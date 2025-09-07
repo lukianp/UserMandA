@@ -157,10 +157,10 @@ function Connect-AzureWithMultipleStrategies {
 
     return $null
 }
-
 function Invoke-AzureDiscovery {
+
     [CmdletBinding()]
-    param(
+ param(
         [Parameter(Mandatory=$true)]
         [hashtable]$Configuration,
 
@@ -173,14 +173,13 @@ function Invoke-AzureDiscovery {
 
     # Define discovery script
     $discoveryScript = {
+}
         param($Configuration, $Context, $SessionId, $Connections, $Result)
         
         $allDiscoveredData = [System.Collections.ArrayList]::new()
-        
         # Get connections
-        $graphConnection = $Connections["Graph"]
+
         $azureConnection = $null
-        
         # Test and install required Azure modules
         if (-not (Test-AzureModules)) {
             $Result.AddWarning("Azure module installation failed, some Azure resources may not be discovered")
@@ -1598,10 +1597,8 @@ function Invoke-AzureDiscovery {
                         
                         foreach ($sa in $storageAccounts) {
                             # Get storage account keys and access policies
-                            $keys = Get-AzStorageAccountKey -ResourceGroupName $sa.ResourceGroupName -Name $sa.StorageAccountName
-                            
                             $saData = [PSCustomObject]@{
-                                ObjectType = "AzureStorageAccount"
+                            ObjectType = "AzureStorageAccount"
                                 SubscriptionId = $sub.Id
                                 ResourceGroup = $sa.ResourceGroupName
                                 StorageAccountName = $sa.StorageAccountName
@@ -1617,10 +1614,10 @@ function Invoke-AzureDiscovery {
                                 MinimumTlsVersion = $sa.MinimumTlsVersion
                                 AllowBlobPublicAccess = $sa.AllowBlobPublicAccess
                                 NetworkRuleSet = ($sa.NetworkRuleSet | ConvertTo-Json -Compress)
-                                BlobServiceEnabled = $sa.PrimaryEndpoints.Blob -ne $null
-                                FileServiceEnabled = $sa.PrimaryEndpoints.File -ne $null
-                                QueueServiceEnabled = $sa.PrimaryEndpoints.Queue -ne $null
-                                TableServiceEnabled = $sa.PrimaryEndpoints.Table -ne $null
+                                BlobServiceEnabled = $null -ne $sa.PrimaryEndpoints.Blob
+                                FileServiceEnabled = $null -ne $sa.PrimaryEndpoints.File
+                                QueueServiceEnabled = $null -ne $sa.PrimaryEndpoints.Queue
+                                TableServiceEnabled = $null -ne $sa.PrimaryEndpoints.Table
                                 Tags = ($sa.Tags | ConvertTo-Json -Compress)
                                 _DataType = 'StorageAccounts'
                                 SessionId = $SessionId
@@ -1784,6 +1781,7 @@ function Invoke-AzureDiscovery {
             $Result.AddError('Discovery failed', $_.Exception, @{Section = 'Discovery'})
         }
 
+    }
     # Execute discovery using the base module
     Start-DiscoveryModule `
         -ModuleName "AzureDiscovery" `

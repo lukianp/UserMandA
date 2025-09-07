@@ -1261,6 +1261,16 @@ namespace MandADiscoverySuite.Models.Identity
         public int ProgressPercentage => TotalUsers > 0 ? (ProcessedUsers * 100) / TotalUsers : 0;
         public DateTime ProgressTime { get; set; } = DateTime.Now;
         public TimeSpan EstimatedTimeRemaining { get; set; }
+        
+        // Additional properties for T-037 compatibility
+        public string StatusMessage { get; set; } = string.Empty;
+        public string Message => StatusMessage;  // Alias for compatibility
+        public int ItemsProcessed { get; set; }
+        public int ProcessedItems => ItemsProcessed;  // Alias for compatibility
+        public int ItemsTotal { get; set; }
+        public int TotalItems => ItemsTotal;  // Alias for compatibility
+        public string CurrentItemName { get; set; } = string.Empty;
+        public string CurrentItem => CurrentItemName;  // Alias for compatibility
     }
 
     /// <summary>

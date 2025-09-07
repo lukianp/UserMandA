@@ -709,81 +709,69 @@ function Invoke-PrerequisitesCheck {
     }
 
     # Run validation for each prerequisite
-    try {
-        foreach ($prereq in $prereqChecker.GetAllPrerequisites()) {
-            Write-PrerequisitesLog "Checking prerequisite: $($prereq.Name)" -Level "INFO"
+    foreach ($prereq in $prereqChecker.GetAllPrerequisites()) {
+        Write-PrerequisitesLog "Checking prerequisite: $($prereq.Name)" -Level "INFO"
 
-            # Execute validation command
-            if ($prereq.ValidationCommand) {
-                try {
-                    $validationResult = Invoke-Expression $prereq.ValidationCommand
+        # Execute validation command
+        if ($prereq.ValidationCommand) {
+            try {
+                $validationResult = Invoke-Expression $prereq.ValidationCommand
 
-                    $prereq.IsInstalled = $validationResult.Installed
-                    $prereq.Status = $validationResult.Status
-                    $prereq.Version = $validationResult.Version
+                $prereq.IsInstalled = $validationResult.Installed
+                $prereq.Status = $validationResult.Status
+                $prereq.Version = $validationResult.Version
 
-                    if ($validationResult.Installed) {
-                        Write-PrerequisitesLog "✓ $($prereq.Name) - OK" -Level "SUCCESS"
-                        $results.Installed += $prereq
-                    } else {
-                        if ($prereq.IsRequired) {
-                            $results.Errors += $prereq
-                            Write-PrerequisitesLog "✗ $($prereq.Name) - REQUIRED but missing: $($prereq.Status)" -Level "ERROR"
-                            $results.OverallSuccess = $false
-
-                            if ($Install) {
-                                # Try auto-installation
-                                Write-PrerequisitesLog "Attempting automatic installation of $($prereq.Name)..." -Level "INFO"
-
-                                if ($prereq.InstallCommand) {
-                                    try {
-                                        $installResult = Invoke-Expression $prereq.InstallCommand
-
-                                        if ($installResult.Success) {
-                                            $prereq.IsInstalled = $true
-                                            $prereq.Status = "Installed"
-                                            Write-PrerequisitesLog "✓ $($prereq.Name) - INSTALLED automatically" -Level "SUCCESS"
-                                        } else {
-                                            Write-PrerequisitesLog "✗ $($prereq.Name) - Installation failed: $($installResult.Message)" -Level "ERROR"
-                                        }
-                                    } catch {
-                                        Write-PrerequisitesLog "✗ Installation failed: $($_.Exception.Message)" -Level "ERROR"
-                                    }
-                                } else {
-                                    Write-PrerequisitesLog "No installation command defined for $($prereq.Name)" -Level "WARN"
-                                }
-                            }
-                        } else {
-                            Write-PrerequisitesLog "! $($prereq.Name) - Optional but missing: $($prereq.Status)" -Level "WARN"
-                            $results.Warnings += $prereq
-                        }
-                    }
-
-                } catch {
-                    Write-PrerequisitesLog "Failed to validate $($prereq.Name): $($_.Exception.Message)" -Level "ERROR"
-                    $results.Errors += $prereq
+                if ($validationResult.Installed) {
+                    Write-PrerequisitesLog "✓ $($prereq.Name) - OK" -Level "SUCCESS"
+                    $results.Installed += $prereq
+                } else {
                     if ($prereq.IsRequired) {
+                        $results.Errors += $prereq
+                        Write-PrerequisitesLog "✗ $($prereq.Name) - REQUIRED but missing: $($prereq.Status)" -Level "ERROR"
                         $results.OverallSuccess = $false
+
+                        if ($Install) {
+                            # Try auto-installation
+                            Write-PrerequisitesLog "Attempting automatic installation of $($prereq.Name)..." -Level "INFO"
+
+                            if ($prereq.InstallCommand) {
+                                $installResult = Invoke-Expression $prereq.InstallCommand
+
+                                if ($installResult.Success) {
+                                    $prereq.IsInstalled = $true
+                                    $prereq.Status = "Installed"
+                                    Write-PrerequisitesLog "✓ $($prereq.Name) - INSTALLED automatically" -Level "SUCCESS"
+                                } else {
+                                    Write-PrerequisitesLog "✗ $($prereq.Name) - Installation failed: $($installResult.Message)" -Level "ERROR"
+                                }
+                            } else {
+                                Write-PrerequisitesLog "No installation command defined for $($prereq.Name)" -Level "WARN"
+                            }
+                        }
+                    } else {
+                        Write-PrerequisitesLog "! $($prereq.Name) - Optional but missing: $($prereq.Status)" -Level "WARN"
+                        $results.Warnings += $prereq
                     }
                 }
+            } catch {
+                Write-PrerequisitesLog "Failed to validate $($prereq.Name): $($_.Exception.Message)" -Level "ERROR"
+                $results.Errors += $prereq
+                if ($prereq.IsRequired) {
+                    $results.OverallSuccess = $false
+                }
             }
-
-            $results.Prerequisites += $prereq
         }
 
-        # Summary
-        Write-PrerequisitesLog "=== Prerequisites Check Summary ===" -Level "HEADER"
-        Write-PrerequisitesLog "Total prerequisites checked: $($results.Prerequisites.Count)" -Level "INFO"
-        Write-PrerequisitesLog "Installed: $($results.Installed.Count)" -Level "SUCCESS"
-        Write-PrerequisitesLog "Warnings: $($results.Warnings.Count)" -Level "WARN"
-        Write-PrerequisitesLog "Errors: $($results.Errors.Count)" -Level "ERROR"
-        Write-PrerequisitesLog "Overall result: $(if ($results.OverallSuccess) { 'PASS' } else { 'FAIL' })" -Level "HEADER"
-
-    } catch {
-        Write-PrerequisitesLog "Prerequisites check failed with error: $($_.Exception.Message)" -Level "ERROR"
-        $results.OverallSuccess = $false
-        $results.Errors += "Prerequisites check failed: $($_.Exception.Message)"
+        $results.Prerequisites += $prereq
     }
+
+    # Summary
+    Write-PrerequisitesLog "=== Prerequisites Check Summary ===" -Level "HEADER"
+    Write-PrerequisitesLog "Total prerequisites checked: $($results.Prerequisites.Count)" -Level "INFO"
+    Write-PrerequisitesLog "Installed: $($results.Installed.Count)" -Level "SUCCESS"
+    Write-PrerequisitesLog "Warnings: $($results.Warnings.Count)" -Level "WARN"
+    Write-PrerequisitesLog "Errors: $($results.Errors.Count)" -Level "ERROR"
+    Write-PrerequisitesLog "Overall result: $(if ($results.OverallSuccess) { 'PASS' } else { 'FAIL' })" -Level "HEADER"
 
     Write-PrerequisitesLog "=== Prerequisites Check Complete ===" -Level "HEADER"
 
@@ -991,43 +979,43 @@ function Install-NmapPrerequisite {
         [switch]$Interactive = $false
     )
 
-    Write-PrerequisitesLog "🔧 Attempting nmap installation..." -Level "INFO"
-
-    # Check if already installed
-    $existingInstall = Test-NmapInstallation
-    if ($existingInstall.Installed -and -not $Force) {
-        Write-PrerequisitesLog "✅ nmap already installed at: $($existingInstall.Path) (v$($existingInstall.Version))" -Level "SUCCESS"
-        return @{
-            Success = $true
-            Installed = $true
-            Message = "nmap already installed"
-            Path = $existingInstall.Path
-            Version = $existingInstall.Version
-        }
-    }
-
-    # Check administrator privileges
-    $adminCheck = Test-AdministratorPrivileges
-    if (-not $adminCheck.Installed) {
-        Write-PrerequisitesLog "❌ Administrator privileges required for nmap installation" -Level "ERROR"
-        return @{
-            Success = $false
-            Installed = $false
-            Message = "Administrator privileges required"
-            RequiresElevation = $true
-        }
-    }
+    Write-PrerequisitesLog "Installing nmap..." -Level "INFO"
 
     try {
+        # Check if already installed
+        $existingInstall = Test-NmapInstallation
+        if ($existingInstall.Installed -and -not $Force) {
+            Write-PrerequisitesLog "nmap already installed at: $($existingInstall.Path) (v$($existingInstall.Version))" -Level "SUCCESS"
+            return @{
+                Success = $true
+                Installed = $true
+                Message = "nmap already installed"
+                Path = $existingInstall.Path
+                Version = $existingInstall.Version
+            }
+        }
+
+        # Check administrator privileges
+        $adminCheck = Test-AdministratorPrivileges
+        if (-not $adminCheck.Installed) {
+            Write-PrerequisitesLog "Administrator privileges required for nmap installation" -Level "ERROR"
+            return @{
+                Success = $false
+                Installed = $false
+                Message = "Administrator privileges required"
+                RequiresElevation = $true
+            }
+        }
+
         # Create temporary directory for installers
         $tempDir = Join-Path $env:TEMP "nmap-install-$(Get-Random)"
         if (-not (Test-Path $tempDir)) {
             New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
         }
 
-        Write-PrerequisitesLog "📁 Created temporary directory: $tempDir" -Level "DEBUG"
+        Write-PrerequisitesLog "Created temporary directory: $tempDir" -Level "DEBUG"
 
-        # Download nmap installer with signature verification preference
+        # Download nmap installer
         $nmapVersion = "7.94"
         $downloadUrls = @(
             "https://nmap.org/dist/nmap-$nmapVersion-setup.exe",
@@ -1039,24 +1027,24 @@ function Install-NmapPrerequisite {
 
         foreach ($url in $downloadUrls) {
             try {
-                Write-PrerequisitesLog "📥 Downloading nmap installer from: $url" -Level "INFO"
+                Write-PrerequisitesLog "Downloading nmap installer from: $url" -Level "INFO"
                 Invoke-WebRequest -Uri $url -OutFile $installerPath -UseBasicParsing -TimeoutSec 30
 
                 if (Test-Path $installerPath -PathType Leaf) {
                     $fileSize = (Get-Item $installerPath).Length
                     if ($fileSize -gt 1024) {
-                        Write-PrerequisitesLog "✅ Downloaded nmap installer successfully ($fileSize bytes)" -Level "SUCCESS"
+                        Write-PrerequisitesLog "Downloaded nmap installer successfully ($($fileSize) bytes)" -Level "SUCCESS"
                         $downloadSuccess = $true
                         break
                     }
                 }
             } catch {
-                Write-PrerequisitesLog "❌ Failed to download from $url : $($_.Exception.Message)" -Level "WARN"
+                Write-PrerequisitesLog "Failed to download from $url : $($_.Exception.Message)" -Level "WARN"
             }
         }
 
         if (-not $downloadSuccess) {
-            Write-PrerequisitesLog "❌ Failed to download nmap installer from all sources" -Level "ERROR"
+            Write-PrerequisitesLog "Failed to download nmap installer from all sources" -Level "ERROR"
             return @{ Success = $false; Installed = $false; Message = "Download failed" }
         }
 
@@ -1065,74 +1053,82 @@ function Install-NmapPrerequisite {
         $npcapPath = "$tempDir\npcap-setup.exe"
 
         try {
-            Write-PrerequisitesLog "📥 Downloading npcap installer..." -Level "INFO"
+            Write-PrerequisitesLog "Downloading npcap installer..." -Level "INFO"
             Invoke-WebRequest -Uri $npcapUrl -OutFile $npcapPath -UseBasicParsing -TimeoutSec 30
-            Write-PrerequisitesLog "✅ Downloaded npcap installer successfully" -Level "SUCCESS"
+            Write-PrerequisitesLog "Downloaded npcap installer successfully" -Level "SUCCESS"
         } catch {
-            Write-PrerequisitesLog "⚠️ Failed to download npcap - nmap functionality may be limited" -Level "WARN"
+            Write-PrerequisitesLog "Failed to download npcap - nmap functionality may be limited" -Level "WARN"
         }
 
         # Install npcap first (if downloaded)
         if (Test-Path $npcapPath) {
-            Write-PrerequisitesLog "🔧 Installing npcap driver..." -Level "INFO"
-            $npcapProcess = Start-Process -FilePath $npcapPath -ArgumentList "/S", "/winpcap_mode=yes" -Wait -PassThru -WindowStyle Hidden
-
-            if ($npcapProcess.ExitCode -eq 0) {
-                Write-PrerequisitesLog "✅ npcap driver installed successfully" -Level "SUCCESS"
-            } else {
-                Write-PrerequisitesLog "⚠️ npcap installation returned exit code: $($npcapProcess.ExitCode)" -Level "WARN"
+            Write-PrerequisitesLog "Installing npcap driver..." -Level "INFO"
+            try {
+                $npcapProcess = Start-Process -FilePath $npcapPath -ArgumentList "/S", "/winpcap_mode=yes" -Wait -PassThru -WindowStyle Hidden
+                if ($npcapProcess.ExitCode -eq 0) {
+                    Write-PrerequisitesLog "npcap driver installed successfully" -Level "SUCCESS"
+                } else {
+                    Write-PrerequisitesLog "npcap installation returned exit code: $($npcapProcess.ExitCode)" -Level "WARN"
+                }
+            } catch {
+                Write-PrerequisitesLog "Failed to install npcap: $($_.Exception.Message)" -Level "WARN"
             }
         }
 
         # Install nmap with silent parameters
-        Write-PrerequisitesLog "🔧 Installing nmap silently..." -Level "INFO"
-        $nmapProcess = Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait -PassThru -WindowStyle Hidden
+        Write-PrerequisitesLog "Installing nmap silently..." -Level "INFO"
+        try {
+            $nmapProcess = Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait -PassThru -WindowStyle Hidden
 
-        if ($nmapProcess.ExitCode -eq 0) {
-            Write-PrerequisitesLog "✅ nmap installed successfully" -Level "SUCCESS"
+            if ($nmapProcess.ExitCode -eq 0) {
+                Write-PrerequisitesLog "nmap installed successfully" -Level "SUCCESS"
 
-            # Wait a moment for files to be ready
-            Start-Sleep -Seconds 2
+                # Wait a moment for files to be ready
+                Start-Sleep -Seconds 2
 
-            # Verify installation
-            $installedNmap = Test-NmapInstallation
+                # Verify installation
+                $installedNmap = Test-NmapInstallation
 
-            if ($installedNmap.Installed) {
-                Write-PrerequisitesLog "🎉 Silent nmap installation completed and verified" -Level "SUCCESS"
+                if ($installedNmap.Installed) {
+                    Write-PrerequisitesLog "Silent nmap installation completed and verified" -Level "SUCCESS"
 
-                return @{
-                    Success = $true
-                    Installed = $true
-                    Message = "nmap installed successfully via silent installer"
-                    Path = $installedNmap.Path
-                    Version = $installedNmap.Version
-                    InstallationType = $installedNmap.InstallationType
+                    return @{
+                        Success = $true
+                        Installed = $true
+                        Message = "nmap installed successfully via silent installer"
+                        Path = $installedNmap.Path
+                        Version = $installedNmap.Version
+                        InstallationType = $installedNmap.InstallationType
+                    }
+                } else {
+                    Write-PrerequisitesLog "nmap installation completed but verification failed" -Level "WARN"
+                    return @{ Success = $false; Installed = $false; Message = "Installation verification failed" }
                 }
             } else {
-                Write-PrerequisitesLog "⚠️ nmap installation completed but verification failed" -Level "WARN"
-                return @{ Success = $false; Installed = $false; Message = "Installation verification failed" }
+                Write-PrerequisitesLog "nmap installation failed (exit code: $($nmapProcess.ExitCode))" -Level "ERROR"
+                return @{ Success = $false; Installed = $false; Message = "Installation failed with exit code $($nmapProcess.ExitCode)" }
             }
-        } else {
-            Write-PrerequisitesLog "❌ nmap installation failed (exit code: $($nmapProcess.ExitCode))" -Level "ERROR"
-            return @{ Success = $false; Installed = $false; Message = "Installation failed with exit code $($nmapProcess.ExitCode)" }
+        } catch {
+            Write-PrerequisitesLog "Failed to install nmap: $($_.Exception.Message)" -Level "ERROR"
+            return @{ Success = $false; Installed = $false; Message = "Installation failed: $($_.Exception.Message)" }
         }
 
-    } catch {
-        Write-PrerequisitesLog "❌ nmap installation failed: $($_.Exception.Message)" -Level "ERROR"
-        return @{
-            Success = $false
-            Installed = $false
-            Message = "Installation failed: $($_.Exception.Message)"
-        }
-    } finally {
         # Cleanup temporary files
         if (Test-Path $tempDir) {
             try {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
-                Write-PrerequisitesLog "🧹 Cleaned up temporary files" -Level "DEBUG"
+                Write-PrerequisitesLog "Cleaned up temporary files" -Level "DEBUG"
             } catch {
-                Write-PrerequisitesLog "Warning: Failed to cleanup temporary directory: $tempDir" -Level "WARN"
+                Write-PrerequisitesLog "Failed to cleanup temporary directory: $($_.Exception.Message)" -Level "WARN"
             }
+        }
+
+    } catch {
+        Write-PrerequisitesLog "nmap installation failed: $($_.Exception.Message)" -Level "ERROR"
+        return @{
+            Success = $false
+            Installed = $false
+            Message = "Installation failed: $($_.Exception.Message)"
         }
     }
 }

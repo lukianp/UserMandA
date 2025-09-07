@@ -144,6 +144,24 @@ namespace MandADiscoverySuite.Services
                 ["EnvironmentRiskAssessment"] = () => new EnvironmentRiskAssessmentView(),
                 ["ExchangeDiscovery"] = () => new ExchangeDiscoveryView(),
                 ["SharePointDiscovery"] = () => new SharePointDiscoveryView(),
+                
+                // T-037: Groups, GPOs, and ACLs Migration
+                ["groupspolicymigration"] = () => new GroupsPolicyMigrationView(),
+                ["groups-policy-migration"] = () => new GroupsPolicyMigrationView(),
+                ["groupspolicy"] = () => new GroupsPolicyMigrationView(),
+                ["security-migration"] = () => new GroupsPolicyMigrationView(),
+                ["securitymigration"] = () => new GroupsPolicyMigrationView(),
+                ["acl-migration"] = () => new GroupsPolicyMigrationView(),
+                ["aclmigration"] = () => new GroupsPolicyMigrationView(),
+                ["gpo-migration"] = () => new GroupsPolicyMigrationView(),
+                ["gpomigration"] = () => new GroupsPolicyMigrationView(),
+                
+                // PascalCase alternatives for T-037
+                ["GroupsPolicyMigration"] = () => new GroupsPolicyMigrationView(),
+                ["GroupsPolicy"] = () => new GroupsPolicyMigrationView(),
+                ["SecurityMigration"] = () => new GroupsPolicyMigrationView(),
+                ["AclMigration"] = () => new GroupsPolicyMigrationView(),
+                ["GpoMigration"] = () => new GroupsPolicyMigrationView(),
             };
         }
 

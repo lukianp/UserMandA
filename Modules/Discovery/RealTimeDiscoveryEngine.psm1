@@ -137,15 +137,15 @@ class RealTimeDiscoveryEngine {
             if ($NotifyFilters -match "Created") { $notifyFilterEnum = $notifyFilterEnum -bor [System.IO.NotifyFilters]::CreationTime }
             if ($NotifyFilters -match "Deleted") { $notifyFilterEnum = $notifyFilterEnum -bor [System.IO.NotifyFilters]::FileName }
             if ($NotifyFilters -match "Changed") { $notifyFilterEnum = $notifyFilterEnum -bor [System.IO.NotifyFilters]::LastWrite }
-            if ($NotifyFilters -match "All") { 
-                $notifyFilterEnum = [System.IO.NotifyFilters]::All 
+            if ($NotifyFilters -match "All") {
+                $notifyFilterEnum = [System.IO.NotifyFilters]::All
             }
             
             $watcher.NotifyFilter = $notifyFilterEnum
             
             # Register event handlers
             $action = {
-                param($sender, $e)
+                param($eventSender, $e)
                 $this.HandleFileSystemChange($WatcherName, $e)
             }.GetNewClosure()
             
@@ -162,6 +162,8 @@ class RealTimeDiscoveryEngine {
         }
     }
     
+    # Justification: $EventArgs is an explicit parameter in the method signature, not an automatic variable
+    [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidAssignmentToAutomaticVariable", "")]
     [void] HandleFileSystemChange([string]$WatcherName, [System.IO.FileSystemEventArgs]$EventArgs) {
         try {
             $changeInfo = @{
@@ -231,7 +233,7 @@ class RealTimeDiscoveryEngine {
             $watcher = New-Object System.Diagnostics.Eventing.Reader.EventLogWatcher($query, $LogName)
             
             $action = {
-                param($sender, $e)
+                param($eventSender, $e)
                 $this.HandleEventLogChange($LogName, $e.EventRecord)
             }.GetNewClosure()
             
@@ -463,4 +465,27 @@ function Get-RealTimeDiscoveryStatus {
     }
 }
 
-Export-ModuleMember -Function Start-RealTimeDiscovery, Stop-RealTimeDiscovery, Get-RealTimeDiscoveryStatus
+# Diagnostic: Adding Invoke wrapper for discovery launcher compatibility
+function Invoke-RealTimeDiscoveryEngine {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context,
+
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId
+    )
+
+    try {
+        Write-RealTimeLog -Message "Invoked via DiscoveryLauncher - delegating to Start-RealTimeDiscovery" -Level "INFO"
+        return Start-RealTimeDiscovery -Configuration $Configuration -Context $Context -SessionId $SessionId
+    } catch {
+        Write-RealTimeLog -Message "Invoke wrapper failed: $($_.Exception.Message)" -Level "ERROR"
+        throw
+    }
+}
+
+Export-ModuleMember -Function Start-RealTimeDiscovery, Stop-RealTimeDiscovery, Get-RealTimeDiscoveryStatus, Invoke-RealTimeDiscoveryEngine

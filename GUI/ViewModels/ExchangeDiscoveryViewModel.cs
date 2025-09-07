@@ -85,7 +85,7 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
-        public AsyncRelayCommand ViewLogsCommand => new AsyncRelayCommand(ViewLogsAsync);
+        public new AsyncRelayCommand ViewLogsCommand => new AsyncRelayCommand(ViewLogsAsync);
 
         #endregion
 
@@ -222,7 +222,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task ViewLogsAsync()
+        protected override async Task ViewLogsAsync()
         {
             try
             {

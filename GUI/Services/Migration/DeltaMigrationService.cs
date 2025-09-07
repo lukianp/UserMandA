@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Migration;
+using MandADiscoverySuite.MigrationProviders;
 
 namespace MandADiscoverySuite.Services.Migration
 {
@@ -17,6 +18,7 @@ namespace MandADiscoverySuite.Services.Migration
         private readonly IFileDeltaMigrator _fileDeltaMigrator;
         private readonly ISqlDeltaMigrator _sqlDeltaMigrator;
         private readonly ISharePointDeltaMigrator? _sharePointDeltaMigrator;
+        private readonly IGroupsPolicyDeltaMigrator? _groupsPolicyDeltaMigrator;
         private readonly MigrationStateService _stateService;
         private readonly MigrationOrchestrationEngine _orchestrationEngine;
 
@@ -27,13 +29,15 @@ namespace MandADiscoverySuite.Services.Migration
             ISqlDeltaMigrator sqlDeltaMigrator,
             MigrationStateService stateService,
             MigrationOrchestrationEngine orchestrationEngine,
-            ISharePointDeltaMigrator? sharePointDeltaMigrator = null)
+            ISharePointDeltaMigrator? sharePointDeltaMigrator = null,
+            IGroupsPolicyDeltaMigrator? groupsPolicyDeltaMigrator = null)
         {
             _identityDeltaMigrator = identityDeltaMigrator;
             _mailDeltaMigrator = mailDeltaMigrator;
             _fileDeltaMigrator = fileDeltaMigrator;
             _sqlDeltaMigrator = sqlDeltaMigrator;
             _sharePointDeltaMigrator = sharePointDeltaMigrator;
+            _groupsPolicyDeltaMigrator = groupsPolicyDeltaMigrator;
             _stateService = stateService;
             _orchestrationEngine = orchestrationEngine;
         }
@@ -84,6 +88,11 @@ namespace MandADiscoverySuite.Services.Migration
                 if (_sharePointDeltaMigrator != null)
                 {
                     changeDetectionTasks.Add(DetectSharePointChangesAsync(lastRunTimestamp, settings, result));
+                }
+
+                if (_groupsPolicyDeltaMigrator != null)
+                {
+                    changeDetectionTasks.Add(DetectGroupsPolicyChangesAsync(lastRunTimestamp, settings, result));
                 }
 
                 await Task.WhenAll(changeDetectionTasks);
@@ -371,6 +380,32 @@ namespace MandADiscoverySuite.Services.Migration
             {
                 var changes = await _sharePointDeltaMigrator.DetectChangesAsync(lastRunTimestamp, settings);
                 result.SharePointChanges.AddRange(changes.ToList());
+            }
+        }
+
+        private async Task DetectGroupsPolicyChangesAsync(
+            DateTime lastRunTimestamp,
+            DeltaMigrationSettings settings,
+            ComprehensiveDeltaResult result)
+        {
+            if (_groupsPolicyDeltaMigrator != null)
+            {
+                var changes = await _groupsPolicyDeltaMigrator.DetectChangesAsync(lastRunTimestamp, settings);
+                // Groups/Policy changes are stored in a custom collection since the result structure
+                // doesn't have a specific property for them yet - they would be mixed with other changes
+                // or we'd need to extend ComprehensiveDeltaResult
+                foreach (var change in changes)
+                {
+                    // For now, we can add them as SharePoint changes or create a new collection
+                    // This is a design decision that can be refined
+                    result.SharePointChanges.Add(new ChangeDetectionResult<object>
+                    {
+                        Item = change.Item,
+                        ChangeType = change.ChangeType,
+                        ChangeTimestamp = change.ChangeTimestamp,
+                        ChangeId = change.ChangeId
+                    });
+                }
             }
         }
 

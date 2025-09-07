@@ -187,11 +187,13 @@ namespace MandADiscoverySuite.Migration
     /// </summary>
     public class CutoverResult
     {
+        public string ServiceName { get; set; } = string.Empty;
         public bool Success { get; set; }
         public DateTime CutoverTimestamp { get; set; }
         public TimeSpan Duration { get; set; }
         public IList<CutoverStep> CompletedSteps { get; set; } = new List<CutoverStep>();
         public IList<CutoverStep> FailedSteps { get; set; } = new List<CutoverStep>();
+        public IList<CutoverStep> Steps => CompletedSteps.Concat(FailedSteps).ToList();
         public string? ErrorMessage { get; set; }
         public CutoverRollbackInfo? RollbackInfo { get; set; }
         public bool RollbackPerformed { get; set; }
@@ -318,6 +320,8 @@ namespace MandADiscoverySuite.Migration
     {
         DisableSource,
         EnableTarget,
+        EnableTargetResources,
+        UpdateConfiguration,
         UpdateDNS,
         UpdateServiceEndpoints,
         ValidateConnectivity,
@@ -341,6 +345,7 @@ namespace MandADiscoverySuite.Migration
     /// </summary>
     public class CutoverValidationIssue
     {
+        public string Category { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public CutoverValidationSeverity Severity { get; set; }
         public string? Resolution { get; set; }

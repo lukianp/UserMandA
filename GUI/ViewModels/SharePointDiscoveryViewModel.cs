@@ -126,8 +126,7 @@ namespace MandADiscoverySuite.ViewModels
                 IsProcessing = true;
                 ProcessingMessage = "Loading SharePoint data...";
 
-                // Load from specific CSV path
-                var csvPath = @"C:\discoverydata\ljpops\Raw\SharePointDiscovery.csv";
+                // Load SharePoint discovery data from profile paths
                 var loadedCsvData = await _csvService.LoadSharePointDiscoveryAsync();
 
                 // Convert to dynamic list

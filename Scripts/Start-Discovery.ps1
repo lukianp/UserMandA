@@ -81,7 +81,28 @@ try {
                 throw "AzureResourceDiscoveryLauncher.ps1 not found at: $launcherPath"
             }
         }
-        
+
+        "RealTimeDiscoveryEngine" {
+            Write-Host "Launching Real-Time Discovery Engine..." -ForegroundColor Green
+
+            # Build arguments for the real-time discovery launcher
+            $launcherArgs = @{
+                CompanyName = $CompanyName
+            }
+
+            if ($SessionId) {
+                $launcherArgs.SessionId = $SessionId
+            }
+
+            $launcherPath = Join-Path $ScriptRoot "Invoke-RealTimeDiscoveryEngine.ps1"
+
+            if (Test-Path $launcherPath) {
+                & $launcherPath @launcherArgs
+            } else {
+                throw "Invoke-RealTimeDiscoveryEngine.ps1 not found at: $launcherPath"
+            }
+        }
+
         default {
             Write-Host "Launching standard discovery module..." -ForegroundColor Green
             
