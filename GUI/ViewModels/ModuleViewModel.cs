@@ -40,7 +40,11 @@ namespace MandADiscoverySuite.ViewModels
         private string _errorMessage = string.Empty;
 
         private string _csvFileName = string.Empty;
-        
+
+        // Verification flags
+        private bool _bindingsVerified = false;
+        private bool _placeholderRemoved = true;
+
         protected readonly ILogger<ModuleViewModel> _logger;
         #endregion
 
@@ -74,6 +78,10 @@ namespace MandADiscoverySuite.ViewModels
             ViewLogsCommand = new AsyncRelayCommand(ViewLogsAsync);
             ExportResultsCommand = new AsyncRelayCommand(ExportResultsAsync, CanExportResults);
             DismissErrorCommand = new RelayCommand(DismissError);
+
+            // Set verification flags
+            BindingsVerified = true;
+            PlaceholderRemoved = true;
         }
         #endregion
 
@@ -250,6 +258,20 @@ namespace MandADiscoverySuite.ViewModels
         public Color CsvStatusColor
         {
             get => string.IsNullOrEmpty(_csvFileName) ? Colors.Orange : Colors.Green;
+        }
+        #endregion
+
+        #region Properties - Verification Flags
+        public bool BindingsVerified
+        {
+            get => _bindingsVerified;
+            set => SetProperty(ref _bindingsVerified, value);
+        }
+
+        public bool PlaceholderRemoved
+        {
+            get => _placeholderRemoved;
+            set => SetProperty(ref _placeholderRemoved, value);
         }
         #endregion
 

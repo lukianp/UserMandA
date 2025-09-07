@@ -198,33 +198,22 @@
                               HorizontalAlignment="Center" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
 
                 <!-- Details Panel -->
-                <Border Grid.Column="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                <Border Grid.Column="2" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                         Margin="0,0,20,20" CornerRadius="4"
                         Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel Margin="16">
-                            <TextBlock Text="Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
-
-                            <TextBlock Text="Device Name:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.device_name}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Device Type:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.device_type}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="IP Address:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.ip_address}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Operating System Version:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.os_version}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Model:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.model}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Uptime:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.uptime}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Location:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.location}" FontSize="14" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                        <StackPanel>
+                            <TextBlock Text="Device Details" FontSize="18" FontWeight="SemiBold" Margin="15,15,15,10"/>
+                            <ItemsControl ItemsSource="{Binding SelectedItemDetails}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="15,0,15,10">
+                                            <TextBlock Text="{Binding Key}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding Value}" Foreground="{DynamicResource MutedForegroundBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>

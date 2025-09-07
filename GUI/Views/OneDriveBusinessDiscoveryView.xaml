@@ -148,25 +148,21 @@
                           Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}">
 
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="User Email"
-                                            Binding="{Binding useremail}"
+                        <DataGridTextColumn Header="User Name"
+                                            Binding="{Binding username}"
                                             Width="250"/>
 
-                        <DataGridTextColumn Header="File Count"
-                                            Binding="{Binding filecount}"
-                                            Width="120"/>
+                        <DataGridTextColumn Header="Quota (GB)"
+                                            Binding="{Binding quota, StringFormat='#,0.00'}"
+                                            Width="150"/>
 
-                        <DataGridTextColumn Header="Storage Used (GB)"
-                                            Binding="{Binding storagesize, StringFormat='#,0.00'}"
+                        <DataGridTextColumn Header="Used Space (GB)"
+                                            Binding="{Binding usedspace, StringFormat='#,0.00'}"
                                             Width="150"/>
 
                         <DataGridTextColumn Header="Last Modified"
-                                            Binding="{Binding lastmodified, StringFormat='yyyy-MM-dd'}"
+                                            Binding="{Binding lastmodified, StringFormat='{}{0:yyyy-MM-dd}'}"
                                             Width="120"/>
-
-                        <DataGridTextColumn Header="Status"
-                                            Binding="{Binding status}"
-                                            Width="100"/>
                     </DataGrid.Columns>
 
                     <DataGrid.RowStyle>

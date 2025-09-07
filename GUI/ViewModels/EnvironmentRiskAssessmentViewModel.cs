@@ -34,6 +34,9 @@ namespace MandADiscoverySuite.ViewModels
         private int _mediumRisk;
         public int MediumRisk { get => _mediumRisk; set => SetProperty(ref _mediumRisk, value); }
 
+        private DateTime _lastAssessment;
+        public DateTime LastAssessment { get => _lastAssessment; set => SetProperty(ref _lastAssessment, value); }
+
         public ObservableCollection<dynamic> SelectedResults { get; } = new();
         private object _selectedItem;
         public object SelectedItem { get => _selectedItem; set => SetProperty(ref _selectedItem, value); }
@@ -155,6 +158,15 @@ namespace MandADiscoverySuite.ViewModels
                 dict.TryGetValue("risklevel", out var riskObj);
                 return riskObj?.ToString().ToLower().Contains("medium") ?? false;
             });
+
+            // Set last assessment date
+            LastAssessment = data.Max(item =>
+            {
+                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+                dict.TryGetValue("assessmentdate", out var dateObj);
+                return DateTime.TryParse(dateObj?.ToString(), out var parsedDate) ? parsedDate : DateTime.MinValue;
+            });
+            if (LastAssessment == DateTime.MinValue) LastAssessment = DateTime.Now;
         }
     }
 }

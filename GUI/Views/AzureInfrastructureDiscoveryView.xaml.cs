@@ -13,7 +13,21 @@ namespace MandADiscoverySuite.Views
     {
         public AzureInfrastructureDiscoveryView()
         {
-            InitializeComponent();
+            try
+            {
+                InitializeComponent();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Exception initializing AzureInfrastructureDiscoveryView: {ex.Message}");
+                throw;
+            }
+
+            // Log successful loading
+            Loaded += (s, e) =>
+            {
+                System.Diagnostics.Debug.WriteLine("AzureInfrastructureDiscoveryView loaded successfully");
+            };
         }
 
         // Factory method for ViewRegistry

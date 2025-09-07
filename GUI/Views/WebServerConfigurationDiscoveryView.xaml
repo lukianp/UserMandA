@@ -120,11 +120,19 @@
             </Grid.ColumnDefinitions>
 
             <DataGrid Grid.Column="0" ItemsSource="{Binding SelectedResults}"
-                      AutoGenerateColumns="True" Margin="10"
-                      SelectedItem="{Binding SelectedItem}"
-                      Visibility="{Binding SelectedResults.Count, Converter={StaticResource CountToVisibility}}"
-                      CanUserAddRows="False" CanUserDeleteRows="False"
-                      SelectionMode="Extended" GridLinesVisibility="Horizontal">
+                       AutoGenerateColumns="False" Margin="10"
+                       SelectedItem="{Binding SelectedItem}"
+                       Visibility="{Binding SelectedResults.Count, Converter={StaticResource CountToVisibility}}"
+                       CanUserAddRows="False" CanUserDeleteRows="False"
+                       SelectionMode="Single" GridLinesVisibility="Horizontal">
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Server Name" Binding="{Binding servername}" Width="200" />
+                    <DataGridTextColumn Header="OS" Binding="{Binding os}" Width="150" />
+                    <DataGridTextColumn Header="Web Server Type" Binding="{Binding webservtype}" Width="150" />
+                    <DataGridTextColumn Header="Version" Binding="{Binding version}" Width="100" />
+                    <DataGridTextColumn Header="Last Patch Date" Binding="{Binding lastpatchdate}" Width="150" />
+                </DataGrid.Columns>
 
             </DataGrid>
 

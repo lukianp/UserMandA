@@ -73,7 +73,21 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    // Update selected item details for details panel
+                    UpdateSelectedItemDetails();
+                }
+            }
+        }
+
+        private ObservableCollection<KeyValuePair<string, string>> _selectedItemDetails = new ObservableCollection<KeyValuePair<string, string>>();
+        public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails
+        {
+            get => _selectedItemDetails;
+            set => SetProperty(ref _selectedItemDetails, value);
         }
 
         #endregion
@@ -250,6 +264,49 @@ namespace MandADiscoverySuite.ViewModels
                     else if (contentType == "dashboard") TotalDashboards++;
                 }
             }
+        }
+
+        private void UpdateSelectedItemDetails()
+        {
+            SelectedItemDetails.Clear();
+
+            if (SelectedItem == null) return;
+
+            var dict = (System.Collections.Generic.IDictionary<string, object>)SelectedItem;
+
+            // Power BI Details
+            dict.TryGetValue("workspace", out var workspaceObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Workspace", workspaceObj?.ToString() ?? ""));
+
+            dict.TryGetValue("reportname", out var reportnameObj);
+            dict.TryGetValue("name", out var nameObj);
+
+            // Use reportname or fallback to name
+            var displayName = reportnameObj?.ToString() ?? nameObj?.ToString() ?? "";
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Report Name", displayName));
+
+            dict.TryGetValue("datasetname", out var datasetnameObj);
+            dict.TryGetValue("dataset", out var datasetObj);
+
+            // Use datasetname or fallback to dataset
+            var datasetDisplay = datasetnameObj?.ToString() ?? datasetObj?.ToString() ?? "";
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Dataset Name", datasetDisplay));
+
+            dict.TryGetValue("owner", out var ownerObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Owner", ownerObj?.ToString() ?? ""));
+
+            dict.TryGetValue("lastrefresh", out var lastrefreshObj);
+            dict.TryGetValue("lastmodified", out var lastmodifiedObj);
+
+            // Use lastrefresh or fallback to lastmodified
+            var dateDisplay = lastrefreshObj?.ToString() ?? lastmodifiedObj?.ToString() ?? "";
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Last Refresh", dateDisplay));
+
+            dict.TryGetValue("contenttype", out var contenttypeObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Content Type", contenttypeObj?.ToString() ?? ""));
+
+            dict.TryGetValue("itemcount", out var itemcountObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Item Count", itemcountObj?.ToString() ?? ""));
         }
 
         #endregion

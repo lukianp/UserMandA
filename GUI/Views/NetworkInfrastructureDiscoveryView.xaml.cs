@@ -13,7 +13,21 @@ namespace MandADiscoverySuite.Views
     {
         public NetworkInfrastructureDiscoveryView()
         {
-            InitializeComponent();
+            try
+            {
+                InitializeComponent();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Exception initializing NetworkInfrastructureDiscoveryView: {ex.Message}");
+                throw;
+            }
+
+            // Log successful loading
+            Loaded += (s, e) =>
+            {
+                System.Diagnostics.Debug.WriteLine("NetworkInfrastructureDiscoveryView loaded successfully");
+            };
         }
 
         // Factory method for ViewRegistry

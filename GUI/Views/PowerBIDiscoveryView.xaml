@@ -148,25 +148,25 @@
                           Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}">
 
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Name"
-                                            Binding="{Binding name}"
-                                            Width="250"/>
-
-                        <DataGridTextColumn Header="Content Type"
-                                            Binding="{Binding contenttype}"
-                                            Width="120"/>
-
                         <DataGridTextColumn Header="Workspace"
                                             Binding="{Binding workspace}"
-                                            Width="150"/>
+                                            Width="200"/>
+
+                        <DataGridTextColumn Header="Report Name"
+                                            Binding="{Binding reportname}"
+                                            Width="200"/>
+
+                        <DataGridTextColumn Header="Dataset Name"
+                                            Binding="{Binding datasetname}"
+                                            Width="200"/>
 
                         <DataGridTextColumn Header="Owner"
                                             Binding="{Binding owner}"
                                             Width="150"/>
 
-                        <DataGridTextColumn Header="Last Modified"
-                                            Binding="{Binding lastmodified, StringFormat='yyyy-MM-dd'}"
-                                            Width="120"/>
+                        <DataGridTextColumn Header="Last Refresh"
+                                            Binding="{Binding lastrefresh, StringFormat='{}{0:g}'}"
+                                            Width="150"/>
                     </DataGrid.Columns>
 
                     <DataGrid.RowStyle>

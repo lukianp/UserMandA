@@ -13,7 +13,21 @@ namespace MandADiscoverySuite.Views
     {
         public EnvironmentDetectionView()
         {
-            InitializeComponent();
+            try
+            {
+                InitializeComponent();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Exception initializing EnvironmentDetectionView: {ex.Message}");
+                throw;
+            }
+
+            // Log successful loading
+            Loaded += (s, e) =>
+            {
+                System.Diagnostics.Debug.WriteLine("EnvironmentDetectionView loaded successfully");
+            };
         }
 
         // Factory method for ViewRegistry

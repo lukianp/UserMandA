@@ -73,7 +73,29 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    // Trigger async loading of item details when selection changes
+                    _ = LoadSelectedItemDetailsAsync();
+                }
+            }
+        }
+
+        // Details for the selected item
+        private ObservableCollection<DetailField> _selectedItemDetails;
+        public ObservableCollection<DetailField> SelectedItemDetails
+        {
+            get => _selectedItemDetails ?? (_selectedItemDetails = new ObservableCollection<DetailField>());
+            set => SetProperty(ref _selectedItemDetails, value);
+        }
+
+        private bool _isLoadingDetails;
+        public bool IsLoadingDetails
+        {
+            get => _isLoadingDetails;
+            set => SetProperty(ref _isLoadingDetails, value);
         }
 
         #endregion
@@ -229,12 +251,101 @@ namespace MandADiscoverySuite.ViewModels
 
         #endregion
 
+        #region Detail Field Loading
+
+        private async Task LoadSelectedItemDetailsAsync()
+        {
+            if (SelectedItem == null)
+            {
+                SelectedItemDetails.Clear();
+                return;
+            }
+
+            try
+            {
+                IsLoadingDetails = true;
+                SelectedItemDetails.Clear();
+
+                // Simulate async loading delay
+                await Task.Delay(100);
+
+                var dict = SelectedItem as IDictionary<string, object>;
+                if (dict != null)
+                {
+                    // Add detail fields based on environment detection requirements
+                    AddDetailField("Environment Name", GetStringValue(dict, new[] { "EnvironmentName", "environmentname", "Name", "name" }));
+                    AddDetailField("Type", GetStringValue(dict, new[] { "Type", "type" }), "Text", true);
+                    AddDetailField("Status", GetStringValue(dict, new[] { "Status", "status" }), "Text", true);
+                    AddDetailField("Resource Count", GetStringValue(dict, new[] { "ResourceCount", "resourcecount", "Resources", "resources" }));
+                    AddDetailField("Description", GetStringValue(dict, new[] { "Description", "description" }), "Text", true);
+                    AddDetailField("Location", GetStringValue(dict, new[] { "Location", "location" }), "Text", true);
+                    AddDetailField("Last Scanned", GetStringValue(dict, new[] { "LastScanned", "lastscanned", "LastScan", "lastscan" }));
+                    AddDetailField("Compliance Status", GetStringValue(dict, new[] { "ComplianceStatus", "compliancestatus" }));
+
+                    // Environment-specific fields
+                    var envType = GetStringValue(dict, new[] { "Type", "type" })?.ToLower();
+                    if (envType?.Contains("azure") == true)
+                    {
+                        AddDetailField("Subscription ID", GetStringValue(dict, new[] { "SubscriptionId", "subscriptionid" }));
+                        AddDetailField("Resource Group", GetStringValue(dict, new[] { "ResourceGroup", "resourcegroup" }));
+                    }
+                    else if (envType?.Contains("aws") == true)
+                    {
+                        AddDetailField("AWS Account ID", GetStringValue(dict, new[] { "AccountId", "accountid" }));
+                        AddDetailField("Region", GetStringValue(dict, new[] { "Region", "region" }));
+                    }
+                    else if (envType?.Contains("on-prem") == true || envType?.Contains("hybrid") == true)
+                    {
+                        AddDetailField("Domain", GetStringValue(dict, new[] { "Domain", "domain" }));
+                        AddDetailField("Network", GetStringValue(dict, new[] { "Network", "network" }));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error loading selected item details");
+                SelectedItemDetails.Add(new DetailField("Error", ex.Message, "Error", false, "Failed to load details"));
+            }
+            finally
+            {
+                IsLoadingDetails = false;
+            }
+        }
+
+        private void AddDetailField(string name, string value, string type = "Text", bool editable = false, string tooltip = null)
+        {
+            if (!string.IsNullOrEmpty(value))
+            {
+                SelectedItemDetails.Add(new DetailField(name, value, type, editable, tooltip));
+            }
+        }
+
+        private string GetStringValue(IDictionary<string, object> dict, string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (dict.TryGetValue(key, out var value))
+                {
+                    return value?.ToString();
+                }
+            }
+            return null;
+        }
+
+        #endregion
+
         #region Helper Methods
 
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
         {
             TotalEnvironments = data.Count;
             TotalResources = 0;
+            ActiveEnvironments = 0;
+
+            var onPremEnvs = 0;
+            var azureEnvs = 0;
+            var awsEnvs = 0;
+            var hybridEnvs = 0;
 
             foreach (var item in data)
             {
@@ -256,7 +367,48 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     ActiveEnvironments++;
                 }
+
+                // Categorize by environment type
+                if (dict.TryGetValue("type", out var typeObj) ||
+                    dict.TryGetValue("Type", out typeObj))
+                {
+                    var envType = typeObj?.ToString().ToLower();
+                    if (envType?.Contains("on-prem") == true || envType?.Contains("onprem") == true)
+                    {
+                        onPremEnvs++;
+                    }
+                    else if (envType?.Contains("azure") == true)
+                    {
+                        azureEnvs++;
+                    }
+                    else if (envType?.Contains("aws") == true)
+                    {
+                        awsEnvs++;
+                    }
+                    else if (envType?.Contains("hybrid") == true)
+                    {
+                        hybridEnvs++;
+                    }
+                }
+
+                // Update last discovery time
+                if (dict.TryGetValue("lastdiscovery", out var lastDiscoveryObj) ||
+                    dict.TryGetValue("LastDiscovery", out lastDiscoveryObj) ||
+                    dict.TryGetValue("LastScanned", out lastDiscoveryObj))
+                {
+                    if (DateTime.TryParse(lastDiscoveryObj?.ToString(), out var lastDiscovery))
+                    {
+                        if (LastDiscoveryTime == DateTime.MinValue || lastDiscovery > LastDiscoveryTime)
+                        {
+                            LastDiscoveryTime = lastDiscovery;
+                        }
+                    }
+                }
             }
+
+            // Log environment type breakdown
+            _log?.LogInformation($"Environment Discovery Summary: Total={TotalEnvironments}, Active={ActiveEnvironments}, Resources={TotalResources}");
+            _log?.LogInformation($"Environment Types: On-Prem={onPremEnvs}, Azure={azureEnvs}, AWS={awsEnvs}, Hybrid={hybridEnvs}");
         }
 
         #endregion

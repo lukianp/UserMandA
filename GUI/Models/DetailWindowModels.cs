@@ -432,4 +432,27 @@ namespace MandADiscoverySuite.Models
         public DateTime? ExpirationDate { get; set; }
         public string AssignmentType { get; set; }
     }
+
+    /// <summary>
+    /// Detail field model for displaying selected item details in discovery modules
+    /// </summary>
+    public class DetailField
+    {
+        public string FieldName { get; set; }
+        public string FieldValue { get; set; }
+        public string FieldType { get; set; }
+        public bool IsEditable { get; set; }
+        public string Tooltip { get; set; }
+
+        public DetailField() { }
+
+        public DetailField(string name, string value, string type = "Text", bool editable = false, string tooltip = null)
+        {
+            FieldName = name;
+            FieldValue = value;
+            FieldType = type;
+            IsEditable = editable;
+            Tooltip = tooltip;
+        }
+    }
 }

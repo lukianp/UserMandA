@@ -73,7 +73,29 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    // Trigger async loading of item details when selection changes
+                    _ = LoadSelectedItemDetailsAsync();
+                }
+            }
+        }
+
+        // Details for the selected item
+        private ObservableCollection<DetailField> _selectedItemDetails;
+        public ObservableCollection<DetailField> SelectedItemDetails
+        {
+            get => _selectedItemDetails ?? (_selectedItemDetails = new ObservableCollection<DetailField>());
+            set => SetProperty(ref _selectedItemDetails, value);
+        }
+
+        private bool _isLoadingDetails;
+        public bool IsLoadingDetails
+        {
+            get => _isLoadingDetails;
+            set => SetProperty(ref _isLoadingDetails, value);
         }
 
         #endregion
@@ -229,6 +251,96 @@ namespace MandADiscoverySuite.ViewModels
 
         #endregion
 
+        #region Detail Field Loading
+
+        private async Task LoadSelectedItemDetailsAsync()
+        {
+            if (SelectedItem == null)
+            {
+                SelectedItemDetails.Clear();
+                return;
+            }
+
+            try
+            {
+                IsLoadingDetails = true;
+                SelectedItemDetails.Clear();
+
+                // Simulate async loading delay
+                await Task.Delay(100);
+
+                var dict = SelectedItem as IDictionary<string, object>;
+                if (dict != null)
+                {
+                    // Add AWS Cloud Infrastructure specific detail fields
+                    AddDetailField("Resource ID", GetStringValue(dict, new[] { "ResourceID", "resourceid", "ResourceId", "resourceId" }));
+                    AddDetailField("Type", GetStringValue(dict, new[] { "Type", "type", "ServiceType", "servicetype" }));
+                    AddDetailField("Region", GetStringValue(dict, new[] { "Region", "region", "AWSRegion", "awsregion" }));
+                    AddDetailField("Status", GetStringValue(dict, new[] { "Status", "status" }), "Text", true);
+                    AddDetailField("Creation Date", GetStringValue(dict, new[] { "CreationDate", "creationdate", "CreatedDate", "createddate" }));
+                    AddDetailField("Tags", GetStringValue(dict, new[] { "Tags", "tags" }), "Text", true);
+
+                    // AWS-specific fields
+                    AddDetailField("Account ID", GetStringValue(dict, new[] { "AccountID", "accountid", "AWSAccountId", "awsaccountid" }));
+                    AddDetailField("VPC ID", GetStringValue(dict, new[] { "VpcId", "vpcid", "VPCId", "vpcId" }));
+                    AddDetailField("Subnet ID", GetStringValue(dict, new[] { "SubnetId", "subnetid", "SubnetID", "subnetId" }));
+                    AddDetailField("Security Groups", GetStringValue(dict, new[] { "SecurityGroups", "securitygroups" }));
+
+                    // EC2-specific fields
+                    if (GetStringValue(dict, new[] { "Type", "type" })?.ToLower() == "ec2")
+                    {
+                        AddDetailField("Instance Type", GetStringValue(dict, new[] { "InstanceType", "instancetype", "EC2InstanceType", "ec2instancetype" }));
+                        AddDetailField("Key Name", GetStringValue(dict, new[] { "KeyName", "keyname" }));
+                        AddDetailField("Public IP", GetStringValue(dict, new[] { "PublicIp", "publicip", "PublicIPAddress", "publicipaddress" }));
+                        AddDetailField("Private IP", GetStringValue(dict, new[] { "PrivateIp", "privateip", "PrivateIPAddress", "privateipaddress" }));
+                    }
+
+                    // S3-specific fields
+                    else if (GetStringValue(dict, new[] { "Type", "type" })?.ToLower() == "s3")
+                    {
+                        AddDetailField("Bucket Name", GetStringValue(dict, new[] { "BucketName", "bucketname", "S3BucketName", "s3bucketname" }));
+                        AddDetailField("Object Count", GetStringValue(dict, new[] { "ObjectCount", "objectcount", "TotalObjects", "totalobjects" }));
+                        AddDetailField("Total Size", GetStringValue(dict, new[] { "TotalSize", "totalsize", "Size", "size" }));
+                    }
+
+                    // Add last modified and description
+                    AddDetailField("Last Modified", GetStringValue(dict, new[] { "LastModified", "lastmodified", "LastUpdated", "lastupdated" }));
+                    AddDetailField("Description", GetStringValue(dict, new[] { "Description", "description" }), "Text", true);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error loading selected item details for AWS Cloud Infrastructure");
+                SelectedItemDetails.Add(new DetailField("Error", ex.Message, "Error", false, "Failed to load details"));
+            }
+            finally
+            {
+                IsLoadingDetails = false;
+            }
+        }
+
+        private void AddDetailField(string name, string value, string type = "Text", bool editable = false, string tooltip = null)
+        {
+            if (!string.IsNullOrEmpty(value))
+            {
+                SelectedItemDetails.Add(new DetailField(name, value, type, editable, tooltip));
+            }
+        }
+
+        private string GetStringValue(IDictionary<string, object> dict, string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (dict.TryGetValue(key, out var value))
+                {
+                    return value?.ToString();
+                }
+            }
+            return null;
+        }
+
+        #endregion
+
         #region Helper Methods
 
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
@@ -244,21 +356,49 @@ namespace MandADiscoverySuite.ViewModels
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
 
                 // Count by service type
-                if (dict.TryGetValue("servicetype", out var serviceTypeObj))
+                if (dict.TryGetValue("servicetype", out var serviceTypeObj) ||
+                    dict.TryGetValue("ServiceType", out serviceTypeObj) ||
+                    dict.TryGetValue("Type", out serviceTypeObj))
                 {
                     var serviceType = serviceTypeObj?.ToString().ToLower();
-                    if (serviceType == "ec2") TotalInstances++;
-                    else if (serviceType == "s3") TotalBuckets++;
+                    if (serviceType == "ec2" || serviceType == "instance" || serviceType == "vm") TotalInstances++;
+                    else if (serviceType == "s3" || serviceType == "bucket" || serviceType == "storage") TotalBuckets++;
                 }
 
                 // Count regions
-                if (dict.TryGetValue("region", out var regionObj))
+                if (dict.TryGetValue("region", out var regionObj) ||
+                    dict.TryGetValue("Region", out regionObj))
                 {
                     regions.Add(regionObj?.ToString() ?? "");
+                }
+
+                // Update last discovery time
+                if (dict.TryGetValue("creationdate", out var creationDateObj) ||
+                    dict.TryGetValue("CreationDate", out creationDateObj) ||
+                    dict.TryGetValue("createddate", out creationDateObj) ||
+                    dict.TryGetValue("CreatedDate", out creationDateObj) ||
+                    dict.TryGetValue("lastdiscovery", out creationDateObj) ||
+                    dict.TryGetValue("LastDiscovery", out creationDateObj))
+                {
+                    if (DateTime.TryParse(creationDateObj?.ToString(), out var creationDate))
+                    {
+                        if (LastDiscoveryTime == DateTime.MinValue || creationDate > LastDiscoveryTime)
+                        {
+                            LastDiscoveryTime = creationDate;
+                        }
+                    }
+                }
+
+                // If no creation date found, use current time as last discovery
+                if (LastDiscoveryTime == DateTime.MinValue && data.Count > 0)
+                {
+                    LastDiscoveryTime = DateTime.Now;
                 }
             }
 
             TotalRegions = regions.Count;
+
+            _log?.LogInformation($"AWS Cloud Infrastructure Summary: Total Instances={TotalInstances}, Buckets={TotalBuckets}, Regions={TotalRegions}, Last Discovery={LastDiscoveryTime:yyyy-MM-dd HH:mm:ss}");
         }
 
         #endregion

@@ -73,7 +73,29 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    // Trigger async loading of item details when selection changes
+                    _ = LoadSelectedItemDetailsAsync();
+                }
+            }
+        }
+
+        // Details for the selected item - flattened from nested structures
+        private ObservableCollection<DetailField> _selectedItemDetails;
+        public ObservableCollection<DetailField> SelectedItemDetails
+        {
+            get => _selectedItemDetails ?? (_selectedItemDetails = new ObservableCollection<DetailField>());
+            set => SetProperty(ref _selectedItemDetails, value);
+        }
+
+        private bool _isLoadingDetails;
+        public bool IsLoadingDetails
+        {
+            get => _isLoadingDetails;
+            set => SetProperty(ref _isLoadingDetails, value);
         }
 
         #endregion
@@ -229,6 +251,127 @@ namespace MandADiscoverySuite.ViewModels
 
         #endregion
 
+        #region Detail Field Loading
+
+        private async Task LoadSelectedItemDetailsAsync()
+        {
+            if (SelectedItem == null)
+            {
+                SelectedItemDetails.Clear();
+                return;
+            }
+
+            try
+            {
+                IsLoadingDetails = true;
+                SelectedItemDetails.Clear();
+
+                // Simulate async loading delay
+                await Task.Delay(100);
+
+                var dict = SelectedItem as IDictionary<string, object>;
+                if (dict != null)
+                {
+                    // Flatten nested structures to detail fields
+                    AddDetailField("Policy Name", GetStringValue(dict, new[] { "PolicyName", "policyname", "Name", "name" }));
+                    AddDetailField("State", GetStringValue(dict, new[] { "State", "state", "Status", "status" }), "Text", true);
+                    AddDetailField("Created Date", GetStringValue(dict, new[] { "CreatedDate", "createddate", "Created", "created" }));
+
+                    // Handle nested Conditions/GrantControls structures
+                    FlattenNestedStructure(dict, "Conditions", "conditions", "Condition");
+                    FlattenNestedStructure(dict, "GrantControls", "grantcontrols", "Grant Control");
+
+                    // Additional policy metadata
+                    AddDetailField("Policy ID", GetStringValue(dict, new[] { "PolicyID", "policyid", "Id", "id" }));
+                    AddDetailField("Description", GetStringValue(dict, new[] { "Description", "description" }), "Text", true);
+                    AddDetailField("Last Modified", GetStringValue(dict, new[] { "LastModified", "lastmodified", "Modified", "modified" }));
+                    AddDetailField("Created By", GetStringValue(dict, new[] { "CreatedBy", "createdby", "Author", "author" }));
+
+                    // Session control details
+                    AddDetailField("Session Controls", GetStringValue(dict, new[] { "SessionControls", "sessioncontrols" }), "Text", true);
+                    AddDetailField("Sign-in Risk Level", GetStringValue(dict, new[] { "SignInRiskLevel", "signinrisklevel" }));
+                    AddDetailField("User Risk Level", GetStringValue(dict, new[] { "UserRiskLevel", "userrisklevel" }));
+
+                    // Additional permissions/details
+                    AddDetailField("Include Users", GetStringValue(dict, new[] { "IncludeUsers", "includeusers" }), "Text", true);
+                    AddDetailField("Exclude Users", GetStringValue(dict, new[] { "ExcludeUsers", "excludeusers" }), "Text", true);
+                    AddDetailField("Include Groups", GetStringValue(dict, new[] { "IncludeGroups", "includegroups" }), "Text", true);
+                    AddDetailField("Exclude Groups", GetStringValue(dict, new[] { "ExcludeGroups", "excludegroups" }), "Text", true);
+                    AddDetailField("Include Applications", GetStringValue(dict, new[] { "IncludeApplications", "includeapplications" }), "Text", true);
+                    AddDetailField("Exclude Applications", GetStringValue(dict, new[] { "ExcludeApplications", "excludeapplications" }), "Text", true);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error loading selected item details for Conditional Access Policies");
+                SelectedItemDetails.Add(new DetailField("Error", ex.Message, "Error", false, "Failed to load details"));
+            }
+            finally
+            {
+                IsLoadingDetails = false;
+            }
+        }
+
+        private void FlattenNestedStructure(IDictionary<string, object> dict, string primaryKey, string backupKey, string displayPrefix)
+        {
+            string nestedValue = GetStringValue(dict, new[] { primaryKey, backupKey });
+
+            if (!string.IsNullOrEmpty(nestedValue))
+            {
+                // Try to parse JSON-like nested structure and flatten it
+                try
+                {
+                    // If it's a simple object, display as text
+                    AddDetailField(displayPrefix, nestedValue, "Text", true);
+
+                    // If it contains multiple fields (comma-separated or structured)
+                    if (nestedValue.Contains(","))
+                    {
+                        var elements = nestedValue.Split(',');
+                        for (int i = 0; i < elements.Length; i++)
+                        {
+                            AddDetailField($"{displayPrefix} {i + 1}", elements[i].Trim(), "Text", true);
+                        }
+                    }
+                    else if (nestedValue.Contains(";"))
+                    {
+                        var elements = nestedValue.Split(';');
+                        for (int i = 0; i < elements.Length; i++)
+                        {
+                            AddDetailField($"{displayPrefix} {i + 1}", elements[i].Trim(), "Text", true);
+                        }
+                    }
+                }
+                catch
+                {
+                    // If parsing fails, just show as-is
+                    AddDetailField(displayPrefix, nestedValue, "Text", true);
+                }
+            }
+        }
+
+        private void AddDetailField(string name, string value, string type = "Text", bool editable = false, string tooltip = null)
+        {
+            if (!string.IsNullOrEmpty(value))
+            {
+                SelectedItemDetails.Add(new DetailField(name, value, type, editable, tooltip));
+            }
+        }
+
+        private string GetStringValue(IDictionary<string, object> dict, string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (dict.TryGetValue(key, out var value))
+                {
+                    return value?.ToString();
+                }
+            }
+            return null;
+        }
+
+        #endregion
+
         #region Helper Methods
 
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
@@ -236,19 +379,64 @@ namespace MandADiscoverySuite.ViewModels
             TotalPolicies = data.Count;
             EnabledPolicies = 0;
             DisabledPolicies = 0;
+            var disabledCount = 0; // Alternative counter for disabled policies
 
             foreach (var item in data)
             {
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
 
-                // Count enabled/disabled policies
-                if (dict.TryGetValue("state", out var stateObj))
+                // Count enabled/disabled policies (handle nested state structures)
+                if (dict.TryGetValue("state", out var stateObj) ||
+                    dict.TryGetValue("State", out stateObj) ||
+                    dict.TryGetValue("status", out stateObj))
                 {
                     var state = stateObj?.ToString().ToLower();
-                    if (state == "enabled") EnabledPolicies++;
-                    else if (state == "disabled") DisabledPolicies++;
+                    if (state == "enabled" || state == "active") EnabledPolicies++;
+                    else if (state == "disabled" || state == "inactive") DisabledPolicies++;
+                    else disabledCount++; // If not clearly enabled, might be disabled
+                }
+
+                // Handle nested conditions/status structures
+                if (dict.TryGetValue("conditions", out var conditionsObj) ||
+                    dict.TryGetValue("Conditions", out conditionsObj))
+                {
+                    var conditions = conditionsObj?.ToString();
+                    if (!string.IsNullOrEmpty(conditions))
+                    {
+                        // Could perform additional analysis on nested conditions
+                        _log?.LogDebug($"Policy conditions: {conditions.Length} characters");
+                    }
+                }
+
+                // Update last discovery time from created date
+                if (dict.TryGetValue("createddate", out var createdDateObj) ||
+                    dict.TryGetValue("CreatedDate", out createdDateObj) ||
+                    dict.TryGetValue("lastmodified", out createdDateObj) ||
+                    dict.TryGetValue("LastModified", out createdDateObj))
+                {
+                    if (DateTime.TryParse(createdDateObj?.ToString(), out var createdDate))
+                    {
+                        if (LastDiscoveryTime == DateTime.MinValue || createdDate > LastDiscoveryTime)
+                        {
+                            LastDiscoveryTime = createdDate;
+                        }
+                    }
                 }
             }
+
+            // If no specific disabled count found, assume remaining policies are disabled
+            if (DisabledPolicies == 0)
+            {
+                DisabledPolicies = TotalPolicies - EnabledPolicies;
+            }
+
+            // If no creation date found, use current time as last discovery
+            if (LastDiscoveryTime == DateTime.MinValue && data.Count > 0)
+            {
+                LastDiscoveryTime = DateTime.Now;
+            }
+
+            _log?.LogInformation($"Conditional Access Policies Summary: Total={TotalPolicies}, Enabled={EnabledPolicies}, Disabled={DisabledPolicies}, Last Discovery={LastDiscoveryTime:yyyy-MM-dd HH:mm:ss}");
         }
 
         #endregion

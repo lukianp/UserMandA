@@ -73,7 +73,21 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    // Update selected item details for details panel
+                    UpdateSelectedItemDetails();
+                }
+            }
+        }
+
+        private ObservableCollection<KeyValuePair<string, string>> _selectedItemDetails = new ObservableCollection<KeyValuePair<string, string>>();
+        public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails
+        {
+            get => _selectedItemDetails;
+            set => SetProperty(ref _selectedItemDetails, value);
         }
 
         #endregion
@@ -254,7 +268,8 @@ namespace MandADiscoverySuite.ViewModels
                 // Sum storage
                 if (dict.TryGetValue("storagesize", out var storageObj) ||
                     dict.TryGetValue("StorageSize", out storageObj) ||
-                    dict.TryGetValue("storageused", out storageObj))
+                    dict.TryGetValue("storageused", out storageObj) ||
+                    dict.TryGetValue("usedspace", out storageObj))
                 {
                     if (long.TryParse(storageObj?.ToString(), out var storage))
                     {
@@ -262,6 +277,44 @@ namespace MandADiscoverySuite.ViewModels
                     }
                 }
             }
+        }
+
+        private void UpdateSelectedItemDetails()
+        {
+            SelectedItemDetails.Clear();
+
+            if (SelectedItem == null) return;
+
+            var dict = (System.Collections.Generic.IDictionary<string, object>)SelectedItem;
+
+            // OneDrive Details
+            dict.TryGetValue("username", out var usernameObj);
+            dict.TryGetValue("useremail", out var useremailObj);
+
+            // Use username or fallback to useremail
+            var displayName = usernameObj?.ToString() ?? useremailObj?.ToString() ?? "";
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("User Name", displayName));
+
+            // Add email if different from username
+            if (!string.IsNullOrEmpty(useremailObj?.ToString()) && useremailObj?.ToString() != displayName)
+            {
+                SelectedItemDetails.Add(new KeyValuePair<string, string>("Email", useremailObj?.ToString() ?? ""));
+            }
+
+            dict.TryGetValue("quota", out var quotaObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Quota (GB)", $"{quotaObj?.ToString() ?? "0"} GB"));
+
+            dict.TryGetValue("usedspace", out var usedspaceObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Used Space", $"{usedspaceObj?.ToString() ?? "0"} GB"));
+
+            dict.TryGetValue("filecount", out var filecountObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("File Count", filecountObj?.ToString() ?? "0"));
+
+            dict.TryGetValue("lastmodified", out var lastmodifiedObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Last Modified", lastmodifiedObj?.ToString() ?? ""));
+
+            dict.TryGetValue("status", out var statusObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Status", statusObj?.ToString() ?? ""));
         }
 
         #endregion

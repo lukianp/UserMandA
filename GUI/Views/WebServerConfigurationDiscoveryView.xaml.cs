@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using System;
 
 namespace MandADiscoverySuite.Views
 {
@@ -9,7 +10,21 @@ namespace MandADiscoverySuite.Views
     {
         public WebServerConfigurationDiscoveryView()
         {
-            InitializeComponent();
+            try
+            {
+                InitializeComponent();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Exception initializing WebServerConfigurationDiscoveryView: {ex.Message}");
+                throw;
+            }
+
+            // Log successful loading
+            Loaded += (s, e) =>
+            {
+                System.Diagnostics.Debug.WriteLine("WebServerConfigurationDiscoveryView loaded successfully");
+            };
         }
 
         // Factory method for ViewRegistry

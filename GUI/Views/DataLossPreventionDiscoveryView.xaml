@@ -120,11 +120,19 @@
             </Grid.ColumnDefinitions>
 
             <DataGrid Grid.Column="0" ItemsSource="{Binding SelectedResults}"
-                      AutoGenerateColumns="True" Margin="10"
-                      SelectedItem="{Binding SelectedItem}"
-                      Visibility="{Binding SelectedResults.Count, Converter={StaticResource CountToVisibility}}"
-                      CanUserAddRows="False" CanUserDeleteRows="False"
-                      SelectionMode="Extended" GridLinesVisibility="Horizontal">
+                       AutoGenerateColumns="False" Margin="10"
+                       SelectedItem="{Binding SelectedItem}"
+                       Visibility="{Binding SelectedResults.Count, Converter={StaticResource CountToVisibility}}"
+                       CanUserAddRows="False" CanUserDeleteRows="False"
+                       SelectionMode="Single" GridLinesVisibility="Horizontal">
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Policy Name" Binding="{Binding policимен}" Width="200" />
+                    <DataGridTextColumn Header="Severity" Binding="{Binding severity}" Width="100" />
+                    <DataGridTextColumn Header="Incident Count" Binding="{Binding incidentcount}" Width="120" />
+                    <DataGridTextColumn Header="Last Incident" Binding="{Binding lastincident}" Width="150" />
+                    <DataGridTextColumn Header="Scope" Binding="{Binding scope}" Width="150" />
+                </DataGrid.Columns>
 
             </DataGrid>
 

@@ -13,7 +13,21 @@ namespace MandADiscoverySuite.Views
     {
         public SharePointDiscoveryView()
         {
-            InitializeComponent();
+            try
+            {
+                InitializeComponent();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Exception initializing SharePointDiscoveryView: {ex.Message}");
+                throw;
+            }
+
+            // Log successful loading
+            Loaded += (s, e) =>
+            {
+                System.Diagnostics.Debug.WriteLine("SharePointDiscoveryView loaded successfully");
+            };
         }
 
         // Factory method for ViewRegistry

@@ -13,7 +13,21 @@ namespace MandADiscoverySuite.Views
     {
         public OneDriveBusinessDiscoveryView()
         {
-            InitializeComponent();
+            try
+            {
+                InitializeComponent();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Exception initializing OneDriveBusinessDiscoveryView: {ex.Message}");
+                throw;
+            }
+
+            // Log successful loading
+            Loaded += (s, e) =>
+            {
+                System.Diagnostics.Debug.WriteLine("OneDriveBusinessDiscoveryView loaded successfully");
+            };
         }
 
         // Factory method for ViewRegistry

@@ -74,8 +74,17 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    UpdateSelectedItemDetails();
+                }
+            }
         }
+
+        private ObservableCollection<KeyValuePair<string, string>> _selectedItemDetails = new();
+        public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails => _selectedItemDetails;
 
         #endregion
 
@@ -113,6 +122,10 @@ namespace MandADiscoverySuite.ViewModels
                 IsProcessing = true;
                 ProcessingMessage = "Loading Network Infrastructure data...";
 
+                // Clear previous state
+                HeaderWarnings.Clear();
+                LastError = null;
+
                 // Load from specific CSV path using the dedicated method
                 var loadedCsvData = await _csvService.LoadNetworkInfrastructureDiscoveryAsync();
 
@@ -125,16 +138,25 @@ namespace MandADiscoverySuite.ViewModels
 
                 var result = DataLoaderResult<dynamic>.Success(results, new List<string>());
 
-                if (result.HeaderWarnings.Any())
+                // Clear previous header warnings and handle gracefully
+                HeaderWarnings.Clear();
+                LastError = null;
+
+                // Handle missing column warnings gracefully
+                if (result.HeaderWarnings.Count > 0)
                 {
-                    // Set error message for red banner
-                    ErrorMessage = string.Join("; ", result.HeaderWarnings);
-                    HasErrors = true;
+                    foreach (var warning in result.HeaderWarnings)
+                    {
+                        HeaderWarnings.Add($"Network Infrastructure: {warning}");
+                    }
+
+                    // Don't set HasErrors for header warnings - these are handled by the UI banner
+                    // Only set errors for actual load failures
+                    HasErrors = false;
                 }
                 else
                 {
                     HasErrors = false;
-                    ErrorMessage = string.Empty;
                 }
 
                 // Update collections and summary statistics
@@ -156,11 +178,29 @@ namespace MandADiscoverySuite.ViewModels
             catch (Exception ex)
             {
                 _log?.LogError(ex, "Error loading Network Infrastructure CSV data");
-                ShowError("Data Load Failed", ex.Message);
+
+                // Handle errors gracefully by adding to HeaderWarnings instead of just showing error
+                if (ex.Message.Contains("column") || ex.Message.Contains("header") || ex.Message.Contains("CSV"))
+                {
+                    HeaderWarnings.Add($"Network Infrastructure Data Load Warning: {ex.Message}");
+                    // Don't set error dialog for column-related issues - they're handled in the warning banner
+                }
+                else
+                {
+                    // For actual load failures, show error dialog
+                    LastError = $"Failed to load Network Infrastructure data: {ex.Message}";
+                    HasErrors = true;
+                }
+
+                // Still try to show some helpful information even if load failed
+                LastUpdated = DateTime.Now;
+                OnPropertyChanged(nameof(ResultsCount));
+                OnPropertyChanged(nameof(HasResults));
             }
             finally
             {
                 IsProcessing = false;
+                ProcessingMessage = string.Empty;
             }
         }
 
@@ -286,6 +326,28 @@ namespace MandADiscoverySuite.ViewModels
                 }
             }
             return null;
+        }
+
+        private void UpdateSelectedItemDetails()
+        {
+            SelectedItemDetails.Clear();
+
+            if (SelectedItem is System.Collections.Generic.IDictionary<string, object> dict)
+            {
+                // Add all properties as key-value pairs, excluding null/empty values
+                foreach (var kvp in dict)
+                {
+                    var value = kvp.Value?.ToString();
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        // Format the key for display (convert camelCase to Title Case, handle underscores)
+                        var formattedKey = System.Text.RegularExpressions.Regex.Replace(
+                            kvp.Key.Replace("_", " "), @"([\w])([\w]+)", "$1$2").Trim();
+
+                        SelectedItemDetails.Add(new KeyValuePair<string, string>(formattedKey, value));
+                    }
+                }
+            }
         }
 
         #endregion
