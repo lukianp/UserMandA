@@ -54,4 +54,35 @@
     <SolidColorBrush x:Key="ValidBorderBrush" Color="#FF00FF00"/>
     <SolidColorBrush x:Key="InvalidBorderBrush" Color="#FFFF0000"/>
 
+    <!-- High Contrast Gradients -->
+    <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FFFFFF00" Offset="0"/>
+        <GradientStop Color="#FF999900" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="AccentGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FFFFFF00" Offset="0"/>
+        <GradientStop Color="#FFCCCC00" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="SuccessGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FF00FF00" Offset="0"/>
+        <GradientStop Color="#FF00CC00" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="WarningGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FFFFA500" Offset="0"/>
+        <GradientStop Color="#FFCC8300" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="ErrorGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FFFF0000" Offset="0"/>
+        <GradientStop Color="#FFCC0000" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="DangerGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FFFF0000" Offset="0"/>
+        <GradientStop Color="#FFCC0000" Offset="1"/>
+    </LinearGradientBrush>
+
 </ResourceDictionary>

@@ -21,6 +21,8 @@
                 <ResourceDictionary Source="Themes/SpacingSystem.xaml"/>
                 <ResourceDictionary Source="Themes/CustomTooltips.xaml"/>
                 <ResourceDictionary Source="Themes/DashboardWidgets.xaml"/>
+                <!-- High Contrast Theme (default) -->
+                <ResourceDictionary Source="Themes/HighContrastTheme.xaml"/>
                 
                 <!-- Data grid theming -->
                 <ResourceDictionary Source="Resources/DataGridTheme.xaml"/>
@@ -45,53 +47,13 @@
             <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
             <converters:ProgressToVisibilityConverter x:Key="ProgressToVisibilityConverter"/>
             
-            <!-- Common Colors -->
-            <SolidColorBrush x:Key="PrimaryBrush" Color="#0066CC"/>
-            <SolidColorBrush x:Key="SecondaryBrush" Color="#2E2E2E"/>
-            <SolidColorBrush x:Key="AccentBrush" Color="#FF6B35"/>
-            <SolidColorBrush x:Key="BackgroundBrush" Color="#F5F5F5"/>
-            <SolidColorBrush x:Key="SurfaceBrush" Color="White"/>
-            <SolidColorBrush x:Key="ForegroundBrush" Color="#333333"/>
-            <SolidColorBrush x:Key="SuccessBrush" Color="#28A745"/>
-            <SolidColorBrush x:Key="ErrorBrush" Color="#DC3545"/>
-            <SolidColorBrush x:Key="WarningBrush" Color="#FFC107"/>
-            <SolidColorBrush x:Key="PrimaryTextBrush" Color="#333333"/>
-            <SolidColorBrush x:Key="SecondaryTextBrush" Color="#4A5568"/>
-            <SolidColorBrush x:Key="BorderBrush" Color="#E2E8F0"/>
-            <SolidColorBrush x:Key="ButtonHoverBrush" Color="#F8F9FA"/>
-            <SolidColorBrush x:Key="InputBackgroundBrush" Color="White"/>
-            <SolidColorBrush x:Key="CardBrush" Color="White"/>
-            <SolidColorBrush x:Key="ValidBorderBrush" Color="#28A745"/>
-            <SolidColorBrush x:Key="InvalidBorderBrush" Color="#DC3545"/>
+            <!-- Theme-specific colors handled by merged dictionaries -->
             
             <!-- Dark Theme Colors -->
             <SolidColorBrush x:Key="DarkBackgroundBrush" Color="#1E1E1E"/>
             <SolidColorBrush x:Key="DarkSurfaceBrush" Color="#2D2D30"/>
             <SolidColorBrush x:Key="DarkForegroundBrush" Color="#CCCCCC"/>
             
-            <!-- Additional colors -->
-            <SolidColorBrush x:Key="MutedForegroundBrush" Color="#999999"/>
-            
-            <!-- Modern Gradient Brushes -->
-            <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#FF1e3c72" Offset="0"/>
-                <GradientStop Color="#FF2a5298" Offset="1"/>
-            </LinearGradientBrush>
-            
-            <LinearGradientBrush x:Key="AccentGradient" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#FF667eea" Offset="0"/>
-                <GradientStop Color="#FF764ba2" Offset="1"/>
-            </LinearGradientBrush>
-            
-            <LinearGradientBrush x:Key="SuccessGradient" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#FF11998e" Offset="0"/>
-                <GradientStop Color="#FF38ef7d" Offset="1"/>
-            </LinearGradientBrush>
-            
-            <LinearGradientBrush x:Key="DangerGradient" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#FFff5f6d" Offset="0"/>
-                <GradientStop Color="#FFffc371" Offset="1"/>
-            </LinearGradientBrush>
             
             <!-- Modern Button Style -->
             <Style x:Key="ModernButtonStyle" TargetType="Button">

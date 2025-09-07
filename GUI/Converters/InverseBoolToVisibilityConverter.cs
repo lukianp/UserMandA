@@ -5,16 +5,16 @@ using System.Windows.Data;
 
 namespace MandADiscoverySuite.Converters
 {
-    public class InvertedBoolToVisibilityConverter : IValueConverter
+    public class InverseBoolToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if (value is bool boolValue)
             {
-                return boolValue ? Visibility.Hidden : Visibility.Visible;
+                return boolValue ? Visibility.Collapsed : Visibility.Visible;
             }
-
-            return Visibility.Hidden;
+            
+            return Visibility.Collapsed;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -23,7 +23,7 @@ namespace MandADiscoverySuite.Converters
             {
                 return visibility != Visibility.Visible;
             }
-
+            
             return true;
         }
     }

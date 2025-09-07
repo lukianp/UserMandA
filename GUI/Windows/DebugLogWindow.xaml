@@ -7,11 +7,6 @@
         ResizeMode="CanResize">
     
     <Window.Resources>
-        <!-- Modern Gradient Brushes -->
-        <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#FF1e3c72" Offset="0"/>
-            <GradientStop Color="#FF2a5298" Offset="1"/>
-        </LinearGradientBrush>
         
         <Style x:Key="ModernButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{StaticResource PrimaryGradient}"/>

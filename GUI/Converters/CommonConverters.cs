@@ -45,32 +45,6 @@ namespace MandADiscoverySuite.Converters
         }
     }
 
-    /// <summary>
-    /// Converts count (int) to Visibility. 0 = Collapsed, > 0 = Visible
-    /// </summary>
-    public class CountToVisibilityConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            if (value == null) return Visibility.Collapsed;
-            
-            int count = 0;
-            if (value is int intValue)
-                count = intValue;
-            else if (value is long longValue)
-                count = (int)longValue;
-            else if (int.TryParse(value.ToString(), out int parsed))
-                count = parsed;
-            
-            return count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            // ConvertBack not supported for this converter
-            return Binding.DoNothing;
-        }
-    }
 
     /// <summary>
     /// Converts boolean to visibility
