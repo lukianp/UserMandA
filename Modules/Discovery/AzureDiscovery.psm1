@@ -1421,7 +1421,7 @@ function Invoke-AzureDiscovery {
             $Result.AddWarning("Failed to discover Intune policies: $($_.Exception.Message)", @{Section="IntunePolicies"})
         }
         #endregion
-        
+         
         #region Legacy Azure Subscription Discovery (if Azure PowerShell works)
         if ($azureConnection) {
             Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Azure Subscriptions - Enumerating subscriptions..." -Level "INFO"
@@ -1777,10 +1777,12 @@ function Invoke-AzureDiscovery {
         
         # Store all discovered data
         $Result.RecordCount = $allDiscoveredData.Count
-        
+
         # Return data grouped by type
         return $allDiscoveredData | Group-Object -Property _DataType
-    }
+        } catch {
+            $Result.AddError('Discovery failed', $_.Exception, @{Section = 'Discovery'})
+        }
 
     # Execute discovery using the base module
     Start-DiscoveryModule `
