@@ -67,7 +67,7 @@
                 <StackPanel>
                     <TextBlock Text="Total Guests" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
                     <TextBlock Text="👤" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-TEST
+                    <TextBlock Text="{Binding TotalGuests}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
@@ -139,12 +139,11 @@ TEST
                       Background="Transparent">
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Team Name" Binding="{Binding teamname}" Width="*" />
-                    <DataGridTextColumn Header="Description" Binding="{Binding description}" Width="200" />
+                    <DataGridTextColumn Header="TeamName" Binding="{Binding teamname}" Width="*" />
                     <DataGridTextColumn Header="Owner" Binding="{Binding owner}" Width="150" />
-                    <DataGridTextColumn Header="Channel Count" Binding="{Binding channelcount}" Width="100" />
-                    <DataGridTextColumn Header="Member Count" Binding="{Binding membercount}" Width="100" />
-                    <DataGridTextColumn Header="Created Date" Binding="{Binding createddate, StringFormat=yyyy-MM-dd}" Width="120" />
+                    <DataGridTextColumn Header="CreatedDate" Binding="{Binding createddate, StringFormat=d}" Width="120" />
+                    <DataGridTextColumn Header="MemberCount" Binding="{Binding membercount}" Width="100" />
+                    <DataGridTextColumn Header="ChannelCount" Binding="{Binding channelcount}" Width="100" />
                     <DataGridTextColumn Header="Visibility" Binding="{Binding visibility}" Width="100" />
                 </DataGrid.Columns>
             </DataGrid>

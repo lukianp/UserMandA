@@ -11,11 +11,31 @@ namespace MandADiscoverySuite.Views
     /// </summary>
     public partial class ActiveDirectoryDiscoveryView : UserControl
     {
-        public ActiveDirectoryDiscoveryView()
+        public ActiveDirectoryDiscoveryView(MainViewModel? mainViewModel = null, ModuleInfo? moduleInfo = null)
         {
             try
             {
                 InitializeComponent();
+
+                // Set DataContext to ActiveDirectoryDiscoveryViewModel
+                var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
+                var logger = loggerFactory.CreateLogger<ActiveDirectoryDiscoveryViewModel>();
+
+                // If no moduleInfo provided, create a default one
+                if (moduleInfo == null)
+                {
+                    moduleInfo = new ModuleInfo
+                    {
+                        DisplayName = "Active Directory Discovery",
+                        Id = "activedirectorydiscovery",
+                        Description = "Discover and manage Active Directory objects",
+                        Icon = "🔍",
+                        Category = "Discovery"
+                    };
+                }
+
+                // If no mainViewModel provided, we can still create ViewModel but some navigation features may be missing
+                this.DataContext = new ActiveDirectoryDiscoveryViewModel(moduleInfo, mainViewModel, logger);
             }
             catch (Exception ex)
             {
@@ -30,10 +50,10 @@ namespace MandADiscoverySuite.Views
             };
         }
 
-        // Factory method for ViewRegistry
-        public static UserControl CreateView()
+        // Factory method for ViewRegistry - parameters can be injected at runtime if available
+        public static UserControl CreateView(MainViewModel? mainViewModel = null, ModuleInfo? moduleInfo = null)
         {
-            return new ActiveDirectoryDiscoveryView();
+            return new ActiveDirectoryDiscoveryView(mainViewModel, moduleInfo);
         }
     }
 }

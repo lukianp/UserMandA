@@ -109,9 +109,9 @@ namespace MandADiscoverySuite.ViewModels
             {
                 "teamname" => "Team Name",
                 "channelcount" => "Channel Count",
-                "membercount" => "Member Count",
+                "membercount" => "Guest Count",
                 "createddate" => "Created Date",
-                "visibility" => "Visibility",
+                "visibility" => "Privacy Level",
                 "description" => "Description",
                 "owner" => "Owner",
                 _ => propertyName
@@ -158,7 +158,7 @@ namespace MandADiscoverySuite.ViewModels
                 ProcessingMessage = "Loading Teams data...";
 
                 // Load from specific CSV path
-                var csvPath = @"C:\discoverydata\ljpops\Raw\TeamsDiscovery.csv";
+                var csvPath = @"C:\discoverydata\ljpops\Raw\MicrosoftTeamsDiscovery.csv";
                 var loadedCsvData = await _csvService.LoadCsvDataAsync(csvPath);
 
                 // Convert to dynamic list

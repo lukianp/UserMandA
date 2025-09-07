@@ -35,8 +35,8 @@ namespace MandADiscoverySuite.Services
                 ["security-policy"] = () => new SecurityPolicyView(), // Direct access key
                 ["securitypolicy"] = () => new SecurityPolicyView(), // Alternative key
                 ["grouppolicysecurity"] = () => new GroupPolicySecurityView(), // Legacy security view
-                ["activedirectorydiscovery"] = () => new ActiveDirectoryDiscoveryView(),
-                ["teamsdiscovery"] = () => new TeamsDiscoveryView(),
+                ["activedirectorydiscovery"] = () => ActiveDirectoryDiscoveryView.CreateView(null, null), // Updated to use factory method
+                ["teamsdiscovery"] = () => new MicrosoftTeamsDiscoveryView(),
                 ["microsoftteamsdiscovery"] = () => new MicrosoftTeamsDiscoveryView(),
                 ["MicrosoftTeamsDiscovery"] = () => new MicrosoftTeamsDiscoveryView(),
                 ["azurediscovery"] = () => new AzureInfrastructureDiscoveryView(),
