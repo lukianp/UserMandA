@@ -9,7 +9,10 @@
         <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Themes/ThemeResources.xaml"/>
+                <ResourceDictionary Source="../Resources/Converters.xaml" />
+                <ResourceDictionary Source="../Resources/DataGridTheme.xaml" />
+                <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
+                <ResourceDictionary Source="../Themes/Colors.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -29,9 +32,7 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10">
             <TextBlock Text="Microsoft Teams Discovery" FontSize="24" FontWeight="Bold"
                        VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding TotalTeams, StringFormat='({0} items)'}"
-                       FontSize="16" Margin="10,0,0,0" VerticalAlignment="Center"
-                       Visibility="Visible"/>
+            <TextBlock Text="{Binding TotalTeams, StringFormat='({0} items)'}" FontSize="16" Margin="10,0,0,0" VerticalAlignment="Center" />
         </StackPanel>
 
         <!-- Toolbar Section -->
