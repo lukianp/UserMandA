@@ -10,6 +10,7 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Themes/Colors.xaml"/>
                 <ResourceDictionary Source="/Themes/ThemeStyles.xaml"/>
                 <ResourceDictionary Source="/Resources/Converters.xaml"/>
                 <ResourceDictionary Source="/Resources/DataGridTheme.xaml"/>
@@ -203,18 +204,16 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="16">
                             <TextBlock Text="Environment Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
-
-                            <TextBlock Text="Environment Name:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.environmentname}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Type:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.environmenttype}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Status:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.status}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="Region:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.region}" FontSize="14" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                            <ItemsControl ItemsSource="{Binding SelectedItemDetails}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,0,0,10">
+                                            <TextBlock Text="{Binding FieldName}" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                            <TextBlock Text="{Binding FieldValue}" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>

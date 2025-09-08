@@ -114,8 +114,10 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ShowLogsCommand { get; }
 
         // New Discovery Views commands
+        public ICommand ShowFileServerDiscoveryCommand { get; }
         public ICommand ShowTeamsDiscoveryCommand { get; }
         public ICommand ShowMicrosoftTeamsDiscoveryCommand { get; }
+        public ICommand ShowVMwareDiscoveryCommand { get; }
         public ICommand ShowAzureDiscoveryCommand { get; }
         public ICommand ShowDataLossPreventionDiscoveryCommand { get; }
         public ICommand ShowWebServerConfigurationDiscoveryCommand { get; }
@@ -124,6 +126,8 @@ namespace MandADiscoverySuite.ViewModels
         public ICommand ShowNetworkInfrastructureDiscoveryCommand { get; }
         public ICommand ShowSharePointDiscoveryCommand { get; }
         public ICommand ShowActiveDirectoryDiscoveryCommand { get; }
+        public ICommand ShowOneDriveBusinessDiscoveryCommand { get; }
+        public ICommand ShowSQLServerDiscoveryCommand { get; }
 
         // Report commands
         public ICommand GenerateReportCommand { get; }
@@ -491,8 +495,10 @@ namespace MandADiscoverySuite.ViewModels
             ShowLogsCommand = new AsyncRelayCommand(ShowLogsAsync);
 
             // New Discovery Views commands
+            ShowFileServerDiscoveryCommand = new AsyncRelayCommand(ShowFileServerDiscoveryAsync);
             ShowTeamsDiscoveryCommand = new AsyncRelayCommand(ShowTeamsDiscoveryAsync);
             ShowMicrosoftTeamsDiscoveryCommand = new AsyncRelayCommand(ShowMicrosoftTeamsDiscoveryAsync);
+            ShowVMwareDiscoveryCommand = new AsyncRelayCommand(ShowVMwareDiscoveryAsync);
             ShowAzureDiscoveryCommand = new AsyncRelayCommand(ShowAzureDiscoveryAsync);
             ShowDataLossPreventionDiscoveryCommand = new AsyncRelayCommand(ShowDataLossPreventionDiscoveryAsync);
             ShowWebServerConfigurationDiscoveryCommand = new AsyncRelayCommand(ShowWebServerConfigurationDiscoveryAsync);
@@ -501,6 +507,8 @@ namespace MandADiscoverySuite.ViewModels
             ShowNetworkInfrastructureDiscoveryCommand = new AsyncRelayCommand(ShowNetworkInfrastructureDiscoveryAsync);
             ShowSharePointDiscoveryCommand = new AsyncRelayCommand(ShowSharePointDiscoveryAsync);
             ShowActiveDirectoryDiscoveryCommand = new AsyncRelayCommand(ShowActiveDirectoryDiscoveryAsync);
+            ShowOneDriveBusinessDiscoveryCommand = new AsyncRelayCommand(ShowOneDriveBusinessDiscoveryAsync);
+            ShowSQLServerDiscoveryCommand = new AsyncRelayCommand(ShowSQLServerDiscoveryAsync);
 
             // Report commands
             GenerateReportCommand = new AsyncRelayCommand<string>(GenerateReportAsync);
@@ -2996,6 +3004,11 @@ namespace MandADiscoverySuite.ViewModels
         private async Task CopySelectedGroupsAsync() => await Task.CompletedTask;
 
         // New Discovery Views command implementations
+        private async Task ShowFileServerDiscoveryAsync()
+        {
+            await _navigationService.NavigateToTabAsync("fileserverdiscovery", "File Server Discovery");
+        }
+
         private async Task ShowTeamsDiscoveryAsync()
         {
             await _navigationService.NavigateToTabAsync("teamsdiscovery", "Teams Discovery");
@@ -3004,6 +3017,11 @@ namespace MandADiscoverySuite.ViewModels
         private async Task ShowMicrosoftTeamsDiscoveryAsync()
         {
             await _navigationService.NavigateToTabAsync("microsoftteamsdiscovery", "Microsoft Teams Discovery");
+        }
+
+        private async Task ShowVMwareDiscoveryAsync()
+        {
+            await _navigationService.NavigateToTabAsync("vmwarediscovery", "VMware Discovery");
         }
 
         private async Task ShowAzureDiscoveryAsync()
@@ -3045,7 +3063,17 @@ namespace MandADiscoverySuite.ViewModels
         {
             await _navigationService.NavigateToTabAsync("activedirectorydiscovery", "Active Directory Discovery");
         }
-        
+
+        private async Task ShowOneDriveBusinessDiscoveryAsync()
+        {
+            await _navigationService.NavigateToTabAsync("onedrivebusinessdiscovery", "OneDrive Business Discovery");
+        }
+
+        private async Task ShowSQLServerDiscoveryAsync()
+        {
+            await _navigationService.NavigateToTabAsync("SQLServerDiscovery", "SQL Server Discovery");
+        }
+
         // Methods referenced by code-behind
         public async Task PreInitializeCriticalViewsAsync()
         {

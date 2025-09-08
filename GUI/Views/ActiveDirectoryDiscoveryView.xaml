@@ -11,10 +11,10 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Themes/Colors.xaml"/>
                 <ResourceDictionary Source="/Themes/ThemeStyles.xaml"/>
                 <ResourceDictionary Source="/Resources/Converters.xaml"/>
                 <ResourceDictionary Source="/Resources/DataGridTheme.xaml"/>
-                <ResourceDictionary Source="/Themes/RefinedColorPalette.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -79,6 +79,14 @@
                 <StackPanel>
                     <TextBlock Text="Total Computers" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
                     <TextBlock Text="{Binding TotalComputers}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TertiaryBrush}" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
+                <StackPanel>
+                    <TextBlock Text="Total OUs" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding TotalOUs}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
@@ -184,6 +192,10 @@
                         <DataGridTextColumn Header="Created Date"
                                             Binding="{Binding createddatetime}"
                                             Width="120"/>
+
+                        <DataGridTextColumn Header="Distinguished Name"
+                                            Binding="{Binding distinguishedname}"
+                                            Width="250"/>
                     </DataGrid.Columns>
 
                     <DataGrid.RowStyle>

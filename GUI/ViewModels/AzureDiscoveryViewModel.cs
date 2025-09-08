@@ -282,11 +282,23 @@ namespace MandADiscoverySuite.ViewModels
             SelectedItemDetails.Clear();
             if (SelectedItem is System.Collections.Generic.IDictionary<string, object> dict)
             {
-                foreach (var kvp in dict)
+                // Show only ResourceID and Provider as specified
+                if (dict.TryGetValue("resourceid", out var resourceIdObj) ||
+                    dict.TryGetValue("resource_id", out resourceIdObj) ||
+                    dict.TryGetValue("id", out resourceIdObj))
                 {
-                    string key = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(kvp.Key);
-                    string value = kvp.Value?.ToString() ?? string.Empty;
-                    SelectedItemDetails.Add(new KeyValuePair<string, string>(key, value));
+                    string resourceId = CultureInfo.CurrentCulture.TextInfo.ToTitleCase("resource_id");
+                    string value = resourceIdObj?.ToString() ?? string.Empty;
+                    SelectedItemDetails.Add(new KeyValuePair<string, string>(resourceId, value));
+                }
+
+                if (dict.TryGetValue("provider", out var providerObj) ||
+                    dict.TryGetValue("resourceprovider", out providerObj) ||
+                    dict.TryGetValue("provider_code", out providerObj))
+                {
+                    string provider = CultureInfo.CurrentCulture.TextInfo.ToTitleCase("provider");
+                    string value = providerObj?.ToString() ?? string.Empty;
+                    SelectedItemDetails.Add(new KeyValuePair<string, string>(provider, value));
                 }
             }
         }

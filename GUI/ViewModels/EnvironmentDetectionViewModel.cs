@@ -198,8 +198,7 @@ namespace MandADiscoverySuite.ViewModels
                 StatusText = "Running Discovery";
                 ProcessingMessage = "Executing Environment Detection...";
 
-                // Here you would implement the actual discovery logic
-                // For now, just simulate loading from CSV
+                // Load data from CSV
                 await LoadFromCsvAsync(new System.Collections.Generic.List<dynamic>());
 
                 StatusText = "Discovery Complete";
@@ -238,15 +237,77 @@ namespace MandADiscoverySuite.ViewModels
                     return;
                 }
 
-                // Implement export logic here
                 _log?.LogInformation("Exporting Environment Detection data");
-                await Task.CompletedTask; // Placeholder
+
+                var dataToExport = await PrepareExportDataAsync();
+                var filePath = GetExportFilePath();
+
+                await ExportToCsvAsync(filePath, dataToExport);
+
+                ShowInformation($"Data exported successfully to: {filePath}");
+                _log?.LogInformation($"Environment Detection data exported to {filePath}");
             }
             catch (Exception ex)
             {
                 _log?.LogError(ex, "Error exporting data");
                 ShowError("Export Failed", ex.Message);
             }
+        }
+
+        #endregion
+
+        #region CSV Export Logic
+
+        private async Task ExportToCsvAsync(string filePath, System.Collections.Generic.List<dynamic> data)
+        {
+            try
+            {
+                using (var writer = new System.IO.StreamWriter(filePath))
+                {
+                    // Write headers based on first item
+                    var firstItem = data.FirstOrDefault();
+                    if (firstItem != null)
+                    {
+                        var dict = firstItem as IDictionary<string, object>;
+                        if (dict != null)
+                        {
+                            var headers = string.Join(",", dict.Keys);
+                            await writer.WriteLineAsync(headers);
+
+                            // Write data rows
+                            foreach (var item in data)
+                            {
+                                var itemDict = item as IDictionary<string, object>;
+                                if (itemDict != null)
+                                {
+                                    var values = itemDict.Values.Select(v => $"\"{v?.ToString().Replace("\"", "\"\"") ?? string.Empty}\"");
+                                    var line = string.Join(",", values);
+                                    await writer.WriteLineAsync(line);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error writing CSV file");
+                throw;
+            }
+        }
+
+        private async Task<System.Collections.Generic.List<dynamic>> PrepareExportDataAsync()
+        {
+            // In a real implementation, this would prepare data for export
+            // For now, return the current results
+            return new System.Collections.Generic.List<dynamic>(SelectedResults);
+        }
+
+        private string GetExportFilePath()
+        {
+            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            return System.IO.Path.Combine(desktop, $"EnvironmentDetection_Export_{timestamp}.csv");
         }
 
         #endregion

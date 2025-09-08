@@ -27,10 +27,11 @@ namespace MandADiscoverySuite.Views
                     moduleInfo = new ModuleInfo
                     {
                         DisplayName = "Active Directory Discovery",
-                        Id = "activedirectorydiscovery",
+                        CommandParameter = "activedirectorydiscovery",
                         Description = "Discover and manage Active Directory objects",
                         Icon = "🔍",
-                        Category = "Discovery"
+                        Category = "Discovery",
+                        Enabled = true
                     };
                 }
 

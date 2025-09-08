@@ -15,7 +15,7 @@
     <converters:CountToVisibilityConverter x:Key="CountToVisibility" />
     
     <!-- Boolean Inverse Converter -->
-    <converters:InverseBooleanConverter x:Key="InverseBool" />
+    <converters:InverseBoolConverter x:Key="InverseBool" />
     
     <!-- Empty String to Visibility Converter -->
     <converters:EmptyStringToVisibilityConverter x:Key="EmptyStringToVisibility" />
@@ -28,12 +28,18 @@
     
     <!-- Status to Color Converter -->
     <converters:StatusToColorConverter x:Key="StatusToColor" />
-    
+
+    <!-- Status to Brush Converter -->
+    <converters:StatusToBrushConverter x:Key="StatusToBrushConverter" />
+
     <!-- Progress to Visibility Converter -->
     <converters:ProgressToVisibilityConverter x:Key="ProgressToVisibility" />
     
     <!-- Inverted Bool to Visibility Converter -->
     <converters:InvertedBoolToVisibilityConverter x:Key="InvertedBoolToVisibilityConverter" />
+
+    <!-- Inverse Count to Visibility Converter -->
+    <converters:InverseCountToVisibilityConverter x:Key="InverseCountToVisibility" />
 
     <!-- Additional Converters for Management Views -->
     <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />

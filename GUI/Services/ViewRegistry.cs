@@ -22,9 +22,11 @@ namespace MandADiscoverySuite.Services
             {
                 // Navigation keys (lowercase) mapped to views - Updated to use New unified pipeline views
                 ["users"] = () => new UsersViewNew(),
-                ["groups"] = () => new GroupsViewNew(), 
+                ["groups"] = () => new GroupsViewNew(),
                 ["applications"] = () => new ApplicationsViewNew(),
+                ["fileserverdiscovery"] = () => new FileServerDiscoveryView(),
                 ["fileservers"] = () => new FileServersViewNew(),
+                ["FileServerDiscovery"] = () => new FileServerDiscoveryView(), // PascalCase alias
                 ["databases"] = () => new DatabasesViewNew(),
                 ["grouppolicies"] = () => new GroupPoliciesViewNew(),
                 ["grouppolicy"] = () => new GroupPoliciesViewNew(), // Alternative key
@@ -36,18 +38,26 @@ namespace MandADiscoverySuite.Services
                 ["securitypolicy"] = () => new SecurityPolicyView(), // Alternative key
                 ["grouppolicysecurity"] = () => new GroupPolicySecurityView(), // Legacy security view
                 ["activedirectorydiscovery"] = () => ActiveDirectoryDiscoveryView.CreateView(null, null), // Updated to use factory method
+                ["ActiveDirectoryDiscovery"] = () => ActiveDirectoryDiscoveryView.CreateView(null, null), // PascalCase alias
                 ["teamsdiscovery"] = () => new MicrosoftTeamsDiscoveryView(),
                 ["microsoftteamsdiscovery"] = () => new MicrosoftTeamsDiscoveryView(),
                 ["MicrosoftTeamsDiscovery"] = () => new MicrosoftTeamsDiscoveryView(),
                 ["azurediscovery"] = () => new AzureInfrastructureDiscoveryView(),
-                ["AzureDiscovery"] = () => new AzureDiscoveryView(),
+                ["AzureDiscovery"] = () => new AzureInfrastructureDiscoveryView(),
                 ["datalosspreventiondiscovery"] = () => new DataLossPreventionDiscoveryView(),
                 ["webserverconfigurationdiscovery"] = () => new WebServerConfigurationDiscoveryView(),
                 ["environmentriskassessment"] = () => new EnvironmentRiskAssessmentView(),
                 ["onedrivebusinessdiscovery"] = () => new OneDriveBusinessDiscoveryView(),
                 ["powerbidiscovery"] = () => new PowerBIDiscoveryView(),
                 ["environmentdetection"] = () => new EnvironmentDetectionView(),
+                ["EnvironmentDetection"] = () => new EnvironmentDetectionView(),
                 ["awscloudinfrastructurediscovery"] = () => new AWSCloudInfrastructureDiscoveryView(),
+                ["AWSCloudInfrastructureDiscovery"] = () => new AWSCloudInfrastructureDiscoveryView(),
+                ["sqlserverdiscovery"] = () => new SQLServerDiscoveryView(),
+                ["SQLServerDiscovery"] = () => new SQLServerDiscoveryView(),
+                ["vmwarediscovery"] = () => new VMwareDiscoveryView(),
+                ["VMwareDiscovery"] = () => new VMwareDiscoveryView(),
+                ["PowerBIDiscovery"] = () => new PowerBIDiscoveryView(),
                 ["conditionalaccesspoliciesdiscovery"] = () => new ConditionalAccessPoliciesDiscoveryView(),
                 ["exchangediscovery"] = () => new ExchangeDiscoveryView(),
                 ["networkinfrastructurediscovery"] = () => new NetworkInfrastructureDiscoveryView(),
@@ -98,6 +108,7 @@ namespace MandADiscoverySuite.Services
                 
                 // Legacy keys for backwards compatibility (PascalCase) - Updated to use New views
                 ["DomainDiscovery"] = () => new DomainDiscoveryView(),
+                ["FileServerDiscovery"] = () => new FileServerDiscoveryView(),
                 ["FileServers"] = () => new FileServersViewNew(),
                 ["Databases"] = () => new DatabasesViewNew(),
                 ["Security"] = () => new SecurityPolicyView(), // Updated to new comprehensive view
@@ -137,12 +148,14 @@ namespace MandADiscoverySuite.Services
                 ["Groups"] = () => new GroupsViewNew(),
                 ["Infrastructure"] = () => new InfrastructureViewNew(),
                 ["Discovery"] = () => new DiscoveryView(), // Discovery modules view (PascalCase)
-                ["TeamsDiscovery"] = () => new TeamsDiscoveryView(),
+                ["TeamsDiscovery"] = () => new MicrosoftTeamsDiscoveryView(),
+                ["VMwareDiscovery"] = () => new VMwareDiscoveryView(),
                 ["AzureDiscovery"] = () => new AzureDiscoveryView(),
                 ["DataLossPreventionDiscovery"] = () => new DataLossPreventionDiscoveryView(),
                 ["WebServerConfigurationDiscovery"] = () => new WebServerConfigurationDiscoveryView(),
                 ["EnvironmentRiskAssessment"] = () => new EnvironmentRiskAssessmentView(),
                 ["ExchangeDiscovery"] = () => new ExchangeDiscoveryView(),
+                ["PowerBIDiscovery"] = () => new PowerBIDiscoveryView(),
                 ["SharePointDiscovery"] = () => new SharePointDiscoveryView(),
                 
                 // T-037: Groups, GPOs, and ACLs Migration

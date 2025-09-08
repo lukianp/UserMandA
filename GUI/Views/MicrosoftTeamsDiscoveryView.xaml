@@ -38,44 +38,38 @@
         </StackPanel>
 
         <!-- Toolbar Section -->
-        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="10,0,10,10">
-            <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <Button Content="▶ Run Discovery" Command="{Binding RunDiscoveryCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="10"/>
-                <Button Content="🔄 Refresh Data" Command="{Binding RefreshDataCommand}" Style="{StaticResource OutlineButtonStyle}" Margin="0,10,10,10"/>
-                <Button Content="📤 Export" Command="{Binding ExportCommand}" Style="{StaticResource OutlineButtonStyle}" Margin="0,10,10,10"/>
-                <Button Content="📋 View Logs" Command="{Binding ViewLogsCommand}" Style="{StaticResource OutlineButtonStyle}" Margin="0,10,10,10"/>
-            </WrapPanel>
-        </Border>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="10,0,10,10">
+            <Button Content="Run Discovery" Command="{Binding RunDiscoveryCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,12,0"/>
+            <Button Content="Refresh Data" Command="{Binding RefreshDataCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,12,0"/>
+            <Button Content="Export" Command="{Binding ExportCommand}" Style="{StaticResource OutlineButtonStyle}" Margin="0,0,12,0"/>
+            <Button Content="View Logs" Command="{Binding ViewLogsCommand}" Style="{StaticResource GhostButtonStyle}" Margin="0,0,0,0"/>
+        </StackPanel>
 
         <!-- Summary Cards Section -->
         <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="10,0,10,10">
             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
                 <StackPanel>
                     <TextBlock Text="Total Teams" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="👥" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding TotalTeams}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalTeams}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,10,0,5"/>
                 </StackPanel>
             </Border>
             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
                 <StackPanel>
                     <TextBlock Text="Total Channels" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="📺" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding TotalChannels}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalChannels}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,10,0,5"/>
                 </StackPanel>
             </Border>
             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
                 <StackPanel>
                     <TextBlock Text="Total Guests" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="👤" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding TotalGuests}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalGuests}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,10,0,5"/>
                 </StackPanel>
             </Border>
             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
                 <StackPanel>
                     <TextBlock Text="Last Discovery" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="📅" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding LastDiscoveryTime, StringFormat='MMM dd, yyyy'}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-                    </StackPanel>
+                    <TextBlock Text="{Binding LastDiscoveryTime, StringFormat='MMM dd, yyyy'}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,10,0,5"/>
+                </StackPanel>
             </Border>
         </WrapPanel>
 
@@ -88,7 +82,7 @@
                     <Border Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
                             CornerRadius="4" Margin="0,0,0,8" Padding="8">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="⚠" FontSize="16" Foreground="{DynamicResource ErrorForegroundBrush}"
+                            <TextBlock Text="Warning:" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ErrorForegroundBrush}"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorForegroundBrush}"
                                        VerticalAlignment="Center" />
@@ -103,7 +97,7 @@
                 CornerRadius="4" Margin="10,0,10,10" Padding="8" Opacity="0.33"
                 Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibility}}">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="❌" FontSize="16" Foreground="{DynamicResource ErrorForegroundBrush}"
+                <TextBlock Text="Error:" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ErrorForegroundBrush}"
                            VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorForegroundBrush}"
                            VerticalAlignment="Center" />
@@ -152,8 +146,8 @@
             <Border Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center"
                     Visibility="{Binding SelectedResults.Count, Converter={StaticResource InverseCountToVisibility}}">
                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-                    <TextBlock Text="👥" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
-                    <TextBlock Text="No Teams data found" FontSize="16" HorizontalAlignment="Center"
+                    <TextBlock Text="No Teams Data Found" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="No Teams data found" FontSize="14" HorizontalAlignment="Center"
                                Margin="0,10,0,0" Opacity="0.7"/>
                     <TextBlock Text="Check CSV files in data directory" FontSize="12" HorizontalAlignment="Center"
                                Margin="0,5,0,0" Opacity="0.5"/>

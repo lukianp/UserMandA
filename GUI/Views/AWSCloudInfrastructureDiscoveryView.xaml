@@ -11,9 +11,8 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="/Themes/Colors.xaml"/>
                 <ResourceDictionary Source="/Resources/Converters.xaml"/>
-                <ResourceDictionary Source="/Resources/DataGridTheme.xaml"/>
-                <ResourceDictionary Source="/Themes/RefinedColorPalette.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -41,9 +40,9 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Border Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
-                            CornerRadius="4" Margin="0,0,0,8" Padding="8">
-                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}" />
-                    </Border>
+                    CornerRadius="4" Margin="0,0,0,8" Padding="8">
+                <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}" />
+            </Border>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -52,40 +51,40 @@
         <Border Grid.Row="2" Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
                 CornerRadius="4" Margin="20,0,20,10" Padding="8"
                 Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisibility}}">
-            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}" />
+            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}" />
         </Border>
 
         <!-- Summary Cards -->
         <WrapPanel Grid.Row="3" Margin="20,0,20,20" Orientation="Horizontal">
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
                     CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
                 <StackPanel>
-                    <TextBlock Text="Total Instances" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="Total Instances" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
                     <TextBlock Text="{Binding TotalInstances}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
                     CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
                 <StackPanel>
-                    <TextBlock Text="Total Buckets" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="Total Buckets" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
                     <TextBlock Text="{Binding TotalBuckets}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
                     CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
                 <StackPanel>
-                    <TextBlock Text="Total Regions" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="Total Regions" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
                     <TextBlock Text="{Binding TotalRegions}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TertiaryBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
                     CornerRadius="8" Padding="16" Width="250">
                 <StackPanel>
-                    <TextBlock Text="Last Discovery" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding LastDiscoveryTime, StringFormat='{}{0:g}'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Last Discovery" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding LastDiscoveryTime, StringFormat='{}{0:g}'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource DarkForegroundBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
         </WrapPanel>
@@ -128,11 +127,11 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Loading Spinner -->
-                <Border Background="{DynamicResource SurfaceBrush}"
+                <Border Background="{DynamicResource DarkSurfaceBrush}"
                         Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibility}}">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
-                        <TextBlock Text="{Binding ProcessingMessage, FallbackValue='Processing...'}" Margin="0,10,0,0" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding ProcessingMessage, FallbackValue='Processing...'}" Margin="0,10,0,0" HorizontalAlignment="Center" Foreground="{DynamicResource DarkForegroundBrush}"/>
                     </StackPanel>
                 </Border>
 
@@ -150,33 +149,41 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Resource Name"
                                             Binding="{Binding resourcename}"
-                                            Width="250"/>
+                                            Width="220"/>
 
                         <DataGridTextColumn Header="Service Type"
                                             Binding="{Binding servicetype}"
+                                            Width="100"/>
+
+                        <DataGridTextColumn Header="Instance Type"
+                                            Binding="{Binding instancetype}"
                                             Width="120"/>
+
+                        <DataGridTextColumn Header="AMI"
+                                            Binding="{Binding ami}"
+                                            Width="150"/>
 
                         <DataGridTextColumn Header="Region"
                                             Binding="{Binding region}"
-                                            Width="120"/>
+                                            Width="100"/>
 
                         <DataGridTextColumn Header="State"
                                             Binding="{Binding state}"
-                                            Width="100"/>
+                                            Width="80"/>
 
-                        <DataGridTextColumn Header="Created Date"
+                        <DataGridTextColumn Header="Created"
                                             Binding="{Binding createddate, StringFormat='yyyy-MM-dd'}"
-                                            Width="120"/>
+                                            Width="100"/>
                     </DataGrid.Columns>
 
                     <DataGrid.RowStyle>
                         <Style TargetType="DataGridRow">
                             <Style.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                    <Setter Property="Background" Value="{DynamicResource DarkHoverBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+                                    <Setter Property="Background" Value="{DynamicResource DarkSelectedBrush}"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
@@ -189,35 +196,41 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            FontSize="16"
-                           Foreground="{DynamicResource MutedForegroundBrush}"
+                           Foreground="{DynamicResource DarkMutedForegroundBrush}"
                            Visibility="{Binding HasResults, Converter={StaticResource InverseBoolToVisibility}}"/>
 
                 <!-- Separator -->
-                <GridSplitter Grid.Column="1" Width="2" Background="{DynamicResource BorderBrush}"
+                <GridSplitter Grid.Column="1" Width="2" Background="{DynamicResource DarkBorderBrush}"
                              HorizontalAlignment="Center" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
 
                 <!-- Details Panel -->
-                <Border Grid.Column="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                <Border Grid.Column="2" Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
                         Margin="0,0,20,20" CornerRadius="4"
                         Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="16">
-                            <TextBlock Text="AWS Resource Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
+                            <TextBlock Text="AWS Resource Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16" Foreground="{DynamicResource DarkForegroundBrush}"/>
 
-                            <TextBlock Text="Resource Name:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.resourcename}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="Resource Name:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.resourcename}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
 
-                            <TextBlock Text="Service Type:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.servicetype}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="Service Type:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.servicetype}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
 
-                            <TextBlock Text="Region:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.region}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="Instance Type:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.instancetype}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
 
-                            <TextBlock Text="State:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.state}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="AMI:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.ami}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
 
-                            <TextBlock Text="Created Date:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.createddate}" FontSize="14" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                            <TextBlock Text="Region:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.region}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
+
+                            <TextBlock Text="State:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.state}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
+
+                            <TextBlock Text="Created Date:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.createddate}" FontSize="14" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>

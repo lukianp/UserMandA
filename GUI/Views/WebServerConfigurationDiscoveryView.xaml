@@ -12,8 +12,8 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Themes/ThemeStyles.xaml"/>
                 <ResourceDictionary Source="/Resources/Converters.xaml"/>
+                <ResourceDictionary Source="/Themes/Colors.xaml"/>
                 <ResourceDictionary Source="/Resources/DataGridTheme.xaml"/>
-                <ResourceDictionary Source="/Themes/RefinedColorPalette.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -127,11 +127,12 @@
                        SelectionMode="Single" GridLinesVisibility="Horizontal">
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Server Name" Binding="{Binding servername}" Width="200" />
-                    <DataGridTextColumn Header="OS" Binding="{Binding os}" Width="150" />
-                    <DataGridTextColumn Header="Web Server Type" Binding="{Binding webservtype}" Width="150" />
-                    <DataGridTextColumn Header="Version" Binding="{Binding version}" Width="100" />
-                    <DataGridTextColumn Header="Last Patch Date" Binding="{Binding lastpatchdate}" Width="150" />
+                    <DataGridTextColumn Header="Object Type" Binding="{Binding ObjectType}" Width="120" />
+                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="200" />
+                    <DataGridTextColumn Header="Type" Binding="{Binding FrameworkName}" Width="150" />
+                    <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="100" />
+                    <DataGridTextColumn Header="Status/State" Binding="{Binding State}" Width="100" />
+                    <DataGridTextColumn Header="Path" Binding="{Binding PhysicalPath}" Width="150" />
                 </DataGrid.Columns>
 
             </DataGrid>
@@ -152,21 +153,43 @@
             <GridSplitter Grid.Column="1" Width="5" Background="{DynamicResource BorderBrush}"/>
 
             <!-- Details Panel -->
-            <Border Grid.Column="2" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,10,10,10"
+            <Border Grid.Column="2" Background="{DynamicResource CardBrush}" CornerRadius="8" Margin="0,10,10,10"
                     Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="15">
                     <StackPanel>
-                        <TextBlock Text="Selected Item Details" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
-                        <ItemsControl ItemsSource="{Binding SelectedItem}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Margin="0,0,0,10">
-                                        <TextBlock Text="{Binding Key}" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding Value}" Foreground="{DynamicResource MutedForegroundBrush}" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <TextBlock Text="Web Server Details" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource WhiteBrush}"/>
+                        <StackPanel Margin="0,0,0,15">
+                            <TextBlock Text="Object Type:" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.ObjectType}" FontSize="14" Foreground="{DynamicResource WhiteBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,15">
+                            <TextBlock Text="Name:" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.Name}" FontSize="14" Foreground="{DynamicResource WhiteBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,15">
+                            <TextBlock Text="Framework/Type:" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.FrameworkName}" FontSize="14" Foreground="{DynamicResource WhiteBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,15">
+                            <TextBlock Text="Version:" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.Version}" FontSize="14" Foreground="{DynamicResource WhiteBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,15">
+                            <TextBlock Text="Status/State:" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.State}" FontSize="14" Foreground="{DynamicResource WhiteBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,15">
+                            <TextBlock Text="Path/Install:" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.PhysicalPath, FallbackValue={Binding SelectedItem.InstallPath}}" FontSize="14" Foreground="{DynamicResource WhiteBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,15">
+                            <TextBlock Text="Last Modified:" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.LastModified, StringFormat=g}" FontSize="14" Foreground="{DynamicResource WhiteBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,15">
+                            <TextBlock Text="Additional Info:" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.Bindings, FallbackValue={Binding SelectedItem.EnabledProtocols}, StringFormat={}Additional: {0}}" FontSize="12" Foreground="{DynamicResource WhiteBrush}" TextWrapping="Wrap" Opacity="0.8"/>
+                        </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
             </Border>

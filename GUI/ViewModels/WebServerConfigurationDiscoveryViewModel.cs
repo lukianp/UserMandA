@@ -140,21 +140,37 @@ namespace MandADiscoverySuite.ViewModels
             catch (Exception ex) { _log?.LogError(ex, "Error exporting data"); ShowError("Export Failed", ex.Message); }
         }
 
+
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
         {
-            TotalServers = data.Count;
-            TotalWebsites = data.Count(item =>
+            int serverCount = 0;
+            int websiteCount = 0;
+            int configCount = 0;
+
+            foreach (var item in data)
             {
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("type", out var typeObj);
-                return typeObj?.ToString().Contains("Website") ?? false;
-            });
-            TotalConfigurations = data.Count(item =>
-            {
-                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
-                dict.TryGetValue("type", out var typeObj);
-                return typeObj?.ToString().Contains("Config") ?? false;
-            });
+
+                // Count servers based on ObjectType
+                string objectType = "";
+                dict.TryGetValue("ObjectType", out var objectTypeObj);
+                if (objectTypeObj != null)
+                {
+                    objectType = objectTypeObj.ToString();
+                    if (objectType.Contains("Site") || objectType.Contains("Application") || objectType.Contains("Installation"))
+                        serverCount++;
+
+                    if (objectType.Contains("Site") || objectType.Contains("VirtualHost") || objectType.Contains("Website"))
+                        websiteCount++;
+
+                    if (objectType.Contains("Config"))
+                        configCount++;
+                }
+            }
+
+            TotalServers = serverCount;
+            TotalWebsites = websiteCount;
+            TotalConfigurations = configCount;
         }
     }
 }

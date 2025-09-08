@@ -2,6 +2,27 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- ===========================================================================
+    MERGED RESOURCE DICTIONARIES - Centralized Resource Management
+    =========================================================================== -->
+
+    <!-- Merge Converter Resources -->
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Resources/Converters.xaml"/>
+        <ResourceDictionary Source="/Themes/Colors.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- ===========================================================================
+    HIGH CONTRAST THEME SUPPORT - Resources for accessibility
+    =========================================================================== -->
+
+    <!-- High Contrast Brushes (fallback when external theme files unavailable) -->
+    <SolidColorBrush x:Key="HighContrastBackgroundBrush" Color="#FF000000"/>
+    <SolidColorBrush x:Key="HighContrastForegroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="HighContrastBorderBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="HighContrastAccentBrush" Color="#FFFFFF00"/>
+    <SolidColorBrush x:Key="HighContrastMutedForegroundBrush" Color="#FF999999"/>
+
+    <!-- ===========================================================================
     COLOR PALETTE - Dark Theme Inspired by Professional Analysis Tools
     =========================================================================== -->
 
@@ -33,6 +54,7 @@
     <!-- Text Colors -->
     <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFF7FAFC"/>
     <SolidColorBrush x:Key="SecondaryTextBrush" Color="#FFA0AEC0"/>
+    <SolidColorBrush x:Key="MutedForegroundBrush" Color="#FFD1D5DB"/>
     <SolidColorBrush x:Key="TertiaryTextBrush" Color="#FF718096"/>
 
     <!-- Success, Warning, Error Colors -->

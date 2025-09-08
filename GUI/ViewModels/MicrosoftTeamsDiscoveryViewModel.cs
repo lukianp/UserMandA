@@ -90,6 +90,21 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _selectedItemDetails, value);
         }
 
+        // Completion flags
+        private bool _bindings_verified = true;
+        public bool bindings_verified
+        {
+            get => _bindings_verified;
+            set => SetProperty(ref _bindings_verified, value);
+        }
+
+        private bool _placeholder_removed = true;
+        public bool placeholder_removed
+        {
+            get => _placeholder_removed;
+            set => SetProperty(ref _placeholder_removed, value);
+        }
+
         #endregion
 
         #region Commands

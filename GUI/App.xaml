@@ -42,7 +42,7 @@
             <converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter"/>
             <converters:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
             <converters:BoolToExpandIconConverter x:Key="BoolToExpandIconConverter"/>
-            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <converters:InverseBoolConverter x:Key="InverseBooleanConverter"/>
             <converters:StringListToStringConverter x:Key="StringListToStringConverter"/>
             <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
             <converters:ProgressToVisibilityConverter x:Key="ProgressToVisibilityConverter"/>
@@ -163,6 +163,9 @@
             </DataTemplate>
             <DataTemplate DataType="{x:Type vm:PolicyDetailViewModel}">
                 <views:PolicyDetailView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:NetworkInfrastructureDiscoveryViewModel}">
+                <views:NetworkInfrastructureDiscoveryView/>
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

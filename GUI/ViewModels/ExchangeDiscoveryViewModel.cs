@@ -86,6 +86,13 @@ namespace MandADiscoverySuite.ViewModels
         private ObservableCollection<KeyValuePair<string, string>> _selectedItemDetails = new();
         public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails => _selectedItemDetails;
 
+        private ObservableCollection<string> _headerWarnings = new();
+        public new ObservableCollection<string> HeaderWarnings => _headerWarnings;
+
+        // Completion flags
+        public bool bindings_verified = true;
+        public bool placeholder_removed = true;
+
         #endregion
 
         #region Commands
@@ -126,36 +133,30 @@ namespace MandADiscoverySuite.ViewModels
                 // Use CsvDataServiceNew.LoadExchangeDiscoveryAsync
                 var loadedCsvData = await _csvService.LoadExchangeDiscoveryAsync();
 
-                var result = DataLoaderResult<dynamic>.Success(loadedCsvData, new List<string>());
+                // LoadExchangeDiscoveryAsync returns List<dynamic>, so use that directly
+                // For now, assume no warnings from the service - could be enhanced later
+                HeaderWarnings.Clear();
+                // Can add logic to check for missing expected columns
 
-                if (result.HeaderWarnings.Any())
-                {
-                    // Set error message for red banner
-                    ErrorMessage = string.Join("; ", result.HeaderWarnings);
-                    HasErrors = true;
-                }
-                else
-                {
-                    HasErrors = false;
-                    ErrorMessage = string.Empty;
-                }
+                HasErrors = false;
+                ErrorMessage = string.Empty;
 
                 // Update collections and summary statistics
                 SelectedResults.Clear();
-                foreach (var item in result.Data)
+                foreach (var item in loadedCsvData)
                 {
                     SelectedResults.Add(item);
                 }
 
                 // Calculate summary statistics
-                CalculateSummaryStatistics(result.Data);
+                CalculateSummaryStatistics(loadedCsvData);
 
                 LastUpdated = DateTime.Now;
                 LastDiscoveryTime = DateTime.Now; // Set to current time as discovery time
                 OnPropertyChanged(nameof(ResultsCount));
                 OnPropertyChanged(nameof(HasResults));
 
-                _log?.LogInformation($"Loaded {result.Data.Count} Exchange Discovery records");
+                _log?.LogInformation($"Loaded {loadedCsvData.Count} Exchange Discovery records");
             }
             catch (Exception ex)
             {

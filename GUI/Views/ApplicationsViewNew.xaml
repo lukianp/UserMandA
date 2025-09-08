@@ -39,12 +39,12 @@
                       Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibility}}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Border Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
+                    <Border Background="{DynamicResource DarkSurfaceBrush}" Opacity="0.8" BorderBrush="{DynamicResource WarningColor}" BorderThickness="2"
                             CornerRadius="4" Margin="0,0,0,8" Padding="8">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="⚠" FontSize="16" Foreground="{DynamicResource WhiteBrush}"
+                            <TextBlock Text="⚠" FontSize="16" Foreground="{DynamicResource WarningColor}"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}"
+                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -53,13 +53,13 @@
         </ItemsControl>
         
         <!-- Error Banner -->
-        <Border Grid.Row="2" Background="{DynamicResource ErrorBrush}" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
-                CornerRadius="4" Margin="10,0,10,10" Padding="8" Opacity="0.33"
+        <Border Grid.Row="2" Background="{DynamicResource DarkSurfaceBrush}" BorderBrush="{DynamicResource ErrorColor}" BorderThickness="2"
+                CornerRadius="4" Margin="10,0,10,10" Padding="8" Opacity="0.8"
                 Visibility="{Binding LastError, Converter={StaticResource NullToVisibility}}">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="❌" FontSize="16" Foreground="{DynamicResource WhiteBrush}"
+                <TextBlock Text="❌" FontSize="16" Foreground="{DynamicResource ErrorColor}"
                            VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBlock Text="{Binding LastError}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}"
+                <TextBlock Text="{Binding LastError}" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"
                            VerticalAlignment="Center" />
             </StackPanel>
         </Border>

@@ -11,10 +11,9 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Themes/ThemeStyles.xaml"/>
-                <ResourceDictionary Source="/Resources/Converters.xaml"/>
-                <ResourceDictionary Source="/Resources/DataGridTheme.xaml"/>
-                <ResourceDictionary Source="/Themes/RefinedColorPalette.xaml"/>
+                <ResourceDictionary Source="/GUI/Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="/GUI/Themes/RefinedColorPalette.xaml"/>
+                <ResourceDictionary Source="/GUI/Resources/Converters.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -153,24 +152,24 @@
                                             Binding="{Binding resourcename}"
                                             Width="200"/>
 
-                        <DataGridTextColumn Header="Resource Type"
+                        <DataGridTextColumn Header="Type"
                                             Binding="{Binding resourcetype}"
-                                            Width="150"/>
-
-                        <DataGridTextColumn Header="Resource Group"
-                                            Binding="{Binding resourcegroup}"
                                             Width="150"/>
 
                         <DataGridTextColumn Header="Region"
                                             Binding="{Binding region}"
                                             Width="120"/>
 
+                        <DataGridTextColumn Header="Resource Group"
+                                            Binding="{Binding resourcegroup}"
+                                            Width="150"/>
+
                         <DataGridTextColumn Header="Status"
                                             Binding="{Binding status}"
                                             Width="100"/>
 
                         <DataGridTextColumn Header="Creation Date"
-                                            Binding="{Binding createddatetime}"
+                                            Binding="{Binding createddatetime, StringFormat=\{0:g\}}"
                                             Width="120"/>
 
                         <DataGridTextColumn Header="Tags"

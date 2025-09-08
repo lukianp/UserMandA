@@ -11,9 +11,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Themes/ThemeStyles.xaml"/>
-                <ResourceDictionary Source="/Resources/Converters.xaml"/>
                 <ResourceDictionary Source="/Resources/DataGridTheme.xaml"/>
-                <ResourceDictionary Source="/Themes/RefinedColorPalette.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -75,7 +73,7 @@
                 <StackPanel>
                     <TextBlock Text="Last Discovery" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
                     <TextBlock Text="📅" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding LastDiscoveryTime, StringFormat='MMM dd, yyyy'}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding LastDiscoveryTime, StringFormat='{}{0:g}'}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
         </WrapPanel>
@@ -144,7 +142,7 @@
                     <DataGridTextColumn Header="PrimarySMTP" Binding="{Binding primarysmtpaddress}" Width="200" />
                     <DataGridTextColumn Header="MailboxType" Binding="{Binding mailboxtype}" Width="150" />
                     <DataGridTextColumn Header="Size" Binding="{Binding sizegb}" Width="100" />
-                    <DataGridTextColumn Header="LastLogin" Binding="{Binding lastlogin, StringFormat=yyyy-MM-dd}" Width="120" />
+                    <DataGridTextColumn Header="LastLogin" Binding="{Binding lastlogin, StringFormat='{}{0:g}'}" Width="120" />
                 </DataGrid.Columns>
             </DataGrid>
 

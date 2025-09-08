@@ -11,6 +11,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="/Themes/Colors.xaml"/>
                 <ResourceDictionary Source="/Resources/Converters.xaml"/>
                 <ResourceDictionary Source="/Resources/DataGridTheme.xaml"/>
                 <ResourceDictionary Source="/Themes/RefinedColorPalette.xaml"/>
@@ -18,7 +19,7 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid>
+    <Grid Background="{DynamicResource DarkBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!-- Header -->
             <RowDefinition Height="Auto"/>  <!-- Toolbar -->
@@ -31,40 +32,51 @@
 
         <!-- Header Section -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10">
-            <TextBlock Text="Data Loss Prevention Discovery" FontSize="24" FontWeight="Bold"
-                       VerticalAlignment="Center"/>
+            <TextBlock Text="🔒 Data Loss Prevention Discovery" FontSize="24" FontWeight="Bold"
+                       VerticalAlignment="Center" Foreground="{DynamicResource DarkForegroundBrush}"/>
             <TextBlock Text="{Binding SelectedResults.Count, StringFormat='({0} items)'}"
                        FontSize="16" Margin="10,0,0,0" VerticalAlignment="Center"
-                       Visibility="Visible"/>
+                       Visibility="Visible" Foreground="{DynamicResource DarkMutedForegroundBrush}"
+                       FontWeight="SemiBold"/>
         </StackPanel>
 
         <!-- Toolbar Section -->
-        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="10,0,10,10">
+        <Border Grid.Row="1" Background="{DynamicResource DarkCardBrush}" CornerRadius="8" Margin="10,0,10,10"
+                BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1">
             <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <Button Content="▶ Run Discovery" Command="{Binding RunDiscoveryCommand}" Margin="10"/>
-                <Button Content="🔄 Refresh" Command="{Binding RefreshDataCommand}" Margin="0,10,10,10"/>
-                <Button Content="📤 Export" Command="{Binding ExportCommand}" Margin="0,10,10,10"/>
+                <Button Content="🔍 Run Discovery" Command="{Binding RunDiscoveryCommand}" Margin="10"
+                        Background="{DynamicResource BrandPrimaryBrush}" Foreground="White"/>
+                <Button Content="🔄 Refresh" Command="{Binding RefreshDataCommand}" Margin="0,10,10,10"
+                        Background="{DynamicResource DarkSurfaceBrush}" Foreground="{DynamicResource DarkForegroundBrush}"/>
+                <Button Content="📤 Export" Command="{Binding ExportCommand}" Margin="0,10,10,10"
+                        Background="{DynamicResource DarkSurfaceBrush}" Foreground="{DynamicResource DarkForegroundBrush}"/>
             </WrapPanel>
         </Border>
 
         <!-- Summary Cards Section -->
         <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="10,0,10,10">
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+            <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
+                    CornerRadius="8" Margin="0,0,10,0" Padding="15">
                 <StackPanel>
-                    <TextBlock Text="Total Policies" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalPolicies}" FontSize="24" FontWeight="Bold"/>
+                    <TextBlock Text="📋 Total Policies" FontSize="14" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding TotalPolicies}" FontSize="24" FontWeight="Bold"
+                               Foreground="{DynamicResource DarkForegroundBrush}"/>
                 </StackPanel>
             </Border>
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+            <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
+                    CornerRadius="8" Margin="0,0,10,0" Padding="15">
                 <StackPanel>
-                    <TextBlock Text="Total Incidents" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalIncidents}" FontSize="24" FontWeight="Bold"/>
+                    <TextBlock Text="🚨 Total Incidents" FontSize="14" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding TotalIncidents}" FontSize="24" FontWeight="Bold"
+                               Foreground="{DynamicResource WarningColor}"/>
                 </StackPanel>
             </Border>
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+            <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
+                    CornerRadius="8" Margin="0,0,10,0" Padding="15">
                 <StackPanel>
-                    <TextBlock Text="Total Alerts" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalAlerts}" FontSize="24" FontWeight="Bold"/>
+                    <TextBlock Text="📊 Total Alerts" FontSize="14" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding TotalAlerts}" FontSize="24" FontWeight="Bold"
+                               Foreground="{DynamicResource InfoColor}"/>
                 </StackPanel>
             </Border>
         </WrapPanel>
@@ -75,13 +87,14 @@
                       Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibility}}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Border Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
+                    <Border Background="{DynamicResource DarkSurfaceBrush}" Opacity="0.8"
+                            BorderBrush="{DynamicResource WarningColor}" BorderThickness="2"
                             CornerRadius="4" Margin="0,0,0,8" Padding="8">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="⚠" FontSize="16" Foreground="{DynamicResource WhiteBrush}"
+                            <TextBlock Text="⚠" FontSize="16" Foreground="{DynamicResource WarningColor}"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}"
-                                       VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"
+                                       VerticalAlignment="Center" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
                 </DataTemplate>
@@ -89,14 +102,14 @@
         </ItemsControl>
 
         <!-- Error Banner -->
-        <Border Grid.Row="4" Background="{DynamicResource ErrorBrush}" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
-                CornerRadius="4" Margin="10,0,10,10" Padding="8" Opacity="0.33"
+        <Border Grid.Row="4" Background="{DynamicResource DarkSurfaceBrush}" BorderBrush="{DynamicResource ErrorColor}" BorderThickness="2"
+                CornerRadius="4" Margin="10,0,10,10" Padding="8" Opacity="0.8"
                 Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisibility}}">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="❌" FontSize="16" Foreground="{DynamicResource WhiteBrush}"
+                <TextBlock Text="❌" FontSize="16" Foreground="{DynamicResource ErrorColor}"
                            VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}"
-                           VerticalAlignment="Center" />
+                <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"
+                           VerticalAlignment="Center" FontWeight="SemiBold"/>
             </StackPanel>
         </Border>
 
@@ -104,10 +117,12 @@
         <Border Grid.Row="5" HorizontalAlignment="Center" Margin="10"
                 Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibility}}">
             <StackPanel Orientation="Horizontal">
-                <ProgressBar IsIndeterminate="True" Width="200" Height="20"
-                             VerticalAlignment="Center"/>
+                <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="10"
+                             VerticalAlignment="Center"
+                             Foreground="{DynamicResource BrandPrimaryColor}"/>
                 <TextBlock Text="{Binding ProcessingMessage}" Margin="10,0,0,0"
-                           VerticalAlignment="Center"/>
+                           VerticalAlignment="Center" Foreground="{DynamicResource DarkForegroundBrush}"
+                           FontWeight="SemiBold"/>
             </StackPanel>
         </Border>
 
@@ -126,13 +141,13 @@
                        CanUserAddRows="False" CanUserDeleteRows="False"
                        SelectionMode="Single" GridLinesVisibility="Horizontal">
 
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Policy Name" Binding="{Binding policимен}" Width="200" />
-                    <DataGridTextColumn Header="Severity" Binding="{Binding severity}" Width="100" />
-                    <DataGridTextColumn Header="Incident Count" Binding="{Binding incidentcount}" Width="120" />
-                    <DataGridTextColumn Header="Last Incident" Binding="{Binding lastincident}" Width="150" />
-                    <DataGridTextColumn Header="Scope" Binding="{Binding scope}" Width="150" />
-                </DataGrid.Columns>
+               <DataGrid.Columns>
+                   <DataGridTextColumn Header="📋 Policy Name" Binding="{Binding policyname}" Width="200" />
+                   <DataGridTextColumn Header="🚨 Severity" Binding="{Binding severity}" Width="100" />
+                   <DataGridTextColumn Header="📊 Incident Count" Binding="{Binding incidentcount}" Width="120" />
+                   <DataGridTextColumn Header="🕒 Last Incident" Binding="{Binding lastincident}" Width="150" />
+                   <DataGridTextColumn Header="🌐 Scope" Binding="{Binding scope}" Width="150" />
+               </DataGrid.Columns>
 
             </DataGrid>
 
@@ -152,17 +167,77 @@
             <GridSplitter Grid.Column="1" Width="5" Background="{DynamicResource BorderBrush}"/>
 
             <!-- Details Panel -->
-            <Border Grid.Column="2" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,10,10,10"
+            <Border Grid.Column="2" Background="{DynamicResource DarkCardBrush}" CornerRadius="8" Margin="0,10,10,10"
+                    BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
                     Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="15">
                     <StackPanel>
-                        <TextBlock Text="Selected Item Details" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <TextBlock Text="🔍 DLP Policy Details" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"
+                                   Foreground="{DynamicResource DarkForegroundBrush}"/>
+
+                        <!-- Policy Information Section -->
+                        <StackPanel Margin="0,0,0,15">
+                            <TextBlock Text="📋 Policy Information" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"
+                                       Foreground="{DynamicResource DarkForegroundBrush}"/>
+                            <Separator Background="{DynamicResource DarkBorderBrush}" Margin="0,0,0,8"/>
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Text="Policy Name:" FontWeight="SemiBold" Foreground="{DynamicResource DarkForegroundBrush}"/>
+                                <TextBlock Text="{Binding SelectedItem.policyname, FallbackValue='N/A'}"
+                                           Foreground="{DynamicResource DarkMutedForegroundBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Text="Severity:" FontWeight="SemiBold" Foreground="{DynamicResource DarkForegroundBrush}"/>
+                                <TextBlock Text="{Binding SelectedItem.severity, FallbackValue='N/A'}"
+                                           Foreground="{DynamicResource WarningColor}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Text="Scope:" FontWeight="SemiBold" Foreground="{DynamicResource DarkForegroundBrush}"/>
+                                <TextBlock Text="{Binding SelectedItem.scope, FallbackValue='N/A'}"
+                                           Foreground="{DynamicResource DarkMutedForegroundBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Incident Information Section -->
+                        <StackPanel Margin="0,0,0,15">
+                            <TextBlock Text="🚨 Incident Information" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"
+                                       Foreground="{DynamicResource DarkForegroundBrush}"/>
+                            <Separator Background="{DynamicResource DarkBorderBrush}" Margin="0,0,0,8"/>
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Text="Incident Count:" FontWeight="SemiBold" Foreground="{DynamicResource DarkForegroundBrush}"/>
+                                <TextBlock Text="{Binding SelectedItem.incidentcount, FallbackValue='0'}"
+                                           Foreground="{DynamicResource ErrorColor}" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Text="Last Incident:" FontWeight="SemiBold" Foreground="{DynamicResource DarkForegroundBrush}"/>
+                                <TextBlock Text="{Binding SelectedItem.lastincident, FallbackValue='No incidents recorded'}"
+                                           Foreground="{DynamicResource DarkMutedForegroundBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Actions Taken Section (if available) -->
+                        <StackPanel Margin="0,0,0,15"
+                                   Visibility="{Binding SelectedItem.actionstaken, Converter={StaticResource NullToVisibility}}">
+                            <TextBlock Text="🛠️ Actions Taken" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"
+                                       Foreground="{DynamicResource DarkForegroundBrush}"/>
+                            <Separator Background="{DynamicResource DarkBorderBrush}" Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding SelectedItem.actionstaken, FallbackValue='No actions recorded'}"
+                                       Foreground="{DynamicResource DarkMutedForegroundBrush}" TextWrapping="Wrap"
+                                       Margin="0,0,0,8"/>
+                        </StackPanel>
+
+                        <!-- Status Information -->
+                        <TextBlock Text="📊 All Properties" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"
+                                   Foreground="{DynamicResource DarkForegroundBrush}"/>
+                        <Separator Background="{DynamicResource DarkBorderBrush}" Margin="0,0,0,8"/>
                         <ItemsControl ItemsSource="{Binding SelectedItem}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Margin="0,0,0,10">
-                                        <TextBlock Text="{Binding Key}" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding Value}" Foreground="{DynamicResource MutedForegroundBrush}" TextWrapping="Wrap"/>
+                                    <StackPanel Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding Key}" FontWeight="SemiBold" FontSize="11"
+                                                   Foreground="{DynamicResource DarkMutedForegroundBrush}"
+                                                   Opacity="0.7"/>
+                                        <TextBlock Text="{Binding Value}" Foreground="{DynamicResource DarkForegroundBrush}"
+                                                   FontSize="12" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

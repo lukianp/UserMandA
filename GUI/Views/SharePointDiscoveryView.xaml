@@ -11,9 +11,10 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="/Themes/Colors.xaml"/>
                 <ResourceDictionary Source="/Resources/Converters.xaml"/>
                 <ResourceDictionary Source="/Resources/DataGridTheme.xaml"/>
-                <ResourceDictionary Source="/Themes/RefinedColorPalette.xaml"/>
+                <ResourceDictionary Source="/Themes/OptimizedResources.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -59,28 +60,28 @@
 
         <!-- Summary Cards Section -->
         <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="10,0,10,10">
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
                 <StackPanel>
                     <TextBlock Text="Total Site Collections" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
                     <TextBlock Text="🏢" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
                     <TextBlock Text="{Binding TotalSiteCollections}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
                 <StackPanel>
                     <TextBlock Text="Total Sites" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
                     <TextBlock Text="🌐" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
                     <TextBlock Text="{Binding TotalSites}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
                 <StackPanel>
                     <TextBlock Text="Total Lists" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
                     <TextBlock Text="📋" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
                     <TextBlock Text="{Binding TotalLists}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
                 <StackPanel>
                     <TextBlock Text="Last Discovery" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
                     <TextBlock Text="📅" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
@@ -131,17 +132,6 @@
             </StackPanel>
         </Border>
 
-        <!-- Loading Spinner -->
-        <Border Grid.Row="5" HorizontalAlignment="Center" Margin="10"
-                Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibility}}">
-            <StackPanel Orientation="Horizontal">
-                <ProgressBar IsIndeterminate="True" Width="200" Height="20"
-                             VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding ProcessingMessage}" Margin="10,0,0,0"
-                           VerticalAlignment="Center"/>
-            </StackPanel>
-        </Border>
-
         <!-- Data Section -->
         <Grid Grid.Row="7">
             <Grid.ColumnDefinitions>
@@ -182,7 +172,7 @@
                     <Style TargetType="DataGridRow">
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>

@@ -14,7 +14,7 @@ namespace MandADiscoverySuite.Views
             {
                 InitializeComponent();
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Exception initializing TeamsDiscoveryView: {ex.Message}");
                 throw;

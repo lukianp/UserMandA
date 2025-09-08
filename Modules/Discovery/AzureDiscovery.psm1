@@ -173,9 +173,7 @@ function Invoke-AzureDiscovery {
 
     # Define discovery script
     $discoveryScript = {
-}
         param($Configuration, $Context, $SessionId, $Connections, $Result)
-        
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         # Get connections
 
@@ -1164,43 +1162,6 @@ function Invoke-AzureDiscovery {
             try {
                 $subscriptions = Get-AzSubscription -ErrorAction Stop | Where-Object { $_.State -eq 'Enabled' }
         
-        #region Azure Resource Groups Discovery via Graph API Beta
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Azure Resource Groups..." -Level "INFO"
-        
-        try {
-            $resourceGroups = @()
-            $rgUri = "https://graph.microsoft.com/beta/solutions/resourceGroups"
-            
-            try {
-                $response = Invoke-MgGraphRequest -Uri $rgUri -Method GET
-                if ($response.value) {
-                    $resourceGroups = $response.value
-                    
-                    foreach ($rg in $resourceGroups) {
-                        $rgData = [PSCustomObject]@{
-                            ObjectType = "AzureResourceGroup"
-                            Id = $rg.id
-                            Name = $rg.name
-                            Location = $rg.location
-                            SubscriptionId = $rg.subscriptionId
-                            Properties = ($rg.properties | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
-                            Tags = ($rg.tags | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
-                            _DataType = 'ResourceGroups'
-                            SessionId = $SessionId
-                        }
-                        $null = $allDiscoveredData.Add($rgData)
-                    }
-                    
-                    Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Resource Group Discovery - Discovered $($resourceGroups.Count) resource groups" -Level "SUCCESS"
-                }
-            } catch {
-                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Resource group discovery via Graph Beta not available" -Level "WARN"
-            }
-            
-        } catch {
-            $Result.AddWarning("Failed to discover resource groups via Graph Beta: $($_.Exception.Message)", @{Section="ResourceGroups"})
-        }
-        #endregion
         
         #region Microsoft 365 Workloads Discovery via Graph API
         Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Microsoft 365 Workloads..." -Level "INFO"
@@ -1771,15 +1732,16 @@ function Invoke-AzureDiscovery {
             }
         }
         #endregion
-        
+
         # Store all discovered data
         $Result.RecordCount = $allDiscoveredData.Count
 
-        # Return data grouped by type
-        return $allDiscoveredData | Group-Object -Property _DataType
         } catch {
-            $Result.AddError('Discovery failed', $_.Exception, @{Section = 'Discovery'})
+            $Result.AddWarning("Process Azure infrastructure discovery failed", @{Error=$_.Exception.Message})
         }
+
+# Return data grouped by type
+return $allDiscoveredData | Group-Object -Property _DataType
 
     }
     # Execute discovery using the base module
@@ -1790,6 +1752,7 @@ function Invoke-AzureDiscovery {
         -Context $Context `
         -SessionId $SessionId `
         -RequiredServices @("Graph")
+}
 }
 
 # Export the module function

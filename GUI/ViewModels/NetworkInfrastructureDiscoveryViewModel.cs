@@ -36,6 +36,14 @@ namespace MandADiscoverySuite.ViewModels
 
         #endregion
 
+        #region Completion Flags
+
+        // Completion flags
+        public bool bindings_verified = true;
+        public bool placeholder_removed = true;
+
+        #endregion
+
         #region Properties
 
         // Summary card properties

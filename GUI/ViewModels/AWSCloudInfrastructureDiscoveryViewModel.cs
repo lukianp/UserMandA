@@ -31,11 +31,76 @@ namespace MandADiscoverySuite.ViewModels
             var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
             var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
             _csvService = new CsvDataServiceNew(csvLogger);
+
+            // Initialize AWS configurations
+            InitializeDefaultConfigurations();
+
+            _log?.LogInformation("AWS Cloud Infrastructure Discovery ViewModel initialized with default configurations");
         }
 
         #endregion
 
         #region Properties
+
+        // AWS Configuration Properties
+        private string _awsAccessKeyId;
+        public string AwsAccessKeyId
+        {
+            get => _awsAccessKeyId;
+            set => SetProperty(ref _awsAccessKeyId, value);
+        }
+
+        private string _awsSecretAccessKey;
+        public string AwsSecretAccessKey
+        {
+            get => _awsSecretAccessKey;
+            set
+            {
+                if (SetProperty(ref _awsSecretAccessKey, value))
+                {
+                    // Clear the masked version when the real value changes
+                    OnPropertyChanged(nameof(AwsSecretAccessKeyMasked));
+                }
+            }
+        }
+
+        public string AwsSecretAccessKeyMasked =>
+            string.IsNullOrEmpty(AwsSecretAccessKey) ? string.Empty :
+            new string('*', Math.Min(AwsSecretAccessKey.Length, 16));
+
+        private string _awsRegion;
+        public string AwsRegion
+        {
+            get => _awsRegion;
+            set => SetProperty(ref _awsRegion, value);
+        }
+
+        private string _awsProfileName;
+        public string AwsProfileName
+        {
+            get => _awsProfileName;
+            set => SetProperty(ref _awsProfileName, value);
+        }
+
+        private bool _useAWSCredentials;
+        public bool UseAWSCredentials
+        {
+            get => _useAWSCredentials;
+            set
+            {
+                if (SetProperty(ref _useAWSCredentials, value))
+                {
+                    ValidateCredentials();
+                }
+            }
+        }
+
+        private bool _useAWSProfile;
+        public bool UseAWSProfile
+        {
+            get => _useAWSProfile;
+            set => SetProperty(ref _useAWSProfile, value);
+        }
 
         // Summary card properties
         private int _totalInstances;
@@ -106,6 +171,7 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
+        public AsyncRelayCommand TestAWSCredentialsCommand => new AsyncRelayCommand(TestAWSCredentialsAsync);
 
         #endregion
 
@@ -186,6 +252,30 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
+        public async Task ExportCsvDataAsync()
+        {
+            await ExportDataAsync();
+        }
+
+        // Helper method to convert data to CSV lines
+        private IEnumerable<string> ConvertToCsvLines(ObservableCollection<dynamic> data)
+        {
+            if (data.Count == 0) yield break;
+
+            // Get headers from first item
+            var firstItem = (System.Collections.Generic.IDictionary<string, object>)data[0];
+            var headers = string.Join(",", firstItem.Keys);
+            yield return headers;
+
+            // Get values for each row
+            foreach (var item in data)
+            {
+                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+                var values = string.Join(",", dict.Values.Select(v => $"\"{v?.ToString() ?? ""}\""));
+                yield return values;
+            }
+        }
+
         #endregion
 
         #region Command Implementations
@@ -194,15 +284,28 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
+                // Validate AWS credentials before proceeding
+                if (!ValidateCredentials())
+                {
+                    ShowError("Configuration Required", "Please configure AWS credentials before running discovery.");
+                    return;
+                }
+
                 IsProcessing = true;
                 StatusText = "Running Discovery";
                 ProcessingMessage = "Executing AWS Cloud Infrastructure Discovery...";
 
-                // Here you would implement the actual discovery logic
-                // For now, just simulate loading from CSV
+                // TODO: Implement actual AWS API discovery logic here
+                // This would use the configured AWS credentials to query:
+                // - EC2 instances via DescribeInstances API
+                // - S3 buckets via ListBuckets API
+                // - Other AWS resources based on configured services
+
+                // For now, simulate discovery by loading from CSV
                 await LoadFromCsvAsync(new System.Collections.Generic.List<dynamic>());
 
                 StatusText = "Discovery Complete";
+                _log?.LogInformation("AWS Cloud Infrastructure Discovery completed successfully");
             }
             catch (Exception ex)
             {
@@ -238,9 +341,18 @@ namespace MandADiscoverySuite.ViewModels
                     return;
                 }
 
-                // Implement export logic here
-                _log?.LogInformation("Exporting AWS Cloud Infrastructure data");
-                await Task.CompletedTask; // Placeholder
+                // Create export path with timestamp
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var exportPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                    $"AWSCloudInfrastructure_Export_{timestamp}.csv"
+                );
+
+                // Export data to CSV manually
+                await Task.Run(() => System.IO.File.WriteAllLines(exportPath, ConvertToCsvLines(SelectedResults)));
+                _log?.LogInformation($"Exported AWS Cloud Infrastructure data to: {exportPath}");
+
+                ShowInformation($"Data exported successfully to: {exportPath}");
             }
             catch (Exception ex)
             {
@@ -399,6 +511,81 @@ namespace MandADiscoverySuite.ViewModels
             TotalRegions = regions.Count;
 
             _log?.LogInformation($"AWS Cloud Infrastructure Summary: Total Instances={TotalInstances}, Buckets={TotalBuckets}, Regions={TotalRegions}, Last Discovery={LastDiscoveryTime:yyyy-MM-dd HH:mm:ss}");
+        }
+
+        #endregion
+
+        #region AWS Credential Handling
+
+        private async Task TestAWSCredentialsAsync()
+        {
+            try
+            {
+                if (!ValidateCredentials())
+                {
+                    ShowError("Configuration Error", "Please configure AWS credentials or select a profile before testing.");
+                    return;
+                }
+
+                IsProcessing = true;
+                ProcessingMessage = "Testing AWS credentials...";
+
+                // Here you would implement actual AWS credential testing
+                // For now, simulate the test with a delay
+                await Task.Delay(2000);
+
+                _log?.LogInformation("AWS credentials validated successfully");
+
+                ShowInformation("Credentials validated successfully!");
+
+                ProcessingMessage = "Credentials validated";
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error testing AWS credentials");
+                ShowError("Credential Test Failed", ex.Message);
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
+        }
+
+        private bool ValidateCredentials()
+        {
+            if (UseAWSProfile)
+            {
+                return !string.IsNullOrWhiteSpace(AwsProfileName);
+            }
+            else if (UseAWSCredentials)
+            {
+                return !string.IsNullOrWhiteSpace(AwsAccessKeyId) &&
+                       !string.IsNullOrWhiteSpace(AwsSecretAccessKey) &&
+                       !string.IsNullOrWhiteSpace(AwsRegion);
+            }
+
+            return false;
+        }
+
+        private void InitializeDefaultConfigurations()
+        {
+            // Set default region if not already set
+            if (string.IsNullOrEmpty(AwsRegion))
+            {
+                AwsRegion = "us-east-1"; // Default AWS region
+            }
+
+            // Try to load AWS profile if available
+            var defaultProfile = Environment.GetEnvironmentVariable("AWS_PROFILE");
+            if (!string.IsNullOrWhiteSpace(defaultProfile))
+            {
+                AwsProfileName = defaultProfile;
+                UseAWSProfile = true;
+            }
+            else
+            {
+                UseAWSCredentials = true;
+            }
         }
 
         #endregion

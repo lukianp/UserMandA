@@ -11,10 +11,11 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Themes/ThemeStyles.xaml"/>
-                <ResourceDictionary Source="/Resources/Converters.xaml"/>
-                <ResourceDictionary Source="/Resources/DataGridTheme.xaml"/>
-                <ResourceDictionary Source="/Themes/RefinedColorPalette.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Themes/Colors.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Resources/Converters.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Resources/DataGridTheme.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/Themes/RefinedColorPalette.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -172,6 +173,9 @@
                         <DataGridTextColumn Header="Status"
                                             Binding="{Binding status}"
                                             Width="100"/>
+                        <DataGridTextColumn Header="Mitigations"
+                                            Binding="{Binding mitigations}"
+                                            Width="200"/>
                     </DataGrid.Columns>
 
                     <DataGrid.RowStyle>
@@ -225,7 +229,9 @@
                             <TextBlock Text="{Binding SelectedItem.assessmentdate}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
 
                             <TextBlock Text="Status:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.status}" FontSize="14" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedItem.status}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="Mitigations:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Text="{Binding SelectedItem.mitigations}" FontSize="14" Margin="0,2,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>
