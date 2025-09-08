@@ -1,4 +1,4 @@
-<UserControl x:Class="MandADiscoverySuite.Views.DomainDiscoveryView"
+﻿<UserControl x:Class="MandADiscoverySuite.Views.DomainDiscoveryView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -18,7 +18,7 @@
             <Setter Property="MinWidth" Value="180"/>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.1" Color="Black"/>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.1" Color="{DynamicResource BlackColor}"/>
                 </Setter.Value>
             </Setter>
         </Style>
@@ -33,14 +33,14 @@
             <Setter Property="MaxWidth" Value="320"/>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.1" Color="Black"/>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.1" Color="{DynamicResource BlackColor}"/>
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Effect">
                         <Setter.Value>
-                            <DropShadowEffect BlurRadius="12" ShadowDepth="4" Opacity="0.15" Color="Black"/>
+                            <DropShadowEffect BlurRadius="12" ShadowDepth="4" Opacity="0.15" Color="{DynamicResource BlackColor}"/>
                         </Setter.Value>
                     </Setter>
                 </Trigger>
@@ -260,7 +260,7 @@
                                                        TextWrapping="Wrap" Foreground="#323130"/>
                                             <Border Background="{Binding CategoryColor}" CornerRadius="3" Padding="6,2" 
                                                     HorizontalAlignment="Left" Margin="0,4,0,0">
-                                                <TextBlock Text="{Binding Category}" FontSize="10" Foreground="White" FontWeight="Medium"/>
+                                                <TextBlock Text="{Binding Category}" FontSize="10" Foreground="{DynamicResource WhiteBrush}" FontWeight="Medium"/>
                                             </Border>
                                         </StackPanel>
 
@@ -329,3 +329,4 @@
         </Grid>
     </Grid>
 </UserControl>
+

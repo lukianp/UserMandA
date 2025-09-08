@@ -282,25 +282,33 @@ namespace MandADiscoverySuite.ViewModels
             SelectedItemDetails.Clear();
             if (SelectedItem is System.Collections.Generic.IDictionary<string, object> dict)
             {
-                // Show only ResourceID and Provider as specified
-                if (dict.TryGetValue("resourceid", out var resourceIdObj) ||
-                    dict.TryGetValue("resource_id", out resourceIdObj) ||
-                    dict.TryGetValue("id", out resourceIdObj))
+                // Show all available fields from the selected item
+                foreach (var kvp in dict)
                 {
-                    string resourceId = CultureInfo.CurrentCulture.TextInfo.ToTitleCase("resource_id");
-                    string value = resourceIdObj?.ToString() ?? string.Empty;
-                    SelectedItemDetails.Add(new KeyValuePair<string, string>(resourceId, value));
-                }
-
-                if (dict.TryGetValue("provider", out var providerObj) ||
-                    dict.TryGetValue("resourceprovider", out providerObj) ||
-                    dict.TryGetValue("provider_code", out providerObj))
-                {
-                    string provider = CultureInfo.CurrentCulture.TextInfo.ToTitleCase("provider");
-                    string value = providerObj?.ToString() ?? string.Empty;
-                    SelectedItemDetails.Add(new KeyValuePair<string, string>(provider, value));
+                    var key = FormatFieldName(kvp.Key);
+                    var value = kvp.Value?.ToString() ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        SelectedItemDetails.Add(new KeyValuePair<string, string>(key, value));
+                    }
                 }
             }
+        }
+
+        private string FormatFieldName(string fieldName)
+        {
+            if (string.IsNullOrWhiteSpace(fieldName))
+                return "Unknown Field";
+
+            // Convert camelCase to Proper Case
+            if (fieldName.Length == 1)
+                return fieldName.ToUpper();
+
+            // Handle special cases and normalize underscores
+            fieldName = fieldName.Replace("_", " ").Replace("-", " ").Trim();
+
+            // Convert to title case
+            return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(fieldName.ToLower());
         }
 
         #endregion

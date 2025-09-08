@@ -1,0 +1,23 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Merged Resource Dictionaries - Centralized Theme Resource Management -->
+    <ResourceDictionary.MergedDictionaries>
+
+        <!-- Colors and Brushes -->
+        <ResourceDictionary Source="Colors.xaml"/>
+
+        <!-- Theme Styles (Buttons, Panels, etc.) -->
+        <ResourceDictionary Source="ThemeStyles.xaml"/>
+
+        <!-- Value Converters -->
+        <ResourceDictionary Source="../Resources/Converters.xaml"/>
+
+        <!-- DataGrid Theme -->
+        <ResourceDictionary Source="../Resources/DataGridTheme.xaml"/>
+
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- Any additional resources can be added here -->
+
+</ResourceDictionary>

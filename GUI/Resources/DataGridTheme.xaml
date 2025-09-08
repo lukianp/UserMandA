@@ -28,7 +28,7 @@
         <Setter Property="Padding" Value="8,4"/>
         <Style.Triggers>
             <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource BrandPrimaryBrush}"/>
                 <Setter Property="Foreground" Value="White"/>
                 <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
             </Trigger>

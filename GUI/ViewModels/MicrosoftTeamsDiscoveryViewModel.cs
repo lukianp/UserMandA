@@ -310,6 +310,9 @@ namespace MandADiscoverySuite.ViewModels
 
             dict.TryGetValue("guestcount", out var guestCountObj);
             SelectedItemDetails.Add(new KeyValuePair<string, string>("Guest Count", guestCountObj?.ToString() ?? ""));
+
+            dict.TryGetValue("lastactivitydate", out var lastActivityDateObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Last Activity Date", lastActivityDateObj?.ToString() ?? ""));
         }
 
         #endregion

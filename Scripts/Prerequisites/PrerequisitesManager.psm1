@@ -439,7 +439,7 @@ function Install-ActiveDirectoryModule {
             $capabilityName = "Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0"
             Write-PrerequisitesLog "Installing RSAT capability: $capabilityName" -Level "INFO"
 
-            $result = dism.exe /online /Get-CapabilityInfo /CapabilityName:$capabilityName 2>&1
+            dism.exe /online /Get-CapabilityInfo /CapabilityName:$capabilityName 2>&1
             if ($LASTEXITCODE -eq 0) {
                 # Install the capability
                 $installResult = dism.exe /online /Add-Capability /CapabilityName:$capabilityName /Quiet /NoRestart 2>&1
@@ -556,6 +556,7 @@ function Install-ActiveDirectoryModule {
             Message = "Installation failed: $($_.Exception.Message)"
             ErrorDetails = $_.Exception.Message
         }
+    } finally {
     }
 }
 
@@ -573,7 +574,7 @@ function Invoke-PrerequisitesCheck {
         [switch]$Interactive
     )
 
-    Write-PrerequisitesLog "=== Prerequisites Check Started ===" -Level "HEADER"
+    Write-PrerequisitesLog "Prerequisites check started" -Level "HEADER"
     Write-PrerequisitesLog "Module: $ModuleName" -Level "INFO"
 
     $results = @{
@@ -651,35 +652,35 @@ function Invoke-PrerequisitesCheck {
                             Write-PrerequisitesLog "! $($prereq.Name) - Optional but missing: $($prereq.Status)" -Level "WARN"
                             $results.Warnings += $prereq
                         }
+                }
                     }
-
-                } catch {
+                catch {
                     Write-PrerequisitesLog "Failed to validate $($prereq.Name): $($_.Exception.Message)" -Level "ERROR"
                     $results.Errors += $prereq
                     if ($prereq.IsRequired) {
                         $results.OverallSuccess = $false
                     }
                 }
-            }
-
-            $results.Prerequisites += $prereq
+        $results.Prerequisites += $prereq
         }
 
         # Summary
-        Write-PrerequisitesLog "=== Prerequisites Check Summary ===" -Level "HEADER"
+        Write-PrerequisitesLog "Prerequisites check summary" -Level "HEADER"
         Write-PrerequisitesLog "Total prerequisites checked: $($results.Prerequisites.Count)" -Level "INFO"
         Write-PrerequisitesLog "Installed: $($results.Installed.Count)" -Level "SUCCESS"
         Write-PrerequisitesLog "Warnings: $($results.Warnings.Count)" -Level "WARN"
         Write-PrerequisitesLog "Errors: $($results.Errors.Count)" -Level "ERROR"
-        Write-PrerequisitesLog "Overall result: $(if ($results.OverallSuccess) { 'PASS' } else { 'FAIL' })" -Level "HEADER"
+        Write-PrerequisitesLog "Overall result: $(if ($results.OverallSuccess) { 'Pass' } else { 'Fail' })" -Level "HEADER"
 
     } catch {
         Write-PrerequisitesLog "Prerequisites check failed with error: $($_.Exception.Message)" -Level "ERROR"
         $results.OverallSuccess = $false
         $results.Errors += "Prerequisites check failed: $($_.Exception.Message)"
+        }
+    } finally {
     }
 
-    Write-PrerequisitesLog "=== Prerequisites Check Complete ===" -Level "HEADER"
+    Write-PrerequisitesLog "Prerequisites check complete" -Level "HEADER"
 
     return $results
 }
@@ -826,7 +827,9 @@ function Test-NmapInstallation {
             InstallationType = "Error"
             Status = "Detection failed: $($_.Exception.Message)"
             Capabilities = "Unknown - detection error occurred"
-        }
+         }
+     }
+     finally {
     }
 }
 
@@ -919,13 +922,13 @@ function Install-NmapPrerequisite {
             New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
         }
         
-        Write-PrerequisitesLog "📁 Created temporary directory: $tempDir" -Level "DEBUG"
+        Write-PrerequisitesLog "Created temporary directory: $tempDir" -Level "DEBUG"
         
         # Download nmap installer with signature verification preference
         $nmapVersion = "7.94"
         $downloadUrls = @(
-            "https://nmap.org/dist/nmap-$nmapVersion-setup.exe",
-            "https://github.com/nmap/nmap/releases/download/v$nmapVersion/nmap-$nmapVersion-setup.exe"
+            "https://nmap.org/dist/nmap-$($nmapVersion)-setup.exe",
+            "https://github.com/nmap/nmap/releases/download/v$($nmapVersion)/nmap-$($nmapVersion)-setup.exe"
         )
         
         $installerPath = "$tempDir\nmap-setup.exe"
@@ -933,13 +936,13 @@ function Install-NmapPrerequisite {
         
         foreach ($url in $downloadUrls) {
             try {
-                Write-PrerequisitesLog "📥 Downloading nmap installer from: $url" -Level "INFO"
+                Write-PrerequisitesLog "Downloading nmap installer from: $url" -Level "INFO"
                 Invoke-WebRequest -Uri $url -OutFile $installerPath -UseBasicParsing -TimeoutSec 30
                 
                 if (Test-Path $installerPath -PathType Leaf) {
                     $fileSize = (Get-Item $installerPath).Length
                     if ($fileSize -gt 1024) {
-                        Write-PrerequisitesLog "SUCCESS: Downloaded nmap installer successfully ($fileSize bytes)" -Level "SUCCESS"
+                        Write-PrerequisitesLog "SUCCESS: Downloaded nmap installer successfully $fileSize bytes" -Level "SUCCESS"
                         $downloadSuccess = $true
                         break
                     }
@@ -959,7 +962,7 @@ function Install-NmapPrerequisite {
         $npcapPath = "$tempDir\npcap-setup.exe"
         
         try {
-            Write-PrerequisitesLog "📥 Downloading npcap installer..." -Level "INFO"
+            Write-PrerequisitesLog "Downloading npcap installer..." -Level "INFO"
             Invoke-WebRequest -Uri $npcapUrl -OutFile $npcapPath -UseBasicParsing -TimeoutSec 30
             Write-PrerequisitesLog "SUCCESS: Downloaded npcap installer successfully" -Level "SUCCESS"
         } catch {
@@ -992,7 +995,7 @@ function Install-NmapPrerequisite {
             $installedNmap = Test-NmapInstallation
             
             if ($installedNmap.Installed) {
-                Write-PrerequisitesLog "🎉 Silent nmap installation completed and verified" -Level "SUCCESS"
+                Write-PrerequisitesLog "Silent nmap installation completed and verified" -Level "SUCCESS"
                 
                 return @{
                     Success = $true
@@ -1018,7 +1021,8 @@ function Install-NmapPrerequisite {
             Installed = $false
             Message = "Installation failed: $($_.Exception.Message)"
         }
-    } finally {
+    }
+    finally {
         # Cleanup temporary files
         if (Test-Path $tempDir) {
             try {

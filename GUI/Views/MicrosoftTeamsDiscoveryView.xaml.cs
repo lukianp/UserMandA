@@ -20,13 +20,13 @@ namespace MandADiscoverySuite.Views
                 // Create and set ViewModel
                 var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
                 var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
-                var vmLogger = loggerFactory.CreateLogger<TeamsDiscoveryViewModel>();
+                var vmLogger = loggerFactory.CreateLogger<MicrosoftTeamsDiscoveryViewModel>();
 
                 var csvService = new CsvDataServiceNew(csvLogger);
 
                 // For simplicity, we'll use the existing pattern used by other views
                 // and let the ViewModel handle the data loading
-                var viewModel = new TeamsDiscoveryViewModel(null, null, vmLogger);
+                var viewModel = new MicrosoftTeamsDiscoveryViewModel(null, null, vmLogger);
 
                 DataContext = viewModel;
 

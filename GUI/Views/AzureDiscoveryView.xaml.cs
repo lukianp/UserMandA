@@ -26,5 +26,11 @@ namespace MandADiscoverySuite.Views
                 System.Diagnostics.Debug.WriteLine("AzureDiscoveryView loaded successfully");
             };
         }
+
+        // Factory method for ViewRegistry
+        public static UserControl CreateView()
+        {
+            return new AzureDiscoveryView();
+        }
     }
 }
