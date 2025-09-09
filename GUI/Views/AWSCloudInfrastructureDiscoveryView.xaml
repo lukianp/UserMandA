@@ -209,26 +209,17 @@
                         <StackPanel Margin="16">
                             <TextBlock Text="AWS Resource Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16" Foreground="{DynamicResource DarkForegroundBrush}"/>
 
-                            <TextBlock Text="Resource Name:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.resourcename}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
 
-                            <TextBlock Text="Service Type:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.servicetype}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
-
-                            <TextBlock Text="Instance Type:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.instancetype}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
-
-                            <TextBlock Text="AMI:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.ami}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
-
-                            <TextBlock Text="Region:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.region}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
-
-                            <TextBlock Text="State:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.state}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
-
-                            <TextBlock Text="Created Date:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
-                            <TextBlock Text="{Binding SelectedItem.createddate}" FontSize="14" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
+                            <ItemsControl ItemsSource="{Binding SelectedItemDetails}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,0,0,12">
+                                            <TextBlock Text="{Binding Key}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                                            <TextBlock Text="{Binding Value}" FontSize="14" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>

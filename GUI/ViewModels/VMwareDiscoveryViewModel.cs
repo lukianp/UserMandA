@@ -74,7 +74,20 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    PopulateSelectedItemDetails();
+                }
+            }
+        }
+
+        private ObservableCollection<KeyValuePair<string, string>> _selectedItemDetails = new ObservableCollection<KeyValuePair<string, string>>();
+        public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails
+        {
+            get => _selectedItemDetails;
+            set => SetProperty(ref _selectedItemDetails, value);
         }
 
         #endregion
@@ -331,6 +344,40 @@ namespace MandADiscoverySuite.ViewModels
             });
 
             _log?.LogInformation($"Calculated VMware summary: {TotalClusters} clusters, {TotalHosts} hosts, {TotalVMs} VMs");
+        }
+
+        private void PopulateSelectedItemDetails()
+        {
+            SelectedItemDetails.Clear();
+            if (SelectedItem is IDictionary<string, object> dict)
+            {
+                // Show all available fields from the selected item
+                foreach (var kvp in dict)
+                {
+                    var key = FormatFieldName(kvp.Key);
+                    var value = kvp.Value?.ToString() ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        SelectedItemDetails.Add(new KeyValuePair<string, string>(key, value));
+                    }
+                }
+            }
+        }
+
+        private string FormatFieldName(string fieldName)
+        {
+            if (string.IsNullOrWhiteSpace(fieldName))
+                return "Unknown Field";
+
+            // Convert camelCase to Proper Case
+            if (fieldName.Length == 1)
+                return fieldName.ToUpper();
+
+            // Handle special cases and normalize underscores
+            fieldName = fieldName.Replace("_", " ").Replace("-", " ").Trim();
+
+            // Convert to title case
+            return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(fieldName.ToLower());
         }
 
         #endregion

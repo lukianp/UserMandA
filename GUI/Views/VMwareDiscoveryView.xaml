@@ -30,7 +30,6 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -121,63 +120,9 @@
                 </Border>
             </Grid>
 
-            <!-- Action Buttons -->
-            <Border Grid.Row="2" Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Left Side - Actions Label -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="📋 Actions" FontSize="18" FontWeight="SemiBold"
-                                   Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center"/>
-                    </StackPanel>
-
-                    <!-- Progress Bar -->
-                    <ProgressBar Grid.Column="1" Value="{Binding ProgressValue}" Maximum="100"
-                                Height="6" Margin="24,0"
-                                Background="{StaticResource SurfaceBrush}"
-                                Foreground="{StaticResource AccentBrush}"
-                                Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                    <!-- Right Side - Action Buttons -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal">
-                        <Button Content="🔄 Run Discovery"
-                                Style="{StaticResource ModernButtonStyle}"
-                                Command="{Binding RunDiscoveryCommand}"
-                                Background="{StaticResource SuccessBrush}"
-                                IsEnabled="{Binding IsProcessing, Converter={StaticResource InverseBoolConverter}}"
-                                Margin="0,0,12,0"
-                                ToolTip="Execute VMware infrastructure discovery"/>
-                        <Button Content="🔄 Refresh Data"
-                                Style="{StaticResource ModernButtonStyle}"
-                                Command="{Binding RefreshDataCommand}"
-                                Background="{StaticResource AccentBrush}"
-                                IsEnabled="{Binding IsProcessing, Converter={StaticResource InverseBoolConverter}}"
-                                Margin="0,0,12,0"
-                                ToolTip="Reload VMware discovery data"/>
-                        <Button Content="💾 Export Data"
-                                Style="{StaticResource ModernButtonStyle}"
-                                Command="{Binding ExportCommand}"
-                                Background="{StaticResource SecondaryBrush}"
-                                IsEnabled="{Binding HasResults}"
-                                Margin="0,0,12,0"
-                                ToolTip="Export VMware data to CSV/Excel"/>
-                        <Button Content="📋 View Logs"
-                                Style="{StaticResource ModernButtonStyle}"
-                                Command="{Binding ViewLogsCommand}"
-                                Background="{StaticResource WarningBrush}"
-                                Margin="0"
-                                ToolTip="View discovery logs"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
 
             <!-- Data Grid -->
-            <Border Grid.Row="3" Style="{StaticResource ModernCardStyle}">
+            <Border Grid.Row="2" Style="{StaticResource ModernCardStyle}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>

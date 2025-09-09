@@ -225,7 +225,7 @@
                         <TextBlock Text="📊 All Properties" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"
                                    Foreground="{DynamicResource DarkForegroundBrush}"/>
                         <Separator Background="{DynamicResource DarkBorderBrush}" Margin="0,0,0,8"/>
-                        <ItemsControl ItemsSource="{Binding SelectedItem}">
+                        <ItemsControl ItemsSource="{Binding SelectedItemDetails}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Margin="0,0,0,8">

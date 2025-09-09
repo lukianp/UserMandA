@@ -67,6 +67,13 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
+        private int _totalACLs;
+        public int TotalACLs
+        {
+            get => _totalACLs;
+            set => SetProperty(ref _totalACLs, value);
+        }
+
         private DateTime _lastDiscoveryTime = DateTime.MinValue;
         public DateTime LastDiscoveryTime
         {
@@ -263,6 +270,7 @@ namespace MandADiscoverySuite.ViewModels
             // Calculate unique servers
             var serverNames = new HashSet<string>();
             long totalBytes = 0;
+            int totalACLs = 0;
 
             foreach (var item in data)
             {
@@ -292,6 +300,27 @@ namespace MandADiscoverySuite.ViewModels
                             totalBytes += sizeBytes;
                         }
                     }
+
+                    // Extract ACL count from Permissions
+                    if (dict.TryGetValue("Permissions", out var permissionsObj) ||
+                        dict.TryGetValue("PERMISSIONS", out permissionsObj))
+                    {
+                        var permissions = permissionsObj?.ToString();
+                        if (!string.IsNullOrEmpty(permissions))
+                        {
+                            var aclCount = permissions.Split(new[] { ';', ',', '\n' }, StringSplitOptions.RemoveEmptyEntries).Length;
+                            totalACLs += aclCount;
+                        }
+                    }
+                    else if (dict.TryGetValue("ACLCount", out var aclCountObj) ||
+                             dict.TryGetValue("AclCount", out aclCountObj) ||
+                             dict.TryGetValue("PermissionsCount", out aclCountObj))
+                    {
+                        if (int.TryParse(aclCountObj?.ToString(), out var aclCount))
+                        {
+                            totalACLs += aclCount;
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -301,7 +330,9 @@ namespace MandADiscoverySuite.ViewModels
 
             TotalServers = serverNames.Count;
             TotalSizeBytes = totalBytes;
+            TotalACLs = totalACLs;
             OnPropertyChanged(nameof(TotalSizeDisplay));
+            OnPropertyChanged(nameof(TotalACLs));
         }
 
         private static string BytesToReadableString(long bytes)

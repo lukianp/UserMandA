@@ -8,12 +8,15 @@
              d:DesignHeight="600" d:DesignWidth="1000">
 
         <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Themes/ThemeResources.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </UserControl.Resources>
+         <ResourceDictionary>
+             <ResourceDictionary.MergedDictionaries>
+                 <ResourceDictionary Source="../Resources/Converters.xaml" />
+                 <ResourceDictionary Source="../Resources/DataGridTheme.xaml" />
+                 <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
+                 <ResourceDictionary Source="../Themes/Colors.xaml" />
+             </ResourceDictionary.MergedDictionaries>
+         </ResourceDictionary>
+     </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
