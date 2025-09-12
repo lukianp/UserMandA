@@ -1,5 +1,7 @@
+using System;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Migration;
+using MandADiscoverySuite.Models.Migration;
 using Moq;
 using Xunit;
 

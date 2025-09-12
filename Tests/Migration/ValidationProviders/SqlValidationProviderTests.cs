@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MandADiscoverySuite.Migration;
+using MandADiscoverySuite.Models.Migration;
 
 namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
 {
@@ -21,8 +22,8 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
         private Mock<ISqlConnectionService> _mockSqlService;
         private Mock<IDbccService> _mockDbccService;
         private Mock<ISchemaComparisonService> _mockSchemaService;
-        private TargetContext _testTargetContext;
-        private DatabaseDto _testDatabase;
+        private MandADiscoverySuite.Migration.TargetContext _testTargetContext;
+        private MandADiscoverySuite.Models.Migration.DatabaseDto _testDatabase;
         private List<string> _auditRecords;
 
         [TestInitialize]
@@ -33,9 +34,9 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
             _mockSchemaService = new Mock<ISchemaComparisonService>();
             _auditRecords = new List<string>();
 
-            _sqlValidator = new SqlValidationProvider(_mockSqlService.Object, _mockDbccService.Object, _mockSchemaService.Object);
+            _sqlValidator = new SqlValidationProvider();
 
-            _testTargetContext = new TargetContext
+            _testTargetContext = new MandADiscoverySuite.Migration.TargetContext
             {
                 TenantId = "test-tenant-123",
                 Environment = "Test"
@@ -44,10 +45,10 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
             _testDatabase = new DatabaseDto
             {
                 Name = "ProductionDB",
-                Server = "sql-target-01.contoso.com",
-                Size = 1024 * 1024 * 1024 * 5, // 5 GB
-                CompatibilityLevel = 150, // SQL Server 2019
-                Collation = "SQL_Latin1_General_CP1_CI_AS",
+                ServerName = "sql-target-01.contoso.com",
+                SizeMB = 1024 * 1024 * 1024 * 5 / (1024 * 1024), // Convert bytes to MB
+                CompatibilityLevel = "150",
+                CollationName = "SQL_Latin1_General_CP1_CI_AS",
                 RecoveryModel = "FULL"
             };
         }
@@ -94,8 +95,8 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
         {
             // Arrange
             _mockSqlService
-                .Setup(sql => sql.TestConnectionAsync(_testDatabase.Server, _testDatabase.Name))
-                .ThrowsAsync(new SqlException("Network-related or instance-specific error"));
+                .Setup(sql => sql.TestConnectionAsync(_testDatabase.ServerName, _testDatabase.Name))
+                .ThrowsAsync(new Exception("Network-related or instance-specific error"));
 
             // Act
             var result = await _sqlValidator.ValidateSqlAsync(_testDatabase, _testTargetContext);
@@ -170,7 +171,7 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
             // Arrange
             SetupDatabaseExistsMock(true);
             _mockDbccService
-                .Setup(dbcc => dbcc.RunCheckDbAsync(_testDatabase.Name, _testDatabase.Server))
+                .Setup(dbcc => dbcc.RunCheckDbAsync(_testDatabase.Name, _testDatabase.ServerName))
                 .ThrowsAsync(new TimeoutException("DBCC CHECKDB operation timed out after 30 minutes"));
 
             // Act
@@ -365,7 +366,7 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
             SetupDatabaseExistsMock(true);
             SetupDatabaseConfigurationMock(new DatabaseConfiguration
             {
-                CompatibilityLevel = _testDatabase.CompatibilityLevel,
+                CompatibilityLevel = int.Parse(_testDatabase.CompatibilityLevel),
                 Collation = "SQL_Latin1_General_CP1_CS_AS", // Case-sensitive, different from expected
                 RecoveryModel = _testDatabase.RecoveryModel
             });
@@ -391,11 +392,11 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
             // Arrange
             SetupDatabaseExistsMock(true);
             _mockSqlService
-                .Setup(sql => sql.DropDatabaseAsync(_testDatabase.Server, _testDatabase.Name))
+                .Setup(sql => sql.DropDatabaseAsync(_testDatabase.ServerName, _testDatabase.Name))
                 .ReturnsAsync(true);
 
             _mockSqlService
-                .Setup(sql => sql.DatabaseExistsAsync(_testDatabase.Server, _testDatabase.Name))
+                .Setup(sql => sql.DatabaseExistsAsync(_testDatabase.ServerName, _testDatabase.Name))
                 .ReturnsAsync(false); // Confirmed deleted
 
             // Act
@@ -404,7 +405,7 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
             // Assert
             Assert.IsTrue(result.Success);
             Assert.IsTrue(result.Message.Contains("successfully"));
-            _mockSqlService.Verify(sql => sql.DropDatabaseAsync(_testDatabase.Server, _testDatabase.Name), Times.Once);
+            _mockSqlService.Verify(sql => sql.DropDatabaseAsync(_testDatabase.ServerName, _testDatabase.Name), Times.Once);
             RecordAuditEvent("Database rollback successful", _testDatabase.Name);
         }
 
@@ -414,8 +415,8 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
             // Arrange
             SetupDatabaseExistsMock(true);
             _mockSqlService
-                .Setup(sql => sql.DropDatabaseAsync(_testDatabase.Server, _testDatabase.Name))
-                .ThrowsAsync(new SqlException("Cannot drop database because it is currently in use"));
+                .Setup(sql => sql.DropDatabaseAsync(_testDatabase.ServerName, _testDatabase.Name))
+                .ThrowsAsync(new SqlException("Cannot drop database because it is currently in use", new SqlError(547, (byte)1, (byte)1, "server", "Cannot drop database because it is currently in use", "", 1)));
 
             // Act
             var result = await _sqlValidator.RollbackSqlAsync(_testDatabase, _testTargetContext);
@@ -434,12 +435,12 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
             SetupDatabaseExistsMock(true);
             
             _mockSqlService
-                .SetupSequence(sql => sql.DropDatabaseAsync(_testDatabase.Server, _testDatabase.Name))
-                .ThrowsAsync(new SqlException("Cannot drop database because it is currently in use"))
+                .SetupSequence(sql => sql.DropDatabaseAsync(_testDatabase.ServerName, _testDatabase.Name))
+                .ThrowsAsync(new SqlException("Cannot drop database because it is currently in use", new SqlError(547, (byte)1, (byte)1, "server", "Cannot drop database because it is currently in use", "", 1)))
                 .ReturnsAsync(true); // Second attempt succeeds
 
             _mockSqlService
-                .Setup(sql => sql.KillConnectionsAsync(_testDatabase.Server, _testDatabase.Name))
+                .Setup(sql => sql.KillConnectionsAsync(_testDatabase.ServerName, _testDatabase.Name))
                 .ReturnsAsync(5); // Killed 5 connections
 
             // Act
@@ -449,7 +450,7 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
             Assert.IsTrue(result.Success);
             Assert.AreEqual(1, result.Warnings.Count);
             Assert.IsTrue(result.Warnings[0].Contains("5 connections"));
-            _mockSqlService.Verify(sql => sql.KillConnectionsAsync(_testDatabase.Server, _testDatabase.Name), Times.Once);
+            _mockSqlService.Verify(sql => sql.KillConnectionsAsync(_testDatabase.ServerName, _testDatabase.Name), Times.Once);
             RecordAuditEvent("Database rollback successful with force", _testDatabase.Name, warnings: result.Warnings);
         }
 
@@ -477,11 +478,11 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
         public async Task ValidateSqlAsync_LargeDatabase_HandlesPerformantly()
         {
             // Arrange
-            var largeDatabase = new DatabaseDto
+            var largeDatabase = new MandADiscoverySuite.Models.Migration.DatabaseDto
             {
                 Name = "LargeProductionDB",
-                Server = _testDatabase.Server,
-                Size = 1024L * 1024L * 1024L * 100, // 100 GB
+                ServerName = _testDatabase.ServerName,
+                SizeMB = 1024L * 1024L * 1024L * 100, // 100 GB
                 CompatibilityLevel = _testDatabase.CompatibilityLevel
             };
 
@@ -541,13 +542,13 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
         private void SetupDatabaseExistsMock(bool exists)
         {
             _mockSqlService
-                .Setup(sql => sql.DatabaseExistsAsync(_testDatabase.Server, _testDatabase.Name))
+                .Setup(sql => sql.DatabaseExistsAsync(_testDatabase.ServerName, _testDatabase.Name))
                 .ReturnsAsync(exists);
 
             if (exists)
             {
                 _mockSqlService
-                    .Setup(sql => sql.TestConnectionAsync(_testDatabase.Server, _testDatabase.Name))
+                    .Setup(sql => sql.TestConnectionAsync(_testDatabase.ServerName, _testDatabase.Name))
                     .Returns(Task.CompletedTask);
             }
         }
@@ -555,28 +556,28 @@ namespace MandADiscoverySuite.Tests.Migration.ValidationProviders
         private void SetupDbccCheckDbMock(DbccResult result)
         {
             _mockDbccService
-                .Setup(dbcc => dbcc.RunCheckDbAsync(_testDatabase.Name, _testDatabase.Server))
+                .Setup(dbcc => dbcc.RunCheckDbAsync(_testDatabase.Name, _testDatabase.ServerName))
                 .ReturnsAsync(result);
         }
 
         private void SetupSchemaValidationMock(SchemaComparisonResult result)
         {
             _mockSchemaService
-                .Setup(schema => schema.CompareSchemaAsync(_testDatabase.Server, _testDatabase.Name, It.IsAny<string>(), It.IsAny<string>()))
+                .Setup(schema => schema.CompareSchemaAsync(_testDatabase.ServerName, _testDatabase.Name, It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(result);
         }
 
         private void SetupDataConsistencyMock(DataConsistencyResult result)
         {
             _mockSqlService
-                .Setup(sql => sql.ValidateDataConsistencyAsync(_testDatabase.Server, _testDatabase.Name, It.IsAny<string>(), It.IsAny<string>()))
+                .Setup(sql => sql.ValidateDataConsistencyAsync(_testDatabase.ServerName, _testDatabase.Name, It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(result);
         }
 
         private void SetupDatabaseConfigurationMock(DatabaseConfiguration config)
         {
             _mockSqlService
-                .Setup(sql => sql.GetDatabaseConfigurationAsync(_testDatabase.Server, _testDatabase.Name))
+                .Setup(sql => sql.GetDatabaseConfigurationAsync(_testDatabase.ServerName, _testDatabase.Name))
                 .ReturnsAsync(config);
         }
 

@@ -284,39 +284,202 @@
             
             <!-- Tab 1: Overview -->
             <TabItem Header="📊 Overview">
-                <Border Background="{DynamicResource CardBackgroundBrush}" 
-                       BorderBrush="{DynamicResource BorderBrush}" 
-                       BorderThickness="1" 
-                       CornerRadius="0,8,8,8">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <Grid Margin="16">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Text="Asset Overview Summary" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,16"/>
-                        <StackPanel Grid.Row="1">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                    <TextBlock Text="Resource Summary" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                    <TextBlock Text="{Binding Users.Count, StringFormat='{}Users: {0}'}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="{Binding Apps.Count, StringFormat='{}Applications: {0}'}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="{Binding FileAccess.Count, StringFormat='{}File Access Entries: {0}'}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="{Binding Groups.Count, StringFormat='{}Groups: {0}'}" Margin="0,0,0,4"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                                    <TextBlock Text="Services Summary" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                    <TextBlock Text="{Binding GpoLinks.Count, StringFormat='{}GPO Links: {0}'}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="{Binding SqlDatabases.Count, StringFormat='{}SQL Databases: {0}'}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="{Binding Risks.Count, StringFormat='{}Risk Items: {0}'}" Margin="0,0,0,4"/>
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
+
+                        <!-- Hardware Section -->
+                        <Border Grid.Row="0" Background="{DynamicResource BorderBrush}" Opacity="0.3" Margin="0,0,0,16" Padding="3" CornerRadius="8">
+                            <StackPanel>
+                                <TextBlock Text="🖥️ Hardware Information" FontSize="18" FontWeight="SemiBold"
+                                          Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,12"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                        <TextBlock Text="CPU Model:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding Hardware?.Processor, FallbackValue='Not Available'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                        <TextBlock Text="RAM:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding Hardware?.InstalledRAM, FallbackValue='Not Available'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                        <TextBlock Text="Storage:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding Hardware?.Storage, FallbackValue='Not Available'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                                        <TextBlock Text="Model:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding Hardware?.Model, FallbackValue='Not Available'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                        <TextBlock Text="Serial Number:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding Hardware?.SerialNumber, FallbackValue='Not Available'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                        <TextBlock Text="BIOS Version:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding Hardware?.BIOSVersion, FallbackValue='Not Available'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2" Margin="0,0,0,0">
+                                        <TextBlock Text="Manufacturer:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding Hardware?.Manufacturer, FallbackValue='Not Available'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                        <TextBlock Text="Chassis Type:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding Hardware?.ChassisType, FallbackValue='Not Available'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                        <TextBlock Text="IP Address:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding Hardware?.IPAddress, FallbackValue='Not Available'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Owner Information Section -->
+                        <Border Grid.Row="1" Background="{DynamicResource BorderBrush}" Opacity="0.3" Margin="0,0,0,16" Padding="3" CornerRadius="8">
+                            <StackPanel>
+                                <TextBlock Text="👤 Owner Information" FontSize="18" FontWeight="SemiBold"
+                                          Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,12"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                        <TextBlock Text="Primary User:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding PrimaryUserName, FallbackValue='Not Assigned'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                        <TextBlock Text="User SID:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding PrimaryUserSid, FallbackValue='N/A'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                                        <TextBlock Text="Department:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding OwnerDepartment, FallbackValue='N/A'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                        <TextBlock Text="Manager:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding OwnerManager, FallbackValue='N/A'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2" Margin="0,0,0,0">
+                                        <TextBlock Text="Location:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding OwnerLocation, FallbackValue='N/A'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                        <TextBlock Text="Employee ID:" Style="{StaticResource LabelStyle}"/>
+                                        <TextBlock Text="{Binding OwnerEmployeeId, FallbackValue='N/A'}"
+                                                  Style="{StaticResource ValueStyle}" Margin="0,0,0,12"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Applications Summary Section -->
+                        <Border Grid.Row="2" Background="{DynamicResource BorderBrush}" Opacity="0.3" Margin="0,0,0,16" Padding="3" CornerRadius="8">
+                            <StackPanel>
+                                <TextBlock Text="📱 Installed Applications" FontSize="18" FontWeight="SemiBold"
+                                          Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,12"/>
+                                <TextBlock Text="Current Status:"
+                                          Style="{StaticResource LabelStyle}" FontSize="14" FontWeight="SemiBold"/>
+                                <Border Background="{DynamicResource CardBackgroundBrush}"  Padding="12" CornerRadius="6" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Total Apps:" Style="{StaticResource LabelStyle}"/>
+                                            <TextBlock Text="{Binding Apps.Count, StringFormat='{}{0} applications'}"
+                                                      Style="{StaticResource ValueStyle}" Margin="0,0,0,8"/>
+                                            <TextBlock Text="Microsoft Apps:" Style="{StaticResource LabelStyle}"/>
+                                            <TextBlock Text="{Binding MicrosoftApps.Count, StringFormat='{}{0} apps'}"
+                                                      Style="{StaticResource ValueStyle}" Margin="0,0,0,8"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="Third-Party Apps:" Style="{StaticResource LabelStyle}"/>
+                                            <TextBlock Text="{Binding ThirdPartyApps.Count, StringFormat='{}{0} apps'}"
+                                                      Style="{StaticResource ValueStyle}" Margin="0,0,0,8"/>
+                                            <TextBlock Text="CrowdStrike Apps:" Style="{StaticResource LabelStyle}"/>
+                                            <TextBlock Text="{Binding CrowdStrikeApps.Count, StringFormat='{}{0} apps'}"
+                                                      Style="{StaticResource ValueStyle}" Margin="0,0,0,8"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Critical Apps:" Style="{StaticResource LabelStyle}"/>
+                                            <TextBlock Text="{Binding CriticalApps.Count, StringFormat='{}{0} apps'}"
+                                                      Style="{StaticResource ValueStyle}" Margin="0,0,0,8"/>
+                                            <TextBlock Text="Last Updated:" Style="{StaticResource LabelStyle}"/>
+                                            <TextBlock Text="{Binding LastAppsScan, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                                      Style="{StaticResource ValueStyle}" Margin="0,0,0,8"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Risk Summary -->
+                        <Border Grid.Row="3" Background="{DynamicResource BorderBrush}" Opacity="0.3" Margin="0,0,0,16" Padding="3" CornerRadius="8">
+                            <StackPanel>
+                                <TextBlock Text="⚠️ Risk Assessment" FontSize="18" FontWeight="SemiBold"
+                                          Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,12"/>
+                                <TextBlock Text="Current Risk Profile:"
+                                          Style="{StaticResource LabelStyle}" FontSize="14" FontWeight="SemiBold"/>
+                                <Border Background="{DynamicResource CardBackgroundBrush}" Padding="12" CornerRadius="6" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Total Risks:" Style="{StaticResource LabelStyle}"/>
+                                            <TextBlock Text="{Binding Risks.Count, StringFormat='{}{0} items'}"
+                                                      Style="{StaticResource ValueStyle}" Margin="0,0,0,8"/>
+                                            <TextBlock Text="High Priority:" Style="{StaticResource LabelStyle}"/>
+                                            <TextBlock Text="{Binding HighRiskCount, StringFormat='{}{0} risks'}"
+                                                      Style="{StaticResource ValueStyle}" Margin="0,0,0,8"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="Migration Status:" Style="{StaticResource LabelStyle}"/>
+                                            <TextBlock Text="{Binding MigrationReadinessStatus, FallbackValue='Not Assessed'}"
+                                                      Style="{StaticResource ValueStyle}" Margin="0,0,0,8"/>
+                                            <TextBlock Text="Compatibility:" Style="{StaticResource LabelStyle}"/>
+                                            <TextBlock Text="{Binding OSCompatibilityStatus, FallbackValue='Checking'}"
+                                                      Style="{StaticResource ValueStyle}" Margin="0,0,0,8"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Backup Status:" Style="{StaticResource LabelStyle}"/>
+                                            <TextBlock Text="{Binding BackupStatus, FallbackValue='Unknown'}"
+                                                      Style="{StaticResource ValueStyle}" Margin="0,0,0,8"/>
+                                            <TextBlock Text="Last Assessment:" Style="{StaticResource LabelStyle}"/>
+                                            <TextBlock Text="{Binding LastRiskAssessment, StringFormat='{}{0:yyyy-MM-dd}'}"
+                                                      Style="{StaticResource ValueStyle}" Margin="0,0,0,8"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
                     </Grid>
-                </Border>
+                </ScrollViewer>
             </TabItem>
             
             <!-- Tab 2: Users -->

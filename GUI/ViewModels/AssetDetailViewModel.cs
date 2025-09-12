@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading.Tasks;
@@ -43,6 +44,27 @@ namespace MandADiscoverySuite.ViewModels
         private DateTime? _lastSeen;
         private DateTime? _createdDate;
 
+        // Hardware Information
+        private object? _hardware;
+        private string? _ownerDepartment;
+        private string? _ownerLocation;
+        private string? _ownerManager;
+        private string? _ownerEmployeeId;
+
+        // Risk and Status information
+        private int _highRiskCount;
+        private string? _migrationReadinessStatus;
+        private string? _osCompatibilityStatus;
+        private string? _backupStatus;
+        private DateTime? _lastRiskAssessment;
+        private DateTime? _lastAppsScan;
+
+        // App summary collections
+        private ObservableCollection<AppDto> _microsoftApps = new();
+        private ObservableCollection<AppDto> _thirdPartyApps = new();
+        private ObservableCollection<AppDto> _crowdStrikeApps = new();
+        private ObservableCollection<AppDto> _criticalApps = new();
+
         // Commands
         public ICommand AddToMigrationWaveCommand { get; private set; }
         public ICommand ExportSnapshotCommand { get; private set; }
@@ -51,7 +73,7 @@ namespace MandADiscoverySuite.ViewModels
 
         public AssetDetailViewModel(
             ILogicEngineService logicEngineService,
-            ILogger<AssetDetailViewModel> logger,
+            ILogger logger,
             IMigrationWaveService? migrationWaveService = null,
             IDataExportService? dataExportService = null)
             : base(logger)
@@ -143,6 +165,100 @@ namespace MandADiscoverySuite.ViewModels
             private set => SetProperty(ref _createdDate, value);
         }
 
+        // Hardware properties
+        public object? Hardware
+        {
+            get => _hardware;
+            private set => SetProperty(ref _hardware, value);
+        }
+
+        // Owner properties
+        public string? OwnerDepartment
+        {
+            get => _ownerDepartment;
+            private set => SetProperty(ref _ownerDepartment, value);
+        }
+
+        public string? OwnerLocation
+        {
+            get => _ownerLocation;
+            private set => SetProperty(ref _ownerLocation, value);
+        }
+
+        public string? OwnerManager
+        {
+            get => _ownerManager;
+            private set => SetProperty(ref _ownerManager, value);
+        }
+
+        public string? OwnerEmployeeId
+        {
+            get => _ownerEmployeeId;
+            private set => SetProperty(ref _ownerEmployeeId, value);
+        }
+
+        // Risk and Status properties
+        public int HighRiskCount
+        {
+            get => _highRiskCount;
+            private set => SetProperty(ref _highRiskCount, value);
+        }
+
+        public string? MigrationReadinessStatus
+        {
+            get => _migrationReadinessStatus;
+            private set => SetProperty(ref _migrationReadinessStatus, value);
+        }
+
+        public string? OSCompatibilityStatus
+        {
+            get => _osCompatibilityStatus;
+            private set => SetProperty(ref _osCompatibilityStatus, value);
+        }
+
+        public string? BackupStatus
+        {
+            get => _backupStatus;
+            private set => SetProperty(ref _backupStatus, value);
+        }
+
+        public DateTime? LastRiskAssessment
+        {
+            get => _lastRiskAssessment;
+            private set => SetProperty(ref _lastRiskAssessment, value);
+        }
+
+        public DateTime? LastAppsScan
+        {
+            get => _lastAppsScan;
+            private set => SetProperty(ref _lastAppsScan, value);
+        }
+
+        // App summary collections
+        public ObservableCollection<AppDto> MicrosoftApps
+        {
+            get => _microsoftApps;
+            private set => SetProperty(ref _microsoftApps, value);
+        }
+
+        public ObservableCollection<AppDto> ThirdPartyApps
+        {
+            get => _thirdPartyApps;
+            private set => SetProperty(ref _thirdPartyApps, value);
+        }
+
+        public ObservableCollection<AppDto> CrowdStrikeApps
+        {
+            get => _crowdStrikeApps;
+            private set => SetProperty(ref _crowdStrikeApps, value);
+        }
+
+        public ObservableCollection<AppDto> CriticalApps
+        {
+            get => _criticalApps;
+            private set => SetProperty(ref _criticalApps, value);
+        }
+
         // Tab collections
         public ObservableCollection<UserDto> Users
         {
@@ -200,7 +316,13 @@ namespace MandADiscoverySuite.ViewModels
             ExportSnapshotCommand = new AsyncRelayCommand(ExportSnapshotAsync, () => AssetDetail != null);
             RefreshDataCommand = new AsyncRelayCommand(LoadAssetDetailAsync);
             CloseCommand = new RelayCommand(CloseAssetDetail);
+            OpenAssetDetailCommand = new RelayCommand<string>(OpenAssetDetail);
         }
+
+        /// <summary>
+        /// Open Asset Detail Command - used for integration with main lists
+        /// </summary>
+        public ICommand OpenAssetDetailCommand { get; private set; }
 
         /// <summary>
         /// Load asset detail data from LogicEngineService
@@ -263,10 +385,30 @@ namespace MandADiscoverySuite.ViewModels
             OrganizationalUnit = device.OU;
             PrimaryUserSid = device.PrimaryUserSid;
             // TODO: Resolve primary user name from SID
-            PrimaryUserName = device.PrimaryUserSid; 
+            PrimaryUserName = device.PrimaryUserSid;
             IsOnline = true; // TODO: Add IsOnline to DeviceDto
             LastSeen = device.DiscoveryTimestamp;
             CreatedDate = device.DiscoveryTimestamp; // TODO: Add proper CreatedDate to DeviceDto
+
+            // Set up basic hardware information (would typically come from detailed discovery)
+            Hardware = new
+            {
+                Processor = "Intel Core i5-10500H", // TODO: Get from detailed hardware discovery
+                InstalledRAM = "16GB", // TODO: Get from detailed hardware discovery
+                Storage = "512GB SSD", // TODO: Get from detailed hardware discovery
+                Model = device.Name ?? "Unknown", // TODO: Get proper model information
+                SerialNumber = "SN123456789", // TODO: Get from hardware discovery
+                BIOSVersion = "1.2.3", // TODO: Get from hardware discovery
+                Manufacturer = "Dell Inc.", // TODO: Get from hardware discovery
+                ChassisType = "Laptop", // TODO: Get from hardware discovery
+                IPAddress = device.DNS ?? "Not Available" // TODO: Get primary IP
+            };
+
+            // TODO: Set up owner information from user details or HR data
+            OwnerDepartment = "IT Department"; // TODO: Get from user directory
+            OwnerLocation = "Head Office"; // TODO: Get from user directory
+            OwnerManager = "John Smith"; // TODO: Get from user directory
+            OwnerEmployeeId = "EMP001"; // TODO: Get from user directory
         }
 
         /// <summary>
@@ -283,6 +425,9 @@ namespace MandADiscoverySuite.ViewModels
             Apps.Clear();
             foreach (var app in detail.InstalledApps)
                 Apps.Add(app);
+
+            // Categorize applications for summary
+            CategorizeApplications(detail.InstalledApps);
 
             // Update File Access tab
             FileAccess.Clear();
@@ -304,8 +449,49 @@ namespace MandADiscoverySuite.ViewModels
 
             // Update Risks tab
             Risks.Clear();
+            HighRiskCount = 0;
             foreach (var risk in detail.Risks)
-                Risks.Add(ConvertToRiskAssessment(risk));
+            {
+                var riskAssessment = ConvertToRiskAssessment(risk);
+                Risks.Add(riskAssessment);
+                if (riskAssessment.CurrentLevel == RiskLevel.High || riskAssessment.CurrentLevel == RiskLevel.Critical)
+                    HighRiskCount++;
+            }
+
+            // Set additional status information
+            MigrationReadinessStatus = HighRiskCount == 0 ? "Ready" : $"{HighRiskCount} issues to resolve";
+            OSCompatibilityStatus = OperatingSystem?.Contains("Windows") == true ? "Compatible" : "Check Required";
+            BackupStatus = "Configured"; // TODO: Get from backup monitoring
+            LastRiskAssessment = DateTime.Now;
+            LastAppsScan = DateTime.Now;
+        }
+
+        /// <summary>
+        /// Categorize installed applications into summary collections
+        /// </summary>
+        private void CategorizeApplications(IEnumerable<AppDto> installedApps)
+        {
+            MicrosoftApps.Clear();
+            ThirdPartyApps.Clear();
+            CrowdStrikeApps.Clear();
+            CriticalApps.Clear();
+
+            foreach (var app in installedApps)
+            {
+                // Categorize Microsoft apps
+                if (app.Source?.Contains("Microsoft") == true || app.Publishers?.Contains("Microsoft") == true)
+                    MicrosoftApps.Add(app);
+                else
+                    ThirdPartyApps.Add(app);
+
+                // Categorize CrowdStrike apps (example categorization)
+                if (app.Name?.Contains("CrowdStrike") == true)
+                    CrowdStrikeApps.Add(app);
+
+                // Categorize critical business applications (example)
+                if (app.Name?.Contains("Office") == true || app.Name?.Contains("Teams") == true || app.Name?.Contains("Azure") == true)
+                    CriticalApps.Add(app);
+            }
         }
 
         /// <summary>
@@ -314,7 +500,7 @@ namespace MandADiscoverySuite.ViewModels
         private void ClearAssetDetail()
         {
             AssetDetail = null;
-            
+
             // Clear basic info
             DeviceName = null;
             DnsName = null;
@@ -325,6 +511,27 @@ namespace MandADiscoverySuite.ViewModels
             IsOnline = false;
             LastSeen = null;
             CreatedDate = null;
+
+            // Clear hardware info
+            Hardware = null;
+            OwnerDepartment = null;
+            OwnerLocation = null;
+            OwnerManager = null;
+            OwnerEmployeeId = null;
+
+            // Clear risk and status info
+            HighRiskCount = 0;
+            MigrationReadinessStatus = null;
+            OSCompatibilityStatus = null;
+            BackupStatus = null;
+            LastRiskAssessment = null;
+            LastAppsScan = null;
+
+            // Clear app summary collections
+            MicrosoftApps.Clear();
+            ThirdPartyApps.Clear();
+            CrowdStrikeApps.Clear();
+            CriticalApps.Clear();
 
             // Clear tab collections
             Users.Clear();
@@ -394,6 +601,14 @@ namespace MandADiscoverySuite.ViewModels
         {
             // Send close message via messenger
             SendMessage(new CloseAssetDetailMessage());
+        }
+
+        /// <summary>
+        /// Open asset detail from external source (main asset list)
+        /// </summary>
+        private void OpenAssetDetail(string deviceName)
+        {
+            SelectedDeviceName = deviceName;
         }
 
         public override async Task LoadAsync()

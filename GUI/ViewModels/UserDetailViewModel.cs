@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
@@ -302,11 +303,11 @@ namespace MandADiscoverySuite.ViewModels
             UserPrincipalName = user.UPN;
             Email = user.Mail;
             Department = user.Dept;
-            JobTitle = null; // TODO: Add JobTitle to UserDto
-            Manager = user.ManagerSid; // TODO: Resolve manager name from SID
+            JobTitle = null; // Not available in current UserDto - would need enrichment
+            Manager = user.ManagerSid ?? "N/A"; // SID-based, name resolution would require additional lookup
             AccountEnabled = user.Enabled;
-            CreatedDate = user.DiscoveryTimestamp; // TODO: Add proper CreatedDate to UserDto
-            LastSignIn = null; // TODO: Add LastSignIn to UserDto
+            CreatedDate = user.DiscoveryTimestamp;
+            LastSignIn = null; // Not available in current UserDto - would need Azure/Entra data
         }
 
         /// <summary>
@@ -555,15 +556,93 @@ namespace MandADiscoverySuite.ViewModels
 
         public async Task<string> ExportUserDetailAsync(UserDetailProjection userDetail)
         {
-            var filename = $"UserDetail_{userDetail.User.Sam}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
-            var exportPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), filename);
-            
-            _logger.LogInformation("STUB: Exporting user detail for {UserName} to {Path}", userDetail.User.DisplayName, exportPath);
-            
-            // Simulate export work
-            await Task.Delay(200);
-            
-            return exportPath;
+            try
+            {
+                var timestamp = DateTime.UtcNow;
+                var sidParts = userDetail.User.Sid.Split('-');
+                var sidSuffix = sidParts.Length > 0 ? sidParts[sidParts.Length - 1] : userDetail.User.Sid;
+                var safeSamAccount = string.IsNullOrEmpty(userDetail.User.Sam)
+                    ? sidSuffix
+                    : userDetail.User.Sam.Replace("\\", "_").Replace("/", "_");
+                var filename = $"UserDetail_{safeSamAccount}_{timestamp:yyyyMMdd_HHmmss}.json";
+                var exportPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), filename);
+
+                // Create basic export data with counts and simple information
+                var exportData = new
+                {
+                    ExportInfo = new
+                    {
+                        ExportedAt = timestamp,
+                        UserIdentifier = userDetail.User.Sid,
+                        DisplayName = userDetail.User.DisplayName,
+                        UserPrincipalName = userDetail.User.UPN,
+                        TotalDataPoints = CalculateTotalDataPoints(userDetail)
+                    },
+                    BasicCounts = new
+                    {
+                        Groups = userDetail.Groups.Count,
+                        Devices = userDetail.Devices.Count,
+                        Applications = userDetail.Apps.Count,
+                        FileAccessEntries = userDetail.Shares.Count,
+                        MappedDrives = userDetail.Drives.Count,
+                        GpoLinks = userDetail.GpoLinks.Count,
+                        GpoFilters = userDetail.GpoFilters.Count,
+                        MailboxExists = userDetail.Mailbox != null,
+                        AzureRoles = userDetail.AzureRoles.Count,
+                        SqlDatabases = userDetail.SqlDatabases.Count,
+                        Risks = userDetail.Risks.Count,
+                        MigrationHints = userDetail.MigrationHints.Count
+                    },
+                    UserDetails = new
+                    {
+                        userDetail.User.Sam,
+                        userDetail.User.DisplayName,
+                        userDetail.User.UPN,
+                        userDetail.User.Mail,
+                        userDetail.User.Dept,
+                        userDetail.User.OU,
+                        userDetail.User.Enabled,
+                        userDetail.User.DiscoveryTimestamp
+                    }
+                };
+
+                // Serialize to JSON and write to file
+                var jsonOptions = new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(exportData, jsonOptions);
+                await File.WriteAllTextAsync(exportPath, json, System.Text.Encoding.UTF8);
+
+                _logger.LogInformation("Successfully exported user detail for {UserName} to {Path}", userDetail.User.DisplayName, exportPath);
+
+                return exportPath;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to export user detail for {UserSid}", userDetail.User.Sid);
+                throw new InvalidOperationException($"Failed to export user details: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Calculate total data points for export summary
+        /// </summary>
+        private int CalculateTotalDataPoints(UserDetailProjection userDetail)
+        {
+            return userDetail.Groups.Count +
+                   userDetail.Devices.Count +
+                   userDetail.Apps.Count +
+                   userDetail.Shares.Count +
+                   userDetail.Drives.Count +
+                   userDetail.GpoLinks.Count +
+                   userDetail.GpoFilters.Count +
+                   userDetail.AzureRoles.Count +
+                   userDetail.SqlDatabases.Count +
+                   userDetail.Risks.Count +
+                   userDetail.MigrationHints.Count;
         }
 
         public async Task<string> ExportAssetDetailAsync(AssetDetailProjection assetDetail)
