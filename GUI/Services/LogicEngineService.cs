@@ -3620,15 +3620,15 @@ namespace MandADiscoverySuite.Services
                     Properties: new Dictionary<string, object>
                     {
                         ["EntityType"] = "FileShare",
-                        ["Name"] = share.Name,
-                        ["Path"] = share.Path,
-                        ["Server"] = share.Server,
-                        ["PermissionCount"] = share.Permissions.Count,
+                        ["Name"] = share.Name ?? "Unknown",
+                        ["Path"] = share.Path ?? "Unknown",
+                        ["Server"] = share.Server ?? "Unknown",
+                        ["PermissionCount"] = share.Permissions?.Count ?? 0,
                         ["RiskScore"] = shareRiskScore,
-                        ["IsHiddenShare"] = share.Name.EndsWith("$"),
-                        ["IsAdminShare"] = IsAdminShare(share.Name),
+                        ["IsHiddenShare"] = share.Name?.EndsWith("$") ?? false,
+                        ["IsAdminShare"] = IsAdminShare(share.Name ?? ""),
                         ["LastSeen"] = share.DiscoveryTimestamp,
-                        ["SourceModule"] = share.DiscoveryModule
+                        ["SourceModule"] = share.DiscoveryModule ?? "Unknown"
                     });
             }
 
@@ -4005,8 +4005,6 @@ namespace MandADiscoverySuite.Services
             };
         }
 
-        #endregion
-
         /// <summary>
         /// Calculates risk score for a user based on various factors
         /// </summary>
@@ -4162,12 +4160,17 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         private bool IsDomainController(string deviceName)
         {
+            if (string.IsNullOrEmpty(deviceName))
+            {
+                return false;
+            }
+
             var name = deviceName.ToLowerInvariant();
             return name.Contains("^dc", StringComparison.OrdinalIgnoreCase) ||
                    name.Contains("domain control", StringComparison.OrdinalIgnoreCase) ||
                    _devicesByName.Values.Any(d => d.Name == deviceName &&
-                       (d.OS.Contains("Server", StringComparison.OrdinalIgnoreCase) ||
-                        d.Name.Length <= 3)); // Short server names often indicate DCs
+                       (d.OS?.Contains("Server", StringComparison.OrdinalIgnoreCase) == true ||
+                        d.Name?.Length <= 3)); // Short server names often indicate DCs
         }
 
         /// <summary>
@@ -4292,10 +4295,15 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         private bool HasKnownVulnerabilities(AppDto app)
         {
+            if (app == null || string.IsNullOrEmpty(app.Name))
+            {
+                return false;
+            }
+
             // Simple heuristic-based vulnerability detection
             // This would typically integrate with a CVE database
 
-            var name = app.Name?.ToLowerInvariant() ?? "";
+            var name = app.Name.ToLowerInvariant();
 
             // Well-known vulnerable patterns
             return name.Contains("java 6") ||
@@ -5025,9 +5033,12 @@ namespace MandADiscoverySuite.Services
                                 }
 
                                 var identityName = GetIdentityNameForSid(acl.IdentitySid);
-                                if (!string.IsNullOrEmpty(identityName) && !permissions[shareKey].Contains(identityName))
+                                if (!string.IsNullOrEmpty(identityName) && permissions.TryGetValue(shareKey, out var permissionList))
                                 {
-                                    permissions[shareKey].Add(identityName);
+                                    if (!permissionList.Contains(identityName))
+                                    {
+                                        permissionList.Add(identityName);
+                                    }
                                 }
 
                                 // Track discovery metadata - we need to get this from Properties
@@ -5082,6 +5093,11 @@ namespace MandADiscoverySuite.Services
                     DiscoveryModule: meta.Item2,
                     SessionId: meta.Item3
                 );
+
+                if (shareName == null)
+                {
+                    continue;
+                }
 
                 _fileSharesByName[shareName] = shareDto;
                 fileShares.Add(shareDto);
@@ -5150,22 +5166,46 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         private string? FuzzyFindClosestMatch(string targetSid)
         {
+            if (string.IsNullOrEmpty(targetSid))
+            {
+                return null;
+            }
+
             // Extract components from target SID: S-1-5-21-[domain]-[user/group]-[user/group id]
             var targetParts = targetSid.Split('-');
-            if (targetParts.Length < 8) return null;
+            if (targetParts.Length < 8)
+            {
+                return null;
+            }
 
-            string bestMatch = null;
+            string? bestMatch = null;
             double bestSimilarity = 0.0;
 
             // Search through all known users for closest match by SID structure
             foreach (var user in _usersBySid.Values)
             {
+                if (user == null || string.IsNullOrEmpty(user.Sid))
+                {
+                    continue;
+                }
+
                 var candidateParts = user.Sid.Split('-');
-                if (candidateParts.Length < 8) continue;
+                if (candidateParts.Length < 8)
+                {
+                    continue;
+                }
 
                 // Calculate similarity based on domain ID and account structure
-                var domainDiff = Math.Abs(long.Parse(targetParts[7]) - long.Parse(candidateParts[7]));
-                var accountDiff = Math.Abs(long.Parse(targetParts[8]) - long.Parse(candidateParts[8]));
+                if (!long.TryParse(targetParts[7], out var targetDomainId) ||
+                    !long.TryParse(candidateParts[7], out var candidateDomainId) ||
+                    !long.TryParse(targetParts[8], out var targetAccountId) ||
+                    !long.TryParse(candidateParts[8], out var candidateAccountId))
+                {
+                    continue;
+                }
+
+                var domainDiff = Math.Abs(targetDomainId - candidateDomainId);
+                var accountDiff = Math.Abs(targetAccountId - candidateAccountId);
 
                 // Domain match is key, account ID should be somewhat close
                 var domainSimilarity = domainDiff <= 10 ? (10.0 - domainDiff) / 10.0 : 0.0;
@@ -5183,10 +5223,24 @@ namespace MandADiscoverySuite.Services
             // Also check groups for closest match
             foreach (var group in _groupsBySid.Values)
             {
-                var candidateParts = group.Sid.Split('-');
-                if (candidateParts.Length < 8) continue;
+                if (group == null || string.IsNullOrEmpty(group.Sid))
+                {
+                    continue;
+                }
 
-                var domainDiff = Math.Abs(long.Parse(targetParts[7]) - long.Parse(candidateParts[7]));
+                var candidateParts = group.Sid.Split('-');
+                if (candidateParts.Length < 8)
+                {
+                    continue;
+                }
+
+                if (!long.TryParse(targetParts[7], out var targetDomainId) ||
+                    !long.TryParse(candidateParts[7], out var candidateDomainId))
+                {
+                    continue;
+                }
+
+                var domainDiff = Math.Abs(targetDomainId - candidateDomainId);
                 var domainSimilarity = domainDiff <= 10 ? (10.0 - domainDiff) / 10.0 : 0.0;
 
                 if (domainSimilarity > bestSimilarity && domainSimilarity > 0.5)
@@ -5344,7 +5398,6 @@ namespace MandADiscoverySuite.Services
             return _sqlDbsByKey.Values.ToList();
         }
 
-        #endregion
     }
 
     /// <summary>
