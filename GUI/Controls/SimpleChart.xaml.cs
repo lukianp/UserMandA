@@ -200,7 +200,7 @@ namespace MandADiscoverySuite.Controls
             }
         }
 
-        private Path CreatePieSlice(double centerX, double centerY, double radius, double startAngle, double sweepAngle, string color)
+        private System.Windows.Shapes.Path CreatePieSlice(double centerX, double centerY, double radius, double startAngle, double sweepAngle, string color)
         {
             var startAngleRad = startAngle * Math.PI / 180;
             var endAngleRad = (startAngle + sweepAngle) * Math.PI / 180;
@@ -214,7 +214,7 @@ namespace MandADiscoverySuite.Controls
 
             var pathData = $"M {centerX},{centerY} L {x1},{y1} A {radius},{radius} 0 {(isLargeArc ? 1 : 0)},1 {x2},{y2} Z";
 
-            return new Path
+            return new System.Windows.Shapes.Path
             {
                 Data = Geometry.Parse(pathData),
                 Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color))

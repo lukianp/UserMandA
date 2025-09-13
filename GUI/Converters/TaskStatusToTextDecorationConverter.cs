@@ -13,7 +13,7 @@ namespace MandADiscoverySuite.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is TaskStatus status && status == TaskStatus.Completed)
+            if (value is Models.TaskStatus status && status == Models.TaskStatus.Completed)
             {
                 return TextDecorations.Strikethrough;
             }

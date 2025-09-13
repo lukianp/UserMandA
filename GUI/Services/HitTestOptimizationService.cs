@@ -19,7 +19,7 @@ namespace MandADiscoverySuite.Services
             typeof(Rectangle),
             typeof(Ellipse),
             typeof(Line),
-            typeof(Path)
+            typeof(System.Windows.Shapes.Path)
         };
 
         private readonly HashSet<string> _decorativeIndicators = new()
@@ -91,7 +91,7 @@ namespace MandADiscoverySuite.Services
                     ellipse.IsHitTestVisible = false;
                     break;
 
-                case Path path when IsDecorative(path):
+                case System.Windows.Shapes.Path path when IsDecorative(path):
                     path.IsHitTestVisible = false;
                     break;
             }

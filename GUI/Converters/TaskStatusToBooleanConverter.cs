@@ -12,9 +12,9 @@ namespace MandADiscoverySuite.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is TaskStatus status)
+            if (value is Models.TaskStatus status)
             {
-                return status == TaskStatus.Completed;
+                return status == Models.TaskStatus.Completed;
             }
             return false;
         }
@@ -23,9 +23,9 @@ namespace MandADiscoverySuite.Converters
         {
             if (value is bool isChecked)
             {
-                return isChecked ? TaskStatus.Completed : TaskStatus.NotStarted;
+                return isChecked ? Models.TaskStatus.Completed : Models.TaskStatus.NotStarted;
             }
-            return TaskStatus.NotStarted;
+            return Models.TaskStatus.NotStarted;
         }
     }
 }

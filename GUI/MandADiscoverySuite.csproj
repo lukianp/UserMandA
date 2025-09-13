@@ -18,6 +18,10 @@
     <NoWarn>CS8209;CS1998;CS4014;CS0169;CS0414;CS8892;CS8632;CS8604;CS0618;CS0067;CS0649</NoWarn>
     <!-- Disable default SDK inclusion of XAML files to avoid duplicates -->
     <EnableDefaultPageItems>false</EnableDefaultPageItems>
+    <!-- Disable auto-generated assembly info to avoid duplicates -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <!-- Disable framework attributes to avoid duplicates -->
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
 
   <ItemGroup>

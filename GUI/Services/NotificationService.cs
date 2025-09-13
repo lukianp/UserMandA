@@ -20,7 +20,7 @@ namespace MandADiscoverySuite.Services
         private readonly ILogger<NotificationService> _logger;
         private readonly IMessenger _messenger;
         private readonly ObservableCollection<Notification> _notifications;
-        private readonly Timer _cleanupTimer;
+        private readonly System.Timers.Timer _cleanupTimer;
         private readonly string _notificationsPath;
         private readonly object _lockObject = new object();
 
@@ -36,7 +36,7 @@ namespace MandADiscoverySuite.Services
                 "MandADiscoverySuite", "notifications.json");
 
             // Set up cleanup timer (runs every 5 minutes)
-            _cleanupTimer = new Timer(TimeSpan.FromMinutes(5).TotalMilliseconds);
+            _cleanupTimer = new System.Timers.Timer(TimeSpan.FromMinutes(5).TotalMilliseconds);
             _cleanupTimer.Elapsed += CleanupExpiredNotifications;
             _cleanupTimer.Start();
 

@@ -44,13 +44,13 @@ namespace MandADiscoverySuite.Converters
                     return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFEF4444")); // Red
 
                 // TaskStatus
-                case TaskStatus.NotStarted:
+                case Models.TaskStatus.NotStarted:
                     return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF6B7280")); // Gray
-                case TaskStatus.InProgress:
+                case Models.TaskStatus.InProgress:
                     return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFF59E0B")); // Yellow
-                case TaskStatus.Completed:
+                case Models.TaskStatus.Completed:
                     return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF10B981")); // Green
-                case TaskStatus.Blocked:
+                case Models.TaskStatus.Blocked:
                     return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFEF4444")); // Red
 
                 // ComponentStatus

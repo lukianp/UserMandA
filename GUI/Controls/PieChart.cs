@@ -161,7 +161,7 @@ namespace MandADiscoverySuite.Controls
             }
         }
 
-        private Path CreatePieSlice(double centerX, double centerY, double radius, double startAngle, double sweepAngle, Brush fill)
+        private System.Windows.Shapes.Path CreatePieSlice(double centerX, double centerY, double radius, double startAngle, double sweepAngle, Brush fill)
         {
             var startAngleRad = Math.PI * startAngle / 180;
             var endAngleRad = Math.PI * (startAngle + sweepAngle) / 180;
@@ -181,7 +181,7 @@ namespace MandADiscoverySuite.Controls
             
             geometry.Figures.Add(figure);
 
-            return new Path
+            return new System.Windows.Shapes.Path
             {
                 Data = geometry,
                 Fill = fill,
