@@ -1,4 +1,4 @@
-using System;
+dsing System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,6 +47,13 @@ namespace MandADiscoverySuite.ViewModels
         #region Properties
 
         // Summary card properties
+        private int _totalDevices;
+        public int TotalDevices
+        {
+            get => _totalDevices;
+            set => SetProperty(ref _totalDevices, value);
+        }
+
         private int _totalSwitches;
         public int TotalSwitches
         {
@@ -93,6 +100,12 @@ namespace MandADiscoverySuite.ViewModels
 
         private ObservableCollection<KeyValuePair<string, string>> _selectedItemDetails = new();
         public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails => _selectedItemDetails;
+
+        private ObservableCollection<KeyValuePair<string, string>> _portDetails = new();
+        public ObservableCollection<KeyValuePair<string, string>> PortDetails => _portDetails;
+
+        private ObservableCollection<KeyValuePair<string, string>> _vlanDetails = new();
+        public ObservableCollection<KeyValuePair<string, string>> VlanDetails => _vlanDetails;
 
         #endregion
 
@@ -330,12 +343,16 @@ namespace MandADiscoverySuite.ViewModels
         {
             if (data == null || !data.Any())
             {
+                TotalDevices = 0;
                 TotalSwitches = 0;
                 TotalRouters = 0;
                 TotalFirewalls = 0;
                 LastDiscoveryTime = DateTime.MinValue;
                 return;
             }
+
+            // Total devices
+            TotalDevices = data.Count;
 
             // Count devices by type
             TotalSwitches = CountDeviceType(data, "switch");
@@ -386,12 +403,47 @@ namespace MandADiscoverySuite.ViewModels
         private void UpdateSelectedItemDetails()
         {
             SelectedItemDetails.Clear();
+            PortDetails.Clear();
+            VlanDetails.Clear();
 
             if (SelectedItem is System.Collections.Generic.IDictionary<string, object> dict)
             {
-                // Add all properties as key-value pairs, excluding null/empty values
+                // Extract port information
+                if (dict.TryGetValue("ports", out var portsObj) && portsObj is string portsStr)
+                {
+                    // Assuming ports is a comma-separated list like "eth0:up,eth1:down"
+                    var portPairs = portsStr.Split(',');
+                    foreach (var pair in portPairs)
+                    {
+                        var parts = pair.Split(':');
+                        if (parts.Length == 2)
+                        {
+                            PortDetails.Add(new KeyValuePair<string, string>(parts[0].Trim(), parts[1].Trim()));
+                        }
+                    }
+                }
+
+                // Extract VLAN information
+                if (dict.TryGetValue("vlans", out var vlansObj) && vlansObj is string vlansStr)
+                {
+                    // Assuming vlans is a comma-separated list like "VLAN10:Management,VLAN20:Data"
+                    var vlanPairs = vlansStr.Split(',');
+                    foreach (var pair in vlanPairs)
+                    {
+                        var parts = pair.Split(':');
+                        if (parts.Length == 2)
+                        {
+                            VlanDetails.Add(new KeyValuePair<string, string>(parts[0].Trim(), parts[1].Trim()));
+                        }
+                    }
+                }
+
+                // Add other properties as key-value pairs, excluding null/empty values and already handled ones
+                var excludedKeys = new HashSet<string> { "ports", "vlans" };
                 foreach (var kvp in dict)
                 {
+                    if (excludedKeys.Contains(kvp.Key)) continue;
+
                     var value = kvp.Value?.ToString();
                     if (!string.IsNullOrEmpty(value))
                     {

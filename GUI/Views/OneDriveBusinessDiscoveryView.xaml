@@ -8,15 +8,23 @@
              Background="{DynamicResource SurfaceBrush}">
 
         <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Resources/Converters.xaml" />
-                <ResourceDictionary Source="../Resources/DataGridTheme.xaml" />
-                <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
-                <ResourceDictionary Source="../Themes/Colors.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </UserControl.Resources>
+            <ResourceDictionary>
+                <ResourceDictionary.MergedDictionaries>
+                    <ResourceDictionary Source="../Resources/Converters.xaml" />
+                    <ResourceDictionary Source="../Resources/DataGridTheme.xaml" />
+                    <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
+                    <ResourceDictionary Source="../Themes/Colors.xaml" />
+                </ResourceDictionary.MergedDictionaries>
+                <Style x:Key="DetailsPanelStyle" TargetType="Border">
+                    <Setter Property="Visibility" Value="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ActualWidth, Converter={StaticResource LessThanConverter}, ConverterParameter=1200}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ResourceDictionary>
+        </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -122,9 +130,9 @@
             <!-- Data Grid and Details Panel -->
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" MinWidth="600"/>
+                    <ColumnDefinition Width="{Binding SplitterPosition, Mode=TwoWay}" MinWidth="400" MaxWidth="1000"/>
                     <ColumnDefinition Width="2"/>
-                    <ColumnDefinition Width="Auto" MinWidth="300"/>
+                    <ColumnDefinition Width="Auto" MinWidth="300" MaxWidth="800"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Loading Spinner -->
@@ -194,8 +202,7 @@
 
                 <!-- Details Panel -->
                 <Border Grid.Column="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                        Margin="0,0,20,20" CornerRadius="4"
-                        Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}">
+                        Margin="0,0,20,20" CornerRadius="4" Style="{StaticResource DetailsPanelStyle}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="16">
                             <TextBlock Text="OneDrive Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>

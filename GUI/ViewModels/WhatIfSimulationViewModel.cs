@@ -195,6 +195,13 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _selectedTab, value);
         }
 
+        private System.Windows.GridLength _splitterPosition = new System.Windows.GridLength(250, System.Windows.GridUnitType.Pixel);
+        public System.Windows.GridLength SplitterPosition
+        {
+            get => _splitterPosition;
+            set => SetProperty(ref _splitterPosition, value);
+        }
+
         // Computed properties
         public bool CanRunSimulation => CurrentSimulation != null && !IsRunning && 
                                        Scenarios.Any(s => s.IsEnabled);

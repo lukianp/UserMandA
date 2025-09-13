@@ -54,35 +54,31 @@
 
         <!-- Summary Cards -->
         <WrapPanel Grid.Row="3" Margin="20,0,20,20" Orientation="Horizontal">
-            <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
+            <Border Style="{StaticResource SummaryCardStyle}" Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" Margin="0,0,16,0" Width="200">
                 <StackPanel>
-                    <TextBlock Text="Total Instances" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalInstances}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Total Instances" Style="{StaticResource MetricLabelStyle}" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding TotalInstances}" Style="{StaticResource MetricNumberStyle}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                 </StackPanel>
             </Border>
 
-            <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
+            <Border Style="{StaticResource SummaryCardStyle}" Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" Margin="0,0,16,0" Width="200">
                 <StackPanel>
-                    <TextBlock Text="Total Buckets" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalBuckets}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Total Buckets" Style="{StaticResource MetricLabelStyle}" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding TotalBuckets}" Style="{StaticResource MetricNumberStyle}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}"/>
                 </StackPanel>
             </Border>
 
-            <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
+            <Border Style="{StaticResource SummaryCardStyle}" Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" Margin="0,0,16,0" Width="200">
                 <StackPanel>
-                    <TextBlock Text="Total Regions" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalRegions}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TertiaryBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Total Regions" Style="{StaticResource MetricLabelStyle}" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding TotalRegions}" Style="{StaticResource MetricNumberStyle}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TertiaryBrush}"/>
                 </StackPanel>
             </Border>
 
-            <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Padding="16" Width="250">
+            <Border Style="{StaticResource SummaryCardStyle}" Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" Width="250">
                 <StackPanel>
-                    <TextBlock Text="Last Discovery" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding LastDiscoveryTime, StringFormat='{}{0:g}'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource DarkForegroundBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Last Discovery" Style="{StaticResource MetricLabelStyle}" FontWeight="SemiBold" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding LastDiscoveryTime, StringFormat='{}{0:g}'}" Style="{StaticResource MetricNumberStyle}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource DarkForegroundBrush}"/>
                 </StackPanel>
             </Border>
         </WrapPanel>

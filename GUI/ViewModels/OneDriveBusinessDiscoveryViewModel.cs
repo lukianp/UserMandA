@@ -113,6 +113,13 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _placeholder_removed, value);
         }
 
+        private System.Windows.GridLength _splitterPosition = new System.Windows.GridLength(600, System.Windows.GridUnitType.Pixel);
+        public System.Windows.GridLength SplitterPosition
+        {
+            get => _splitterPosition;
+            set => SetProperty(ref _splitterPosition, value);
+        }
+
         #endregion
 
         #region Commands

@@ -27,6 +27,8 @@
                 <!-- Data grid theming -->
                 <ResourceDictionary Source="Resources/DataGridTheme.xaml"/>
                 <ResourceDictionary Source="Resources/ButtonStyles.xaml"/>
+                <!-- Discovery view styles -->
+                <ResourceDictionary Source="Resources/DiscoveryViewStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
             <!-- Standard Converters -->

@@ -8,15 +8,23 @@
              Background="{DynamicResource SurfaceBrush}">
 
         <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Resources/Converters.xaml" />
-                <ResourceDictionary Source="../Resources/DataGridTheme.xaml" />
-                <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
-                <ResourceDictionary Source="../Themes/Colors.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </UserControl.Resources>
+            <ResourceDictionary>
+                <ResourceDictionary.MergedDictionaries>
+                    <ResourceDictionary Source="../Resources/Converters.xaml" />
+                    <ResourceDictionary Source="../Resources/DataGridTheme.xaml" />
+                    <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
+                    <ResourceDictionary Source="../Themes/Colors.xaml" />
+                </ResourceDictionary.MergedDictionaries>
+                <Style x:Key="DetailsPanelStyle" TargetType="Border">
+                    <Setter Property="Visibility" Value="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ActualWidth, Converter={StaticResource LessThanConverter}, ConverterParameter=1200}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ResourceDictionary>
+        </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -57,35 +65,31 @@
 
         <!-- Summary Cards -->
         <WrapPanel Grid.Row="3" Margin="20,0,20,20" Orientation="Horizontal">
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
+            <Border Style="{StaticResource SummaryCardStyle}" Margin="0,0,16,0" Width="200">
                 <StackPanel>
-                    <TextBlock Text="Total Policies" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalPolicies}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Total Policies" Style="{StaticResource MetricLabelStyle}" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding TotalPolicies}" Style="{StaticResource MetricNumberStyle}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                 </StackPanel>
             </Border>
 
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
+            <Border Style="{StaticResource SummaryCardStyle}" Margin="0,0,16,0" Width="200">
                 <StackPanel>
-                    <TextBlock Text="Enabled Policies" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding EnabledPolicies}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Enabled Policies" Style="{StaticResource MetricLabelStyle}" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding EnabledPolicies}" Style="{StaticResource MetricNumberStyle}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}"/>
                 </StackPanel>
             </Border>
 
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
+            <Border Style="{StaticResource SummaryCardStyle}" Margin="0,0,16,0" Width="200">
                 <StackPanel>
-                    <TextBlock Text="Disabled Policies" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding DisabledPolicies}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TertiaryBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Disabled Policies" Style="{StaticResource MetricLabelStyle}" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding DisabledPolicies}" Style="{StaticResource MetricNumberStyle}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TertiaryBrush}"/>
                 </StackPanel>
             </Border>
 
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Padding="16" Width="250">
+            <Border Style="{StaticResource SummaryCardStyle}" Width="250">
                 <StackPanel>
-                    <TextBlock Text="Last Discovery" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding LastDiscoveryTime, StringFormat='{}{0:g}'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Last Discovery" Style="{StaticResource MetricLabelStyle}" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                    <TextBlock Text="{Binding LastDiscoveryTime, StringFormat='{}{0:g}'}" Style="{StaticResource MetricNumberStyle}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
                 </StackPanel>
             </Border>
         </WrapPanel>
@@ -122,9 +126,9 @@
             <!-- Data Grid and Details Panel -->
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" MinWidth="600"/>
+                    <ColumnDefinition Width="{Binding SplitterPosition, Mode=TwoWay}" MinWidth="400" MaxWidth="1000"/>
                     <ColumnDefinition Width="2"/>
-                    <ColumnDefinition Width="Auto" MinWidth="300"/>
+                    <ColumnDefinition Width="Auto" MinWidth="300" MaxWidth="800"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Loading Spinner -->
@@ -206,8 +210,7 @@
 
                 <!-- Details Panel -->
                 <Border Grid.Column="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                        Margin="0,0,20,20" CornerRadius="4"
-                        Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}">
+                        Margin="0,0,20,20" CornerRadius="4" Style="{StaticResource DetailsPanelStyle}">
                     <Grid>
                         <!-- Loading State -->
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"

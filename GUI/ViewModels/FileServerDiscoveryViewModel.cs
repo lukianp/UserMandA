@@ -78,6 +78,12 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _totalACLs, value);
         }
 
+        // New summary card properties
+        public int FileServersCount => TotalServers;
+        public int SharesCount => TotalShares;
+        public string StorageTB => TotalSizeBytes > 0 ? $"{(double)TotalSizeBytes / (1024L * 1024L * 1024L * 1024L):F2}" : "0.00";
+        public int AccessibleSharesCount => TotalACLs; // Assuming ACLs represent accessible shares
+
         private DateTime _lastDiscoveryTime = DateTime.MinValue;
         public DateTime LastDiscoveryTime
         {
@@ -107,6 +113,9 @@ namespace MandADiscoverySuite.ViewModels
             get => _selectedItemDetails;
             set => SetProperty(ref _selectedItemDetails, value);
         }
+
+        // Server summaries for DataGrid
+        public ObservableCollection<dynamic> ServerSummaries { get; } = new ObservableCollection<dynamic>();
 
         #endregion
 
@@ -171,6 +180,9 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     SelectedResults.Add(item);
                 }
+
+                // Create server summaries
+                CreateServerSummaries(result.Data);
 
                 // Calculate summary statistics
                 CalculateSummaryStatistics(result.Data);
@@ -402,6 +414,70 @@ namespace MandADiscoverySuite.ViewModels
                         SelectedItemDetails.Add(new KeyValuePair<string, string>(key, value));
                     }
                 }
+            }
+        }
+
+        private void CreateServerSummaries(List<dynamic> data)
+        {
+            ServerSummaries.Clear();
+
+            var groupedData = data.GroupBy(item =>
+            {
+                var dict = (IDictionary<string, object>)item;
+                object serverNameValue = null;
+                if (dict.TryGetValue("ServerName", out serverNameValue) ||
+                    dict.TryGetValue("SERVERNAME", out serverNameValue) ||
+                    dict.TryGetValue("Server Name", out serverNameValue))
+                {
+                    return serverNameValue?.ToString() ?? "Unknown";
+                }
+                return "Unknown";
+            });
+
+            foreach (var group in groupedData)
+            {
+                var serverName = group.Key;
+                var shares = group.ToList();
+                var totalShares = shares.Count;
+                long totalStorage = 0;
+                string ip = "N/A";
+                string os = "N/A";
+
+                foreach (var share in shares)
+                {
+                    var dict = (IDictionary<string, object>)share;
+
+                    // Extract size
+                    if (dict.TryGetValue("Size", out var sizeObj) ||
+                        dict.TryGetValue("SIZE", out sizeObj))
+                    {
+                        if (sizeObj != null && long.TryParse(sizeObj.ToString(), out var sizeBytes))
+                        {
+                            totalStorage += sizeBytes;
+                        }
+                    }
+
+                    // Try to extract IP and OS (assuming first share has it)
+                    if (dict.TryGetValue("IP", out var ipObj) || dict.TryGetValue("IPAddress", out ipObj))
+                    {
+                        ip = ipObj?.ToString() ?? "N/A";
+                    }
+                    if (dict.TryGetValue("OS", out var osObj) || dict.TryGetValue("OperatingSystem", out osObj))
+                    {
+                        os = osObj?.ToString() ?? "N/A";
+                    }
+                }
+
+                // Create dynamic summary
+                var summary = new System.Dynamic.ExpandoObject() as IDictionary<string, object>;
+                summary["ServerName"] = serverName;
+                summary["IP"] = ip;
+                summary["OS"] = os;
+                summary["TotalShares"] = totalShares;
+                summary["TotalStorage"] = BytesToReadableString(totalStorage);
+                summary["Shares"] = shares; // Store shares for details
+
+                ServerSummaries.Add(summary);
             }
         }
 

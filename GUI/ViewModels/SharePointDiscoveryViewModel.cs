@@ -11,6 +11,15 @@ using CommunityToolkit.Mvvm.Input;
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
+    /// Represents a SharePoint permission level with description
+    /// </summary>
+    public class PermissionLevelInfo
+    {
+        public string Level { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
+
+    /// <summary>
     /// ViewModel for SharePoint Discovery module
     /// </summary>
     public class SharePointDiscoveryViewModel : ModuleViewModel
@@ -302,13 +311,24 @@ namespace MandADiscoverySuite.ViewModels
 
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
         {
-            TotalSiteCollections = data.Count;
             TotalSites = data.Count;
+            TotalDocumentLibraries = 0;
             TotalLists = 0;
+            TotalStorageUsed = 0.0;
 
             foreach (var item in data)
             {
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+
+                // Count document libraries
+                if (dict.TryGetValue("documentlibrarycount", out var docLibCountObj) ||
+                    dict.TryGetValue("DocumentLibraryCount", out docLibCountObj))
+                {
+                    if (int.TryParse(docLibCountObj?.ToString(), out var docLibs))
+                    {
+                        TotalDocumentLibraries += docLibs;
+                    }
+                }
 
                 // Count lists
                 if (dict.TryGetValue("listcount", out var listCountObj) ||
@@ -319,18 +339,30 @@ namespace MandADiscoverySuite.ViewModels
                         TotalLists += lists;
                     }
                 }
+
+                // Sum storage used
+                if (dict.TryGetValue("storageused", out var storageObj) ||
+                    dict.TryGetValue("StorageUsed", out storageObj))
+                {
+                    if (double.TryParse(storageObj?.ToString(), out var storage))
+                    {
+                        TotalStorageUsed += storage;
+                    }
+                }
             }
         }
 
         private void UpdateSelectedItemDetails()
         {
             SelectedItemDetails.Clear();
+            SiteHierarchy.Clear();
+            PermissionLevels.Clear();
 
             if (SelectedItem == null) return;
 
             var dict = (System.Collections.Generic.IDictionary<string, object>)SelectedItem;
 
-            // Site Details
+            // Standard Site Details
             dict.TryGetValue("sitename", out var siteNameObj);
             SelectedItemDetails.Add(new KeyValuePair<string, string>("Site Name", siteNameObj?.ToString() ?? ""));
 
@@ -344,7 +376,7 @@ namespace MandADiscoverySuite.ViewModels
             SelectedItemDetails.Add(new KeyValuePair<string, string>("Site Template", siteTemplateObj?.ToString() ?? ""));
 
             dict.TryGetValue("storageused", out var storageUsedObj);
-            SelectedItemDetails.Add(new KeyValuePair<string, string>("Storage Used", storageUsedObj?.ToString() ?? ""));
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Storage Used (GB)", $"{storageUsedObj?.ToString() ?? "0"} GB"));
 
             dict.TryGetValue("createddate", out var createdDateObj);
             SelectedItemDetails.Add(new KeyValuePair<string, string>("Created Date", createdDateObj?.ToString() ?? ""));
@@ -358,6 +390,47 @@ namespace MandADiscoverySuite.ViewModels
 
             dict.TryGetValue("itemcount", out var itemCountObj);
             SelectedItemDetails.Add(new KeyValuePair<string, string>("Item Count", itemCountObj?.ToString() ?? ""));
+
+            // Build Site Hierarchy (simplified example)
+            var siteUrl = urlObj?.ToString() ?? "";
+            if (!string.IsNullOrEmpty(siteUrl))
+            {
+                var uri = new Uri(siteUrl);
+                var segments = uri.AbsolutePath.Trim('/').Split('/');
+                SiteHierarchy.Add($"Root Site Collection: {uri.Host}");
+                for (int i = 0; i < segments.Length; i++)
+                {
+                    var indent = new string(' ', i * 2);
+                    SiteHierarchy.Add($"{indent}Subsite: {segments[i]}");
+                }
+            }
+
+            // Build Permission Levels (standard SharePoint permission levels)
+            PermissionLevels.Add(new PermissionLevelInfo
+            {
+                Level = "Full Control",
+                Description = "Full control of the site, including permissions management"
+            });
+            PermissionLevels.Add(new PermissionLevelInfo
+            {
+                Level = "Design",
+                Description = "Can view, add, update, delete, approve, and customize"
+            });
+            PermissionLevels.Add(new PermissionLevelInfo
+            {
+                Level = "Edit",
+                Description = "Can add, edit and delete lists and document libraries"
+            });
+            PermissionLevels.Add(new PermissionLevelInfo
+            {
+                Level = "Contribute",
+                Description = "Can view, add, update, and delete"
+            });
+            PermissionLevels.Add(new PermissionLevelInfo
+            {
+                Level = "Read",
+                Description = "Can view pages and list items"
+            });
         }
 
         #endregion
