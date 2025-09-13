@@ -157,6 +157,8 @@ namespace MandADiscoverySuite.Services
                 ["ExchangeDiscovery"] = () => new ExchangeDiscoveryView(),
                 ["PowerBIDiscovery"] = () => new PowerBIDiscoveryView(),
                 ["SharePointDiscovery"] = () => new SharePointDiscoveryView(),
+                ["PhysicalServerDiscovery"] = () => new PhysicalServerDiscoveryView(),
+                ["SecurityInfrastructureDiscovery"] = () => new SecurityInfrastructureDiscoveryView(),
 
                 // Missing discovery module mappings for ModuleRegistry.json modules
                 ["environmentriskscoring"] = () => new EnvironmentRiskAssessmentView(), // Maps EnvironmentRiskScoring → EnvironmentRiskAssessment
@@ -168,9 +170,9 @@ namespace MandADiscoverySuite.Services
                 ["dlpdiscovery"] = () => new DataLossPreventionDiscoveryView(), // Maps DLPDiscovery → DataLossPreventionDiscovery
                 ["webserverconfigdiscovery"] = () => new WebServerConfigurationDiscoveryView(), // Maps WebServerConfigDiscovery → WebServerConfigurationDiscovery
                 // Additional enabled modules from ModuleRegistry.json
-                ["physicalserverdiscovery"] = () => new Views.Placeholders.MissingView(), // Physical server discovery view doesn't exist yet
+                ["physicalserverdiscovery"] = () => new PhysicalServerDiscoveryView(), // Physical server discovery view - IMPLEMENTED
                 ["applicationdiscovery"] = () => new Views.Placeholders.MissingView(), // Application discovery view doesn't exist yet
-                ["securityinfrastructurediscovery"] = () => new Views.Placeholders.MissingView(), // Security infrastructure discovery view doesn't exist yet
+                ["securityinfrastructurediscovery"] = () => new SecurityInfrastructureDiscoveryView(), // Security infrastructure discovery view - IMPLEMENTED
                 ["certificatediscovery"] = () => new Views.Placeholders.MissingView(), // Certificate discovery view doesn't exist yet
                 ["dataclassification"] = () => new Views.Placeholders.MissingView(), // Data classification view doesn't exist yet
                 ["storagearraydiscovery"] = () => new Views.Placeholders.MissingView(), // Storage array discovery view doesn't exist yet

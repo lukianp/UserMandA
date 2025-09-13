@@ -75,7 +75,7 @@
                                 <Setter Property="Background" Value="#FF2C5282"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Background" Value="#FFA0AEC0"/>
+                                <Setter Property="Background" Value="{StaticResource SecondaryTextBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

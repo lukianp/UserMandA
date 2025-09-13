@@ -33,7 +33,7 @@
         <StackPanel Grid.Row="0" Margin="20,20,20,10">
             <TextBlock Text="Environment Risk Assessment" FontSize="24" FontWeight="SemiBold"/>
             <TextBlock Text="Assess and analyze risks in your environment"
-                       FontSize="12" Foreground="Gray" Margin="0,4,0,0"/>
+                       FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,4,0,0"/>
         </StackPanel>
 
         <!-- Header Warnings Banner -->

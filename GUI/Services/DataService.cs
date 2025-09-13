@@ -14,19 +14,21 @@ namespace MandADiscoverySuite.Services
     public class DataService : IDataService
     {
         private readonly ILogger<DataService> _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly CsvDataServiceNew _csvDataService;
 
-        public DataService(ILogger<DataService> logger)
+        public DataService(ILogger<DataService> logger, ILoggerFactory loggerFactory)
         {
             _logger = logger;
-            _csvDataService = new CsvDataServiceNew(_logger as ILogger<CsvDataServiceNew>);
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _csvDataService = new CsvDataServiceNew(loggerFactory.CreateLogger<CsvDataServiceNew>());
         }
 
         public async Task<IEnumerable<UserData>> LoadUsersAsync(string profileName, bool forceRefresh = false, CancellationToken cancellationToken = default)
         {
             try
             {
-                var result = await _csvDataService.LoadUsersAsync(profileName);
+                var result = await _csvDataService.LoadUsersAsync(profileName, cancellationToken);
                 return result.Data ?? Enumerable.Empty<UserData>();
             }
             catch (Exception ex)
@@ -40,7 +42,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                var result = await _csvDataService.LoadInfrastructureAsync(profileName);
+                var result = await _csvDataService.LoadInfrastructureAsync(profileName, cancellationToken);
                 return result.Data ?? Enumerable.Empty<InfrastructureData>();
             }
             catch (Exception ex)
@@ -54,7 +56,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                var result = await _csvDataService.LoadGroupsAsync(profileName);
+                var result = await _csvDataService.LoadGroupsAsync(profileName, cancellationToken);
                 return result.Data ?? Enumerable.Empty<GroupData>();
             }
             catch (Exception ex)
@@ -68,7 +70,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                var result = await _csvDataService.LoadApplicationsAsync(profileName);
+                var result = await _csvDataService.LoadApplicationsAsync(profileName, cancellationToken);
                 return result.Data ?? Enumerable.Empty<ApplicationData>();
             }
             catch (Exception ex)
@@ -82,7 +84,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                var result = await _csvDataService.LoadGroupPoliciesAsync(profileName);
+                var result = await _csvDataService.LoadGroupPoliciesAsync(profileName, cancellationToken);
                 return result.Data ?? Enumerable.Empty<PolicyData>();
             }
             catch (Exception ex)

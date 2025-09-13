@@ -54,7 +54,7 @@
                           Margin="0,0,0,8"/>
                 <TextBlock Text="Project status and discovered IT infrastructure overview" 
                           FontSize="16" 
-                          Foreground="#FFA0AEC0"/>
+                          Foreground="{StaticResource SecondaryTextBrush}"/>
             </StackPanel>
             
             <!-- Loading Indicator -->
@@ -163,17 +163,17 @@
                                    Foreground="#FF3B82F6" Margin="0,0,0,12"/>
                         
                         <StackPanel Margin="0,0,0,8">
-                            <TextBlock Text="Target Cutover" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Text="Target Cutover" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             <TextBlock Text="{Binding DaysToCutover.Days, FallbackValue='--'}" FontSize="24" FontWeight="Bold" 
                                        Foreground="#FFFBBF24"/>
-                            <TextBlock Text="days remaining" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Text="days remaining" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                         </StackPanel>
                         
                         <StackPanel Margin="0,0,0,16">
-                            <TextBlock Text="Next Wave" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Text="Next Wave" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             <TextBlock Text="{Binding DaysToNextWave.Days, FallbackValue='--'}" FontSize="20" FontWeight="Bold" 
                                        Foreground="#FF10B981"/>
-                            <TextBlock Text="days remaining" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Text="days remaining" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                         </StackPanel>
                         
                         <Button Content="Configure" Command="{Binding ConfigureProjectCommand}" 

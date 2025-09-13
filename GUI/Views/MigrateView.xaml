@@ -98,7 +98,7 @@
         
         <Style x:Key="TabButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#FFA0AEC0"/>
+            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="16,12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -158,7 +158,7 @@
                                Foreground="#FFE2E8F0"/>
                     <TextBlock Text="Enterprise migration planning, execution, and monitoring" 
                                FontSize="14" 
-                               Foreground="#FFA0AEC0" 
+                               Foreground="{StaticResource SecondaryTextBrush}" 
                                Margin="0,4,0,0"/>
                 </StackPanel>
                 
@@ -253,7 +253,7 @@
                                        Foreground="#FF60A5FA"/>
                             <TextBlock Text="Total Projects" 
                                        FontSize="14" 
-                                       Foreground="#FFA0AEC0"/>
+                                       Foreground="{StaticResource SecondaryTextBrush}"/>
                         </StackPanel>
                     </Border>
                     
@@ -265,7 +265,7 @@
                                        Foreground="#FF10B981"/>
                             <TextBlock Text="Active Migrations" 
                                        FontSize="14" 
-                                       Foreground="#FFA0AEC0"/>
+                                       Foreground="{StaticResource SecondaryTextBrush}"/>
                         </StackPanel>
                     </Border>
                     
@@ -277,7 +277,7 @@
                                        Foreground="#FF34D399"/>
                             <TextBlock Text="Completed" 
                                        FontSize="14" 
-                                       Foreground="#FFA0AEC0"/>
+                                       Foreground="{StaticResource SecondaryTextBrush}"/>
                         </StackPanel>
                     </Border>
                     
@@ -289,7 +289,7 @@
                                        Foreground="#FFF59E0B"/>
                             <TextBlock Text="Overall Progress" 
                                        FontSize="14" 
-                                       Foreground="#FFA0AEC0"/>
+                                       Foreground="{StaticResource SecondaryTextBrush}"/>
                         </StackPanel>
                     </Border>
                 </UniformGrid>
@@ -414,7 +414,7 @@
                                 <TextBlock Text="Source Environment" 
                                            FontSize="14" 
                                            FontWeight="SemiBold" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            Margin="0,0,0,8"/>
                                 <ComboBox ItemsSource="{Binding SourceEnvironmentTypes}" 
                                           SelectedItem="{Binding SelectedSourceEnvironment}" 
@@ -437,7 +437,7 @@
                                 <TextBlock Text="Target Environment" 
                                            FontSize="14" 
                                            FontWeight="SemiBold" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            Margin="0,0,0,8"/>
                                 <ComboBox ItemsSource="{Binding TargetEnvironmentTypes}" 
                                           SelectedItem="{Binding SelectedTargetEnvironment}" 
@@ -474,7 +474,7 @@
                                        Foreground="#FF60A5FA"/>
                             <TextBlock Text="Users Found" 
                                        FontSize="12" 
-                                       Foreground="#FFA0AEC0"/>
+                                       Foreground="{StaticResource SecondaryTextBrush}"/>
                         </StackPanel>
                     </Border>
                     
@@ -486,7 +486,7 @@
                                        Foreground="#FF10B981"/>
                             <TextBlock Text="Mailboxes" 
                                        FontSize="12" 
-                                       Foreground="#FFA0AEC0"/>
+                                       Foreground="{StaticResource SecondaryTextBrush}"/>
                         </StackPanel>
                     </Border>
                     
@@ -498,7 +498,7 @@
                                        Foreground="#FF34D399"/>
                             <TextBlock Text="File Shares" 
                                        FontSize="12" 
-                                       Foreground="#FFA0AEC0"/>
+                                       Foreground="{StaticResource SecondaryTextBrush}"/>
                         </StackPanel>
                     </Border>
                     
@@ -510,7 +510,7 @@
                                        Foreground="#FFF59E0B"/>
                             <TextBlock Text="Dependencies" 
                                        FontSize="12" 
-                                       Foreground="#FFA0AEC0"/>
+                                       Foreground="{StaticResource SecondaryTextBrush}"/>
                         </StackPanel>
                     </Border>
                 </UniformGrid>
@@ -596,7 +596,7 @@
                                           Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding SelectedSourceProfile.CompanyName, StringFormat='Source: {0}'}" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            Margin="0,0,0,0"/>
                             </StackPanel>
                             
@@ -626,7 +626,7 @@
                                           Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding SelectedTargetProfile.Name, StringFormat='Target: {0}'}" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            Margin="0,0,0,0"/>
                             </StackPanel>
                         </Grid>
@@ -835,7 +835,7 @@
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Total Waves" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                             
@@ -847,7 +847,7 @@
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Items to Migrate" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                             
@@ -859,7 +859,7 @@
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Estimated Duration" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                             
@@ -871,7 +871,7 @@
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Complexity Score" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                         </UniformGrid>
@@ -989,7 +989,7 @@
                                 <TextBlock Text="Wave Information" 
                                            FontSize="14" 
                                            FontWeight="SemiBold" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            Margin="0,0,0,8"/>
                                 
                                 <Grid>
@@ -1004,16 +1004,16 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Order:" Foreground="#FFA0AEC0" Margin="0,0,8,4"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Order:" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,8,4"/>
                                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedWave.Order}" Foreground="#FFE2E8F0" Margin="0,0,0,4"/>
                                     
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Status:" Foreground="#FFA0AEC0" Margin="0,0,8,4"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Status:" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,8,4"/>
                                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedWave.Status}" Foreground="#FFE2E8F0" Margin="0,0,0,4"/>
                                     
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Start Date:" Foreground="#FFA0AEC0" Margin="0,0,8,4"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Start Date:" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,8,4"/>
                                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedWave.PlannedStartDate, StringFormat=yyyy-MM-dd HH:mm}" Foreground="#FFE2E8F0" Margin="0,0,0,4"/>
                                     
-                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Items:" Foreground="#FFA0AEC0" Margin="0,0,8,4"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Items:" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,8,4"/>
                                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedWave.TotalItems}" Foreground="#FFE2E8F0" Margin="0,0,0,4"/>
                                 </Grid>
                             </StackPanel>
@@ -1023,7 +1023,7 @@
                                 <TextBlock Text="Prerequisites" 
                                            FontSize="14" 
                                            FontWeight="SemiBold" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            Margin="0,0,0,8"/>
                                 
                                 <ListBox ItemsSource="{Binding SelectedWave.Prerequisites}" 
@@ -1038,7 +1038,7 @@
                         <TextBlock Text="Migration Batches" 
                                    FontSize="14" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFA0AEC0" 
+                                   Foreground="{StaticResource SecondaryTextBrush}" 
                                    Margin="0,16,0,8"/>
                         
                         <DataGrid ItemsSource="{Binding SelectedWave.Batches}" 
@@ -1138,7 +1138,7 @@
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Active Streams" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                             
@@ -1150,7 +1150,7 @@
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Items/Min" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                             
@@ -1162,7 +1162,7 @@
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Throughput" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                             
@@ -1174,7 +1174,7 @@
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Errors" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                             
@@ -1186,7 +1186,7 @@
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="ETA" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                         </UniformGrid>
@@ -1284,7 +1284,7 @@
                                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <TextBlock Text="Performance Chart" 
                                                FontSize="16" 
-                                               Foreground="#FFA0AEC0" 
+                                               Foreground="{StaticResource SecondaryTextBrush}" 
                                                HorizontalAlignment="Center"/>
                                     <TextBlock Text="Real-time throughput and error rate tracking" 
                                                FontSize="12" 
@@ -1337,7 +1337,7 @@
                                             
                                             <TextBlock Grid.Column="2" 
                                                        Text="{Binding Timestamp, StringFormat=HH:mm:ss}" 
-                                                       Foreground="#FFA0AEC0" 
+                                                       Foreground="{StaticResource SecondaryTextBrush}" 
                                                        FontSize="11"/>
                                         </Grid>
                                     </Border>
@@ -1400,7 +1400,7 @@
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Total Checks" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                             
@@ -1412,7 +1412,7 @@
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Passed" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                             
@@ -1424,7 +1424,7 @@
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Failed" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                             
@@ -1436,7 +1436,7 @@
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Success Rate" 
                                            FontSize="12" 
-                                           Foreground="#FFA0AEC0" 
+                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                         </UniformGrid>
@@ -1586,7 +1586,7 @@
                                                            FontWeight="SemiBold" 
                                                            Foreground="#FFE2E8F0"/>
                                                 <TextBlock Text="{Binding Description}" 
-                                                           Foreground="#FFA0AEC0" 
+                                                           Foreground="{StaticResource SecondaryTextBrush}" 
                                                            FontSize="12" 
                                                            Margin="0,2,0,0"/>
                                             </StackPanel>
@@ -1614,7 +1614,7 @@
                        HorizontalAlignment="Center" 
                        VerticalAlignment="Center" 
                        FontSize="18" 
-                       Foreground="#FFA0AEC0"/>
+                       Foreground="{StaticResource SecondaryTextBrush}"/>
         </Grid>
         
         <!-- Error Display -->

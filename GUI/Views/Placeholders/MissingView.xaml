@@ -21,7 +21,7 @@
                        Foreground="#FFE2E8F0"/>
             <TextBlock Text="{Binding SubHeaderText}" 
                        FontSize="14" 
-                       Foreground="#FFA0AEC0" 
+                       Foreground="{StaticResource SecondaryTextBrush}" 
                        Margin="0,4,0,0"/>
         </StackPanel>
         
@@ -43,7 +43,7 @@
                            Margin="0,0,0,16"/>
                 <TextBlock Text="View Under Construction" 
                            FontSize="16" 
-                           Foreground="#FFA0AEC0" 
+                           Foreground="{StaticResource SecondaryTextBrush}" 
                            HorizontalAlignment="Center"
                            Margin="0,0,0,24"/>
                 
@@ -58,7 +58,7 @@
                                 <ColumnDefinition Width="100"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="View Key:" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Grid.Column="0" Text="View Key:" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             <TextBlock Grid.Column="1" Text="{Binding Key}" FontSize="12" Foreground="#FFE2E8F0"/>
                         </Grid>
                         
@@ -67,7 +67,7 @@
                                 <ColumnDefinition Width="100"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Reason:" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Grid.Column="0" Text="Reason:" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             <TextBlock Grid.Column="1" Text="{Binding Reason}" FontSize="12" Foreground="#FFE2E8F0" TextWrapping="Wrap"/>
                         </Grid>
                         
@@ -76,7 +76,7 @@
                                 <ColumnDefinition Width="100"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Timestamp:" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Grid.Column="0" Text="Timestamp:" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontSize="12" Foreground="#FFE2E8F0"/>
                         </Grid>
                         
@@ -85,7 +85,7 @@
                                 <ColumnDefinition Width="100"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Next Steps:" FontSize="12" Foreground="#FFA0AEC0"/>
+                            <TextBlock Grid.Column="0" Text="Next Steps:" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             <TextBlock Grid.Column="1" Text="This view needs to be implemented and registered in ViewRegistry" 
                                        FontSize="12" Foreground="#FFE2E8F0" TextWrapping="Wrap"/>
                         </Grid>

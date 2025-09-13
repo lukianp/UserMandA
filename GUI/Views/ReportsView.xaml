@@ -138,7 +138,7 @@
                           Margin="0,0,0,8"/>
                 <TextBlock Text="Create, generate, and manage reports from discovered data" 
                           FontSize="14" 
-                          Foreground="#FFA0AEC0"/>
+                          Foreground="{StaticResource SecondaryTextBrush}"/>
                 
                 <!-- Loading Indicator -->
                 <Border Background="#FF2D3748" 
@@ -239,7 +239,7 @@
                                                       FontSize="14"/>
                                             <TextBlock Grid.Row="1" 
                                                       Text="{Binding Description}" 
-                                                      Foreground="#FFA0AEC0" 
+                                                      Foreground="{StaticResource SecondaryTextBrush}" 
                                                       FontSize="12" 
                                                       Margin="0,4,0,0"
                                                       TextWrapping="Wrap"/>
@@ -297,18 +297,18 @@
                     
                     <!-- Basic Settings -->
                     <StackPanel Grid.Row="1" Margin="0,0,0,16">
-                        <TextBlock Text="Report Name" Foreground="#FFA0AEC0" FontSize="12" Margin="0,0,0,4"/>
+                        <TextBlock Text="Report Name" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,4"/>
                         <TextBox Style="{StaticResource InputStyle}" 
                                 Text="{Binding CurrentReport.Name, UpdateSourceTrigger=PropertyChanged}"/>
                         
-                        <TextBlock Text="Description" Foreground="#FFA0AEC0" FontSize="12" Margin="0,8,0,4"/>
+                        <TextBlock Text="Description" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" Margin="0,8,0,4"/>
                         <TextBox Style="{StaticResource InputStyle}" 
                                 Text="{Binding CurrentReport.Description, UpdateSourceTrigger=PropertyChanged}"
                                 Height="60" 
                                 TextWrapping="Wrap" 
                                 AcceptsReturn="True"/>
                         
-                        <TextBlock Text="Report Type" Foreground="#FFA0AEC0" FontSize="12" Margin="0,8,0,4"/>
+                        <TextBlock Text="Report Type" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" Margin="0,8,0,4"/>
                         <ComboBox Style="{StaticResource ComboBoxStyle}"
                                  SelectedItem="{Binding CurrentReport.ReportType}">
                             <ComboBoxItem Content="Table"/>
@@ -346,11 +346,11 @@
                                Margin="0,8,0,0"
                                Visibility="{Binding SelectedDataSource, Converter={StaticResource BoolToVisibilityConverter}}">
                             <StackPanel>
-                                <TextBlock Foreground="#FFA0AEC0" FontSize="11">
+                                <TextBlock Foreground="{StaticResource SecondaryTextBrush}" FontSize="11">
                                     <Run Text="Records: "/>
                                     <Run Text="{Binding SelectedDataSource.RecordCount, StringFormat=N0}" Foreground="#FF68D391"/>
                                 </TextBlock>
-                                <TextBlock Foreground="#FFA0AEC0" FontSize="11" Margin="0,2,0,0">
+                                <TextBlock Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" Margin="0,2,0,0">
                                     <Run Text="Updated: "/>
                                     <Run Text="{Binding SelectedDataSource.LastUpdated, StringFormat=yyyy-MM-dd HH:mm}" Foreground="#FF68D391"/>
                                 </TextBlock>
@@ -365,7 +365,7 @@
                                 <DataTemplate>
                                     <StackPanel Margin="0,0,0,8">
                                         <TextBlock Text="{Binding DisplayName}" 
-                                                  Foreground="#FFA0AEC0" 
+                                                  Foreground="{StaticResource SecondaryTextBrush}" 
                                                   FontSize="12" 
                                                   Margin="0,0,0,4"/>
                                         <TextBox Style="{StaticResource InputStyle}" 
@@ -398,7 +398,7 @@
                                           FontWeight="Bold" 
                                           FontSize="12"/>
                                 <TextBlock Text="{Binding GenerationProgress}" 
-                                          Foreground="#FFA0AEC0" 
+                                          Foreground="{StaticResource SecondaryTextBrush}" 
                                           FontSize="11" 
                                           Margin="0,4,0,0"/>
                             </StackPanel>
@@ -420,7 +420,7 @@
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
                         <TextBlock Text="👁️ Preview &amp; Results" Style="{StaticResource SectionHeaderStyle}"/>
                         <TextBlock Text="{Binding PreviewRowCount, StringFormat='({0:N0} rows)'}" 
-                                  Foreground="#FFA0AEC0" 
+                                  Foreground="{StaticResource SecondaryTextBrush}" 
                                   FontSize="12" 
                                   VerticalAlignment="Bottom" 
                                   Margin="8,0,0,2"
@@ -482,11 +482,11 @@
                                                                   FontWeight="Bold" 
                                                                   Foreground="#FFF7FAFC" 
                                                                   FontSize="14"/>
-                                                        <TextBlock Foreground="#FFA0AEC0" FontSize="11" Margin="0,2,0,0">
+                                                        <TextBlock Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" Margin="0,2,0,0">
                                                             <Run Text="Generated: "/>
                                                             <Run Text="{Binding GeneratedDate, StringFormat=yyyy-MM-dd HH:mm}"/>
                                                         </TextBlock>
-                                                        <TextBlock Foreground="#FFA0AEC0" FontSize="11">
+                                                        <TextBlock Foreground="{StaticResource SecondaryTextBrush}" FontSize="11">
                                                             <Run Text="Records: "/>
                                                             <Run Text="{Binding RecordCount, StringFormat=N0}"/>
                                                         </TextBlock>
@@ -518,7 +518,7 @@
                                            HorizontalAlignment="Center" 
                                            Margin="0,12,0,0">
                                     <TextBlock Text="Export as:" 
-                                              Foreground="#FFA0AEC0" 
+                                              Foreground="{StaticResource SecondaryTextBrush}" 
                                               FontSize="12" 
                                               VerticalAlignment="Center" 
                                               Margin="0,0,8,0"/>

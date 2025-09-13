@@ -25,7 +25,7 @@
                        Foreground="#FFE2E8F0"/>
             <TextBlock Text="Configure application settings and preferences" 
                        FontSize="14" 
-                       Foreground="#FFA0AEC0" 
+                       Foreground="{StaticResource SecondaryTextBrush}" 
                        Margin="0,4,0,0"/>
         </StackPanel>
         
@@ -44,7 +44,7 @@
                         <TextBlock Text="⏳" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
                         <TextBlock Text="{Binding LoadingMessage}" 
                                    FontSize="16" 
-                                   Foreground="#FFA0AEC0" 
+                                   Foreground="{StaticResource SecondaryTextBrush}" 
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
                     
@@ -61,7 +61,7 @@
                                         <ColumnDefinition Width="200"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Company Profile:" VerticalAlignment="Center" Foreground="#FFA0AEC0"/>
+                                    <TextBlock Grid.Column="0" Text="Company Profile:" VerticalAlignment="Center" Foreground="{StaticResource SecondaryTextBrush}"/>
                                     <ComboBox Grid.Column="1" ItemsSource="{Binding CompanyProfiles}" 
                                               SelectedItem="{Binding SelectedProfile}" Width="300" HorizontalAlignment="Left"/>
                                 </Grid>
@@ -71,7 +71,7 @@
                                         <ColumnDefinition Width="200"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Theme:" VerticalAlignment="Center" Foreground="#FFA0AEC0"/>
+                                    <TextBlock Grid.Column="0" Text="Theme:" VerticalAlignment="Center" Foreground="{StaticResource SecondaryTextBrush}"/>
                                     <ComboBox Grid.Column="1" ItemsSource="{Binding Themes}" 
                                               SelectedItem="{Binding SelectedTheme}" Width="200" HorizontalAlignment="Left"/>
                                 </Grid>
@@ -81,10 +81,10 @@
                                         <ColumnDefinition Width="200"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Auto-refresh interval:" VerticalAlignment="Center" Foreground="#FFA0AEC0"/>
+                                    <TextBlock Grid.Column="0" Text="Auto-refresh interval:" VerticalAlignment="Center" Foreground="{StaticResource SecondaryTextBrush}"/>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                                         <TextBox Text="{Binding RefreshInterval}" Width="100" Margin="0,0,8,0"/>
-                                        <TextBlock Text="seconds" VerticalAlignment="Center" Foreground="#FFA0AEC0"/>
+                                        <TextBlock Text="seconds" VerticalAlignment="Center" Foreground="{StaticResource SecondaryTextBrush}"/>
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>
@@ -101,7 +101,7 @@
                                         <ColumnDefinition Width="200"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Data Directory:" VerticalAlignment="Center" Foreground="#FFA0AEC0"/>
+                                    <TextBlock Grid.Column="0" Text="Data Directory:" VerticalAlignment="Center" Foreground="{StaticResource SecondaryTextBrush}"/>
                                     <TextBlock Grid.Column="1" Text="{Binding DataDirectory}" Foreground="#FFE2E8F0"/>
                                 </Grid>
                                 
@@ -110,7 +110,7 @@
                                         <ColumnDefinition Width="200"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Log Directory:" VerticalAlignment="Center" Foreground="#FFA0AEC0"/>
+                                    <TextBlock Grid.Column="0" Text="Log Directory:" VerticalAlignment="Center" Foreground="{StaticResource SecondaryTextBrush}"/>
                                     <TextBlock Grid.Column="1" Text="{Binding LogDirectory}" Foreground="#FFE2E8F0"/>
                                 </Grid>
                             </StackPanel>

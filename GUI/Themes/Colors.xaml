@@ -28,6 +28,10 @@
     <Color x:Key="WarningColorLight">#FFCE38</Color>
     <Color x:Key="WarningColorDark">#EBB90F</Color>
 
+    <!-- Warning Brush Resources (for Foreground usage) -->
+    <SolidColorBrush x:Key="WarningBrushLight" Color="{StaticResource WarningColorLight}"/>
+    <SolidColorBrush x:Key="WarningBrushDark" Color="{StaticResource WarningColorDark}"/>
+
     <!-- Error Colors -->
     <Color x:Key="ErrorColor">#DC3545</Color>               <!-- Red -->
     <Color x:Key="ErrorColorLight">#E5766F</Color>

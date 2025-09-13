@@ -26,7 +26,7 @@
                        Foreground="#FFE2E8F0"/>
             <TextBlock Text="Manage and view security group information" 
                        FontSize="14" 
-                       Foreground="#FFA0AEC0" 
+                       Foreground="{StaticResource SecondaryTextBrush}" 
                        Margin="0,4,0,0"/>
         </StackPanel>
         
@@ -112,7 +112,7 @@
                     <TextBlock Text="⏳" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
                     <TextBlock Text="{Binding LoadingMessage}" 
                                FontSize="16" 
-                               Foreground="#FFA0AEC0" 
+                               Foreground="{StaticResource SecondaryTextBrush}" 
                                HorizontalAlignment="Center"/>
                 </StackPanel>
                 

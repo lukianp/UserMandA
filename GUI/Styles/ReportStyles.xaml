@@ -72,7 +72,7 @@
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Background" Value="#FF4A5568"/>
-                            <Setter Property="Foreground" Value="#FFA0AEC0"/>
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -173,7 +173,7 @@
                                                   HorizontalAlignment="Center" 
                                                   VerticalAlignment="Center" 
                                                   Data="M 0 0 L 4 4 L 8 0 Z" 
-                                                  Fill="#FFA0AEC0"/>
+                                                  Fill="{StaticResource DarkMutedForegroundColor}"/>
                                         </Grid>
                                     </Border>
                                     <ControlTemplate.Triggers>

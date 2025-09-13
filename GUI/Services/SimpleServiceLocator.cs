@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Messaging;
@@ -11,7 +12,7 @@ namespace MandADiscoverySuite.Services
     [Obsolete("To be replaced by proper dependency injection")]
     public class SimpleServiceLocator
     {
-        private static readonly Dictionary<Type, object> _services = new();
+        private static readonly ConcurrentDictionary<Type, object> _services = new();
         private static ILoggerFactory _loggerFactory;
         private static IMessenger _messenger;
         
@@ -45,7 +46,7 @@ namespace MandADiscoverySuite.Services
             {
                 // Register IDataService and DataService
                 var dataLogger = _loggerFactory.CreateLogger<DataService>();
-                var dataService = new DataService(dataLogger);
+                var dataService = new DataService(dataLogger, _loggerFactory);
                 RegisterService<IDataService>(dataService);
                 RegisterService<DataService>(dataService);
                 
@@ -161,7 +162,7 @@ namespace MandADiscoverySuite.Services
             if (type == typeof(IDataService) || type == typeof(DataService))
             {
                 var logger = _loggerFactory.CreateLogger<DataService>();
-                var dataService = new DataService(logger);
+                var dataService = new DataService(logger, _loggerFactory);
                 RegisterService<IDataService>(dataService);
                 RegisterService<DataService>(dataService);
                 return (T)(object)dataService;

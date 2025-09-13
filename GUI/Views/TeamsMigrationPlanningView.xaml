@@ -202,7 +202,7 @@
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Total Teams" 
                                        FontSize="12" 
-                                       Foreground="#FFA0AEC0" 
+                                       Foreground="{StaticResource SecondaryTextBrush}" 
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -216,7 +216,7 @@
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Total Channels" 
                                        FontSize="12" 
-                                       Foreground="#FFA0AEC0" 
+                                       Foreground="{StaticResource SecondaryTextBrush}" 
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -230,7 +230,7 @@
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Total Members" 
                                        FontSize="12" 
-                                       Foreground="#FFA0AEC0" 
+                                       Foreground="{StaticResource SecondaryTextBrush}" 
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -244,7 +244,7 @@
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Total Data" 
                                        FontSize="12" 
-                                       Foreground="#FFA0AEC0" 
+                                       Foreground="{StaticResource SecondaryTextBrush}" 
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -258,7 +258,7 @@
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Teams w/ Issues" 
                                        FontSize="12" 
-                                       Foreground="#FFA0AEC0" 
+                                       Foreground="{StaticResource SecondaryTextBrush}" 
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -272,7 +272,7 @@
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Est. Hours" 
                                        FontSize="12" 
-                                       Foreground="#FFA0AEC0" 
+                                       Foreground="{StaticResource SecondaryTextBrush}" 
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -286,7 +286,7 @@
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Est. Cost" 
                                        FontSize="12" 
-                                       Foreground="#FFA0AEC0" 
+                                       Foreground="{StaticResource SecondaryTextBrush}" 
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>

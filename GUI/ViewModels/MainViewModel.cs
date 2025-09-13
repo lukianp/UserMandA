@@ -1109,7 +1109,7 @@ namespace MandADiscoverySuite.ViewModels
                 { 
                     Text = "Enter target company name:", 
                     FontSize = 13,
-                    Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFA0AEC0")),
+                    Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xA0, 0xAE, 0xC0)),
                     Margin = new Thickness(0, 0, 0, 8) 
                 };
                 stackPanel.Children.Add(instructionBlock);
@@ -1977,7 +1977,7 @@ namespace MandADiscoverySuite.ViewModels
                 { 
                     Text = "Enter company name:", 
                     FontSize = 13,
-                    Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFA0AEC0")),
+                    Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xA0, 0xAE, 0xC0)),
                     Margin = new Thickness(0, 0, 0, 8) 
                 };
                 stackPanel.Children.Add(instructionBlock);

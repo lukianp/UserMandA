@@ -15,7 +15,7 @@ namespace MandADiscoverySuite.Tests.ViewModels
     {
         private class TestViewModel : BaseViewModel
         {
-            public TestViewModel(ILogger logger = null, IMessenger messenger = null) 
+            public TestViewModel(ILogger logger = null, IMessenger messenger = null)
                 : base(logger, messenger)
             {
             }
@@ -44,6 +44,16 @@ namespace MandADiscoverySuite.Tests.ViewModels
                     await Task.Delay(10);
                     throw new InvalidOperationException("Test error");
                 }, "Test Operation");
+            }
+
+            public void TestOnPropertiesChangedBatched(params string[] propertyNames)
+            {
+                OnPropertiesChangedBatched(propertyNames);
+            }
+
+            public void TestFlushPendingNotifications()
+            {
+                FlushPendingNotifications();
             }
         }
 
@@ -178,6 +188,31 @@ namespace MandADiscoverySuite.Tests.ViewModels
             // Act & Assert
             var exception = Record.Exception(() => viewModel.Dispose());
             Assert.Null(exception);
+        }
+
+        [Fact]
+        public void ProcessPendingNotifications_ProcessesAllQueuedNotifications()
+        {
+            // Arrange
+            var viewModel = new TestViewModel(_mockLogger.Object, _mockMessenger.Object);
+            var propertyChangedEvents = new System.Collections.Generic.List<string>();
+            viewModel.PropertyChanged += (s, e) => propertyChangedEvents.Add(e.PropertyName);
+
+            // Act - Queue more than 20 notifications (the old limit)
+            for (int i = 0; i < 30; i++)
+            {
+                viewModel.TestOnPropertiesChangedBatched($"Property{i}");
+            }
+
+            // Force immediate processing
+            viewModel.TestFlushPendingNotifications();
+
+            // Assert - All notifications should have been processed
+            Assert.Equal(30, propertyChangedEvents.Count);
+            for (int i = 0; i < 30; i++)
+            {
+                Assert.Contains($"Property{i}", propertyChangedEvents);
+            }
         }
     }
 }

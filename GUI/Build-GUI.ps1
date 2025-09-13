@@ -458,6 +458,29 @@ if (Test-Path $ScriptsSourcePath) {
     Write-Host "  [OK] $ScriptCount utility scripts copied" -ForegroundColor Green
 }
 
+# Copy XAML Resource directories (Themes, Styles, Controls) - CRITICAL FOR STARTUP
+Write-Host "Copying XAML resource directories..." -ForegroundColor Yellow
+$XAMLDirectories = @("Themes", "Styles", "Controls")
+
+foreach ($dir in $XAMLDirectories) {
+    $SourceXAMLPath = Join-Path $ScriptDir $dir
+    $DestXAMLPath = Join-Path $OutputPath $dir
+
+    if (Test-Path $SourceXAMLPath) {
+        # Remove existing directory to ensure clean copy
+        if (Test-Path $DestXAMLPath) {
+            Remove-Item -Path $DestXAMLPath -Recurse -Force
+        }
+
+        Copy-Item -Path $SourceXAMLPath -Destination $DestXAMLPath -Recurse -Force
+
+        $FileCount = (Get-ChildItem -Path $DestXAMLPath -Filter "*.xaml" -Recurse -ErrorAction SilentlyContinue | Measure-Object).Count
+        Write-Host "  [OK] $dir directory copied ($FileCount XAML files)" -ForegroundColor Green
+    } else {
+        Write-Warning "XAML resource directory not found: $SourceXAMLPath"
+    }
+}
+
 # Get build information
 $ExePath = Join-Path $OutputPath "MandADiscoverySuite.exe"
 if (Test-Path $ExePath) {

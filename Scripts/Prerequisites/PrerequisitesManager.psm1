@@ -652,8 +652,8 @@ function Invoke-PrerequisitesCheck {
                             Write-PrerequisitesLog "! $($prereq.Name) - Optional but missing: $($prereq.Status)" -Level "WARN"
                             $results.Warnings += $prereq
                         }
-                }
                     }
+                }
                 catch {
                     Write-PrerequisitesLog "Failed to validate $($prereq.Name): $($_.Exception.Message)" -Level "ERROR"
                     $results.Errors += $prereq
@@ -661,6 +661,7 @@ function Invoke-PrerequisitesCheck {
                         $results.OverallSuccess = $false
                     }
                 }
+            }
         $results.Prerequisites += $prereq
         }
 

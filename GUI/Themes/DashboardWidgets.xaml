@@ -24,7 +24,7 @@
                     </StackPanel>
                     
                     <TextBlock Grid.Column="1" Text="{Binding LastUpdated, StringFormat='{}{0:HH:mm}'}" 
-                               Foreground="#FFA0AEC0" FontSize="11" VerticalAlignment="Center"/>
+                               Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" VerticalAlignment="Center"/>
                 </Grid>
 
                 <!-- Content -->
@@ -36,7 +36,7 @@
                             <TextBlock Text="{Binding TotalUsers, StringFormat='{}{0:N0}'}" 
                                        Foreground="#FFE2E8F0" FontSize="18" FontWeight="Bold" 
                                        HorizontalAlignment="Center"/>
-                            <TextBlock Text="Users" Foreground="#FFA0AEC0" FontSize="11" 
+                            <TextBlock Text="Users" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" 
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -48,7 +48,7 @@
                             <TextBlock Text="{Binding TotalComputers, StringFormat='{}{0:N0}'}" 
                                        Foreground="#FFE2E8F0" FontSize="18" FontWeight="Bold" 
                                        HorizontalAlignment="Center"/>
-                            <TextBlock Text="Computers" Foreground="#FFA0AEC0" FontSize="11" 
+                            <TextBlock Text="Computers" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" 
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -60,7 +60,7 @@
                             <TextBlock Text="{Binding TotalGroups, StringFormat='{}{0:N0}'}" 
                                        Foreground="#FFE2E8F0" FontSize="18" FontWeight="Bold" 
                                        HorizontalAlignment="Center"/>
-                            <TextBlock Text="Groups" Foreground="#FFA0AEC0" FontSize="11" 
+                            <TextBlock Text="Groups" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" 
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -72,7 +72,7 @@
                             <TextBlock Text="{Binding HealthStatus}" 
                                        Foreground="#FFE2E8F0" FontSize="14" FontWeight="Bold" 
                                        HorizontalAlignment="Center"/>
-                            <TextBlock Text="Health" Foreground="#FFA0AEC0" FontSize="11" 
+                            <TextBlock Text="Health" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" 
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -117,13 +117,13 @@
                     </StackPanel>
                     
                     <TextBlock Grid.Column="1" Text="{Binding LastUpdated, StringFormat='{}{0:HH:mm}'}" 
-                               Foreground="#FFA0AEC0" FontSize="11" VerticalAlignment="Center"/>
+                               Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" VerticalAlignment="Center"/>
                 </Grid>
 
                 <!-- Risk Score -->
                 <Border Grid.Row="1" Background="#FF2D3748" CornerRadius="6" Padding="12" Margin="0,12,0,0">
                     <StackPanel HorizontalAlignment="Center">
-                        <TextBlock Text="Overall Risk Score" Foreground="#FFA0AEC0" FontSize="11" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Overall Risk Score" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding OverallRiskScore, StringFormat='{}{0:F1}'}" 
                                    Foreground="#FFF56565" FontSize="24" FontWeight="Bold" 
                                    HorizontalAlignment="Center"/>
@@ -146,7 +146,7 @@
                                         <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                         <StackPanel Grid.Column="1">
                                             <TextBlock Text="{Binding Category}" Foreground="#FFE2E8F0" FontSize="12" FontWeight="Medium"/>
-                                            <TextBlock Text="{Binding Description}" Foreground="#FFA0AEC0" FontSize="10" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Description}" Foreground="{StaticResource SecondaryTextBrush}" FontSize="10" TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" HorizontalAlignment="Right">
                                             <TextBlock Text="{Binding Count}" 
@@ -200,7 +200,7 @@
                     </StackPanel>
                     
                     <TextBlock Grid.Column="1" Text="{Binding LastUpdated, StringFormat='{}{0:HH:mm}'}" 
-                               Foreground="#FFA0AEC0" FontSize="11" VerticalAlignment="Center"/>
+                               Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" VerticalAlignment="Center"/>
                 </Grid>
 
                 <!-- Overall Progress -->
@@ -212,7 +212,7 @@
                         </Grid.ColumnDefinitions>
                         
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Overall Progress" Foreground="#FFA0AEC0" FontSize="11"/>
+                            <TextBlock Text="Overall Progress" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11"/>
                             <ProgressBar Value="{Binding OverallProgress}" Maximum="100" Height="8" 
                                          Background="#FF4A5568" Foreground="#FF48BB78" Margin="0,4"/>
                         </StackPanel>
@@ -245,7 +245,7 @@
                                                        Foreground="#FFE2E8F0" FontSize="12" FontWeight="Medium" 
                                                        VerticalAlignment="Center"/>
                                             <TextBlock Grid.Column="1" Text="{Binding Status}" 
-                                                       Foreground="#FFA0AEC0" FontSize="10" 
+                                                       Foreground="{StaticResource SecondaryTextBrush}" FontSize="10" 
                                                        VerticalAlignment="Center"/>
                                         </Grid>
                                         
@@ -260,7 +260,7 @@
                                                          Background="#FF4A5568" Foreground="#FF667eea"/>
                                             <TextBlock Grid.Column="1" 
                                                        Text="{Binding ProgressText}"
-                                                       Foreground="#FFA0AEC0" FontSize="10" 
+                                                       Foreground="{StaticResource SecondaryTextBrush}" FontSize="10" 
                                                        VerticalAlignment="Center" Margin="8,0,0,0"/>
                                         </Grid>
                                     </Grid>

@@ -13,37 +13,37 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Load user account data from CSV files
         /// </summary>
-        Task<DataLoaderResult<UserData>> LoadUsersAsync(string profileName);
+        Task<DataLoaderResult<UserData>> LoadUsersAsync(string profileName, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Load group data from CSV files
         /// </summary>
-        Task<DataLoaderResult<GroupData>> LoadGroupsAsync(string profileName);
+        Task<DataLoaderResult<GroupData>> LoadGroupsAsync(string profileName, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Load infrastructure data from CSV files
         /// </summary>
-        Task<DataLoaderResult<InfrastructureData>> LoadInfrastructureAsync(string profileName);
+        Task<DataLoaderResult<InfrastructureData>> LoadInfrastructureAsync(string profileName, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Load applications data from CSV files
         /// </summary>
-        Task<DataLoaderResult<ApplicationData>> LoadApplicationsAsync(string profileName);
+        Task<DataLoaderResult<ApplicationData>> LoadApplicationsAsync(string profileName, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Load file server data from CSV files
         /// </summary>
-        Task<DataLoaderResult<FileServerData>> LoadFileServersAsync(string profileName);
+        Task<DataLoaderResult<FileServerData>> LoadFileServersAsync(string profileName, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Load SQL Server instance data from CSV files
         /// </summary>
-        Task<DataLoaderResult<SqlInstanceData>> LoadDatabasesAsync(string profileName);
+        Task<DataLoaderResult<SqlInstanceData>> LoadDatabasesAsync(string profileName, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Load group policy data from CSV files
         /// </summary>
-        Task<DataLoaderResult<PolicyData>> LoadGroupPoliciesAsync(string profileName);
+        Task<DataLoaderResult<PolicyData>> LoadGroupPoliciesAsync(string profileName, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Load migration items data from CSV files with enhanced error handling

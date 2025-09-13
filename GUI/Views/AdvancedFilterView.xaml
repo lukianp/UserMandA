@@ -72,7 +72,7 @@
                         
                         <!-- 'And' label for Between operators -->
                         <TextBlock Grid.Column="1" Text=" and " 
-                                   Foreground="#FFA0AEC0" 
+                                   Foreground="{StaticResource SecondaryTextBrush}" 
                                    VerticalAlignment="Center"
                                    Margin="8,0"
                                    FontSize="11"
@@ -193,7 +193,7 @@
                             Content="✕"
                             Command="{Binding ToggleFilterPanelCommand}"
                             Background="Transparent" 
-                            Foreground="#FFA0AEC0"
+                            Foreground="{StaticResource SecondaryTextBrush}"
                             BorderThickness="0"
                             FontSize="14"
                             Width="24" Height="24"/>
@@ -232,7 +232,7 @@
                         </Grid.ColumnDefinitions>
                         
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Logic:" Foreground="#FFA0AEC0" FontSize="12" Margin="0,0,8,0"/>
+                            <TextBlock Text="Logic:" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" Margin="0,0,8,0"/>
                             <ComboBox ItemsSource="{Binding FilterLogicOptions}" 
                                       SelectedItem="{Binding CurrentFilter.Logic}"
                                       Background="#FF2D3748" 
@@ -276,7 +276,7 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"/>
                                         <TextBlock Grid.Column="1" Text="{Binding CreatedDate, StringFormat='{}{0:MM/dd}'}" 
-                                                   Foreground="#FFA0AEC0" FontSize="10" Margin="8,0,0,0"/>
+                                                   Foreground="{StaticResource SecondaryTextBrush}" FontSize="10" Margin="8,0,0,0"/>
                                     </Grid>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>

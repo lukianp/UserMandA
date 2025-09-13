@@ -142,7 +142,7 @@ namespace MandADiscoverySuite.Services
 
         #region Users Loading
 
-        public async Task<DataLoaderResult<UserData>> LoadUsersAsync(string profileName)
+        public async Task<DataLoaderResult<UserData>> LoadUsersAsync(string profileName, CancellationToken cancellationToken = default)
         {
             var sw = Stopwatch.StartNew();
             var warnings = new List<string>();
@@ -245,7 +245,7 @@ namespace MandADiscoverySuite.Services
 
         #region Groups Loading
 
-        public async Task<DataLoaderResult<GroupData>> LoadGroupsAsync(string profileName)
+        public async Task<DataLoaderResult<GroupData>> LoadGroupsAsync(string profileName, CancellationToken cancellationToken = default)
         {
             var sw = Stopwatch.StartNew();
             var warnings = new List<string>();
@@ -346,7 +346,7 @@ namespace MandADiscoverySuite.Services
 
         #region Infrastructure Loading
 
-        public async Task<DataLoaderResult<InfrastructureData>> LoadInfrastructureAsync(string profileName)
+        public async Task<DataLoaderResult<InfrastructureData>> LoadInfrastructureAsync(string profileName, CancellationToken cancellationToken = default)
         {
             var sw = Stopwatch.StartNew();
             var warnings = new List<string>();
@@ -440,7 +440,7 @@ namespace MandADiscoverySuite.Services
 
         #region Applications Loading
 
-        public async Task<DataLoaderResult<ApplicationData>> LoadApplicationsAsync(string profileName)
+        public async Task<DataLoaderResult<ApplicationData>> LoadApplicationsAsync(string profileName, CancellationToken cancellationToken = default)
         {
             var sw = Stopwatch.StartNew();
             var warnings = new List<string>();
@@ -528,7 +528,7 @@ namespace MandADiscoverySuite.Services
 
         #region File Servers Loading
 
-        public async Task<DataLoaderResult<FileServerData>> LoadFileServersAsync(string profileName)
+        public async Task<DataLoaderResult<FileServerData>> LoadFileServersAsync(string profileName, CancellationToken cancellationToken = default)
         {
             var sw = Stopwatch.StartNew();
             var warnings = new List<string>();
@@ -614,7 +614,7 @@ namespace MandADiscoverySuite.Services
 
         #region Databases Loading
 
-        public async Task<DataLoaderResult<SqlInstanceData>> LoadDatabasesAsync(string profileName)
+        public async Task<DataLoaderResult<SqlInstanceData>> LoadDatabasesAsync(string profileName, CancellationToken cancellationToken = default)
         {
             var sw = Stopwatch.StartNew();
             var warnings = new List<string>();
@@ -702,7 +702,7 @@ namespace MandADiscoverySuite.Services
 
         #region Group Policies Loading
 
-        public async Task<DataLoaderResult<PolicyData>> LoadGroupPoliciesAsync(string profileName)
+        public async Task<DataLoaderResult<PolicyData>> LoadGroupPoliciesAsync(string profileName, CancellationToken cancellationToken = default)
         {
             var sw = Stopwatch.StartNew();
             var warnings = new List<string>();

@@ -49,7 +49,7 @@
             <StackPanel Grid.Row="0" Margin="0,0,0,32">
                 <TextBlock Text="Management" Style="{StaticResource HeaderTextStyle}"/>
                 <TextBlock Text="Configure and manage system settings and profiles" 
-                           Foreground="#FFA0AEC0" FontSize="16" Margin="0,8,0,0"/>
+                           Foreground="{StaticResource SecondaryTextBrush}" FontSize="16" Margin="0,8,0,0"/>
             </StackPanel>
 
             <!-- Management Content -->
@@ -59,7 +59,7 @@
                     
                     <!-- Placeholder content - will be expanded based on ManagementViewModel functionality -->
                     <TextBlock Text="Management features will be implemented here" 
-                               Foreground="#FFA0AEC0" FontSize="14"/>
+                               Foreground="{StaticResource SecondaryTextBrush}" FontSize="14"/>
                 </StackPanel>
             </Border>
         </Grid>

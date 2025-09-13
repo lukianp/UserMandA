@@ -53,7 +53,7 @@
 
     <!-- Text Colors -->
     <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFF7FAFC"/>
-    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#FFA0AEC0"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource LightForegroundSecondaryColor}"/>
     <SolidColorBrush x:Key="MutedForegroundBrush" Color="#FFD1D5DB"/>
     <SolidColorBrush x:Key="TertiaryTextBrush" Color="#FF718096"/>
 

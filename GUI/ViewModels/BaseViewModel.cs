@@ -308,29 +308,36 @@ namespace MandADiscoverySuite.ViewModels
             }
 
             _notificationTimer?.Stop();
-            string[] notifications;
 
-            lock (_notificationLock)
+            // Process all pending notifications in a loop until queue is empty
+            while (true)
             {
-                notifications = _pendingNotifications.ToArray();
-                _pendingNotifications.Clear();
-                _isNotificationScheduled = false;
-            }
+                string[] notifications;
 
-            // Limit the number of notifications processed at once
-            var limitedNotifications = notifications.Take(20).ToArray();
-            
-            foreach (var propertyName in limitedNotifications)
-            {
-                if (_disposed) break; // Safety check
-                try
+                lock (_notificationLock)
                 {
-                    OnPropertyChanged(propertyName);
+                    if (_pendingNotifications.Count == 0)
+                    {
+                        _isNotificationScheduled = false;
+                        break;
+                    }
+
+                    notifications = _pendingNotifications.ToArray();
+                    _pendingNotifications.Clear();
                 }
-                catch (Exception ex)
+
+                foreach (var propertyName in notifications)
                 {
-                    _log?.LogError(ex, $"Error processing property change notification for {propertyName}");
-                    break; // Stop processing on error
+                    if (_disposed) return; // Safety check
+                    try
+                    {
+                        OnPropertyChanged(propertyName);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log?.LogError(ex, $"Error processing property change notification for {propertyName}");
+                        // Continue processing other notifications even if one fails
+                    }
                 }
             }
 

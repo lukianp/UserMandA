@@ -48,8 +48,15 @@ class RealTimeDiscoveryEngine {
         $this.ChangeQueue = @{}
         
         # Initialize discovery interval from configuration
-        if ($Config.realTimeDiscovery.intervalMinutes) {
-            $this.DiscoveryInterval = $Config.realTimeDiscovery.intervalMinutes * 60
+        Write-RealTimeLog -Message "Config intervalMinutes: $($Config.intervalMinutes) (Type: $($Config.intervalMinutes.GetType().Name))" -Level "DEBUG"
+        if ($Config.intervalMinutes) {
+            $intervalValue = $Config.intervalMinutes
+            if ($intervalValue -is [array]) {
+                $intervalValue = $intervalValue[0]
+                Write-RealTimeLog -Message "intervalMinutes was array, using first value: $intervalValue" -Level "WARN"
+            }
+            $this.DiscoveryInterval = [int]$intervalValue * 60
+            Write-RealTimeLog -Message "DiscoveryInterval set to: $($this.DiscoveryInterval) (Type: $($this.DiscoveryInterval.GetType().Name))" -Level "DEBUG"
         }
     }
     
@@ -138,7 +145,7 @@ class RealTimeDiscoveryEngine {
             if ($NotifyFilters -match "Deleted") { $notifyFilterEnum = $notifyFilterEnum -bor [System.IO.NotifyFilters]::FileName }
             if ($NotifyFilters -match "Changed") { $notifyFilterEnum = $notifyFilterEnum -bor [System.IO.NotifyFilters]::LastWrite }
             if ($NotifyFilters -match "All") {
-                $notifyFilterEnum = [System.IO.NotifyFilters]::All
+                $notifyFilterEnum = [System.IO.NotifyFilters]::FileName -bor [System.IO.NotifyFilters]::DirectoryName -bor [System.IO.NotifyFilters]::Attributes -bor [System.IO.NotifyFilters]::Size -bor [System.IO.NotifyFilters]::LastWrite -bor [System.IO.NotifyFilters]::LastAccess -bor [System.IO.NotifyFilters]::CreationTime -bor [System.IO.NotifyFilters]::Security
             }
             
             $watcher.NotifyFilter = $notifyFilterEnum
@@ -191,7 +198,7 @@ class RealTimeDiscoveryEngine {
     
     [void] StartBackgroundTimer() {
         Write-RealTimeLog -Message "Starting background discovery timer (interval: $($this.DiscoveryInterval) seconds)" -Level "INFO"
-        
+
         $timerCallback = {
             param($state)
             try {
@@ -200,8 +207,10 @@ class RealTimeDiscoveryEngine {
                 Write-RealTimeLog -Message "Error in background timer: $($_.Exception.Message)" -Level "ERROR"
             }
         }.GetNewClosure()
-        
-        $this.BackgroundTimer = New-Object System.Threading.Timer($timerCallback, $null, $this.DiscoveryInterval * 1000, $this.DiscoveryInterval * 1000)
+
+        $dueTime = $this.DiscoveryInterval * 1000
+        Write-RealTimeLog -Message "Creating timer with dueTime: $dueTime (Type: $($dueTime.GetType().Name))" -Level "DEBUG"
+        $this.BackgroundTimer = New-Object System.Threading.Timer($timerCallback, $null, $dueTime, $dueTime)
     }
     
     [void] StartEventLogMonitoring() {

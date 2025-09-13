@@ -25,7 +25,7 @@
                        Foreground="#FFE2E8F0"/>
             <TextBlock Text="Data analytics and visualization dashboard" 
                        FontSize="14" 
-                       Foreground="#FFA0AEC0" 
+                       Foreground="{StaticResource SecondaryTextBrush}" 
                        Margin="0,4,0,0"/>
         </StackPanel>
         
@@ -43,7 +43,7 @@
                     <TextBlock Text="⏳" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
                     <TextBlock Text="{Binding LoadingMessage}" 
                                FontSize="16" 
-                               Foreground="#FFA0AEC0" 
+                               Foreground="{StaticResource SecondaryTextBrush}" 
                                HorizontalAlignment="Center"/>
                 </StackPanel>
                 
@@ -56,7 +56,7 @@
                             <StackPanel>
                                 <TextBlock Text="👥 Users" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding TotalUsers}" FontSize="28" FontWeight="Bold" Foreground="#FF3B82F6"/>
-                                <TextBlock Text="Active Directory Users" FontSize="12" Foreground="#FFA0AEC0"/>
+                                <TextBlock Text="Active Directory Users" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
@@ -64,7 +64,7 @@
                             <StackPanel>
                                 <TextBlock Text="👥 Groups" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding TotalGroups}" FontSize="28" FontWeight="Bold" Foreground="#FF8B5CF6"/>
-                                <TextBlock Text="Security Groups" FontSize="12" Foreground="#FFA0AEC0"/>
+                                <TextBlock Text="Security Groups" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
@@ -72,7 +72,7 @@
                             <StackPanel>
                                 <TextBlock Text="🖥️ Infrastructure" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding TotalInfrastructure}" FontSize="28" FontWeight="Bold" Foreground="#FF10B981"/>
-                                <TextBlock Text="Servers &amp; Workstations" FontSize="12" Foreground="#FFA0AEC0"/>
+                                <TextBlock Text="Servers &amp; Workstations" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
@@ -80,7 +80,7 @@
                             <StackPanel>
                                 <TextBlock Text="📱 Applications" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding TotalApplications}" FontSize="28" FontWeight="Bold" Foreground="#FFF59E0B"/>
-                                <TextBlock Text="Installed Software" FontSize="12" Foreground="#FFA0AEC0"/>
+                                <TextBlock Text="Installed Software" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
@@ -88,7 +88,7 @@
                             <StackPanel>
                                 <TextBlock Text="📁 File Servers" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding TotalFileServers}" FontSize="28" FontWeight="Bold" Foreground="#FF06B6D4"/>
-                                <TextBlock Text="File Share Systems" FontSize="12" Foreground="#FFA0AEC0"/>
+                                <TextBlock Text="File Share Systems" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
@@ -96,7 +96,7 @@
                             <StackPanel>
                                 <TextBlock Text="🗄️ Databases" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding TotalDatabases}" FontSize="28" FontWeight="Bold" Foreground="#FFEF4444"/>
-                                <TextBlock Text="SQL Instances" FontSize="12" Foreground="#FFA0AEC0"/>
+                                <TextBlock Text="SQL Instances" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
@@ -104,7 +104,7 @@
                             <StackPanel>
                                 <TextBlock Text="📋 Policies" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding TotalPolicies}" FontSize="28" FontWeight="Bold" Foreground="#FF84CC16"/>
-                                <TextBlock Text="Group Policy Objects" FontSize="12" Foreground="#FFA0AEC0"/>
+                                <TextBlock Text="Group Policy Objects" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
@@ -112,7 +112,7 @@
                             <StackPanel>
                                 <TextBlock Text="📊 Total Assets" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding TotalAssets}" FontSize="28" FontWeight="Bold" Foreground="#FFFBBF24"/>
-                                <TextBlock Text="Combined Infrastructure" FontSize="12" Foreground="#FFA0AEC0"/>
+                                <TextBlock Text="Combined Infrastructure" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                     </WrapPanel>

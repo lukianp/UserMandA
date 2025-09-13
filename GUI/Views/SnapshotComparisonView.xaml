@@ -85,7 +85,7 @@
                               Padding="12,8"
                               FontSize="13"/>
                     <TextBlock Text="{Binding BaselineSnapshot.CreatedDate, StringFormat='Created: {0:yyyy-MM-dd HH:mm}'}" 
-                               Foreground="#FFA0AEC0" FontSize="11" Margin="0,4,0,0"/>
+                               Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" Margin="0,4,0,0"/>
                 </StackPanel>
                 
                 <!-- Compare Snapshot Selection -->
@@ -101,7 +101,7 @@
                               Padding="12,8"
                               FontSize="13"/>
                     <TextBlock Text="{Binding CompareSnapshot.CreatedDate, StringFormat='Created: {0:yyyy-MM-dd HH:mm}'}" 
-                               Foreground="#FFA0AEC0" FontSize="11" Margin="0,4,0,0"/>
+                               Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" Margin="0,4,0,0"/>
                 </StackPanel>
                 
                 <!-- Compare Button -->
@@ -125,25 +125,25 @@
                         <StackPanel Grid.Column="0" HorizontalAlignment="Center">
                             <TextBlock Text="{Binding ComparisonResult.Summary.TotalChanges}" 
                                        Foreground="#FFE2E8F0" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Total Changes" Foreground="#FFA0AEC0" FontSize="11" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Total Changes" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Center"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Column="1" HorizontalAlignment="Center">
                             <TextBlock Text="{Binding ComparisonResult.Summary.AddedItems}" 
                                        Foreground="#FF48BB78" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Added" Foreground="#FFA0AEC0" FontSize="11" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Added" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Center"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Column="2" HorizontalAlignment="Center">
                             <TextBlock Text="{Binding ComparisonResult.Summary.RemovedItems}" 
                                        Foreground="#FFF56565" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Removed" Foreground="#FFA0AEC0" FontSize="11" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Removed" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Center"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Column="3" HorizontalAlignment="Center">
                             <TextBlock Text="{Binding ComparisonResult.Summary.ModifiedItems}" 
                                        Foreground="#FFFBBF24" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Modified" Foreground="#FFA0AEC0" FontSize="11" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Modified" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -262,9 +262,9 @@
                     </StackPanel.Style>
                     
                     <TextBlock Text="🔍" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Opacity="0.5"/>
-                    <TextBlock Text="No changes found" Foreground="#FFA0AEC0" FontSize="16" HorizontalAlignment="Center"/>
+                    <TextBlock Text="No changes found" Foreground="{StaticResource SecondaryTextBrush}" FontSize="16" HorizontalAlignment="Center"/>
                     <TextBlock Text="The selected snapshots are identical or your filters are too restrictive." 
-                               Foreground="#FFA0AEC0" FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                               Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                 </StackPanel>
                 
                 <!-- No Comparison State -->
@@ -281,9 +281,9 @@
                     </StackPanel.Style>
                     
                     <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Opacity="0.5"/>
-                    <TextBlock Text="Select snapshots to compare" Foreground="#FFA0AEC0" FontSize="16" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Select snapshots to compare" Foreground="{StaticResource SecondaryTextBrush}" FontSize="16" HorizontalAlignment="Center"/>
                     <TextBlock Text="Choose a baseline and compare snapshot, then click Compare to see the differences." 
-                               Foreground="#FFA0AEC0" FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                               Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                 </StackPanel>
             </Grid>
         </Border>
