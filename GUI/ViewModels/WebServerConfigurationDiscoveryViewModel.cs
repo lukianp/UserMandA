@@ -42,6 +42,7 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
+        public AsyncRelayCommand<object> ViewDetailsCommand => new AsyncRelayCommand<object>(ViewDetailsAsync);
 
         // Overrides
         protected override async Task ExecuteModuleAsync()
@@ -166,6 +167,65 @@ namespace MandADiscoverySuite.ViewModels
             TotalServers = serverCount;
             TotalWebsites = websiteCount;
             TotalConfigurations = configCount;
+        }
+
+        private async Task ViewDetailsAsync(object parameter)
+        {
+            try
+            {
+                if (parameter == null)
+                {
+                    ShowError("View Details", "No asset selected");
+                    return;
+                }
+
+                var assetName = GetAssetName(parameter);
+                if (string.IsNullOrEmpty(assetName) || assetName == "Unknown")
+                {
+                    ShowError("View Details", "Unable to identify asset name");
+                    return;
+                }
+
+                // Open the asset detail tab using the tabs service
+                if (MainViewModel.CurrentTabsService != null)
+                {
+                    var success = await MainViewModel.CurrentTabsService.OpenAssetDetailTabAsync(assetName, assetName);
+                    if (success)
+                    {
+                        _log?.LogInformation($"Opened asset details for web server asset: {assetName}");
+                    }
+                    else
+                    {
+                        ShowError("View Details", "Failed to open asset details tab");
+                    }
+                }
+                else
+                {
+                    ShowError("View Details", "Tab service not available");
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error opening web server asset details");
+                ShowError("View Details Error", ex.Message);
+            }
+        }
+
+        private string GetAssetName(object asset)
+        {
+            if (asset == null) return "Unknown";
+
+            // Try to get name from common properties for web server assets
+            var dict = asset as System.Collections.Generic.IDictionary<string, object>;
+            if (dict != null)
+            {
+                if (dict.TryGetValue("Name", out var name) && !string.IsNullOrEmpty(name?.ToString()))
+                    return name.ToString();
+                if (dict.TryGetValue("ObjectType", out var objectType) && !string.IsNullOrEmpty(objectType?.ToString()))
+                    return objectType.ToString();
+            }
+
+            return asset.ToString() ?? "Unknown";
         }
     }
 }

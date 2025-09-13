@@ -9,6 +9,10 @@
     <SolidColorBrush x:Key="CardBrush" Color="#FF101010"/>
     <SolidColorBrush x:Key="ElevatedBrush" Color="#FF202020"/>
 
+    <!-- Primary Brushes -->
+    <SolidColorBrush x:Key="PrimaryBackgroundBrush" Color="#FF000000"/> <!-- Primary background -->
+    <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#FFFFFFFF"/> <!-- Primary foreground for text -->
+
     <!-- Text Colors -->
     <SolidColorBrush x:Key="ForegroundBrush" Color="#FFFFFFFF"/>
     <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#FFCCCCCC"/>

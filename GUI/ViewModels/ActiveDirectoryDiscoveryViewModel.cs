@@ -49,6 +49,8 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Properties
 
+        public string ModuleIcon { get; set; } = "👥";
+
         // Summary card properties
         private int _totalUsers;
         public int TotalUsers

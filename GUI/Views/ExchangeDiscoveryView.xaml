@@ -18,117 +18,119 @@
          </ResourceDictionary>
      </UserControl.Resources>
 
-    <Grid>
+    <Grid Margin="16">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>  <!-- Header -->
-            <RowDefinition Height="Auto"/>  <!-- Toolbar -->
-            <RowDefinition Height="Auto"/>  <!-- Summary Cards -->
-            <RowDefinition Height="Auto"/>  <!-- Warning Banners -->
-            <RowDefinition Height="Auto"/>  <!-- Error Banner -->
-            <RowDefinition Height="Auto"/>  <!-- Loading -->
-            <RowDefinition Height="*"/>     <!-- Data and Details -->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header Section -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10">
-            <TextBlock Text="Exchange Discovery" FontSize="24" FontWeight="Bold"
-                       VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding TotalMailboxes, StringFormat='({0} items)'}"
-                       FontSize="16" Margin="10,0,0,0" VerticalAlignment="Center"
-                       Visibility="Visible"/>
-        </StackPanel>
+        <!-- Main Header Section -->
+        <TextBlock Grid.Row="0" Text="Exchange Discovery" FontSize="20" FontWeight="Bold" Margin="0,0,0,8"/>
 
-        <!-- Toolbar Section -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="10,0,10,10">
-            <Button Content="Run Discovery" Command="{Binding RunDiscoveryCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,12,0"/>
-            <Button Content="Refresh Data" Command="{Binding RefreshDataCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,12,0"/>
-            <Button Content="Export" Command="{Binding ExportCommand}" Style="{StaticResource OutlineButtonStyle}" Margin="0,0,12,0"/>
-            <Button Content="View Logs" Command="{Binding ViewLogsCommand}" Style="{StaticResource GhostButtonStyle}" Margin="0,0,0,0"/>
-        </StackPanel>
-
-        <!-- Summary Cards Section -->
-        <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="10,0,10,10">
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+        <!-- UniformGrid for 4 Summary Statistic Cards -->
+        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,16">
+            <!-- Total Mailboxes Card -->
+            <Border Background="#FFE6F3FF" BorderBrush="#FF0066CC" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="Total Mailboxes" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="📧" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding TotalMailboxes}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Total Mailboxes" FontWeight="Bold" FontSize="14" Foreground="#FF0066CC"/>
+                    <TextBlock Text="📧" FontSize="24" HorizontalAlignment="Center" Margin="0,8,0,8"/>
+                    <TextBlock Text="{Binding TotalMailboxes}" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#FF0066CC"/>
                 </StackPanel>
             </Border>
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+            <!-- Shared Mailboxes Card -->
+            <Border Background="#FFF0F9FF" BorderBrush="#FF0891B2" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="Total Shared Mailboxes" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="📬" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding TotalSharedMailboxes}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Shared Mailboxes" FontWeight="Bold" FontSize="14" Foreground="#FF0891B2"/>
+                    <TextBlock Text="📬" FontSize="24" HorizontalAlignment="Center" Margin="0,8,0,8"/>
+                    <TextBlock Text="{Binding TotalSharedMailboxes}" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#FF0891B2"/>
                 </StackPanel>
             </Border>
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+            <!-- Distribution Groups Card -->
+            <Border Background="#FFE0F2FE" BorderBrush="#FF0277BD" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="Total Distribution Groups" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="👥" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding TotalDistributionGroups}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Distribution Groups" FontWeight="Bold" FontSize="14" Foreground="#FF0277BD"/>
+                    <TextBlock Text="👥" FontSize="24" HorizontalAlignment="Center" Margin="0,8,0,8"/>
+                    <TextBlock Text="{Binding TotalDistributionGroups}" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#FF0277BD"/>
                 </StackPanel>
             </Border>
-            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+            <!-- Mail-Enabled Security Groups Card -->
+            <Border Background="#FFE8F5E8" BorderBrush="#FF2E7D32" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="Last Discovery" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="📅" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding LastDiscoveryTime, StringFormat='{}{0:g}'}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Mail-Enabled Security Groups" FontWeight="Bold" FontSize="14" Foreground="#FF2E7D32"/>
+                    <TextBlock Text="🔒" FontSize="24" HorizontalAlignment="Center" Margin="0,8,0,8"/>
+                    <TextBlock Text="{Binding TotalMailEnabledSecurityGroups}" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#FF2E7D32"/>
                 </StackPanel>
             </Border>
-        </WrapPanel>
+        </UniformGrid>
 
-        <!-- Red Warning Banners for Missing CSV Headers -->
-        <ItemsControl Grid.Row="3" ItemsSource="{Binding HeaderWarnings}"
-                      Margin="10,0,10,10"
-                      Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibility}}">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Border Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
-                            CornerRadius="4" Margin="0,0,0,8" Padding="8">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Warning:" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ErrorForegroundBrush}"
-                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorForegroundBrush}"
-                                       VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <!-- ToolBar for Action Buttons -->
+        <ToolBar Grid.Row="2" Margin="0,0,0,16">
+            <Button Content="Run Discovery" Command="{Binding RunDiscoveryCommand}" Style="{StaticResource RoundedButtonStyle}" Padding="12,6" Margin="0,0,8,0"/>
+            <Button Content="Refresh" Command="{Binding RefreshDataCommand}" Style="{StaticResource RoundedButtonStyle}" Padding="12,6" Margin="0,0,8,0"/>
+            <Button Content="Export" Command="{Binding ExportCommand}" Style="{StaticResource RoundedButtonStyle}" Padding="12,6" Margin="0,0,8,0"/>
+            <Button Content="View Logs" Command="{Binding ViewLogsCommand}" Style="{StaticResource RoundedButtonStyle}" Padding="12,6" Margin="0,0,8,0"/>
+        </ToolBar>
 
-        <!-- Error Banner -->
-        <Border Grid.Row="4" Background="{DynamicResource ErrorBrush}" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
-                CornerRadius="4" Margin="10,0,10,10" Padding="8" Opacity="0.33"
-                Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibility}}">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Error:" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ErrorForegroundBrush}"
-                           VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorForegroundBrush}"
-                           VerticalAlignment="Center" />
-            </StackPanel>
-        </Border>
-
-        <!-- Loading Spinner -->
-        <Border Grid.Row="5" HorizontalAlignment="Center" Margin="10"
-                Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibility}}">
-            <StackPanel Orientation="Horizontal">
-                <ProgressBar IsIndeterminate="True" Width="200" Height="20"
-                             VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding ProcessingMessage}" Margin="10,0,0,0"
-                           VerticalAlignment="Center"/>
-            </StackPanel>
-        </Border>
-
-        <!-- Data Section -->
-        <Grid Grid.Row="6">
+        <!-- Grid with GridSplitter to separate DataGrid from Details Panel -->
+        <Grid Grid.Row="3">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="300" MinWidth="250"/>
             </Grid.ColumnDefinitions>
 
-            <DataGrid Grid.Column="0" ItemsSource="{Binding SelectedResults}"
+            <!-- Red Warning Banners for Missing CSV Headers -->
+            <ItemsControl Grid.Row="0" Grid.ColumnSpan="3" ItemsSource="{Binding HeaderWarnings}"
+                          Margin="10,0,10,10"
+                          Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibility}}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
+                                CornerRadius="4" Margin="0,0,0,8" Padding="8">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Warning:" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ErrorForegroundBrush}"
+                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorForegroundBrush}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Error Banner -->
+            <Border Grid.Row="1" Grid.ColumnSpan="3" Background="{DynamicResource ErrorBrush}" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
+                    CornerRadius="4" Margin="10,0,10,10" Padding="8" Opacity="0.33"
+                    Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Error:" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ErrorForegroundBrush}"
+                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorForegroundBrush}"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <!-- Loading Spinner -->
+            <Border Grid.Row="2" Grid.ColumnSpan="3" HorizontalAlignment="Center" Margin="10"
+                    Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel Orientation="Horizontal">
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="20"
+                                 VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding ProcessingMessage}" Margin="10,0,0,0"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <DataGrid Grid.Row="3" Grid.Column="0" ItemsSource="{Binding SelectedResults}"
                       Margin="10"
                       SelectedItem="{Binding SelectedItem}"
                       Visibility="{Binding SelectedResults.Count, Converter={StaticResource CountToVisibility}}"
@@ -138,11 +140,13 @@
                       Background="Transparent">
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="MailboxName" Binding="{Binding mailboxname}" Width="*" />
-                    <DataGridTextColumn Header="PrimarySMTP" Binding="{Binding primarysmtpaddress}" Width="200" />
-                    <DataGridTextColumn Header="MailboxType" Binding="{Binding mailboxtype}" Width="150" />
-                    <DataGridTextColumn Header="Size" Binding="{Binding sizegb}" Width="100" />
-                    <DataGridTextColumn Header="LastLogin" Binding="{Binding lastlogin, StringFormat='{}{0:g}'}" Width="120" />
+                    <DataGridTextColumn Header="Mailbox Name" Binding="{Binding mailboxname}" Width="*" />
+                    <DataGridTextColumn Header="Primary SMTP" Binding="{Binding primarysmtpaddress}" Width="200" />
+                    <DataGridTextColumn Header="Mailbox Type" Binding="{Binding mailboxtype}" Width="150" />
+                    <DataGridTextColumn Header="Size (GB)" Binding="{Binding sizegb}" Width="100" />
+                    <DataGridTextColumn Header="Archive Status" Binding="{Binding archivestatus}" Width="120" />
+                    <DataGridTextColumn Header="Last Login" Binding="{Binding lastlogin, StringFormat='{}{0:g}'}" Width="120" />
+                    <DataGridTextColumn Header="Litigation Hold" Binding="{Binding litigationholdenabled}" Width="120" />
                     <DataGridTemplateColumn Header="Actions" Width="100">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -183,7 +187,7 @@
             </DataGrid>
 
             <!-- No Data Message -->
-            <Border Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+            <Border Grid.Row="3" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center"
                     Visibility="{Binding SelectedResults.Count, Converter={StaticResource InverseCountToVisibility}}">
                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
                     <TextBlock Text="No Exchange Data Found" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
@@ -195,10 +199,10 @@
             </Border>
 
             <!-- GridSplitter for Details Panel -->
-            <GridSplitter Grid.Column="1" Width="5" Background="{DynamicResource BorderBrush}"/>
+            <GridSplitter Grid.Row="3" Grid.Column="1" Width="5" Background="{DynamicResource BorderBrush}"/>
 
             <!-- Details Panel -->
-            <Border Grid.Column="2" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,10,10,10"
+            <Border Grid.Row="3" Grid.Column="2" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,10,10,10"
                     Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
@@ -218,5 +222,9 @@
             </Border>
         </Grid>
 
+        <!-- Footer or Empty State Placeholder -->
+        <Border Grid.Row="4" Background="#FF1A202C" Padding="16" Margin="0,16,0,0">
+            <TextBlock Text="Exchange Discovery - Ready for use" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF4A5568"/>
+        </Border>
     </Grid>
 </UserControl>

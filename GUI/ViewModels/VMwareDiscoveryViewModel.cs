@@ -99,6 +99,7 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
         public new AsyncRelayCommand ViewLogsCommand => new AsyncRelayCommand(ViewLogsAsync);
+        public AsyncRelayCommand<object> ViewDetailsCommand => new AsyncRelayCommand<object>(ViewDetailsAsync);
 
         #endregion
 
@@ -296,6 +297,67 @@ namespace MandADiscoverySuite.ViewModels
                 _log?.LogError(ex, "Error opening VMware logs");
                 ShowError("Logs Error", ex.Message);
             }
+        }
+
+        private async Task ViewDetailsAsync(object parameter)
+        {
+            try
+            {
+                if (parameter == null)
+                {
+                    ShowError("View Details", "No asset selected");
+                    return;
+                }
+
+                var assetName = GetAssetName(parameter);
+                if (string.IsNullOrEmpty(assetName) || assetName == "Unknown")
+                {
+                    ShowError("View Details", "Unable to identify asset name");
+                    return;
+                }
+
+                // Open the asset detail tab using the tabs service
+                if (MainViewModel.CurrentTabsService != null)
+                {
+                    var success = await MainViewModel.CurrentTabsService.OpenAssetDetailTabAsync(assetName, assetName);
+                    if (success)
+                    {
+                        _log?.LogInformation($"Opened asset details for VMware asset: {assetName}");
+                    }
+                    else
+                    {
+                        ShowError("View Details", "Failed to open asset details tab");
+                    }
+                }
+                else
+                {
+                    ShowError("View Details", "Tab service not available");
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error opening VMware asset details");
+                ShowError("View Details Error", ex.Message);
+            }
+        }
+
+        private string GetAssetName(object asset)
+        {
+            if (asset == null) return "Unknown";
+
+            // Try to get name from common properties for VMware assets
+            var dict = asset as IDictionary<string, object>;
+            if (dict != null)
+            {
+                if (dict.TryGetValue("ClusterName", out var clusterName) && !string.IsNullOrEmpty(clusterName?.ToString()))
+                    return clusterName.ToString();
+                if (dict.TryGetValue("HostName", out var hostName) && !string.IsNullOrEmpty(hostName?.ToString()))
+                    return hostName.ToString();
+                if (dict.TryGetValue("VMName", out var vmName) && !string.IsNullOrEmpty(vmName?.ToString()))
+                    return vmName.ToString();
+            }
+
+            return asset.ToString() ?? "Unknown";
         }
 
         #endregion

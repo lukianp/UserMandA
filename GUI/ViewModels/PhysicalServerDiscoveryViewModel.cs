@@ -5,8 +5,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Views;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Input;
+using MandADiscoverySuite.ViewModels;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -45,6 +47,7 @@ namespace MandADiscoverySuite.ViewModels
 
             // Initialize commands
             LoadCommand = new AsyncRelayCommand(LoadAsync);
+            ViewDetailsCommand = new RelayCommand<dynamic>(ViewDetails);
         }
 
         #endregion
@@ -148,6 +151,7 @@ namespace MandADiscoverySuite.ViewModels
 
         // Commands
         public AsyncRelayCommand LoadCommand { get; }
+        public RelayCommand<dynamic> ViewDetailsCommand { get; private set; }
 
         #endregion
 
@@ -338,6 +342,38 @@ namespace MandADiscoverySuite.ViewModels
             catch
             {
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Open the asset detail view for the selected hardware component
+        /// </summary>
+        private void ViewDetails(dynamic? asset)
+        {
+            if (asset == null) return;
+
+            try
+            {
+                _logger?.LogInformation("Opening asset detail view for hardware component");
+
+                // Create AssetDetailViewModel with the dynamic asset object
+                var assetDetailViewModel = new AssetDetailViewModel(
+                    asset,
+                    new LogicEngineService(null), // TODO: Inject proper logger
+                    _logger);
+
+                // Create and show the AssetDetailWindow
+                var assetDetailWindow = new AssetDetailWindow();
+                assetDetailWindow.DataContext = assetDetailViewModel;
+                assetDetailWindow.Show();
+
+                _logger?.LogInformation("Asset detail window opened successfully");
+
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error opening asset detail view");
+                ErrorMessage = $"Failed to open asset details: {ex.Message}";
             }
         }
 

@@ -5,210 +5,233 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="1000">
+             d:DesignHeight="800" d:DesignWidth="1200">
 
-        <UserControl.Resources>
-         <ResourceDictionary>
-             <ResourceDictionary.MergedDictionaries>
-                 <ResourceDictionary Source="../Resources/Converters.xaml" />
-                 <ResourceDictionary Source="../Resources/DataGridTheme.xaml" />
-                 <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
-                 <ResourceDictionary Source="../Themes/Colors.xaml" />
-             </ResourceDictionary.MergedDictionaries>
-         </ResourceDictionary>
-     </UserControl.Resources>
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#FF2D3748"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="FilterComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="MinWidth" Value="150"/>
+            <Setter Property="Margin" Value="8,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="SearchTextBoxStyle" TargetType="TextBox">
+            <Setter Property="MinWidth" Value="200"/>
+            <Setter Property="Margin" Value="8,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#FFE2E8F0"/>
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Converters.xaml" />
+                <ResourceDictionary Source="../Resources/DataGridTheme.xaml" />
+                <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
+                <ResourceDictionary Source="../Themes/Colors.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
 
-    <Grid>
+    <Grid Margin="16">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>  <!-- Header -->
-            <RowDefinition Height="Auto"/>  <!-- Toolbar -->
-            <RowDefinition Height="Auto"/>  <!-- Summary Cards -->
-            <RowDefinition Height="Auto"/>  <!-- Warning Banners -->
-            <RowDefinition Height="Auto"/>  <!-- Error Banner -->
-            <RowDefinition Height="Auto"/>  <!-- Loading -->
-            <RowDefinition Height="*"/>     <!-- Data and Details -->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header Section -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10">
-            <TextBlock Text="SharePoint Discovery" FontSize="24" FontWeight="Bold"
-                       VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding TotalSites, StringFormat='({0} sites)'}"
-                       FontSize="16" Margin="10,0,0,0" VerticalAlignment="Center"
-                       Visibility="Visible"/>
-        </StackPanel>
+        <!-- Main Header Section -->
+        <TextBlock Grid.Row="0" Text="SharePoint Discovery" Style="{StaticResource HeaderTextStyle}" FontSize="20"/>
 
-        <!-- Toolbar Section -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="10,0,10,10">
+        <!-- ToolBar for Action Buttons -->
+        <ToolBar Grid.Row="2" Margin="0,0,0,16">
             <Button Content="▶ Run Discovery"
                     Command="{Binding RunDiscoveryCommand}"
-                    Style="{StaticResource PrimaryButtonStyle}"
-                    Margin="0,0,12,0"/>
+                    Style="{StaticResource RoundedButtonStyle}"
+                    Padding="12,6" Margin="0,0,8,0"/>
             <Button Content="🔄 Refresh Data"
                     Command="{Binding RefreshDataCommand}"
-                    Style="{StaticResource SecondaryButtonStyle}"
-                    Margin="0,0,12,0"/>
+                    Style="{StaticResource RoundedButtonStyle}"
+                    Padding="12,6" Margin="0,0,8,0"/>
             <Button Content="📤 Export"
                     Command="{Binding ExportCommand}"
-                    Style="{StaticResource OutlineButtonStyle}"/>
+                    Style="{StaticResource RoundedButtonStyle}"
+                    Padding="12,6" Margin="0,0,8,0"/>
             <Button Content="📋 View Logs"
                     Command="{Binding ViewLogsCommand}"
-                    Style="{StaticResource GhostButtonStyle}"
-                    Margin="12,0,0,0"/>
-        </StackPanel>
+                    Style="{StaticResource RoundedButtonStyle}"
+                    Padding="12,6" Margin="0,0,8,0"/>
+        </ToolBar>
 
-        <!-- Summary Cards Section -->
-        <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="10,0,10,10">
-            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+        <!-- UniformGrid for 4 Summary Statistic Cards -->
+        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,16">
+            <!-- Total Sites Card -->
+            <Border Background="#FFF8FAFC" BorderBrush="#FF0891B2" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="Total Site Collections" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="🏢" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding TotalSiteCollections}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Total Sites" FontWeight="Bold" FontSize="14" Foreground="#FF0891B2"/>
+                    <TextBlock Text="🌐" FontSize="24" HorizontalAlignment="Center" Margin="0,8,0,8"/>
+                    <TextBlock Text="{Binding TotalSites}" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
-            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+            <!-- Document Libraries Card -->
+            <Border Background="#FFF8FAFC" BorderBrush="#FFDC2626" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="Total Sites" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="🌐" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding TotalSites}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Document Libraries" FontWeight="Bold" FontSize="14" Foreground="#FFDC2626"/>
+                    <TextBlock Text="📚" FontSize="24" HorizontalAlignment="Center" Margin="0,8,0,8"/>
+                    <TextBlock Text="{Binding TotalDocumentLibraries}" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
-            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+            <!-- Lists Card -->
+            <Border Background="#FFF8FAFC" BorderBrush="#FF16A34A" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="Total Lists" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="📋" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding TotalLists}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Lists" FontWeight="Bold" FontSize="14" Foreground="#FF16A34A"/>
+                    <TextBlock Text="📋" FontSize="24" HorizontalAlignment="Center" Margin="0,8,0,8"/>
+                    <TextBlock Text="{Binding TotalLists}" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
-            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Margin="0,0,10,0" Padding="15">
+            <!-- Storage Used Card -->
+            <Border Background="#FFF8FAFC" BorderBrush="#FF7C3AED" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="Last Discovery" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="📅" FontSize="20" HorizontalAlignment="Center" Margin="0,5,0,5"/>
-                    <TextBlock Text="{Binding LastDiscovery, StringFormat='MMM dd, yyyy'}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Storage Used" FontWeight="Bold" FontSize="14" Foreground="#FF7C3AED"/>
+                    <TextBlock Text="💾" FontSize="24" HorizontalAlignment="Center" Margin="0,8,0,8"/>
+                    <TextBlock Text="{Binding TotalStorageUsed, StringFormat='{0} GB'}" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
-        </WrapPanel>
+        </UniformGrid>
 
-        <!-- Red Warning Banners for Missing CSV Headers -->
-        <ItemsControl Grid.Row="3" ItemsSource="{Binding HeaderWarnings}"
-                      Margin="10,0,10,10"
-                      Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibility}}">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Border Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
-                            CornerRadius="4" Margin="0,0,0,8" Padding="8">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="⚠" FontSize="16" Foreground="{DynamicResource WhiteBrush}"
-                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}"
-                                       VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
 
-        <!-- Error Banner -->
-        <Border Grid.Row="4" Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
-                CornerRadius="4" Margin="10,0,10,10" Padding="8"
-                Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibility}}">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="❌" FontSize="16" Foreground="{DynamicResource WhiteBrush}"
-                          VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}"
-                          VerticalAlignment="Center"/>
-            </StackPanel>
-        </Border>
-
-        <!-- Loading Spinner -->
-        <Border Grid.Row="5" HorizontalAlignment="Center" Margin="10"
-                Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibility}}">
-            <StackPanel Orientation="Horizontal">
-                <ProgressBar IsIndeterminate="True" Width="200" Height="20"
-                            VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding ProcessingMessage}" Margin="10,0,0,0"
-                          VerticalAlignment="Center"/>
-            </StackPanel>
-        </Border>
-
-        <!-- Data Section -->
-        <Grid Grid.Row="6">
+        <!-- Grid with GridSplitter to separate DataGrid from Details Panel -->
+        <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="300" MinWidth="250"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <DataGrid Grid.Column="0" ItemsSource="{Binding SelectedResults}"
-                      AutoGenerateColumns="False"
-                      CanUserAddRows="False"
-                      CanUserDeleteRows="False"
-                      GridLinesVisibility="Horizontal"
-                      HeadersVisibility="Column"
-                      Margin="20,0,20,20"
-                      SelectedItem="{Binding SelectedItem}"
-                      SelectionMode="Extended"
-                      Visibility="{Binding SelectedResults.Count, Converter={StaticResource CountToVisibility}}">
+            <!-- Main DataGrid Placeholder -->
+            <Border Grid.Column="0" Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1">
+                <DataGrid ItemsSource="{Binding SelectedResults}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          GridLinesVisibility="Horizontal"
+                          HeadersVisibility="Column"
+                          Margin="8"
+                          SelectedItem="{Binding SelectedItem}"
+                          SelectionMode="Extended"
+                          Visibility="{Binding SelectedResults.Count, Converter={StaticResource CountToVisibility}}">
 
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Site Name"
-                                        Binding="{Binding sitename}"
-                                        Width="200"/>
-                    <DataGridTextColumn Header="URL"
-                                        Binding="{Binding url}"
-                                        Width="200"/>
-                    <DataGridTextColumn Header="Owner"
-                                        Binding="{Binding owner}"
-                                        Width="150"/>
-                    <DataGridTextColumn Header="Created Date"
-                                        Binding="{Binding createddate, StringFormat='{}{0:yyyy-MM-dd}'}"  Width="120"/>
-                    <DataGridTextColumn Header="Storage Used"
-                                        Binding="{Binding storageused}"
-                                        Width="120"/>
-                </DataGrid.Columns>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Site Name"
+                                            Binding="{Binding sitename}"
+                                            Width="200"/>
+                        <DataGridTextColumn Header="URL"
+                                            Binding="{Binding url}"
+                                            Width="250"/>
+                        <DataGridTextColumn Header="Template"
+                                            Binding="{Binding sitetemplate}"
+                                            Width="150"/>
+                        <DataGridTextColumn Header="Owner"
+                                            Binding="{Binding owner}"
+                                            Width="150"/>
+                        <DataGridTextColumn Header="Storage Used (GB)"
+                                            Binding="{Binding storageused}"
+                                            Width="120"/>
+                        <DataGridTextColumn Header="Created Date"
+                                            Binding="{Binding createddate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="120"/>
+                        <DataGridTemplateColumn Header="Actions" Width="100">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="View Details"
+                                            FontSize="11"
+                                            Padding="8,4"
+                                            Background="#FF0891B2"
+                                            Foreground="White"
+                                            BorderThickness="0"
+                                            Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
 
-                <DataGrid.RowStyle>
-                    <Style TargetType="DataGridRow">
-                        <Style.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </DataGrid.RowStyle>
-            </DataGrid>
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#FFE6F7FF"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#FFB3E5FC"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+                </DataGrid>
 
-            <!-- No Data Message -->
-            <Border Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding SelectedResults.Count, Converter={StaticResource InverseCountToVisibility}}">
-                <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-                    <TextBlock Text="🌐" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
-                    <TextBlock Text="No SharePoint data found" FontSize="16" HorizontalAlignment="Center"
-                               Margin="0,10,0,0" Opacity="0.7"/>
-                    <TextBlock Text="Check CSV files in data directory" FontSize="12" HorizontalAlignment="Center"
-                               Margin="0,5,0,0" Opacity="0.5"/>
-                </StackPanel>
+                <!-- No Data Message -->
+                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="{Binding SelectedResults.Count, Converter={StaticResource InverseCountToVisibility}}">
+                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                        <TextBlock Text="🌐" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
+                        <TextBlock Text="No SharePoint data found" FontSize="16" HorizontalAlignment="Center"
+                                   Margin="0,10,0,0" Opacity="0.7"/>
+                        <TextBlock Text="Check CSV files in data directory" FontSize="12" HorizontalAlignment="Center"
+                                   Margin="0,5,0,0" Opacity="0.5"/>
+                    </StackPanel>
+                </Border>
             </Border>
 
-            <!-- GridSplitter for Details Panel -->
-            <GridSplitter Grid.Column="1" Width="5" Background="{DynamicResource BorderBrush}"/>
+            <GridSplitter Grid.Column="1" Width="5" Background="Gray" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
 
-            <!-- Details Panel -->
-            <Border Grid.Column="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    Margin="0,10,10,10" CornerRadius="8"
-                    Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}">
+            <!-- Right-hand Details Panel with Site Hierarchy and Permission Levels -->
+            <Border Grid.Column="2" Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="16">
-                        <TextBlock Text="Site Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
+                    <StackPanel Margin="16" Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="Site Details & Hierarchy" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16" Foreground="#FF0891B2"/>
+
+                        <!-- Site Hierarchy Section -->
+                        <TextBlock Text="Site Hierarchy" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#FF16A34A"/>
+                        <ItemsControl ItemsSource="{Binding SiteHierarchy}" Margin="0,0,0,16">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FFF0F9FF" BorderBrush="#FF0891B2" BorderThickness="1" Margin="0,0,0,4" Padding="8" CornerRadius="4">
+                                        <TextBlock Text="{Binding}" FontSize="12" Foreground="#FF0891B2"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Permission Levels Section -->
+                        <TextBlock Text="Permission Levels" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#FFDC2626"/>
+                        <ItemsControl ItemsSource="{Binding PermissionLevels}" Margin="0,0,0,16">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FFFEF2F2" BorderBrush="#FFDC2626" BorderThickness="1" Margin="0,0,0,4" Padding="8" CornerRadius="4">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Level}" FontSize="12" FontWeight="Bold" Foreground="#FFDC2626"/>
+                                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="#FFDC2626" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Standard Site Details -->
+                        <TextBlock Text="Site Information" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#FF7C3AED"/>
                         <ItemsControl ItemsSource="{Binding SelectedItemDetails}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Margin="0,0,0,12">
-                                        <TextBlock Text="{Binding Key}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                                        <TextBlock Text="{Binding Value}" FontSize="14" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        <TextBlock Text="{Binding Key}" FontSize="12" FontWeight="SemiBold" Foreground="#FF7C3AED"/>
+                                        <TextBlock Text="{Binding Value}" FontSize="14" Foreground="#FF1A202C" TextWrapping="Wrap" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -218,5 +241,13 @@
             </Border>
         </Grid>
 
-    </Grid>
+       <!-- Footer or Empty State Placeholder -->
+       <Border Grid.Row="4" Background="#FFF8FAFC" Padding="16" Margin="0,16,0,0">
+           <StackPanel HorizontalAlignment="Center">
+               <TextBlock Text="SharePoint Discovery Module - Ready" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF4A5568"/>
+               <TextBlock Text="{Binding StatusText}" FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,0" Foreground="#FF718096"/>
+               <TextBlock Text="{Binding LastUpdated, StringFormat='Last Updated: {0:g}'}" FontSize="10" HorizontalAlignment="Center" Margin="0,4,0,0" Foreground="#FFA0AEC0"/>
+           </StackPanel>
+       </Border>
+   </Grid>
 </UserControl>

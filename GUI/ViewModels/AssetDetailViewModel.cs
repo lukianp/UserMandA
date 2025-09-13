@@ -423,6 +423,36 @@ namespace MandADiscoverySuite.ViewModels
                     case "DatabaseData":
                         LoadDatabaseDataDetails(asset);
                         break;
+                    case "FileServerData":
+                        LoadFileServerDataDetails(asset);
+                        break;
+                    case "NetworkDeviceData":
+                        LoadNetworkDeviceDataDetails(asset);
+                        break;
+                    case "PhysicalServerData":
+                        LoadPhysicalServerDataDetails(asset);
+                        break;
+                    case "SQLServerData":
+                        LoadSQLServerDataDetails(asset);
+                        break;
+                    case "VMwareData":
+                        LoadVMwareDataDetails(asset);
+                        break;
+                    case "AzureData":
+                        LoadAzureDataDetails(asset);
+                        break;
+                    case "AzureInfrastructureData":
+                        LoadAzureInfrastructureDataDetails(asset);
+                        break;
+                    case "ActiveDirectoryData":
+                        LoadActiveDirectoryDataDetails(asset);
+                        break;
+                    case "ExchangeData":
+                        LoadExchangeDataDetails(asset);
+                        break;
+                    case "OneDriveBusinessData":
+                        LoadOneDriveBusinessDataDetails(asset);
+                        break;
                     default:
                         Debug.WriteLine($"AssetDetailViewModel.LoadAssetDetails: Unknown asset type: {assetType}, using default loading");
                         LoadDefaultAssetDetails(asset);
@@ -657,6 +687,57 @@ namespace MandADiscoverySuite.ViewModels
             if (asset.GetType().Name.Contains("Database") || asset.GetType().GetProperty("DatabaseName") != null)
             {
                 return "DatabaseData";
+            }
+
+            // New discovery source type detection
+            if (asset.GetType().Name.Contains("FileServer") || asset.GetType().GetProperty("FileServerType") != null ||
+                asset.GetType().GetProperty("FileShare") != null)
+            {
+                return "FileServerData";
+            }
+            if (asset.GetType().Name.Contains("Network") || asset.GetType().GetProperty("NetworkType") != null ||
+                asset.GetType().GetProperty("IPAddress") != null)
+            {
+                return "NetworkDeviceData";
+            }
+            if (asset.GetType().Name.Contains("PhysicalServer") || asset.GetType().GetProperty("PhysicalServerType") != null ||
+                asset.GetType().GetProperty("ServerType") != null && asset.GetType().Name.Contains("Physical"))
+            {
+                return "PhysicalServerData";
+            }
+            if (asset.GetType().Name.Contains("SQLServer") || asset.GetType().GetProperty("SQLServerType") != null ||
+                asset.GetType().GetProperty("SQLInstance") != null)
+            {
+                return "SQLServerData";
+            }
+            if (asset.GetType().Name.Contains("VMware") || asset.GetType().GetProperty("VMwareType") != null ||
+                asset.GetType().GetProperty("VMHost") != null)
+            {
+                return "VMwareData";
+            }
+            if (asset.GetType().Name.Contains("Azure") && !asset.GetType().Name.Contains("Infrastructure") ||
+                asset.GetType().GetProperty("AzureType") != null)
+            {
+                return "AzureData";
+            }
+            if (asset.GetType().Name.Contains("AzureInfrastructure") || asset.GetType().GetProperty("AzureInfraType") != null)
+            {
+                return "AzureInfrastructureData";
+            }
+            if (asset.GetType().Name.Contains("ActiveDirectory") || asset.GetType().GetProperty("ADType") != null ||
+                asset.GetType().GetProperty("DomainController") != null)
+            {
+                return "ActiveDirectoryData";
+            }
+            if (asset.GetType().Name.Contains("Exchange") || asset.GetType().GetProperty("ExchangeType") != null ||
+                asset.GetType().GetProperty("MailboxDatabase") != null)
+            {
+                return "ExchangeData";
+            }
+            if (asset.GetType().Name.Contains("OneDrive") || asset.GetType().GetProperty("OneDriveType") != null ||
+                asset.GetType().GetProperty("OneDriveBusiness") != null)
+            {
+                return "OneDriveBusinessData";
             }
 
             return "Unknown";
@@ -899,6 +980,583 @@ namespace MandADiscoverySuite.ViewModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"AssetDetailViewModel.LoadDatabaseDataDetails: Error loading DatabaseData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load details for FileServerData
+        /// </summary>
+        private void LoadFileServerDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadFileServerDataDetails: Loading FileServerData details");
+
+            try
+            {
+                string csvPath = "FileServerDiscovery.csv";
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadFileServerDataDetails: FileServerDiscovery.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadFileServerDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate file server details
+                        DeviceName = values.Length > 0 ? values[0] : null;
+                        OperatingSystem = values.Length > 2 ? values[2] : null;
+                        DnsName = values.Length > 1 ? values[1] : null;
+
+                        // Add to Apps collection
+                        Apps.Add(new AppDto(
+                            Id: Guid.NewGuid().ToString(),
+                            Name: "File Server Service",
+                            Source: "FileServer",
+                            InstallCounts: 1,
+                            Executables: new List<string>(),
+                            Publishers: new List<string> { "File Server" },
+                            DiscoveryTimestamp: DateTime.Now,
+                            DiscoveryModule: "AssetDetailViewModel",
+                            SessionId: Guid.NewGuid().ToString()
+                        ));
+                        Debug.WriteLine($"AssetDetailViewModel.LoadFileServerDataDetails: Populated Apps collection with 1 item");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadFileServerDataDetails: Error loading FileServerData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load details for NetworkDeviceData
+        /// </summary>
+        private void LoadNetworkDeviceDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadNetworkDeviceDataDetails: Loading NetworkDeviceData details");
+
+            try
+            {
+                string csvPath = "NetworkInfrastructureDiscovery.csv";
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadNetworkDeviceDataDetails: NetworkInfrastructureDiscovery.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadNetworkDeviceDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate network device details
+                        DeviceName = values.Length > 0 ? values[0] : null;
+                        DnsName = values.Length > 1 ? values[1] : null;
+                        OperatingSystem = values.Length > 3 ? values[3] : null;
+
+                        // Add to Apps collection
+                        Apps.Add(new AppDto(
+                            Id: Guid.NewGuid().ToString(),
+                            Name: "Network Device Service",
+                            Source: "NetworkDevice",
+                            InstallCounts: 1,
+                            Executables: new List<string>(),
+                            Publishers: new List<string> { "Network Infrastructure" },
+                            DiscoveryTimestamp: DateTime.Now,
+                            DiscoveryModule: "AssetDetailViewModel",
+                            SessionId: Guid.NewGuid().ToString()
+                        ));
+                        Debug.WriteLine($"AssetDetailViewModel.LoadNetworkDeviceDataDetails: Populated Apps collection with 1 item");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadNetworkDeviceDataDetails: Error loading NetworkDeviceData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load details for PhysicalServerData
+        /// </summary>
+        private void LoadPhysicalServerDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadPhysicalServerDataDetails: Loading PhysicalServerData details");
+
+            try
+            {
+                string csvPath = "PhysicalServerDiscovery.csv";
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadPhysicalServerDataDetails: PhysicalServerDiscovery.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadPhysicalServerDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate physical server details
+                        DeviceName = values.Length > 0 ? values[0] : null;
+                        OperatingSystem = values.Length > 2 ? values[2] : null;
+                        DnsName = values.Length > 1 ? values[1] : null;
+
+                        // Add to Apps collection
+                        Apps.Add(new AppDto(
+                            Id: Guid.NewGuid().ToString(),
+                            Name: "Physical Server Service",
+                            Source: "PhysicalServer",
+                            InstallCounts: 1,
+                            Executables: new List<string>(),
+                            Publishers: new List<string> { "Physical Infrastructure" },
+                            DiscoveryTimestamp: DateTime.Now,
+                            DiscoveryModule: "AssetDetailViewModel",
+                            SessionId: Guid.NewGuid().ToString()
+                        ));
+                        Debug.WriteLine($"AssetDetailViewModel.LoadPhysicalServerDataDetails: Populated Apps collection with 1 item");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadPhysicalServerDataDetails: Error loading PhysicalServerData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load details for SQLServerData
+        /// </summary>
+        private void LoadSQLServerDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadSQLServerDataDetails: Loading SQLServerData details");
+
+            try
+            {
+                string csvPath = "SQLServerDiscovery.csv";
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadSQLServerDataDetails: SQLServerDiscovery.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadSQLServerDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate SQL server details
+                        DeviceName = values.Length > 0 ? values[0] : null;
+
+                        // Add to SQLDatabases collection
+                        SqlDatabases.Add(new SqlDbDto(
+                            Server: values.Length > 0 ? values[0] : assetName,
+                            Instance: values.Length > 1 ? values[1] : null,
+                            Database: values.Length > 2 ? values[2] : assetName,
+                            Owners: new List<string>(),
+                            AppHints: new List<string>(),
+                            DiscoveryTimestamp: DateTime.Now,
+                            DiscoveryModule: "AssetDetailViewModel",
+                            SessionId: Guid.NewGuid().ToString()
+                        ));
+                        Debug.WriteLine($"AssetDetailViewModel.LoadSQLServerDataDetails: Populated SqlDatabases collection with 1 item");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadSQLServerDataDetails: Error loading SQLServerData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load details for VMwareData
+        /// </summary>
+        private void LoadVMwareDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadVMwareDataDetails: Loading VMwareData details");
+
+            try
+            {
+                string csvPath = "VMwareDiscovery.csv";
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadVMwareDataDetails: VMwareDiscovery.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadVMwareDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate VMware details
+                        DeviceName = values.Length > 0 ? values[0] : null;
+                        OperatingSystem = values.Length > 3 ? values[3] : null;
+                        DnsName = values.Length > 1 ? values[1] : null;
+
+                        // Add to Apps collection
+                        Apps.Add(new AppDto(
+                            Id: Guid.NewGuid().ToString(),
+                            Name: "VMware Virtual Machine",
+                            Source: "VMware",
+                            InstallCounts: 1,
+                            Executables: new List<string>(),
+                            Publishers: new List<string> { "VMware" },
+                            DiscoveryTimestamp: DateTime.Now,
+                            DiscoveryModule: "AssetDetailViewModel",
+                            SessionId: Guid.NewGuid().ToString()
+                        ));
+                        Debug.WriteLine($"AssetDetailViewModel.LoadVMwareDataDetails: Populated Apps collection with 1 item");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadVMwareDataDetails: Error loading VMwareData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load details for AzureData
+        /// </summary>
+        private void LoadAzureDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadAzureDataDetails: Loading AzureData details");
+
+            try
+            {
+                string csvPath = "AzureDiscovery.csv";
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadAzureDataDetails: AzureDiscovery.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadAzureDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate Azure details
+                        DeviceName = values.Length > 0 ? values[0] : null;
+
+                        // Add to Apps collection
+                        Apps.Add(new AppDto(
+                            Id: Guid.NewGuid().ToString(),
+                            Name: "Azure Cloud Service",
+                            Source: "Azure",
+                            InstallCounts: 1,
+                            Executables: new List<string>(),
+                            Publishers: new List<string> { "Microsoft Azure" },
+                            DiscoveryTimestamp: DateTime.Now,
+                            DiscoveryModule: "AssetDetailViewModel",
+                            SessionId: Guid.NewGuid().ToString()
+                        ));
+                        Debug.WriteLine($"AssetDetailViewModel.LoadAzureDataDetails: Populated Apps collection with 1 item");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadAzureDataDetails: Error loading AzureData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load details for AzureInfrastructureData
+        /// </summary>
+        private void LoadAzureInfrastructureDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadAzureInfrastructureDataDetails: Loading AzureInfrastructureData details");
+
+            try
+            {
+                string csvPath = "AzureInfrastructureDiscovery.csv";
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadAzureInfrastructureDataDetails: AzureInfrastructureDiscovery.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadAzureInfrastructureDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate Azure infrastructure details
+                        DeviceName = values.Length > 0 ? values[0] : null;
+
+                        // Add to Apps collection
+                        Apps.Add(new AppDto(
+                            Id: Guid.NewGuid().ToString(),
+                            Name: "Azure Infrastructure Service",
+                            Source: "AzureInfrastructure",
+                            InstallCounts: 1,
+                            Executables: new List<string>(),
+                            Publishers: new List<string> { "Microsoft Azure" },
+                            DiscoveryTimestamp: DateTime.Now,
+                            DiscoveryModule: "AssetDetailViewModel",
+                            SessionId: Guid.NewGuid().ToString()
+                        ));
+                        Debug.WriteLine($"AssetDetailViewModel.LoadAzureInfrastructureDataDetails: Populated Apps collection with 1 item");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadAzureInfrastructureDataDetails: Error loading AzureInfrastructureData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load details for ActiveDirectoryData
+        /// </summary>
+        private void LoadActiveDirectoryDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadActiveDirectoryDataDetails: Loading ActiveDirectoryData details");
+
+            try
+            {
+                string csvPath = "ActiveDirectoryDiscovery.csv";
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadActiveDirectoryDataDetails: ActiveDirectoryDiscovery.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadActiveDirectoryDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate Active Directory details
+                        DeviceName = values.Length > 0 ? values[0] : null;
+
+                        // Add to Apps collection
+                        Apps.Add(new AppDto(
+                            Id: Guid.NewGuid().ToString(),
+                            Name: "Active Directory Service",
+                            Source: "ActiveDirectory",
+                            InstallCounts: 1,
+                            Executables: new List<string>(),
+                            Publishers: new List<string> { "Microsoft" },
+                            DiscoveryTimestamp: DateTime.Now,
+                            DiscoveryModule: "AssetDetailViewModel",
+                            SessionId: Guid.NewGuid().ToString()
+                        ));
+                        Debug.WriteLine($"AssetDetailViewModel.LoadActiveDirectoryDataDetails: Populated Apps collection with 1 item");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadActiveDirectoryDataDetails: Error loading ActiveDirectoryData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load details for ExchangeData
+        /// </summary>
+        private void LoadExchangeDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadExchangeDataDetails: Loading ExchangeData details");
+
+            try
+            {
+                string csvPath = "ExchangeDiscovery.csv";
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadExchangeDataDetails: ExchangeDiscovery.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadExchangeDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate Exchange details
+                        DeviceName = values.Length > 0 ? values[0] : null;
+
+                        // Add to Apps collection
+                        Apps.Add(new AppDto(
+                            Id: Guid.NewGuid().ToString(),
+                            Name: "Exchange Server Service",
+                            Source: "Exchange",
+                            InstallCounts: 1,
+                            Executables: new List<string>(),
+                            Publishers: new List<string> { "Microsoft" },
+                            DiscoveryTimestamp: DateTime.Now,
+                            DiscoveryModule: "AssetDetailViewModel",
+                            SessionId: Guid.NewGuid().ToString()
+                        ));
+                        Debug.WriteLine($"AssetDetailViewModel.LoadExchangeDataDetails: Populated Apps collection with 1 item");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadExchangeDataDetails: Error loading ExchangeData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load details for OneDriveBusinessData
+        /// </summary>
+        private void LoadOneDriveBusinessDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadOneDriveBusinessDataDetails: Loading OneDriveBusinessData details");
+
+            try
+            {
+                string csvPath = "OneDriveBusinessDiscovery.csv";
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadOneDriveBusinessDataDetails: OneDriveBusinessDiscovery.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadOneDriveBusinessDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate OneDrive Business details
+                        DeviceName = values.Length > 0 ? values[0] : null;
+
+                        // Add to Apps collection
+                        Apps.Add(new AppDto(
+                            Id: Guid.NewGuid().ToString(),
+                            Name: "OneDrive for Business",
+                            Source: "OneDriveBusiness",
+                            InstallCounts: 1,
+                            Executables: new List<string>(),
+                            Publishers: new List<string> { "Microsoft" },
+                            DiscoveryTimestamp: DateTime.Now,
+                            DiscoveryModule: "AssetDetailViewModel",
+                            SessionId: Guid.NewGuid().ToString()
+                        ));
+                        Debug.WriteLine($"AssetDetailViewModel.LoadOneDriveBusinessDataDetails: Populated Apps collection with 1 item");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadOneDriveBusinessDataDetails: Error loading OneDriveBusinessData: {ex.Message}");
             }
         }
 

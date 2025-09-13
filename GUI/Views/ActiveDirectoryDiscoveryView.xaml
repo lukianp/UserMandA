@@ -28,16 +28,53 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Main Header Section -->
-        <ContentControl Grid.Row="0" Content="{Binding HeaderContent}" />
+        <!-- Header Section -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
+            <TextBlock Text="{Binding ModuleIcon}" FontSize="32" Margin="0,0,8,0" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding ModuleTitle}" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding SelectedResults.Count, StringFormat=' ({0} records)'}" FontSize="16" Foreground="Gray" VerticalAlignment="Center" Margin="16,0,0,0"/>
+        </StackPanel>
 
-        <!-- UniformGrid for 4 Summary Statistic Cards -->
-        <ContentControl Grid.Row="1" Content="{Binding SummaryCardsContent}" />
+        <!-- Summary Cards Region -->
+        <UniformGrid Columns="4" Margin="0,0,0,16" Grid.Row="1">
+            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
+                <StackPanel>
+                    <TextBlock Text="👤" FontSize="24" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Total Users" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalUsers}" FontSize="24" FontWeight="SemiBold" Foreground="Blue" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
+                <StackPanel>
+                    <TextBlock Text="👥" FontSize="24" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Total Groups" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalGroups}" FontSize="24" FontWeight="SemiBold" Foreground="Green" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
+                <StackPanel>
+                    <TextBlock Text="💻" FontSize="24" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Total Computers" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalComputers}" FontSize="24" FontWeight="SemiBold" Foreground="Orange" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
+                <StackPanel>
+                    <TextBlock Text="📁" FontSize="24" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Total OUs" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalOUs}" FontSize="24" FontWeight="SemiBold" Foreground="Purple" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
 
-        <!-- ToolBar for Action Buttons -->
-        <ContentControl Grid.Row="2" Content="{Binding ActionButtonsContent}" />
+        <!-- Toolbar Region -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,16">
+            <Button Content="Refresh" Padding="12,6" Margin="0,0,8,0" Command="{Binding RefreshDataCommand}"/>
+            <Button Content="Export" Padding="12,6" Margin="0,0,8,0" Command="{Binding ExportCommand}"/>
+            <Button Content="Run Discovery" Padding="12,6" Command="{Binding RunDiscoveryCommand}"/>
+        </StackPanel>
 
-        <!-- Grid with GridSplitter to separate DataGrid from Details Panel -->
+        <!-- Main Content Grid -->
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -45,16 +82,54 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Main DataGrid Placeholder -->
-            <ContentControl Grid.Column="0" Content="{Binding DataGridContent}" />
+            <!-- Main DataGrid -->
+            <DataGrid Grid.Column="0" ItemsSource="{Binding SelectedResults}" AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="Horizontal" HeadersVisibility="Column" Margin="20,0,20,20" SelectedItem="{Binding SelectedItem}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Display Name" Binding="{Binding displayname}" Width="200"/>
+                    <DataGridTextColumn Header="User Principal Name" Binding="{Binding userprincipalname}" Width="250"/>
+                    <DataGridTextColumn Header="SAM Account Name" Binding="{Binding samaccountname}" Width="150"/>
+                    <DataGridTextColumn Header="Email" Binding="{Binding mail}" Width="200"/>
+                    <DataGridTextColumn Header="Department" Binding="{Binding department}" Width="150"/>
+                    <DataGridTextColumn Header="Job Title" Binding="{Binding jobtitle}" Width="150"/>
+                    <DataGridTextColumn Header="Company" Binding="{Binding company}" Width="150"/>
+                    <DataGridTextColumn Header="Manager" Binding="{Binding manager}" Width="150"/>
+                    <DataGridTextColumn Header="Created Date" Binding="{Binding createddatetime}" Width="120"/>
+                    <DataGridTextColumn Header="Distinguished Name" Binding="{Binding distinguishedname}" Width="250"/>
+                    <DataGridTemplateColumn Header="Actions" Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="View Details" Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
 
             <GridSplitter Grid.Column="1" Width="5" Background="Gray" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
 
-            <!-- Right-hand Details Panel Placeholder -->
-            <ContentControl Grid.Column="2" Content="{Binding DetailsPanelContent}" />
+            <!-- Right-hand Details Panel -->
+            <Border Grid.Column="2" Background="#FF1A202C" BorderBrush="#FFE2E8F0" BorderThickness="1" Margin="0,0,20,20">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <TextBlock Text="Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
+                        <ListView ItemsSource="{Binding SelectedItemDetails}" BorderThickness="0" Background="Transparent">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,10">
+                                        <TextBlock Text="{Binding Key}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Value}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
         </Grid>
 
-        <!-- Footer or Empty State Placeholder -->
-        <ContentControl Grid.Row="4" Content="{Binding FooterContent}" />
+        <!-- Footer Region -->
+        <Border Grid.Row="4" Background="#FF1A202C" Padding="16" Margin="0,16,0,0">
+            <TextBlock Text="Footer/Empty State Content" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF4A5568"/>
+        </Border>
     </Grid>
 </UserControl>

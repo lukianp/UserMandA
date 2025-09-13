@@ -189,8 +189,18 @@
                                             Width="80"/>
 
                         <DataGridTextColumn Header="Last Modified"
-                                            Binding="{Binding LastModified}"
-                                            Width="120"/>
+                                             Binding="{Binding LastModified}"
+                                             Width="120"/>
+
+                        <DataGridTemplateColumn Header="Actions" Width="120">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="View Details"
+                                            Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
 
                     <DataGrid.RowStyle>
@@ -230,20 +240,16 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="16">
                             <TextBlock Text="Share Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
-                            <ListView ItemsSource="{Binding SelectedItemDetails}" BorderThickness="0" Background="Transparent">
-                                <ListView.ItemTemplate>
+                            <ItemsControl ItemsSource="{Binding SelectedItemDetails}">
+                                <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid Margin="0,4">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="120"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Text="{Binding Key}" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}" VerticalAlignment="Top"/>
-                                            <TextBlock Text="{Binding Value}" Grid.Column="1" TextWrapping="Wrap" VerticalAlignment="Top"/>
-                                        </Grid>
+                                        <StackPanel Margin="0,0,0,12">
+                                            <TextBlock Text="{Binding Key}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                            <TextBlock Text="{Binding Value}" FontSize="14" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        </StackPanel>
                                     </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>

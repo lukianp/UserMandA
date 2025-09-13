@@ -64,6 +64,13 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _totalDistributionGroups, value);
         }
 
+        private int _totalMailEnabledSecurityGroups;
+        public int TotalMailEnabledSecurityGroups
+        {
+            get => _totalMailEnabledSecurityGroups;
+            set => SetProperty(ref _totalMailEnabledSecurityGroups, value);
+        }
+
         private DateTime _lastDiscoveryTime = DateTime.MinValue;
         public DateTime LastDiscoveryTime
         {
@@ -327,6 +334,14 @@ namespace MandADiscoverySuite.ViewModels
                 var type = mailboxTypeObj?.ToString()?.ToLowerInvariant();
                 return type?.Contains("distribution") ?? false;
             });
+
+            TotalMailEnabledSecurityGroups = data.Count(item =>
+            {
+                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+                dict.TryGetValue("mailboxtype", out var mailboxTypeObj);
+                var type = mailboxTypeObj?.ToString()?.ToLowerInvariant();
+                return type?.Contains("mail-enabled security") ?? false || type?.Contains("security") ?? false;
+            });
         }
 
         private void UpdateSelectedItemDetails()
@@ -335,7 +350,20 @@ namespace MandADiscoverySuite.ViewModels
 
             if (SelectedItem is System.Collections.Generic.IDictionary<string, object> dict)
             {
-                // Add all properties as key-value pairs, excluding null/empty values
+                // Add Exchange-specific properties first
+                AddDetailIfExists(dict, "mailboxname", "Mailbox Name");
+                AddDetailIfExists(dict, "primarysmtpaddress", "Primary SMTP Address");
+                AddDetailIfExists(dict, "mailboxtype", "Mailbox Type");
+                AddDetailIfExists(dict, "sizegb", "Size (GB)");
+                AddDetailIfExists(dict, "lastlogin", "Last Login");
+                AddDetailIfExists(dict, "archivestatus", "Archive Status");
+                AddDetailIfExists(dict, "litigationholdenabled", "Litigation Hold");
+                AddDetailIfExists(dict, "retentionpolicy", "Retention Policy");
+
+                // Add permissions section
+                AddPermissionsSection(dict);
+
+                // Add remaining properties
                 foreach (var kvp in dict)
                 {
                     var value = kvp.Value?.ToString();
@@ -345,9 +373,46 @@ namespace MandADiscoverySuite.ViewModels
                         var formattedKey = System.Text.RegularExpressions.Regex.Replace(
                             kvp.Key, @"([\w])([\w]+)", "$1$2").Trim();
 
-                        SelectedItemDetails.Add(new KeyValuePair<string, string>(formattedKey, value));
+                        // Skip if already added
+                        if (!SelectedItemDetails.Any(d => d.Key == formattedKey))
+                        {
+                            SelectedItemDetails.Add(new KeyValuePair<string, string>(formattedKey, value));
+                        }
                     }
                 }
+            }
+        }
+
+        private void AddDetailIfExists(System.Collections.Generic.IDictionary<string, object> dict, string key, string displayName)
+        {
+            if (dict.TryGetValue(key, out var value) && value != null)
+            {
+                var valueStr = value.ToString();
+                if (!string.IsNullOrEmpty(valueStr))
+                {
+                    SelectedItemDetails.Add(new KeyValuePair<string, string>(displayName, valueStr));
+                }
+            }
+        }
+
+        private void AddPermissionsSection(System.Collections.Generic.IDictionary<string, object> dict)
+        {
+            // Add permissions header
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("--- Permissions ---", ""));
+
+            // Check for various permission-related fields
+            AddDetailIfExists(dict, "fullaccesspermissions", "Full Access Permissions");
+            AddDetailIfExists(dict, "sendaspermissions", "Send As Permissions");
+            AddDetailIfExists(dict, "sendonbehalfpermissions", "Send on Behalf Of Permissions");
+            AddDetailIfExists(dict, "folderpermissions", "Folder Permissions");
+
+            // If no specific permissions found, add a note
+            var permissionsCount = SelectedItemDetails.Count(d =>
+                d.Key.Contains("Permission") || d.Key.Contains("Access") || d.Key.Contains("Send"));
+
+            if (permissionsCount <= 1) // Only the header
+            {
+                SelectedItemDetails.Add(new KeyValuePair<string, string>("Permissions", "No specific permissions configured"));
             }
         }
 

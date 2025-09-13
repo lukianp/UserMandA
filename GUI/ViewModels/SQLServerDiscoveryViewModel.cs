@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Views;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
@@ -35,6 +36,9 @@ namespace MandADiscoverySuite.ViewModels
 
             // Initialize SQL Server configurations
             InitializeDefaultConfigurations();
+
+            // Initialize ViewDetailsCommand
+            ViewDetailsCommand = new RelayCommand<dynamic>(ViewDetails);
 
             _log?.LogInformation("SQL Server Discovery ViewModel initialized with default configurations");
         }
@@ -172,6 +176,7 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
         public new AsyncRelayCommand ViewLogsCommand => new AsyncRelayCommand(ViewLogsAsync);
+        public RelayCommand<dynamic> ViewDetailsCommand { get; private set; }
 
         #endregion
 
@@ -593,6 +598,112 @@ namespace MandADiscoverySuite.ViewModels
             {
                 UseWindowsAuth = true;
             }
+        }
+
+        #endregion
+
+        #region View Details Implementation
+
+        /// <summary>
+        /// Open the asset detail tab for the selected SQL Server item
+        /// </summary>
+        private async void ViewDetails(dynamic? asset)
+        {
+            if (asset == null) return;
+
+            try
+            {
+                _log?.LogInformation("Opening asset detail tab for SQL Server item");
+
+                // Get asset name for display
+                var assetName = GetAssetName(asset);
+                var displayName = string.IsNullOrWhiteSpace(assetName) ? "SQL Server Asset" : assetName;
+
+                // Try to open as a tab using the main view model's tab service
+                if (MainViewModel.CurrentTabsService != null)
+                {
+                    // Use the specialized method for opening asset detail tabs
+                    var success = await MainViewModel.CurrentTabsService.OpenAssetDetailTabAsync(assetName, displayName);
+
+                    if (success)
+                    {
+                        _log?.LogInformation("Asset detail tab opened successfully");
+                    }
+                    else
+                    {
+                        // Fallback: Open as a window if tab fails
+                        await OpenAssetDetailWindowAsync(asset);
+                        _log?.LogInformation("Asset detail window opened as fallback");
+                    }
+                }
+                else
+                {
+                    // Fallback: Open as a window if no tab service available
+                    await OpenAssetDetailWindowAsync(asset);
+                    _log?.LogInformation("Asset detail window opened (no tab service available)");
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error opening asset detail tab");
+                ShowError("Asset Details Error", $"Failed to open asset details: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Fallback method to open asset detail as a window
+        /// </summary>
+        private async Task OpenAssetDetailWindowAsync(dynamic asset)
+        {
+            try
+            {
+                // Create AssetDetailViewModel with the dynamic asset object
+                var assetDetailViewModel = new AssetDetailViewModel(
+                    asset,
+                    new LogicEngineService(null), // TODO: Inject proper logger
+                    _log);
+
+                // Create and show the AssetDetailWindow
+                var assetDetailWindow = new AssetDetailWindow();
+                assetDetailWindow.DataContext = assetDetailViewModel;
+                assetDetailWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error opening asset detail window");
+                throw; // Re-throw to be caught by caller
+            }
+        }
+
+        /// <summary>
+        /// Get asset name from the dynamic object for tab title
+        /// </summary>
+        private string GetAssetName(dynamic asset)
+        {
+            if (asset == null) return "Unknown";
+
+            // Try to get from various possible properties
+            try
+            {
+                if (asset is IDictionary<string, object> dict)
+                {
+                    // Try common name properties
+                    var nameKeys = new[] { "Name", "name", "DatabaseName", "databasename", "InstanceName", "instancename", "ServerName", "servername" };
+                    foreach (var key in nameKeys)
+                    {
+                        if (dict.TryGetValue(key, out var value) && value != null)
+                        {
+                            return value.ToString();
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore errors and return default
+            }
+
+            return "SQL Server Asset";
         }
 
         #endregion

@@ -8,13 +8,14 @@ using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Input;
+using GUI.Interfaces;
 
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
     /// ViewModel for File Server Discovery module
     /// </summary>
-    public class FileServerDiscoveryViewModel : ModuleViewModel
+    public class FileServerDiscoveryViewModel : ModuleViewModel, IDetailViewSupport
     {
         private readonly CsvDataServiceNew _csvService;
 
@@ -32,6 +33,9 @@ namespace MandADiscoverySuite.ViewModels
             var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
             var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
             _csvService = new CsvDataServiceNew(csvLogger);
+
+            // Initialize commands
+            ViewDetailsCommand = new AsyncRelayCommand<object>(OpenDetailViewAsync);
         }
 
         #endregion
@@ -88,7 +92,20 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    PopulateSelectedItemDetails();
+                }
+            }
+        }
+
+        private ObservableCollection<KeyValuePair<string, string>> _selectedItemDetails = new ObservableCollection<KeyValuePair<string, string>>();
+        public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails
+        {
+            get => _selectedItemDetails;
+            set => SetProperty(ref _selectedItemDetails, value);
         }
 
         #endregion
@@ -100,6 +117,7 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
         public new AsyncRelayCommand ViewLogsCommand => new AsyncRelayCommand(ViewLogsAsync);
+        public ICommand ViewDetailsCommand { get; private set; }
 
         #endregion
 
@@ -253,6 +271,27 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
+        public async Task OpenDetailViewAsync(object selectedItem)
+        {
+            try
+            {
+                if (selectedItem == null) return;
+
+                _log?.LogInformation($"Viewing details for File Server share: {selectedItem}");
+
+                // Open AssetDetailWindow with the selected file server share data
+                var assetDetailWindow = new Views.AssetDetailWindow();
+                // TODO: Pass selectedItem to AssetDetailWindow's ViewModel
+                assetDetailWindow.ShowDialog();
+                await Task.CompletedTask; // Placeholder for async
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error viewing File Server share details");
+                ShowError("View Details Failed", ex.Message);
+            }
+        }
+
         #endregion
 
         #region Helper Methods
@@ -346,6 +385,40 @@ namespace MandADiscoverySuite.ViewModels
                 return $"{(double)bytes / KB:F2} KB";
 
             return $"{bytes} B";
+        }
+
+        private void PopulateSelectedItemDetails()
+        {
+            SelectedItemDetails.Clear();
+            if (SelectedItem is System.Collections.Generic.IDictionary<string, object> dict)
+            {
+                // Show all available fields from the selected item
+                foreach (var kvp in dict)
+                {
+                    var key = FormatFieldName(kvp.Key);
+                    var value = kvp.Value?.ToString() ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        SelectedItemDetails.Add(new KeyValuePair<string, string>(key, value));
+                    }
+                }
+            }
+        }
+
+        private string FormatFieldName(string fieldName)
+        {
+            if (string.IsNullOrWhiteSpace(fieldName))
+                return "Unknown Field";
+
+            // Convert camelCase to Proper Case
+            if (fieldName.Length == 1)
+                return fieldName.ToUpper();
+
+            // Handle special cases and normalize underscores
+            fieldName = fieldName.Replace("_", " ").Replace("-", " ").Trim();
+
+            // Convert to title case
+            return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(fieldName.ToLower());
         }
 
         #endregion

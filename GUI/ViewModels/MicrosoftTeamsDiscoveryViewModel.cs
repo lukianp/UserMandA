@@ -52,6 +52,13 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _totalChannels, value);
         }
 
+        private int _totalMembers;
+        public int TotalMembers
+        {
+            get => _totalMembers;
+            set => SetProperty(ref _totalMembers, value);
+        }
+
         private int _totalGuests;
         public int TotalGuests
         {
@@ -104,6 +111,11 @@ namespace MandADiscoverySuite.ViewModels
             get => _placeholder_removed;
             set => SetProperty(ref _placeholder_removed, value);
         }
+
+        // Properties for template binding
+        public string ModuleIcon => Icon;
+        public string ModuleTitle => DisplayName;
+        public int TotalRecords => TotalTeams;
 
         #endregion
 
@@ -246,6 +258,7 @@ namespace MandADiscoverySuite.ViewModels
         {
             TotalTeams = data.Count;
             TotalChannels = 0;
+            TotalMembers = 0;
             TotalGuests = 0;
 
             foreach (var item in data)
@@ -259,6 +272,16 @@ namespace MandADiscoverySuite.ViewModels
                     if (int.TryParse(channelCountObj?.ToString(), out var channels))
                     {
                         TotalChannels += channels;
+                    }
+                }
+
+                // Count members
+                if (dict.TryGetValue("membercount", out var memberCountObj) ||
+                    dict.TryGetValue("MemberCount", out memberCountObj))
+                {
+                    if (int.TryParse(memberCountObj?.ToString(), out var members))
+                    {
+                        TotalMembers += members;
                     }
                 }
 
@@ -301,18 +324,39 @@ namespace MandADiscoverySuite.ViewModels
             dict.TryGetValue("visibility", out var visibilityObj);
             SelectedItemDetails.Add(new KeyValuePair<string, string>("Visibility", visibilityObj?.ToString() ?? ""));
 
+            dict.TryGetValue("lastactivitydate", out var lastActivityDateObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Last Activity Date", lastActivityDateObj?.ToString() ?? ""));
+
             // Membership Details
+            dict.TryGetValue("membercount", out var memberCountObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Total Members", memberCountObj?.ToString() ?? ""));
+
+            dict.TryGetValue("guestcount", out var guestCountObj);
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Guest Users", guestCountObj?.ToString() ?? ""));
+
+            // Channel Information
             dict.TryGetValue("channelcount", out var channelCountObj);
             SelectedItemDetails.Add(new KeyValuePair<string, string>("Channel Count", channelCountObj?.ToString() ?? ""));
 
-            dict.TryGetValue("membercount", out var memberCountObj);
-            SelectedItemDetails.Add(new KeyValuePair<string, string>("Member Count", memberCountObj?.ToString() ?? ""));
+            // Try to show member list if available
+            if (dict.TryGetValue("members", out var membersObj) && membersObj != null)
+            {
+                var membersStr = membersObj.ToString();
+                if (!string.IsNullOrEmpty(membersStr))
+                {
+                    SelectedItemDetails.Add(new KeyValuePair<string, string>("Members", membersStr));
+                }
+            }
 
-            dict.TryGetValue("guestcount", out var guestCountObj);
-            SelectedItemDetails.Add(new KeyValuePair<string, string>("Guest Count", guestCountObj?.ToString() ?? ""));
-
-            dict.TryGetValue("lastactivitydate", out var lastActivityDateObj);
-            SelectedItemDetails.Add(new KeyValuePair<string, string>("Last Activity Date", lastActivityDateObj?.ToString() ?? ""));
+            // Try to show channel information if available
+            if (dict.TryGetValue("channels", out var channelsObj) && channelsObj != null)
+            {
+                var channelsStr = channelsObj.ToString();
+                if (!string.IsNullOrEmpty(channelsStr))
+                {
+                    SelectedItemDetails.Add(new KeyValuePair<string, string>("Channels", channelsStr));
+                }
+            }
         }
 
         #endregion

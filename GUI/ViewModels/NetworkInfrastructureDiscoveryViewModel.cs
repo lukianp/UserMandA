@@ -102,6 +102,7 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
+        public AsyncRelayCommand<dynamic> ViewDetailsCommand => new AsyncRelayCommand<dynamic>(ViewDetailsAsync);
 
         #endregion
 
@@ -267,6 +268,57 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _log?.LogError(ex, "Error exporting data");
                 ShowError("Export Failed", ex.Message);
+            }
+        }
+
+        private async Task ViewDetailsAsync(dynamic asset)
+        {
+            try
+            {
+                if (asset == null) return;
+
+                // Extract device name from the dynamic object
+                string deviceName = null;
+                if (asset is System.Collections.Generic.IDictionary<string, object> dict)
+                {
+                    // Try different possible property names for device name
+                    dict.TryGetValue("device_name", out var deviceNameObj);
+                    if (deviceNameObj == null)
+                        dict.TryGetValue("name", out deviceNameObj);
+                    if (deviceNameObj == null)
+                        dict.TryGetValue("DeviceName", out deviceNameObj);
+
+                    deviceName = deviceNameObj?.ToString();
+                }
+
+                if (string.IsNullOrEmpty(deviceName))
+                {
+                    ShowError("View Details Error", "Could not determine device name from selected item");
+                    return;
+                }
+
+                // Use TabsService to open asset detail tab
+                if (MainViewModel.CurrentTabsService != null)
+                {
+                    var success = await MainViewModel.CurrentTabsService.OpenAssetDetailTabAsync(deviceName, deviceName);
+                    if (!success)
+                    {
+                        ShowError("View Details Error", $"Failed to open details for device: {deviceName}");
+                    }
+                    else
+                    {
+                        _log?.LogInformation($"Opened asset detail tab for device: {deviceName}");
+                    }
+                }
+                else
+                {
+                    ShowError("View Details Error", "Tab service not available");
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, $"Error opening asset details for device");
+                ShowError("View Details Error", ex.Message);
             }
         }
 

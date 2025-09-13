@@ -8,7 +8,11 @@
     <SolidColorBrush x:Key="SurfaceBrush" Color="#FF374151"/> <!-- Medium gray surface -->
     <SolidColorBrush x:Key="CardBrush" Color="#FF4B5563"/> <!-- Light gray cards -->
     <SolidColorBrush x:Key="ElevatedBrush" Color="#FF6B7280"/> <!-- Elevated surfaces -->
-    
+
+    <!-- Primary Brushes -->
+    <SolidColorBrush x:Key="PrimaryBackgroundBrush" Color="#FF1F2937"/> <!-- Primary background -->
+    <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#FFF9FAFB"/> <!-- Primary foreground for text -->
+
     <!-- Text Colors -->
     <SolidColorBrush x:Key="ForegroundBrush" Color="#FFF9FAFB"/> <!-- Primary text -->
     <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#FFE5E7EB"/> <!-- Secondary text -->

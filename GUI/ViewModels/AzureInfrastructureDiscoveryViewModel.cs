@@ -67,6 +67,33 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _totalStorage, value);
         }
 
+        private int _totalStorageAccounts;
+        public int TotalStorageAccounts
+        {
+            get => _totalStorageAccounts;
+            set => SetProperty(ref _totalStorageAccounts, value);
+        }
+
+        private int _totalResourceGroups;
+        public int TotalResourceGroups
+        {
+            get => _totalResourceGroups;
+            set => SetProperty(ref _totalResourceGroups, value);
+        }
+
+        // Base template properties
+        public string ModuleIcon => "☁️";
+        public string ModuleTitle => "Azure Infrastructure Discovery";
+        public string ModuleDescription => "Discover and manage Azure resources and infrastructure";
+        public int TotalRecords => TotalResources;
+        public int ActiveRecords => TotalVMs;
+        public DateTime LastUpdated { get; set; }
+        public string DiscoveryStatus => "Ready";
+
+        // Details panel properties
+        public ObservableCollection<KeyValuePair<string, string>> SelectedItemTags { get; } = new ObservableCollection<KeyValuePair<string, string>>();
+        public decimal SelectedItemCost { get; set; }
+
         // Data binding collections
         public ObservableCollection<dynamic> SelectedResults { get; } = new ObservableCollection<dynamic>();
 
@@ -74,7 +101,13 @@ namespace MandADiscoverySuite.ViewModels
         public object SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    UpdateSelectedItemDetails();
+                }
+            }
         }
 
         #endregion
@@ -236,20 +269,64 @@ namespace MandADiscoverySuite.ViewModels
         {
             TotalResources = data.Count;
             // Specific calculations based on Azure data structure
-            // For now, approximate
             TotalVMs = data.Count(item =>
             {
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
                 dict.TryGetValue("resourcetype", out var resourceTypeObj);
-                return resourceTypeObj?.ToString().Contains("VM") ?? false;
+                return resourceTypeObj?.ToString().Contains("Microsoft.Compute/virtualMachines") ?? false;
             });
 
-            TotalStorage = data.Count(item =>
+            TotalStorageAccounts = data.Count(item =>
             {
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
                 dict.TryGetValue("resourcetype", out var resourceTypeObj);
-                return resourceTypeObj?.ToString().Contains("Storage") ?? false;
+                return resourceTypeObj?.ToString().Contains("Microsoft.Storage/storageAccounts") ?? false;
             });
+
+            TotalResourceGroups = data.Select(item =>
+            {
+                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+                dict.TryGetValue("resourcegroup", out var rg);
+                return rg?.ToString();
+            }).Distinct().Count(rg => !string.IsNullOrEmpty(rg));
+        }
+
+        private void UpdateSelectedItemDetails()
+        {
+            SelectedItemTags.Clear();
+            SelectedItemCost = 0;
+
+            if (SelectedItem is System.Collections.Generic.IDictionary<string, object> dict)
+            {
+                // Tags - assume tags is a string like "key1=value1,key2=value2" or dictionary
+                if (dict.TryGetValue("tags", out var tagsObj))
+                {
+                    var tagsStr = tagsObj?.ToString();
+                    if (!string.IsNullOrEmpty(tagsStr))
+                    {
+                        // Simple parsing, assuming comma-separated key=value pairs
+                        var pairs = tagsStr.Split(',');
+                        foreach (var pair in pairs)
+                        {
+                            var kv = pair.Split('=');
+                            if (kv.Length == 2)
+                            {
+                                SelectedItemTags.Add(new KeyValuePair<string, string>(kv[0].Trim(), kv[1].Trim()));
+                            }
+                        }
+                    }
+                }
+
+                // Cost
+                if (dict.TryGetValue("cost", out var costObj))
+                {
+                    decimal.TryParse(costObj?.ToString(), out var cost);
+                    SelectedItemCost = cost;
+                }
+            }
+
+            OnPropertyChanged(nameof(SelectedItemTags));
+            OnPropertyChanged(nameof(SelectedItemCost));
         }
 
         #endregion

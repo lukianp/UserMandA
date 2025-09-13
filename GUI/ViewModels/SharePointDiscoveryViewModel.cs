@@ -31,6 +31,9 @@ namespace MandADiscoverySuite.ViewModels
             var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
             var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
             _csvService = new CsvDataServiceNew(csvLogger);
+
+            // Initialize commands
+            ViewDetailsCommand = new RelayCommand<dynamic>(ViewDetails, asset => asset != null);
         }
 
         #endregion
@@ -38,18 +41,18 @@ namespace MandADiscoverySuite.ViewModels
         #region Properties
 
         // Summary card properties
-        private int _totalSiteCollections;
-        public int TotalSiteCollections
-        {
-            get => _totalSiteCollections;
-            set => SetProperty(ref _totalSiteCollections, value);
-        }
-
         private int _totalSites;
         public int TotalSites
         {
             get => _totalSites;
             set => SetProperty(ref _totalSites, value);
+        }
+
+        private int _totalDocumentLibraries;
+        public int TotalDocumentLibraries
+        {
+            get => _totalDocumentLibraries;
+            set => SetProperty(ref _totalDocumentLibraries, value);
         }
 
         private int _totalLists;
@@ -59,11 +62,11 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _totalLists, value);
         }
 
-        private DateTime _lastDiscovery = DateTime.MinValue;
-        public DateTime LastDiscovery
+        private double _totalStorageUsed;
+        public double TotalStorageUsed
         {
-            get => _lastDiscovery;
-            set => SetProperty(ref _lastDiscovery, value);
+            get => _totalStorageUsed;
+            set => SetProperty(ref _totalStorageUsed, value);
         }
 
         // Data binding collections
@@ -90,6 +93,21 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _selectedItemDetails, value);
         }
 
+        // Site hierarchy and permissions for details panel
+        private ObservableCollection<string> _siteHierarchy = new ObservableCollection<string>();
+        public ObservableCollection<string> SiteHierarchy
+        {
+            get => _siteHierarchy;
+            set => SetProperty(ref _siteHierarchy, value);
+        }
+
+        private ObservableCollection<PermissionLevelInfo> _permissionLevels = new ObservableCollection<PermissionLevelInfo>();
+        public ObservableCollection<PermissionLevelInfo> PermissionLevels
+        {
+            get => _permissionLevels;
+            set => SetProperty(ref _permissionLevels, value);
+        }
+
         #endregion
 
         #region Commands
@@ -98,6 +116,7 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
+        public RelayCommand<dynamic> ViewDetailsCommand { get; }
 
         #endregion
 
@@ -231,6 +250,49 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _log?.LogError(ex, "Error exporting data");
                 ShowError("Export Failed", ex.Message);
+            }
+        }
+
+        private async void ViewDetails(dynamic asset)
+        {
+            if (asset == null) return;
+
+            try
+            {
+                _log?.LogInformation("Opening asset detail tab for SharePoint site");
+
+                // Extract site identifier - use sitename first, then url as fallback
+                var dict = (System.Collections.Generic.IDictionary<string, object>)asset;
+                var deviceName = dict.TryGetValue("sitename", out var siteNameObj) && siteNameObj != null ? siteNameObj.ToString() : "Unknown Site";
+                var displayName = deviceName;
+
+                // Use TabsService from MainViewModel to open asset detail tab
+                if (MainViewModel.CurrentTabsService != null)
+                {
+                    var success = await MainViewModel.CurrentTabsService.OpenAssetDetailTabAsync(
+                        deviceName,
+                        displayName);
+
+                    if (success)
+                    {
+                        _log?.LogInformation("Opened asset detail tab for SharePoint site {SiteName}", deviceName);
+                    }
+                    else
+                    {
+                        _log?.LogWarning("Failed to open asset detail tab for SharePoint site {SiteName}", deviceName);
+                        ShowError("Asset Details", "Failed to open asset details");
+                    }
+                }
+                else
+                {
+                    _log?.LogError("TabsService not available");
+                    ShowError("Asset Details", "TabsService not available");
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Failed to open asset detail tab for SharePoint site");
+                ShowError("Asset Details", $"Failed to open asset details: {ex.Message}");
             }
         }
 
