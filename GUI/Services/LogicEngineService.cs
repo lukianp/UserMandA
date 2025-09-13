@@ -956,7 +956,7 @@ namespace MandADiscoverySuite.Services
             finally { _csvReadSemaphore.Release(); }
         }
 
-        #endregion
+        
 
         private async Task LoadUsersAsync()
         {
@@ -3843,7 +3843,7 @@ namespace MandADiscoverySuite.Services
             }
         }
 
-        #endregion
+        
 
         // T-029: Risk scoring and analysis helper methods
         

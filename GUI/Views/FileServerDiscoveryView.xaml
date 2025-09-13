@@ -11,7 +11,7 @@
         <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Themes/ThemeResources.xaml"/>
+                <ResourceDictionary Source="../Themes/ThemeResources.xaml"/>
                 <ResourceDictionary Source="../Resources/Converters.xaml"/>
                 <ResourceDictionary Source="../Resources/DataGridTheme.xaml"/>
                 <ResourceDictionary Source="../Themes/ThemeStyles.xaml"/>

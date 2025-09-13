@@ -114,10 +114,10 @@ namespace MandADiscoverySuite.Services
                 {
                     ProfileName = profileName,
                     LastUpdated = DateTime.UtcNow,
-                    TotalUsers = users.Count,
-                    TotalComputers = infrastructure.Count,
-                    TotalGroups = groups.Count,
-                    TotalApplications = applications.Count,
+                    TotalUsers = users.Count(),
+                    TotalComputers = infrastructure.Count(),
+                    TotalGroups = groups.Count(),
+                    TotalApplications = applications.Count(),
                     UsersByDepartment = users
                         .Where(u => !string.IsNullOrEmpty(u.Department))
                         .GroupBy(u => u.Department)
