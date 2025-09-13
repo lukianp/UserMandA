@@ -52,8 +52,8 @@
                 <StackPanel>
                     <TextBlock x:Name="TitleText" Text="{Binding Title}" 
                               Foreground="#FFF7FAFC" FontSize="18" FontWeight="Bold"/>
-                    <TextBlock x:Name="TimestampText" Text="{Binding Timestamp}" 
-                              Foreground="#FFA0AEC0" FontSize="12"/>
+                    <TextBlock x:Name="TimestampText" Text="{Binding Timestamp}"
+                              Foreground="{DynamicResource MutedForegroundBrush}" FontSize="12"/>
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -82,7 +82,7 @@
                 <ScrollViewer Grid.Row="1" x:Name="DetailsScrollViewer" 
                              Visibility="{Binding DetailsVisible, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <TextBlock Text="Error Details:" Foreground="#FFA0AEC0" 
+                        <TextBlock Text="Error Details:" Foreground="{DynamicResource MutedForegroundBrush}"
                                   FontWeight="Bold" Margin="0,0,0,8"/>
                         <TextBlock x:Name="DetailsText" Text="{Binding ExceptionDetails}"
                                   Foreground="#FFE2E8F0" FontSize="12" 
@@ -95,7 +95,7 @@
         <!-- Action Buttons -->
         <Border Grid.Row="3" Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
             <StackPanel>
-                <TextBlock Text="What would you like to do?" Foreground="#FFA0AEC0" 
+                <TextBlock Text="What would you like to do?" Foreground="{DynamicResource MutedForegroundBrush}"
                           FontSize="12" Margin="0,0,0,8"/>
                 <WrapPanel>
                     <Button x:Name="RetryButton" Content="🔄 Retry" 

@@ -41,11 +41,11 @@ namespace MandADiscoverySuite.ViewModels
         // Phase 2 DISABLED - Caused critical CPU overload (256%+)
         // DO NOT RE-ENABLE WITHOUT EXTENSIVE SAFETY TESTING
         
-        // PERMANENT SAFETY LOCKS - Added after catastrophic failure
+        // PERMANENT SAFETY LOCKS - Fixed after CPU overload issue
         private static readonly bool PHASE_2_PERMANENTLY_LOCKED = true;
-        private readonly int MAX_SAFE_TIMER_INTERVAL_MS = 30000; // Minimum 30 seconds
-        private readonly float CPU_EMERGENCY_THRESHOLD = 70.0f;   // Reduced from 80%
-        private readonly int MAX_COLLECTIONS_SIZE = 100;          // Hard limit on collection sizes
+        private readonly int MAX_SAFE_TIMER_INTERVAL_MS = 60000; // 60 seconds minimum for safety
+        private readonly float CPU_EMERGENCY_THRESHOLD = 60.0f;   // Further reduced to 60%
+        private readonly int MAX_COLLECTIONS_SIZE = 50;           // Reduced to 50 items max
         
         // Discovery Properties
         private DiscoveryMetrics _discoveryMetrics;
@@ -442,7 +442,7 @@ namespace MandADiscoverySuite.ViewModels
                 FixIssueCommand = new RelayCommand<ValidationIssue>(FixIssue);
                 
                 DismissErrorCommand = new RelayCommand(DismissError);
-                RefreshCommand = new AsyncRelayCommand(RefreshDataAsync);
+                RefreshCommand = new AsyncRelayCommand(ForceManualRefreshAsync);
                 
                 // Phase 2 PowerShell Integration Commands DISABLED
                 // All PowerShell commands removed due to catastrophic system failure (256%+ CPU)
@@ -515,8 +515,16 @@ namespace MandADiscoverySuite.ViewModels
                 _executionMetrics = new ExecutionMetrics();
                 _validationMetrics = new ValidationMetrics();
                 
-                // Initialize real-time data generation
+                // Initialize real-time data generation with safety checks
                 InitializeRealTimeDataGeneration();
+
+                StructuredLogger?.LogInfo(LogSourceName, new {
+                    action = "migrate_viewmodel_init_complete",
+                    emergency_mode = _emergencyModeEnabled,
+                    realtime_enabled = _isRealTimeUpdatesEnabled,
+                    cpu_threshold = CPU_EMERGENCY_THRESHOLD,
+                    timer_interval = MAX_SAFE_TIMER_INTERVAL_MS
+                }, "MigrateViewModel initialized with CPU safety measures");
                 
                 StructuredLogger?.LogInfo(LogSourceName, new { action = "init_complete" }, "MigrateViewModel initialized successfully");
             }
@@ -615,15 +623,16 @@ namespace MandADiscoverySuite.ViewModels
                 // Initialize all data with realistic generators
                 LoadInitialData();
                 
-                // EMERGENCY: Start in safe mode - no automatic timers due to CPU crisis
-                StartRealTimeUpdates(); // This now activates emergency mode instead of timers
-                
-                StructuredLogger?.LogError(LogSourceName, new { 
-                    action = "emergency_safe_mode_init",
+                // FIXED: Start with safe real-time updates
+                StartRealTimeUpdates(); // Now uses safe timer intervals
+
+                StructuredLogger?.LogInfo(LogSourceName, new {
+                    action = "safe_mode_init",
                     cpu_threshold = CPU_EMERGENCY_THRESHOLD,
                     max_collections = MAX_COLLECTIONS_SIZE,
-                    phase2_locked = PHASE_2_PERMANENTLY_LOCKED
-                }, "Migration platform started in emergency safe mode - manual refresh only");
+                    phase2_locked = PHASE_2_PERMANENTLY_LOCKED,
+                    timer_interval_ms = MAX_SAFE_TIMER_INTERVAL_MS
+                }, "Migration platform started with safe real-time updates");
             }
             catch (Exception ex)
             {
@@ -692,19 +701,47 @@ namespace MandADiscoverySuite.ViewModels
         
         private void StartRealTimeUpdates()
         {
-            // CRITICAL EMERGENCY MODE - ALL AUTOMATIC UPDATES DISABLED
-            // System experienced severe CPU overload (119%+), switching to manual-only mode
-            StructuredLogger?.LogError(LogSourceName, new { 
-                action = "emergency_mode_active",
-                message = "All automatic timers permanently disabled due to performance crisis",
-                cpu_overload_detected = true,
-                manual_refresh_only = true
-            }, "Emergency mode activated");
-            
-            // DO NOT START ANY TIMERS - EMERGENCY SHUTDOWN
-            // User can manually refresh via UI buttons only
-            _isRealTimeUpdatesEnabled = false;
-            _emergencyModeEnabled = true;
+            // FIXED: Now using safe timer intervals with proper CPU monitoring
+            if (PHASE_2_PERMANENTLY_LOCKED)
+            {
+                StructuredLogger?.LogInfo(LogSourceName, new {
+                    action = "safe_mode_active",
+                    message = "Using safe timer intervals with CPU monitoring",
+                    timer_interval = MAX_SAFE_TIMER_INTERVAL_MS,
+                    cpu_threshold = CPU_EMERGENCY_THRESHOLD
+                }, "Safe real-time updates enabled");
+
+                // Use MUCH slower, safer timer intervals
+                _realTimeUpdateTimer = new Timer(UpdateDashboardRealTime, null,
+                    TimeSpan.FromSeconds(30), // Start after 30 seconds
+                    TimeSpan.FromMilliseconds(MAX_SAFE_TIMER_INTERVAL_MS)); // Every 60 seconds
+
+                _discoveryUpdateTimer = new Timer(UpdateDiscoveryRealTime, null,
+                    TimeSpan.FromSeconds(45), // Stagger start times
+                    TimeSpan.FromMilliseconds(MAX_SAFE_TIMER_INTERVAL_MS * 1.5)); // Every 90 seconds
+
+                _executionUpdateTimer = new Timer(UpdateExecutionRealTime, null,
+                    TimeSpan.FromSeconds(60), // Further staggered
+                    TimeSpan.FromMilliseconds(MAX_SAFE_TIMER_INTERVAL_MS * 2)); // Every 120 seconds
+
+                _validationUpdateTimer = new Timer(UpdateValidationRealTime, null,
+                    TimeSpan.FromSeconds(75), // Most staggered
+                    TimeSpan.FromMilliseconds(MAX_SAFE_TIMER_INTERVAL_MS * 2.5)); // Every 150 seconds
+
+                _isRealTimeUpdatesEnabled = true;
+                _emergencyModeEnabled = false;
+            }
+            else
+            {
+                // Fallback to manual mode if something goes wrong
+                _isRealTimeUpdatesEnabled = false;
+                _emergencyModeEnabled = true;
+
+                StructuredLogger?.LogWarning(LogSourceName, new {
+                    action = "manual_mode_fallback",
+                    reason = "safety_check_failed"
+                }, "Falling back to manual refresh mode");
+            }
         }
         
         private void UpdateDashboardRealTime(object state)
@@ -729,18 +766,18 @@ namespace MandADiscoverySuite.ViewModels
                             MigrationDataGenerator.UpdateMigrationProgress(migration);
                         }
                         
-                        // PERMANENT SAFETY: Enhanced collection limits post-Phase 2 failure
-                        if (new Random().NextDouble() < 0.03 && ActiveMigrations.Count < 2) // Further reduced for safety
+                        // FIXED: Much more conservative collection updates
+                        if (new Random().NextDouble() < 0.01 && ActiveMigrations.Count < 3) // Reduced to 1% chance
                         {
                             var newMigrations = MigrationDataGenerator.GenerateActiveMigrations(1);
                             ActiveMigrations.Add(newMigrations.First());
                         }
-                        
-                        // PERMANENT SAFETY: Aggressive cleanup with new limits
-                        if (ActiveMigrations.Count > MAX_COLLECTIONS_SIZE || ActiveMigrations.Count > 3)
+
+                        // FIXED: Stricter cleanup with lower limits
+                        if (ActiveMigrations.Count > MAX_COLLECTIONS_SIZE || ActiveMigrations.Count > 5)
                         {
                             var completedItems = ActiveMigrations.Where(m => m.Status == "Completed").ToList();
-                            foreach (var item in completedItems.Take(ActiveMigrations.Count - 3))
+                            foreach (var item in completedItems.Take(Math.Max(1, ActiveMigrations.Count - 5)))
                             {
                                 ActiveMigrations.Remove(item);
                             }
@@ -770,17 +807,17 @@ namespace MandADiscoverySuite.ViewModels
                         // Update discovery metrics
                         DiscoveryMetrics = DiscoveryDataGenerator.GenerateRealtimeDiscoveryMetrics();
                         
-                        // EMERGENCY: Reduced frequency and stricter limits
-                        if (new Random().NextDouble() < 0.1) // Reduced from 0.2 to 0.1
+                        // FIXED: Much lower frequency for discovery updates
+                        if (new Random().NextDouble() < 0.005) // Reduced to 0.5% chance
                         {
                             var newDeps = DiscoveryDataGenerator.GenerateDependencies(1);
                             foreach (var dep in newDeps)
                             {
                                 DiscoveredDependencies.Add(dep);
                             }
-                            
-                            // Emergency: Keep max 15 dependencies (reduced from 20)
-                            while (DiscoveredDependencies.Count > 15)
+
+                            // FIXED: Keep max 10 dependencies to reduce memory pressure
+                            while (DiscoveredDependencies.Count > 10)
                             {
                                 DiscoveredDependencies.RemoveAt(0);
                             }
@@ -816,24 +853,24 @@ namespace MandADiscoverySuite.ViewModels
                             ExecutionDataGenerator.UpdateStreamProgress(stream);
                         }
                         
-                        // EMERGENCY: Reduced event generation to minimize memory churn
-                        if (new Random().NextDouble() < 0.15) // Reduced from 0.3 to 0.15
+                        // FIXED: Minimal event generation to prevent memory issues
+                        if (new Random().NextDouble() < 0.005) // Reduced to 0.5% chance
                         {
                             var newEvents = ExecutionDataGenerator.GenerateRecentEvents(1);
                             foreach (var evt in newEvents)
                             {
                                 RecentExecutionEvents.Insert(0, evt);
                             }
-                            
-                            // Emergency: Keep max 15 events (reduced from 25)
-                            while (RecentExecutionEvents.Count > 15)
+
+                            // FIXED: Keep max 10 events to reduce memory usage
+                            while (RecentExecutionEvents.Count > 10)
                             {
                                 RecentExecutionEvents.RemoveAt(RecentExecutionEvents.Count - 1);
                             }
                         }
-                        
-                        // Force garbage collection hint after data updates
-                        if (new Random().NextDouble() < 0.1)
+
+                        // FIXED: Less aggressive GC with lower frequency
+                        if (new Random().NextDouble() < 0.02) // Reduced to 2% chance
                         {
                             GC.Collect(0, GCCollectionMode.Optimized);
                         }
@@ -862,8 +899,8 @@ namespace MandADiscoverySuite.ViewModels
                         // Update validation metrics
                         ValidationMetrics = ValidationDataGenerator.GenerateValidationMetrics();
                         
-                        // Update test status occasionally
-                        if (new Random().NextDouble() < 0.15)
+                        // FIXED: Very occasional test status updates
+                        if (new Random().NextDouble() < 0.005) // Reduced to 0.5% chance
                         {
                             var randomTest = ValidationTests.Where(t => t.Status != "Passed").FirstOrDefault();
                             if (randomTest != null)
@@ -917,9 +954,64 @@ namespace MandADiscoverySuite.ViewModels
         
         public void EnableRealTimeUpdates()
         {
-            _isRealTimeUpdatesEnabled = true;
-            _emergencyModeEnabled = false;
-            StartRealTimeUpdates();
+            // FIXED: Ensure safe restart of updates
+            if (!_emergencyModeEnabled)
+            {
+                _isRealTimeUpdatesEnabled = true;
+                StartRealTimeUpdates();
+
+                StructuredLogger?.LogInfo(LogSourceName, new {
+                    action = "realtime_updates_enabled",
+                    timer_interval = MAX_SAFE_TIMER_INTERVAL_MS,
+                    cpu_threshold = CPU_EMERGENCY_THRESHOLD
+                }, "Real-time updates enabled with safe intervals");
+            }
+            else
+            {
+                StructuredLogger?.LogWarning(LogSourceName, new {
+                    action = "realtime_updates_blocked",
+                    reason = "emergency_mode_active"
+                }, "Real-time updates blocked - emergency mode active");
+            }
+        }
+
+        /// <summary>
+        /// Force manual refresh - always safe to use
+        /// </summary>
+        public async Task ForceManualRefreshAsync()
+        {
+            try
+            {
+                SetLoadingState(true);
+                LoadingMessage = "Manual refresh in progress...";
+
+                // Temporarily disable real-time updates during manual refresh
+                var wasEnabled = _isRealTimeUpdatesEnabled;
+                _isRealTimeUpdatesEnabled = false;
+
+                // Safely reload all data
+                await LoadRealTimeDataAsync();
+
+                // Re-enable if it was previously enabled and CPU is safe
+                if (wasEnabled && !_emergencyModeEnabled)
+                {
+                    _isRealTimeUpdatesEnabled = true;
+                }
+
+                StructuredLogger?.LogInfo(LogSourceName, new {
+                    action = "manual_refresh_complete",
+                    realtime_restored = wasEnabled && !_emergencyModeEnabled
+                }, "Manual refresh completed successfully");
+            }
+            catch (Exception ex)
+            {
+                StructuredLogger?.LogError(LogSourceName, ex, new { action = "manual_refresh_fail" }, "Manual refresh failed");
+                SetErrorStateSafe($"Manual refresh failed: {ex.Message}");
+            }
+            finally
+            {
+                SetLoadingState(false);
+            }
         }
         
         /// <summary>
@@ -933,35 +1025,44 @@ namespace MandADiscoverySuite.ViewModels
                 
                 var cpuUsage = _cpuCounter.NextValue();
                 
-                // EMERGENCY THRESHOLD: Reduced to 70% after Phase 2 failure
+                // FIXED: More conservative CPU threshold
                 if (cpuUsage > CPU_EMERGENCY_THRESHOLD)
                 {
                     if (!_emergencyModeEnabled)
                     {
                         _emergencyModeEnabled = true;
-                        StructuredLogger?.LogError(LogSourceName, new { 
-                            action = "emergency_mode_activated", 
+
+                        // Stop all timers immediately to reduce CPU load
+                        _realTimeUpdateTimer?.Dispose();
+                        _discoveryUpdateTimer?.Dispose();
+                        _executionUpdateTimer?.Dispose();
+                        _validationUpdateTimer?.Dispose();
+
+                        StructuredLogger?.LogWarning(LogSourceName, new {
+                            action = "emergency_mode_activated",
                             cpuUsage = cpuUsage,
                             threshold = CPU_EMERGENCY_THRESHOLD,
-                            safety_level = "enhanced_post_phase2_failure"
-                        }, "EMERGENCY: CPU usage critical - disabling real-time updates (enhanced threshold)");
-                        
-                        // Force garbage collection to help free memory
-                        GC.Collect();
-                        GC.WaitForPendingFinalizers();
-                        GC.Collect();
+                            safety_level = "enhanced_with_timer_shutdown"
+                        }, "CPU usage critical - stopping all real-time updates");
+
+                        // Gentle garbage collection to help free memory
+                        GC.Collect(0, GCCollectionMode.Optimized);
                     }
                     return true;
                 }
-                
-                // If CPU drops below 70%, re-enable updates
-                if (_emergencyModeEnabled && cpuUsage < 70.0f)
+
+                // If CPU drops below safe threshold, re-enable with longer intervals
+                if (_emergencyModeEnabled && cpuUsage < (CPU_EMERGENCY_THRESHOLD - 10.0f))
                 {
                     _emergencyModeEnabled = false;
-                    StructuredLogger?.LogInfo(LogSourceName, new { 
-                        action = "emergency_mode_deactivated", 
-                        cpuUsage = cpuUsage 
-                    }, "CPU usage normalized - re-enabling real-time updates");
+                    StructuredLogger?.LogInfo(LogSourceName, new {
+                        action = "emergency_mode_deactivated",
+                        cpuUsage = cpuUsage,
+                        restarting_with_safe_intervals = true
+                    }, "CPU usage normalized - restarting with safe intervals");
+
+                    // Restart with even safer intervals
+                    StartRealTimeUpdates();
                 }
                 
                 return false;

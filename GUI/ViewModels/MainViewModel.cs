@@ -801,7 +801,8 @@ namespace MandADiscoverySuite.ViewModels
                                     if (modules.Any(m => m.DisplayName == kvp.Value.DisplayName)) // Only add enabled modules
                                     {
                                         var moduleInfo = kvp.Value;
-                                        moduleInfo.CommandParameter = kvp.Key; // Set command parameter to module key
+                                        // Convert PascalCase key to lowercase to match ViewRegistry expectations
+                                        moduleInfo.CommandParameter = kvp.Key.ToLowerInvariant();
                                         DiscoveryModules.Add(moduleInfo);
                                     }
                                 }

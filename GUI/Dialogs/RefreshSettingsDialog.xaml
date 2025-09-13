@@ -78,7 +78,7 @@
                     <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
                         <StackPanel>
                             <TextBlock Text="🕒 Refresh Interval" Style="{StaticResource ModernTextStyle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
-                            <TextBlock Text="How often should data be automatically refreshed?" Style="{StaticResource ModernTextStyle}" FontSize="12" Foreground="#FFA0AEC0" Margin="0,0,0,12"/>
+                            <TextBlock Text="How often should data be automatically refreshed?" Style="{StaticResource ModernTextStyle}" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,0,12"/>
                             <ComboBox x:Name="IntervalComboBox" Style="{StaticResource ModernComboBoxStyle}" Width="200" HorizontalAlignment="Left"
                                       SelectedValue="{Binding Settings.GlobalInterval}" SelectedValuePath="Tag">
                                 <ComboBoxItem Content="Disabled" Tag="0"/>
@@ -98,7 +98,7 @@
                     <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
                         <StackPanel>
                             <TextBlock Text="📊 Views to Refresh" Style="{StaticResource ModernTextStyle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
-                            <TextBlock Text="Select which views should be automatically refreshed" Style="{StaticResource ModernTextStyle}" FontSize="12" Foreground="#FFA0AEC0" Margin="0,0,0,12"/>
+                            <TextBlock Text="Select which views should be automatically refreshed" Style="{StaticResource ModernTextStyle}" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,0,12"/>
                             <CheckBox Content="📈 Dashboard" Style="{StaticResource ModernCheckBoxStyle}" IsChecked="{Binding Settings.DashboardEnabled}"/>
                             <CheckBox Content="👤 Users" Style="{StaticResource ModernCheckBoxStyle}" IsChecked="{Binding Settings.UsersEnabled}"/>
                             <CheckBox Content="🌐 Infrastructure" Style="{StaticResource ModernCheckBoxStyle}" IsChecked="{Binding Settings.InfrastructureEnabled}"/>
@@ -110,7 +110,7 @@
                     <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
                         <StackPanel>
                             <TextBlock Text="⚙️ Refresh Behavior" Style="{StaticResource ModernTextStyle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
-                            <TextBlock Text="Configure how automatic refresh behaves" Style="{StaticResource ModernTextStyle}" FontSize="12" Foreground="#FFA0AEC0" Margin="0,0,0,12"/>
+                            <TextBlock Text="Configure how automatic refresh behaves" Style="{StaticResource ModernTextStyle}" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,0,12"/>
                             <CheckBox Content="Only refresh visible view" Style="{StaticResource ModernCheckBoxStyle}" IsChecked="{Binding Settings.RefreshOnlyWhenVisible}">
                                 <CheckBox.ToolTip>
                                     <ToolTip>

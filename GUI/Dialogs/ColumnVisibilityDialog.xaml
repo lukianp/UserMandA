@@ -116,11 +116,11 @@
                            FontWeight="SemiBold" 
                            Foreground="#FFE2E8F0" 
                            HorizontalAlignment="Left"/>
-                <Button Content="✕" 
-                        HorizontalAlignment="Right" 
+                <Button Content="✕"
+                        HorizontalAlignment="Right"
                         VerticalAlignment="Top"
-                        Background="Transparent" 
-                        Foreground="#FFA0AEC0" 
+                        Background="Transparent"
+                        Foreground="{DynamicResource MutedForegroundBrush}"
                         BorderThickness="0" 
                         FontSize="16" 
                         Padding="8,4" 
@@ -129,9 +129,9 @@
             </Grid>
 
             <!-- Description -->
-            <TextBlock Grid.Row="1" 
-                       Text="Select which columns to show or hide in the data grid." 
-                       Foreground="#FFA0AEC0" 
+            <TextBlock Grid.Row="1"
+                       Text="Select which columns to show or hide in the data grid."
+                       Foreground="{DynamicResource MutedForegroundBrush}"
                        FontSize="13" 
                        Margin="0,8,0,16"/>
 

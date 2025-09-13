@@ -157,7 +157,26 @@ namespace MandADiscoverySuite.Services
                 ["ExchangeDiscovery"] = () => new ExchangeDiscoveryView(),
                 ["PowerBIDiscovery"] = () => new PowerBIDiscoveryView(),
                 ["SharePointDiscovery"] = () => new SharePointDiscoveryView(),
-                
+
+                // Missing discovery module mappings for ModuleRegistry.json modules
+                ["environmentriskscoring"] = () => new EnvironmentRiskAssessmentView(), // Maps EnvironmentRiskScoring → EnvironmentRiskAssessment
+                ["environmentdetectiondiscovery"] = () => new EnvironmentDetectionView(), // Maps EnvironmentDetectionDiscovery → EnvironmentDetection
+                ["onedrivediscovery"] = () => new OneDriveBusinessDiscoveryView(), // Maps OneDriveDiscovery → OneDriveBusinessDiscovery
+                ["awsdiscovery"] = () => new AWSCloudInfrastructureDiscoveryView(), // Maps AWSDiscovery → AWSCloudInfrastructureDiscovery
+                ["gcpdiscovery"] = () => new Views.Placeholders.MissingView(), // GCP discovery view doesn't exist yet
+                ["conditionalaccessdiscovery"] = () => new ConditionalAccessPoliciesDiscoveryView(), // Maps ConditionalAccessDiscovery → ConditionalAccessPoliciesDiscovery
+                ["dlpdiscovery"] = () => new DataLossPreventionDiscoveryView(), // Maps DLPDiscovery → DataLossPreventionDiscovery
+                ["webserverconfigdiscovery"] = () => new WebServerConfigurationDiscoveryView(), // Maps WebServerConfigDiscovery → WebServerConfigurationDiscovery
+                // Additional enabled modules from ModuleRegistry.json
+                ["physicalserverdiscovery"] = () => new Views.Placeholders.MissingView(), // Physical server discovery view doesn't exist yet
+                ["applicationdiscovery"] = () => new Views.Placeholders.MissingView(), // Application discovery view doesn't exist yet
+                ["securityinfrastructurediscovery"] = () => new Views.Placeholders.MissingView(), // Security infrastructure discovery view doesn't exist yet
+                ["certificatediscovery"] = () => new Views.Placeholders.MissingView(), // Certificate discovery view doesn't exist yet
+                ["dataclassification"] = () => new Views.Placeholders.MissingView(), // Data classification view doesn't exist yet
+                ["storagearraydiscovery"] = () => new Views.Placeholders.MissingView(), // Storage array discovery view doesn't exist yet
+                ["powerplatformdiscovery"] = () => new Views.Placeholders.MissingView(), // Power Platform discovery view doesn't exist yet
+                ["databaseschemadiscovery"] = () => new Views.Placeholders.MissingView(), // Database schema discovery view doesn't exist yet
+
                 // T-037: Groups, GPOs, and ACLs Migration
                 ["groupspolicymigration"] = () => new GroupsPolicyMigrationView(),
                 ["groups-policy-migration"] = () => new GroupsPolicyMigrationView(),

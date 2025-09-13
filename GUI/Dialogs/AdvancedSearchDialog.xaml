@@ -217,8 +217,8 @@
                                         <TextBlock Text="⭐" FontSize="12" Margin="4,0,0,0"
                                                    Visibility="{Binding IsFavorite, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                     </StackPanel>
-                                    <TextBlock Text="{Binding Summary}" Style="{StaticResource ModernTextStyle}" 
-                                               FontSize="10" Foreground="#FFA0AEC0"/>
+                                    <TextBlock Text="{Binding Summary}" Style="{StaticResource ModernTextStyle}"
+                                               FontSize="10" Foreground="{DynamicResource MutedForegroundBrush}"/>
                                     <TextBlock Text="{Binding LastUsed, StringFormat='Last used: {0:MM/dd HH:mm}'}" 
                                                Style="{StaticResource ModernTextStyle}" FontSize="9" Foreground="#FF718096"/>
                                 </StackPanel>

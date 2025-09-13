@@ -10,7 +10,9 @@
       "Bash(powershell:*)",
       "Bash(dotnet publish:*)",
       "Bash(start:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(dotnet build:*)",
+      "Bash(robocopy:*)"
     ],
     "deny": [],
     "ask": [],
