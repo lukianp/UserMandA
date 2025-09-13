@@ -21,11 +21,9 @@ namespace MandADiscoverySuite.ViewModels
     {
         public event PropertyChangedEventHandler PropertyChanged;
         
-        private readonly HashSet<string> _pendingNotifications = new HashSet<string>();
+        private readonly Queue<string> _pendingNotifications = new Queue<string>();
         private readonly object _notificationLock = new object();
         private bool _isNotificationScheduled;
-        private int _notificationProcessCount = 0;
-        private const int MAX_NOTIFICATION_PROCESS_COUNT = 100; // Circuit breaker
         private DispatcherTimer _notificationTimer;
         
         // Modern MVVM infrastructure
@@ -207,7 +205,7 @@ namespace MandADiscoverySuite.ViewModels
 
             lock (_notificationLock)
             {
-                _pendingNotifications.Add(propertyName);
+                _pendingNotifications.Enqueue(propertyName);
                 if (!_isNotificationScheduled)
                 {
                     _isNotificationScheduled = true;
@@ -292,41 +290,11 @@ namespace MandADiscoverySuite.ViewModels
 
         private void ProcessPendingNotifications(object sender, EventArgs e)
         {
-            // Circuit breaker to prevent infinite loops
-            _notificationProcessCount++;
-            if (_notificationProcessCount > MAX_NOTIFICATION_PROCESS_COUNT)
-            {
-                _log?.LogWarning($"[{GetType().Name}] Circuit breaker triggered - too many notification processes");
-                _notificationTimer?.Stop();
-                lock (_notificationLock)
-                {
-                    _pendingNotifications.Clear();
-                    _isNotificationScheduled = false;
-                }
-                _notificationProcessCount = 0;
-                return;
-            }
-
             _notificationTimer?.Stop();
 
-            // Process all pending notifications in a loop until queue is empty
-            while (true)
+            lock (_notificationLock)
             {
-                string[] notifications;
-
-                lock (_notificationLock)
-                {
-                    if (_pendingNotifications.Count == 0)
-                    {
-                        _isNotificationScheduled = false;
-                        break;
-                    }
-
-                    notifications = _pendingNotifications.ToArray();
-                    _pendingNotifications.Clear();
-                }
-
-                foreach (var propertyName in notifications)
+                while (_pendingNotifications.TryDequeue(out var propertyName))
                 {
                     if (_disposed) return; // Safety check
                     try
@@ -339,10 +307,8 @@ namespace MandADiscoverySuite.ViewModels
                         // Continue processing other notifications even if one fails
                     }
                 }
+                _isNotificationScheduled = false;
             }
-
-            // Reset counter after successful processing
-            _notificationProcessCount = Math.Max(0, _notificationProcessCount - 10);
         }
 
         #region Modern MVVM Operations

@@ -214,5 +214,30 @@ namespace MandADiscoverySuite.Tests.ViewModels
                 Assert.Contains($"Property{i}", propertyChangedEvents);
             }
         }
+
+        [Fact]
+        public void ProcessPendingNotifications_ProcessesLargeQueue()
+        {
+            // Arrange
+            var viewModel = new TestViewModel(_mockLogger.Object, _mockMessenger.Object);
+            var propertyChangedEvents = new System.Collections.Generic.List<string>();
+            viewModel.PropertyChanged += (s, e) => propertyChangedEvents.Add(e.PropertyName);
+
+            // Act - Queue a large number of notifications (1000)
+            for (int i = 0; i < 1000; i++)
+            {
+                viewModel.TestOnPropertiesChangedBatched($"LargeProperty{i}");
+            }
+
+            // Force immediate processing
+            viewModel.TestFlushPendingNotifications();
+
+            // Assert - All notifications should have been processed
+            Assert.Equal(1000, propertyChangedEvents.Count);
+            for (int i = 0; i < 1000; i++)
+            {
+                Assert.Contains($"LargeProperty{i}", propertyChangedEvents);
+            }
+        }
     }
 }

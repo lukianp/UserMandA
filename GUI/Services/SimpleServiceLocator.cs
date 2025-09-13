@@ -196,7 +196,7 @@ namespace MandADiscoverySuite.Services
         
         public static void RegisterService<T>(T service) where T : class
         {
-            _services[typeof(T)] = service;
+            _services.TryAdd(typeof(T), service);
         }
     }
 }
