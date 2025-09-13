@@ -674,14 +674,14 @@ function Invoke-PrerequisitesCheck {
         Write-PrerequisitesLog "Overall result: $(if ($results.OverallSuccess) { 'Pass' } else { 'Fail' })" -Level "HEADER"
     }
 
-} catch {
+catch {
         Write-PrerequisitesLog "Prerequisites check failed with error: $($_.Exception.Message)" -Level "ERROR"
         $results.OverallSuccess = $false
         $results.Errors += "Prerequisites check failed: $($_.Exception.Message)"
         }
-    } finally {
-    }
 
+finally {
+    }
     Write-PrerequisitesLog "Prerequisites check complete" -Level "HEADER"
 
     return $results

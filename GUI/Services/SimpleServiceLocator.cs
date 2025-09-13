@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Messaging;
 
@@ -56,7 +57,7 @@ namespace MandADiscoverySuite.Services
                 
                 // Register LogicEngineService
                 var logicLogger = _loggerFactory.CreateLogger<LogicEngineService>();
-                var dataRoot = @"C:\discoverydata\ljpops\RawData\";
+                var dataRoot = Path.Combine(ConfigurationService.Instance.DiscoveryDataRootPath, "ljpops", "RawData");
                 var logicEngineService = new LogicEngineService(logicLogger, null, dataRoot);
                 RegisterService<ILogicEngineService>(logicEngineService);
                 RegisterService<LogicEngineService>(logicEngineService);
@@ -143,7 +144,7 @@ namespace MandADiscoverySuite.Services
                     // Cache service not available - proceed without it
                 }
                 
-                var dataRoot = @"C:\discoverydata\ljpops\RawData\";
+                var dataRoot = Path.Combine(ConfigurationService.Instance.DiscoveryDataRootPath, "ljpops", "RawData");
                 var logicEngineService = new LogicEngineService(logger, cacheService, dataRoot);
                 RegisterService<ILogicEngineService>(logicEngineService);
                 RegisterService<LogicEngineService>(logicEngineService);

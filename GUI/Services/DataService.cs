@@ -164,45 +164,43 @@ namespace MandADiscoverySuite.Services
 
             try
             {
-                var tasks = new List<Task>();
+                // Create direct task variables instead of Task.Run wrappers
+                var userTask = options.IncludeUsers ?
+                    LoadUsersAsync(profileName, false, cancellationToken) : Task.FromResult(Enumerable.Empty<UserData>());
 
+                var computerTask = options.IncludeComputers ?
+                    LoadInfrastructureAsync(profileName, false, cancellationToken) : Task.FromResult(Enumerable.Empty<InfrastructureData>());
+
+                var groupTask = options.IncludeGroups ?
+                    LoadGroupsAsync(profileName, false, cancellationToken) : Task.FromResult(Enumerable.Empty<GroupData>());
+
+                var applicationTask = options.IncludeApplications ?
+                    LoadApplicationsAsync(profileName, false, cancellationToken) : Task.FromResult(Enumerable.Empty<ApplicationData>());
+
+                // Await all tasks together
+                await Task.WhenAll(userTask, computerTask, groupTask, applicationTask);
+
+                // Collect and filter results after await
                 if (options.IncludeUsers)
                 {
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        var users = await LoadUsersAsync(profileName, false, cancellationToken);
-                        results.Users = FilterUsers(users, searchTerm, options).Take(options.MaxResults / 4).ToList();
-                    }, cancellationToken));
+                    results.Users = FilterUsers(await userTask, searchTerm, options).Take(options.MaxResults / 4).ToList();
                 }
 
                 if (options.IncludeComputers)
                 {
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        var computers = await LoadInfrastructureAsync(profileName, false, cancellationToken);
-                        results.Computers = FilterInfrastructure(computers, searchTerm, options).Take(options.MaxResults / 4).ToList();
-                    }, cancellationToken));
+                    results.Computers = FilterInfrastructure(await computerTask, searchTerm, options).Take(options.MaxResults / 4).ToList();
                 }
 
                 if (options.IncludeGroups)
                 {
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        var groups = await LoadGroupsAsync(profileName, false, cancellationToken);
-                        results.Groups = FilterGroups(groups, searchTerm, options).Take(options.MaxResults / 4).ToList();
-                    }, cancellationToken));
+                    results.Groups = FilterGroups(await groupTask, searchTerm, options).Take(options.MaxResults / 4).ToList();
                 }
 
                 if (options.IncludeApplications)
                 {
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        var applications = await LoadApplicationsAsync(profileName, false, cancellationToken);
-                        results.Applications = FilterApplications(applications, searchTerm, options).Take(options.MaxResults / 4).ToList();
-                    }, cancellationToken));
+                    results.Applications = FilterApplications(await applicationTask, searchTerm, options).Take(options.MaxResults / 4).ToList();
                 }
 
-                await Task.WhenAll(tasks);
                 results.TotalResults = results.Users.Count + results.Computers.Count + results.Groups.Count + results.Applications.Count;
                 results.SearchDuration = DateTime.UtcNow - startTime;
             }

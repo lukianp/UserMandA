@@ -167,7 +167,7 @@ namespace MandADiscoverySuite.Services
                 var processedFiles = 0;
 
                 // Load data from files in background
-                await Task.Run(() =>
+                await Task.Run(async () =>
                 {
                     foreach (var file in files)
                     {
@@ -181,7 +181,8 @@ namespace MandADiscoverySuite.Services
 
                         try
                         {
-                            var fileData = loadFunction(file).GetAwaiter().GetResult();
+                            // Replace blocking GetAwaiter().GetResult() with await
+                            var fileData = await loadFunction(file);
                             allData.AddRange(fileData);
                         }
                         catch (Exception ex)
@@ -231,6 +232,7 @@ namespace MandADiscoverySuite.Services
                 {
                     if (_currentLoadingCancellation?.Token == token)
                     {
+                        _currentLoadingCancellation?.Dispose();
                         _currentLoadingCancellation = null;
                     }
                 }

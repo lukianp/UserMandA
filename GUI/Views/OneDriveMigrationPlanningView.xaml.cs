@@ -11,6 +11,25 @@ namespace MandADiscoverySuite.Views
         {
             InitializeComponent();
             DataContext = new OneDriveMigrationPlanningViewModel();
+
+            // Handle initialization asynchronously
+            this.Loaded += OnLoaded;
+        }
+
+        private async void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is OneDriveMigrationPlanningViewModel viewModel)
+            {
+                try
+                {
+                    await viewModel.InitializeTask;
+                }
+                catch (Exception ex)
+                {
+                    // Handle initialization errors appropriately
+                    System.Diagnostics.Debug.WriteLine($"Failed to initialize OneDrive Migration Planning: {ex.Message}");
+                }
+            }
         }
 
         private void UsersDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)

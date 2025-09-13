@@ -20,6 +20,10 @@ namespace MandADiscoverySuite.ViewModels
     /// </summary>
     public class OneDriveMigrationPlanningViewModel : BaseViewModel
     {
+        /// <summary>
+        /// Task that completes when initialization is finished
+        /// </summary>
+        public Task InitializeTask { get; private set; }
         #region Private Fields
         private readonly CsvDataServiceNew _csvDataService;
         private readonly object _dataUpdateLock = new object();
@@ -323,19 +327,19 @@ namespace MandADiscoverySuite.ViewModels
             {
                 // Initialize services
                 _csvDataService = SimpleServiceLocator.Instance.GetService<CsvDataServiceNew>();
-                
+
                 // Initialize collections
                 InitializeCollections();
-                
+
                 // Initialize commands
                 InitializeCommands();
-                
-                // Load initial data
-                LoadInitialDataAsync();
-                
+
                 // Start refresh timer with safety limits
                 InitializeRefreshTimer();
-                
+
+                // Start initialization task (fire-and-forget, but observable via InitializeTask)
+                InitializeTask = InitializeAsync();
+
                 StatusMessage =("OneDrive Migration Planning initialized successfully");
             }
             catch (Exception ex)
@@ -348,6 +352,22 @@ namespace MandADiscoverySuite.ViewModels
         
         #region Private Methods
         
+        /// <summary>
+        /// Initialize the ViewModel asynchronously
+        /// </summary>
+        public async Task InitializeAsync()
+        {
+            try
+            {
+                await LoadInitialDataAsync();
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage =($"Failed to initialize OneDrive Migration Planning: {ex.Message}");
+                throw; // Re-throw to make exceptions observable
+            }
+        }
+
         private void InitializeCollections()
         {
             UserDrives = new ObservableCollection<dynamic>();
@@ -377,7 +397,7 @@ namespace MandADiscoverySuite.ViewModels
             ClearFiltersCommand = new RelayCommand(ClearFilters);
         }
         
-        private async void LoadInitialDataAsync()
+        private async Task LoadInitialDataAsync()
         {
             try
             {

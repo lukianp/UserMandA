@@ -10,7 +10,7 @@ namespace MandADiscoverySuite.Services
     /// <summary>
     /// Central navigation service that prevents async deadlocks and race conditions
     /// </summary>
-    public class NavigationService
+    public class NavigationService : IDisposable
     {
         private readonly ILogger<NavigationService>? _logger;
         private readonly TabsService _tabsService;
@@ -173,6 +173,7 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public void Dispose()
         {
+            _logger?.LogInformation("[NavigationService] Dispose() method called - cleaning up resources");
             Dispose(true);
             GC.SuppressFinalize(this);
         }
