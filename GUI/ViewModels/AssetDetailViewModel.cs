@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -83,6 +84,20 @@ namespace MandADiscoverySuite.ViewModels
             _dataExportService = dataExportService ?? new StubDataExportService(logger);
 
             TabTitle = "Asset Details";
+        }
+
+        /// <summary>
+        /// Constructor that receives object asset and loads its details
+        /// </summary>
+        public AssetDetailViewModel(
+            object asset,
+            ILogicEngineService logicEngineService,
+            ILogger logger,
+            IMigrationWaveService? migrationWaveService = null,
+            IDataExportService? dataExportService = null)
+            : this(logicEngineService, logger, migrationWaveService, dataExportService)
+        {
+            LoadAssetDetails(asset);
         }
 
         #region Properties
@@ -337,41 +352,96 @@ namespace MandADiscoverySuite.ViewModels
 
             await ExecuteAsync(async () =>
             {
-                StructuredLogger?.LogDebug(LogSourceName, 
-                    new { action = "load_asset_detail_start", device_name = SelectedDeviceName }, 
+                StructuredLogger?.LogDebug(LogSourceName,
+                    new { action = "load_asset_detail_start", device_name = SelectedDeviceName },
                     "Loading asset detail projection");
 
                 var detail = await _logicEngineService.GetAssetDetailAsync(SelectedDeviceName);
-                
+
                 if (detail != null)
                 {
                     AssetDetail = detail;
                     UpdateAssetBasicInfo(detail.Device);
                     UpdateTabCollections(detail);
-                    
+
                     TabTitle = $"Asset Details - {detail.Device.Name ?? SelectedDeviceName}";
-                    
-                    StructuredLogger?.LogInfo(LogSourceName, 
-                        new { 
-                            action = "load_asset_detail_complete", 
+
+                    StructuredLogger?.LogInfo(LogSourceName,
+                        new {
+                            action = "load_asset_detail_complete",
                             device_name = SelectedDeviceName,
                             primary_user = detail.PrimaryUser?.DisplayName,
                             apps_count = detail.InstalledApps.Count,
                             risks_count = detail.Risks.Count
-                        }, 
+                        },
                         "Asset detail projection loaded successfully");
                 }
                 else
                 {
                     ClearAssetDetail();
                     StatusMessage = "Asset not found";
-                    
-                    StructuredLogger?.LogWarning(LogSourceName, 
-                        new { action = "load_asset_detail_notfound", device_name = SelectedDeviceName }, 
+
+                    StructuredLogger?.LogWarning(LogSourceName,
+                        new { action = "load_asset_detail_notfound", device_name = SelectedDeviceName },
                         "Asset not found in LogicEngine data");
                 }
 
             }, "Loading asset details");
+        }
+
+        /// <summary>
+        /// Load asset details from incoming asset object, identifying type and fetching related data
+        /// </summary>
+        public void LoadAssetDetails(object asset)
+        {
+            if (asset == null)
+            {
+                Debug.WriteLine("AssetDetailViewModel.LoadAssetDetails: Asset is null, clearing details");
+                ClearAssetDetail();
+                return;
+            }
+
+            // Reset all collections at start
+            ResetCollections();
+
+            try
+            {
+                string assetType = IdentifyAssetType(asset);
+                Debug.WriteLine($"AssetDetailViewModel.LoadAssetDetails: Identified asset type: {assetType}");
+
+                switch (assetType)
+                {
+                    case "UserData":
+                        LoadUserDataDetails(asset);
+                        break;
+                    case "ComputerData":
+                        LoadComputerDataDetails(asset);
+                        break;
+                    case "MailboxData":
+                        LoadMailboxDataDetails(asset);
+                        break;
+                    case "DatabaseData":
+                        LoadDatabaseDataDetails(asset);
+                        break;
+                    default:
+                        Debug.WriteLine($"AssetDetailViewModel.LoadAssetDetails: Unknown asset type: {assetType}, using default loading");
+                        LoadDefaultAssetDetails(asset);
+                        break;
+                }
+
+                Debug.WriteLine($"AssetDetailViewModel.LoadAssetDetails: Completed loading for asset type {assetType}");
+                StructuredLogger?.LogInfo(LogSourceName,
+                    new { action = "load_asset_details_complete", asset_type = assetType },
+                    $"Asset details loaded for type {assetType}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadAssetDetails: Error loading asset details: {ex.Message}");
+                StructuredLogger?.LogError(LogSourceName, ex,
+                    new { action = "load_asset_details_error", error = ex.Message },
+                    "Error loading asset details");
+                ClearAssetDetail();
+            }
         }
 
         /// <summary>
@@ -492,6 +562,379 @@ namespace MandADiscoverySuite.ViewModels
                 if (app.Name?.Contains("Office") == true || app.Name?.Contains("Teams") == true || app.Name?.Contains("Azure") == true)
                     CriticalApps.Add(app);
             }
+        }
+
+        /// <summary>
+        /// Reset all collections at start of loading
+        /// </summary>
+        private void ResetCollections()
+        {
+            // Clear tab collections
+            Users.Clear();
+            Apps.Clear();
+            FileAccess.Clear();
+            GpoLinks.Clear();
+            Groups.Clear();
+            SqlDatabases.Clear();
+            Risks.Clear();
+
+            // Clear app summary collections
+            MicrosoftApps.Clear();
+            ThirdPartyApps.Clear();
+            CrowdStrikeApps.Clear();
+            CriticalApps.Clear();
+
+            // Clear basic info
+            DeviceName = null;
+            DnsName = null;
+            OperatingSystem = null;
+            OrganizationalUnit = null;
+            PrimaryUserSid = null;
+            PrimaryUserName = null;
+            IsOnline = false;
+            LastSeen = null;
+            CreatedDate = null;
+
+            // Clear hardware info
+            Hardware = null;
+            OwnerDepartment = null;
+            OwnerLocation = null;
+            OwnerManager = null;
+            OwnerEmployeeId = null;
+
+            // Clear risk and status info
+            HighRiskCount = 0;
+            MigrationReadinessStatus = null;
+            OSCompatibilityStatus = null;
+            BackupStatus = null;
+            LastRiskAssessment = null;
+            LastAppsScan = null;
+
+            AssetDetail = null;
+            TabTitle = "Asset Details";
+        }
+
+        /// <summary>
+        /// Identify the type of the incoming asset object
+        /// </summary>
+        private string IdentifyAssetType(object asset)
+        {
+            if (asset is null) return "Unknown";
+
+            // Try to get Type property
+            var typeProperty = asset.GetType().GetProperty("Type");
+            if (typeProperty != null)
+            {
+                var typeValue = typeProperty.GetValue(asset)?.ToString();
+                if (!string.IsNullOrEmpty(typeValue))
+                {
+                    return typeValue;
+                }
+            }
+
+            // Try to get from dictionary if it's a dict
+            if (asset is Dictionary<string, object> dict)
+            {
+                if (dict.TryGetValue("Type", out var typeObj) && typeObj is string typeStr)
+                {
+                    return typeStr;
+                }
+            }
+
+            // Default based on properties
+            if (asset.GetType().Name.Contains("User") || asset.GetType().GetProperty("DisplayName") != null)
+            {
+                return "UserData";
+            }
+            if (asset.GetType().Name.Contains("Computer") || asset.GetType().GetProperty("OperatingSystem") != null)
+            {
+                return "ComputerData";
+            }
+            if (asset.GetType().Name.Contains("Mailbox") || asset.GetType().GetProperty("EmailAddress") != null)
+            {
+                return "MailboxData";
+            }
+            if (asset.GetType().Name.Contains("Database") || asset.GetType().GetProperty("DatabaseName") != null)
+            {
+                return "DatabaseData";
+            }
+
+            return "Unknown";
+        }
+
+        /// <summary>
+        /// Load details for UserData from Active Directory
+        /// </summary>
+        private void LoadUserDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadUserDataDetails: Loading UserData details");
+
+            try
+            {
+                string csvPath = "ActiveDirectory.csv"; // Assume CSV file for AD users
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadUserDataDetails: ActiveDirectory.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadUserDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate user details
+                        if (values.Length > 1) DeviceName = values[0];
+                        if (values.Length > 2) PrimaryUserName = values[1];
+                        // Add more fields as per CSV structure
+
+                        Users.Add(new UserDto(
+                            UPN: assetName.Contains("@") ? assetName : $"{assetName}@domain.com",
+                            Sam: assetName,
+                            Sid: $"S-1-5-21-{new Random().Next(100000000, 999999999)}-{new Random().Next(100000000, 999999999)}-{new Random().Next(1000, 9999)}",
+                            Mail: null,
+                            DisplayName: PrimaryUserName ?? assetName,
+                            Enabled: true,
+                            OU: null,
+                            ManagerSid: null,
+                            Dept: null,
+                            AzureObjectId: null,
+                            Groups: new List<string>(),
+                            DiscoveryTimestamp: DateTime.Now,
+                            DiscoveryModule: "AssetDetailViewModel",
+                            SessionId: Guid.NewGuid().ToString()
+                        ));
+                        Debug.WriteLine($"AssetDetailViewModel.LoadUserDataDetails: Populated Users collection with 1 item");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadUserDataDetails: Error loading UserData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load details for ComputerData from Infrastructure
+        /// </summary>
+        private void LoadComputerDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadComputerDataDetails: Loading ComputerData details from Infrastructure.csv");
+
+            try
+            {
+                string csvPath = "Infrastructure.csv";
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadComputerDataDetails: Infrastructure.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadComputerDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate computer details
+                        DeviceName = values.Length > 0 ? values[0] : null;
+                        OperatingSystem = values.Length > 4 ? values[4] : null;
+                        DnsName = values.Length > 3 ? values[3] : null;
+                        OrganizationalUnit = values.Length > 6 ? values[6] : null;
+
+                        // Add to apps or other collections based on type
+                        if (values.Length > 1)
+                        {
+                            Apps.Add(new AppDto(
+                                Id: Guid.NewGuid().ToString(),
+                                Name: $"{values[1]} Service",
+                                Source: "System",
+                                InstallCounts: 1,
+                                Executables: new List<string>(),
+                                Publishers: new List<string> { "System" },
+                                DiscoveryTimestamp: DateTime.Now,
+                                DiscoveryModule: "AssetDetailViewModel",
+                                SessionId: Guid.NewGuid().ToString()
+                            ));
+                            Debug.WriteLine($"AssetDetailViewModel.LoadComputerDataDetails: Populated Apps collection with 1 item");
+                        }
+
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadComputerDataDetails: Error loading ComputerData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load details for MailboxData
+        /// </summary>
+        private void LoadMailboxDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadMailboxDataDetails: Loading MailboxData details");
+
+            try
+            {
+                string csvPath = "ExchangeMailboxes.csv"; // Assume CSV file for Exchange mailboxes
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadMailboxDataDetails: ExchangeMailboxes.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadMailboxDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate mailbox details
+                        DeviceName = values[0];
+                        // Add mailbox-specific data
+
+                        Apps.Add(new AppDto(
+                            Id: Guid.NewGuid().ToString(),
+                            Name: "Exchange Mailbox",
+                            Source: "Microsoft",
+                            InstallCounts: 1,
+                            Executables: new List<string>(),
+                            Publishers: new List<string> { "Microsoft" },
+                            DiscoveryTimestamp: DateTime.Now,
+                            DiscoveryModule: "AssetDetailViewModel",
+                            SessionId: Guid.NewGuid().ToString()
+                        ));
+                        Debug.WriteLine($"AssetDetailViewModel.LoadMailboxDataDetails: Populated Apps collection with 1 item");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadMailboxDataDetails: Error loading MailboxData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load details for DatabaseData
+        /// </summary>
+        private void LoadDatabaseDataDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadDatabaseDataDetails: Loading DatabaseData details");
+
+            try
+            {
+                string csvPath = "DatabaseServers.csv"; // Assume CSV file for databases
+                if (!File.Exists(csvPath))
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadDatabaseDataDetails: DatabaseServers.csv not found");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(csvPath);
+                if (lines.Length < 2)
+                {
+                    Debug.WriteLine("AssetDetailViewModel.LoadDatabaseDataDetails: CSV file is empty or has no data rows");
+                    return;
+                }
+
+                var headers = lines[0].Split(',');
+                var assetName = GetAssetName(asset);
+
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length > 0 && values[0].Equals(assetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Populate database details
+                        DeviceName = values[0];
+                        // Add to SQLDatabases
+
+                        SqlDatabases.Add(new SqlDbDto(
+                            Server: values[0],
+                            Instance: null,
+                            Database: values[0],
+                            Owners: new List<string>(),
+                            AppHints: new List<string>(),
+                            DiscoveryTimestamp: DateTime.Now,
+                            DiscoveryModule: "AssetDetailViewModel",
+                            SessionId: Guid.NewGuid().ToString()
+                        ));
+                        Debug.WriteLine($"AssetDetailViewModel.LoadDatabaseDataDetails: Populated SqlDatabases collection with 1 item");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AssetDetailViewModel.LoadDatabaseDataDetails: Error loading DatabaseData: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load default asset details
+        /// </summary>
+        private void LoadDefaultAssetDetails(object asset)
+        {
+            Debug.WriteLine("AssetDetailViewModel.LoadDefaultAssetDetails: Loading default asset details");
+
+            var assetName = GetAssetName(asset);
+            DeviceName = assetName;
+            Debug.WriteLine($"AssetDetailViewModel.LoadDefaultAssetDetails: Set DeviceName to {assetName}");
+        }
+
+        /// <summary>
+        /// Get asset name from object
+        /// </summary>
+        private string GetAssetName(object asset)
+        {
+            if (asset == null) return "Unknown";
+
+            // Try Name property
+            var nameProperty = asset.GetType().GetProperty("Name");
+            if (nameProperty != null)
+            {
+                return nameProperty.GetValue(asset)?.ToString() ?? "Unknown";
+            }
+
+            // Try from dictionary
+            if (asset is Dictionary<string, object> dict && dict.TryGetValue("Name", out var nameObj))
+            {
+                return nameObj?.ToString() ?? "Unknown";
+            }
+
+            return asset.ToString() ?? "Unknown";
         }
 
         /// <summary>

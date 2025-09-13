@@ -63,13 +63,13 @@
 
         <!-- Toolbar -->
         <ToolBar Grid.Row="0" Height="40">
-            <Button Command="{Binding NewGraphCommand}" ToolTip="New Graph">
+            <Button Command="{Binding NewGraphCommand}" ToolTip="New Graph" Style="{StaticResource RoundedButtonStyle}">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="➕" Margin="0,0,5,0"/>
                     <TextBlock Text="New"/>
                 </StackPanel>
             </Button>
-            <Button Command="{Binding SaveGraphCommand}" ToolTip="Save Graph">
+            <Button Command="{Binding SaveGraphCommand}" ToolTip="Save Graph" Style="{StaticResource RoundedButtonStyle}">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="💾" Margin="0,0,5,0"/>
                     <TextBlock Text="Save"/>
@@ -85,7 +85,7 @@
             
             <Separator/>
             
-            <Button Command="{Binding BuildFromDiscoveryDataCommand}" ToolTip="Build from Discovery Data">
+            <Button Command="{Binding BuildFromDiscoveryDataCommand}" ToolTip="Build from Discovery Data" Style="{StaticResource RoundedButtonStyle}">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="🔄" Margin="0,0,5,0"/>
                     <TextBlock Text="Build from Data"/>
@@ -98,21 +98,22 @@
             <ComboBox ItemsSource="{Binding LayoutAlgorithms}" 
                       SelectedItem="{Binding SelectedLayoutAlgorithm}"
                       Width="120"/>
-            <Button Command="{Binding ApplyLayoutCommand}" 
+            <Button Command="{Binding ApplyLayoutCommand}"
                     CommandParameter="{Binding SelectedLayoutAlgorithm}"
-                    ToolTip="Apply Layout">
+                    ToolTip="Apply Layout"
+                    Style="{StaticResource RoundedButtonStyle}">
                 <TextBlock Text="Apply"/>
             </Button>
             
             <Separator/>
             
-            <Button Command="{Binding ZoomInCommand}" ToolTip="Zoom In">
+            <Button Command="{Binding ZoomInCommand}" ToolTip="Zoom In" Style="{StaticResource RoundedButtonStyle}">
                 <TextBlock Text="🔍+"/>
             </Button>
-            <Button Command="{Binding ZoomOutCommand}" ToolTip="Zoom Out">
+            <Button Command="{Binding ZoomOutCommand}" ToolTip="Zoom Out" Style="{StaticResource RoundedButtonStyle}">
                 <TextBlock Text="🔍-"/>
             </Button>
-            <Button Command="{Binding ZoomToFitCommand}" ToolTip="Zoom to Fit">
+            <Button Command="{Binding ZoomToFitCommand}" ToolTip="Zoom to Fit" Style="{StaticResource RoundedButtonStyle}">
                 <TextBlock Text="⊡"/>
             </Button>
             <TextBlock Text="{Binding ZoomLevel, StringFormat='Zoom: {0:P0}'}" 
@@ -187,13 +188,15 @@
                                 IsSnapToTickEnabled="True"/>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                            <Button Command="{Binding ApplyFilterCommand}" 
-                                    Content="Apply" 
-                                    Width="60" 
-                                    Margin="0,0,5,0"/>
-                            <Button Command="{Binding ClearFilterCommand}" 
-                                    Content="Clear" 
-                                    Width="60"/>
+                            <Button Command="{Binding ApplyFilterCommand}"
+                                    Content="Apply"
+                                    Width="60"
+                                    Margin="0,0,5,0"
+                                    Style="{StaticResource RoundedButtonStyle}"/>
+                            <Button Command="{Binding ClearFilterCommand}"
+                                    Content="Clear"
+                                    Width="60"
+                                    Style="{StaticResource RoundedButtonStyle}"/>
                         </StackPanel>
                     </StackPanel>
                 </Expander>
@@ -377,9 +380,10 @@
 
                         <StackPanel Grid.Row="6" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,10,0,0">
                             <Button Command="{Binding DataContext.DeleteNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    Content="Delete Node" 
-                                    Width="100" 
-                                    Margin="0,0,5,0"/>
+                                    Content="Delete Node"
+                                    Width="100"
+                                    Margin="0,0,5,0"
+                                    Style="{StaticResource RoundedButtonStyle}"/>
                         </StackPanel>
                     </Grid>
                 </GroupBox>

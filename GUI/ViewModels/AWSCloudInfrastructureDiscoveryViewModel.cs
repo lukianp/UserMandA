@@ -3,17 +3,19 @@ using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Input;
+using GUI.Interfaces;
 
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
     /// ViewModel for AWS Cloud Infrastructure Discovery module
     /// </summary>
-    public class AWSCloudInfrastructureDiscoveryViewModel : ModuleViewModel
+    public class AWSCloudInfrastructureDiscoveryViewModel : ModuleViewModel, IDetailViewSupport
     {
         private readonly CsvDataServiceNew _csvService;
 
@@ -34,6 +36,9 @@ namespace MandADiscoverySuite.ViewModels
 
             // Initialize AWS configurations
             InitializeDefaultConfigurations();
+
+            // Initialize commands
+            ViewDetailsCommand = new AsyncRelayCommand<object>(OpenDetailViewAsync);
 
             _log?.LogInformation("AWS Cloud Infrastructure Discovery ViewModel initialized with default configurations");
         }
@@ -172,6 +177,7 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
         public AsyncRelayCommand TestAWSCredentialsCommand => new AsyncRelayCommand(TestAWSCredentialsAsync);
+        public ICommand ViewDetailsCommand { get; private set; }
 
         #endregion
 
@@ -548,6 +554,27 @@ namespace MandADiscoverySuite.ViewModels
             finally
             {
                 IsProcessing = false;
+            }
+        }
+
+        public async Task OpenDetailViewAsync(object selectedItem)
+        {
+            try
+            {
+                if (selectedItem == null) return;
+
+                _log?.LogInformation($"Viewing details for AWS resource: {selectedItem}");
+
+                // Open AssetDetailWindow with resource data
+                var assetDetailWindow = new Views.AssetDetailWindow();
+                // TODO: Pass selectedItem to AssetDetailWindow's ViewModel
+                assetDetailWindow.ShowDialog();
+                await Task.CompletedTask; // Placeholder for async
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error viewing AWS resource details");
+                ShowError("View Details Failed", ex.Message);
             }
         }
 

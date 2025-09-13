@@ -77,19 +77,19 @@
                 </TextBox>
 
                 <!-- Filter Toggle -->
-                <Button Content="🔍 Filter" Command="{Binding ToggleFilterPanelCommand}" 
-                       Width="80" Height="30" Margin="10,0,0,0"/>
+                <Button Content="🔍 Filter" Command="{Binding ToggleFilterPanelCommand}"
+                       Width="80" Height="30" Margin="10,0,0,0" Style="{StaticResource RoundedButtonStyle}"/>
             </StackPanel>
 
             <!-- Action Buttons -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10">
-                <Button Content="➕ New Note" Command="{Binding CreateNoteCommand}" 
-                       Width="90" Height="30" Margin="5,0" 
-                       Visibility="{Binding IsNotesView, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                <Button Content="➕ New Tag" Command="{Binding CreateTagCommand}" 
+                <Button Content="➕ New Note" Command="{Binding CreateNoteCommand}"
                        Width="90" Height="30" Margin="5,0"
-                       Visibility="{Binding IsNotesView, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
-                <Button Content="🔄 Refresh" Command="{Binding RefreshDataCommand}" Width="70" Height="30" Margin="5,0"/>
+                       Visibility="{Binding IsNotesView, Converter={StaticResource BooleanToVisibilityConverter}}" Style="{StaticResource RoundedButtonStyle}"/>
+                <Button Content="➕ New Tag" Command="{Binding CreateTagCommand}"
+                       Width="90" Height="30" Margin="5,0"
+                       Visibility="{Binding IsNotesView, Converter={StaticResource InverseBooleanToVisibilityConverter}}" Style="{StaticResource RoundedButtonStyle}"/>
+                <Button Content="🔄 Refresh" Command="{Binding RefreshDataCommand}" Width="70" Height="30" Margin="5,0" Style="{StaticResource RoundedButtonStyle}"/>
             </StackPanel>
         </Grid>
 

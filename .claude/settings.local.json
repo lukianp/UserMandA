@@ -7,7 +7,8 @@
       "Bash(wmic process where \"name='MandADiscoverySuite.exe'\" get CommandLine:*)",
       "Bash(Get-Process -Name \"MandADiscoverySuite\" -ErrorAction SilentlyContinue)",
       "Bash(dotnet clean:*)",
-      "Bash(pwsh:*)"
+      "Bash(pwsh:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": [],

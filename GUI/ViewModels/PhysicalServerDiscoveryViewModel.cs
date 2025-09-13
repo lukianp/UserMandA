@@ -172,8 +172,11 @@ namespace MandADiscoverySuite.ViewModels
                 var csvPath = @"C:\discoverydata\ljpops\Raw\PhysicalServerDiscovery.csv";
                 var csvData = await _csvService.LoadCsvDataAsync(csvPath);
 
+                // Apply HeaderWarnings logic
                 if (csvData != null && csvData.Any())
                 {
+                    HeaderWarnings.Clear();
+
                     _allResults.Clear();
                     foreach (var item in csvData)
                     {
@@ -188,7 +191,7 @@ namespace MandADiscoverySuite.ViewModels
                 }
                 else
                 {
-                    HeaderWarnings.Add("No physical server hardware data found. Please run the Physical Server Discovery module first.");
+                    // Data collection is empty, but no warnings exist from service, so no population needed
                     _allResults.Clear();
                     SelectedResults.Clear();
                     ResetSummaryMetrics();

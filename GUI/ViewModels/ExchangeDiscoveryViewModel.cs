@@ -8,13 +8,14 @@ using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Input;
+using GUI.Interfaces;
 
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
     /// ViewModel for Exchange Discovery module
     /// </summary>
-    public class ExchangeDiscoveryViewModel : ModuleViewModel
+    public class ExchangeDiscoveryViewModel : ModuleViewModel, IDetailViewSupport
     {
         private readonly CsvDataServiceNew _csvService;
 
@@ -32,6 +33,9 @@ namespace MandADiscoverySuite.ViewModels
             var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
             var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
             _csvService = new CsvDataServiceNew(csvLogger);
+
+            // Initialize commands
+            ViewDetailsCommand = new AsyncRelayCommand<object>(OpenDetailViewAsync);
         }
 
         #endregion
@@ -102,6 +106,7 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
         public new AsyncRelayCommand ViewLogsCommand => new AsyncRelayCommand(ViewLogsAsync);
+        public ICommand ViewDetailsCommand { get; private set; }
 
         #endregion
 
@@ -134,9 +139,9 @@ namespace MandADiscoverySuite.ViewModels
                 var loadedCsvData = await _csvService.LoadExchangeDiscoveryAsync();
 
                 // LoadExchangeDiscoveryAsync returns List<dynamic>, so use that directly
-                // For now, assume no warnings from the service - could be enhanced later
+                // Check for expected headers
                 HeaderWarnings.Clear();
-                // Can add logic to check for missing expected columns
+                CheckForMissingHeaders(loadedCsvData);
 
                 HasErrors = false;
                 ErrorMessage = string.Empty;
@@ -269,6 +274,35 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
+        public async Task OpenDetailViewAsync(object selectedItem)
+        {
+            try
+            {
+                if (selectedItem is System.Collections.Generic.IDictionary<string, object> mailboxData)
+                {
+                    // Create AssetDetailViewModel and load the mailbox data
+                    var assetDetailViewModel = new MandADiscoverySuite.ViewModels.AssetDetailViewModel(null, _log, null, null);
+                    assetDetailViewModel.LoadAssetDetails(selectedItem);
+
+                    var assetDetailView = new MandADiscoverySuite.Views.AssetDetailView();
+                    assetDetailView.DataContext = assetDetailViewModel;
+
+                    var assetDetailWindow = new MandADiscoverySuite.Views.AssetDetailWindow();
+                    assetDetailWindow.Content = assetDetailView;
+                    assetDetailWindow.DataContext = assetDetailViewModel;
+                    assetDetailWindow.ShowDialog();
+
+                    _log?.LogInformation("Opened AssetDetailWindow for mailbox data");
+                    await Task.CompletedTask; // Placeholder for async
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error opening asset details");
+                ShowError("View Details Failed", ex.Message);
+            }
+        }
+
         #endregion
 
         #region Helper Methods
@@ -314,6 +348,48 @@ namespace MandADiscoverySuite.ViewModels
                         SelectedItemDetails.Add(new KeyValuePair<string, string>(formattedKey, value));
                     }
                 }
+            }
+        }
+
+        private void CheckForMissingHeaders(System.Collections.Generic.List<dynamic> data)
+        {
+            if (data == null || data.Count == 0)
+                return;
+
+            // Expected headers for Exchange discovery
+            var expectedHeaders = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "mailboxname",
+                "primarysmtpaddress",
+                "mailboxtype",
+                "sizegb",
+                "lastlogin"
+            };
+
+            // Get actual headers from the first data item
+            var actualHeaders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (data.First() is System.Collections.Generic.IDictionary<string, object> firstItem)
+            {
+                foreach (var key in firstItem.Keys)
+                {
+                    actualHeaders.Add(key);
+                }
+            }
+
+            // Check for missing headers
+            foreach (var expectedHeader in expectedHeaders)
+            {
+                if (!actualHeaders.Contains(expectedHeader))
+                {
+                    HeaderWarnings.Add($"Missing expected column: '{expectedHeader}'");
+                }
+            }
+
+            // Log warnings if any
+            if (HeaderWarnings.Count > 0)
+            {
+                _log?.LogWarning("Exchange Discovery CSV missing expected columns: {warnings}",
+                    string.Join(", ", HeaderWarnings));
             }
         }
 

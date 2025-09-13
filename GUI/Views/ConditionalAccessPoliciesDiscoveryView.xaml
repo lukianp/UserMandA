@@ -251,7 +251,7 @@
                                 <!-- No Details Message -->
                                 <TextBlock Text="No details available" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}"
                                            HorizontalAlignment="Center" Margin="0,16,0,0"
-                                           Visibility="{Binding SelectedItemDetails.Count, Converter={StaticResource CountToInverseVisibility}}"/>
+                                           Visibility="{Binding SelectedItemDetails.Count, Converter={StaticResource InverseCountToVisibility}}"/>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>

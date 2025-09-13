@@ -36,11 +36,11 @@
             <!-- Profiles list -->
             <DockPanel Grid.Column="0">
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
-                    <Button Content="Reload" Margin="0,0,8,8" Command="{Binding LoadCommand}"/>
-                    <Button Content="New" Margin="0,0,8,8" Command="{Binding NewCommand}"/>
-                    <Button Content="Set Active" Margin="0,0,8,8" Command="{Binding SetActiveCommand}"/>
-                    <Button Content="Import From App Reg" Margin="0,0,8,8" Command="{Binding ImportFromAppRegCommand}"/>
-                    <Button Content="Delete" Margin="0,0,8,8" Command="{Binding DeleteCommand}" IsEnabled="{Binding Path=Selected, Converter={StaticResource NullToBoolConverter}}" Visibility="Collapsed"/>
+                    <Button Content="Reload" Margin="0,0,8,8" Command="{Binding LoadCommand}" Style="{StaticResource RoundedButtonStyle}"/>
+                    <Button Content="New" Margin="0,0,8,8" Command="{Binding NewCommand}" Style="{StaticResource RoundedButtonStyle}"/>
+                    <Button Content="Set Active" Margin="0,0,8,8" Command="{Binding SetActiveCommand}" Style="{StaticResource RoundedButtonStyle}"/>
+                    <Button Content="Import From App Reg" Margin="0,0,8,8" Command="{Binding ImportFromAppRegCommand}" Style="{StaticResource RoundedButtonStyle}"/>
+                    <Button Content="Delete" Margin="0,0,8,8" Command="{Binding DeleteCommand}" IsEnabled="{Binding Path=Selected, Converter={StaticResource NullToBoolConverter}}" Visibility="Collapsed" Style="{StaticResource RoundedButtonStyle}"/>
                 </StackPanel>
                 <ListBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding Selected}">
                     <ListBox.ItemTemplate>
@@ -111,9 +111,9 @@
                 </Grid>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Test Connection" Width="140" Margin="0,0,8,0" Command="{Binding TestConnectionCommand}"/>
-                    <Button Content="Save" Width="100" Command="{Binding SaveCommand}"/>
-                    <Button Content="Close" Width="100" Margin="8,0,0,0" IsCancel="True"/>
+                    <Button Content="Test Connection" Width="140" Margin="0,0,8,0" Command="{Binding TestConnectionCommand}" Style="{StaticResource RoundedButtonStyle}"/>
+                    <Button Content="Save" Width="100" Command="{Binding SaveCommand}" Style="{StaticResource RoundedButtonStyle}"/>
+                    <Button Content="Close" Width="100" Margin="8,0,0,0" IsCancel="True" Style="{StaticResource RoundedButtonStyle}"/>
                 </StackPanel>
             </StackPanel>
         </Grid>

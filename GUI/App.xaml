@@ -26,6 +26,7 @@
                 
                 <!-- Data grid theming -->
                 <ResourceDictionary Source="Resources/DataGridTheme.xaml"/>
+                <ResourceDictionary Source="Resources/ButtonStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
             <!-- Standard Converters -->

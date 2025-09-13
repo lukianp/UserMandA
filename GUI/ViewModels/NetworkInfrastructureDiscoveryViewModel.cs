@@ -131,7 +131,6 @@ namespace MandADiscoverySuite.ViewModels
                 ProcessingMessage = "Loading Network Infrastructure data...";
 
                 // Clear previous state
-                HeaderWarnings.Clear();
                 LastError = null;
 
                 // Load from specific CSV path using the dedicated method
@@ -146,26 +145,22 @@ namespace MandADiscoverySuite.ViewModels
 
                 var result = DataLoaderResult<dynamic>.Success(results, new List<string>());
 
-                // Clear previous header warnings and handle gracefully
-                HeaderWarnings.Clear();
-                LastError = null;
-
-                // Handle missing column warnings gracefully
-                if (result.HeaderWarnings.Count > 0)
+                // Apply HeaderWarnings logic
+                if (result.Data.Any())
+                {
+                    HeaderWarnings.Clear();
+                }
+                else if (result.HeaderWarnings.Any())
                 {
                     foreach (var warning in result.HeaderWarnings)
                     {
                         HeaderWarnings.Add($"Network Infrastructure: {warning}");
                     }
+                }
 
-                    // Don't set HasErrors for header warnings - these are handled by the UI banner
-                    // Only set errors for actual load failures
-                    HasErrors = false;
-                }
-                else
-                {
-                    HasErrors = false;
-                }
+                // Don't set HasErrors for header warnings - these are handled by the UI banner
+                // Only set errors for actual load failures
+                HasErrors = false;
 
                 // Update collections and summary statistics
                 SelectedResults.Clear();

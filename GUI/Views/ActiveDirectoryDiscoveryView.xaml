@@ -19,252 +19,42 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid>
+    <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="20,20,20,10">
-            <TextBlock Text="Active Directory Discovery" FontSize="24" FontWeight="SemiBold"/>
-            <TextBlock Text="Discover and manage Active Directory objects"
-                       FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,4,0,0"/>
-        </StackPanel>
+        <!-- Main Header Section -->
+        <ContentControl Grid.Row="0" Content="{Binding HeaderContent}" />
 
-        <!-- Header Warnings Banner -->
-        <ItemsControl Grid.Row="1" ItemsSource="{Binding HeaderWarnings}"
-                      Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibility}}"
-                      Margin="20,0,20,10">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Border Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
-                            CornerRadius="4" Margin="0,0,0,8" Padding="8">
-                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}" />
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <!-- UniformGrid for 4 Summary Statistic Cards -->
+        <ContentControl Grid.Row="1" Content="{Binding SummaryCardsContent}" />
 
-        <!-- Error Banner -->
-        <Border Grid.Row="2" Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
-                CornerRadius="4" Margin="20,0,20,10" Padding="8"
-                Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisibility}}">
-            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}" />
-        </Border>
+        <!-- ToolBar for Action Buttons -->
+        <ContentControl Grid.Row="2" Content="{Binding ActionButtonsContent}" />
 
-        <!-- Summary Cards -->
-        <WrapPanel Grid.Row="3" Margin="20,0,20,20" Orientation="Horizontal">
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
-                <StackPanel>
-                    <TextBlock Text="Total Users" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalUsers}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
+        <!-- Grid with GridSplitter to separate DataGrid from Details Panel -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
-                <StackPanel>
-                    <TextBlock Text="Total Groups" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalGroups}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}" Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
+            <!-- Main DataGrid Placeholder -->
+            <ContentControl Grid.Column="0" Content="{Binding DataGridContent}" />
 
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
-                <StackPanel>
-                    <TextBlock Text="Total Computers" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalComputers}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TertiaryBrush}" Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
+            <GridSplitter Grid.Column="1" Width="5" Background="Gray" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
 
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
-                <StackPanel>
-                    <TextBlock Text="Total OUs" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalOUs}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
-
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Padding="16" Width="250">
-                <StackPanel>
-                    <TextBlock Text="Last Discovery" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding LastDiscoveryTime, StringFormat='{}{0:g}'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
-        </WrapPanel>
-
-        <!-- Action Buttons and Data Area -->
-        <Grid Grid.Row="4">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-
-            <!-- Action Buttons -->
-            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20,0,20,10">
-                <Button Content="🔍 Run Discovery"
-                        Command="{Binding RunDiscoveryCommand}"
-                        Style="{StaticResource PrimaryButtonStyle}"
-                        Margin="0,0,12,0"/>
-
-                <Button Content="🔄 Refresh Data"
-                        Command="{Binding RefreshDataCommand}"
-                        Style="{StaticResource SecondaryButtonStyle}"
-                        Margin="0,0,12,0"/>
-
-                <Button Content="📤 Export"
-                        Command="{Binding ExportCommand}"
-                        Style="{StaticResource OutlineButtonStyle}"/>
-
-                <Button Content="📋 Show Logs"
-                        Command="{Binding ViewLogsCommand}"
-                        Style="{StaticResource GhostButtonStyle}"
-                        Margin="12,0,0,0"/>
-            </StackPanel>
-
-            <!-- Data Grid and Details Panel -->
-            <Grid Grid.Row="1">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" MinWidth="600"/>
-                    <ColumnDefinition Width="2"/>
-                    <ColumnDefinition Width="Auto" MinWidth="300"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Loading Spinner -->
-                <Border Background="{DynamicResource SurfaceBrush}"
-                        Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibility}}">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
-                        <TextBlock Text="{Binding ProcessingMessage, FallbackValue='Processing...'}" Margin="0,10,0,0" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Data Grid -->
-                <DataGrid Grid.Column="0"
-                          ItemsSource="{Binding SelectedResults}"
-                          AutoGenerateColumns="False"
-                          CanUserAddRows="False"
-                          GridLinesVisibility="Horizontal"
-                          HeadersVisibility="Column"
-                          Margin="20,0,20,20"
-                          SelectedItem="{Binding SelectedItem}"
-                          Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}">
-
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Display Name"
-                                            Binding="{Binding displayname}"
-                                            Width="200"/>
-
-                        <DataGridTextColumn Header="User Principal Name"
-                                            Binding="{Binding userprincipalname}"
-                                            Width="250"/>
-
-                        <DataGridTextColumn Header="SAM Account Name"
-                                            Binding="{Binding samaccountname}"
-                                            Width="150"/>
-
-                        <DataGridTextColumn Header="Email"
-                                            Binding="{Binding mail}"
-                                            Width="200"/>
-
-                        <DataGridTextColumn Header="Department"
-                                            Binding="{Binding department}"
-                                            Width="150"/>
-
-                        <DataGridTextColumn Header="Job Title"
-                                            Binding="{Binding jobtitle}"
-                                            Width="150"/>
-
-                        <DataGridTextColumn Header="Company"
-                                            Binding="{Binding company}"
-                                            Width="150"/>
-
-                        <DataGridTextColumn Header="Manager"
-                                            Binding="{Binding manager}"
-                                            Width="150"/>
-
-                        <DataGridTextColumn Header="Created Date"
-                                            Binding="{Binding createddatetime}"
-                                            Width="120"/>
-
-                        <DataGridTextColumn Header="Distinguished Name"
-                                            Binding="{Binding distinguishedname}"
-                                            Width="250"/>
-                    </DataGrid.Columns>
-
-                    <DataGrid.RowStyle>
-                        <Style TargetType="DataGridRow">
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-                                </Trigger>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGrid.RowStyle>
-                </DataGrid>
-
-                <!-- No Data Message -->
-                <TextBlock Grid.Column="0"
-                           Text="No Active Directory data available"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           FontSize="16"
-                           Foreground="{DynamicResource MutedForegroundBrush}"
-                           Visibility="{Binding HasResults, Converter={StaticResource InverseBoolToVisibility}}"/>
-
-                <!-- Separator -->
-                <GridSplitter Grid.Column="1" Width="2" Background="{DynamicResource BorderBrush}"
-                             HorizontalAlignment="Center" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
-
-                <!-- Details Panel -->
-                <Border Grid.Column="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                        Margin="0,0,20,20" CornerRadius="4"
-                        Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel Margin="16">
-                            <TextBlock Text="Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
-
-                            <ListView ItemsSource="{Binding SelectedItemDetails}"
-                                      BorderThickness="0" Background="Transparent"
-                                      VerticalAlignment="Stretch">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="0,0,0,8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" MinWidth="120"/>
-                                                <ColumnDefinition Width="10"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <TextBlock Text="{Binding Key}"
-                                                       Grid.Column="0"
-                                                       FontSize="12"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource MutedForegroundBrush}"
-                                                       VerticalAlignment="Top"/>
-
-                                            <TextBlock Text="{Binding Value}"
-                                                       Grid.Column="2"
-                                                       FontSize="14"
-                                                       TextWrapping="Wrap"
-                                                       HorizontalAlignment="Left"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
-                        </StackPanel>
-                    </ScrollViewer>
-                </Border>
-            </Grid>
+            <!-- Right-hand Details Panel Placeholder -->
+            <ContentControl Grid.Column="2" Content="{Binding DetailsPanelContent}" />
         </Grid>
+
+        <!-- Footer or Empty State Placeholder -->
+        <ContentControl Grid.Row="4" Content="{Binding FooterContent}" />
     </Grid>
 </UserControl>

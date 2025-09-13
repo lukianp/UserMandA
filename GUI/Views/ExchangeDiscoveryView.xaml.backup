@@ -39,12 +39,14 @@
         </StackPanel>
 
         <!-- Toolbar Section -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="10,0,10,10">
-            <Button Content="Run Discovery" Command="{Binding RunDiscoveryCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,12,0"/>
-            <Button Content="Refresh Data" Command="{Binding RefreshDataCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,12,0"/>
-            <Button Content="Export" Command="{Binding ExportCommand}" Style="{StaticResource OutlineButtonStyle}" Margin="0,0,12,0"/>
-            <Button Content="View Logs" Command="{Binding ViewLogsCommand}" Style="{StaticResource GhostButtonStyle}" Margin="0,0,0,0"/>
-        </StackPanel>
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="10,0,10,10">
+            <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Content="▶ Run Discovery" Command="{Binding RunDiscoveryCommand}" Margin="10"/>
+                <Button Content="🔄 Refresh Data" Command="{Binding RefreshDataCommand}" Margin="0,10,10,10"/>
+                <Button Content="📤 Export" Command="{Binding ExportCommand}" Margin="0,10,10,10"/>
+                <Button Content="📋 View Logs" Command="{Binding ViewLogsCommand}" Margin="0,10,10,10"/>
+            </WrapPanel>
+        </Border>
 
         <!-- Summary Cards Section -->
         <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="10,0,10,10">
@@ -87,9 +89,9 @@
                     <Border Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
                             CornerRadius="4" Margin="0,0,0,8" Padding="8">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Warning:" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ErrorForegroundBrush}"
+                            <TextBlock Text="⚠" FontSize="16" Foreground="{DynamicResource WhiteBrush}"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorForegroundBrush}"
+                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}"
                                        VerticalAlignment="Center" />
                         </StackPanel>
                     </Border>
@@ -102,9 +104,9 @@
                 CornerRadius="4" Margin="10,0,10,10" Padding="8" Opacity="0.33"
                 Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibility}}">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Error:" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ErrorForegroundBrush}"
+                <TextBlock Text="❌" FontSize="16" Foreground="{DynamicResource WhiteBrush}"
                            VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorForegroundBrush}"
+                <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}"
                            VerticalAlignment="Center" />
             </StackPanel>
         </Border>
@@ -143,42 +145,6 @@
                     <DataGridTextColumn Header="MailboxType" Binding="{Binding mailboxtype}" Width="150" />
                     <DataGridTextColumn Header="Size" Binding="{Binding sizegb}" Width="100" />
                     <DataGridTextColumn Header="LastLogin" Binding="{Binding lastlogin, StringFormat='{}{0:g}'}" Width="120" />
-                    <DataGridTemplateColumn Header="Actions" Width="100">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Button Content="View Details"
-                                        FontSize="11"
-                                        Padding="8,4"
-                                        Background="#FF10B981"
-                                        Foreground="White"
-                                        BorderThickness="0"
-                                        Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                        CommandParameter="{Binding}">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="Button">
-                                                        <Border Background="{TemplateBinding Background}"
-                                                                CornerRadius="4"
-                                                                BorderThickness="0">
-                                                            <ContentPresenter HorizontalAlignment="Center"
-                                                                              VerticalAlignment="Center"/>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter Property="Background" Value="#FF059669"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
                 </DataGrid.Columns>
             </DataGrid>
 
@@ -186,8 +152,8 @@
             <Border Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center"
                     Visibility="{Binding SelectedResults.Count, Converter={StaticResource InverseCountToVisibility}}">
                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-                    <TextBlock Text="No Exchange Data Found" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="No Exchange data found" FontSize="14" HorizontalAlignment="Center"
+                    <TextBlock Text="📧" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
+                    <TextBlock Text="No Exchange data found" FontSize="16" HorizontalAlignment="Center"
                                Margin="0,10,0,0" Opacity="0.7"/>
                     <TextBlock Text="Check CSV files in data directory" FontSize="12" HorizontalAlignment="Center"
                                Margin="0,5,0,0" Opacity="0.5"/>

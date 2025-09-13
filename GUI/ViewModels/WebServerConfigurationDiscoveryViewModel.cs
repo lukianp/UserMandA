@@ -72,15 +72,10 @@ namespace MandADiscoverySuite.ViewModels
                 foreach (var item in loadedCsvData) results.Add(item);
                 var result = DataLoaderResult<dynamic>.Success(results, new System.Collections.Generic.List<string>());
 
-                if (result.HeaderWarnings.Any())
+                // Apply HeaderWarnings logic
+                if (result.Data.Any())
                 {
-                    ErrorMessage = string.Join("; ", result.HeaderWarnings);
-                    HasErrors = true;
-                }
-                else
-                {
-                    HasErrors = false;
-                    ErrorMessage = string.Empty;
+                    HeaderWarnings.Clear();
                 }
 
                 SelectedResults.Clear();

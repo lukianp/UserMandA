@@ -138,16 +138,10 @@ namespace MandADiscoverySuite.ViewModels
 
                 var result = DataLoaderResult<dynamic>.Success(results, new List<string>());
 
-                if (result.HeaderWarnings.Any())
+                // Apply HeaderWarnings logic
+                if (result.Data.Any())
                 {
-                    // Set error message for red banner
-                    ErrorMessage = string.Join("; ", result.HeaderWarnings);
-                    HasErrors = true;
-                }
-                else
-                {
-                    HasErrors = false;
-                    ErrorMessage = string.Empty;
+                    HeaderWarnings.Clear();
                 }
 
                 // Update collections and summary statistics

@@ -9,13 +9,14 @@ using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Input;
+using GUI.Interfaces;
 
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
     /// ViewModel for Azure Discovery module
     /// </summary>
-    public class AzureDiscoveryViewModel : ModuleViewModel
+    public class AzureDiscoveryViewModel : ModuleViewModel, IDetailViewSupport
     {
         private readonly CsvDataServiceNew _csvService;
 
@@ -33,6 +34,9 @@ namespace MandADiscoverySuite.ViewModels
             var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
             var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
             _csvService = new CsvDataServiceNew(csvLogger);
+
+            // Initialize commands
+            ViewDetailsCommand = new AsyncRelayCommand<object>(OpenDetailViewAsync);
         }
 
         #endregion
@@ -99,6 +103,7 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
+        public ICommand ViewDetailsCommand { get; private set; }
 
         #endregion
 
@@ -129,6 +134,12 @@ namespace MandADiscoverySuite.ViewModels
 
                 // Load from specific CSV path using the service
                 var result = await _csvService.LoadAzureDiscoveryAsync();
+
+                // Apply HeaderWarnings logic
+                if (result.Any())
+                {
+                    HeaderWarnings.Clear();
+                }
 
                 // Update collections and summary statistics
                 SelectedResults.Clear();
@@ -218,6 +229,27 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _log?.LogError(ex, "Error exporting data");
                 ShowError("Export Failed", ex.Message);
+            }
+        }
+
+        public async Task OpenDetailViewAsync(object selectedItem)
+        {
+            try
+            {
+                if (selectedItem == null) return;
+
+                _log?.LogInformation($"Viewing details for Azure resource: {selectedItem}");
+
+                // Open AssetDetailWindow with resource data
+                var assetDetailWindow = new Views.AssetDetailWindow();
+                // TODO: Pass selectedItem to AssetDetailWindow's ViewModel
+                assetDetailWindow.ShowDialog();
+                await Task.CompletedTask; // Placeholder for async
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error viewing Azure resource details");
+                ShowError("View Details Failed", ex.Message);
             }
         }
 

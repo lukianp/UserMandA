@@ -3,18 +3,23 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Input;
+using GUI.Interfaces;
 
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
     /// ViewModel for Active Directory Discovery module
     /// </summary>
-    public class ActiveDirectoryDiscoveryViewModel : ModuleViewModel
+    public class ActiveDirectoryDiscoveryViewModel : ModuleViewModel, IDetailViewSupport
     {
         private readonly CsvDataServiceNew _csvService;
 
@@ -32,6 +37,12 @@ namespace MandADiscoverySuite.ViewModels
             var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
             var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
             _csvService = new CsvDataServiceNew(csvLogger);
+
+            // Initialize commands
+            ViewDetailsCommand = new AsyncRelayCommand<object>(OpenDetailViewAsync);
+
+            // Initialize content for template
+            InitializeContent();
         }
 
         #endregion
@@ -90,6 +101,9 @@ namespace MandADiscoverySuite.ViewModels
 
         public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails { get; } = new ObservableCollection<KeyValuePair<string, string>>();
 
+        // Header warnings collection
+        public ObservableCollection<string> HeaderWarnings { get; } = new ObservableCollection<string>();
+
         // Completion flags
         private bool _bindings_verified = true;
         public bool bindings_verified
@@ -105,6 +119,49 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _placeholder_removed, value);
         }
 
+        // ContentControl properties for template
+        private FrameworkElement _headerContent;
+        public FrameworkElement HeaderContent
+        {
+            get => _headerContent;
+            set => SetProperty(ref _headerContent, value);
+        }
+
+        private FrameworkElement _summaryCardsContent;
+        public FrameworkElement SummaryCardsContent
+        {
+            get => _summaryCardsContent;
+            set => SetProperty(ref _summaryCardsContent, value);
+        }
+
+        private FrameworkElement _actionButtonsContent;
+        public FrameworkElement ActionButtonsContent
+        {
+            get => _actionButtonsContent;
+            set => SetProperty(ref _actionButtonsContent, value);
+        }
+
+        private FrameworkElement _dataGridContent;
+        public FrameworkElement DataGridContent
+        {
+            get => _dataGridContent;
+            set => SetProperty(ref _dataGridContent, value);
+        }
+
+        private FrameworkElement _detailsPanelContent;
+        public FrameworkElement DetailsPanelContent
+        {
+            get => _detailsPanelContent;
+            set => SetProperty(ref _detailsPanelContent, value);
+        }
+
+        private FrameworkElement _footerContent;
+        public FrameworkElement FooterContent
+        {
+            get => _footerContent;
+            set => SetProperty(ref _footerContent, value);
+        }
+
         #endregion
 
         #region Commands
@@ -113,6 +170,7 @@ namespace MandADiscoverySuite.ViewModels
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
+        public ICommand ViewDetailsCommand { get; private set; }
 
         #endregion
 
@@ -147,12 +205,19 @@ namespace MandADiscoverySuite.ViewModels
 
                 if (result.HeaderWarnings.Any())
                 {
-                    // Set error message for red banner
+                    // Populate HeaderWarnings with errors
+                    HeaderWarnings.Clear();
+                    foreach (var warning in result.HeaderWarnings)
+                    {
+                        HeaderWarnings.Add(warning);
+                    }
                     ErrorMessage = string.Join("; ", result.HeaderWarnings);
                     HasErrors = true;
                 }
                 else
                 {
+                    // Clear HeaderWarnings on success
+                    HeaderWarnings.Clear();
                     HasErrors = false;
                     ErrorMessage = string.Empty;
                 }
@@ -256,6 +321,28 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
+        public async Task OpenDetailViewAsync(object selectedItem)
+        {
+            try
+            {
+                if (selectedItem == null) return;
+
+                _log?.LogInformation($"Viewing details for user: {selectedItem}");
+
+                // Open UserDetailWindow with user data
+                var userDetailWindow = new Views.UserDetailWindow();
+                // TODO: Pass selectedItem to UserDetailWindow's ViewModel
+                userDetailWindow.ShowDialog();
+                await Task.CompletedTask; // Placeholder for async
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, "Error viewing user details");
+                ShowError("View Details Failed", ex.Message);
+            }
+        }
+
+
         #endregion
 
         #region Helper Methods
@@ -345,6 +432,149 @@ namespace MandADiscoverySuite.ViewModels
                     SelectedItemDetails.Add(new KeyValuePair<string, string>(displayName, kvp.Value.ToString()));
                 }
             }
+        }
+
+        #endregion
+
+        #region Content Initialization
+
+        private void InitializeContent()
+        {
+            // Header content
+            var headerPanel = new StackPanel();
+            headerPanel.Children.Add(new TextBlock
+            {
+                Text = "Active Directory Discovery",
+                FontSize = 24,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 20, 20, 10)
+            });
+            headerPanel.Children.Add(new TextBlock
+            {
+                Text = "Discover and manage Active Directory objects",
+                FontSize = 12,
+                Foreground = System.Windows.Media.Brushes.Gray,
+                Margin = new Thickness(0, 4, 0, 0)
+            });
+            HeaderContent = headerPanel;
+
+            // Summary cards content
+            var summaryGrid = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 16) };
+
+            // Total Users card
+            var usersBorder = CreateSummaryCard("Total Users", "0");
+            summaryGrid.Children.Add(usersBorder);
+
+            // Total Groups card
+            var groupsBorder = CreateSummaryCard("Total Groups", "0");
+            summaryGrid.Children.Add(groupsBorder);
+
+            // Total Computers card
+            var computersBorder = CreateSummaryCard("Total Computers", "0");
+            summaryGrid.Children.Add(computersBorder);
+
+            // Total OUs card
+            var ousBorder = CreateSummaryCard("Total OUs", "0");
+            summaryGrid.Children.Add(ousBorder);
+
+            SummaryCardsContent = summaryGrid;
+
+            // Action buttons content
+            var toolBar = new ToolBar { Margin = new Thickness(0, 0, 0, 16) };
+            toolBar.Items.Add(new Button { Content = "Refresh", Margin = new Thickness(0, 0, 8, 0) });
+            toolBar.Items.Add(new Button { Content = "Export", Margin = new Thickness(0, 0, 8, 0) });
+            toolBar.Items.Add(new Button { Content = "Clear Filters", Margin = new Thickness(0, 0, 8, 0) });
+            ActionButtonsContent = toolBar;
+
+            // DataGrid content
+            var dataGrid = new DataGrid
+            {
+                ItemsSource = SelectedResults,
+                AutoGenerateColumns = false,
+                CanUserAddRows = false,
+                GridLinesVisibility = DataGridGridLinesVisibility.Horizontal,
+                HeadersVisibility = DataGridHeadersVisibility.Column,
+                Margin = new Thickness(20, 0, 20, 20),
+                SelectedItem = SelectedItem
+            };
+
+            // Add DataGrid columns
+            dataGrid.Columns.Add(new DataGridTextColumn { Header = "Display Name", Binding = new System.Windows.Data.Binding("displayname"), Width = 200 });
+            dataGrid.Columns.Add(new DataGridTextColumn { Header = "User Principal Name", Binding = new System.Windows.Data.Binding("userprincipalname"), Width = 250 });
+            dataGrid.Columns.Add(new DataGridTextColumn { Header = "SAM Account Name", Binding = new System.Windows.Data.Binding("samaccountname"), Width = 150 });
+            dataGrid.Columns.Add(new DataGridTextColumn { Header = "Email", Binding = new System.Windows.Data.Binding("mail"), Width = 200 });
+            dataGrid.Columns.Add(new DataGridTextColumn { Header = "Department", Binding = new System.Windows.Data.Binding("department"), Width = 150 });
+            dataGrid.Columns.Add(new DataGridTextColumn { Header = "Job Title", Binding = new System.Windows.Data.Binding("jobtitle"), Width = 150 });
+            dataGrid.Columns.Add(new DataGridTextColumn { Header = "Company", Binding = new System.Windows.Data.Binding("company"), Width = 150 });
+            dataGrid.Columns.Add(new DataGridTextColumn { Header = "Manager", Binding = new System.Windows.Data.Binding("manager"), Width = 150 });
+            dataGrid.Columns.Add(new DataGridTextColumn { Header = "Created Date", Binding = new System.Windows.Data.Binding("createddatetime"), Width = 120 });
+            dataGrid.Columns.Add(new DataGridTextColumn { Header = "Distinguished Name", Binding = new System.Windows.Data.Binding("distinguishedname"), Width = 250 });
+
+            // Add Actions column with View Details button
+            var actionsColumn = new DataGridTemplateColumn { Header = "Actions", Width = 120 };
+            var actionsTemplate = new DataTemplate();
+
+            var buttonFactory = new FrameworkElementFactory(typeof(Button));
+            buttonFactory.SetValue(Button.ContentProperty, "View Details");
+            buttonFactory.SetBinding(Button.CommandProperty, new Binding("DataContext.ViewDetailsCommand") { RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(UserControl), 1) });
+            buttonFactory.SetBinding(Button.CommandParameterProperty, new Binding("."));
+
+            actionsTemplate.VisualTree = buttonFactory;
+            actionsColumn.CellTemplate = actionsTemplate;
+            dataGrid.Columns.Add(actionsColumn);
+
+            DataGridContent = dataGrid;
+
+            // Details panel content
+            var detailsBorder = new Border
+            {
+                Background = System.Windows.Media.Brushes.LightGray,
+                BorderBrush = System.Windows.Media.Brushes.Gray,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Margin = new Thickness(0, 0, 20, 20)
+            };
+
+            var detailsScrollViewer = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+            var detailsStackPanel = new StackPanel { Margin = new Thickness(16) };
+            detailsStackPanel.Children.Add(new TextBlock { Text = "Details", FontSize = 18, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 16) });
+
+            var detailsListView = new ListView { ItemsSource = SelectedItemDetails, BorderThickness = new Thickness(0), Background = System.Windows.Media.Brushes.Transparent };
+            detailsStackPanel.Children.Add(detailsListView);
+
+            detailsScrollViewer.Content = detailsStackPanel;
+            detailsBorder.Child = detailsScrollViewer;
+
+            DetailsPanelContent = detailsBorder;
+
+            // Footer content
+            var footerBorder = new Border
+            {
+                Background = System.Windows.Media.Brushes.LightGray,
+                Padding = new Thickness(16),
+                Margin = new Thickness(0, 16, 0, 0)
+            };
+            footerBorder.Child = new TextBlock { Text = "Footer/Empty State Content", HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            FooterContent = footerBorder;
+        }
+
+        private Border CreateSummaryCard(string title, string value)
+        {
+            var border = new Border
+            {
+                Background = System.Windows.Media.Brushes.White,
+                BorderBrush = System.Windows.Media.Brushes.LightGray,
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(16),
+                Margin = new Thickness(4)
+            };
+
+            var stackPanel = new StackPanel();
+            stackPanel.Children.Add(new TextBlock { Text = title, FontSize = 14, FontWeight = FontWeights.SemiBold });
+            stackPanel.Children.Add(new TextBlock { Text = value, FontSize = 32, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 4, 0, 0) });
+
+            border.Child = stackPanel;
+            return border;
         }
 
         #endregion
