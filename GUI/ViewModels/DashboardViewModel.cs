@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -263,15 +264,35 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                var projectPath = @"C:\discoverydata\ljpops\Project.json";
-                
-                if (File.Exists(projectPath))
+                // Get dynamic project configuration path
+                var profileName = _profileService.CurrentProfile ?? "default";
+                var projectPath = Path.Combine(ConfigurationService.Instance.GetCompanyDataPath(profileName), "Project.json");
+
+                // Fallback paths for backward compatibility
+                var fallbackPaths = new[]
                 {
-                    var json = await File.ReadAllTextAsync(projectPath);
+                    projectPath,
+                    @"C:\discoverydata\ljpops\Project.json", // Legacy hardcoded path
+                    Path.Combine(ConfigurationService.Instance.DiscoveryDataRootPath, "ljpops", "Project.json")
+                };
+
+                string? foundProjectPath = null;
+                foreach (var path in fallbackPaths)
+                {
+                    if (File.Exists(path))
+                    {
+                        foundProjectPath = path;
+                        break;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(foundProjectPath))
+                {
+                    var json = await File.ReadAllTextAsync(foundProjectPath);
                     var project = JsonSerializer.Deserialize<JsonElement>(json);
 
                     ProjectName = project.GetProperty("ProjectName").GetString();
-                    
+
                     if (project.TryGetProperty("TargetCutover", out var cutover))
                     {
                         TargetCutover = DateTimeOffset.Parse(cutover.GetString() ?? "");
@@ -283,16 +304,21 @@ namespace MandADiscoverySuite.ViewModels
                         NextWave = DateTimeOffset.Parse(wave.GetString() ?? "");
                         DaysToNextWave = NextWave - DateTimeOffset.Now;
                     }
+
+                    _logger?.LogInformation("Project configuration loaded from: {Path}", foundProjectPath);
                 }
                 else
                 {
-                    ProjectName = "Not set";
+                    ProjectName = "Not configured";
+                    _logger?.LogInformation("No project configuration found for profile: {Profile}", profileName);
                 }
             }
             catch (Exception ex)
             {
                 _logger?.LogWarning(ex, "Failed to load project countdowns");
-                ProjectName = "Not set";
+                ProjectName = "Error loading";
+                ErrorMessage = $"Failed to load project configuration: {ex.Message}";
+                HasErrors = true;
             }
         }
 
@@ -300,10 +326,21 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                var projectPath = @"C:\discoverydata\ljpops\Project.json";
+                // Get dynamic project configuration path
+                var profileName = _profileService.CurrentProfile ?? "default";
+                var projectPath = Path.Combine(ConfigurationService.Instance.GetCompanyDataPath(profileName), "Project.json");
+
+                // Ensure directory exists
+                var directory = Path.GetDirectoryName(projectPath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                // Create default project configuration
                 var projectData = new
                 {
-                    ProjectName = "M&A — ljpops",
+                    ProjectName = $"M&A — {profileName}",
                     TargetCutover = "2025-12-15T09:00:00Z",
                     NextWave = "2025-10-01T09:00:00Z"
                 };
@@ -312,13 +349,14 @@ namespace MandADiscoverySuite.ViewModels
                 await File.WriteAllTextAsync(projectPath, json);
 
                 await LoadProjectCountdownsAsync();
-                
-                _logger?.LogInformation("Project configuration updated");
+
+                _logger?.LogInformation("Project configuration updated for profile: {Profile}", profileName);
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Failed to configure project");
                 ErrorMessage = $"Failed to configure project: {ex.Message}";
+                HasErrors = true;
             }
         }
     }

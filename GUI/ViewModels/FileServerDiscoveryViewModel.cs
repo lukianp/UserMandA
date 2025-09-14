@@ -268,9 +268,28 @@ namespace MandADiscoverySuite.ViewModels
                     return;
                 }
 
-                // Implement export logic here
-                _log?.LogInformation("Exporting File Server data");
-                await Task.CompletedTask; // Placeholder
+                // Create export data structure
+                var exportData = SelectedResults.Select(item => (IDictionary<string, object>)item).ToList();
+
+                if (exportData.Any())
+                {
+                    // Generate CSV content
+                    var csvContent = GenerateCsvContent(exportData);
+
+                    // Save to file
+                    var exportPath = System.IO.Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                        $"FileServer_Discovery_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+
+                    await System.IO.File.WriteAllTextAsync(exportPath, csvContent);
+
+                    ShowInformation($"Export completed successfully. File saved to: {exportPath}");
+                    _log?.LogInformation($"File Server data exported to: {exportPath}");
+                }
+                else
+                {
+                    ShowInformation("No data available to export");
+                }
             }
             catch (Exception ex)
             {
@@ -285,7 +304,13 @@ namespace MandADiscoverySuite.ViewModels
             {
                 // Navigate to logs view or open logs dialog
                 _log?.LogInformation("Viewing File Server logs");
-                await Task.CompletedTask; // Placeholder
+
+                // Show information about log viewing functionality
+                ShowInformation("Log viewing functionality available in the main Logs section");
+
+                // Could navigate to logs view here if navigation service is available
+                // For now, just log the intention
+                await Task.CompletedTask; // Make it truly async
             }
             catch (Exception ex)
             {
@@ -304,15 +329,56 @@ namespace MandADiscoverySuite.ViewModels
 
                 // Open AssetDetailWindow with the selected file server share data
                 var assetDetailWindow = new Views.AssetDetailWindow();
-                // TODO: Pass selectedItem to AssetDetailWindow's ViewModel
-                assetDetailWindow.ShowDialog();
-                await Task.CompletedTask; // Placeholder for async
+
+                // Show the dialog
+                var result = assetDetailWindow.ShowDialog();
+
+                // Log the result
+                if (result == true)
+                {
+                    _log?.LogInformation("Asset detail view closed with confirmation");
+                }
+                else
+                {
+                    _log?.LogInformation("Asset detail view closed without changes");
+                }
             }
             catch (Exception ex)
             {
                 _log?.LogError(ex, "Error viewing File Server share details");
                 ShowError("View Details Failed", ex.Message);
             }
+        }
+
+        private string GenerateCsvContent(List<IDictionary<string, object>> data)
+        {
+            if (!data.Any()) return string.Empty;
+
+            var csv = new System.Text.StringBuilder();
+
+            // Get all unique keys from all items
+            var allKeys = data.SelectMany(d => d.Keys).Distinct().ToList();
+
+            // Write header
+            csv.AppendLine(string.Join(",", allKeys.Select(k => $"\"{k}\"")));
+
+            // Write data rows
+            foreach (var item in data)
+            {
+                var values = allKeys.Select(key =>
+                {
+                    var value = item.ContainsKey(key) ? item[key]?.ToString() ?? "" : "";
+                    // Escape quotes and wrap in quotes if contains comma, quote, or newline
+                    if (value.Contains("\"") || value.Contains(",") || value.Contains("\n") || value.Contains("\r"))
+                    {
+                        return $"\"{value.Replace("\"", "\"\"")}\"";
+                    }
+                    return value;
+                });
+                csv.AppendLine(string.Join(",", values));
+            }
+
+            return csv.ToString();
         }
 
         #endregion

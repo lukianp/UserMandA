@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.MigrationProviders;
+using MandADiscoverySuite.Models.Migration;
 
 namespace MandADiscoverySuite.Services.Migration
 {
@@ -654,11 +655,11 @@ namespace MandADiscoverySuite.Services.Migration
         public List<ChangeDetectionResult<object>> SharePointChanges { get; set; } = new();
 
         // Delta migration results
-        public DeltaMigrationResult<MigrationResult>? IdentityDeltaResult { get; set; }
-        public DeltaMigrationResult<MigrationResult>? MailboxDeltaResult { get; set; }
-        public DeltaMigrationResult<MigrationResult>? FileDeltaResult { get; set; }
-        public DeltaMigrationResult<MigrationResult>? DatabaseDeltaResult { get; set; }
-        public DeltaMigrationResult<MigrationResult>? SharePointDeltaResult { get; set; }
+        public DeltaMigrationResult<MigrationResultBase>? IdentityDeltaResult { get; set; }
+        public DeltaMigrationResult<MigrationResultBase>? MailboxDeltaResult { get; set; }
+        public DeltaMigrationResult<MigrationResultBase>? FileDeltaResult { get; set; }
+        public DeltaMigrationResult<MigrationResultBase>? DatabaseDeltaResult { get; set; }
+        public DeltaMigrationResult<MigrationResultBase>? SharePointDeltaResult { get; set; }
 
         // Cutover result if auto-cutover was performed
         public ComprehensiveCutoverResult? CutoverResult { get; set; }

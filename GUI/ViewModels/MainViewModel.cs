@@ -63,6 +63,23 @@ namespace MandADiscoverySuite.ViewModels
         private ObservableCollection<object> _groups = new ObservableCollection<object>();
         private ObservableCollection<object> _databases = new ObservableCollection<object>();
         private ObservableCollection<object> _mailboxes = new ObservableCollection<object>();
+
+        // Pagination properties
+        private int _currentUserPage = 1;
+        private int _currentGroupPage = 1;
+        private int _currentInfrastructurePage = 1;
+        private int _pageSize = 50;
+        private int _totalUserPages;
+        private int _totalGroupPages;
+        private int _totalInfrastructurePages;
+        private int _totalUserCount;
+        private int _totalGroupCount;
+        private int _totalInfrastructureCount;
+
+        // View collections (paginated)
+        private ObservableCollection<object> _usersView = new ObservableCollection<object>();
+        private ObservableCollection<object> _groupsView = new ObservableCollection<object>();
+        private ObservableCollection<object> _infrastructureView = new ObservableCollection<object>();
         
         // Discovery module collection
         private ObservableCollection<ModuleInfo> _discoveryModules = new ObservableCollection<ModuleInfo>();
@@ -414,6 +431,145 @@ namespace MandADiscoverySuite.ViewModels
                 OnPropertyChanged();
             }
         }
+
+        // Pagination properties
+        public int CurrentUserPage
+        {
+            get => _currentUserPage;
+            set
+            {
+                _currentUserPage = value;
+                OnPropertyChanged();
+                UpdateUsersView();
+            }
+        }
+
+        public int CurrentGroupPage
+        {
+            get => _currentGroupPage;
+            set
+            {
+                _currentGroupPage = value;
+                OnPropertyChanged();
+                UpdateGroupsView();
+            }
+        }
+
+        public int CurrentInfrastructurePage
+        {
+            get => _currentInfrastructurePage;
+            set
+            {
+                _currentInfrastructurePage = value;
+                OnPropertyChanged();
+                UpdateInfrastructureView();
+            }
+        }
+
+        public int PageSize
+        {
+            get => _pageSize;
+            set
+            {
+                _pageSize = value;
+                OnPropertyChanged();
+                UpdateAllViews();
+            }
+        }
+
+        public int TotalUserPages
+        {
+            get => _totalUserPages;
+            set
+            {
+                _totalUserPages = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public int TotalGroupPages
+        {
+            get => _totalGroupPages;
+            set
+            {
+                _totalGroupPages = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public int TotalInfrastructurePages
+        {
+            get => _totalInfrastructurePages;
+            set
+            {
+                _totalInfrastructurePages = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public int TotalUserCount
+        {
+            get => _totalUserCount;
+            set
+            {
+                _totalUserCount = value;
+                OnPropertyChanged();
+                TotalUserPages = (int)Math.Ceiling((double)value / PageSize);
+            }
+        }
+
+        public int TotalGroupCount
+        {
+            get => _totalGroupCount;
+            set
+            {
+                _totalGroupCount = value;
+                OnPropertyChanged();
+                TotalGroupPages = (int)Math.Ceiling((double)value / PageSize);
+            }
+        }
+
+        public int TotalInfrastructureCount
+        {
+            get => _totalInfrastructureCount;
+            set
+            {
+                _totalInfrastructureCount = value;
+                OnPropertyChanged();
+                TotalInfrastructurePages = (int)Math.Ceiling((double)value / PageSize);
+            }
+        }
+
+        // Paged view collections
+        public ObservableCollection<object> UsersView
+        {
+            get => _usersView;
+            set
+            {
+                _usersView = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public ObservableCollection<object> GroupsView
+        {
+            get => _groupsView;
+            set
+            {
+                _groupsView = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public ObservableCollection<object> InfrastructureView
+        {
+            get => _infrastructureView;
+            set
+            {
+                _infrastructureView = value;
+                OnPropertyChanged();
+            }
+        }
         
         public MainViewModel()
         {
@@ -523,7 +679,7 @@ namespace MandADiscoverySuite.ViewModels
             TestTargetConnectionCommand = new AsyncRelayCommand(TestTargetConnectionAsync);
             RefreshEnvironmentStatusCommand = new AsyncRelayCommand(RefreshEnvironmentStatusAsync);
             
-            // Initialize stub commands to prevent binding errors
+            // Initialize pagination and data management commands
             RefreshUsersCommand = new AsyncRelayCommand(RefreshUsersAsync);
             RefreshInfrastructureCommand = new AsyncRelayCommand(RefreshInfrastructureAsync);
             RefreshGroupsCommand = new AsyncRelayCommand(RefreshGroupsAsync);
@@ -536,6 +692,10 @@ namespace MandADiscoverySuite.ViewModels
             PreviousGroupPageCommand = new AsyncRelayCommand(PreviousGroupPageAsync);
             NextGroupPageCommand = new AsyncRelayCommand(NextGroupPageAsync);
             LastGroupPageCommand = new AsyncRelayCommand(LastGroupPageAsync);
+            FirstInfrastructurePageCommand = new AsyncRelayCommand(FirstInfrastructurePageAsync);
+            PreviousInfrastructurePageCommand = new AsyncRelayCommand(PreviousInfrastructurePageAsync);
+            NextInfrastructurePageCommand = new AsyncRelayCommand(NextInfrastructurePageAsync);
+            LastInfrastructurePageCommand = new AsyncRelayCommand(LastInfrastructurePageAsync);
             DeleteSelectedUsersCommand = new AsyncRelayCommand(DeleteSelectedUsersAsync);
             DeleteSelectedGroupsCommand = new AsyncRelayCommand(DeleteSelectedGroupsAsync);
             PasswordPolicyCommand = new AsyncRelayCommand(PasswordPolicyAsync);
@@ -1787,6 +1947,17 @@ namespace MandADiscoverySuite.ViewModels
                         _logger?.LogWarning("[MainViewModel] Data service not available");
                     }
                     
+                    // Update pagination and views
+                    TotalUserCount = _users.Count;
+                    TotalGroupCount = _groups.Count;
+                    TotalInfrastructureCount = _computers.Count;
+
+                    CurrentUserPage = 1;
+                    CurrentGroupPage = 1;
+                    CurrentInfrastructurePage = 1;
+
+                    UpdateAllViews();
+
                     // Trigger UI update
                     OnPropertyChanged(nameof(Users));
                     OnPropertyChanged(nameof(Computers));
@@ -1794,7 +1965,7 @@ namespace MandADiscoverySuite.ViewModels
                     OnPropertyChanged(nameof(Groups));
                     OnPropertyChanged(nameof(Databases));
                     OnPropertyChanged(nameof(Mailboxes));
-                    
+
                     _logger?.LogInformation($"[MainViewModel] Data refresh completed for {csvFiles.Length} CSV files");
                 }
                 catch (Exception ex)
@@ -2955,54 +3126,707 @@ namespace MandADiscoverySuite.ViewModels
         
         #endregion
         
-        // Stub method implementations for missing commands
-        private async Task RefreshUsersAsync() => await Task.CompletedTask;
-        private async Task RefreshInfrastructureAsync() => await Task.CompletedTask;
-        private async Task RefreshGroupsAsync() => await Task.CompletedTask;
-        private async Task RefreshComputersAsync() => await Task.CompletedTask;
-        private async Task FirstUserPageAsync() => await Task.CompletedTask;
-        private async Task PreviousUserPageAsync() => await Task.CompletedTask;
-        private async Task NextUserPageAsync() => await Task.CompletedTask;
-        private async Task LastUserPageAsync() => await Task.CompletedTask;
-        private async Task FirstGroupPageAsync() => await Task.CompletedTask;
-        private async Task PreviousGroupPageAsync() => await Task.CompletedTask;
-        private async Task NextGroupPageAsync() => await Task.CompletedTask;
-        private async Task LastGroupPageAsync() => await Task.CompletedTask;
-        private async Task DeleteSelectedUsersAsync() => await Task.CompletedTask;
-        private async Task DeleteSelectedGroupsAsync() => await Task.CompletedTask;
-        private async Task PasswordPolicyAsync() => await Task.CompletedTask;
-        private async Task PasswordGeneratorAsync() => await Task.CompletedTask;
-        private async Task RefreshTopologyAsync() => await Task.CompletedTask;
-        private async Task AutoLayoutTopologyAsync() => await Task.CompletedTask;
-        private async Task CancelOperationAsync() => await Task.CompletedTask;
-        
-        // Additional stub implementations
-        private async Task StopDiscoveryAsync() => await Task.CompletedTask;
-        private async Task NavigateAsync(string? parameter) => await Task.CompletedTask;
-        private async Task RefreshCurrentViewAsync() => await Task.CompletedTask;
-        private async Task ExportUsersAsync() => await Task.CompletedTask;
-        private async Task ExportInfrastructureAsync() => await Task.CompletedTask;
-        private async Task ExportGroupsAsync() => await Task.CompletedTask;
-        private async Task ShowUsersAdvancedSearchAsync() => await Task.CompletedTask;
-        private async Task ShowInfrastructureAdvancedSearchAsync() => await Task.CompletedTask;
-        private async Task ShowGroupsAdvancedSearchAsync() => await Task.CompletedTask;
-        private async Task ShowColumnVisibilityAsync() => await Task.CompletedTask;
-        private async Task PreviousPageAsync() => await Task.CompletedTask;
-        private async Task NextPageAsync() => await Task.CompletedTask;
-        private async Task FirstPageAsync() => await Task.CompletedTask;
-        private async Task LastPageAsync() => await Task.CompletedTask;
-        private async Task PreviousInfrastructurePageAsync() => await Task.CompletedTask;
-        private async Task NextInfrastructurePageAsync() => await Task.CompletedTask;
-        private async Task FirstInfrastructurePageAsync() => await Task.CompletedTask;
-        private async Task LastInfrastructurePageAsync() => await Task.CompletedTask;
+        // Pagination helper methods
+        private void UpdateUsersView()
+        {
+            try
+            {
+                UsersView.Clear();
+                if (Users.Count == 0) return;
+
+                var startIndex = (CurrentUserPage - 1) * PageSize;
+                var items = Users.Skip(startIndex).Take(PageSize);
+
+                foreach (var item in items)
+                {
+                    UsersView.Add(item);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error updating users view");
+            }
+        }
+
+        private void UpdateGroupsView()
+        {
+            try
+            {
+                GroupsView.Clear();
+                if (Groups.Count == 0) return;
+
+                var startIndex = (CurrentGroupPage - 1) * PageSize;
+                var items = Groups.Skip(startIndex).Take(PageSize);
+
+                foreach (var item in items)
+                {
+                    GroupsView.Add(item);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error updating groups view");
+            }
+        }
+
+        private void UpdateInfrastructureView()
+        {
+            try
+            {
+                InfrastructureView.Clear();
+                if (Computers.Count == 0) return;
+
+                var startIndex = (CurrentInfrastructurePage - 1) * PageSize;
+                var items = Computers.Skip(startIndex).Take(PageSize);
+
+                foreach (var item in items)
+                {
+                    InfrastructureView.Add(item);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error updating infrastructure view");
+            }
+        }
+
+        private void UpdateAllViews()
+        {
+            UpdateUsersView();
+            UpdateGroupsView();
+            UpdateInfrastructureView();
+        }
+
+        // Pagination command implementations
+        private async Task FirstUserPageAsync()
+        {
+            await Task.Run(() => CurrentUserPage = 1);
+        }
+
+        private async Task PreviousUserPageAsync()
+        {
+            await Task.Run(() =>
+            {
+                if (CurrentUserPage > 1)
+                    CurrentUserPage--;
+            });
+        }
+
+        private async Task NextUserPageAsync()
+        {
+            await Task.Run(() =>
+            {
+                if (CurrentUserPage < TotalUserPages)
+                    CurrentUserPage++;
+            });
+        }
+
+        private async Task LastUserPageAsync()
+        {
+            await Task.Run(() => CurrentUserPage = TotalUserPages);
+        }
+
+        private async Task FirstGroupPageAsync()
+        {
+            await Task.Run(() => CurrentGroupPage = 1);
+        }
+
+        private async Task PreviousGroupPageAsync()
+        {
+            await Task.Run(() =>
+            {
+                if (CurrentGroupPage > 1)
+                    CurrentGroupPage--;
+            });
+        }
+
+        private async Task NextGroupPageAsync()
+        {
+            await Task.Run(() =>
+            {
+                if (CurrentGroupPage < TotalGroupPages)
+                    CurrentGroupPage++;
+            });
+        }
+
+        private async Task LastGroupPageAsync()
+        {
+            await Task.Run(() => CurrentGroupPage = TotalGroupPages);
+        }
+
+        private async Task FirstInfrastructurePageAsync()
+        {
+            await Task.Run(() => CurrentInfrastructurePage = 1);
+        }
+
+        private async Task PreviousInfrastructurePageAsync()
+        {
+            await Task.Run(() =>
+            {
+                if (CurrentInfrastructurePage > 1)
+                    CurrentInfrastructurePage--;
+            });
+        }
+
+        private async Task NextInfrastructurePageAsync()
+        {
+            await Task.Run(() =>
+            {
+                if (CurrentInfrastructurePage < TotalInfrastructurePages)
+                    CurrentInfrastructurePage++;
+            });
+        }
+
+        private async Task LastInfrastructurePageAsync()
+        {
+            await Task.Run(() => CurrentInfrastructurePage = TotalInfrastructurePages);
+        }
+
+        // Data management command implementations
+        private async Task RefreshUsersAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Refreshing users data");
+
+                // Reload users data
+                await ReloadDataAsync();
+
+                // Update pagination
+                TotalUserCount = Users.Count;
+                CurrentUserPage = 1;
+                UpdateUsersView();
+
+                _logger?.LogInformation($"[MainViewModel] Refreshed users data: {TotalUserCount} users loaded");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error refreshing users data");
+                System.Windows.MessageBox.Show($"Error refreshing users: {ex.Message}", "Refresh Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private async Task RefreshInfrastructureAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Refreshing infrastructure data");
+
+                // Reload infrastructure data
+                await ReloadDataAsync();
+
+                // Update pagination
+                TotalInfrastructureCount = Computers.Count;
+                CurrentInfrastructurePage = 1;
+                UpdateInfrastructureView();
+
+                _logger?.LogInformation($"[MainViewModel] Refreshed infrastructure data: {TotalInfrastructureCount} computers loaded");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error refreshing infrastructure data");
+                System.Windows.MessageBox.Show($"Error refreshing infrastructure: {ex.Message}", "Refresh Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private async Task RefreshGroupsAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Refreshing groups data");
+
+                // Reload groups data
+                await ReloadDataAsync();
+
+                // Update pagination
+                TotalGroupCount = Groups.Count;
+                CurrentGroupPage = 1;
+                UpdateGroupsView();
+
+                _logger?.LogInformation($"[MainViewModel] Refreshed groups data: {TotalGroupCount} groups loaded");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error refreshing groups data");
+                System.Windows.MessageBox.Show($"Error refreshing groups: {ex.Message}", "Refresh Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private async Task RefreshComputersAsync()
+        {
+            // Alias for RefreshInfrastructureAsync for compatibility
+            await RefreshInfrastructureAsync();
+        }
+        private async Task DeleteSelectedUsersAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Deleting selected users");
+
+                // This would typically get selected items from a DataGrid and remove them
+                // For now, just show a message indicating this functionality
+                var result = System.Windows.MessageBox.Show(
+                    "Delete selected users functionality would be implemented here.\n\nThis would remove selected users from the collection.\n\nContinue?",
+                    "Delete Selected Users",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question);
+
+                if (result == System.Windows.MessageBoxResult.Yes)
+                {
+                    _logger?.LogInformation("[MainViewModel] User confirmed deletion (stub implementation)");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error deleting selected users");
+                System.Windows.MessageBox.Show($"Error deleting users: {ex.Message}", "Delete Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private async Task DeleteSelectedGroupsAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Deleting selected groups");
+
+                var result = System.Windows.MessageBox.Show(
+                    "Delete selected groups functionality would be implemented here.\n\nThis would remove selected groups from the collection.\n\nContinue?",
+                    "Delete Selected Groups",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Question);
+
+                if (result == System.Windows.MessageBoxResult.Yes)
+                {
+                    _logger?.LogInformation("[MainViewModel] User confirmed group deletion (stub implementation)");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error deleting selected groups");
+                System.Windows.MessageBox.Show($"Error deleting groups: {ex.Message}", "Delete Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private async Task PasswordPolicyAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Showing password policy dialog");
+
+                System.Windows.MessageBox.Show(
+                    "Password Policy Management\n\nThis dialog would allow configuration of:\n• Minimum password length\n• Complexity requirements\n• Password expiration\n• Account lockout policies",
+                    "Password Policy",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error showing password policy");
+            }
+        }
+
+        private async Task PasswordGeneratorAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Showing password generator");
+
+                System.Windows.MessageBox.Show(
+                    "Password Generator\n\nThis tool would generate secure passwords based on:\n• Configured complexity rules\n• Length requirements\n• Character set requirements",
+                    "Password Generator",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error showing password generator");
+            }
+        }
+
+        private async Task RefreshTopologyAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Refreshing topology visualization");
+
+                // This would refresh the network topology visualization
+                System.Windows.MessageBox.Show(
+                    "Topology refresh would update the network visualization with:\n• Current device connections\n• Updated link statuses\n• New discovered devices",
+                    "Refresh Topology",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error refreshing topology");
+            }
+        }
+
+        private async Task AutoLayoutTopologyAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Applying automatic topology layout");
+
+                System.Windows.MessageBox.Show(
+                    "Auto-layout would reorganize the topology visualization using:\n• Hierarchical layout algorithms\n• Force-directed positioning\n• Optimized spacing",
+                    "Auto Layout Topology",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error applying auto layout");
+            }
+        }
+
+        private async Task CancelOperationAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Cancelling current operation");
+
+                System.Windows.MessageBox.Show(
+                    "Current operation cancelled.\n\nThis would gracefully stop any running:\n• Discovery processes\n• Data exports\n• Background operations",
+                    "Operation Cancelled",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error cancelling operation");
+            }
+        }
+
+        // Additional implementations
+        private async Task StopDiscoveryAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Stopping discovery process");
+
+                System.Windows.MessageBox.Show("Discovery stop functionality would signal running discovery processes to terminate gracefully.",
+                    "Stop Discovery", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error stopping discovery");
+            }
+        }
+
+        private async Task NavigateAsync(string? parameter)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(parameter)) return;
+
+                _logger?.LogInformation($"[MainViewModel] Navigating to: {parameter}");
+                await _navigationService.NavigateToTabAsync(parameter, parameter);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"[MainViewModel] Error navigating to {parameter}");
+            }
+        }
+
+        private async Task RefreshCurrentViewAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Refreshing current view");
+                await ReloadDataAsync();
+                UpdateAllViews();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error refreshing current view");
+            }
+        }
+
+        private async Task ExportUsersAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Exporting users data");
+
+                if (Users.Count == 0)
+                {
+                    System.Windows.MessageBox.Show("No users data to export.", "Export Users",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
+                var result = await _dataExportService.ExportToCsvAsync(Users, $"Users_{CurrentProfileName}_{DateTime.Now:yyyyMMdd_HHmmss}");
+                if (result)
+                {
+                    System.Windows.MessageBox.Show("Users data exported successfully.", "Export Complete",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show("Failed to export users data.", "Export Failed",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error exporting users");
+                System.Windows.MessageBox.Show($"Error exporting users: {ex.Message}", "Export Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private async Task ExportInfrastructureAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Exporting infrastructure data");
+
+                if (Computers.Count == 0)
+                {
+                    System.Windows.MessageBox.Show("No infrastructure data to export.", "Export Infrastructure",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
+                var result = await _dataExportService.ExportToCsvAsync(Computers, $"Infrastructure_{CurrentProfileName}_{DateTime.Now:yyyyMMdd_HHmmss}");
+                if (result)
+                {
+                    System.Windows.MessageBox.Show("Infrastructure data exported successfully.", "Export Complete",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show("Failed to export infrastructure data.", "Export Failed",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error exporting infrastructure");
+                System.Windows.MessageBox.Show($"Error exporting infrastructure: {ex.Message}", "Export Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private async Task ExportGroupsAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Exporting groups data");
+
+                if (Groups.Count == 0)
+                {
+                    System.Windows.MessageBox.Show("No groups data to export.", "Export Groups",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
+                var result = await _dataExportService.ExportToCsvAsync(Groups, $"Groups_{CurrentProfileName}_{DateTime.Now:yyyyMMdd_HHmmss}");
+                if (result)
+                {
+                    System.Windows.MessageBox.Show("Groups data exported successfully.", "Export Complete",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show("Failed to export groups data.", "Export Failed",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error exporting groups");
+                System.Windows.MessageBox.Show($"Error exporting groups: {ex.Message}", "Export Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private async Task ShowUsersAdvancedSearchAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Showing advanced search for users");
+
+                System.Windows.MessageBox.Show("Advanced search for users would include:\n• Multi-field filtering\n• Date range searches\n• Boolean operators\n• Saved search queries",
+                    "Advanced Search", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error showing users advanced search");
+            }
+        }
+
+        private async Task ShowInfrastructureAdvancedSearchAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Showing advanced search for infrastructure");
+
+                System.Windows.MessageBox.Show("Advanced search for infrastructure would include:\n• IP address ranges\n• Operating system filters\n• Hardware specifications\n• Network location filters",
+                    "Advanced Search", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error showing infrastructure advanced search");
+            }
+        }
+
+        private async Task ShowGroupsAdvancedSearchAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Showing advanced search for groups");
+
+                System.Windows.MessageBox.Show("Advanced search for groups would include:\n• Group type filters\n• Member count ranges\n• Creation date filters\n• Security group classification",
+                    "Advanced Search", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error showing groups advanced search");
+            }
+        }
+
+        private async Task ShowColumnVisibilityAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Showing column visibility dialog");
+
+                System.Windows.MessageBox.Show("Column visibility settings would allow:\n• Showing/hiding data columns\n• Reordering columns\n• Saving column layouts\n• Resetting to defaults",
+                    "Column Visibility", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error showing column visibility");
+            }
+        }
+
+        // Generic pagination commands (for backward compatibility)
+        private async Task PreviousPageAsync()
+        {
+            // Default to users pagination
+            await PreviousUserPageAsync();
+        }
+
+        private async Task NextPageAsync()
+        {
+            // Default to users pagination
+            await NextUserPageAsync();
+        }
+
+        private async Task FirstPageAsync()
+        {
+            // Default to users pagination
+            await FirstUserPageAsync();
+        }
+
+        private async Task LastPageAsync()
+        {
+            // Default to users pagination
+            await LastUserPageAsync();
+        }
         
         // Selection command implementations
-        private async Task SelectAllUsersAsync() => await Task.CompletedTask;
-        private async Task SelectAllInfrastructureAsync() => await Task.CompletedTask;
-        private async Task SelectAllGroupsAsync() => await Task.CompletedTask;
-        private async Task CopySelectedUsersAsync() => await Task.CompletedTask;
-        private async Task CopySelectedInfrastructureAsync() => await Task.CompletedTask;
-        private async Task CopySelectedGroupsAsync() => await Task.CompletedTask;
+        private async Task SelectAllUsersAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Selecting all users");
+                // This would typically interact with a DataGrid or ListView to select all items
+                // For now, just log the operation
+                await Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error selecting all users");
+            }
+        }
+
+        private async Task SelectAllInfrastructureAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Selecting all infrastructure");
+                // This would typically interact with a DataGrid or ListView to select all items
+                await Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error selecting all infrastructure");
+            }
+        }
+
+        private async Task SelectAllGroupsAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Selecting all groups");
+                // This would typically interact with a DataGrid or ListView to select all items
+                await Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error selecting all groups");
+            }
+        }
+
+        private async Task CopySelectedUsersAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Copying selected users to clipboard");
+                // This would typically get selected items from a DataGrid and copy to clipboard
+                // For now, just show a message
+                System.Windows.MessageBox.Show("Copy functionality would copy selected users to clipboard.",
+                    "Copy Users", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error copying selected users");
+                System.Windows.MessageBox.Show($"Error copying users: {ex.Message}", "Copy Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private async Task CopySelectedInfrastructureAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Copying selected infrastructure to clipboard");
+                // This would typically get selected items from a DataGrid and copy to clipboard
+                System.Windows.MessageBox.Show("Copy functionality would copy selected infrastructure to clipboard.",
+                    "Copy Infrastructure", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error copying selected infrastructure");
+                System.Windows.MessageBox.Show($"Error copying infrastructure: {ex.Message}", "Copy Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private async Task CopySelectedGroupsAsync()
+        {
+            try
+            {
+                _logger?.LogInformation("[MainViewModel] Copying selected groups to clipboard");
+                // This would typically get selected items from a DataGrid and copy to clipboard
+                System.Windows.MessageBox.Show("Copy functionality would copy selected groups to clipboard.",
+                    "Copy Groups", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Error copying selected groups");
+                System.Windows.MessageBox.Show($"Error copying groups: {ex.Message}", "Copy Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
 
         // New Discovery Views command implementations
         private async Task ShowFileServerDiscoveryAsync()

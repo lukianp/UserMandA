@@ -7,7 +7,9 @@ using Microsoft.Graph;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Services.Migration;
+using MandADiscoverySuite.Models.Migration;
 using IIDM = MandADiscoverySuite.Migration.IIdentityDeltaMigrator;
+using MandADiscoverySuite.Models;
 
 namespace MandADiscoverySuite.MigrationProviders
 {

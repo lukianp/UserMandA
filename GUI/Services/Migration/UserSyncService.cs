@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.Json;
+using System.IO;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using MandADiscoverySuite.Migration;
@@ -645,23 +647,80 @@ namespace MandADiscoverySuite.Services.Migration
         }
 
         /// <summary>
-        /// Persist sync configuration (placeholder for database storage)
+        /// Persist sync configuration to file storage
         /// </summary>
         private async Task PersistSyncConfigurationAsync(UserSyncConfiguration config, MigrationContext context, CancellationToken cancellationToken)
         {
-            // In a real implementation, this would save to a database
-            await Task.CompletedTask;
-            _logger.LogDebug($"Persisted sync configuration for user: {config.SourceUserPrincipalName}");
+            try
+            {
+                var syncDataPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "MandADiscoverySuite",
+                    "UserSyncConfigurations");
+
+                Directory.CreateDirectory(syncDataPath);
+
+                var fileName = $"{config.SourceUserPrincipalName.Replace("@", "_").Replace(".", "_")}.json";
+                var filePath = Path.Combine(syncDataPath, fileName);
+
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNameCaseInsensitive = true
+                };
+
+                var json = JsonSerializer.Serialize(config, jsonOptions);
+                await File.WriteAllTextAsync(filePath, json, cancellationToken);
+
+                // Configuration successfully persisted
+
+                _logger.LogInformation($"Successfully persisted sync configuration for user: {config.SourceUserPrincipalName} to {filePath}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to persist sync configuration for user: {config.SourceUserPrincipalName}");
+                throw; // Re-throw to maintain error handling in calling method
+            }
         }
 
         /// <summary>
-        /// Remove sync configuration (placeholder for database removal)
+        /// Remove sync configuration from file storage
         /// </summary>
         private async Task RemoveSyncConfigurationAsync(UserSyncConfiguration config, MigrationContext context, CancellationToken cancellationToken)
         {
-            // In a real implementation, this would remove from database
-            await Task.CompletedTask;
-            _logger.LogDebug($"Removed sync configuration for user: {config.SourceUserPrincipalName}");
+            try
+            {
+                var syncDataPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "MandADiscoverySuite",
+                    "UserSyncConfigurations");
+
+                var fileName = $"{config.SourceUserPrincipalName.Replace("@", "_").Replace(".", "_")}.json";
+                var filePath = Path.Combine(syncDataPath, fileName);
+
+                if (File.Exists(filePath))
+                {
+                    await Task.Run(() => File.Delete(filePath), cancellationToken);
+                    _logger.LogInformation($"Successfully removed sync configuration file for user: {config.SourceUserPrincipalName}");
+                }
+                else
+                {
+                    _logger.LogWarning($"Sync configuration file not found for user: {config.SourceUserPrincipalName} at {filePath}");
+                }
+
+                // Also cleanup any backup files if they exist
+                var backupPath = filePath + ".backup";
+                if (File.Exists(backupPath))
+                {
+                    await Task.Run(() => File.Delete(backupPath), cancellationToken);
+                    _logger.LogDebug($"Cleaned up backup file for user: {config.SourceUserPrincipalName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to remove sync configuration for user: {config.SourceUserPrincipalName}");
+                throw; // Re-throw to maintain error handling in calling method
+            }
         }
 
         #endregion

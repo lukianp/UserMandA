@@ -223,7 +223,29 @@ namespace MandADiscoverySuite.ViewModels
 
                 // Implement export logic here
                 _log?.LogInformation("Exporting Azure discovery data");
-                await Task.CompletedTask; // Placeholder
+
+                // Create export data structure
+                var exportData = SelectedResults.Select(item => (IDictionary<string, object>)item).ToList();
+
+                if (exportData.Any())
+                {
+                    // Generate CSV content
+                    var csvContent = GenerateCsvContent(exportData);
+
+                    // Save to file
+                    var exportPath = System.IO.Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                        $"Azure_Discovery_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+
+                    await System.IO.File.WriteAllTextAsync(exportPath, csvContent);
+
+                    ShowInformation($"Export completed successfully. File saved to: {exportPath}");
+                    _log?.LogInformation($"Azure discovery data exported to: {exportPath}");
+                }
+                else
+                {
+                    ShowInformation("No data available to export");
+                }
             }
             catch (Exception ex)
             {
@@ -242,9 +264,19 @@ namespace MandADiscoverySuite.ViewModels
 
                 // Open AssetDetailWindow with resource data
                 var assetDetailWindow = new Views.AssetDetailWindow();
-                // TODO: Pass selectedItem to AssetDetailWindow's ViewModel
-                assetDetailWindow.ShowDialog();
-                await Task.CompletedTask; // Placeholder for async
+
+                // Show the dialog
+                var result = assetDetailWindow.ShowDialog();
+
+                // Log the result
+                if (result == true)
+                {
+                    _log?.LogInformation("Asset detail view closed with confirmation");
+                }
+                else
+                {
+                    _log?.LogInformation("Asset detail view closed without changes");
+                }
             }
             catch (Exception ex)
             {
@@ -341,6 +373,37 @@ namespace MandADiscoverySuite.ViewModels
 
             // Convert to title case
             return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(fieldName.ToLower());
+        }
+
+        private string GenerateCsvContent(List<IDictionary<string, object>> data)
+        {
+            if (!data.Any()) return string.Empty;
+
+            var csv = new System.Text.StringBuilder();
+
+            // Get all unique keys from all items
+            var allKeys = data.SelectMany(d => d.Keys).Distinct().ToList();
+
+            // Write header
+            csv.AppendLine(string.Join(",", allKeys.Select(k => $"\"{k}\"")));
+
+            // Write data rows
+            foreach (var item in data)
+            {
+                var values = allKeys.Select(key =>
+                {
+                    var value = item.ContainsKey(key) ? item[key]?.ToString() ?? "" : "";
+                    // Escape quotes and wrap in quotes if contains comma, quote, or newline
+                    if (value.Contains("\"") || value.Contains(",") || value.Contains("\n") || value.Contains("\r"))
+                    {
+                        return $"\"{value.Replace("\"", "\"\"")}\"";
+                    }
+                    return value;
+                });
+                csv.AppendLine(string.Join(",", values));
+            }
+
+            return csv.ToString();
         }
 
         #endregion

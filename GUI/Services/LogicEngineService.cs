@@ -3173,21 +3173,216 @@ namespace MandADiscoverySuite.Services
 
         private void ApplyGpoSecurityFilterInference()
         {
-            // TODO: Implement GPO security filtering inference
-            _appliedInferenceRules.Add("GPO security filter inference");
+            var gpoFilterCount = 0;
+
+            try
+            {
+                // Build GPO security filter relationships
+                foreach (var gpoKvp in _gposByGuid.ToArray())
+                {
+                    var gpo = gpoKvp.Value;
+                    if (gpo.SecurityFilter.Count == 0) continue;
+
+                    foreach (var filterSid in gpo.SecurityFilter)
+                    {
+                        // Create security filtering relationships
+                        if (_usersBySid.ContainsKey(filterSid))
+                        {
+                            // User-based security filter
+                            var user = _usersBySid[filterSid];
+                            _edges.Add(new GraphEdge(
+                                gpo.Guid,
+                                user.Sid,
+                                EdgeType.LinkedByGpo,
+                                new Dictionary<string, object>
+                                {
+                                    ["FilterType"] = "UserSecurityFilter",
+                                    ["GpoName"] = gpo.Name ?? "",
+                                    ["FilterSid"] = filterSid,
+                                    ["IsSecurityFiltered"] = true
+                                }
+                            ));
+
+                            // Add to GPO filter indices
+                            _gposBySidFilter.AddToValueList(user.Sid, gpo);
+                            gpoFilterCount++;
+                        }
+                        else if (_groupsBySid.ContainsKey(filterSid))
+                        {
+                            // Group-based security filter
+                            var group = _groupsBySid[filterSid];
+                            _edges.Add(new GraphEdge(
+                                gpo.Guid,
+                                group.Sid,
+                                EdgeType.LinkedByGpo,
+                                new Dictionary<string, object>
+                                {
+                                    ["FilterType"] = "GroupSecurityFilter",
+                                    ["GpoName"] = gpo.Name ?? "",
+                                    ["FilterSid"] = filterSid,
+                                    ["MemberCount"] = group.Members.Count,
+                                    ["IsSecurityFiltered"] = true
+                                }
+                            ));
+
+                            // Propagate to group members
+                            foreach (var memberSid in group.Members)
+                            {
+                                _gposBySidFilter.AddToValueList(memberSid, gpo);
+                            }
+                            gpoFilterCount++;
+                        }
+                        else
+                        {
+                            // Unknown SID type - log for analysis
+                            _logger.LogDebug("GPO {GpoName} has unknown security filter SID: {FilterSid}", gpo.Name, filterSid);
+                        }
+                    }
+                }
+
+                _appliedInferenceRules.Add($"GPO security filter inference ({gpoFilterCount} filters applied)");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to apply GPO security filter inference");
+                _appliedInferenceRules.Add("GPO security filter inference (failed)");
+            }
         }
 
         private void ApplyMailboxPresenceInference()
         {
-            // TODO: Implement mailbox presence inference
-            _appliedInferenceRules.Add("Mailbox presence inference");
+            var mailboxPresenceLinks = 0;
+
+            try
+            {
+                // Build mailbox-user relationships
+                foreach (var mailbox in _mailboxByUpn.Values)
+                {
+                    var user = _usersByUpn.GetValueOrDefault(mailbox.UPN);
+                    if (user != null)
+                    {
+                        // Create mailbox-user relationship
+                        _edges.Add(new GraphEdge(
+                            user.Sid,
+                            mailbox.UPN,
+                            EdgeType.HasMailbox,
+                            new Dictionary<string, object>
+                            {
+                                ["MailboxSizeMB"] = mailbox.SizeMB,
+                                ["MailboxType"] = mailbox.Type,
+                                ["MailboxGuid"] = mailbox.MailboxGuid ?? "",
+                                ["DiscoveryTimestamp"] = mailbox.DiscoveryTimestamp
+                            }
+                        ));
+
+                        // Create reverse relationship for mailbox dependency tracking
+                        _edges.Add(new GraphEdge(
+                            mailbox.UPN,
+                            user.Sid,
+                            EdgeType.MapsTo,
+                            new Dictionary<string, object>
+                            {
+                                ["MappingType"] = "MailboxOwner",
+                                ["UserSid"] = user.Sid,
+                                ["UserUPN"] = user.UPN,
+                                ["UserEnabled"] = user.Enabled
+                            }
+                        ));
+
+                        mailboxPresenceLinks++;
+                    }
+                    else
+                    {
+                        // Log orphaned mailbox
+                        _logger.LogDebug("Mailbox {UPN} has no corresponding user account", mailbox.UPN);
+                        _appliedInferenceRules.Add($"Orphaned mailbox detected: {mailbox.UPN}");
+                    }
+                }
+
+                _appliedInferenceRules.Add($"Mailbox presence inference ({mailboxPresenceLinks} mailbox-user links created)");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to apply mailbox presence inference");
+                _appliedInferenceRules.Add("Mailbox presence inference (failed)");
+            }
         }
 
         private void ApplyAzureRoleInference()
         {
-            // TODO: Implement Azure role inference
-            var linkedRolesCount = _rolesByPrincipalId.Values.Sum(list => list.Count);
-            _appliedInferenceRules.Add($"Azure role inference ({linkedRolesCount} role assignments)");
+            var linkedRolesCount = 0;
+            var azureUserMappings = 0;
+
+            try
+            {
+                // Build Azure role relationships and user mappings
+                foreach (var roleAssignment in _rolesByPrincipalId.Values.SelectMany(list => list))
+                {
+                    var principalId = roleAssignment.PrincipalObjectId;
+
+                    // Find user by Azure Object ID or SID (if it matches Azure Object ID format)
+                    UserDto? mappedUser = null;
+
+                    // First try direct Azure Object ID match
+                    mappedUser = _usersBySid.Values.FirstOrDefault(u =>
+                        u.AzureObjectId?.Equals(principalId, StringComparison.OrdinalIgnoreCase) == true);
+
+                    // If not found, try SID match (some legacy mappings might use SID as Azure Object ID)
+                    if (mappedUser == null)
+                    {
+                        _usersBySid.TryGetValue(principalId, out mappedUser);
+                    }
+
+                    if (mappedUser != null)
+                    {
+                        // Create role assignment edge
+                        _edges.Add(new GraphEdge(
+                            roleAssignment.PrincipalObjectId,
+                            roleAssignment.RoleName,
+                            EdgeType.AssignedRole,
+                            new Dictionary<string, object>
+                            {
+                                ["Scope"] = roleAssignment.Scope,
+                                ["RoleDefinitionId"] = roleAssignment.RoleName, // Assuming RoleName contains the definition
+                                ["UserSid"] = mappedUser.Sid,
+                                ["UserUPN"] = mappedUser.UPN,
+                                ["AssignmentTimestamp"] = roleAssignment.DiscoveryTimestamp
+                            }
+                        ));
+
+                        // Create user-role relationship
+                        _edges.Add(new GraphEdge(
+                            mappedUser.Sid,
+                            roleAssignment.RoleName,
+                            EdgeType.AssignedRole,
+                            new Dictionary<string, object>
+                            {
+                                ["PrincipalId"] = roleAssignment.PrincipalObjectId,
+                                ["Scope"] = roleAssignment.Scope,
+                                ["RoleType"] = "AzureRBAC",
+                                ["DiscoveryTimestamp"] = roleAssignment.DiscoveryTimestamp
+                            }
+                        ));
+
+                        azureUserMappings++;
+                    }
+                    else
+                    {
+                        // Log unmapped Azure role assignment
+                        _logger.LogDebug("Azure role assignment for principal {PrincipalId} has no corresponding user mapping", principalId);
+                        _appliedInferenceRules.Add($"Unmapped Azure role: {roleAssignment.RoleName} for {principalId}");
+                    }
+
+                    linkedRolesCount++;
+                }
+
+                _appliedInferenceRules.Add($"Azure role inference ({linkedRolesCount} role assignments, {azureUserMappings} user mappings)");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to apply Azure role inference");
+                _appliedInferenceRules.Add($"Azure role inference ({linkedRolesCount} role assignments, failed)");
+            }
         }
 
         private void ApplySqlOwnershipInference()
@@ -4882,61 +5077,65 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Gets comprehensive file share detail projection including permissions and usage
         /// </summary>
-        public async Task<FileShareDto?> GetFileShareDetailAsync(string shareName)
+        public Task<FileShareDto?> GetFileShareDetailAsync(string shareName)
         {
-            await Task.CompletedTask; // Async stub
-            
-            // Return a basic stub - could be expanded to return actual file share data
-            return new FileShareDto(
+            // Try to find the share from loaded data
+            if (_fileSharesByName.TryGetValue(shareName, out var share))
+            {
+                return Task.FromResult<FileShareDto?>(share);
+            }
+
+            // Return a basic stub if not found in loaded data
+            var stubShare = new FileShareDto(
                 Name: shareName,
                 Path: $"\\\\server\\{shareName}",
                 Description: $"File share: {shareName}",
                 Server: "server",
                 Permissions: new List<string>(),
-                DiscoveryTimestamp: DateTime.Now,
+                DiscoveryTimestamp: DateTime.UtcNow,
                 DiscoveryModule: "StubModule",
-                SessionId: "stub-session"
+                SessionId: Guid.NewGuid().ToString()
             );
+
+            return Task.FromResult<FileShareDto?>(stubShare);
         }
         
         /// <summary>
         /// Gets comprehensive mailbox detail projection including size and permissions
         /// </summary>
-        public async Task<MailboxDto?> GetMailboxDetailAsync(string mailboxName)
+        public Task<MailboxDto?> GetMailboxDetailAsync(string mailboxName)
         {
-            await Task.CompletedTask; // Async stub
-            
             // Find mailbox from loaded data
-            var mailbox = _mailboxByUpn.Values.FirstOrDefault(m => m.UserPrincipalName?.Equals(mailboxName, StringComparison.OrdinalIgnoreCase) == true);
-            return mailbox;
+            var mailbox = _mailboxByUpn.Values.FirstOrDefault(m =>
+                m.UserPrincipalName?.Equals(mailboxName, StringComparison.OrdinalIgnoreCase) == true ||
+                m.UserPrincipalName?.Contains(mailboxName, StringComparison.OrdinalIgnoreCase) == true);
+
+            return Task.FromResult(mailbox);
         }
         
         /// <summary>
         /// Gets mailbox by UPN for eligibility checks
         /// </summary>
-        public async Task<MailboxDto?> GetMailboxByUpnAsync(string upn)
+        public Task<MailboxDto?> GetMailboxByUpnAsync(string upn)
         {
-            await Task.CompletedTask; // Async stub
             _mailboxByUpn.TryGetValue(upn, out var mailbox);
-            return mailbox;
+            return Task.FromResult(mailbox);
         }
         
         /// <summary>
         /// Gets all users for eligibility analysis
         /// </summary>
-        public async Task<List<UserDto>> GetAllUsersAsync()
+        public Task<List<UserDto>> GetAllUsersAsync()
         {
-            await Task.CompletedTask; // Async stub
-            return _usersBySid.Values.ToList();
+            return Task.FromResult(_usersBySid.Values.ToList());
         }
         
         /// <summary>
         /// Gets all mailboxes for eligibility analysis
         /// </summary>
-        public async Task<List<MailboxDto>> GetAllMailboxesAsync()
+        public Task<List<MailboxDto>> GetAllMailboxesAsync()
         {
-            await Task.CompletedTask; // Async stub
-            return _mailboxByUpn.Values.ToList();
+            return Task.FromResult(_mailboxByUpn.Values.ToList());
         }
         
         private readonly ConcurrentDictionary<string, FileShareDto> _fileSharesByName = new();
@@ -4946,8 +5145,6 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<List<FileShareDto>> GetAllFileSharesAsync()
         {
-            await Task.CompletedTask; // Async stub
-
             // Build file shares from NTFS ACL data and share patterns
             var fileShares = BuildFileSharesFromAclData();
 
@@ -4962,9 +5159,9 @@ namespace MandADiscoverySuite.Services
                         Description: "Shared documents folder",
                         Server: "FileServer01",
                         Permissions: new List<string> { "Domain Users" },
-                        DiscoveryTimestamp: DateTime.Now.AddDays(-1),
+                        DiscoveryTimestamp: DateTime.UtcNow.AddDays(-1),
                         DiscoveryModule: "FileServerDiscovery",
-                        SessionId: "sample-session"
+                        SessionId: Guid.NewGuid().ToString()
                     ),
                     new FileShareDto(
                         Name: "UserProfiles",
@@ -4972,9 +5169,9 @@ namespace MandADiscoverySuite.Services
                         Description: "User profile share",
                         Server: "FileServer01",
                         Permissions: new List<string> { "Domain Admins" },
-                        DiscoveryTimestamp: DateTime.Now.AddDays(-1),
+                        DiscoveryTimestamp: DateTime.UtcNow.AddDays(-1),
                         DiscoveryModule: "FileServerDiscovery",
-                        SessionId: "sample-session"
+                        SessionId: Guid.NewGuid().ToString()
                     )
                 };
             }
@@ -5392,10 +5589,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Gets all SQL databases for eligibility analysis
         /// </summary>
-        public async Task<List<SqlDbDto>> GetAllSqlDatabasesAsync()
+        public Task<List<SqlDbDto>> GetAllSqlDatabasesAsync()
         {
-            await Task.CompletedTask; // Async stub
-            return _sqlDbsByKey.Values.ToList();
+            return Task.FromResult(_sqlDbsByKey.Values.ToList());
         }
 
     }

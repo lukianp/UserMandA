@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models;
 using Microsoft.Extensions.Logging;
@@ -152,8 +153,29 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 if (SelectedResults.Count == 0) { ShowInformation("No data to export"); return; }
-                _log?.LogInformation("Exporting Web Server data");
-                await Task.CompletedTask;
+
+                // Create export data structure
+                var exportData = SelectedResults.Select(item => (IDictionary<string, object>)item).ToList();
+
+                if (exportData.Any())
+                {
+                    // Generate CSV content
+                    var csvContent = GenerateCsvContent(exportData);
+
+                    // Save to file
+                    var exportPath = System.IO.Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                        $"WebServer_Discovery_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+
+                    await System.IO.File.WriteAllTextAsync(exportPath, csvContent);
+
+                    ShowInformation($"Export completed successfully. File saved to: {exportPath}");
+                    _log?.LogInformation($"Web Server data exported to: {exportPath}");
+                }
+                else
+                {
+                    ShowInformation("No data available to export");
+                }
             }
             catch (Exception ex) { _log?.LogError(ex, "Error exporting data"); ShowError("Export Failed", ex.Message); }
         }
@@ -339,6 +361,37 @@ namespace MandADiscoverySuite.ViewModels
             }
 
             return asset.ToString() ?? "Unknown";
+        }
+
+        private string GenerateCsvContent(List<IDictionary<string, object>> data)
+        {
+            if (!data.Any()) return string.Empty;
+
+            var csv = new System.Text.StringBuilder();
+
+            // Get all unique keys from all items
+            var allKeys = data.SelectMany(d => d.Keys).Distinct().ToList();
+
+            // Write header
+            csv.AppendLine(string.Join(",", allKeys.Select(k => $"\"{k}\"")));
+
+            // Write data rows
+            foreach (var item in data)
+            {
+                var values = allKeys.Select(key =>
+                {
+                    var value = item.ContainsKey(key) ? item[key]?.ToString() ?? "" : "";
+                    // Escape quotes and wrap in quotes if contains comma, quote, or newline
+                    if (value.Contains("\"") || value.Contains(",") || value.Contains("\n") || value.Contains("\r"))
+                    {
+                        return $"\"{value.Replace("\"", "\"\"")}\"";
+                    }
+                    return value;
+                });
+                csv.AppendLine(string.Join(",", values));
+            }
+
+            return csv.ToString();
         }
     }
 }

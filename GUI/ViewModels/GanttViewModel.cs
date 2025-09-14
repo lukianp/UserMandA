@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -79,11 +80,22 @@ namespace MandADiscoverySuite.ViewModels
             // First try to load from CSV data in profile directory
             try
             {
-                var profileName = "ljpops"; // TODO: Get from configuration/context
+                // Get dynamic profile name from ProfileService
+                var profileService = MandADiscoverySuite.Services.ProfileService.Instance;
+                var profileName = profileService.CurrentProfile ?? "default";
+
+                // Get dynamic paths using ConfigurationService
+                var configService = MandADiscoverySuite.Services.ConfigurationService.Instance;
+                var companyDataPath = configService.GetCompanyDataPath(profileName);
+                var rawDataPath = System.IO.Path.Combine(companyDataPath, "Raw", "GanttTasks.csv");
+
+                // Fallback paths for backward compatibility
                 var possiblePaths = new[]
                 {
+                    rawDataPath,
                     System.IO.Path.Combine(@"C:\discoverydata", profileName, "Raw", "GanttTasks.csv"),
-                    System.IO.Path.Combine(@"C:\discoverydata\Profiles", profileName, "Raw", "GanttTasks.csv")
+                    System.IO.Path.Combine(@"C:\discoverydata\Profiles", profileName, "Raw", "GanttTasks.csv"),
+                    System.IO.Path.Combine(@"C:\discoverydata", "ljpops", "Raw", "GanttTasks.csv") // Legacy fallback
                 };
 
                 foreach (var csvPath in possiblePaths)
@@ -91,6 +103,7 @@ namespace MandADiscoverySuite.ViewModels
                     if (System.IO.File.Exists(csvPath))
                     {
                         allTasks = LoadTasksFromCsv(csvPath);
+                        System.Diagnostics.Debug.WriteLine($"Loaded Gantt tasks from: {csvPath}");
                         break;
                     }
                 }

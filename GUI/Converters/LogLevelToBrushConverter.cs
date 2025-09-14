@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Media;
-using Microsoft.Extensions.Logging;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace MandADiscoverySuite.Converters
 {
@@ -29,7 +29,22 @@ namespace MandADiscoverySuite.Converters
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            throw new NotImplementedException();
+            if (value is SolidColorBrush brush)
+            {
+                Color color = brush.Color;
+                return color switch
+                {
+                    { R: 220, G: 38, B: 38 } => LogLevel.Critical,
+                    { R: 239, G: 68, B: 68 } => LogLevel.Error,
+                    { R: 245, G: 158, B: 11 } => LogLevel.Warning,
+                    { R: 59, G: 130, B: 246 } => LogLevel.Information,
+                    { R: 107, G: 114, B: 128 } => LogLevel.Debug,
+                    { R: 156, G: 163, B: 175 } => LogLevel.Trace,
+                    _ => LogLevel.None
+                };
+            }
+
+            return LogLevel.None;
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Graph;
 using MandADiscoverySuite.Migration;
+using MandADiscoverySuite.Services.Migration;
 using System.Net.Http;
 using System.Text.Json;
 
@@ -27,10 +28,10 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         public async Task<SharePointMigrationResult> MigrateSiteAsync(
-            SharePointSiteDto site, 
-            SharePointMigrationSettings settings, 
-            TargetContext target, 
-            IProgress<MigrationProgress>? progress = null)
+            SharePointSiteDto site,
+            SharePointMigrationSettings settings,
+            TargetContext target,
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress>? progress = null)
         {
             var result = new SharePointMigrationResult
             {
@@ -40,17 +41,17 @@ namespace MandADiscoverySuite.MigrationProviders
 
             try
             {
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 0, 
-                    Message = $"Starting migration of site: {site.Title}" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 0,
+                    Message = $"Starting migration of site: {site.Title}"
                 });
 
                 // Step 1: Validate source site connectivity
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 10, 
-                    Message = "Validating source site connectivity..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 10,
+                    Message = "Validating source site connectivity..."
                 });
 
                 if (!await ValidateSourceSiteAsync(site.SiteUrl))
@@ -141,10 +142,10 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         public async Task<SharePointMigrationResult> MigrateLibraryAsync(
-            SharePointLibraryDto library, 
-            SharePointMigrationSettings settings, 
-            TargetContext target, 
-            IProgress<MigrationProgress>? progress = null)
+            SharePointLibraryDto library,
+            SharePointMigrationSettings settings,
+            TargetContext target,
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress>? progress = null)
         {
             var result = new SharePointMigrationResult
             {
@@ -218,10 +219,10 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         public async Task<SharePointMigrationResult> MigrateOneDriveAsync(
-            OneDriveLibraryDto oneDrive, 
-            SharePointMigrationSettings settings, 
-            TargetContext target, 
-            IProgress<MigrationProgress>? progress = null)
+            OneDriveLibraryDto oneDrive,
+            SharePointMigrationSettings settings,
+            TargetContext target,
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress>? progress = null)
         {
             var result = new SharePointMigrationResult
             {
@@ -312,11 +313,11 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         public async Task<SharePointMigrationResult> MigrateDeltaAsync(
-            SharePointSiteDto site, 
-            DateTime lastMigrationDate, 
-            SharePointMigrationSettings settings, 
-            TargetContext target, 
-            IProgress<MigrationProgress>? progress = null)
+            SharePointSiteDto site,
+            DateTime lastMigrationDate,
+            SharePointMigrationSettings settings,
+            TargetContext target,
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress>? progress = null)
         {
             var result = new SharePointMigrationResult
             {
@@ -425,14 +426,14 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         public async Task<List<SharePointSiteDto>> DiscoverSitesAsync(
-            TargetContext sourceContext, 
-            IProgress<MigrationProgress>? progress = null)
+            TargetContext sourceContext,
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress>? progress = null)
         {
             var sites = new List<SharePointSiteDto>();
 
             try
             {
-                progress?.Report(new MigrationProgress 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
                 { 
                     Percentage = 0, 
                     Message = "Discovering SharePoint sites..." 
@@ -499,8 +500,8 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         public async Task<List<OneDriveLibraryDto>> DiscoverOneDriveLibrariesAsync(
-            TargetContext sourceContext, 
-            IProgress<MigrationProgress>? progress = null)
+            TargetContext sourceContext,
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress>? progress = null)
         {
             var libraries = new List<OneDriveLibraryDto>();
 
@@ -615,9 +616,9 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         public async Task<RollbackResult> RollbackMigrationAsync(
-            SharePointSiteDto site, 
-            TargetContext target, 
-            IProgress<MigrationProgress>? progress = null)
+            SharePointSiteDto site,
+            TargetContext target,
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress>? progress = null)
         {
             try
             {
@@ -660,26 +661,26 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         private async Task MigrateSiteStructureAsync(
-            SharePointSiteDto site, 
-            SharePointMigrationSettings settings, 
-            TargetContext target, 
-            IProgress<MigrationProgress>? progress)
+            SharePointSiteDto site,
+            SharePointMigrationSettings settings,
+            TargetContext target,
+            IProgress<MandADiscoverySuite.Services.Migration.MigrationProgress>? progress)
         {
             // Implementation for site structure migration
             await Task.Delay(1000); // Simulate structure migration
         }
 
         private async Task<SharePointMigrationResult> MigrateContentAsync(
-            SharePointSiteDto site, 
-            SharePointMigrationSettings settings, 
-            TargetContext target, 
-            IProgress<MigrationProgress>? progress)
+            SharePointSiteDto site,
+            SharePointMigrationSettings settings,
+            TargetContext target,
+            IProgress<MandADiscoverySuite.Services.Migration.MigrationProgress>? progress)
         {
             // Implementation for content migration
             await Task.Delay(2000); // Simulate content migration
-            return new SharePointMigrationResult 
-            { 
-                MigratedFiles = 1000, 
+            return new SharePointMigrationResult
+            {
+                MigratedFiles = 1000,
                 MigratedSizeBytes = 1024 * 1024 * 100 // 100MB
             };
         }
@@ -717,15 +718,15 @@ namespace MandADiscoverySuite.MigrationProviders
             return Guid.NewGuid().ToString(); // Return job ID
         }
 
-        private async Task<string> MonitorMigrationJobAsync(string jobId, IProgress<MigrationProgress>? progress)
+        private async Task<string> MonitorMigrationJobAsync(string jobId, IProgress<MandADiscoverySuite.Services.Migration.MigrationProgress>? progress)
         {
             // Simulate job monitoring with progress updates
             for (int i = 60; i < 90; i += 5)
             {
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = i, 
-                    Message = $"Migration job progress: {i}%" 
+                progress?.Report(new MandADiscoverySuite.Services.Migration.MigrationProgress
+                {
+                    Percentage = i,
+                    Message = $"Migration job progress: {i}%"
                 });
                 await Task.Delay(200);
             }
@@ -745,21 +746,21 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         private async Task<SharePointMigrationResult> MigrateOneDriveContentAsync(
-            Drive sourceDrive, 
-            OneDriveLibraryDto oneDrive, 
-            SharePointMigrationSettings settings, 
-            TargetContext target, 
-            IProgress<MigrationProgress>? progress)
+            Microsoft.Graph.Models.Drive sourceDrive,
+            OneDriveLibraryDto oneDrive,
+            SharePointMigrationSettings settings,
+            TargetContext target,
+            IProgress<MandADiscoverySuite.Services.Migration.MigrationProgress>? progress)
         {
             await Task.Delay(1500); // Simulate OneDrive content migration
-            return new SharePointMigrationResult 
-            { 
-                MigratedFiles = 200, 
+            return new SharePointMigrationResult
+            {
+                MigratedFiles = 200,
                 MigratedSizeBytes = 1024 * 1024 * 20 // 20MB
             };
         }
 
-        private async Task MigrateSharedItemsAsync(Drive sourceDrive, OneDriveLibraryDto oneDrive, TargetContext target)
+        private async Task MigrateSharedItemsAsync(Microsoft.Graph.Models.Drive sourceDrive, OneDriveLibraryDto oneDrive, TargetContext target)
         {
             await Task.Delay(400); // Simulate shared items migration
         }
@@ -771,15 +772,15 @@ namespace MandADiscoverySuite.MigrationProviders
         }
 
         private async Task<SharePointMigrationResult> MigrateDeltaContentAsync(
-            List<string> changedItems, 
-            SharePointMigrationSettings settings, 
-            TargetContext target, 
-            IProgress<MigrationProgress>? progress)
+            List<string> changedItems,
+            SharePointMigrationSettings settings,
+            TargetContext target,
+            IProgress<MandADiscoverySuite.Services.Migration.MigrationProgress>? progress)
         {
             await Task.Delay(800); // Simulate delta migration
-            return new SharePointMigrationResult 
-            { 
-                MigratedFiles = changedItems.Count, 
+            return new SharePointMigrationResult
+            {
+                MigratedFiles = changedItems.Count,
                 MigratedSizeBytes = changedItems.Count * 1024 * 100 // 100KB per item
             };
         }

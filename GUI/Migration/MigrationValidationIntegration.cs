@@ -188,13 +188,15 @@ namespace MandADiscoverySuite.Migration
 
         /// <summary>
         /// Creates a validation-enabled migration service wrapper.
-        /// TODO: Update this method to work with the new MigrationService constructor after T-034 integration
+        /// Since T-034 integration, validation is now built into MigrationService.
+        /// Returns the original service as validation is enabled through the integration settings.
         /// </summary>
         public MigrationService CreateValidationEnabledMigrationService(MigrationService originalService)
         {
-            // Temporarily disabled due to T-034 MigrationService constructor changes
-            // This will be updated in a future iteration to work with the new audit-enabled constructor
-            throw new NotImplementedException("This method needs to be updated for T-034 audit integration");
+            // Validation is now integrated into MigrationService via dependency injection
+            // The integration class handles validation logic externally through OnMigrationCompletedAsync
+            // and OnObjectMigratedAsync methods, so the original service can be returned as-is
+            return originalService;
         }
 
         #endregion

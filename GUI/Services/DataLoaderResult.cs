@@ -26,7 +26,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Creates a successful result with data
         /// </summary>
-        public static DataLoaderResult<T> Success(List<T> data, List<string> warnings = null)
+        public static DataLoaderResult<T> Success(List<T> data, List<string>? warnings = null)
         {
             return new DataLoaderResult<T>
             {
@@ -39,7 +39,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Creates a failed result with warnings
         /// </summary>
-        public static DataLoaderResult<T> Failure(List<string> warnings)
+        public static DataLoaderResult<T> Failure(List<string>? warnings)
         {
             return new DataLoaderResult<T>
             {

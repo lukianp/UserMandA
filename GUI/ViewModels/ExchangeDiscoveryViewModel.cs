@@ -285,6 +285,10 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
+                if (selectedItem == null) return;
+
+                _log?.LogInformation($"Viewing details for Exchange mailbox: {selectedItem}");
+
                 if (selectedItem is System.Collections.Generic.IDictionary<string, object> mailboxData)
                 {
                     // Create AssetDetailViewModel and load the mailbox data
@@ -297,10 +301,19 @@ namespace MandADiscoverySuite.ViewModels
                     var assetDetailWindow = new MandADiscoverySuite.Views.AssetDetailWindow();
                     assetDetailWindow.Content = assetDetailView;
                     assetDetailWindow.DataContext = assetDetailViewModel;
-                    assetDetailWindow.ShowDialog();
 
-                    _log?.LogInformation("Opened AssetDetailWindow for mailbox data");
-                    await Task.CompletedTask; // Placeholder for async
+                    // Show the dialog
+                    var result = assetDetailWindow.ShowDialog();
+
+                    // Log the result
+                    if (result == true)
+                    {
+                        _log?.LogInformation("Asset detail view closed with confirmation");
+                    }
+                    else
+                    {
+                        _log?.LogInformation("Asset detail view closed without changes");
+                    }
                 }
             }
             catch (Exception ex)

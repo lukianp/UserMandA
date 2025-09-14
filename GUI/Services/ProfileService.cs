@@ -19,8 +19,27 @@ namespace MandADiscoverySuite.Services
         private static ProfileService _instance;
 
         public static ProfileService Instance => _instance ??= new ProfileService();
-        
-        public string CurrentProfile => "ljpops"; // Hardcoded for now
+
+        private string _currentProfile;
+        public string CurrentProfile
+        {
+            get
+            {
+                if (_currentProfile == null)
+                {
+                    try
+                    {
+                        var activeProfile = Task.Run(() => GetCurrentProfileAsync()).Result;
+                        _currentProfile = activeProfile?.CompanyName ?? "default";
+                    }
+                    catch
+                    {
+                        _currentProfile = "default";
+                    }
+                }
+                return _currentProfile;
+            }
+        }
 
         public event EventHandler ProfilesChanged;
 
@@ -513,7 +532,7 @@ namespace MandADiscoverySuite.Services
         {
             var profiles = await GetProfilesAsync();
             var targetProfile = profiles.FirstOrDefault(p => p.CompanyName == profileName || p.Id == profileName);
-            
+
             if (targetProfile == null)
                 return false;
 
@@ -526,8 +545,12 @@ namespace MandADiscoverySuite.Services
             // Set target profile as active
             targetProfile.IsActive = true;
             await SaveProfilesAsync();
+
+            // Invalidate the cached current profile
+            _currentProfile = null;
+
             ProfilesChanged?.Invoke(this, EventArgs.Empty);
-            
+
             return true;
         }
 
