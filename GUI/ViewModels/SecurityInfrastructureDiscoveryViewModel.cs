@@ -36,11 +36,9 @@ namespace MandADiscoverySuite.ViewModels
             FilterOptions = new ObservableCollection<string>
             {
                 "All Security Components",
+                "VPNs",
                 "Firewalls",
-                "Antivirus",
-                "VPN",
-                "Intrusion Detection",
-                "Authentication"
+                "IDS/IPS"
             };
             SelectedFilter = "All Security Components";
 
@@ -53,6 +51,20 @@ namespace MandADiscoverySuite.ViewModels
         #region Properties
 
         // Summary card properties
+        private int _totalDevices;
+        public int TotalDevices
+        {
+            get => _totalDevices;
+            set => SetProperty(ref _totalDevices, value);
+        }
+
+        private int _totalVpns;
+        public int TotalVpns
+        {
+            get => _totalVpns;
+            set => SetProperty(ref _totalVpns, value);
+        }
+
         private int _totalFirewalls;
         public int TotalFirewalls
         {
@@ -60,25 +72,11 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _totalFirewalls, value);
         }
 
-        private int _totalAntivirusDevices;
-        public int TotalAntivirusDevices
+        private int _totalIdsIps;
+        public int TotalIdsIps
         {
-            get => _totalAntivirusDevices;
-            set => SetProperty(ref _totalAntivirusDevices, value);
-        }
-
-        private int _totalVpnConnections;
-        public int TotalVpnConnections
-        {
-            get => _totalVpnConnections;
-            set => SetProperty(ref _totalVpnConnections, value);
-        }
-
-        private int _activeThreats;
-        public int ActiveThreats
-        {
-            get => _activeThreats;
-            set => SetProperty(ref _activeThreats, value);
+            get => _totalIdsIps;
+            set => SetProperty(ref _totalIdsIps, value);
         }
 
         private DateTime _lastSecurityScan = DateTime.MinValue;
@@ -247,17 +245,13 @@ namespace MandADiscoverySuite.ViewModels
             {
                 filtered = SelectedFilter switch
                 {
+                    "VPNs" => filtered.Where(item => GetStringProperty(item, "ComponentType")?.Contains("VPN") == true ||
+                                                     GetStringProperty(item, "Type")?.Contains("VPN") == true),
                     "Firewalls" => filtered.Where(item => GetStringProperty(item, "ComponentType")?.Contains("Firewall") == true ||
-                                                         GetStringProperty(item, "Type")?.Contains("Firewall") == true),
-                    "Antivirus" => filtered.Where(item => GetStringProperty(item, "ComponentType")?.Contains("Antivirus") == true ||
-                                                         GetStringProperty(item, "Type")?.Contains("Antivirus") == true),
-                    "VPN" => filtered.Where(item => GetStringProperty(item, "ComponentType")?.Contains("VPN") == true ||
-                                                   GetStringProperty(item, "Type")?.Contains("VPN") == true),
-                    "Intrusion Detection" => filtered.Where(item => GetStringProperty(item, "ComponentType")?.Contains("IDS") == true ||
-                                                                   GetStringProperty(item, "ComponentType")?.Contains("IPS") == true ||
-                                                                   GetStringProperty(item, "Type")?.Contains("Intrusion") == true),
-                    "Authentication" => filtered.Where(item => GetStringProperty(item, "ComponentType")?.Contains("Auth") == true ||
-                                                              GetStringProperty(item, "Type")?.Contains("Auth") == true),
+                                                          GetStringProperty(item, "Type")?.Contains("Firewall") == true),
+                    "IDS/IPS" => filtered.Where(item => GetStringProperty(item, "ComponentType")?.Contains("IDS") == true ||
+                                                        GetStringProperty(item, "ComponentType")?.Contains("IPS") == true ||
+                                                        GetStringProperty(item, "Type")?.Contains("Intrusion") == true),
                     _ => filtered
                 };
             }
@@ -279,56 +273,78 @@ namespace MandADiscoverySuite.ViewModels
                 return;
             }
 
+            TotalDevices = _allResults.Count;
+
             // Count by security component types
             TotalFirewalls = _allResults.Count(item =>
                 GetStringProperty(item, "ComponentType")?.Contains("Firewall") == true ||
                 GetStringProperty(item, "Type")?.Contains("Firewall") == true);
 
-            TotalAntivirusDevices = _allResults.Count(item =>
-                GetStringProperty(item, "ComponentType")?.Contains("Antivirus") == true ||
-                GetStringProperty(item, "Type")?.Contains("Antivirus") == true);
-
-            TotalVpnConnections = _allResults.Count(item =>
+            TotalVpns = _allResults.Count(item =>
                 GetStringProperty(item, "ComponentType")?.Contains("VPN") == true ||
                 GetStringProperty(item, "Type")?.Contains("VPN") == true);
 
-            // Count active threats (assuming status indicates threats)
-            ActiveThreats = _allResults.Count(item =>
-                GetStringProperty(item, "Status")?.Contains("Alert") == true ||
-                GetStringProperty(item, "Status")?.Contains("Threat") == true ||
-                GetStringProperty(item, "Status")?.Contains("Warning") == true);
+            TotalIdsIps = _allResults.Count(item =>
+                GetStringProperty(item, "ComponentType")?.Contains("IDS") == true ||
+                GetStringProperty(item, "ComponentType")?.Contains("IPS") == true ||
+                GetStringProperty(item, "Type")?.Contains("Intrusion") == true);
         }
 
         private void ResetSummaryMetrics()
         {
+            TotalDevices = 0;
+            TotalVpns = 0;
             TotalFirewalls = 0;
-            TotalAntivirusDevices = 0;
-            TotalVpnConnections = 0;
-            ActiveThreats = 0;
+            TotalIdsIps = 0;
+        }
+
+        private string _selectedItemSecurityConfig;
+        public string SelectedItemSecurityConfig
+        {
+            get => _selectedItemSecurityConfig;
+            set => SetProperty(ref _selectedItemSecurityConfig, value);
         }
 
         private void UpdateSelectedItemDetails()
         {
             SelectedItemDetails.Clear();
+            SelectedItemSecurityConfig = string.Empty;
 
             if (SelectedItem == null) return;
 
             try
             {
                 var properties = ((IDictionary<string, object>)SelectedItem);
+                var securityConfigParts = new List<string>();
 
                 foreach (var kvp in properties)
                 {
                     if (kvp.Value != null && !string.IsNullOrEmpty(kvp.Value.ToString()))
                     {
-                        SelectedItemDetails.Add(new { Key = FormatPropertyName(kvp.Key), Value = kvp.Value.ToString() });
+                        var key = FormatPropertyName(kvp.Key);
+                        var value = kvp.Value.ToString();
+
+                        // Add to details list
+                        SelectedItemDetails.Add(new { Key = key, Value = value });
+
+                        // Collect security-related configuration
+                        if (key.Contains("Security") || key.Contains("Policy") || key.Contains("Rule") ||
+                            key.Contains("Config") || key.Contains("Setting") || key.Contains("Auth"))
+                        {
+                            securityConfigParts.Add($"{key}: {value}");
+                        }
                     }
                 }
+
+                SelectedItemSecurityConfig = securityConfigParts.Any() ?
+                    string.Join(Environment.NewLine, securityConfigParts) :
+                    "No security configuration details available";
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error updating selected item details");
                 SelectedItemDetails.Add(new { Key = "Error", Value = "Unable to load item details" });
+                SelectedItemSecurityConfig = "Error loading security configuration";
             }
         }
 

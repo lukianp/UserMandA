@@ -81,7 +81,10 @@ namespace MandADiscoverySuite.ViewModels
         // New summary card properties
         public int FileServersCount => TotalServers;
         public int SharesCount => TotalShares;
-        public string StorageTB => TotalSizeBytes > 0 ? $"{(double)TotalSizeBytes / (1024L * 1024L * 1024L * 1024L):F2}" : "0.00";
+        public string StorageTB
+        {
+            get => TotalSizeBytes > 0 ? $"{(double)TotalSizeBytes / (1024L * 1024L * 1024L * 1024L):F2}" : "0.00";
+        }
         public int AccessibleSharesCount => TotalACLs; // Assuming ACLs represent accessible shares
 
         private DateTime _lastDiscoveryTime = DateTime.MinValue;
@@ -116,6 +119,14 @@ namespace MandADiscoverySuite.ViewModels
 
         // Server summaries for DataGrid
         public ObservableCollection<dynamic> ServerSummaries { get; } = new ObservableCollection<dynamic>();
+
+        // Shares for selected server
+        private List<dynamic> _selectedServerShares = new List<dynamic>();
+        public List<dynamic> SelectedServerShares
+        {
+            get => _selectedServerShares;
+            set => SetProperty(ref _selectedServerShares, value);
+        }
 
         #endregion
 
@@ -378,6 +389,10 @@ namespace MandADiscoverySuite.ViewModels
             TotalACLs = totalACLs;
             OnPropertyChanged(nameof(TotalSizeDisplay));
             OnPropertyChanged(nameof(TotalACLs));
+            OnPropertyChanged(nameof(StorageTB));
+            OnPropertyChanged(nameof(FileServersCount));
+            OnPropertyChanged(nameof(SharesCount));
+            OnPropertyChanged(nameof(AccessibleSharesCount));
         }
 
         private static string BytesToReadableString(long bytes)
@@ -402,16 +417,36 @@ namespace MandADiscoverySuite.ViewModels
         private void PopulateSelectedItemDetails()
         {
             SelectedItemDetails.Clear();
+            SelectedServerShares.Clear();
+
             if (SelectedItem is System.Collections.Generic.IDictionary<string, object> dict)
             {
-                // Show all available fields from the selected item
-                foreach (var kvp in dict)
+                // Check if it's a server summary with shares
+                if (dict.ContainsKey("Shares") && dict["Shares"] is List<dynamic> shares)
                 {
-                    var key = FormatFieldName(kvp.Key);
-                    var value = kvp.Value?.ToString() ?? string.Empty;
-                    if (!string.IsNullOrWhiteSpace(value))
+                    SelectedServerShares = shares;
+                    // Show server summary details
+                    foreach (var kvp in dict.Where(k => k.Key != "Shares"))
                     {
-                        SelectedItemDetails.Add(new KeyValuePair<string, string>(key, value));
+                        var key = FormatFieldName(kvp.Key);
+                        var value = kvp.Value?.ToString() ?? string.Empty;
+                        if (!string.IsNullOrWhiteSpace(value))
+                        {
+                            SelectedItemDetails.Add(new KeyValuePair<string, string>(key, value));
+                        }
+                    }
+                }
+                else
+                {
+                    // Show all available fields from the selected item
+                    foreach (var kvp in dict)
+                    {
+                        var key = FormatFieldName(kvp.Key);
+                        var value = kvp.Value?.ToString() ?? string.Empty;
+                        if (!string.IsNullOrWhiteSpace(value))
+                        {
+                            SelectedItemDetails.Add(new KeyValuePair<string, string>(key, value));
+                        }
                     }
                 }
             }

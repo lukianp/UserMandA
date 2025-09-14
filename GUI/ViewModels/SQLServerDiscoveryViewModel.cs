@@ -121,11 +121,18 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _totalDatabases, value);
         }
 
-        private int _totalTables;
-        public int TotalTables
+        private double _storageGB;
+        public double StorageGB
         {
-            get => _totalTables;
-            set => SetProperty(ref _totalTables, value);
+            get => _storageGB;
+            set => SetProperty(ref _storageGB, value);
+        }
+
+        private int _largeDBs;
+        public int LargeDBs
+        {
+            get => _largeDBs;
+            set => SetProperty(ref _largeDBs, value);
         }
 
         private DateTime _lastDiscoveryTime = DateTime.MinValue;
@@ -422,11 +429,16 @@ namespace MandADiscoverySuite.ViewModels
                     AddDetailField("Database Name", GetStringValue(dict, new[] { "DatabaseName", "databasename", "DBName", "dbname" }));
                     AddDetailField("Server", GetStringValue(dict, new[] { "Server", "server", "ServerName", "servername" }));
                     AddDetailField("Version", GetStringValue(dict, new[] { "Version", "version", "SQLVersion", "sqlversion" }));
+                    AddDetailField("Edition", GetStringValue(dict, new[] { "Edition", "edition", "SQLEdition", "sqledition" }));
                     AddDetailField("Status", GetStringValue(dict, new[] { "Status", "status" }), "Text", true);
                     AddDetailField("Size (MB)", GetStringValue(dict, new[] { "SizeMB", "sizemb", "Size", "size", "DatabaseSize", "databasesize" }));
                     AddDetailField("Compatibility Level", GetStringValue(dict, new[] { "CompatibilityLevel", "compatlevel", "Compatibility", "compatibility" }));
                     AddDetailField("Creation Date", GetStringValue(dict, new[] { "CreationDate", "creationdate", "CreateDate", "createdate" }));
                     AddDetailField("Last Modified", GetStringValue(dict, new[] { "LastModified", "lastmodified", "ModifiedDate", "modifieddate" }));
+
+                    // Backup information
+                    AddDetailField("Last Backup", GetStringValue(dict, new[] { "LastBackup", "lastbackup", "BackupDate", "backupdate" }));
+                    AddDetailField("Backup Status", GetStringValue(dict, new[] { "BackupStatus", "backupstatus", "BackupState", "backupstate" }));
 
                     // Collation and recovery model
                     AddDetailField("Collation", GetStringValue(dict, new[] { "Collation", "collation", "DatabaseCollation", "databasecollation" }));
@@ -479,10 +491,13 @@ namespace MandADiscoverySuite.ViewModels
         {
             TotalInstances = 0;
             TotalDatabases = 0;
-            TotalTables = 0;
+            StorageGB = 0.0;
+            LargeDBs = 0;
 
             var instances = new HashSet<string>();
             var databases = new HashSet<string>();
+            double totalStorage = 0.0;
+            int largeDatabaseCount = 0;
 
             foreach (var item in data)
             {
@@ -506,13 +521,19 @@ namespace MandADiscoverySuite.ViewModels
                     databases.Add(dbObj?.ToString() ?? "");
                 }
 
-                // Count tables (if available in data)
-                if (dict.TryGetValue("totaltables", out var tablesObj) ||
-                    dict.TryGetValue("TotalTables", out tablesObj))
+                // Calculate storage
+                if (dict.TryGetValue("size", out var sizeObj) ||
+                    dict.TryGetValue("Size", out sizeObj) ||
+                    dict.TryGetValue("SizeMB", out sizeObj) ||
+                    dict.TryGetValue("sizemb", out sizeObj))
                 {
-                    if (int.TryParse(tablesObj?.ToString(), out var tableCount))
+                    if (double.TryParse(sizeObj?.ToString(), out var sizeMB))
                     {
-                        TotalTables += tableCount;
+                        totalStorage += sizeMB / 1024.0; // Convert MB to GB
+                        if (sizeMB > 1024) // Consider >1GB as large database
+                        {
+                            largeDatabaseCount++;
+                        }
                     }
                 }
 
@@ -525,8 +546,10 @@ namespace MandADiscoverySuite.ViewModels
 
             TotalInstances = instances.Count(i => !string.IsNullOrEmpty(i));
             TotalDatabases = databases.Count(d => !string.IsNullOrEmpty(d));
+            StorageGB = Math.Round(totalStorage, 2);
+            LargeDBs = largeDatabaseCount;
 
-            _log?.LogInformation($"SQL Server Discovery Summary: Total Instances={TotalInstances}, Databases={TotalDatabases}, Tables={TotalTables}, Last Discovery={LastDiscoveryTime:yyyy-MM-dd HH:mm:ss}");
+            _log?.LogInformation($"SQL Server Discovery Summary: Instances={TotalInstances}, Databases={TotalDatabases}, Storage={StorageGB}GB, Large DBs={LargeDBs}, Last Discovery={LastDiscoveryTime:yyyy-MM-dd HH:mm:ss}");
         }
 
         #endregion

@@ -1,251 +1,141 @@
 ﻿<UserControl x:Class="MandADiscoverySuite.Views.SecurityInfrastructureDiscoveryView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Name="SecurityInfrastructureDiscoveryControl"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="1200"
-             Background="{DynamicResource SurfaceBrush}">
+             d:DesignHeight="800" d:DesignWidth="1200">
 
     <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/Themes/ThemeStyles.xaml"/>
-                <ResourceDictionary Source="pack://application:,,,/Themes/Colors.xaml"/>
-                <ResourceDictionary Source="pack://application:,,,/Resources/Converters.xaml"/>
-                <ResourceDictionary Source="pack://application:,,,/Resources/DataGridTheme.xaml"/>
-                <ResourceDictionary Source="pack://application:,,,/Themes/RefinedColorPalette.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#FF2D3748"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="FilterComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="MinWidth" Value="150"/>
+            <Setter Property="Margin" Value="8,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="SearchTextBoxStyle" TargetType="TextBox">
+            <Setter Property="MinWidth" Value="200"/>
+            <Setter Property="Margin" Value="8,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#FFE2E8F0"/>
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
     </UserControl.Resources>
 
-    <Grid>
+    <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="20,20,20,10">
-            <TextBlock Text="🔒 Security Infrastructure Discovery" FontSize="24" FontWeight="SemiBold"/>
-            <TextBlock Text="Discover and analyze security appliances, firewalls, antivirus systems, and threat detection infrastructure"
-                       FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,4,0,0"/>
-        </StackPanel>
+        <!-- Main Header Section -->
+        <TextBlock Grid.Row="0" Text="🔒 Security Infrastructure Discovery" Style="{StaticResource HeaderTextStyle}" FontSize="24"/>
+        <!-- Placeholder: Replace with customized header content in each view -->
 
-        <!-- Header Warnings Banner -->
-        <ItemsControl Grid.Row="1" ItemsSource="{Binding HeaderWarnings}"
-                      Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibility}}"
-                      Margin="20,0,20,10">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Border Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
-                            CornerRadius="4" Margin="0,0,0,8" Padding="8">
-                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}" />
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-
-        <!-- Error Banner -->
-        <Border Grid.Row="2" Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
-                CornerRadius="4" Margin="20,0,20,10" Padding="8"
-                Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisibility}}">
-            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}" />
-        </Border>
-
-        <!-- Summary Cards -->
-        <WrapPanel Grid.Row="3" Margin="20,0,20,20" Orientation="Horizontal">
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
+        <!-- UniformGrid for 4 Summary Statistic Cards -->
+        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,16">
+            <!-- Total Devices Card -->
+            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="Total Firewalls" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalFirewalls}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Total Devices" FontWeight="Bold" FontSize="14"/>
+                    <TextBlock Text="{Binding TotalDevices}" FontSize="24" FontWeight="SemiBold" Foreground="#FF3182CE"/>
                 </StackPanel>
             </Border>
-
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
+            <!-- VPNs Card -->
+            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="Antivirus Devices" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalAntivirusDevices}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource SecondaryBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="VPNs" FontWeight="Bold" FontSize="14"/>
+                    <TextBlock Text="{Binding TotalVpns}" FontSize="24" FontWeight="SemiBold" Foreground="#FF38A169"/>
                 </StackPanel>
             </Border>
-
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
+            <!-- Firewalls Card -->
+            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="VPN Connections" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding TotalVpnConnections}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource TertiaryBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="Firewalls" FontWeight="Bold" FontSize="14"/>
+                    <TextBlock Text="{Binding TotalFirewalls}" FontSize="24" FontWeight="SemiBold" Foreground="#FFD69E2E"/>
                 </StackPanel>
             </Border>
-
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Margin="0,0,16,0" Padding="16" Width="200">
+            <!-- IDS/IPS Card -->
+            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="Active Threats" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding ActiveThreats}" FontSize="32" FontWeight="Bold" Foreground="{DynamicResource ErrorBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="IDS/IPS" FontWeight="Bold" FontSize="14"/>
+                    <TextBlock Text="{Binding TotalIdsIps}" FontSize="24" FontWeight="SemiBold" Foreground="#FFE53E3E"/>
                 </StackPanel>
             </Border>
+        </UniformGrid>
 
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    CornerRadius="8" Padding="16" Width="250">
-                <StackPanel>
-                    <TextBlock Text="Last Security Scan" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding LastSecurityScan, StringFormat='{}{0:g}'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
-        </WrapPanel>
+        <!-- ToolBar for Action Buttons -->
+        <ToolBar Grid.Row="2" Margin="0,0,0,16">
+            <Button Content="Refresh" Style="{StaticResource RoundedButtonStyle}" Padding="12,6" Margin="0,0,8,0"/>
+            <Button Content="Export" Style="{StaticResource RoundedButtonStyle}" Padding="12,6" Margin="0,0,8,0"/>
+            <Button Content="Clear Filters" Style="{StaticResource RoundedButtonStyle}" Padding="12,6" Margin="0,0,8,0"/>
+            <!-- Placeholder: Add more buttons as needed in each view -->
+        </ToolBar>
 
-        <!-- Action Buttons and Data Area -->
-        <Grid Grid.Row="4">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+        <!-- Grid with GridSplitter to separate DataGrid from Details Panel -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-            <!-- Action Buttons -->
-            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20,0,20,10">
-                <Button Content="🔍 Run Security Scan"
-                        Command="{Binding RunModuleCommand}"
-                        Style="{StaticResource PrimaryButtonStyle}"
-                        Margin="0,0,12,0"/>
-
-                <Button Content="🔄 Refresh Data"
-                        Command="{Binding LoadCommand}"
-                        Style="{StaticResource SecondaryButtonStyle}"
-                        Margin="0,0,12,0"/>
-
-                <Button Content="📤 Export"
-                        Command="{Binding ExportResultsCommand}"
-                        Style="{StaticResource OutlineButtonStyle}"/>
-
-                <Button Content="📋 Show Logs"
-                        Command="{Binding ViewLogsCommand}"
-                        Style="{StaticResource GhostButtonStyle}"
-                        Margin="12,0,0,0"/>
-            </StackPanel>
-
-            <!-- Filter Selection -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="20,0,20,10">
-                <TextBlock Text="Filter by Security Component:" VerticalAlignment="Center" Margin="0,0,10,0"
-                           Foreground="{DynamicResource MutedForegroundBrush}"/>
-                <ComboBox ItemsSource="{Binding FilterOptions}"
-                          SelectedItem="{Binding SelectedFilter}"
-                          Width="200"
-                          Style="{StaticResource PrimaryComboBoxStyle}"/>
-            </StackPanel>
-
-            <!-- Data Grid and Details Panel -->
-            <Grid Grid.Row="2">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" MinWidth="600"/>
-                    <ColumnDefinition Width="2"/>
-                    <ColumnDefinition Width="Auto" MinWidth="300"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Loading Spinner -->
-                <Border Background="{DynamicResource SurfaceBrush}"
-                        Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibility}}">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
-                        <TextBlock Text="{Binding ProcessingMessage, FallbackValue='Processing...'}" Margin="0,10,0,0" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Data Grid -->
-                <DataGrid Grid.Column="0"
-                          ItemsSource="{Binding SelectedResults}"
-                          AutoGenerateColumns="False"
-                          CanUserAddRows="False"
-                          GridLinesVisibility="Horizontal"
-                          HeadersVisibility="Column"
-                          Margin="20,0,20,20"
-                          SelectedItem="{Binding SelectedItem}"
-                          Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}">
-
+            <!-- Main DataGrid -->
+            <Border Grid.Column="0" Background="#FF1A202C" BorderBrush="#FFE2E8F0" BorderThickness="1">
+                <DataGrid ItemsSource="{Binding SelectedResults}" AutoGenerateColumns="False" Margin="8">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Component Type"
-                                            Binding="{Binding ComponentType}"
-                                            Width="150"/>
-
-                        <DataGridTextColumn Header="Name"
-                                            Binding="{Binding Name}"
-                                            Width="200"/>
-
-                        <DataGridTextColumn Header="Type"
-                                            Binding="{Binding Type}"
-                                            Width="120"/>
-
-                        <DataGridTextColumn Header="Status"
-                                            Binding="{Binding Status}"
-                                            Width="100"/>
-
-                        <DataGridTextColumn Header="Version"
-                                            Binding="{Binding Version}"
-                                            Width="120"/>
-
-                        <DataGridTextColumn Header="Location"
-                                            Binding="{Binding Location}"
-                                            Width="150"/>
-
-                        <DataGridTextColumn Header="Last Updated"
-                                            Binding="{Binding LastUpdated}"
-                                            Width="150"/>
+                        <DataGridTextColumn Header="Device Name" Binding="{Binding DeviceName}" Width="150"/>
+                        <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="120"/>
+                        <DataGridTextColumn Header="IP Address" Binding="{Binding IpAddress}" Width="150"/>
+                        <DataGridTextColumn Header="Model" Binding="{Binding Model}" Width="120"/>
+                        <DataGridTextColumn Header="Firmware Version" Binding="{Binding FirmwareVersion}" Width="150"/>
+                        <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="150"/>
                     </DataGrid.Columns>
-
-                    <DataGrid.RowStyle>
-                        <Style TargetType="DataGridRow">
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-                                </Trigger>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGrid.RowStyle>
                 </DataGrid>
+            </Border>
 
-                <!-- No Data Message -->
-                <TextBlock Grid.Column="0"
-                           Text="No security infrastructure data available"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           FontSize="16"
-                           Foreground="{DynamicResource MutedForegroundBrush}"
-                           Visibility="{Binding HasResults, Converter={StaticResource InverseBoolToVisibility}}"/>
+            <GridSplitter Grid.Column="1" Width="5" Background="Gray" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
 
-                <!-- Separator -->
-                <GridSplitter Grid.Column="1" Width="2" Background="{DynamicResource BorderBrush}"
-                             HorizontalAlignment="Center" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
-
-                <!-- Details Panel -->
-                <Border Grid.Column="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                        Margin="0,0,20,20" CornerRadius="4"
-                        Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel Margin="16">
-                            <TextBlock Text="Security Component Details" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
+            <!-- Right-hand Details Panel -->
+            <Border Grid.Column="2" Background="#FF1A202C" BorderBrush="#FFE2E8F0" BorderThickness="1">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <TextBlock Text="Device Configuration & Security Settings" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
+                        <StackPanel Visibility="{Binding SelectedItem, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <TextBlock Text="Device Details:" FontWeight="Bold" Margin="0,0,0,8"/>
                             <ItemsControl ItemsSource="{Binding SelectedItemDetails}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <StackPanel Margin="0,0,0,10">
-                                            <TextBlock Text="{Binding Key}" FontWeight="SemiBold" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                                            <TextBlock Text="{Binding Value}" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                            <TextBlock Text="{Binding Key}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Value}" TextWrapping="Wrap" Margin="0,2,0,0"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <TextBlock Text="Security Configuration:" FontWeight="Bold" Margin="0,16,0,8"/>
+                            <TextBlock Text="{Binding SelectedItemSecurityConfig, FallbackValue='No security configuration available'}" TextWrapping="Wrap"/>
                         </StackPanel>
-                    </ScrollViewer>
-                </Border>
-            </Grid>
+                        <TextBlock Text="Select a device to view details" FontStyle="Italic" Visibility="{Binding SelectedItem, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=invert}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
         </Grid>
+
+        <!-- Footer or Empty State Placeholder -->
+        <Border Grid.Row="4" Background="#FF1A202C" Padding="16" Margin="0,16,0,0">
+            <TextBlock Text="Security Infrastructure Metrics & Status" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF4A5568"/>
+            <!-- Placeholder: Replace with footer or empty state content in each view -->
+        </Border>
     </Grid>
 </UserControl>

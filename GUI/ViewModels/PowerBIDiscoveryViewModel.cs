@@ -46,6 +46,13 @@ namespace MandADiscoverySuite.ViewModels
         #region Properties
 
         // Summary card properties
+        private int _totalWorkspaces;
+        public int TotalWorkspaces
+        {
+            get => _totalWorkspaces;
+            set => SetProperty(ref _totalWorkspaces, value);
+        }
+
         private int _totalReports;
         public int TotalReports
         {
@@ -60,11 +67,11 @@ namespace MandADiscoverySuite.ViewModels
             set => SetProperty(ref _totalDatasets, value);
         }
 
-        private int _totalDashboards;
-        public int TotalDashboards
+        private int _totalUsers;
+        public int TotalUsers
         {
-            get => _totalDashboards;
-            set => SetProperty(ref _totalDashboards, value);
+            get => _totalUsers;
+            set => SetProperty(ref _totalUsers, value);
         }
 
         private DateTime _lastDiscoveryTime = DateTime.MinValue;
@@ -275,13 +282,27 @@ namespace MandADiscoverySuite.ViewModels
 
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
         {
+            TotalWorkspaces = 0;
             TotalReports = 0;
             TotalDatasets = 0;
-            TotalDashboards = 0;
+            TotalUsers = 0;
+
+            var uniqueWorkspaces = new HashSet<string>();
+            var uniqueUsers = new HashSet<string>();
 
             foreach (var item in data)
             {
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+
+                // Count unique workspaces
+                if (dict.TryGetValue("workspace", out var workspaceObj))
+                {
+                    var workspace = workspaceObj?.ToString();
+                    if (!string.IsNullOrEmpty(workspace))
+                    {
+                        uniqueWorkspaces.Add(workspace);
+                    }
+                }
 
                 // Count by content type
                 if (dict.TryGetValue("contenttype", out var contentTypeObj))
@@ -289,9 +310,21 @@ namespace MandADiscoverySuite.ViewModels
                     var contentType = contentTypeObj?.ToString().ToLower();
                     if (contentType == "report") TotalReports++;
                     else if (contentType == "dataset") TotalDatasets++;
-                    else if (contentType == "dashboard") TotalDashboards++;
+                }
+
+                // Count unique users (owners)
+                if (dict.TryGetValue("owner", out var ownerObj))
+                {
+                    var owner = ownerObj?.ToString();
+                    if (!string.IsNullOrEmpty(owner))
+                    {
+                        uniqueUsers.Add(owner);
+                    }
                 }
             }
+
+            TotalWorkspaces = uniqueWorkspaces.Count;
+            TotalUsers = uniqueUsers.Count;
         }
 
         private void UpdateSelectedItemDetails()

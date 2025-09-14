@@ -33,6 +33,15 @@ namespace MandADiscoverySuite.ViewModels
         private int _totalPolicies;
         public int TotalPolicies { get => _totalPolicies; set => SetProperty(ref _totalPolicies, value); }
 
+        private int _activePolicies;
+        public int ActivePolicies { get => _activePolicies; set => SetProperty(ref _activePolicies, value); }
+
+        private int _highSeverityAlerts;
+        public int HighSeverityAlerts { get => _highSeverityAlerts; set => SetProperty(ref _highSeverityAlerts, value); }
+
+        private int _matchedItems;
+        public int MatchedItems { get => _matchedItems; set => SetProperty(ref _matchedItems, value); }
+
         private int _totalIncidents;
         public int TotalIncidents { get => _totalIncidents; set => SetProperty(ref _totalIncidents, value); }
 
@@ -45,7 +54,19 @@ namespace MandADiscoverySuite.ViewModels
 
         public ObservableCollection<dynamic> SelectedResults { get; } = new();
         private object _selectedItem;
-        public object SelectedItem { get => _selectedItem; set => SetProperty(ref _selectedItem, value); }
+        public object SelectedItem
+        {
+            get => _selectedItem;
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    UpdateSelectedItemDetails();
+                }
+            }
+        }
+
+        public ObservableCollection<System.Collections.Generic.KeyValuePair<string, string>> SelectedItemDetails { get; } = new();
 
         // Commands
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
@@ -151,9 +172,44 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         // Helper Methods
+        private void UpdateSelectedItemDetails()
+        {
+            SelectedItemDetails.Clear();
+            if (SelectedItem is System.Collections.Generic.IDictionary<string, object> dict)
+            {
+                foreach (var kvp in dict)
+                {
+                    SelectedItemDetails.Add(new System.Collections.Generic.KeyValuePair<string, string>(kvp.Key, kvp.Value?.ToString() ?? "N/A"));
+                }
+            }
+        }
+
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
         {
             TotalPolicies = data.Count;
+            ActivePolicies = data.Count(item =>
+            {
+                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+                dict.TryGetValue("status", out var statusObj);
+                return statusObj?.ToString().ToLower() == "active";
+            });
+            HighSeverityAlerts = data.Count(item =>
+            {
+                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+                dict.TryGetValue("severity", out var severityObj);
+                return severityObj?.ToString().ToLower() == "high";
+            });
+            MatchedItems = data.Count(item =>
+            {
+                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+                dict.TryGetValue("incidentcount", out var incidentCountObj);
+                if (int.TryParse(incidentCountObj?.ToString(), out int count))
+                    return count > 0;
+                dict.TryGetValue("alertcount", out var alertCountObj);
+                if (int.TryParse(alertCountObj?.ToString(), out int alertCount))
+                    return alertCount > 0;
+                return false;
+            });
             TotalIncidents = data.Count(item =>
             {
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;

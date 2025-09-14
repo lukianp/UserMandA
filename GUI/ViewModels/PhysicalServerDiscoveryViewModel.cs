@@ -37,13 +37,12 @@ namespace MandADiscoverySuite.ViewModels
             // Initialize filter options
             FilterOptions = new ObservableCollection<string>
             {
-                "All Components",
-                "Processors",
-                "Memory",
-                "Storage",
-                "Network"
+                "All Servers",
+                "Linux Servers",
+                "Windows Servers",
+                "VMware Hosts"
             };
-            SelectedFilter = "All Components";
+            SelectedFilter = "All Servers";
 
             // Initialize commands
             LoadCommand = new AsyncRelayCommand(LoadAsync);
@@ -55,32 +54,32 @@ namespace MandADiscoverySuite.ViewModels
         #region Properties
 
         // Summary card properties
-        private int _totalProcessors;
-        public int TotalProcessors
+        private int _totalServers;
+        public int TotalServers
         {
-            get => _totalProcessors;
-            set => SetProperty(ref _totalProcessors, value);
+            get => _totalServers;
+            set => SetProperty(ref _totalServers, value);
         }
 
-        private int _totalCores;
-        public int TotalCores
+        private int _linuxServers;
+        public int LinuxServers
         {
-            get => _totalCores;
-            set => SetProperty(ref _totalCores, value);
+            get => _linuxServers;
+            set => SetProperty(ref _linuxServers, value);
         }
 
-        private int _totalMemoryModules;
-        public int TotalMemoryModules
+        private int _windowsServers;
+        public int WindowsServers
         {
-            get => _totalMemoryModules;
-            set => SetProperty(ref _totalMemoryModules, value);
+            get => _windowsServers;
+            set => SetProperty(ref _windowsServers, value);
         }
 
-        private int _totalStorageDevices;
-        public int TotalStorageDevices
+        private int _vmwareHosts;
+        public int VMwareHosts
         {
-            get => _totalStorageDevices;
-            set => SetProperty(ref _totalStorageDevices, value);
+            get => _vmwareHosts;
+            set => SetProperty(ref _vmwareHosts, value);
         }
 
         private DateTime _lastDiscoveryTime = DateTime.MinValue;
@@ -225,15 +224,14 @@ namespace MandADiscoverySuite.ViewModels
 
             var filtered = _allResults.AsEnumerable();
 
-            if (SelectedFilter != "All Components")
+            if (SelectedFilter != "All Servers")
             {
                 filtered = SelectedFilter switch
                 {
-                    "Processors" => filtered.Where(item => GetStringProperty(item, "ComponentType")?.Contains("Processor") == true),
-                    "Memory" => filtered.Where(item => GetStringProperty(item, "ComponentType")?.Contains("Memory") == true),
-                    "Storage" => filtered.Where(item => GetStringProperty(item, "ComponentType")?.Contains("Storage") == true ||
-                                                       GetStringProperty(item, "ComponentType")?.Contains("Disk") == true),
-                    "Network" => filtered.Where(item => GetStringProperty(item, "ComponentType")?.Contains("Network") == true),
+                    "Linux Servers" => filtered.Where(item => GetStringProperty(item, "OS")?.ToLower().Contains("linux") == true),
+                    "Windows Servers" => filtered.Where(item => GetStringProperty(item, "OS")?.ToLower().Contains("windows") == true),
+                    "VMware Hosts" => filtered.Where(item => GetStringProperty(item, "OS")?.ToLower().Contains("esx") == true ||
+                                                             GetStringProperty(item, "OS")?.ToLower().Contains("vmware") == true),
                     _ => filtered
                 };
             }
@@ -255,29 +253,20 @@ namespace MandADiscoverySuite.ViewModels
                 return;
             }
 
-            // Count by component types
-            TotalProcessors = _allResults.Count(item => GetStringProperty(item, "ComponentType")?.Contains("Processor") == true);
-            TotalMemoryModules = _allResults.Count(item => GetStringProperty(item, "ComponentType")?.Contains("Memory") == true);
-            TotalStorageDevices = _allResults.Count(item => GetStringProperty(item, "ComponentType")?.Contains("Storage") == true ||
-                                                           GetStringProperty(item, "ComponentType")?.Contains("Disk") == true);
-
-            // Calculate total cores from processors
-            TotalCores = 0;
-            foreach (var processor in _allResults.Where(item => GetStringProperty(item, "ComponentType")?.Contains("Processor") == true))
-            {
-                if (int.TryParse(GetStringProperty(processor, "NumberOfCores"), out int cores))
-                {
-                    TotalCores += cores;
-                }
-            }
+            // Count servers by OS type
+            TotalServers = _allResults.Count;
+            LinuxServers = _allResults.Count(item => GetStringProperty(item, "OS")?.ToLower().Contains("linux") == true);
+            WindowsServers = _allResults.Count(item => GetStringProperty(item, "OS")?.ToLower().Contains("windows") == true);
+            VMwareHosts = _allResults.Count(item => GetStringProperty(item, "OS")?.ToLower().Contains("esx") == true ||
+                                                     GetStringProperty(item, "OS")?.ToLower().Contains("vmware") == true);
         }
 
         private void ResetSummaryMetrics()
         {
-            TotalProcessors = 0;
-            TotalCores = 0;
-            TotalMemoryModules = 0;
-            TotalStorageDevices = 0;
+            TotalServers = 0;
+            LinuxServers = 0;
+            WindowsServers = 0;
+            VMwareHosts = 0;
         }
 
         private void UpdateSelectedItemDetails()

@@ -3,6 +3,13 @@
 ## Overview
 This document outlines the standardized architecture for discovery views in the MandA Discovery Suite application. The implementation uses a shared BaseDiscoveryViewTemplate architecture with consistent styling, layout patterns, and responsive behavior across all discovery modules.
 
+**All 14 standardized discovery modules have been successfully implemented and validated:**
+- ActiveDirectory, AzureInfrastructure, Exchange, MicrosoftTeams, SharePoint
+- NetworkInfrastructure, FileServer, PhysicalServer, SQLServer, VMware
+- WebServer, PowerBI, DataLossPrevention, SecurityInfrastructure
+
+Each module follows the BaseDiscoveryViewTemplate pattern with consistent data loading, summary cards, DataGrid functionality, detail panels, and responsive layouts.
+
 ## BaseDiscoveryViewTemplate Architecture
 
 ### Template Structure
@@ -93,14 +100,27 @@ The `GUI/Templates/StandardDiscoveryViewTemplate.xaml` serves as the foundationa
 ## View-Specific Customizations
 
 ### Inheritance Pattern
-Each discovery view inherits from the base template and customizes specific sections:
+Each discovery view inherits from the base template and customizes specific sections for domain-specific requirements:
 
-1. **AzureDiscoveryView**: Basic template implementation with standard DataGrid columns
-2. **AzureInfrastructureDiscoveryView**: Enhanced with cost information and additional metadata columns
-3. **VMwareDiscoveryView**: Tab-based details navigation, status color coding
-4. **OneDriveBusinessDiscoveryView**: Splitter position persistence, responsive panel collapse
-5. **ConditionalAccessPoliciesDiscoveryView**: Advanced async details loading with nested structure flattening
-6. **AWSCloudInfrastructureDiscoveryView**: Service-type-specific detail fields, credential management
+#### Infrastructure & Cloud Views
+1. **ActiveDirectory**: Domain object discovery with user/computer/group hierarchies and permission structures
+2. **AzureInfrastructure**: Enhanced with cost information, resource tagging, and subscription management
+3. **Exchange**: Mailbox and distribution group management with compliance and migration data
+4. **NetworkInfrastructure**: Network device monitoring with interface details and configuration management
+5. **FileServer**: File share permissions and NTFS ACL management with storage analytics
+6. **PhysicalServer**: Hardware inventory with component details, warranty, and maintenance tracking
+7. **SQLServer**: Database instance and schema discovery with performance and backup information
+8. **VMware**: Virtual infrastructure management with cluster/host/VM relationships and resource allocation
+9. **WebServer**: IIS/SharePoint site configuration with SSL certificates and application pools
+10. **SecurityInfrastructure**: Firewall and endpoint protection with policy compliance and threat detection
+
+#### Collaboration & Productivity Views
+11. **MicrosoftTeams**: Team and channel management with governance and compliance monitoring
+12. **SharePoint**: Site collection and content management with permission inheritance
+13. **PowerBI**: Workspace and report governance with data source tracking and refresh monitoring
+
+#### Compliance & Security Views
+14. **DataLossPrevention**: Policy management and incident tracking with sensitive data classification
 
 ### DataGrid Column Patterns
 - **Standard Columns**: Name/ID, Type, Status, Created Date, Actions
@@ -155,13 +175,25 @@ protected override async Task LoadFromCsvAsync(List<dynamic> csvData)
 - **[Screenshot: StandardDiscoveryViewTemplate-DataArea.png]** - DataGrid with GridSplitter and details panel
 
 ### Individual View Implementations
-- **[Screenshot: AzureDiscoveryView-FullView.png]** - Complete Azure discovery view
-- **[Screenshot: AzureDiscoveryView-DataGrid.png]** - Azure resources DataGrid with details panel
-- **[Screenshot: AzureInfrastructureDiscoveryView-Summary.png]** - Enhanced summary cards with icons
-- **[Screenshot: VMwareDiscoveryView-StatusIndicators.png]** - VMware status column with color coding
-- **[Screenshot: OneDriveBusinessDiscoveryView-Responsive.png]** - Responsive layout with collapsed details
-- **[Screenshot: ConditionalAccessPoliciesDiscoveryView-Details.png]** - Advanced details panel with sections
-- **[Screenshot: AWSCloudInfrastructureDiscoveryView-ServiceFields.png]** - AWS-specific detail fields
+#### Infrastructure & Cloud Discovery Views
+- **[Screenshot: ActiveDirectoryDiscoveryView-FullView.png]** - Complete Active Directory domain discovery view
+- **[Screenshot: AzureInfrastructureDiscoveryView-Summary.png]** - Enhanced Azure summary cards with cost information
+- **[Screenshot: ExchangeDiscoveryView-Mailboxes.png]** - Exchange mailbox management interface
+- **[Screenshot: NetworkInfrastructureDiscoveryView-Devices.png]** - Network device inventory with status indicators
+- **[Screenshot: FileServerDiscoveryView-Permissions.png]** - File server share permissions and ACLs
+- **[Screenshot: PhysicalServerDiscoveryView-Hardware.png]** - Physical server hardware inventory
+- **[Screenshot: SQLServerDiscoveryView-Databases.png]** - SQL Server instances and database schema
+- **[Screenshot: VMwareDiscoveryView-StatusIndicators.png]** - VMware infrastructure with color-coded status
+- **[Screenshot: WebServerDiscoveryView-Configuration.png]** - Web server configuration and SSL certificates
+- **[Screenshot: SecurityInfrastructureDiscoveryView-Policies.png]** - Security policies and compliance status
+
+#### Collaboration & Productivity Discovery Views
+- **[Screenshot: MicrosoftTeamsDiscoveryView-Teams.png]** - Teams and channels governance interface
+- **[Screenshot: SharePointDiscoveryView-Sites.png]** - SharePoint site collections and content
+- **[Screenshot: PowerBIDiscoveryView-Workspaces.png]** - Power BI workspace and report governance
+
+#### Compliance & Security Discovery Views
+- **[Screenshot: DataLossPreventionDiscoveryView-Incidents.png]** - DLP policy incidents and data classification
 
 ### Responsive Behavior
 - **[Screenshot: DiscoveryViews-MobileLayout.png]** - Narrow screen responsive behavior

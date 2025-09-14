@@ -25,14 +25,17 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         // Properties
-        private int _totalServers;
-        public int TotalServers { get => _totalServers; set => SetProperty(ref _totalServers, value); }
+        private int _webServersCount;
+        public int WebServersCount { get => _webServersCount; set => SetProperty(ref _webServersCount, value); }
+
+        private int _iisCount;
+        public int IISCount { get => _iisCount; set => SetProperty(ref _iisCount, value); }
+
+        private int _apacheCount;
+        public int ApacheCount { get => _apacheCount; set => SetProperty(ref _apacheCount, value); }
 
         private int _totalWebsites;
         public int TotalWebsites { get => _totalWebsites; set => SetProperty(ref _totalWebsites, value); }
-
-        private int _totalConfigurations;
-        public int TotalConfigurations { get => _totalConfigurations; set => SetProperty(ref _totalConfigurations, value); }
 
         public ObservableCollection<dynamic> SelectedResults { get; } = new();
         private object _selectedItem;
@@ -70,7 +73,26 @@ namespace MandADiscoverySuite.ViewModels
                 var loadedCsvData = await _csvService.LoadCsvDataAsync(csvPath);
 
                 var results = new System.Collections.Generic.List<dynamic>();
-                foreach (var item in loadedCsvData) results.Add(item);
+                foreach (var item in loadedCsvData)
+                {
+                    // Create enhanced dynamic object with computed properties
+                    var enhancedItem = new System.Dynamic.ExpandoObject();
+                    var itemDict = (System.Collections.Generic.IDictionary<string, object>)enhancedItem;
+
+                    // Copy all original properties
+                    var originalDict = (System.Collections.Generic.IDictionary<string, object>)item;
+                    foreach (var kvp in originalDict)
+                    {
+                        itemDict[kvp.Key] = kvp.Value;
+                    }
+
+                    // Add computed properties for DataGrid columns
+                    itemDict["WebsitesCount"] = CalculateWebsitesCount(item);
+                    itemDict["AppPoolsCount"] = CalculateAppPoolsCount(item);
+
+                    results.Add(enhancedItem);
+                }
+
                 var result = DataLoaderResult<dynamic>.Success(results, new System.Collections.Generic.List<string>());
 
                 // Apply HeaderWarnings logic
@@ -139,34 +161,60 @@ namespace MandADiscoverySuite.ViewModels
 
         private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
         {
-            int serverCount = 0;
-            int websiteCount = 0;
-            int configCount = 0;
+            int webServersCount = 0;
+            int iisCount = 0;
+            int apacheCount = 0;
+            int totalWebsites = 0;
 
             foreach (var item in data)
             {
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
 
-                // Count servers based on ObjectType
+                // Count web servers based on FrameworkName
+                string frameworkName = "";
+                dict.TryGetValue("FrameworkName", out var frameworkNameObj);
+                if (frameworkNameObj != null)
+                {
+                    frameworkName = frameworkNameObj.ToString().ToLowerInvariant();
+
+                    // Count total web servers
+                    if (frameworkName.Contains("iis") || frameworkName.Contains("apache") ||
+                        frameworkName.Contains("nginx") || frameworkName.Contains("tomcat"))
+                    {
+                        webServersCount++;
+                    }
+
+                    // Count IIS servers
+                    if (frameworkName.Contains("iis"))
+                    {
+                        iisCount++;
+                    }
+
+                    // Count Apache servers
+                    if (frameworkName.Contains("apache"))
+                    {
+                        apacheCount++;
+                    }
+                }
+
+                // Count websites based on ObjectType
                 string objectType = "";
                 dict.TryGetValue("ObjectType", out var objectTypeObj);
                 if (objectTypeObj != null)
                 {
-                    objectType = objectTypeObj.ToString();
-                    if (objectType.Contains("Site") || objectType.Contains("Application") || objectType.Contains("Installation"))
-                        serverCount++;
-
-                    if (objectType.Contains("Site") || objectType.Contains("VirtualHost") || objectType.Contains("Website"))
-                        websiteCount++;
-
-                    if (objectType.Contains("Config"))
-                        configCount++;
+                    objectType = objectTypeObj.ToString().ToLowerInvariant();
+                    if (objectType.Contains("site") || objectType.Contains("virtualhost") ||
+                        objectType.Contains("website") || objectType.Contains("webapplication"))
+                    {
+                        totalWebsites++;
+                    }
                 }
             }
 
-            TotalServers = serverCount;
-            TotalWebsites = websiteCount;
-            TotalConfigurations = configCount;
+            WebServersCount = webServersCount;
+            IISCount = iisCount;
+            ApacheCount = apacheCount;
+            TotalWebsites = totalWebsites;
         }
 
         private async Task ViewDetailsAsync(object parameter)
@@ -208,6 +256,71 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _log?.LogError(ex, "Error opening web server asset details");
                 ShowError("View Details Error", ex.Message);
+            }
+        }
+
+        private int CalculateWebsitesCount(dynamic item)
+        {
+            try
+            {
+                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+
+                // Check if WebsitesCount is already provided in the data
+                if (dict.TryGetValue("WebsitesCount", out var websitesCountObj))
+                {
+                    if (int.TryParse(websitesCountObj?.ToString(), out var count))
+                        return count;
+                }
+
+                // Calculate based on ObjectType (simple heuristic)
+                if (dict.TryGetValue("ObjectType", out var objectTypeObj))
+                {
+                    var objectType = objectTypeObj?.ToString().ToLowerInvariant();
+                    if (objectType != null)
+                    {
+                        if (objectType.Contains("server") || objectType.Contains("installation"))
+                            return 5; // Assume servers host multiple websites
+                        if (objectType.Contains("site") || objectType.Contains("website"))
+                            return 1; // Individual sites
+                    }
+                }
+
+                return 0; // Default
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private int CalculateAppPoolsCount(dynamic item)
+        {
+            try
+            {
+                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+
+                // Check if AppPoolsCount is already provided in the data
+                if (dict.TryGetValue("AppPoolsCount", out var appPoolsCountObj))
+                {
+                    if (int.TryParse(appPoolsCountObj?.ToString(), out var count))
+                        return count;
+                }
+
+                // Calculate based on FrameworkName (simple heuristic for IIS)
+                if (dict.TryGetValue("FrameworkName", out var frameworkNameObj))
+                {
+                    var frameworkName = frameworkNameObj?.ToString().ToLowerInvariant();
+                    if (frameworkName != null && frameworkName.Contains("iis"))
+                    {
+                        return 3; // Assume IIS servers have app pools
+                    }
+                }
+
+                return 0; // Default for non-IIS servers
+            }
+            catch
+            {
+                return 0;
             }
         }
 
