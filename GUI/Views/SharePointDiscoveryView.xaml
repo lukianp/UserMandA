@@ -8,26 +8,6 @@
              d:DesignHeight="800" d:DesignWidth="1200">
 
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#FF2D3748"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
-        <Style x:Key="FilterComboBoxStyle" TargetType="ComboBox">
-            <Setter Property="MinWidth" Value="150"/>
-            <Setter Property="Margin" Value="8,0"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-        <Style x:Key="SearchTextBoxStyle" TargetType="TextBox">
-            <Setter Property="MinWidth" Value="200"/>
-            <Setter Property="Margin" Value="8,0"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#FFE2E8F0"/>
-            <Setter Property="Padding" Value="8,6"/>
-        </Style>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="../Resources/Converters.xaml" />
@@ -35,6 +15,26 @@
                 <ResourceDictionary Source="../Themes/ThemeStyles.xaml" />
                 <ResourceDictionary Source="../Themes/Colors.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="16"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="#FF2D3748"/>
+                <Setter Property="Margin" Value="0,0,0,8"/>
+            </Style>
+            <Style x:Key="FilterComboBoxStyle" TargetType="ComboBox">
+                <Setter Property="MinWidth" Value="150"/>
+                <Setter Property="Margin" Value="8,0"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+            <Style x:Key="SearchTextBoxStyle" TargetType="TextBox">
+                <Setter Property="MinWidth" Value="200"/>
+                <Setter Property="Margin" Value="8,0"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="BorderBrush" Value="#FFE2E8F0"/>
+                <Setter Property="Padding" Value="8,6"/>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -101,7 +101,7 @@
                 <StackPanel>
                     <TextBlock Text="Storage Used" FontWeight="Bold" FontSize="14" Foreground="#FF7C3AED"/>
                     <TextBlock Text="💾" FontSize="24" HorizontalAlignment="Center" Margin="0,8,0,8"/>
-                    <TextBlock Text="{Binding TotalStorageUsed, StringFormat='{0} GB'}" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalStorageUsed, StringFormat='{}{0} GB'}" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
         </UniformGrid>
@@ -117,76 +117,79 @@
 
             <!-- Main DataGrid Placeholder -->
             <Border Grid.Column="0" Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1">
-                <DataGrid ItemsSource="{Binding SelectedResults}"
-                          AutoGenerateColumns="False"
-                          CanUserAddRows="False"
-                          CanUserDeleteRows="False"
-                          GridLinesVisibility="Horizontal"
-                          HeadersVisibility="Column"
-                          Margin="8"
-                          SelectedItem="{Binding SelectedItem}"
-                          SelectionMode="Extended"
-                          Visibility="{Binding SelectedResults.Count, Converter={StaticResource CountToVisibility}}">
+                <Grid>
+                    <DataGrid ItemsSource="{Binding SelectedResults}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              GridLinesVisibility="Horizontal"
+                              HeadersVisibility="Column"
+                              Margin="8"
+                              SelectedItem="{Binding SelectedItem}"
+                              SelectionMode="Extended"
+                              Visibility="{Binding SelectedResults.Count, Converter={StaticResource CountToVisibility}}">
 
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Site Name"
-                                            Binding="{Binding sitename}"
-                                            Width="200"/>
-                        <DataGridTextColumn Header="URL"
-                                            Binding="{Binding url}"
-                                            Width="250"/>
-                        <DataGridTextColumn Header="Template"
-                                            Binding="{Binding sitetemplate}"
-                                            Width="150"/>
-                        <DataGridTextColumn Header="Owner"
-                                            Binding="{Binding owner}"
-                                            Width="150"/>
-                        <DataGridTextColumn Header="Storage Used (GB)"
-                                            Binding="{Binding storageused}"
-                                            Width="120"/>
-                        <DataGridTextColumn Header="Created Date"
-                                            Binding="{Binding createddate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="120"/>
-                        <DataGridTemplateColumn Header="Actions" Width="100">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Button Content="View Details"
-                                            FontSize="11"
-                                            Padding="8,4"
-                                            Background="#FF0891B2"
-                                            Foreground="White"
-                                            BorderThickness="0"
-                                            Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                            CommandParameter="{Binding}" />
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Site Name"
+                                                Binding="{Binding sitename}"
+                                                Width="200"/>
+                            <DataGridTextColumn Header="URL"
+                                                Binding="{Binding url}"
+                                                Width="250"/>
+                            <DataGridTextColumn Header="Template"
+                                                Binding="{Binding sitetemplate}"
+                                                Width="150"/>
+                            <DataGridTextColumn Header="Owner"
+                                                Binding="{Binding owner}"
+                                                Width="150"/>
+                            <DataGridTextColumn Header="Storage Used (GB)"
+                                                Binding="{Binding storageused}"
+                                                Width="120"/>
+                            <DataGridTextColumn Header="Created Date"
+                                                Binding="{Binding createddate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="120"/>
+                            <DataGridTemplateColumn Header="Actions" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="View Details"
+                                                FontSize="11"
+                                                Padding="8,4"
+                                                Background="#FF0891B2"
+                                                Foreground="White"
+                                                BorderThickness="0"
+                                                Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
 
-                    <DataGrid.RowStyle>
-                        <Style TargetType="DataGridRow">
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#FFE6F7FF"/>
-                                </Trigger>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="#FFB3E5FC"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGrid.RowStyle>
-                </DataGrid>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#FFE6F7FF"/>
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#FFB3E5FC"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+                    </DataGrid>
 
-                <!-- No Data Message -->
-                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
-                        Visibility="{Binding SelectedResults.Count, Converter={StaticResource InverseCountToVisibility}}">
-                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-                        <TextBlock Text="🌐" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
-                        <TextBlock Text="No SharePoint data found" FontSize="16" HorizontalAlignment="Center"
-                                   Margin="0,10,0,0" Opacity="0.7"/>
-                        <TextBlock Text="Check CSV files in data directory" FontSize="12" HorizontalAlignment="Center"
-                                   Margin="0,5,0,0" Opacity="0.5"/>
-                    </StackPanel>
-                </Border>
+                    <!-- No Data Message -->
+                    <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Visibility="{Binding SelectedResults.Count, Converter={StaticResource InverseCountToVisibility}}"
+                            Background="#FFF8FAFC">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                            <TextBlock Text="🌐" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
+                            <TextBlock Text="No SharePoint data found" FontSize="16" HorizontalAlignment="Center"
+                                        Margin="0,10,0,0" Opacity="0.7"/>
+                            <TextBlock Text="Check CSV files in data directory" FontSize="12" HorizontalAlignment="Center"
+                                        Margin="0,5,0,0" Opacity="0.5"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </Border>
 
             <GridSplitter Grid.Column="1" Width="5" Background="Gray" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
@@ -195,7 +198,7 @@
             <Border Grid.Column="2" Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="16" Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}">
-                        <TextBlock Text="Site Details & Hierarchy" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16" Foreground="#FF0891B2"/>
+                        <TextBlock Text="Site Details &amp; Hierarchy" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16" Foreground="#FF0891B2"/>
 
                         <!-- Site Hierarchy Section -->
                         <TextBlock Text="Site Hierarchy" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#FF16A34A"/>
@@ -246,7 +249,7 @@
            <StackPanel HorizontalAlignment="Center">
                <TextBlock Text="SharePoint Discovery Module - Ready" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF4A5568"/>
                <TextBlock Text="{Binding StatusText}" FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,0" Foreground="#FF718096"/>
-               <TextBlock Text="{Binding LastUpdated, StringFormat='Last Updated: {0:g}'}" FontSize="10" HorizontalAlignment="Center" Margin="0,4,0,0" Foreground="#FFA0AEC0"/>
+               <TextBlock Text="{Binding LastUpdated, StringFormat='{}{0:g}'}" FontSize="10" HorizontalAlignment="Center" Margin="0,4,0,0" Foreground="#FFA0AEC0"/>
            </StackPanel>
        </Border>
    </Grid>

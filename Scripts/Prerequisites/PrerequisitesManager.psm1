@@ -350,6 +350,94 @@ function New-InfrastructureDiscoveryPrerequisites {
     return $prereqChecker
 }
 
+function New-LicenseAssignmentPrerequisites {
+    <#
+    .SYNOPSIS
+        Creates prerequisite checker for License Assignment and Compliance (T-038)
+    .DESCRIPTION
+        Defines prerequisites for the License Assignment service including Microsoft Graph API
+        connectivity, required permissions, and Azure AD application registration.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $prereqChecker = [PrerequisiteChecker]::new()
+
+    # Microsoft Graph PowerShell SDK
+    $graphSdkPrereq = New-Prerequisite `
+        -Name "Microsoft.Graph-PowerShell" `
+        -Description "Microsoft Graph PowerShell SDK for license management and API operations" `
+        -IsRequired $false  # Optional - can use REST API directly
+
+    $graphSdkPrereq.InstallMethod = "Automatic"
+    $graphSdkPrereq.ValidationCommand = "Test-PowerShellModule -ModuleName 'Microsoft.Graph'"
+    $graphSdkPrereq.InstallCommand = "Install-GraphPowerShellModule"
+    $prereqChecker.AddPrerequisite($graphSdkPrereq)
+
+    # Azure AD Application Registration
+    $azureAdAppPrereq = New-Prerequisite `
+        -Name "AzureAD-Application-Registration" `
+        -Description "Azure AD application with required Graph API permissions for license operations" `
+        -IsRequired $true
+
+    $azureAdAppPrereq.InstallMethod = "Manual"
+    $azureAdAppPrereq.ValidationCommand = "Test-AzureADAppRegistration"
+    $azureAdAppPrereq.InstallCommand = "New-AzureADAppRegistration"
+    $prereqChecker.AddPrerequisite($azureAdAppPrereq)
+
+    # Graph API Connectivity
+    $graphConnectivityPrereq = New-Prerequisite `
+        -Name "Graph-API-Connectivity" `
+        -Description "Network connectivity to Microsoft Graph API endpoints for license operations" `
+        -IsRequired $true
+
+    $graphConnectivityPrereq.InstallMethod = "Information"
+    $graphConnectivityPrereq.ValidationCommand = "Test-GraphAPIConnectivity"
+    $prereqChecker.AddPrerequisite($graphConnectivityPrereq)
+
+    # Required Graph API Permissions
+    $graphPermissionsPrereq = New-Prerequisite `
+        -Name "Graph-API-Permissions" `
+        -Description "Required Microsoft Graph API permissions: User.ReadWrite.All, Directory.ReadWrite.All, Organization.Read.All, LicenseAssignment.ReadWrite.All" `
+        -IsRequired $true
+
+    $graphPermissionsPrereq.InstallMethod = "Manual"
+    $graphPermissionsPrereq.ValidationCommand = "Test-GraphAPIPermissions"
+    $prereqChecker.AddPrerequisite($graphPermissionsPrereq)
+
+    # Target Tenant Credentials
+    $targetCredentialsPrereq = New-Prerequisite `
+        -Name "Target-Tenant-Credentials" `
+        -Description "Valid credentials (Client ID/Secret or Certificate) for target Microsoft 365 tenant" `
+        -IsRequired $true
+
+    $targetCredentialsPrereq.InstallMethod = "Manual"
+    $targetCredentialsPrereq.ValidationCommand = "Test-TargetTenantCredentials"
+    $prereqChecker.AddPrerequisite($targetCredentialsPrereq)
+
+    # Administrator Consent
+    $adminConsentPrereq = New-Prerequisite `
+        -Name "Admin-Consent-Granted" `
+        -Description "Administrator consent granted for required Graph API permissions in target tenant" `
+        -IsRequired $true
+
+    $adminConsentPrereq.InstallMethod = "Manual"
+    $adminConsentPrereq.ValidationCommand = "Test-AdminConsentStatus"
+    $prereqChecker.AddPrerequisite($adminConsentPrereq)
+
+    # License Management Permissions
+    $licensePermissionsPrereq = New-Prerequisite `
+        -Name "License-Management-Permissions" `
+        -Description "User account or service principal has license administrator role in target tenant" `
+        -IsRequired $true
+
+    $licensePermissionsPrereq.InstallMethod = "Manual"
+    $licensePermissionsPrereq.ValidationCommand = "Test-LicenseManagementPermissions"
+    $prereqChecker.AddPrerequisite($licensePermissionsPrereq)
+
+    return $prereqChecker
+}
+
 function Test-AdministratorPrivileges {
     $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
@@ -439,7 +527,7 @@ function Install-ActiveDirectoryModule {
             $capabilityName = "Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0"
             Write-PrerequisitesLog "Installing RSAT capability: $capabilityName" -Level "INFO"
 
-            dism.exe /online /Get-CapabilityInfo /CapabilityName:$capabilityName 2>&1
+            dism.exe /online /Get-CapabilityInfo /CapabilityName:$capabilityName 2>&1 | Out-Null
             if ($LASTEXITCODE -eq 0) {
                 # Install the capability
                 $installResult = dism.exe /online /Add-Capability /CapabilityName:$capabilityName /Quiet /NoRestart 2>&1
@@ -556,7 +644,6 @@ function Install-ActiveDirectoryModule {
             Message = "Installation failed: $($_.Exception.Message)"
             ErrorDetails = $_.Exception.Message
         }
-    } finally {
     }
 }
 
@@ -574,7 +661,7 @@ function Invoke-PrerequisitesCheck {
         [switch]$Interactive
     )
 
-    Write-PrerequisitesLog "Prerequisites check started" -Level "HEADER"
+    Write-PrerequisitesLog "=== Prerequisites Check Started ===" -Level "HEADER"
     Write-PrerequisitesLog "Module: $ModuleName" -Level "INFO"
 
     $results = @{
@@ -598,6 +685,10 @@ function Invoke-PrerequisitesCheck {
                 Write-PrerequisitesLog "Checking Infrastructure Discovery prerequisites..." -Level "INFO"
                 $prereqChecker = New-InfrastructureDiscoveryPrerequisites
             }
+            {$_ -in @("LicenseAssignment", "LicenseCompliance", "Migration", "ConditionalAccessDiscovery", "All")} {
+                Write-PrerequisitesLog "Checking License Assignment and Compliance prerequisites..." -Level "INFO"
+                $prereqChecker = New-LicenseAssignmentPrerequisites
+            }
             default {
                 Write-PrerequisitesLog "No specific prerequisites defined for module '$ModuleName'" -Level "WARN"
                 return $results
@@ -607,82 +698,83 @@ function Invoke-PrerequisitesCheck {
         if (-not $prereqChecker) {
             Write-PrerequisitesLog "No prerequisite checker available for module '$ModuleName'" -Level "ERROR"
             $results.OverallSuccess = $false
+            $results.Errors += "No prerequisite checker available for module '$ModuleName'"
             return $results
         }
+    } catch {
+        Write-PrerequisitesLog "Failed to create prerequisite checker: $($_.Exception.Message)" -Level "ERROR"
+        $results.OverallSuccess = $false
+        $results.Errors += "Failed to create prerequisite checker: $($_.Exception.Message)"
+        return $results
+    }
 
-        # Run validation for each prerequisite
-        foreach ($prereq in $prereqChecker.GetAllPrerequisites()) {
-            Write-PrerequisitesLog "Checking prerequisite: $($prereq.Name)" -Level "INFO"
+    # Run validation for each prerequisite
+    foreach ($prereq in $prereqChecker.GetAllPrerequisites()) {
+        Write-PrerequisitesLog "Checking prerequisite: $($prereq.Name)" -Level "INFO"
 
-            # Execute validation command
-            if ($prereq.ValidationCommand) {
-                try {
-                    $validationResult = Invoke-Expression $prereq.ValidationCommand
+        # Execute validation command
+        if ($prereq.ValidationCommand) {
+            try {
+                $validationResult = Invoke-Expression $prereq.ValidationCommand
 
-                    $prereq.IsInstalled = $validationResult.Installed
-                    $prereq.Status = $validationResult.Status
-                    $prereq.Version = $validationResult.Version
+                $prereq.IsInstalled = $validationResult.Installed
+                $prereq.Status = $validationResult.Status
+                $prereq.Version = $validationResult.Version
 
-                    if ($validationResult.Installed) {
-                        Write-PrerequisitesLog "✓ $($prereq.Name) - OK" -Level "SUCCESS"
-                        $results.Installed += $prereq
-                    } else {
-                        if ($prereq.IsRequired) {
-                            $results.Errors += $prereq
-                            Write-PrerequisitesLog "[FAILED] $($prereq.Name) - REQUIRED but missing: $($prereq.Status)" -Level "ERROR"
-                            $results.OverallSuccess = $false
+                if ($validationResult.Installed) {
+                    Write-PrerequisitesLog "$($prereq.Name) - OK" -Level "SUCCESS"
+                    $results.Installed += $prereq
+                } else {
+                    if ($prereq.IsRequired) {
+                        $results.Errors += $prereq
+                        Write-PrerequisitesLog "$($prereq.Name) - REQUIRED but missing: $($prereq.Status)" -Level "ERROR"
+                        $results.OverallSuccess = $false
 
-                            if ($Install) {
-                                # Try auto-installation
-                                Write-PrerequisitesLog "Attempting automatic installation of $($prereq.Name)..." -Level "INFO"
+                        if ($Install) {
+                            # Try auto-installation
+                            Write-PrerequisitesLog "Attempting automatic installation of $($prereq.Name)..." -Level "INFO"
 
-                                if ($prereq.InstallCommand) {
-                                    $installResult = Invoke-Expression $prereq.InstallCommand
+                            if ($prereq.InstallCommand) {
+                                $installResult = Invoke-Expression $prereq.InstallCommand
 
-                                    if ($installResult.Success) {
-                                        $prereq.IsInstalled = $true
-                                        $prereq.Status = "Installed"
-                                        Write-PrerequisitesLog "[OK] $($prereq.Name) - INSTALLED automatically" -Level "SUCCESS"
-                                    } else {
-                                        Write-PrerequisitesLog "[FAILED] $($prereq.Name) - Installation failed: $($installResult.Message)" -Level "ERROR"
-                                    }
+                                if ($installResult.Success) {
+                                    $prereq.IsInstalled = $true
+                                    $prereq.Status = "Installed"
+                                    Write-PrerequisitesLog "$($prereq.Name) - INSTALLED automatically" -Level "SUCCESS"
+                                } else {
+                                    Write-PrerequisitesLog "$($prereq.Name) - Installation failed: $($installResult.Message)" -Level "ERROR"
                                 }
+                            } else {
+                                Write-PrerequisitesLog "No installation command defined for $($prereq.Name)" -Level "WARN"
                             }
-                        } else {
-                            Write-PrerequisitesLog "! $($prereq.Name) - Optional but missing: $($prereq.Status)" -Level "WARN"
-                            $results.Warnings += $prereq
+                        }
+                    } else {
+                        Write-PrerequisitesLog "Optional $($prereq.Name) - missing: $($prereq.Status)" -Level "WARN"
+                        $results.Warnings += $prereq
                         }
                     }
-                }
-                catch {
-                    Write-PrerequisitesLog "Failed to validate $($prereq.Name): $($_.Exception.Message)" -Level "ERROR"
-                    $results.Errors += $prereq
-                    if ($prereq.IsRequired) {
-                        $results.OverallSuccess = $false
-                    }
+            }
+            catch {
+                Write-PrerequisitesLog "Failed to validate $($prereq.Name): $($_.Exception.Message)" -Level "ERROR"
+                $results.Errors += $prereq
+                if ($prereq.IsRequired) {
+                    $results.OverallSuccess = $false
                 }
             }
+        }
+
         $results.Prerequisites += $prereq
-        }
-
-        # Summary
-        Write-PrerequisitesLog "Prerequisites check summary" -Level "HEADER"
-        Write-PrerequisitesLog "Total prerequisites checked: $($results.Prerequisites.Count)" -Level "INFO"
-        Write-PrerequisitesLog "Installed: $($results.Installed.Count)" -Level "SUCCESS"
-        Write-PrerequisitesLog "Warnings: $($results.Warnings.Count)" -Level "WARN"
-        Write-PrerequisitesLog "Errors: $($results.Errors.Count)" -Level "ERROR"
-        Write-PrerequisitesLog "Overall result: $(if ($results.OverallSuccess) { 'Pass' } else { 'Fail' })" -Level "HEADER"
     }
 
-catch {
-        Write-PrerequisitesLog "Prerequisites check failed with error: $($_.Exception.Message)" -Level "ERROR"
-        $results.OverallSuccess = $false
-        $results.Errors += "Prerequisites check failed: $($_.Exception.Message)"
-        }
+    # Summary
+    Write-PrerequisitesLog "=== Prerequisites Check Summary ===" -Level "HEADER"
+    Write-PrerequisitesLog "Total prerequisites checked: $($results.Prerequisites.Count)" -Level "INFO"
+    Write-PrerequisitesLog "Installed: $($results.Installed.Count)" -Level "SUCCESS"
+    Write-PrerequisitesLog "Warnings: $($results.Warnings.Count)" -Level "WARN"
+    Write-PrerequisitesLog "Errors: $($results.Errors.Count)" -Level "ERROR"
+    Write-PrerequisitesLog "Overall result: $(if ($results.OverallSuccess) { 'PASS' } else { 'FAIL' })" -Level "HEADER"
 
-finally {
-    }
-    Write-PrerequisitesLog "Prerequisites check complete" -Level "HEADER"
+    Write-PrerequisitesLog "=== Prerequisites Check Complete ===" -Level "HEADER"
 
     return $results
 }
@@ -702,7 +794,7 @@ function Test-NmapInstallation {
         [switch]$IncludeFunctionalityTest
     )
 
-    Write-PrerequisitesLog "[SEARCH] Testing nmap installation and capabilities..." -Level "INFO"
+    Write-PrerequisitesLog "Testing nmap installation and capabilities..." -Level "INFO"
 
     try {
         # PRIORITY 1: Check if system-installed nmap is available in PATH (preferred for performance)
@@ -711,8 +803,8 @@ function Test-NmapInstallation {
             try {
                 $versionOutput = & $nmapPath.Source --version 2>$null
                 if ($versionOutput -match 'Nmap version ([0-9]+\.[0-9]+)') {
-                    Write-PrerequisitesLog "SUCCESS: Found system nmap in PATH: $($nmapPath.Source) (v$($matches[1]))" -Level "SUCCESS"
-                    
+                    Write-PrerequisitesLog "Found system nmap in PATH: $($nmapPath.Source) (v$($matches[1]))" -Level "SUCCESS"
+
                     $result = @{
                         Installed = $true
                         Version = $matches[1]
@@ -721,35 +813,35 @@ function Test-NmapInstallation {
                         Status = "Functional system installation found"
                         Capabilities = "Full nmap capabilities available"
                     }
-                    
+
                     if ($IncludeFunctionalityTest) {
                         $result.FunctionalityTest = Test-NmapFunctionality -NmapPath $nmapPath.Source
                     }
-                    
+
                     return $result
                 }
             } catch {
                 Write-PrerequisitesLog "nmap in PATH failed version test: $($_.Exception.Message)" -Level "DEBUG"
             }
         }
-        
+
         # PRIORITY 2: Check common system installation paths
         $commonPaths = @(
             "${env:ProgramFiles}\Nmap\nmap.exe",
             "${env:ProgramFiles(x86)}\Nmap\nmap.exe",
-            "C:\Program Files\Nmap\nmap.exe", 
+            "C:\Program Files\Nmap\nmap.exe",
             "C:\Program Files (x86)\Nmap\nmap.exe",
             "${env:LOCALAPPDATA}\Programs\Nmap\nmap.exe",
             "C:\Tools\Nmap\nmap.exe"
         )
-        
+
         foreach ($path in $commonPaths) {
             if (Test-Path $path) {
                 try {
                     $versionOutput = & $path --version 2>$null
                     if ($versionOutput -match 'Nmap version ([0-9]+\.[0-9]+)') {
-                        Write-PrerequisitesLog "SUCCESS: Found system nmap at: $path (v$($matches[1]))" -Level "SUCCESS"
-                        
+                        Write-PrerequisitesLog "Found system nmap at: $path (v$($matches[1]))" -Level "SUCCESS"
+
                         $result = @{
                             Installed = $true
                             Version = $matches[1]
@@ -758,11 +850,11 @@ function Test-NmapInstallation {
                             Status = "Functional system installation found"
                             Capabilities = "Full nmap capabilities available"
                         }
-                        
+
                         if ($IncludeFunctionalityTest) {
                             $result.FunctionalityTest = Test-NmapFunctionality -NmapPath $path
                         }
-                        
+
                         return $result
                     }
                 } catch {
@@ -770,22 +862,22 @@ function Test-NmapInstallation {
                 }
             }
         }
-        
+
         # PRIORITY 3: Check for embedded nmap in application directory
         $embeddedPaths = @(
             "$PSScriptRoot\..\..\Tools\nmap\nmap.exe",
-            "$PSScriptRoot\..\..\..\Tools\nmap\nmap.exe", 
+            "$PSScriptRoot\..\..\..\Tools\nmap\nmap.exe",
             "C:\enterprisediscovery\Tools\nmap\nmap.exe",
             "C:\Tools\nmap\nmap.exe"
         )
-        
+
         foreach ($embeddedPath in $embeddedPaths) {
             if (Test-Path $embeddedPath) {
                 try {
                     $versionOutput = & $embeddedPath --version 2>$null
                     if ($versionOutput -match 'Nmap version ([0-9]+\.[0-9]+)') {
-                        Write-PrerequisitesLog "SUCCESS: Found embedded nmap: $embeddedPath (v$($matches[1]))" -Level "SUCCESS"
-                        
+                        Write-PrerequisitesLog "Found embedded nmap: $embeddedPath (v$($matches[1]))" -Level "SUCCESS"
+
                         $result = @{
                             Installed = $true
                             Version = $matches[1]
@@ -795,11 +887,11 @@ function Test-NmapInstallation {
                             Capabilities = "Basic nmap capabilities available"
                             Recommendation = "Consider installing system nmap for better performance and full capabilities"
                         }
-                        
+
                         if ($IncludeFunctionalityTest) {
                             $result.FunctionalityTest = Test-NmapFunctionality -NmapPath $embeddedPath
                         }
-                        
+
                         return $result
                     }
                 } catch {
@@ -807,9 +899,9 @@ function Test-NmapInstallation {
                 }
             }
         }
-        
+
         # No nmap found
-        Write-PrerequisitesLog "[WARNING] No functional nmap installation found" -Level "WARN"
+        Write-PrerequisitesLog "No functional nmap installation found" -Level "WARN"
         return @{
             Installed = $false
             Version = ""
@@ -819,9 +911,9 @@ function Test-NmapInstallation {
             Capabilities = "None - PowerShell alternatives will be used"
             Recommendation = "Install nmap for enhanced network scanning capabilities"
         }
-        
+
     } catch {
-        Write-PrerequisitesLog "[ERROR] nmap detection failed: $($_.Exception.Message)" -Level "ERROR"
+        Write-PrerequisitesLog "nmap detection failed: $($_.Exception.Message)" -Level "ERROR"
         return @{
             Installed = $false
             Version = ""
@@ -829,9 +921,7 @@ function Test-NmapInstallation {
             InstallationType = "Error"
             Status = "Detection failed: $($_.Exception.Message)"
             Capabilities = "Unknown - detection error occurred"
-         }
-     }
-     finally {
+        }
     }
 }
 
@@ -847,7 +937,7 @@ function Test-NmapFunctionality {
         [Parameter(Mandatory=$true)]
         [string]$NmapPath
     )
-    
+
     try {
         # Test basic functionality with a safe local scan
         $testResult = & $NmapPath -sn -T1 127.0.0.1 2>$null
@@ -885,154 +975,161 @@ function Install-NmapPrerequisite {
     param(
         [Parameter(Mandatory=$false)]
         [switch]$Force,
-        
+
         [Parameter(Mandatory=$false)]
         [switch]$Interactive = $false
     )
-    
-    Write-PrerequisitesLog "Tool: Attempting nmap installation..." -Level "INFO"
-    
-    # Check if already installed
-    $existingInstall = Test-NmapInstallation
-    if ($existingInstall.Installed -and -not $Force) {
-        Write-PrerequisitesLog "SUCCESS: nmap already installed at: $($existingInstall.Path) (v$($existingInstall.Version))" -Level "SUCCESS"
-        return @{
-            Success = $true
-            Installed = $true
-            Message = "nmap already installed"
-            Path = $existingInstall.Path
-            Version = $existingInstall.Version
-        }
-    }
-    
-    # Check administrator privileges
-    $adminCheck = Test-AdministratorPrivileges
-    if (-not $adminCheck.Installed) {
-        Write-PrerequisitesLog "[ERROR] Administrator privileges required for nmap installation" -Level "ERROR"
-        return @{
-            Success = $false
-            Installed = $false
-            Message = "Administrator privileges required"
-            RequiresElevation = $true
-        }
-    }
-    
+
+    Write-PrerequisitesLog "Installing nmap..." -Level "INFO"
+
     try {
+        # Check if already installed
+        $existingInstall = Test-NmapInstallation
+        if ($existingInstall.Installed -and -not $Force) {
+            Write-PrerequisitesLog "nmap already installed at: $($existingInstall.Path) (v$($existingInstall.Version))" -Level "SUCCESS"
+            return @{
+                Success = $true
+                Installed = $true
+                Message = "nmap already installed"
+                Path = $existingInstall.Path
+                Version = $existingInstall.Version
+            }
+        }
+
+        # Check administrator privileges
+        $adminCheck = Test-AdministratorPrivileges
+        if (-not $adminCheck.Installed) {
+            Write-PrerequisitesLog "Administrator privileges required for nmap installation" -Level "ERROR"
+            return @{
+                Success = $false
+                Installed = $false
+                Message = "Administrator privileges required"
+                RequiresElevation = $true
+            }
+        }
+
         # Create temporary directory for installers
         $tempDir = Join-Path $env:TEMP "nmap-install-$(Get-Random)"
         if (-not (Test-Path $tempDir)) {
             New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
         }
-        
+
         Write-PrerequisitesLog "Created temporary directory: $tempDir" -Level "DEBUG"
-        
-        # Download nmap installer with signature verification preference
+
+        # Download nmap installer
         $nmapVersion = "7.94"
         $downloadUrls = @(
-            "https://nmap.org/dist/nmap-$($nmapVersion)-setup.exe",
-            "https://github.com/nmap/nmap/releases/download/v$($nmapVersion)/nmap-$($nmapVersion)-setup.exe"
+            "https://nmap.org/dist/nmap-$nmapVersion-setup.exe",
+            "https://github.com/nmap/nmap/releases/download/v$nmapVersion/nmap-$nmapVersion-setup.exe"
         )
-        
+
         $installerPath = "$tempDir\nmap-setup.exe"
         $downloadSuccess = $false
-        
+
         foreach ($url in $downloadUrls) {
             try {
                 Write-PrerequisitesLog "Downloading nmap installer from: $url" -Level "INFO"
                 Invoke-WebRequest -Uri $url -OutFile $installerPath -UseBasicParsing -TimeoutSec 30
-                
+
                 if (Test-Path $installerPath -PathType Leaf) {
                     $fileSize = (Get-Item $installerPath).Length
                     if ($fileSize -gt 1024) {
-                        Write-PrerequisitesLog "SUCCESS: Downloaded nmap installer successfully $fileSize bytes" -Level "SUCCESS"
+                        Write-PrerequisitesLog "Downloaded nmap installer successfully ($fileSize bytes)" -Level "SUCCESS"
                         $downloadSuccess = $true
                         break
                     }
                 }
             } catch {
-                Write-PrerequisitesLog "[ERROR] Failed to download from $url : $($_.Exception.Message)" -Level "WARN"
+                Write-PrerequisitesLog "Failed to download from $url : $($_.Exception.Message)" -Level "WARN"
             }
         }
-        
+
         if (-not $downloadSuccess) {
-            Write-PrerequisitesLog "[ERROR] Failed to download nmap installer from all sources" -Level "ERROR"
+            Write-PrerequisitesLog "Failed to download nmap installer from all sources" -Level "ERROR"
             return @{ Success = $false; Installed = $false; Message = "Download failed" }
         }
-        
+
         # Download npcap installer (required for nmap functionality)
         $npcapUrl = "https://npcap.com/dist/npcap-1.79.exe"
         $npcapPath = "$tempDir\npcap-setup.exe"
-        
+
         try {
             Write-PrerequisitesLog "Downloading npcap installer..." -Level "INFO"
             Invoke-WebRequest -Uri $npcapUrl -OutFile $npcapPath -UseBasicParsing -TimeoutSec 30
-            Write-PrerequisitesLog "SUCCESS: Downloaded npcap installer successfully" -Level "SUCCESS"
+            Write-PrerequisitesLog "Downloaded npcap installer successfully" -Level "SUCCESS"
         } catch {
-            Write-PrerequisitesLog "[WARNING] Failed to download npcap - nmap functionality may be limited" -Level "WARN"
+            Write-PrerequisitesLog "Failed to download npcap - nmap functionality may be limited" -Level "WARN"
         }
-        
+
         # Install npcap first (if downloaded)
         if (Test-Path $npcapPath) {
-            Write-PrerequisitesLog "Tool: Installing npcap driver..." -Level "INFO"
-            $npcapProcess = Start-Process -FilePath $npcapPath -ArgumentList "/S", "/winpcap_mode=yes" -Wait -PassThru -WindowStyle Hidden
-            
-            if ($npcapProcess.ExitCode -eq 0) {
-                Write-PrerequisitesLog "SUCCESS: npcap driver installed successfully" -Level "SUCCESS"
-            } else {
-                Write-PrerequisitesLog "[WARNING] npcap installation returned exit code: $($npcapProcess.ExitCode)" -Level "WARN"
+            Write-PrerequisitesLog "Installing npcap driver..." -Level "INFO"
+            try {
+                $npcapProcess = Start-Process -FilePath $npcapPath -ArgumentList "/S", "/winpcap_mode=yes" -Wait -PassThru -WindowStyle Hidden
+                if ($npcapProcess.ExitCode -eq 0) {
+                    Write-PrerequisitesLog "npcap driver installed successfully" -Level "SUCCESS"
+                } else {
+                    Write-PrerequisitesLog "npcap installation returned exit code: $($npcapProcess.ExitCode)" -Level "WARN"
+                }
+            } catch {
+                Write-PrerequisitesLog "Failed to install npcap: $($_.Exception.Message)" -Level "WARN"
             }
         }
-        
+
         # Install nmap with silent parameters
-        Write-PrerequisitesLog "Tool: Installing nmap silently..." -Level "INFO"
-        $nmapProcess = Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait -PassThru -WindowStyle Hidden
-        
-        if ($nmapProcess.ExitCode -eq 0) {
-            Write-PrerequisitesLog "SUCCESS: nmap installed successfully" -Level "SUCCESS"
-            
-            # Wait a moment for files to be ready
-            Start-Sleep -Seconds 2
-            
-            # Verify installation
-            $installedNmap = Test-NmapInstallation
-            
-            if ($installedNmap.Installed) {
-                Write-PrerequisitesLog "Silent nmap installation completed and verified" -Level "SUCCESS"
-                
-                return @{
-                    Success = $true
-                    Installed = $true
-                    Message = "nmap installed successfully via silent installer"
-                    Path = $installedNmap.Path
-                    Version = $installedNmap.Version
-                    InstallationType = $installedNmap.InstallationType
+        Write-PrerequisitesLog "Installing nmap silently..." -Level "INFO"
+        try {
+            $nmapProcess = Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait -PassThru -WindowStyle Hidden
+
+            if ($nmapProcess.ExitCode -eq 0) {
+                Write-PrerequisitesLog "nmap installed successfully" -Level "SUCCESS"
+
+                # Wait a moment for files to be ready
+                Start-Sleep -Seconds 2
+
+                # Verify installation
+                $installedNmap = Test-NmapInstallation
+
+                if ($installedNmap.Installed) {
+                    Write-PrerequisitesLog "Silent nmap installation completed and verified" -Level "SUCCESS"
+
+                    return @{
+                        Success = $true
+                        Installed = $true
+                        Message = "nmap installed successfully via silent installer"
+                        Path = $installedNmap.Path
+                        Version = $installedNmap.Version
+                        InstallationType = $installedNmap.InstallationType
+                    }
+                } else {
+                    Write-PrerequisitesLog "nmap installation completed but verification failed" -Level "WARN"
+                    return @{ Success = $false; Installed = $false; Message = "Installation verification failed" }
                 }
             } else {
-                Write-PrerequisitesLog "[WARNING] nmap installation completed but verification failed" -Level "WARN"
-                return @{ Success = $false; Installed = $false; Message = "Installation verification failed" }
+                Write-PrerequisitesLog "nmap installation failed (exit code: $($nmapProcess.ExitCode))" -Level "ERROR"
+                return @{ Success = $false; Installed = $false; Message = "Installation failed with exit code $($nmapProcess.ExitCode)" }
             }
-        } else {
-            Write-PrerequisitesLog "[ERROR] nmap installation failed (exit code: $($nmapProcess.ExitCode))" -Level "ERROR"
-            return @{ Success = $false; Installed = $false; Message = "Installation failed with exit code $($nmapProcess.ExitCode)" }
+        } catch {
+            Write-PrerequisitesLog "Failed to install nmap: $($_.Exception.Message)" -Level "ERROR"
+            return @{ Success = $false; Installed = $false; Message = "Installation failed: $($_.Exception.Message)" }
         }
-        
-    } catch {
-        Write-PrerequisitesLog "[ERROR] nmap installation failed: $($_.Exception.Message)" -Level "ERROR"
-        return @{
-            Success = $false
-            Installed = $false
-            Message = "Installation failed: $($_.Exception.Message)"
-        }
-    }
-    finally {
+
         # Cleanup temporary files
         if (Test-Path $tempDir) {
             try {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
-                Write-PrerequisitesLog "[CLEAN] Cleaned up temporary files" -Level "DEBUG"
+                Write-PrerequisitesLog "Cleaned up temporary files" -Level "DEBUG"
             } catch {
-                Write-PrerequisitesLog "[WARNING] Failed to cleanup temporary directory: $tempDir" -Level "WARN"
+                Write-PrerequisitesLog "Failed to cleanup temporary directory: $($_.Exception.Message)" -Level "WARN"
             }
+        }
+
+    } catch {
+        Write-PrerequisitesLog "nmap installation failed: $($_.Exception.Message)" -Level "ERROR"
+        return @{
+            Success = $false
+            Installed = $false
+            Message = "Installation failed: $($_.Exception.Message)"
         }
     }
 }
@@ -1042,3 +1139,4 @@ Export-ModuleMember -Function Invoke-PrerequisitesCheck, Write-PrerequisitesLog,
 Export-ModuleMember -Function Install-ActiveDirectoryModule, Test-AdministratorPrivileges, Test-WindowsCompatibility
 Export-ModuleMember -Function Test-PowerShellModule, Test-WindowsFeature, Test-Executable
 Export-ModuleMember -Function Test-NmapInstallation, Test-NmapFunctionality, Install-NmapPrerequisite
+Export-ModuleMember -Function New-LicenseAssignmentPrerequisites, New-ActiveDirectoryPrerequisites, New-InfrastructureDiscoveryPrerequisites

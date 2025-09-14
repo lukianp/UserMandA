@@ -340,7 +340,7 @@ namespace MandADiscoverySuite.ViewModels
                 var dict = (System.Collections.Generic.IDictionary<string, object>)item;
                 dict.TryGetValue("mailboxtype", out var mailboxTypeObj);
                 var type = mailboxTypeObj?.ToString()?.ToLowerInvariant();
-                return type?.Contains("mail-enabled security") ?? false || type?.Contains("security") ?? false;
+                return (type?.Contains("mail-enabled security") ?? false) || (type?.Contains("security") ?? false);
             });
         }
 

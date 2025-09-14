@@ -48,7 +48,8 @@ class RealTimeDiscoveryEngine {
         $this.ChangeQueue = @{}
         
         # Initialize discovery interval from configuration
-        Write-RealTimeLog -Message "Config intervalMinutes: $($Config.intervalMinutes) (Type: $($Config.intervalMinutes.GetType().Name))" -Level "DEBUG"
+        $typeName = if ($Config.intervalMinutes) { $Config.intervalMinutes.GetType().Name } else { "null" }
+        Write-RealTimeLog -Message "Config intervalMinutes: $($Config.intervalMinutes) (Type: $typeName)" -Level "DEBUG"
         if ($Config.intervalMinutes) {
             $intervalValue = $Config.intervalMinutes
             if ($intervalValue -is [array]) {

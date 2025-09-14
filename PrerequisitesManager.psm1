@@ -253,9 +253,7 @@ function Write-PrerequisitesLog {
 # ActiveDirectory-specific prerequisite checks
 function New-ActiveDirectoryPrerequisites {
     [CmdletBinding()]
-    param(
-
-    )
+    param()
 
     $prereqChecker = [PrerequisiteChecker]::new()
 
@@ -741,6 +739,8 @@ function Invoke-PrerequisitesCheck {
                                     $prereq.IsInstalled = $true
                                     $prereq.Status = "Installed"
                                     Write-PrerequisitesLog "✓ $($prereq.Name) - INSTALLED automatically" -Level "SUCCESS"
+                                    $results.Installed += $prereq
+                                    $results.Errors = $results.Errors | Where-Object { $_.Name -ne $prereq.Name }
                                 } else {
                                     Write-PrerequisitesLog "✗ $($prereq.Name) - Installation failed: $($installResult.Message)" -Level "ERROR"
                                 }
@@ -804,7 +804,7 @@ function Test-NmapInstallation {
                 if ($versionOutput -match 'Nmap version ([0-9]+\.[0-9]+)') {
                     Write-PrerequisitesLog "✅ Found system nmap in PATH: $($nmapPath.Source) (v$($matches[1]))" -Level "SUCCESS"
 
-                    $result = @{
+                    $nmapResult = @{
                         Installed = $true
                         Version = $matches[1]
                         Path = $nmapPath.Source
@@ -814,10 +814,10 @@ function Test-NmapInstallation {
                     }
 
                     if ($IncludeFunctionalityTest) {
-                        $result.FunctionalityTest = Test-NmapFunctionality -NmapPath $nmapPath.Source
+                        $nmapResult.FunctionalityTest = Test-NmapFunctionality -NmapPath $nmapPath.Source
                     }
 
-                    return $result
+                    return $nmapResult
                 }
             } catch {
                 Write-PrerequisitesLog "nmap in PATH failed version test: $($_.Exception.Message)" -Level "DEBUG"
@@ -841,7 +841,7 @@ function Test-NmapInstallation {
                     if ($versionOutput -match 'Nmap version ([0-9]+\.[0-9]+)') {
                         Write-PrerequisitesLog "✅ Found system nmap at: $path (v$($matches[1]))" -Level "SUCCESS"
 
-                        $result = @{
+                        $nmapResult = @{
                             Installed = $true
                             Version = $matches[1]
                             Path = $path
@@ -851,10 +851,10 @@ function Test-NmapInstallation {
                         }
 
                         if ($IncludeFunctionalityTest) {
-                            $result.FunctionalityTest = Test-NmapFunctionality -NmapPath $path
+                            $nmapResult.FunctionalityTest = Test-NmapFunctionality -NmapPath $path
                         }
 
-                        return $result
+                        return $nmapResult
                     }
                 } catch {
                     Write-PrerequisitesLog "nmap at $path failed version test: $($_.Exception.Message)" -Level "DEBUG"
@@ -877,7 +877,7 @@ function Test-NmapInstallation {
                     if ($versionOutput -match 'Nmap version ([0-9]+\.[0-9]+)') {
                         Write-PrerequisitesLog "✅ Found embedded nmap: $embeddedPath (v$($matches[1]))" -Level "SUCCESS"
 
-                        $result = @{
+                        $nmapResult = @{
                             Installed = $true
                             Version = $matches[1]
                             Path = $embeddedPath
@@ -888,10 +888,10 @@ function Test-NmapInstallation {
                         }
 
                         if ($IncludeFunctionalityTest) {
-                            $result.FunctionalityTest = Test-NmapFunctionality -NmapPath $embeddedPath
+                            $nmapResult.FunctionalityTest = Test-NmapFunctionality -NmapPath $embeddedPath
                         }
 
-                        return $result
+                        return $nmapResult
                     }
                 } catch {
                     Write-PrerequisitesLog "Embedded nmap at $embeddedPath failed test: $($_.Exception.Message)" -Level "DEBUG"
@@ -1033,7 +1033,7 @@ function Install-NmapPrerequisite {
                 if (Test-Path $installerPath -PathType Leaf) {
                     $fileSize = (Get-Item $installerPath).Length
                     if ($fileSize -gt 1024) {
-                        Write-PrerequisitesLog "Downloaded nmap installer successfully ($($fileSize) bytes)" -Level "SUCCESS"
+                        Write-PrerequisitesLog "Downloaded nmap installer successfully ($fileSize bytes)" -Level "SUCCESS"
                         $downloadSuccess = $true
                         break
                     }
@@ -1112,7 +1112,7 @@ function Install-NmapPrerequisite {
             Write-PrerequisitesLog "Failed to install nmap: $($_.Exception.Message)" -Level "ERROR"
             return @{ Success = $false; Installed = $false; Message = "Installation failed: $($_.Exception.Message)" }
         }
-
+    } finally {
         # Cleanup temporary files
         if (Test-Path $tempDir) {
             try {
@@ -1121,14 +1121,6 @@ function Install-NmapPrerequisite {
             } catch {
                 Write-PrerequisitesLog "Failed to cleanup temporary directory: $($_.Exception.Message)" -Level "WARN"
             }
-        }
-
-    } catch {
-        Write-PrerequisitesLog "nmap installation failed: $($_.Exception.Message)" -Level "ERROR"
-        return @{
-            Success = $false
-            Installed = $false
-            Message = "Installation failed: $($_.Exception.Message)"
         }
     }
 }

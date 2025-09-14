@@ -69,6 +69,14 @@ $testResults = @{
     Recommendations = @()
     ExecutionTime = $null
 }
+# Load PrerequisitesManager module
+$prereqPath = Join-Path $PSScriptRoot "Prerequisites\PrerequisitesManager.psm1"
+if (-not (Test-Path $prereqPath)) {
+    Write-TestLog "PrerequisitesManager.psm1 not found at: $prereqPath" -Level "ERROR"
+    exit 1
+}
+Import-Module $prereqPath -Force
+
 
 # Test logging function
 function Write-TestLog {
@@ -155,13 +163,6 @@ function Test-Execution {
 try {
     # TEST 1: Prerequisites Manager Module Import
     Test-Execution -TestName "PrerequisitesManager Module Import" -TestScript {
-        $prereqPath = Join-Path $PSScriptRoot "Prerequisites\PrerequisitesManager.psm1"
-        if (-not (Test-Path $prereqPath)) {
-            Write-TestLog "PrerequisitesManager.psm1 not found at: $prereqPath" -Level "ERROR" -NoConsoleOutput
-            return $false
-        }
-
-        Import-Module $prereqPath -Force -ErrorAction Stop
         Write-TestLog "PrerequisitesManager module imported successfully" -Level "INFO" -NoConsoleOutput
         return $true
     }
