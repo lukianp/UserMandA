@@ -5203,7 +5203,7 @@ namespace MandADiscoverySuite.Services
                         isShare = segments.Length >= 2 && !segments[1].Contains("$") || segments[1].EndsWith("$"); // Share pattern
                     }
 
-                    if (isShare)
+                    if (isShare && acl.SourcePath != null)
                     {
                         var path = acl.SourcePath;
 

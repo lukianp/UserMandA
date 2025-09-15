@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using MandADiscoverySuite.Services;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -13,6 +15,7 @@ namespace MandADiscoverySuite.ViewModels
     /// </summary>
     public class UserDetailViewModel : BaseViewModel
     {
+        private readonly ILogicEngineService _logicEngineService;
         private object _userData;
         private string _displayName;
         private string _userPrincipalName;
@@ -26,12 +29,34 @@ namespace MandADiscoverySuite.ViewModels
         private string _objectType;
         private string _distinguishedName;
         private string _description;
+        private string _selectedUserIdentifier;
 
         public UserDetailViewModel(object userData)
         {
             _userData = userData;
             LoadUserData();
             CloseCommand = new RelayCommand(Close);
+        }
+
+        public UserDetailViewModel(ILogicEngineService logicEngineService, ILogger logger)
+            : base(logger)
+        {
+            _logicEngineService = logicEngineService ?? throw new ArgumentNullException(nameof(logicEngineService));
+            CloseCommand = new RelayCommand(Close);
+        }
+
+        public string SelectedUserIdentifier
+        {
+            get => _selectedUserIdentifier;
+            set
+            {
+                if (value != _selectedUserIdentifier)
+                {
+                    _selectedUserIdentifier = value;
+                    OnPropertyChanged();
+                    _ = Task.Run(LoadUserDetailAsync);
+                }
+            }
         }
 
         public string DisplayName
@@ -107,6 +132,38 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         public RelayCommand CloseCommand { get; }
+
+        public override async Task LoadAsync()
+        {
+            await LoadUserDetailAsync();
+        }
+
+        private async Task LoadUserDetailAsync()
+        {
+            if (string.IsNullOrEmpty(SelectedUserIdentifier))
+            {
+                return;
+            }
+
+            if (_logicEngineService != null)
+            {
+                try
+                {
+                    // Load user data from LogicEngineService
+                    var userData = await _logicEngineService.GetUserDetailAsync(SelectedUserIdentifier);
+                    if (userData != null)
+                    {
+                        _userData = userData;
+                        LoadUserData();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log error if logger available
+                    (Logger as ILogger)?.LogError(ex, "Failed to load user detail for {UserIdentifier}", SelectedUserIdentifier);
+                }
+            }
+        }
 
         private void LoadUserData()
         {

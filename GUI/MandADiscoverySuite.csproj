@@ -13,7 +13,7 @@
     <PublishReadyToRun>false</PublishReadyToRun>
     <!-- Enable binding optimization for better performance -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <NoWarn>$(NoWarn);CS8209;CS1998;CS4014;CS0169;CS0414;CS8892;CS8632;CS8604;CS0618;CS0067;CS0649</NoWarn>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
     <!-- Force suppress all duplicate attribute warnings -->
     <!-- Disable default SDK inclusion of XAML files to avoid duplicates -->
     <EnableDefaultPageItems>false</EnableDefaultPageItems>

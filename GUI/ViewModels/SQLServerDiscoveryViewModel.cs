@@ -310,7 +310,7 @@ namespace MandADiscoverySuite.ViewModels
                 var profileName = "ljpops"; // Use default profile
                 var result = await _csvService.LoadDatabasesAsync(profileName);
 
-                if (result.Success)
+                if (result.IsSuccess)
                 {
                     // Convert SqlInstanceData to dynamic for compatibility
                     var dynamicData = result.Data.Select(instance => new

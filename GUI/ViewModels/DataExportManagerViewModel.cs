@@ -442,7 +442,7 @@ namespace MandADiscoverySuite.ViewModels
                     if (_csvDataService != null)
                     {
                         var result = await _csvDataService.LoadUsersAsync("ljpops"); // Use default profile
-                        var exportData = result.Success ? result.Data : new List<UserData>();
+                        var exportData = result.IsSuccess ? result.Data : new List<UserData>();
                         await ExportDataAsync(fileName, exportData, SelectedFormat);
                     }
                     break;
@@ -452,7 +452,7 @@ namespace MandADiscoverySuite.ViewModels
                     if (_csvDataService != null)
                     {
                         var result = await _csvDataService.LoadGroupsAsync("ljpops"); // Use default profile
-                        var exportData = result.Success ? result.Data : new List<GroupData>();
+                        var exportData = result.IsSuccess ? result.Data : new List<GroupData>();
                         await ExportDataAsync(fileName, exportData, SelectedFormat);
                     }
                     break;
@@ -462,7 +462,7 @@ namespace MandADiscoverySuite.ViewModels
                     if (_csvDataService != null)
                     {
                         var result = await _csvDataService.LoadInfrastructureAsync("ljpops"); // Use default profile
-                        var exportData = result.Success ? result.Data : new List<InfrastructureData>();
+                        var exportData = result.IsSuccess ? result.Data : new List<InfrastructureData>();
                         await ExportDataAsync(fileName, exportData, SelectedFormat);
                     }
                     break;

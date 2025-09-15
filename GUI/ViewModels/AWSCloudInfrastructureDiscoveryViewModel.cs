@@ -1,12 +1,13 @@
 using System;
-using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models;
 using Microsoft.Extensions.Logging;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GUI.Interfaces;
 using Amazon.EC2;
@@ -14,7 +15,8 @@ using Amazon.EC2.Model;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon;
-using System.Net;
+using Amazon.Runtime;
+using Amazon.Runtime.CredentialManagement;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -25,6 +27,7 @@ namespace MandADiscoverySuite.ViewModels
     {
         private readonly CsvDataServiceNew _csvService;
         private readonly ILogicEngineService _logicEngineService;
+        private readonly new ILogger<AWSCloudInfrastructureDiscoveryViewModel> _log;
 
         #region Constructor
 
@@ -35,11 +38,12 @@ namespace MandADiscoverySuite.ViewModels
             ILogicEngineService logicEngineService)
             : base(moduleInfo, mainViewModel, logger)
         {
+            _log = logger;
             _logicEngineService = logicEngineService ?? throw new ArgumentNullException(nameof(logicEngineService));
             _log?.LogInformation("Initializing AWSCloudInfrastructureDiscoveryViewModel");
 
             // Get CSV service
-            var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
             var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
             _csvService = new CsvDataServiceNew(csvLogger);
 
@@ -72,7 +76,6 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (SetProperty(ref _awsSecretAccessKey, value))
                 {
-                    // Clear the masked version when the real value changes
                     OnPropertyChanged(nameof(AwsSecretAccessKeyMasked));
                 }
             }
@@ -156,7 +159,6 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (SetProperty(ref _selectedItem, value))
                 {
-                    // Trigger async loading of item details when selection changes
                     _ = LoadSelectedItemDetailsAsync();
                 }
             }
@@ -181,7 +183,6 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Commands
 
-        // Additional commands beyond inherited ones
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
         public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
@@ -197,9 +198,7 @@ namespace MandADiscoverySuite.ViewModels
             try
             {
                 _log?.LogInformation("Executing AWS Cloud Infrastructure Discovery module");
-
-                // Load data from CSV
-                await LoadFromCsvAsync(new System.Collections.Generic.List<dynamic>());
+                await LoadFromCsvAsync(new List<dynamic>());
             }
             catch (Exception ex)
             {
@@ -208,18 +207,16 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        protected override async Task LoadFromCsvAsync(System.Collections.Generic.List<dynamic> csvData)
+        protected override async Task LoadFromCsvAsync(List<dynamic> csvData)
         {
             try
             {
                 IsProcessing = true;
                 ProcessingMessage = "Loading AWS Cloud Infrastructure data...";
 
-                // Load from specific CSV path
                 var csvPath = @"C:\discoverydata\ljpops\Raw\AWSCloudInfrastructureDiscovery.csv";
                 var loadedCsvData = await _csvService.LoadCsvDataAsync(csvPath);
 
-                // Convert to dynamic list (similar to other loaders)
                 var results = new List<dynamic>();
                 foreach (var item in loadedCsvData)
                 {
@@ -230,7 +227,6 @@ namespace MandADiscoverySuite.ViewModels
 
                 if (result.HeaderWarnings.Any())
                 {
-                    // Set error message for red banner
                     ErrorMessage = string.Join("; ", result.HeaderWarnings);
                     HasErrors = true;
                 }
@@ -240,14 +236,12 @@ namespace MandADiscoverySuite.ViewModels
                     ErrorMessage = string.Empty;
                 }
 
-                // Update collections and summary statistics
                 SelectedResults.Clear();
                 foreach (var item in result.Data)
                 {
                     SelectedResults.Add(item);
                 }
 
-                // Calculate summary statistics
                 CalculateSummaryStatistics(result.Data);
 
                 LastUpdated = DateTime.Now;
@@ -272,20 +266,17 @@ namespace MandADiscoverySuite.ViewModels
             await ExportDataAsync();
         }
 
-        // Helper method to convert data to CSV lines
         private IEnumerable<string> ConvertToCsvLines(ObservableCollection<dynamic> data)
         {
             if (data.Count == 0) yield break;
 
-            // Get headers from first item
-            var firstItem = (System.Collections.Generic.IDictionary<string, object>)data[0];
+            var firstItem = (IDictionary<string, object>)data[0];
             var headers = string.Join(",", firstItem.Keys);
             yield return headers;
 
-            // Get values for each row
             foreach (var item in data)
             {
-                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+                var dict = (IDictionary<string, object>)item;
                 var values = string.Join(",", dict.Values.Select(v => $"\"{v?.ToString() ?? ""}\""));
                 yield return values;
             }
@@ -299,7 +290,6 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                // Validate AWS credentials before proceeding
                 if (!ValidateCredentials())
                 {
                     ShowError("Configuration Required", "Please configure AWS credentials before running discovery.");
@@ -310,22 +300,17 @@ namespace MandADiscoverySuite.ViewModels
                 StatusText = "Running Discovery";
                 ProcessingMessage = "Executing AWS Cloud Infrastructure Discovery...";
 
-                // Discover AWS resources using AWS SDK
                 var discoveredResources = new List<dynamic>();
 
-                // Discover EC2 instances
                 var ec2Instances = await DiscoverEC2InstancesAsync();
                 discoveredResources.AddRange(ec2Instances);
 
-                // Discover S3 buckets
                 var s3Buckets = await DiscoverS3BucketsAsync();
                 discoveredResources.AddRange(s3Buckets);
 
-                // Discover other AWS resources (RDS, Lambda, etc.) based on configuration
                 var otherResources = await DiscoverAdditionalAWSResourcesAsync();
                 discoveredResources.AddRange(otherResources);
 
-                // Process discovered data
                 var result = DataLoaderResult<dynamic>.Success(discoveredResources, new List<string>());
 
                 if (result.HeaderWarnings.Any())
@@ -339,14 +324,12 @@ namespace MandADiscoverySuite.ViewModels
                     ErrorMessage = string.Empty;
                 }
 
-                // Update collections and summary statistics
                 SelectedResults.Clear();
                 foreach (var item in result.Data)
                 {
                     SelectedResults.Add(item);
                 }
 
-                // Calculate summary statistics
                 CalculateSummaryStatistics(result.Data);
 
                 LastUpdated = DateTime.Now;
@@ -375,7 +358,7 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                await LoadFromCsvAsync(new System.Collections.Generic.List<dynamic>());
+                await LoadFromCsvAsync(new List<dynamic>());
             }
             catch (Exception ex)
             {
@@ -394,14 +377,12 @@ namespace MandADiscoverySuite.ViewModels
                     return;
                 }
 
-                // Create export path with timestamp
                 var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 var exportPath = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
                     $"AWSCloudInfrastructure_Export_{timestamp}.csv"
                 );
 
-                // Export data to CSV manually
                 await Task.Run(() => System.IO.File.WriteAllLines(exportPath, ConvertToCsvLines(SelectedResults)));
                 _log?.LogInformation($"Exported AWS Cloud Infrastructure data to: {exportPath}");
 
@@ -431,13 +412,11 @@ namespace MandADiscoverySuite.ViewModels
                 IsLoadingDetails = true;
                 SelectedItemDetails.Clear();
 
-                // Simulate async loading delay
                 await Task.Delay(100);
 
                 var dict = SelectedItem as IDictionary<string, object>;
                 if (dict != null)
                 {
-                    // Add AWS Cloud Infrastructure specific detail fields
                     AddDetailField("Resource ID", GetStringValue(dict, new[] { "ResourceID", "resourceid", "ResourceId", "resourceId" }));
                     AddDetailField("Type", GetStringValue(dict, new[] { "Type", "type", "ServiceType", "servicetype" }));
                     AddDetailField("Region", GetStringValue(dict, new[] { "Region", "region", "AWSRegion", "awsregion" }));
@@ -445,13 +424,11 @@ namespace MandADiscoverySuite.ViewModels
                     AddDetailField("Creation Date", GetStringValue(dict, new[] { "CreationDate", "creationdate", "CreatedDate", "createddate" }));
                     AddDetailField("Tags", GetStringValue(dict, new[] { "Tags", "tags" }), "Text", true);
 
-                    // AWS-specific fields
                     AddDetailField("Account ID", GetStringValue(dict, new[] { "AccountID", "accountid", "AWSAccountId", "awsaccountid" }));
                     AddDetailField("VPC ID", GetStringValue(dict, new[] { "VpcId", "vpcid", "VPCId", "vpcId" }));
                     AddDetailField("Subnet ID", GetStringValue(dict, new[] { "SubnetId", "subnetid", "SubnetID", "subnetId" }));
                     AddDetailField("Security Groups", GetStringValue(dict, new[] { "SecurityGroups", "securitygroups" }));
 
-                    // EC2-specific fields
                     if (GetStringValue(dict, new[] { "Type", "type" })?.ToLower() == "ec2")
                     {
                         AddDetailField("Instance Type", GetStringValue(dict, new[] { "InstanceType", "instancetype", "EC2InstanceType", "ec2instancetype" }));
@@ -459,8 +436,6 @@ namespace MandADiscoverySuite.ViewModels
                         AddDetailField("Public IP", GetStringValue(dict, new[] { "PublicIp", "publicip", "PublicIPAddress", "publicipaddress" }));
                         AddDetailField("Private IP", GetStringValue(dict, new[] { "PrivateIp", "privateip", "PrivateIPAddress", "privateipaddress" }));
                     }
-
-                    // S3-specific fields
                     else if (GetStringValue(dict, new[] { "Type", "type" })?.ToLower() == "s3")
                     {
                         AddDetailField("Bucket Name", GetStringValue(dict, new[] { "BucketName", "bucketname", "S3BucketName", "s3bucketname" }));
@@ -468,7 +443,6 @@ namespace MandADiscoverySuite.ViewModels
                         AddDetailField("Total Size", GetStringValue(dict, new[] { "TotalSize", "totalsize", "Size", "size" }));
                     }
 
-                    // Add last modified and description
                     AddDetailField("Last Modified", GetStringValue(dict, new[] { "LastModified", "lastmodified", "LastUpdated", "lastupdated" }));
                     AddDetailField("Description", GetStringValue(dict, new[] { "Description", "description" }), "Text", true);
                 }
@@ -508,7 +482,7 @@ namespace MandADiscoverySuite.ViewModels
 
         #region Helper Methods
 
-        private void CalculateSummaryStatistics(System.Collections.Generic.List<dynamic> data)
+        private void CalculateSummaryStatistics(List<dynamic> data)
         {
             TotalInstances = 0;
             TotalBuckets = 0;
@@ -518,9 +492,8 @@ namespace MandADiscoverySuite.ViewModels
 
             foreach (var item in data)
             {
-                var dict = (System.Collections.Generic.IDictionary<string, object>)item;
+                var dict = (IDictionary<string, object>)item;
 
-                // Count by service type
                 if (dict.TryGetValue("servicetype", out var serviceTypeObj) ||
                     dict.TryGetValue("ServiceType", out serviceTypeObj) ||
                     dict.TryGetValue("Type", out serviceTypeObj))
@@ -530,14 +503,12 @@ namespace MandADiscoverySuite.ViewModels
                     else if (serviceType == "s3" || serviceType == "bucket" || serviceType == "storage") TotalBuckets++;
                 }
 
-                // Count regions
                 if (dict.TryGetValue("region", out var regionObj) ||
                     dict.TryGetValue("Region", out regionObj))
                 {
                     regions.Add(regionObj?.ToString() ?? "");
                 }
 
-                // Update last discovery time
                 if (dict.TryGetValue("creationdate", out var creationDateObj) ||
                     dict.TryGetValue("CreationDate", out creationDateObj) ||
                     dict.TryGetValue("createddate", out creationDateObj) ||
@@ -554,7 +525,6 @@ namespace MandADiscoverySuite.ViewModels
                     }
                 }
 
-                // If no creation date found, use current time as last discovery
                 if (LastDiscoveryTime == DateTime.MinValue && data.Count > 0)
                 {
                     LastDiscoveryTime = DateTime.Now;
@@ -583,8 +553,6 @@ namespace MandADiscoverySuite.ViewModels
                 IsProcessing = true;
                 ProcessingMessage = "Testing AWS credentials...";
 
-                // Here you would implement actual AWS credential testing
-                // For now, simulate the test with a delay
                 await Task.Delay(2000);
 
                 _log?.LogInformation("AWS credentials validated successfully");
@@ -612,19 +580,17 @@ namespace MandADiscoverySuite.ViewModels
 
                 _log?.LogInformation($"Viewing details for AWS resource: {selectedItem}");
 
-                // Create AssetDetailViewModel with the selected item and required services
                 var assetDetailViewModel = new AssetDetailViewModel(
                     selectedItem,
                     _logicEngineService,
                     _log);
 
-                // Open AssetDetailWindow with the ViewModel
                 var assetDetailWindow = new Views.AssetDetailWindow
                 {
                     DataContext = assetDetailViewModel
                 };
                 assetDetailWindow.ShowDialog();
-                await Task.CompletedTask; // Placeholder for async
+                await Task.CompletedTask;
             }
             catch (Exception ex)
             {
@@ -651,13 +617,11 @@ namespace MandADiscoverySuite.ViewModels
 
         private void InitializeDefaultConfigurations()
         {
-            // Set default region if not already set
             if (string.IsNullOrEmpty(AwsRegion))
             {
-                AwsRegion = "us-east-1"; // Default AWS region
+                AwsRegion = "us-east-1";
             }
 
-            // Try to load AWS profile if available
             var defaultProfile = Environment.GetEnvironmentVariable("AWS_PROFILE");
             if (!string.IsNullOrWhiteSpace(defaultProfile))
             {
@@ -674,9 +638,6 @@ namespace MandADiscoverySuite.ViewModels
 
         #region AWS Discovery Methods
 
-        /// <summary>
-        /// Discovers EC2 instances using AWS SDK
-        /// </summary>
         private async Task<List<dynamic>> DiscoverEC2InstancesAsync()
         {
             var instances = new List<dynamic>();
@@ -686,7 +647,7 @@ namespace MandADiscoverySuite.ViewModels
                 var region = RegionEndpoint.GetBySystemName(AwsRegion ?? "us-east-1");
                 AmazonEC2Config config = new AmazonEC2Config { RegionEndpoint = region };
 
-                using (var ec2Client = CreateEC2Client(config))
+                using (var ec2Client = new AmazonEC2Client(new BasicAWSCredentials(AwsAccessKeyId, AwsSecretAccessKey), region))
                 {
                     var request = new DescribeInstancesRequest();
                     var response = await ec2Client.DescribeInstancesAsync(request);
@@ -725,15 +686,11 @@ namespace MandADiscoverySuite.ViewModels
             catch (Exception ex)
             {
                 _log?.LogError(ex, "Error discovering EC2 instances");
-                // Continue with other discoveries
             }
 
             return instances;
         }
 
-        /// <summary>
-        /// Discovers S3 buckets using AWS SDK
-        /// </summary>
         private async Task<List<dynamic>> DiscoverS3BucketsAsync()
         {
             var buckets = new List<dynamic>();
@@ -743,13 +700,12 @@ namespace MandADiscoverySuite.ViewModels
                 var region = RegionEndpoint.GetBySystemName(AwsRegion ?? "us-east-1");
                 AmazonS3Config config = new AmazonS3Config { RegionEndpoint = region };
 
-                using (var s3Client = CreateS3Client(config))
+                using (var s3Client = new AmazonS3Client(new BasicAWSCredentials(AwsAccessKeyId, AwsSecretAccessKey), region))
                 {
                     var response = await s3Client.ListBucketsAsync();
 
                     foreach (var bucket in response.Buckets)
                     {
-                        // Get bucket location (region)
                         string bucketRegion = AwsRegion ?? "us-east-1";
                         try
                         {
@@ -774,7 +730,7 @@ namespace MandADiscoverySuite.ViewModels
                             CreationDate = bucket.CreationDate?.ToString("yyyy-MM-ddTHH:mm:ssZ"),
                             BucketName = bucket.BucketName,
                             AccountID = GetAccountIdFromCredentials(),
-                            Tags = "", // S3 bucket tags would require additional API calls
+                            Tags = "",
                             LastModified = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
                             Description = $"S3 Bucket {bucket.BucketName}"
                         };
@@ -787,40 +743,27 @@ namespace MandADiscoverySuite.ViewModels
             catch (Exception ex)
             {
                 _log?.LogError(ex, "Error discovering S3 buckets");
-                // Continue with other discoveries
             }
 
             return buckets;
         }
 
-        /// <summary>
-        /// Discovers additional AWS resources (RDS, Lambda, etc.)
-        /// </summary>
         private async Task<List<dynamic>> DiscoverAdditionalAWSResourcesAsync()
         {
             var resources = new List<dynamic>();
-
-            // Note: This method can be extended to discover other AWS resources
-            // such as RDS instances, Lambda functions, etc. based on requirements
-
-            // For now, return empty list as a placeholder for future expansion
             _log?.LogInformation("Additional AWS resource discovery not implemented yet");
-
             return resources;
         }
 
-        /// <summary>
-        /// Creates an EC2 client with the configured credentials
-        /// </summary>
         private AmazonEC2Client CreateEC2Client(AmazonEC2Config config)
         {
             if (UseAWSCredentials && !string.IsNullOrEmpty(AwsAccessKeyId) && !string.IsNullOrEmpty(AwsSecretAccessKey))
             {
-                return new AmazonEC2Client(AwsAccessKeyId, AwsSecretAccessKey, config);
+                return new AmazonEC2Client(new BasicAWSCredentials(AwsAccessKeyId, AwsSecretAccessKey), config);
             }
             else if (UseAWSProfile && !string.IsNullOrEmpty(AwsProfileName))
             {
-                var credentials = new Amazon.Runtime.CredentialManagement.SharedCredentialsFile();
+                var credentials = new SharedCredentialsFile();
                 if (credentials.TryGetProfile(AwsProfileName, out var profile))
                 {
                     return new AmazonEC2Client(profile.GetAWSCredentials(credentials), config);
@@ -830,18 +773,15 @@ namespace MandADiscoverySuite.ViewModels
             throw new InvalidOperationException("AWS credentials not properly configured");
         }
 
-        /// <summary>
-        /// Creates an S3 client with the configured credentials
-        /// </summary>
         private AmazonS3Client CreateS3Client(AmazonS3Config config)
         {
             if (UseAWSCredentials && !string.IsNullOrEmpty(AwsAccessKeyId) && !string.IsNullOrEmpty(AwsSecretAccessKey))
             {
-                return new AmazonS3Client(AwsAccessKeyId, AwsSecretAccessKey, config);
+                return new AmazonS3Client(new BasicAWSCredentials(AwsAccessKeyId, AwsSecretAccessKey), config);
             }
             else if (UseAWSProfile && !string.IsNullOrEmpty(AwsProfileName))
             {
-                var credentials = new Amazon.Runtime.CredentialManagement.SharedCredentialsFile();
+                var credentials = new SharedCredentialsFile();
                 if (credentials.TryGetProfile(AwsProfileName, out var profile))
                 {
                     return new AmazonS3Client(profile.GetAWSCredentials(credentials), config);
@@ -851,13 +791,8 @@ namespace MandADiscoverySuite.ViewModels
             throw new InvalidOperationException("AWS credentials not properly configured");
         }
 
-        /// <summary>
-        /// Gets the AWS account ID from credentials (placeholder implementation)
-        /// </summary>
         private string GetAccountIdFromCredentials()
         {
-            // In a real implementation, this would extract the account ID from the credentials
-            // For now, return a placeholder
             return "123456789012";
         }
 

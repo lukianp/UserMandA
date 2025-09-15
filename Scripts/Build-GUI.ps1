@@ -83,6 +83,63 @@ Error: $($_.Exception.Message)
     exit 1
 }
 
+# Function to find MSBuild.exe flexibly
+function Find-MSBuild {
+    Write-Host "Locating MSBuild.exe..." -ForegroundColor Yellow
+
+    # Try to find msbuild in PATH using where.exe
+    try {
+        $msbuildFromWhere = & where.exe msbuild 2>$null | Select-Object -First 1
+        if ($msbuildFromWhere -and (Test-Path $msbuildFromWhere)) {
+            Write-Host "  [OK] Found MSBuild via PATH: $msbuildFromWhere" -ForegroundColor Green
+            return $msbuildFromWhere
+        }
+    } catch {
+        # where.exe failed, continue to other methods
+    }
+
+    # Check common Visual Studio installation paths
+    $vsVersions = @("2022", "2019", "2017")
+    $vsEditions = @("Enterprise", "Professional", "Community", "BuildTools")
+
+    foreach ($version in $vsVersions) {
+        foreach ($edition in $vsEditions) {
+            $possiblePaths = @(
+                "${env:ProgramFiles}\Microsoft Visual Studio\$version\$edition\MSBuild\Current\Bin\MSBuild.exe",
+                "${env:ProgramFiles(x86)}\Microsoft Visual Studio\$version\$edition\MSBuild\Current\Bin\MSBuild.exe"
+            )
+
+            foreach ($path in $possiblePaths) {
+                if (Test-Path $path) {
+                    Write-Host "  [OK] Found MSBuild at: $path" -ForegroundColor Green
+                    return $path
+                }
+            }
+        }
+    }
+
+    # Try dotnet msbuild as fallback
+    try {
+        $dotnetMsbuild = & dotnet msbuild --help 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  [OK] Using dotnet msbuild fallback" -ForegroundColor Green
+            return "dotnet msbuild"
+        }
+    } catch {
+        # dotnet msbuild not available
+    }
+
+    throw "MSBuild.exe not found. Please ensure Visual Studio or Build Tools are installed, or dotnet CLI is available."
+}
+
+# Get MSBuild path
+try {
+    $MSBuildPath = Find-MSBuild
+} catch {
+    Write-Error "MSBuild detection failed: $($_.Exception.Message)"
+    exit 1
+}
+
 # Check required files
 $RequiredFiles = @(
     'MandADiscoverySuite.csproj',
@@ -188,26 +245,34 @@ $BuildArgs = @(
 )
 
 if ($SelfContained) {
-    $BuildArgs += '--self-contained', 'true'
-    $BuildArgs += '--runtime', 'win-x64'
+    $BuildArgs += '/p:SelfContained=true'
+    $BuildArgs += '/p:RuntimeIdentifier=win-x64'
     Write-Host "Building self-contained application..." -ForegroundColor Cyan
 } else {
-    $BuildArgs += '--self-contained', 'false'
+    $BuildArgs += '/p:SelfContained=false'
     Write-Host "Building framework-dependent application..." -ForegroundColor Cyan
-    }
-    
+}
+
     # Ensure CS0579 and related warnings are suppressed for all builds
     $BuildArgs += '/nowarn:CS0579;CS1685;CS1701;CS0101;CS0108;CS8632'
 
 # Restore packages first
 Write-Host "Restoring packages for publish..." -ForegroundColor Yellow
-& "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe" MandADiscoverySuite.csproj /t:Restore
+if ($MSBuildPath -eq "dotnet msbuild") {
+    & dotnet msbuild MandADiscoverySuite.csproj /t:Restore
+} else {
+    & $MSBuildPath MandADiscoverySuite.csproj /t:Restore
+}
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to restore packages"
     exit 1
 }
 
-& "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe" @BuildArgs
+if ($MSBuildPath -eq "dotnet msbuild") {
+    & dotnet msbuild @BuildArgs
+} else {
+    & $MSBuildPath @BuildArgs
+}
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Build failed"
