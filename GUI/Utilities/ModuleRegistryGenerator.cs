@@ -330,6 +330,7 @@ namespace MandADiscoverySuite.Utilities
         /// <summary>
         /// Console application entry point for registry management
         /// </summary>
+#if DEBUG
         public static async Task<int> Main(string[] args)
         {
             try
@@ -372,6 +373,7 @@ namespace MandADiscoverySuite.Utilities
                 return 1;
             }
         }
+#endif
 
         private static void PrintUsage()
         {

@@ -88,7 +88,7 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
@@ -196,17 +196,17 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Column="0">
+                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
                             <TextBlock Text="{Binding ProgressPercentage, StringFormat={}{0:F1}%}" Style="{StaticResource MetricValueStyle}"/>
                             <TextBlock Text="Complete" Style="{StaticResource MetricLabelStyle}"/>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="1">
+                        <StackPanel Grid.Column="1" Margin="8,0">
                             <TextBlock Text="{Binding ProcessedFiles}" Style="{StaticResource MetricValueStyle}"/>
                             <TextBlock Text="{Binding TotalFiles, StringFormat={}of {0} files}" Style="{StaticResource MetricLabelStyle}"/>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="2">
+                        <StackPanel Grid.Column="2" Margin="8,0,0,0">
                             <TextBlock Text="{Binding TransferRateMBps, StringFormat={}{0:F1} MB/s}" Style="{StaticResource MetricValueStyle}"/>
                             <TextBlock Text="Transfer Rate" Style="{StaticResource MetricLabelStyle}"/>
                         </StackPanel>
@@ -219,12 +219,12 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Column="0">
+                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
                             <TextBlock Text="{Binding ProcessedSizeFormatted}" FontSize="16" FontWeight="Medium"/>
                             <TextBlock Text="{Binding TotalSizeFormatted, StringFormat={}of {0}}" FontSize="12" Foreground="#718096"/>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="1">
+                        <StackPanel Grid.Column="1" Margin="8,0,0,0">
                             <TextBlock Text="{Binding EstimatedTimeRemaining, StringFormat={}{0:hh\\:mm\\:ss}}" FontSize="16" FontWeight="Medium"/>
                             <TextBlock Text="ETA" FontSize="12" Foreground="#718096"/>
                         </StackPanel>

@@ -8,33 +8,35 @@ namespace MandADiscoverySuite
 {
     public class TestRedBannersConsole
     {
+#if DEBUG
         public static async Task Main(string[] args)
         {
             Console.WriteLine("=== Testing Red Banner Functionality ===");
-            
+
             // Create services
-            var loggerFactory = LoggerFactory.Create(builder => 
+            var loggerFactory = LoggerFactory.Create(builder =>
                 builder.AddConsole().SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Debug));
-            
+
             var csvService = new CsvDataServiceNew(loggerFactory.CreateLogger<CsvDataServiceNew>());
             var profileService = new ProfileService();
             await profileService.SetCurrentProfileAsync("ljpops");
-            
+
             Console.WriteLine("Services initialized...");
-            
+
             // Test Users ViewNew
             await TestUsersView(csvService, loggerFactory, profileService);
-            
+
             // Test Applications ViewNew
             await TestApplicationsView(csvService, loggerFactory, profileService);
-            
+
             // Test Groups ViewNew
             await TestGroupsView(csvService, loggerFactory, profileService);
-            
+
             Console.WriteLine("\n=== Test Complete ===");
             Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
         }
+#endif
         
         private static async Task TestUsersView(CsvDataServiceNew csvService, ILoggerFactory loggerFactory, ProfileService profileService)
         {

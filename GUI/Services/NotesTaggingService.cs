@@ -37,7 +37,7 @@ namespace MandADiscoverySuite.Services
             _dataPath = Path.Combine(appData, "MandADiscoverySuite", "NotesAndTags");
             Directory.CreateDirectory(_dataPath);
 
-            LoadDataAsync();
+            _ = LoadDataAsync();
         }
 
         #region Note Management

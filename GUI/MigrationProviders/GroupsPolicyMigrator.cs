@@ -23,10 +23,11 @@ namespace MandADiscoverySuite.MigrationProviders
         private readonly AuditService _auditService;
 
         #region Events
-
+#pragma warning disable CS0067 // Events are declared for future use
         public event EventHandler<GroupMigrationProgressEventArgs>? ProgressUpdated;
         public event EventHandler<PolicyMigrationConflictEventArgs>? ConflictDetected;
         public event EventHandler<AclValidationStatusEventArgs>? AclStatusChanged;
+#pragma warning restore CS0067
 
         #endregion
 

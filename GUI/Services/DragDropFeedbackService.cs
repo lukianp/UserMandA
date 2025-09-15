@@ -22,7 +22,6 @@ namespace MandADiscoverySuite.Services
         private readonly Dictionary<FrameworkElement, DragDropState> _dragStates;
         private DragGhostAdorner _currentGhostAdorner;
         private DropZoneIndicator _dropZoneIndicator;
-        private Popup _dragPreviewPopup;
 
         private DragDropFeedbackService()
         {

@@ -12,6 +12,7 @@ namespace MandADiscoverySuite.Tools
     /// </summary>
     class ModuleRegistryManager
     {
+#if DEBUG
         static async Task<int> Main(string[] args)
         {
             Console.WriteLine("=== M&A Discovery Suite - Module Registry Manager ===");
@@ -67,6 +68,7 @@ namespace MandADiscoverySuite.Tools
                 return 1;
             }
         }
+#endif
 
         static void PrintUsage()
         {

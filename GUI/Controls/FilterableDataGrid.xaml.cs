@@ -6,12 +6,15 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.ViewModels;
+using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Views;
 using Microsoft.Extensions.Logging;
 
 namespace MandADiscoverySuite.Controls
@@ -20,6 +23,7 @@ namespace MandADiscoverySuite.Controls
     {
         private readonly IAdvancedFilterService _filterService;
         private readonly ILogger<FilterableDataGrid> _logger;
+        private readonly SemaphoreSlim _dataOperationLock = new SemaphoreSlim(1, 1);
         
         private IEnumerable _originalItems;
         private ObservableCollection<object> _filteredItems;
@@ -68,6 +72,10 @@ namespace MandADiscoverySuite.Controls
             DependencyProperty.Register(nameof(AutoGenerateColumns), typeof(bool), typeof(FilterableDataGrid),
                 new PropertyMetadata(true));
 
+        public static readonly DependencyProperty ItemTypeProperty =
+            DependencyProperty.Register(nameof(ItemType), typeof(Type), typeof(FilterableDataGrid),
+                new PropertyMetadata(null, OnItemTypeChanged));
+
         #endregion
 
         #region Properties
@@ -88,6 +96,12 @@ namespace MandADiscoverySuite.Controls
         {
             get => (bool)GetValue(AutoGenerateColumnsProperty);
             set => SetValue(AutoGenerateColumnsProperty, value);
+        }
+
+        public Type ItemType
+        {
+            get => (Type)GetValue(ItemTypeProperty);
+            set => SetValue(ItemTypeProperty, value);
         }
 
         public ObservableCollection<object> FilteredItems
@@ -159,23 +173,60 @@ namespace MandADiscoverySuite.Controls
             }
         }
 
-        private void OnItemsSourceChanged(IEnumerable newItemsSource)
+        private static void OnItemTypeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            _originalItems = newItemsSource;
-            
-            if (newItemsSource != null)
+            if (d is FilterableDataGrid control)
             {
-                // Initialize filter for the item type
-                var itemType = GetItemType(newItemsSource);
-                if (itemType != null)
+                try
                 {
-                    var initializeMethod = typeof(AdvancedFilterViewModel).GetMethod("Initialize");
-                    var genericMethod = initializeMethod?.MakeGenericMethod(itemType);
-                    genericMethod?.Invoke(FilterViewModel, null);
+                    if (e.NewValue is Type itemType && control.FilterViewModel != null)
+                    {
+                        var initializeMethod = typeof(AdvancedFilterViewModel).GetMethod("Initialize");
+                        var genericMethod = initializeMethod?.MakeGenericMethod(itemType);
+                        genericMethod?.Invoke(control.FilterViewModel, null);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    control._logger?.LogError(ex, "Error initializing filter for ItemType change");
                 }
             }
-            
-            Task.Run(RefreshFilteredItemsAsync);
+        }
+
+        private void OnItemsSourceChanged(IEnumerable newItemsSource)
+        {
+            // Serialize ItemsSource updates with other data operations
+            Task.Run(async () =>
+            {
+                await _dataOperationLock.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    _originalItems = newItemsSource;
+
+                    if (newItemsSource != null)
+                    {
+                        // Initialize filter for the item type (prefer explicit ItemType)
+                        var itemType = ItemType ?? GetItemType(newItemsSource);
+                        if (itemType != null && itemType != typeof(object))
+                        {
+                            var initializeMethod = typeof(AdvancedFilterViewModel).GetMethod("Initialize");
+                            var genericMethod = initializeMethod?.MakeGenericMethod(itemType);
+                            genericMethod?.Invoke(FilterViewModel, null);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Error handling ItemsSource change");
+                }
+                finally
+                {
+                    _dataOperationLock.Release();
+                }
+
+                // Refresh after updating source to reflect changes
+                await RefreshFilteredItemsAsync().ConfigureAwait(false);
+            });
         }
 
         private async void OnFilterApplied(object sender, FilterAppliedEventArgs e)
@@ -196,36 +247,38 @@ namespace MandADiscoverySuite.Controls
 
         private async Task RefreshFilteredItemsAsync()
         {
-            if (_originalItems == null)
-            {
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    FilteredItems.Clear();
-                    UpdatePropertyNotifications();
-                });
-                return;
-            }
-
+            await _dataOperationLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                IsLoading = true;
-                
+                if (_originalItems == null)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        IsLoading = false;
+                        FilteredItems.Clear();
+                        UpdatePropertyNotifications();
+                    });
+                    return;
+                }
+
+                await Application.Current.Dispatcher.InvokeAsync(() => IsLoading = true);
+
                 var items = _originalItems.Cast<object>().ToList();
-                
+
                 // Apply advanced filters
                 if (FilterViewModel?.CurrentFilter?.Rules?.Any(r => r.IsEnabled) == true)
                 {
-                    var itemType = GetItemType(_originalItems);
-                    if (itemType != null)
+                    var itemType = ItemType ?? GetItemType(_originalItems);
+                    if (itemType != null && itemType != typeof(object))
                     {
                         var filterMethod = typeof(IAdvancedFilterService).GetMethod("ApplyFiltersAsync");
                         var genericMethod = filterMethod?.MakeGenericMethod(itemType);
-                        
+
                         if (genericMethod != null)
                         {
                             var task = (Task)genericMethod.Invoke(_filterService, new object[] { items, FilterViewModel.CurrentFilter });
-                            await task;
-                            
+                            await task.ConfigureAwait(false);
+
                             var resultProperty = task.GetType().GetProperty("Result");
                             if (resultProperty != null)
                             {
@@ -234,13 +287,13 @@ namespace MandADiscoverySuite.Controls
                         }
                     }
                 }
-                
+
                 // Apply global search
                 if (!string.IsNullOrEmpty(GlobalSearchText))
                 {
                     items = ApplyGlobalSearch(items, GlobalSearchText).ToList();
                 }
-                
+
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     FilteredItems.Clear();
@@ -248,7 +301,7 @@ namespace MandADiscoverySuite.Controls
                     {
                         FilteredItems.Add(item);
                     }
-                    
+
                     UpdatePropertyNotifications();
                 });
             }
@@ -258,7 +311,8 @@ namespace MandADiscoverySuite.Controls
             }
             finally
             {
-                IsLoading = false;
+                await Application.Current.Dispatcher.InvokeAsync(() => IsLoading = false);
+                _dataOperationLock.Release();
             }
         }
 
@@ -305,10 +359,14 @@ namespace MandADiscoverySuite.Controls
 
         private Type GetItemType(IEnumerable items)
         {
+            // Prefer explicitly provided ItemType
+            if (ItemType != null)
+                return ItemType;
+
             if (items == null) return null;
-            
+
             var enumerableType = items.GetType();
-            
+
             if (enumerableType.IsGenericType)
             {
                 var genericArgs = enumerableType.GetGenericArguments();
@@ -317,13 +375,14 @@ namespace MandADiscoverySuite.Controls
                     return genericArgs[0];
                 }
             }
-            
+
             // Fallback: try to get type from first item
             foreach (var item in items)
             {
                 return item?.GetType();
             }
-            
+
+            // If we cannot infer, fall back to object (filters won't be applied generically)
             return typeof(object);
         }
 
@@ -376,18 +435,93 @@ namespace MandADiscoverySuite.Controls
         {
             try
             {
-                // Simple column configuration implementation
-                var visibleColumns = MainDataGrid.Columns.Where(c => c.Visibility == Visibility.Visible).Count();
-                var hiddenColumns = MainDataGrid.Columns.Where(c => c.Visibility != Visibility.Visible).Count();
-                var totalColumns = MainDataGrid.Columns.Count;
-                
-                var message = $"Column Configuration:\n\n" +
-                             $"• Total columns: {totalColumns}\n" +
-                             $"• Visible: {visibleColumns}\n" +
-                             $"• Hidden: {hiddenColumns}\n\n" +
-                             "Click column headers to sort.\nRight-click for context menu options.";
-                             
-                MessageBox.Show(message, "Column Configuration", MessageBoxButton.OK, MessageBoxImage.Information);
+                // Build configuration from current DataGrid columns
+                var configuration = new DataGridColumnConfiguration
+                {
+                    ViewName = this.Name ?? "FilterableDataGrid",
+                    ConfigurationName = "Current",
+                    IsDefault = false,
+                    CreatedDate = DateTime.Now,
+                    ModifiedDate = DateTime.Now
+                };
+
+                foreach (var col in MainDataGrid.Columns.OrderBy(c => c.DisplayIndex))
+                {
+                    string propertyName = null;
+                    if (col is DataGridBoundColumn bound && bound.Binding is Binding binding)
+                    {
+                        propertyName = binding.Path?.Path;
+                    }
+
+                    configuration.Columns.Add(new ColumnViewModel
+                    {
+                        Header = col.Header?.ToString() ?? propertyName ?? "Column",
+                        PropertyName = propertyName ?? col.Header?.ToString(),
+                        IsVisible = col.Visibility == Visibility.Visible,
+                        IsSortable = col.CanUserSort,
+                        IsResizable = col.CanUserResize,
+                        Width = col.Width.IsSizeToCells || col.Width.IsAuto ? double.NaN : (col.ActualWidth > 0 ? col.ActualWidth : col.Width.Value),
+                        MinWidth = col.MinWidth,
+                        MaxWidth = col.MaxWidth,
+                        DisplayOrder = col.DisplayIndex
+                    });
+                }
+
+                var viewModel = new ColumnChooserViewModel(configuration);
+                var dialog = new ColumnChooserDialog
+                {
+                    Owner = Window.GetWindow(this),
+                    DataContext = viewModel
+                };
+
+                var result = dialog.ShowDialog();
+                if (result == true)
+                {
+                    // Apply the chosen configuration
+                    var orderedVisible = configuration.VisibleColumns.ToList();
+                    for (int i = 0; i < orderedVisible.Count; i++)
+                    {
+                        var vm = orderedVisible[i];
+                        var column = FindColumn(vm);
+                        if (column != null)
+                        {
+                            column.Visibility = Visibility.Visible;
+                            column.DisplayIndex = i;
+                            column.CanUserSort = vm.IsSortable;
+                            column.CanUserResize = vm.IsResizable;
+                            if (!double.IsNaN(vm.Width) && vm.Width > 0)
+                            {
+                                column.Width = new DataGridLength(vm.Width);
+                            }
+                        }
+                    }
+
+                    // Hide remaining columns
+                    var toHide = configuration.HiddenColumns.ToList();
+                    foreach (var vm in toHide)
+                    {
+                        var column = FindColumn(vm);
+                        if (column != null)
+                        {
+                            column.Visibility = Visibility.Collapsed;
+                        }
+                    }
+                }
+
+                DataGridColumn FindColumn(ColumnViewModel vm)
+                {
+                    // Prefer match by binding path
+                    foreach (var c in MainDataGrid.Columns)
+                    {
+                        if (c is DataGridBoundColumn dbc && dbc.Binding is Binding b && !string.IsNullOrEmpty(vm.PropertyName))
+                        {
+                            if (string.Equals(b.Path?.Path, vm.PropertyName, StringComparison.Ordinal))
+                                return c;
+                        }
+                    }
+                    // Fallback by header text
+                    return MainDataGrid.Columns.FirstOrDefault(c => string.Equals(c.Header?.ToString(), vm.Header, StringComparison.Ordinal));
+                }
             }
             catch (Exception ex)
             {

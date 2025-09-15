@@ -105,7 +105,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _searchText = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 
@@ -159,7 +159,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _showBuildLogs = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 
@@ -170,7 +170,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _showRuntimeLogs = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 
@@ -181,7 +181,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _showModuleLogs = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 
@@ -192,7 +192,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _showMigrationLogs = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 
@@ -204,7 +204,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _showErrorLevel = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 
@@ -215,7 +215,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _showWarningLevel = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 
@@ -226,7 +226,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _showInfoLevel = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 
@@ -237,7 +237,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _showDebugLevel = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 
@@ -248,7 +248,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _showTraceLevel = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 
@@ -259,7 +259,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _showCriticalLevel = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 
@@ -271,7 +271,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _filterStartDate = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 
@@ -282,7 +282,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _filterEndDate = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 
@@ -293,7 +293,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _sourceFilter = value;
                 OnPropertyChanged();
-                ApplyFiltersAsync();
+                _ = ApplyFiltersAsync();
             }
         }
 

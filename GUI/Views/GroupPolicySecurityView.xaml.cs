@@ -4,6 +4,8 @@ using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models;
 using Microsoft.Extensions.Logging;
 
+#pragma warning disable CS0618 // SimpleServiceLocator is obsolete
+
 namespace MandADiscoverySuite.Views
 {
     /// <summary>

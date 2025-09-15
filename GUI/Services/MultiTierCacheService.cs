@@ -49,7 +49,9 @@ namespace MandADiscoverySuite.Services
         // Events for cache notifications
         public event EventHandler<CachePromotionEventArgs>? ItemPromoted;
         public event EventHandler<CacheEvictionEventArgs>? ItemEvicted;
+#pragma warning disable CS0067 // Event is declared for future use
         public event EventHandler<CacheWarmupEventArgs>? CacheWarmedUp;
+#pragma warning restore CS0067
 
         public MultiTierCacheService(ILogger<MultiTierCacheService> logger, MemoryPressureMonitor memoryMonitor)
         {

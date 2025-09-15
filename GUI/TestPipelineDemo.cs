@@ -11,6 +11,7 @@ namespace TestPipeline
     /// </summary>
     public class TestPipelineDemo
     {
+#if DEBUG
         public static async Task Main(string[] args)
         {
             Console.WriteLine("=== M&A Discovery Suite - Unified Pipeline Demonstration ===");
@@ -18,33 +19,33 @@ namespace TestPipeline
             Console.WriteLine();
 
             // Set up logging
-            using var loggerFactory = LoggerFactory.Create(builder => 
+            using var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder.AddConsole();
                 builder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Debug);
             });
-            
+
             var csvLogger = loggerFactory.CreateLogger<CsvDataServiceNew>();
-            
+
             // Create the service
             var csvService = new CsvDataServiceNew(csvLogger);
             var profileService = SimpleProfileService.Instance;
-            
+
             Console.WriteLine("🔧 Testing CsvDataServiceNew with real CSV files...");
             Console.WriteLine();
-            
+
             // Test 1: Load Users (complete headers)
             Console.WriteLine("📊 Test 1: Loading Users.csv (complete headers)");
             Console.WriteLine("Expected: Clean load with no warnings");
             Console.WriteLine();
-            
-            try 
+
+            try
             {
                 var usersResult = await csvService.LoadUsersAsync("ljpops");
-                
+
                 Console.WriteLine($"✅ Success: Loaded {usersResult.Data.Count} users");
                 Console.WriteLine($"⚠️  Warnings: {usersResult.HeaderWarnings.Count}");
-                
+
                 if (usersResult.HeaderWarnings.Count > 0)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -55,7 +56,7 @@ namespace TestPipeline
                     }
                     Console.ResetColor();
                 }
-                
+
                 Console.WriteLine();
                 Console.WriteLine("Sample data loaded:");
                 foreach (var user in usersResult.Data.Take(3))
@@ -69,25 +70,25 @@ namespace TestPipeline
                 Console.WriteLine($"❌ Error: {ex.Message}");
                 Console.ResetColor();
             }
-            
+
             Console.WriteLine();
             Console.WriteLine(new string('=', 60));
             Console.WriteLine();
-            
+
             // Test 2: Demonstrate header verification with missing columns
             Console.WriteLine("📊 Test 2: Dynamic Header Verification Demo");
             Console.WriteLine("File: AzureUsers.csv (missing Department, JobTitle, CompanyName, ManagerDisplayName)");
             Console.WriteLine("Expected: Red warning banner for missing columns");
             Console.WriteLine();
-            
-            try 
+
+            try
             {
                 // This should trigger warnings for missing columns
                 var azureResult = await csvService.LoadUsersAsync("ljpops");
-                
+
                 Console.WriteLine($"✅ Success: Loaded {azureResult.Data.Count} total users from all files");
                 Console.WriteLine($"⚠️  Header Warnings: {azureResult.HeaderWarnings.Count}");
-                
+
                 if (azureResult.HeaderWarnings.Count > 0)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -113,22 +114,22 @@ namespace TestPipeline
                 Console.WriteLine($"❌ Error: {ex.Message}");
                 Console.ResetColor();
             }
-            
+
             Console.WriteLine();
             Console.WriteLine(new string('=', 60));
             Console.WriteLine();
-            
+
             // Test 3: Test Groups loader
             Console.WriteLine("📊 Test 3: Testing Groups loader");
             Console.WriteLine();
-            
-            try 
+
+            try
             {
                 var groupsResult = await csvService.LoadGroupsAsync("ljpops");
-                
+
                 Console.WriteLine($"✅ Success: Loaded {groupsResult.Data.Count} groups");
                 Console.WriteLine($"⚠️  Warnings: {groupsResult.HeaderWarnings.Count}");
-                
+
                 if (groupsResult.Data.Count > 0)
                 {
                     Console.WriteLine();
@@ -145,16 +146,16 @@ namespace TestPipeline
                 Console.WriteLine($"❌ Error: {ex.Message}");
                 Console.ResetColor();
             }
-            
+
             Console.WriteLine();
             Console.WriteLine(new string('=', 60));
             Console.WriteLine();
-            
+
             // Summary
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("🎯 UNIFIED PIPELINE DEMONSTRATION COMPLETE");
             Console.ResetColor();
-            
+
             Console.WriteLine();
             Console.WriteLine("✅ Features Demonstrated:");
             Console.WriteLine("   • Dynamic CSV header verification with case-insensitive mapping");
@@ -164,16 +165,17 @@ namespace TestPipeline
             Console.WriteLine("   • Structured logging throughout");
             Console.WriteLine("   • Red warning banner system for missing columns");
             Console.WriteLine();
-            
+
             Console.WriteLine("🔄 Ready for WPF Integration:");
             Console.WriteLine("   • BaseViewModel with unified LoadAsync pattern implemented");
             Console.WriteLine("   • UsersViewNew.xaml shows complete UI integration");
             Console.WriteLine("   • Four UI states: loading, error, warnings, data");
             Console.WriteLine("   • ViewRegistry and TabsService ready for navigation");
-            
+
             Console.WriteLine();
             Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
         }
+#endif
     }
 }

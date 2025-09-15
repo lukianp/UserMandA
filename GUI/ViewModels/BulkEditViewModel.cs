@@ -8,6 +8,8 @@ using CommunityToolkit.Mvvm.Input;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 
+#pragma warning disable CS0618 // SimpleServiceLocator is obsolete
+
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>

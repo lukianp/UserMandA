@@ -398,9 +398,10 @@ namespace MandADiscoverySuite.ViewModels
         #endregion
 
         #region Constructor
-        public TeamsMigrationPlanningViewModel()
+        public TeamsMigrationPlanningViewModel(NavigationService navigationService)
         {
-            navigationService = SimpleServiceLocator.Instance.GetService<NavigationService>();
+            this.navigationService = navigationService;
+            _cancellationTokenSource = new CancellationTokenSource();
             InitializeCommands();
             InitializeCollections();
             // Data will be loaded from CSV discovery files when available

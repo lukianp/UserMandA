@@ -6,8 +6,12 @@ using System.Windows;
 using System.Windows.Input;
 using System.Diagnostics;
 using System.Windows.Data;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
+using MandADiscoverySuite.Services.Audit;
+using MandADiscoverySuite.Interfaces;
 using MandADiscoverySuite.ViewModels;
 using MandADiscoverySuite.Helpers;
 using MandADiscoverySuite.Navigation;
@@ -19,9 +23,82 @@ namespace MandADiscoverySuite
 {
     public partial class App : Application
     {
+        // IServiceProvider for dependency injection
+        public static IServiceProvider ServiceProvider { get; private set; }
+
         // Disabled for unified pipeline build
         // private StartupOptimizationService _startupService;
         // private KeyboardShortcutManager _shortcutManager;
+
+        /// <summary>
+        /// Configure services for dependency injection
+        /// </summary>
+        private void ConfigureServices()
+        {
+            var services = new ServiceCollection();
+
+            // Add logging
+            services.AddLogging(builder => builder.AddConsole());
+
+            // Add messenger for MVVM
+            services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
+
+            // Register core services
+            services.AddSingleton<ConfigurationService>();
+            services.AddSingleton<MandADiscoverySuite.Services.AuditService>();
+            services.AddSingleton<MandADiscoverySuite.Services.Audit.IAuditService, MandADiscoverySuite.Services.Audit.AuditService>();
+
+            // Register data services
+            services.AddSingleton<IDataService, DataService>();
+            services.AddSingleton<DataService>();
+            services.AddSingleton<TargetProfileService>();
+
+            // Register logic engine service
+            services.AddSingleton<ILogicEngineService>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<LogicEngineService>>();
+                var configService = sp.GetRequiredService<ConfigurationService>();
+                var dataRoot = Path.Combine(configService.DiscoveryDataRootPath, "ljpops", "RawData");
+                return new LogicEngineService(logger, null, dataRoot);
+            });
+            services.AddSingleton<LogicEngineService>(sp => (LogicEngineService)sp.GetRequiredService<ILogicEngineService>());
+
+            // Register log management service
+            services.AddSingleton<ILogManagementService, LogManagementService>();
+            services.AddSingleton<LogManagementService>();
+
+            // Register theme service
+            services.AddSingleton<ThemeService>();
+
+            // Register UI logging service
+            services.AddSingleton<UIInteractionLoggingService>();
+
+            // Register CSV file watcher service
+            services.AddSingleton<CsvFileWatcherService>();
+
+            // Register CSV data service
+            services.AddSingleton<ICsvDataLoader>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<CsvDataServiceNew>>();
+                return (ICsvDataLoader)new CsvDataServiceNew(logger, "ljpops"); // Use default profile
+            });
+            services.AddSingleton<CsvDataServiceNew>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<CsvDataServiceNew>>();
+                return new CsvDataServiceNew(logger, "ljpops");
+            });
+
+            // Register navigation service
+            services.AddSingleton<NavigationService>();
+
+            // Register additional services that may be needed
+            services.AddSingleton<ProfileService>();
+            services.AddSingleton<IKeyboardShortcutService, KeyboardShortcutService>();
+            services.AddSingleton<AnimationOptimizationService>();
+
+            // Build the service provider
+            ServiceProvider = services.BuildServiceProvider();
+        }
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -40,7 +117,7 @@ namespace MandADiscoverySuite
                 // Initialize enhanced logging and audit services early
                 logAction?.Invoke("Initializing logging and audit services...");
                 var loggingService = EnhancedLoggingService.Instance;
-                var auditService = AuditService.Instance;
+                var auditService = MandADiscoverySuite.Services.AuditService.Instance;
                 _ = Task.Run(async () => await loggingService.LogAsync(Services.LogLevel.Debug, "Debug logging enabled"));
                 logAction?.Invoke("Logging and audit services initialized");
 
@@ -49,13 +126,18 @@ namespace MandADiscoverySuite
                 SimpleServiceLocator.Initialize();
                 logAction?.Invoke("SimpleServiceLocator initialized successfully");
 
+                // Configure dependency injection services
+                logAction?.Invoke("Configuring dependency injection services...");
+                ConfigureServices();
+                logAction?.Invoke("Dependency injection services configured successfully");
+
                 // Initialize discovery data root path (will use MANDA_DISCOVERY_PATH if set)
                 var discoveryPath = ConfigurationService.Instance.DiscoveryDataRootPath;
                 logAction?.Invoke($"DiscoveryDataRootPath initialized: {discoveryPath}");
 
                 // Initialize UI interaction logging service for comprehensive click tracking
                 logAction?.Invoke("Initializing UI interaction logging service...");
-                var uiLoggingService = SimpleServiceLocator.Instance.GetService<UIInteractionLoggingService>();
+                var uiLoggingService = ServiceProvider.GetService<UIInteractionLoggingService>();
                 uiLoggingService?.Initialize();
                 logAction?.Invoke("UI interaction logging service initialized successfully");
 
@@ -71,9 +153,9 @@ namespace MandADiscoverySuite
                 // SimpleServiceLocator already initialized above
                 
                 logAction?.Invoke("Getting ThemeService...");
-                var themeService = SimpleServiceLocator.Instance.GetService<ThemeService>();
+                var themeService = ServiceProvider.GetService<ThemeService>();
                 logAction?.Invoke($"ThemeService retrieved: {(themeService != null ? "Success" : "NULL")}");
-                
+
                 if (themeService != null)
                 {
                     logAction?.Invoke("Initializing ThemeService...");
@@ -81,7 +163,7 @@ namespace MandADiscoverySuite
                     logAction?.Invoke("ThemeService initialized successfully");
 
                     // Register for theme change messages to reload theme resources
-                    var messenger = SimpleServiceLocator.Instance.GetService<IMessenger>();
+                    var messenger = ServiceProvider.GetService<IMessenger>();
                     messenger?.Register<App, ThemeChangedMessage>(this, (r, m) =>
                     {
                         r.ApplyThemeDictionary(m.IsDarkTheme);
@@ -147,8 +229,13 @@ namespace MandADiscoverySuite
                 
                 System.Diagnostics.Debug.WriteLine(fullError);
                 
-                MessageBox.Show($"CRITICAL STARTUP FAILURE:\n{ex.Message}\n\nType: {ex.GetType().Name}\n\nFull details logged.\n\nStack trace:\n{ex.StackTrace}", 
-                              "Critical Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                var logFilePath = Current.Properties["LogFilePath"] as string;
+                var userMessage = "The application failed to start.\n\n" +
+                                  (string.IsNullOrEmpty(logFilePath)
+                                      ? "A detailed error log has been created."
+                                      : $"A detailed error log has been saved to:\n{logFilePath}") +
+                                  "\n\nPlease review the log file or share it with support.";
+                MessageBox.Show(userMessage, "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 Shutdown(1);
             }
         }
@@ -160,11 +247,15 @@ namespace MandADiscoverySuite
             {
                 // Wait a moment for the main window to finish loading
                 await Task.Delay(1000);
-                
-                // Complete startup optimization - DISABLED for unified pipeline
-                // await _startupService?.CompleteStartupAsync();
-                
-                // Startup service completion skipped
+
+                // Try to complete startup optimization if service is available
+                // Startup optimization service disabled for unified pipeline build
+                // var startupService = ServiceProvider.GetService<StartupOptimizationService>();
+                // if (startupService != null)
+                // {
+                //     await startupService.CompleteStartupAsync();
+                // }
+                // else: service not available in unified pipeline build; no-op
             }
             catch (Exception ex)
             {
@@ -176,7 +267,7 @@ namespace MandADiscoverySuite
         {
             try
             {
-                var animationService = SimpleServiceLocator.Instance.GetService<AnimationOptimizationService>();
+                var animationService = ServiceProvider.GetService<AnimationOptimizationService>();
                 if (animationService != null)
                 {
                     // Set performance level based on system capabilities
@@ -203,7 +294,7 @@ namespace MandADiscoverySuite
         {
             try
             {
-                var shortcutService = SimpleServiceLocator.Instance.GetService<IKeyboardShortcutService>();
+                var shortcutService = ServiceProvider.GetService<IKeyboardShortcutService>();
                 if (shortcutService != null)
                 {
                     // _shortcutManager = new KeyboardShortcutManager(shortcutService);
@@ -433,8 +524,9 @@ namespace MandADiscoverySuite
                 }
             };
             
-            // Store log action for later use
+            // Store log action and path for later use
             Current.Properties["LogAction"] = logAction;
+            Current.Properties["LogFilePath"] = logFile;
         }
 
         private void FreezeStaticBrushes()
@@ -512,7 +604,7 @@ namespace MandADiscoverySuite
         {
             try
             {
-                var csvWatcher = SimpleServiceLocator.Instance.GetService<CsvFileWatcherService>();
+                var csvWatcher = ServiceProvider.GetService<CsvFileWatcherService>();
                 if (csvWatcher != null)
                 {
                     csvWatcher.StartWatching();
@@ -536,7 +628,7 @@ namespace MandADiscoverySuite
         {
             try
             {
-                var logicEngine = SimpleServiceLocator.Instance.GetService<ILogicEngineService>();
+                var logicEngine = ServiceProvider.GetService<ILogicEngineService>();
                 if (logicEngine != null)
                 {
                     // Set up event handlers for data loading

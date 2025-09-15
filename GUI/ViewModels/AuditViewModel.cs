@@ -492,6 +492,8 @@ namespace MandADiscoverySuite.ViewModels
             return $"{number:n1} {suffixes[counter]}";
         }
 
+#pragma warning disable CS0067 // Event is declared for future use
         public event PropertyChangedEventHandler PropertyChanged;
+#pragma warning restore CS0067
     }
 }

@@ -13,7 +13,6 @@ namespace MandADiscoverySuite.Views
     /// </summary>
     public partial class WaveView : UserControl
     {
-        private bool _isDragging = false;
         private User _draggedUser = null;
         
         public WaveView()
@@ -49,15 +48,12 @@ namespace MandADiscoverySuite.Views
                     _draggedUser = element.Tag as User;
                     if (_draggedUser != null)
                     {
-                        _isDragging = true;
-                        
                         // Create drag data
                         var dragData = new DataObject("User", _draggedUser);
-                        
+
                         // Start drag operation
                         DragDrop.DoDragDrop(element, dragData, DragDropEffects.Move);
-                        
-                        _isDragging = false;
+
                         _draggedUser = null;
                     }
                 }

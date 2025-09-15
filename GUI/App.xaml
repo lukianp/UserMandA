@@ -32,7 +32,6 @@
             </ResourceDictionary.MergedDictionaries>
             
             <!-- Standard Converters -->
-            <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <converters:InvertedBoolToVisibilityConverter x:Key="InvertedBoolToVisibilityConverter"/>
             <converters:ViewModelTypeComparisonConverter x:Key="ViewModelTypeComparisonConverter"/>

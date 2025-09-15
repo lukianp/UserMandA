@@ -600,9 +600,28 @@ namespace MandADiscoverySuite.Services
             
             foreach (var user in updatedUsers)
             {
-                _usersBySid.TryUpdate(user.Sid, user, _usersBySid.GetValueOrDefault(user.Sid));
+                var currentBySid = _usersBySid.GetValueOrDefault(user.Sid);
+                if (currentBySid != null)
+                {
+                    _usersBySid.TryUpdate(user.Sid, user, currentBySid);
+                }
+                else
+                {
+                    _usersBySid.TryAdd(user.Sid, user);
+                }
+
                 if (!string.IsNullOrEmpty(user.UPN))
-                    _usersByUpn.TryUpdate(user.UPN, user, _usersByUpn.GetValueOrDefault(user.UPN));
+                {
+                    var currentByUpn = _usersByUpn.GetValueOrDefault(user.UPN);
+                    if (currentByUpn != null)
+                    {
+                        _usersByUpn.TryUpdate(user.UPN, user, currentByUpn);
+                    }
+                    else
+                    {
+                        _usersByUpn.TryAdd(user.UPN, user);
+                    }
+                }
             }
             
             _logger.LogDebug("Updated {UserCount} users from incremental update", updatedUsers.Count);

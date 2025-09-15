@@ -1,6 +1,7 @@
 using System.Windows.Controls;
 using MandADiscoverySuite.ViewModels;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite.Views
 {
@@ -13,6 +14,10 @@ namespace MandADiscoverySuite.Views
         public TeamsMigrationPlanningView()
         {
             InitializeComponent();
+
+            // Create ViewModel with dependency injection
+            var navigationService = (NavigationService)App.ServiceProvider.GetService(typeof(NavigationService));
+            DataContext = new TeamsMigrationPlanningViewModel(navigationService);
         }
 
         private void TeamsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -68,7 +68,7 @@ namespace MandADiscoverySuite.ViewModels
             InitializeCollections();
             InitializeCommands();
             // Removed GenerateSampleData call - will load from CSV if available
-            LoadExchangeDataAsync();
+            _ = LoadExchangeDataAsync();
             RefreshStatistics();
 
             // Load target profiles for selection

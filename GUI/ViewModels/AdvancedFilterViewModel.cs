@@ -8,6 +8,8 @@ using System.Windows.Input;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Services;
 
+#pragma warning disable CS0618 // SimpleServiceLocator is obsolete
+
 namespace MandADiscoverySuite.ViewModels
 {
     public class AdvancedFilterViewModel : BaseViewModel

@@ -35,7 +35,9 @@ namespace MandADiscoverySuite.Services
         public event EventHandler<MigrationAlertEventArgs> MigrationAlert;
         
         // Additional events for ViewModel compatibility
+#pragma warning disable CS0067 // Event is declared for future use
         public event EventHandler<WaveCompletedEventArgs> WaveCompleted;
+#pragma warning restore CS0067
 
         public MigrationWaveOrchestrator(
             ILogger<MigrationWaveOrchestrator> logger = null,
