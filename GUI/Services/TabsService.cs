@@ -41,82 +41,85 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<bool> OpenTabAsync(string key, string? title = null)
         {
-            if (string.IsNullOrWhiteSpace(key))
-                return false;
-
-            try
+            return await Task.Run(() =>
             {
-                // Check if tab already exists
-                var existingTab = _tabs.FirstOrDefault(t => 
-                    t.Tag?.ToString()?.Equals(key, StringComparison.OrdinalIgnoreCase) == true);
+                if (string.IsNullOrWhiteSpace(key))
+                    return false;
 
-                if (existingTab != null)
+                try
                 {
-                    // Activate existing tab
+                    // Check if tab already exists
+                    var existingTab = _tabs.FirstOrDefault(t =>
+                        t.Tag?.ToString()?.Equals(key, StringComparison.OrdinalIgnoreCase) == true);
+
+                    if (existingTab != null)
+                    {
+                        // Activate existing tab
+                        if (_tabControl != null)
+                        {
+                            _tabControl.SelectedItem = existingTab;
+                        }
+
+                        _logger?.LogInformation($"[TabsService] Activated existing tab: {key}");
+                        LogClickToFile("Tab", key, "Reactivated");
+                        return true;
+                    }
+
+                    // Create new view
+                    var view = _viewRegistry.CreateView(key);
+                    if (view == null)
+                    {
+                        _logger?.LogWarning($"[TabsService] Failed to create view for key: {key}");
+                        return false;
+                    }
+
+                    // Initialize view if it has a ViewModel with LoadAsync - MUST happen before adding tab
+                    if (view.DataContext is BaseViewModel viewModel)
+                    {
+                        // Start loading asynchronously but marshal back to UI thread for safety
+                        // This prevents cross-thread issues during data binding
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await viewModel.LoadAsync();
+                                _logger?.LogInformation($"[TabsService] Loaded data for view: {key}");
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger?.LogError(ex, $"[TabsService] Failed to load data for view: {key}");
+                            }
+                        });
+                    }
+
+                    // Create tab
+                    var tab = new TabItem
+                    {
+                        Header = title ?? key,
+                        Content = view,
+                        Tag = key
+                    };
+
+                    // Add to collection
+                    _tabs.Add(tab);
+
+                    // Select the new tab
                     if (_tabControl != null)
                     {
-                        _tabControl.SelectedItem = existingTab;
+                        _tabControl.SelectedItem = tab;
                     }
-                    
-                    _logger?.LogInformation($"[TabsService] Activated existing tab: {key}");
-                    LogClickToFile("Tab", key, "Reactivated");
+
+                    _logger?.LogInformation($"[TabsService] Opened new tab: {key} with title: {title ?? key}");
+                    LogClickToFile("Tab", key, "Opened");
+
                     return true;
                 }
-
-                // Create new view
-                var view = _viewRegistry.CreateView(key);
-                if (view == null)
+                catch (Exception ex)
                 {
-                    _logger?.LogWarning($"[TabsService] Failed to create view for key: {key}");
+                    _logger?.LogError(ex, $"[TabsService] Error opening tab for key: {key}");
                     return false;
                 }
-
-                // Initialize view if it has a ViewModel with LoadAsync - MUST happen before adding tab
-                if (view.DataContext is BaseViewModel viewModel)
-                {
-                    // Start loading asynchronously but marshal back to UI thread for safety
-                    // This prevents cross-thread issues during data binding
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await viewModel.LoadAsync();
-                            _logger?.LogInformation($"[TabsService] Loaded data for view: {key}");
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogError(ex, $"[TabsService] Failed to load data for view: {key}");
-                        }
-                    });
-                }
-
-                // Create tab
-                var tab = new TabItem
-                {
-                    Header = title ?? key,
-                    Content = view,
-                    Tag = key
-                };
-
-                // Add to collection
-                _tabs.Add(tab);
-
-                // Select the new tab
-                if (_tabControl != null)
-                {
-                    _tabControl.SelectedItem = tab;
-                }
-
-                _logger?.LogInformation($"[TabsService] Opened new tab: {key} with title: {title ?? key}");
-                LogClickToFile("Tab", key, "Opened");
-                
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"[TabsService] Error opening tab for key: {key}");
-                return false;
-            }
+            });
         }
 
         /// <summary>
@@ -216,86 +219,89 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<bool> OpenUserDetailTabAsync(string userIdentifier, string displayName)
         {
-            if (string.IsNullOrWhiteSpace(userIdentifier))
-                return false;
-
-            try
+            return await Task.Run(() =>
             {
-                var tabKey = $"userdetail_{userIdentifier}";
-                var tabTitle = $"User Details - {displayName}";
+                if (string.IsNullOrWhiteSpace(userIdentifier))
+                    return false;
 
-                // Check if tab already exists
-                var existingTab = _tabs.FirstOrDefault(t => 
-                    t.Tag?.ToString()?.Equals(tabKey, StringComparison.OrdinalIgnoreCase) == true);
-
-                if (existingTab != null)
+                try
                 {
-                    // Activate existing tab
+                    var tabKey = $"userdetail_{userIdentifier}";
+                    var tabTitle = $"User Details - {displayName}";
+
+                    // Check if tab already exists
+                    var existingTab = _tabs.FirstOrDefault(t =>
+                        t.Tag?.ToString()?.Equals(tabKey, StringComparison.OrdinalIgnoreCase) == true);
+
+                    if (existingTab != null)
+                    {
+                        // Activate existing tab
+                        if (_tabControl != null)
+                        {
+                            _tabControl.SelectedItem = existingTab;
+                        }
+
+                        _logger?.LogInformation($"[TabsService] Activated existing user detail tab: {userIdentifier}");
+                        LogClickToFile("Tab", tabKey, "Reactivated");
+                        return true;
+                    }
+
+                    // Create new UserDetailView
+                    var userDetailView = new MandADiscoverySuite.Views.UserDetailView();
+
+                    // Create ViewModel with LogicEngineService
+                    var logicEngineService = new MandADiscoverySuite.Services.LogicEngineService(
+                        Microsoft.Extensions.Logging.Abstractions.NullLogger<MandADiscoverySuite.Services.LogicEngineService>.Instance);
+
+                    var userDetailViewModel = new MandADiscoverySuite.ViewModels.UserDetailViewModel(
+                        logicEngineService,
+                        Microsoft.Extensions.Logging.Abstractions.NullLogger<MandADiscoverySuite.ViewModels.UserDetailViewModel>.Instance)
+                    {
+                        SelectedUserIdentifier = userIdentifier
+                    };
+
+                    userDetailView.DataContext = userDetailViewModel;
+
+                    // Load data asynchronously
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await userDetailViewModel.LoadAsync();
+                            _logger?.LogInformation($"[TabsService] Loaded user detail data for: {userIdentifier}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger?.LogError(ex, $"[TabsService] Failed to load user detail data for: {userIdentifier}");
+                        }
+                    });
+
+                    // Create tab
+                    var tab = new TabItem
+                    {
+                        Header = tabTitle,
+                        Content = userDetailView,
+                        Tag = tabKey
+                    };
+
+                    _tabs.Add(tab);
+
+                    // Select the new tab
                     if (_tabControl != null)
                     {
-                        _tabControl.SelectedItem = existingTab;
+                        _tabControl.SelectedItem = tab;
                     }
-                    
-                    _logger?.LogInformation($"[TabsService] Activated existing user detail tab: {userIdentifier}");
-                    LogClickToFile("Tab", tabKey, "Reactivated");
+
+                    _logger?.LogInformation($"[TabsService] Created user detail tab: {tabKey}");
+                    LogClickToFile("Tab", tabKey, "Created");
                     return true;
                 }
-
-                // Create new UserDetailView
-                var userDetailView = new MandADiscoverySuite.Views.UserDetailView();
-                
-                // Create ViewModel with LogicEngineService
-                var logicEngineService = new MandADiscoverySuite.Services.LogicEngineService(
-                    Microsoft.Extensions.Logging.Abstractions.NullLogger<MandADiscoverySuite.Services.LogicEngineService>.Instance);
-                
-                var userDetailViewModel = new MandADiscoverySuite.ViewModels.UserDetailViewModel(
-                    logicEngineService, 
-                    Microsoft.Extensions.Logging.Abstractions.NullLogger<MandADiscoverySuite.ViewModels.UserDetailViewModel>.Instance)
+                catch (Exception ex)
                 {
-                    SelectedUserIdentifier = userIdentifier
-                };
-
-                userDetailView.DataContext = userDetailViewModel;
-
-                // Load data asynchronously
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await userDetailViewModel.LoadAsync();
-                        _logger?.LogInformation($"[TabsService] Loaded user detail data for: {userIdentifier}");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger?.LogError(ex, $"[TabsService] Failed to load user detail data for: {userIdentifier}");
-                    }
-                });
-
-                // Create tab
-                var tab = new TabItem
-                {
-                    Header = tabTitle,
-                    Content = userDetailView,
-                    Tag = tabKey
-                };
-
-                _tabs.Add(tab);
-
-                // Select the new tab
-                if (_tabControl != null)
-                {
-                    _tabControl.SelectedItem = tab;
+                    _logger?.LogError(ex, $"[TabsService] Failed to open user detail tab for: {userIdentifier}");
+                    return false;
                 }
-
-                _logger?.LogInformation($"[TabsService] Created user detail tab: {tabKey}");
-                LogClickToFile("Tab", tabKey, "Created");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"[TabsService] Failed to open user detail tab for: {userIdentifier}");
-                return false;
-            }
+            });
         }
 
         /// <summary>
@@ -303,87 +309,90 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<bool> OpenAssetDetailTabAsync(string deviceName, string displayName)
         {
-            if (string.IsNullOrWhiteSpace(deviceName))
-                return false;
-
-            try
+            return await Task.Run(() =>
             {
-                var tabKey = $"assetdetail_{deviceName}";
-                var tabTitle = $"Asset Details - {displayName}";
+                if (string.IsNullOrWhiteSpace(deviceName))
+                    return false;
 
-                // Check if tab already exists
-                var existingTab = _tabs.FirstOrDefault(t => 
-                    t.Tag?.ToString()?.Equals(tabKey, StringComparison.OrdinalIgnoreCase) == true);
-
-                if (existingTab != null)
+                try
                 {
-                    // Activate existing tab
+                    var tabKey = $"assetdetail_{deviceName}";
+                    var tabTitle = $"Asset Details - {displayName}";
+
+                    // Check if tab already exists
+                    var existingTab = _tabs.FirstOrDefault(t =>
+                        t.Tag?.ToString()?.Equals(tabKey, StringComparison.OrdinalIgnoreCase) == true);
+
+                    if (existingTab != null)
+                    {
+                        // Activate existing tab
+                        if (_tabControl != null)
+                        {
+                            _tabControl.SelectedItem = existingTab;
+                        }
+
+                        _logger?.LogInformation($"[TabsService] Activated existing asset detail tab: {deviceName}");
+                        LogClickToFile("Tab", tabKey, "Reactivated");
+                        return true;
+                    }
+
+                    // Create new AssetDetailView
+                    var assetDetailView = new MandADiscoverySuite.Views.AssetDetailView();
+
+                    // Create ViewModel with LogicEngineService (will be implemented next)
+                    var logicEngineService = new MandADiscoverySuite.Services.LogicEngineService(
+                        Microsoft.Extensions.Logging.Abstractions.NullLogger<MandADiscoverySuite.Services.LogicEngineService>.Instance);
+
+                    // Create AssetDetailViewModel with LogicEngineService
+                    var assetDetailViewModel = new MandADiscoverySuite.ViewModels.AssetDetailViewModel(
+                        logicEngineService,
+                        Microsoft.Extensions.Logging.Abstractions.NullLogger<MandADiscoverySuite.ViewModels.AssetDetailViewModel>.Instance)
+                    {
+                        SelectedDeviceName = deviceName
+                    };
+
+                    assetDetailView.DataContext = assetDetailViewModel;
+
+                    // Load data asynchronously
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await assetDetailViewModel.LoadAsync();
+                            _logger?.LogInformation($"[TabsService] Loaded asset detail data for: {deviceName}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger?.LogError(ex, $"[TabsService] Failed to load asset detail data for: {deviceName}");
+                        }
+                    });
+
+                    // Create tab
+                    var tab = new TabItem
+                    {
+                        Header = tabTitle,
+                        Content = assetDetailView,
+                        Tag = tabKey
+                    };
+
+                    _tabs.Add(tab);
+
+                    // Select the new tab
                     if (_tabControl != null)
                     {
-                        _tabControl.SelectedItem = existingTab;
+                        _tabControl.SelectedItem = tab;
                     }
-                    
-                    _logger?.LogInformation($"[TabsService] Activated existing asset detail tab: {deviceName}");
-                    LogClickToFile("Tab", tabKey, "Reactivated");
+
+                    _logger?.LogInformation($"[TabsService] Created asset detail tab: {tabKey}");
+                    LogClickToFile("Tab", tabKey, "Created");
                     return true;
                 }
-
-                // Create new AssetDetailView
-                var assetDetailView = new MandADiscoverySuite.Views.AssetDetailView();
-                
-                // Create ViewModel with LogicEngineService (will be implemented next)
-                var logicEngineService = new MandADiscoverySuite.Services.LogicEngineService(
-                    Microsoft.Extensions.Logging.Abstractions.NullLogger<MandADiscoverySuite.Services.LogicEngineService>.Instance);
-                
-                // Create AssetDetailViewModel with LogicEngineService
-                var assetDetailViewModel = new MandADiscoverySuite.ViewModels.AssetDetailViewModel(
-                    logicEngineService, 
-                    Microsoft.Extensions.Logging.Abstractions.NullLogger<MandADiscoverySuite.ViewModels.AssetDetailViewModel>.Instance)
+                catch (Exception ex)
                 {
-                    SelectedDeviceName = deviceName
-                };
-
-                assetDetailView.DataContext = assetDetailViewModel;
-
-                // Load data asynchronously
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await assetDetailViewModel.LoadAsync();
-                        _logger?.LogInformation($"[TabsService] Loaded asset detail data for: {deviceName}");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger?.LogError(ex, $"[TabsService] Failed to load asset detail data for: {deviceName}");
-                    }
-                });
-
-                // Create tab
-                var tab = new TabItem
-                {
-                    Header = tabTitle,
-                    Content = assetDetailView,
-                    Tag = tabKey
-                };
-
-                _tabs.Add(tab);
-
-                // Select the new tab
-                if (_tabControl != null)
-                {
-                    _tabControl.SelectedItem = tab;
+                    _logger?.LogError(ex, $"[TabsService] Failed to open asset detail tab for: {deviceName}");
+                    return false;
                 }
-
-                _logger?.LogInformation($"[TabsService] Created asset detail tab: {tabKey}");
-                LogClickToFile("Tab", tabKey, "Created");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"[TabsService] Failed to open asset detail tab for: {deviceName}");
-                return false;
-            }
+            });
         }
 
         /// <summary>

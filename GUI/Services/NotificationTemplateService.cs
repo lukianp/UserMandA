@@ -38,14 +38,14 @@ namespace MandADiscoverySuite.Services
         {
             _logger = logger;
             _templateCache = new Dictionary<string, NotificationTemplate>();
-            
+
             // Default to C:\discoverydata\{profile}\Notifications\ as per T-033 spec
             var basePath = profilePath ?? @"C:\discoverydata\ljpops";
             _templatesBasePath = Path.Combine(basePath, TEMPLATES_FOLDER);
-            
+
             EnsureDirectoriesExist();
-            InitializeDefaultTemplates();
-            
+            _ = InitializeDefaultTemplates();
+
             _logger?.LogInformation("NotificationTemplateService initialized with base path: {BasePath}", _templatesBasePath);
         }
 

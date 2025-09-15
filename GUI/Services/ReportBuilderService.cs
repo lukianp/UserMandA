@@ -25,11 +25,11 @@ namespace MandADiscoverySuite.Services
         private readonly List<ReportExecution> _executions;
         private readonly ReportBuilderSettings _settings;
 
-        public ReportBuilderService(ILogger<ReportBuilderService> logger = null, IDataService dataService = null, IProfileService profileService = null)
+        public ReportBuilderService(ILogger<ReportBuilderService> logger, IDataService dataService, IProfileService profileService)
         {
-            _logger = logger;
-            _dataService = dataService ?? SimpleServiceLocator.Instance.GetService<IDataService>();
-            _profileService = profileService ?? SimpleServiceLocator.Instance.GetService<IProfileService>();
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));
+            _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
             
             var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MandADiscoverySuite");
             _reportsPath = Path.Combine(appDataPath, "Reports");

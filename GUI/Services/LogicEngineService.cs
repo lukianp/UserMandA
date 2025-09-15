@@ -4796,19 +4796,22 @@ namespace MandADiscoverySuite.Services
         private List<SqlDbDto> GetUserSqlDatabases(string userSid)
         {
             var databases = new List<SqlDbDto>();
-            
+
             try
             {
+                // Add null check for userSid parameter to fix CS8604 warning
+                if (string.IsNullOrEmpty(userSid)) return databases;
+
                 var user = _usersBySid.GetValueOrDefault(userSid);
                 if (user == null) return databases;
-                
+
                 // Find databases where user is listed as owner by SID, UPN, or display name
                 foreach (var sqlDb in _sqlDbsByKey.Values)
                 {
                     if (sqlDb.Owners.Contains(userSid) ||
-                        sqlDb.Owners.Contains(user.UPN) ||
-                        sqlDb.Owners.Contains(user.DisplayName) ||
-                        sqlDb.Owners.Contains(user.Sam))
+                        (!string.IsNullOrEmpty(user.UPN) && sqlDb.Owners.Contains(user.UPN)) ||
+                        (!string.IsNullOrEmpty(user.DisplayName) && sqlDb.Owners.Contains(user.DisplayName)) ||
+                        (!string.IsNullOrEmpty(user.Sam) && sqlDb.Owners.Contains(user.Sam)))
                     {
                         databases.Add(sqlDb);
                     }
@@ -4818,7 +4821,7 @@ namespace MandADiscoverySuite.Services
             {
                 _logger.LogWarning(ex, "Failed to get SQL databases for user {UserSid}", userSid);
             }
-            
+
             return databases;
         }
         

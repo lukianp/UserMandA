@@ -118,7 +118,7 @@ namespace MandADiscoverySuite.Services
             {
                 if (segment.TryRemove(key, out var removedValue))
                 {
-                    value = DeoptimizeValue(removedValue);
+                    value = removedValue is not null ? DeoptimizeValue(removedValue) : default;
                     removed = true;
                     Interlocked.Decrement(ref _totalItems);
                     UpdateMemoryUsage(0, EstimateItemMemoryUsage(key, value));

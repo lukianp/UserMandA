@@ -107,15 +107,15 @@ namespace MandADiscoverySuite.Services
                 }
             };
 
-            element.MouseLeave += (s, e) =>
+            element.MouseLeave += async (s, e) =>
             {
                 if (_microInteractionsEnabled)
                 {
-                    AnimateGlowOpacity(glowEffect, intensity, 0, TimeSpan.FromMilliseconds(200))
-                        .ContinueWith(_ => Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            element.Effect = originalEffect;
-                        }));
+                    await AnimateGlowOpacity(glowEffect, intensity, 0, TimeSpan.FromMilliseconds(200));
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        element.Effect = originalEffect;
+                    });
                 }
             };
 

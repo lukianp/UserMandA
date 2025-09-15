@@ -2647,71 +2647,74 @@ namespace MandADiscoverySuite.ViewModels
         /// </summary>
         private async Task ShowAllDiscoveryDataAsync()
         {
-            try
+            await Task.Run(() =>
             {
-                _logger?.LogInformation("[MainViewModel] ShowAllDiscoveryData started");
-                
-                var dataWindow = new System.Windows.Window
+                try
                 {
-                    Title = $"All Discovery Data - {CurrentProfileName}",
-                    Width = 800,
-                    Height = 600,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                    Owner = Application.Current.MainWindow
-                };
-                
-                var tabControl = new System.Windows.Controls.TabControl();
-                
-                // Add tabs for each data type
-                if (Users.Any())
-                {
-                    var usersTab = new System.Windows.Controls.TabItem { Header = $"Users ({Users.Count})" };
-                    var usersGrid = new System.Windows.Controls.DataGrid 
-                    { 
-                        ItemsSource = Users,
-                        IsReadOnly = true,
-                        AutoGenerateColumns = true
+                    _logger?.LogInformation("[MainViewModel] ShowAllDiscoveryData started");
+
+                    var dataWindow = new System.Windows.Window
+                    {
+                        Title = $"All Discovery Data - {CurrentProfileName}",
+                        Width = 800,
+                        Height = 600,
+                        WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                        Owner = Application.Current.MainWindow
                     };
-                    usersTab.Content = usersGrid;
-                    tabControl.Items.Add(usersTab);
+
+                    var tabControl = new System.Windows.Controls.TabControl();
+
+                    // Add tabs for each data type
+                    if (Users.Any())
+                    {
+                        var usersTab = new System.Windows.Controls.TabItem { Header = $"Users ({Users.Count})" };
+                        var usersGrid = new System.Windows.Controls.DataGrid
+                        {
+                            ItemsSource = Users,
+                            IsReadOnly = true,
+                            AutoGenerateColumns = true
+                        };
+                        usersTab.Content = usersGrid;
+                        tabControl.Items.Add(usersTab);
+                    }
+
+                    if (Computers.Any())
+                    {
+                        var computersTab = new System.Windows.Controls.TabItem { Header = $"Computers ({Computers.Count})" };
+                        var computersGrid = new System.Windows.Controls.DataGrid
+                        {
+                            ItemsSource = Computers,
+                            IsReadOnly = true,
+                            AutoGenerateColumns = true
+                        };
+                        computersTab.Content = computersGrid;
+                        tabControl.Items.Add(computersTab);
+                    }
+
+                    // Add other data types as needed...
+
+                    if (tabControl.Items.Count == 0)
+                    {
+                        var emptyTab = new System.Windows.Controls.TabItem { Header = "No Data" };
+                        emptyTab.Content = new System.Windows.Controls.TextBlock
+                        {
+                            Text = "No discovery data available. Run discovery first.",
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            FontSize = 16
+                        };
+                        tabControl.Items.Add(emptyTab);
+                    }
+
+                    dataWindow.Content = tabControl;
+                    dataWindow.ShowDialog();
                 }
-                
-                if (Computers.Any())
+                catch (Exception ex)
                 {
-                    var computersTab = new System.Windows.Controls.TabItem { Header = $"Computers ({Computers.Count})" };
-                    var computersGrid = new System.Windows.Controls.DataGrid 
-                    { 
-                        ItemsSource = Computers,
-                        IsReadOnly = true,
-                        AutoGenerateColumns = true
-                    };
-                    computersTab.Content = computersGrid;
-                    tabControl.Items.Add(computersTab);
+                    _logger?.LogError(ex, "[MainViewModel] Error showing all discovery data");
+                    MessageBox.Show($"Error showing discovery data: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
-                
-                // Add other data types as needed...
-                
-                if (tabControl.Items.Count == 0)
-                {
-                    var emptyTab = new System.Windows.Controls.TabItem { Header = "No Data" };
-                    emptyTab.Content = new System.Windows.Controls.TextBlock 
-                    { 
-                        Text = "No discovery data available. Run discovery first.",
-                        HorizontalAlignment = HorizontalAlignment.Center,
-                        VerticalAlignment = VerticalAlignment.Center,
-                        FontSize = 16
-                    };
-                    tabControl.Items.Add(emptyTab);
-                }
-                
-                dataWindow.Content = tabControl;
-                dataWindow.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "[MainViewModel] Error showing all discovery data");
-                MessageBox.Show($"Error showing discovery data: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            });
         }
         
         /// <summary>
@@ -2719,84 +2722,87 @@ namespace MandADiscoverySuite.ViewModels
         /// </summary>
         private async Task ShowRefreshSettingsAsync()
         {
-            try
+            await Task.Run(() =>
             {
-                _logger?.LogInformation("[MainViewModel] ShowRefreshSettings started");
-                
-                var settingsDialog = new System.Windows.Window
+                try
                 {
-                    Title = "Refresh Settings",
-                    Width = 400,
-                    Height = 300,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                    Owner = Application.Current.MainWindow,
-                    ResizeMode = ResizeMode.NoResize
-                };
-                
-                var stackPanel = new System.Windows.Controls.StackPanel { Margin = new Thickness(20) };
-                
-                stackPanel.Children.Add(new System.Windows.Controls.TextBlock 
-                { 
-                    Text = "Auto-refresh Settings", 
-                    FontSize = 16, 
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 0, 0, 15)
-                });
-                
-                var enableAutoRefresh = new System.Windows.Controls.CheckBox
-                {
-                    Content = "Enable automatic data refresh",
-                    Margin = new Thickness(0, 0, 0, 10)
-                };
-                stackPanel.Children.Add(enableAutoRefresh);
-                
-                stackPanel.Children.Add(new System.Windows.Controls.TextBlock 
-                { 
-                    Text = "Refresh interval (minutes):", 
-                    Margin = new Thickness(0, 10, 0, 5)
-                });
-                
-                var intervalSlider = new System.Windows.Controls.Slider
-                {
-                    Minimum = 1,
-                    Maximum = 60,
-                    Value = 10,
-                    TickFrequency = 5,
-                    TickPlacement = System.Windows.Controls.Primitives.TickPlacement.BottomRight
-                };
-                stackPanel.Children.Add(intervalSlider);
-                
-                var buttonPanel = new System.Windows.Controls.StackPanel
-                {
-                    Orientation = System.Windows.Controls.Orientation.Horizontal,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    Margin = new Thickness(0, 20, 0, 0)
-                };
-                
-                var okButton = new System.Windows.Controls.Button { Content = "OK", Width = 80, Margin = new Thickness(0, 0, 10, 0) };
-                var cancelButton = new System.Windows.Controls.Button { Content = "Cancel", Width = 80 };
-                
-                okButton.Click += (s, e) => settingsDialog.DialogResult = true;
-                cancelButton.Click += (s, e) => settingsDialog.DialogResult = false;
-                
-                buttonPanel.Children.Add(okButton);
-                buttonPanel.Children.Add(cancelButton);
-                stackPanel.Children.Add(buttonPanel);
-                
-                settingsDialog.Content = stackPanel;
-                
-                var result = settingsDialog.ShowDialog();
-                if (result == true)
-                {
-                    _logger?.LogInformation($"[MainViewModel] Refresh settings updated: AutoRefresh={enableAutoRefresh.IsChecked}, Interval={intervalSlider.Value}");
-                    MessageBox.Show("Refresh settings updated.", "Settings Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _logger?.LogInformation("[MainViewModel] ShowRefreshSettings started");
+
+                    var settingsDialog = new System.Windows.Window
+                    {
+                        Title = "Refresh Settings",
+                        Width = 400,
+                        Height = 300,
+                        WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                        Owner = Application.Current.MainWindow,
+                        ResizeMode = ResizeMode.NoResize
+                    };
+
+                    var stackPanel = new System.Windows.Controls.StackPanel { Margin = new Thickness(20) };
+
+                    stackPanel.Children.Add(new System.Windows.Controls.TextBlock
+                    {
+                        Text = "Auto-refresh Settings",
+                        FontSize = 16,
+                        FontWeight = FontWeights.Bold,
+                        Margin = new Thickness(0, 0, 0, 15)
+                    });
+
+                    var enableAutoRefresh = new System.Windows.Controls.CheckBox
+                    {
+                        Content = "Enable automatic data refresh",
+                        Margin = new Thickness(0, 0, 0, 10)
+                    };
+                    stackPanel.Children.Add(enableAutoRefresh);
+
+                    stackPanel.Children.Add(new System.Windows.Controls.TextBlock
+                    {
+                        Text = "Refresh interval (minutes):",
+                        Margin = new Thickness(0, 10, 0, 5)
+                    });
+
+                    var intervalSlider = new System.Windows.Controls.Slider
+                    {
+                        Minimum = 1,
+                        Maximum = 60,
+                        Value = 10,
+                        TickFrequency = 5,
+                        TickPlacement = System.Windows.Controls.Primitives.TickPlacement.BottomRight
+                    };
+                    stackPanel.Children.Add(intervalSlider);
+
+                    var buttonPanel = new System.Windows.Controls.StackPanel
+                    {
+                        Orientation = System.Windows.Controls.Orientation.Horizontal,
+                        HorizontalAlignment = HorizontalAlignment.Right,
+                        Margin = new Thickness(0, 20, 0, 0)
+                    };
+
+                    var okButton = new System.Windows.Controls.Button { Content = "OK", Width = 80, Margin = new Thickness(0, 0, 10, 0) };
+                    var cancelButton = new System.Windows.Controls.Button { Content = "Cancel", Width = 80 };
+
+                    okButton.Click += (s, e) => settingsDialog.DialogResult = true;
+                    cancelButton.Click += (s, e) => settingsDialog.DialogResult = false;
+
+                    buttonPanel.Children.Add(okButton);
+                    buttonPanel.Children.Add(cancelButton);
+                    stackPanel.Children.Add(buttonPanel);
+
+                    settingsDialog.Content = stackPanel;
+
+                    var result = settingsDialog.ShowDialog();
+                    if (result == true)
+                    {
+                        _logger?.LogInformation($"[MainViewModel] Refresh settings updated: AutoRefresh={enableAutoRefresh.IsChecked}, Interval={intervalSlider.Value}");
+                        MessageBox.Show("Refresh settings updated.", "Settings Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "[MainViewModel] Error showing refresh settings");
-                MessageBox.Show($"Error showing refresh settings: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "[MainViewModel] Error showing refresh settings");
+                    MessageBox.Show($"Error showing refresh settings: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            });
         }
         
         /// <summary>
@@ -3362,29 +3368,32 @@ namespace MandADiscoverySuite.ViewModels
         }
         private async Task DeleteSelectedUsersAsync()
         {
-            try
+            await Task.Run(() =>
             {
-                _logger?.LogInformation("[MainViewModel] Deleting selected users");
-
-                // This would typically get selected items from a DataGrid and remove them
-                // For now, just show a message indicating this functionality
-                var result = System.Windows.MessageBox.Show(
-                    "Delete selected users functionality would be implemented here.\n\nThis would remove selected users from the collection.\n\nContinue?",
-                    "Delete Selected Users",
-                    System.Windows.MessageBoxButton.YesNo,
-                    System.Windows.MessageBoxImage.Question);
-
-                if (result == System.Windows.MessageBoxResult.Yes)
+                try
                 {
-                    _logger?.LogInformation("[MainViewModel] User confirmed deletion (stub implementation)");
+                    _logger?.LogInformation("[MainViewModel] Deleting selected users");
+
+                    // This would typically get selected items from a DataGrid and remove them
+                    // For now, just show a message indicating this functionality
+                    var result = System.Windows.MessageBox.Show(
+                        "Delete selected users functionality would be implemented here.\n\nThis would remove selected users from the collection.\n\nContinue?",
+                        "Delete Selected Users",
+                        System.Windows.MessageBoxButton.YesNo,
+                        System.Windows.MessageBoxImage.Question);
+
+                    if (result == System.Windows.MessageBoxResult.Yes)
+                    {
+                        _logger?.LogInformation("[MainViewModel] User confirmed deletion (stub implementation)");
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "[MainViewModel] Error deleting selected users");
-                System.Windows.MessageBox.Show($"Error deleting users: {ex.Message}", "Delete Error",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "[MainViewModel] Error deleting selected users");
+                    System.Windows.MessageBox.Show($"Error deleting users: {ex.Message}", "Delete Error",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            });
         }
 
         private async Task DeleteSelectedGroupsAsync()

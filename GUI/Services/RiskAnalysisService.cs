@@ -35,7 +35,7 @@ namespace MandADiscoverySuite.Services
             _dataPath = Path.Combine(appData, "MandADiscoverySuite", "RiskAnalysis");
             Directory.CreateDirectory(_dataPath);
 
-            LoadDataAsync();
+            _ = LoadDataAsync();
         }
 
         #region Risk Assessment Management

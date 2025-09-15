@@ -69,8 +69,8 @@ namespace MandADiscoverySuite.Services
                     {
                         // On background thread - use proper dispatching
                         var tcs = new TaskCompletionSource<bool>();
-                        
-                        Application.Current.Dispatcher.BeginInvoke(new Action(async () =>
+
+                        Application.Current.Dispatcher.InvokeAsync(async () =>
                         {
                             try
                             {
@@ -81,7 +81,7 @@ namespace MandADiscoverySuite.Services
                             {
                                 tcs.SetException(ex);
                             }
-                        }), DispatcherPriority.Normal);
+                        }, DispatcherPriority.Normal);
 
                         success = await tcs.Task;
                     }
