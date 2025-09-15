@@ -90,7 +90,7 @@ namespace MandADiscoverySuite.Services
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _loggerFactory = loggerFactory ?? Microsoft.Extensions.Logging.LoggerFactory.Create(builder => { });
-            _dataRoot = dataRoot ?? Path.Combine(ConfigurationService.Instance.DiscoveryDataRootPath, "ljpops", "RawData");
+            _dataRoot = dataRoot ?? Path.Combine(ConfigurationService.Instance?.DiscoveryDataRootPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MandADiscoverySuite"), "ljpops", "RawData");
             _fuzzyConfig = new FuzzyMatchingConfig();
             
             // T-030: Initialize optimized services

@@ -23,7 +23,6 @@ namespace MandADiscoverySuite.ViewModels
         private readonly MigrationDataService _migrationService;
         private readonly SharePointMigrationService _sharePointService;
         private readonly ICsvDataLoader _csvDataLoader;
-        private CancellationTokenSource _cancellationTokenSource;
 
         // Project Properties
         private string _projectName = "SharePoint Migration Project";

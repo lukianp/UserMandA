@@ -480,7 +480,7 @@ namespace MandADiscoverySuite.Services
 
             try
             {
-                _ = Task.Run(async () => await CheckPendingWaves());
+                _ = CheckPendingWaves();
             }
             catch (Exception ex)
             {

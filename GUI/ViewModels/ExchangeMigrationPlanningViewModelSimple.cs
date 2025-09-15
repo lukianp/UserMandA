@@ -19,7 +19,6 @@ namespace MandADiscoverySuite.ViewModels
     {
         private readonly MigrationDataService _migrationService;
         private readonly ICsvDataLoader _csvDataLoader;
-        private CancellationTokenSource _cancellationTokenSource;
 
         // Project Properties
         private string _projectName = "Exchange Migration Project";

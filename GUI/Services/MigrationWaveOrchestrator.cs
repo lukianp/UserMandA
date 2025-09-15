@@ -35,7 +35,6 @@ namespace MandADiscoverySuite.Services
         public event EventHandler<MigrationAlertEventArgs> MigrationAlert;
         
         // Additional events for ViewModel compatibility
-        public event EventHandler<WaveStartedEventArgs> WaveStarted;
         public event EventHandler<WaveCompletedEventArgs> WaveCompleted;
 
         public MigrationWaveOrchestrator(
