@@ -42,6 +42,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
             try
             {
+                await Task.CompletedTask;
                 _logger.LogInformation("ACL migration completed for {Path}", item.SourcePath);
                 result.IsSuccess = true;
                 result.TargetId = item.TargetPath;

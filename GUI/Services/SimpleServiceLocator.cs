@@ -11,7 +11,6 @@ namespace MandADiscoverySuite.Services
     /// <summary>
     /// Simple service locator for dependency injection - temporary implementation
     /// </summary>
-    [Obsolete("To be replaced by proper dependency injection")]
     public class SimpleServiceLocator
     {
         private static readonly ConcurrentDictionary<Type, object> _services = new();

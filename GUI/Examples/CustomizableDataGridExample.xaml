@@ -4,6 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:behaviors="clr-namespace:MandADiscoverySuite.Behaviors"
+             xmlns:controls="clr-namespace:MandADiscoverySuite.Controls"
+             xmlns:vm="clr-namespace:MandADiscoverySuite.ViewModels"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="1000">
 
@@ -57,20 +59,11 @@
             </Grid>
         </Border>
 
-        <!-- Main DataGrid -->
-        <DataGrid Grid.Row="1" 
-                  x:Name="MainDataGrid"
-                  ItemsSource="{Binding SampleData}"
-                  Style="{StaticResource CustomizableDataGridStyle}"
-                  behaviors:DataGridColumnCustomizationBehavior.IsEnabled="True"
-                  behaviors:DataGridColumnCustomizationBehavior.ViewName="SampleUsers"
-                  Margin="10">
-            
-            <!-- Configure manually defined columns if needed -->
-            <DataGrid.Columns>
-                <!-- These will be overridden by the behavior based on configuration -->
-            </DataGrid.Columns>
-        </DataGrid>
+        <!-- FilterableDataGrid example with explicit ItemType -->
+        <controls:FilterableDataGrid Grid.Row="1"
+                                     ItemsSource="{Binding SampleData}"
+                                     ItemType="{x:Type vm:SampleUserData}"
+                                     Margin="10"/>
 
         <!-- Status and Help -->
         <Grid Grid.Row="2" Margin="10,0,10,10">

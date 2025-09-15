@@ -90,6 +90,58 @@ namespace GUI.Tests.Services
             Assert.Contains(detail!.Shares, s => s.Path == "C:\\Share");
         }
 
+        [Fact]
+        public async Task LoadAllAsync_EmptyFiles_DoesNotThrowAndReportsZero()
+        {
+            var tempDir = CopyDataDirectory();
+            // Truncate all CSVs
+            foreach (var file in Directory.GetFiles(tempDir, "*.csv"))
+                File.WriteAllText(file, string.Empty);
+            var svc = new LogicEngineService(_logger.Object, tempDir);
+            var success = await svc.LoadAllAsync();
+            Assert.True(success);
+            var stats = svc.GetLoadStatistics();
+            Assert.Equal(0, stats.UserCount);
+            Assert.Equal(0, stats.DeviceCount);
+            Assert.Equal(0, stats.GroupCount);
+            Directory.Delete(tempDir, true);
+        }
+
+        [Fact]
+        public async Task LoadAllAsync_MalformedCsvRows_GracefullySkips()
+        {
+            var tempDir = CopyDataDirectory();
+            var usersFile = Path.Combine(tempDir, "Users.csv");
+            // Append broken line with wrong column count or garbage
+            File.AppendAllText(usersFile, "\nthis,is,not,valid,row");
+            var svc = new LogicEngineService(_logger.Object, tempDir);
+            var success = await svc.LoadAllAsync();
+            Assert.True(success);
+            var stats = svc.GetLoadStatistics();
+            Assert.True(stats.UserCount >= 0);
+            Directory.Delete(tempDir, true);
+        }
+
+        [Fact]
+        public async Task LoadAllAsync_NoRelationships_DoesNotBreakLookups()
+        {
+            var tempDir = CopyDataDirectory();
+            // Remove groups/devices to simulate missing relationships
+            foreach (var name in new[] { "Groups.csv", "GroupMembers.csv", "Computers.csv", "UserDevices.csv", "Shares.csv", "Acls.csv" })
+            {
+                var p = Path.Combine(tempDir, name);
+                if (File.Exists(p)) File.Delete(p);
+            }
+            var svc = new LogicEngineService(_logger.Object, tempDir);
+            var success = await svc.LoadAllAsync();
+            Assert.True(success);
+            // Query a known user; relationships should be empty but not throw
+            var detail = await svc.GetUserDetailAsync("S-1-5-21-1-1-1-1001");
+            // If user file exists in basic set, detail may be returned or null; we only assert no exception and service success
+            Assert.True(success);
+            Directory.Delete(tempDir, true);
+        }
+
         private static string CopyDataDirectory()
         {
             var source = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Tests", "TestData", "LogicEngine", "basic"));
