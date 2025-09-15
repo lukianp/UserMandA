@@ -182,14 +182,27 @@ namespace MandADiscoverySuite.ViewModels
             {
                 StructuredLogger?.LogInfo(LogSourceName, new { action = "loading_start" }, "Loading infrastructure devices");
 
-                // TODO: Replace with actual LogicEngineService call
-                // For now, using mock data to simulate the discovery process
-                var mockDevices = GenerateMockInfrastructure();
+                // Get infrastructure devices from LogicEngineService
+                var devices = await _logicEngineService.GetDevicesAsync();
 
                 Infrastructure.Clear();
-                foreach (var device in mockDevices)
+                foreach (var device in devices)
                 {
-                    Infrastructure.Add(device);
+                    var infraItem = new InfrastructureItem
+                    {
+                        Name = device.Name,
+                        Type = "Computer", // Default type for devices
+                        Description = $"{device.OS ?? "Unknown OS"} device in {device.OU ?? "Unknown OU"}",
+                        IPAddress = device.DNS, // Use DNS as IP address approximation
+                        OperatingSystem = device.OS,
+                        Version = null, // Not available in DeviceDto
+                        Location = device.OU,
+                        Status = "Unknown", // Not available in DeviceDto
+                        Manufacturer = null, // Not available in DeviceDto
+                        Model = null, // Not available in DeviceDto
+                        LastSeen = device.DiscoveryTimestamp
+                    };
+                    Infrastructure.Add(infraItem);
                 }
 
                 StructuredLogger?.LogInfo(LogSourceName,

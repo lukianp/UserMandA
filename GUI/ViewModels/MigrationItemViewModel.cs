@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using MandADiscoverySuite.Models;
@@ -277,39 +278,210 @@ namespace MandADiscoverySuite.ViewModels
 
                 _item.ValidationTime = DateTime.Now;
                 _item.Status = MigrationStatus.Validating;
-                
-                // TODO: Implement actual validation logic
-                // For now, just mark as validation passed
-                _item.IsValidationPassed = true;
-                _item.Status = MigrationStatus.Ready;
-                
+                _item.ValidationResults.Clear();
+
+                // Implement actual validation logic
+                var validationErrors = new List<string>();
+                var validationWarnings = new List<string>();
+
+                // Validate source identity
+                if (string.IsNullOrWhiteSpace(_item.SourceIdentity))
+                {
+                    validationErrors.Add("Source identity is required");
+                }
+
+                // Validate target identity
+                if (string.IsNullOrWhiteSpace(_item.TargetIdentity))
+                {
+                    validationErrors.Add("Target identity is required");
+                }
+
+                // Validate paths if applicable
+                if (_item.Type == MigrationType.FileShare || _item.Type == MigrationType.UserProfile)
+                {
+                    if (string.IsNullOrWhiteSpace(_item.SourcePath))
+                    {
+                        validationErrors.Add("Source path is required for file system migrations");
+                    }
+                    if (string.IsNullOrWhiteSpace(_item.TargetPath))
+                    {
+                        validationErrors.Add("Target path is required for file system migrations");
+                    }
+                }
+
+                // Validate dependencies
+                if (_item.Dependencies.Any())
+                {
+                    validationWarnings.Add($"Item has {Dependencies.Count} dependencies that should be migrated first");
+                }
+
+                // Validate size limits
+                if (_item.SizeBytes.HasValue && _item.SizeBytes.Value > 100L * 1024 * 1024 * 1024) // 100GB
+                {
+                    validationWarnings.Add("Large item detected - may require special handling");
+                }
+
+                // Validate complexity
+                if (_item.Complexity == MigrationComplexity.HighRisk)
+                {
+                    validationWarnings.Add("High-risk item requires additional review");
+                }
+
+                // Set validation results
+                _item.ValidationResults.AddRange(validationErrors);
+                _item.ValidationResults.AddRange(validationWarnings);
+
+                // Determine if validation passed
+                _item.IsValidationPassed = !validationErrors.Any();
+
+                // Update status based on validation result
+                if (_item.IsValidationPassed)
+                {
+                    _item.Status = MigrationStatus.Ready;
+                }
+                else
+                {
+                    _item.Status = MigrationStatus.Failed;
+                    _item.Errors.AddRange(validationErrors);
+                }
+
+                // Add warnings to item warnings list
+                if (validationWarnings.Any())
+                {
+                    _item.Warnings.AddRange(validationWarnings);
+                }
+
                 UpdateStatusDisplay();
                 RefreshProperties();
-                
-                _logger?.LogInformation($"Validated migration item: {_item.DisplayName ?? _item.SourceIdentity}");
+
+                var resultMessage = _item.IsValidationPassed ? "passed" : $"failed with {validationErrors.Count} errors";
+                _logger?.LogInformation($"Validated migration item: {_item.DisplayName ?? _item.SourceIdentity} - {resultMessage}");
             }
             catch (Exception ex)
             {
+                _item.IsValidationPassed = false;
+                _item.Status = MigrationStatus.Failed;
+                _item.Errors.Add($"Validation error: {ex.Message}");
+
+                UpdateStatusDisplay();
+                RefreshProperties();
+
                 _logger?.LogError(ex, $"Failed to validate item {_item?.DisplayName ?? _item?.SourceIdentity}");
             }
         }
 
         private void ViewDetails()
         {
-            // TODO: Open detailed item view window
-            _logger?.LogInformation($"Viewing details for item: {_item?.DisplayName ?? _item?.SourceIdentity}");
+            if (_item == null) return;
+
+            try
+            {
+                // Create detailed information string
+                var details = $"Migration Item Details\n\n" +
+                    $"Name: {_item.DisplayName ?? "N/A"}\n" +
+                    $"Source: {_item.SourceIdentity ?? "N/A"}\n" +
+                    $"Target: {_item.TargetIdentity ?? "N/A"}\n" +
+                    $"Type: {_item.Type}\n" +
+                    $"Status: {_item.Status}\n" +
+                    $"Priority: {_item.Priority}\n" +
+                    $"Complexity: {_item.Complexity}\n" +
+                    $"Size: {_item.FormattedSize ?? "Unknown"}\n" +
+                    $"Progress: {_item.ProgressPercentage:F1}%\n" +
+                    $"Start Time: {_item.StartTime?.ToString() ?? "Not started"}\n" +
+                    $"Duration: {_item.ActualDuration?.ToString(@"hh\:mm\:ss") ?? _item.EstimatedDuration?.ToString(@"hh\:mm\:ss") ?? "Unknown"}\n" +
+                    $"Assigned Technician: {_item.AssignedTechnician ?? "Unassigned"}\n" +
+                    $"Business Justification: {_item.BusinessJustification ?? "Not specified"}";
+
+                if (_item.Errors.Any())
+                {
+                    details += $"\n\nErrors ({_item.Errors.Count}):\n" + string.Join("\n", _item.Errors);
+                }
+
+                if (_item.Warnings.Any())
+                {
+                    details += $"\n\nWarnings ({_item.Warnings.Count}):\n" + string.Join("\n", _item.Warnings);
+                }
+
+                if (_item.Dependencies.Any())
+                {
+                    details += $"\n\nDependencies ({_item.Dependencies.Count}):\n" + string.Join("\n", _item.Dependencies);
+                }
+
+                MessageBox.Show(details, $"Migration Item Details - {_item.DisplayName ?? _item.SourceIdentity}",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+
+                _logger?.LogInformation($"Viewed details for item: {_item.DisplayName ?? _item.SourceIdentity}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to display item details: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger?.LogError(ex, $"Failed to view details for item {_item?.DisplayName ?? _item?.SourceIdentity}");
+            }
         }
 
         private void ViewErrors()
         {
-            // TODO: Open errors dialog
-            _logger?.LogInformation($"Viewing errors for item: {_item?.DisplayName ?? _item?.SourceIdentity}");
+            if (_item == null || !_item.Errors.Any()) return;
+
+            try
+            {
+                var errorDetails = $"Migration Item Errors\n\n" +
+                    $"Item: {_item.DisplayName ?? _item.SourceIdentity}\n" +
+                    $"Status: {_item.Status}\n" +
+                    $"Total Errors: {_item.Errors.Count}\n\n" +
+                    "Error Details:\n" +
+                    string.Join("\n\n", _item.Errors.Select((error, index) => $"{index + 1}. {error}"));
+
+                MessageBox.Show(errorDetails, $"Errors - {_item.DisplayName ?? _item.SourceIdentity}",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+
+                _logger?.LogInformation($"Viewed {_item.Errors.Count} errors for item: {_item.DisplayName ?? _item.SourceIdentity}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to display errors: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger?.LogError(ex, $"Failed to view errors for item {_item?.DisplayName ?? _item?.SourceIdentity}");
+            }
         }
 
         private void ViewDependencies()
         {
-            // TODO: Open dependencies view
-            _logger?.LogInformation($"Viewing dependencies for item: {_item?.DisplayName ?? _item?.SourceIdentity}");
+            if (_item == null || !_item.Dependencies.Any()) return;
+
+            try
+            {
+                var dependencyDetails = $"Migration Item Dependencies\n\n" +
+                    $"Item: {_item.DisplayName ?? _item.SourceIdentity}\n" +
+                    $"Total Dependencies: {_item.Dependencies.Count}\n" +
+                    $"Dependent Items: {_item.DependentItems.Count}\n\n" +
+                    "Dependencies (must be migrated first):\n" +
+                    string.Join("\n", _item.Dependencies.Select((dep, index) => $"{index + 1}. {dep}"));
+
+                if (_item.DependentItems.Any())
+                {
+                    dependencyDetails += "\n\nDependent Items (migrate after this item):\n" +
+                        string.Join("\n", _item.DependentItems.Select((dep, index) => $"{index + 1}. {dep}"));
+                }
+
+                // Add migration order warning if applicable
+                if (_item.Dependencies.Any())
+                {
+                    dependencyDetails += "\n\n⚠️ Warning: Ensure all dependencies are migrated before starting this item.";
+                }
+
+                MessageBox.Show(dependencyDetails, $"Dependencies - {_item.DisplayName ?? _item.SourceIdentity}",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+
+                _logger?.LogInformation($"Viewed {_item.Dependencies.Count} dependencies for item: {_item.DisplayName ?? _item.SourceIdentity}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to display dependencies: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger?.LogError(ex, $"Failed to view dependencies for item {_item?.DisplayName ?? _item?.SourceIdentity}");
+            }
         }
 
         private void RollbackItem()

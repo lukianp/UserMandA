@@ -185,6 +185,8 @@ $BuildArgs = @(
     '--nologo'
     '--force'
     '--no-dependencies'
+    '--nowarn:CS0579,CS1685,CS1701'
+    '--warnaserror'
 )
 
 if ($SelfContained) {

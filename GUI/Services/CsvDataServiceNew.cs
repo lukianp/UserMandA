@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Interfaces;
+using MandADiscoverySuite.Repository;
 
 namespace MandADiscoverySuite.Services
 {

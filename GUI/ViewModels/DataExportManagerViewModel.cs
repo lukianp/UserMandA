@@ -441,9 +441,9 @@ namespace MandADiscoverySuite.ViewModels
                     fileName = Path.Combine(ExportPath, $"users_{timestamp}.{GetFileExtension()}");
                     if (_csvDataService != null)
                     {
-                        // Export users via CSV service - placeholder implementation
-                        await Task.Delay(100); // Simulate export
-                        await File.WriteAllTextAsync(fileName, "User export data placeholder");
+                        var result = await _csvDataService.LoadUsersAsync("ljpops"); // Use default profile
+                        var exportData = result.Success ? result.Data : new List<UserData>();
+                        await ExportDataAsync(fileName, exportData, SelectedFormat);
                     }
                     break;
 
@@ -451,9 +451,9 @@ namespace MandADiscoverySuite.ViewModels
                     fileName = Path.Combine(ExportPath, $"groups_{timestamp}.{GetFileExtension()}");
                     if (_csvDataService != null)
                     {
-                        // Export groups via CSV service - placeholder implementation
-                        await Task.Delay(100); // Simulate export
-                        await File.WriteAllTextAsync(fileName, "Groups export data placeholder");
+                        var result = await _csvDataService.LoadGroupsAsync("ljpops"); // Use default profile
+                        var exportData = result.Success ? result.Data : new List<GroupData>();
+                        await ExportDataAsync(fileName, exportData, SelectedFormat);
                     }
                     break;
 
@@ -461,9 +461,9 @@ namespace MandADiscoverySuite.ViewModels
                     fileName = Path.Combine(ExportPath, $"infrastructure_{timestamp}.{GetFileExtension()}");
                     if (_csvDataService != null)
                     {
-                        // Export infrastructure via CSV service - placeholder implementation
-                        await Task.Delay(100); // Simulate export
-                        await File.WriteAllTextAsync(fileName, "Infrastructure export data placeholder");
+                        var result = await _csvDataService.LoadInfrastructureAsync("ljpops"); // Use default profile
+                        var exportData = result.Success ? result.Data : new List<InfrastructureData>();
+                        await ExportDataAsync(fileName, exportData, SelectedFormat);
                     }
                     break;
 
@@ -516,6 +516,68 @@ namespace MandADiscoverySuite.ViewModels
             }
 
             return fileName;
+        }
+
+        private async Task ExportDataAsync<T>(string fileName, IEnumerable<T> data, DataExportFormat format)
+        {
+            switch (format)
+            {
+                case DataExportFormat.JSON:
+                    var json = System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                    });
+                    await File.WriteAllTextAsync(fileName, json);
+                    break;
+
+                case DataExportFormat.CSV:
+                    var csvContent = ConvertToCsv(data);
+                    await File.WriteAllTextAsync(fileName, csvContent);
+                    break;
+
+                case DataExportFormat.XML:
+                    var xml = SerializeToXml(data);
+                    await File.WriteAllTextAsync(fileName, xml);
+                    break;
+
+                case DataExportFormat.Excel:
+                    // For Excel, we'll create CSV for now since EPPlus might not be available
+                    var excelCsv = ConvertToCsv(data);
+                    var excelFileName = Path.ChangeExtension(fileName, ".csv");
+                    await File.WriteAllTextAsync(excelFileName, excelCsv);
+                    fileName = excelFileName;
+                    break;
+            }
+        }
+
+        private string ConvertToCsv<T>(IEnumerable<T> data)
+        {
+            if (!data.Any()) return string.Empty;
+
+            var properties = typeof(T).GetProperties();
+            var header = string.Join(",", properties.Select(p => $"\"{p.Name}\""));
+            var lines = new List<string> { header };
+
+            foreach (var item in data)
+            {
+                var values = properties.Select(p =>
+                {
+                    var value = p.GetValue(item)?.ToString() ?? "";
+                    return $"\"{value.Replace("\"", "\"\"")}\"";
+                });
+                lines.Add(string.Join(",", values));
+            }
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        private string SerializeToXml<T>(IEnumerable<T> data)
+        {
+            var serializer = new System.Xml.Serialization.XmlSerializer(typeof(List<T>));
+            using var stringWriter = new System.IO.StringWriter();
+            serializer.Serialize(stringWriter, data.ToList());
+            return stringWriter.ToString();
         }
 
         private string GetFileExtension()

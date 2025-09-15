@@ -11,6 +11,6 @@
 
     <Grid>
         <!-- Embed the UserDetailView UserControl -->
-        <views:UserDetailView/>
+        <views:UserDetailView x:Name="UserDetailViewControl"/>
     </Grid>
 </Window>

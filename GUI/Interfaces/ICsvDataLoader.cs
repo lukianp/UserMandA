@@ -1,8 +1,9 @@
 using System.Threading.Tasks;
 using System.Threading;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Services;
 
-namespace MandADiscoverySuite.Services
+namespace MandADiscoverySuite.Interfaces
 {
     /// <summary>
     /// Interface for CSV data loading services

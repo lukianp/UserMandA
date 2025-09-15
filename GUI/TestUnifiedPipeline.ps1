@@ -1,15 +1,34 @@
 #!/usr/bin/env pwsh
 
+param(
+    [string]$DataPath = $env:MANDA_DATA_PATH,
+    [string]$LogsPath = $env:MANDA_LOGS_PATH,
+    [string]$ProjectRoot = $env:MANDA_PROJECT_ROOT
+)
+
+# Set default paths if not provided via parameters or environment variables
+if (-not $DataPath) {
+    $DataPath = "C:\discoverydata\ljpops\Raw"
+}
+if (-not $LogsPath) {
+    $LogsPath = "C:\discoverydata\ljpops\Logs"
+}
+if (-not $ProjectRoot) {
+    # Use relative path from script location
+    $ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+}
+
 Write-Host "=== M&A Discovery Suite - Unified Pipeline Test ===" -ForegroundColor Green
 Write-Host ""
 
 # Set up paths
-$dataPath = "C:\discoverydata\ljpops\Raw"
-$logsPath = "C:\discoverydata\ljpops\Logs"
+$dataPath = $DataPath
+$logsPath = $LogsPath
 
 Write-Host "🔧 Verifying test environment..." -ForegroundColor Yellow
 Write-Host "Data Path: $dataPath"
 Write-Host "Logs Path: $logsPath"
+Write-Host "Project Root: $ProjectRoot"
 
 # Check if test data exists
 $usersFile = "$dataPath\Users.csv"
@@ -62,11 +81,11 @@ Write-Host ""
 Write-Host "🎯 Unified Architecture Components Status:" -ForegroundColor Cyan
 
 # Check if core components exist
-$baseViewModel = "D:\Scripts\UserMandA-1\GUI\ViewModels\BaseViewModel.cs"
-$csvService = "D:\Scripts\UserMandA-1\GUI\Services\CsvDataServiceNew.cs"
-$dataResult = "D:\Scripts\UserMandA-1\GUI\Services\DataLoaderResult.cs"
-$usersViewNew = "D:\Scripts\UserMandA-1\GUI\Views\UsersViewNew.xaml"
-$usersVMNew = "D:\Scripts\UserMandA-1\GUI\ViewModels\UsersViewModelNew.cs"
+$baseViewModel = Join-Path $ProjectRoot "GUI\ViewModels\BaseViewModel.cs"
+$csvService = Join-Path $ProjectRoot "GUI\Services\CsvDataServiceNew.cs"
+$dataResult = Join-Path $ProjectRoot "GUI\Services\DataLoaderResult.cs"
+$usersViewNew = Join-Path $ProjectRoot "GUI\Views\UsersViewNew.xaml"
+$usersVMNew = Join-Path $ProjectRoot "GUI\ViewModels\UsersViewModelNew.cs"
 
 if (Test-Path $baseViewModel) {
     Write-Host "✅ BaseViewModel.cs - Unified LoadAsync pattern" -ForegroundColor Green
@@ -102,7 +121,8 @@ Write-Host ""
 Write-Host "🔄 Build Status Check:" -ForegroundColor Cyan
 
 try {
-    $buildResult = dotnet build "D:\Scripts\UserMandA-1\GUI\MandADiscoverySuite.csproj" --configuration Release --verbosity quiet 2>&1
+    $projectFile = Join-Path $ProjectRoot "GUI\MandADiscoverySuite.csproj"
+    $buildResult = dotnet build $projectFile --configuration Release --verbosity quiet 2>&1
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✅ Core unified architecture builds successfully" -ForegroundColor Green

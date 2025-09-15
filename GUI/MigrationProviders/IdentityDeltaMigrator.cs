@@ -10,6 +10,9 @@ using MandADiscoverySuite.Services.Migration;
 using MandADiscoverySuite.Models.Migration;
 using IIDM = MandADiscoverySuite.Migration.IIdentityDeltaMigrator;
 using MandADiscoverySuite.Models;
+// Disambiguate ambiguous types
+using MigrationUserDto = MandADiscoverySuite.Models.Migration.UserDto;
+using MigrationResultType = MandADiscoverySuite.Migration.MigrationResult;
 
 namespace MandADiscoverySuite.MigrationProviders
 {
@@ -127,11 +130,11 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<IEnumerable<ChangeDetectionResult<UserDto>>> DetectChangesAsync(
+        public async Task<IEnumerable<ChangeDetectionResult<MigrationUserDto>>> DetectChangesAsync(
             DateTime lastRunTimestamp, 
             DeltaMigrationSettings settings)
         {
-            var changes = new List<ChangeDetectionResult<UserDto>>();
+            var changes = new List<ChangeDetectionResult<MigrationUserDto>>();
 
             try
             {
@@ -166,7 +169,7 @@ namespace MandADiscoverySuite.MigrationProviders
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to detect identity changes");
-                return Enumerable.Empty<ChangeDetectionResult<UserDto>>();
+                return Enumerable.Empty<ChangeDetectionResult<MigrationUserDto>>();
             }
         }
 
@@ -391,11 +394,11 @@ namespace MandADiscoverySuite.MigrationProviders
 
         // Private helper methods
 
-        private async Task<IEnumerable<ChangeDetectionResult<UserDto>>> DetectAzureADChangesAsync(
+        private async Task<IEnumerable<ChangeDetectionResult<MigrationUserDto>>> DetectAzureADChangesAsync(
             DateTime lastRunTimestamp, 
             DeltaMigrationSettings settings)
         {
-            var changes = new List<ChangeDetectionResult<UserDto>>();
+            var changes = new List<ChangeDetectionResult<MigrationUserDto>>();
 
             try
             {
@@ -414,9 +417,9 @@ namespace MandADiscoverySuite.MigrationProviders
                     
                     if (settings.IncludedMigration.ChangeTypes.HasFlag(changeType))
                     {
-                        changes.Add(new ChangeDetectionResult<UserDto>
+                        changes.Add(new ChangeDetectionResult<MigrationUserDto>
                         {
-                            Item = new UserDto
+                            Item = new MigrationUserDto
                             {
                                 DisplayName = user.DisplayName ?? "",
                                 UserPrincipalName = user.UserPrincipalName ?? ""
@@ -440,15 +443,15 @@ namespace MandADiscoverySuite.MigrationProviders
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to detect Azure AD changes");
-                return Enumerable.Empty<ChangeDetectionResult<UserDto>>();
+                return Enumerable.Empty<ChangeDetectionResult<MigrationUserDto>>();
             }
         }
 
-        private async Task<IEnumerable<ChangeDetectionResult<UserDto>>> DetectActiveDirectoryChangesAsync(
+        private async Task<IEnumerable<ChangeDetectionResult<MigrationUserDto>>> DetectActiveDirectoryChangesAsync(
             DateTime lastRunTimestamp, 
             DeltaMigrationSettings settings)
         {
-            var changes = new List<ChangeDetectionResult<UserDto>>();
+            var changes = new List<ChangeDetectionResult<MigrationUserDto>>();
 
             try
             {
@@ -473,9 +476,9 @@ namespace MandADiscoverySuite.MigrationProviders
                     
                     if (settings.IncludedMigration.ChangeTypes.HasFlag(changeType))
                     {
-                        changes.Add(new ChangeDetectionResult<UserDto>
+                        changes.Add(new ChangeDetectionResult<MigrationUserDto>
                         {
-                            Item = new UserDto
+                            Item = new MigrationUserDto
                             {
                                 DisplayName = result.Properties["displayName"]?[0]?.ToString() ?? "",
                                 UserPrincipalName = result.Properties["userPrincipalName"]?[0]?.ToString() ?? ""
@@ -499,13 +502,13 @@ namespace MandADiscoverySuite.MigrationProviders
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to detect Active Directory changes");
-                return Enumerable.Empty<ChangeDetectionResult<UserDto>>();
+                return Enumerable.Empty<ChangeDetectionResult<MigrationUserDto>>();
             }
         }
 
-        private async Task<MigrationResult> ProcessIdentityChangeAsync(
-            ChangeDetectionResult<UserDto> change, 
-            DeltaMigrationSettings settings, 
+        private async Task<MigrationResultType> ProcessIdentityChangeAsync(
+            ChangeDetectionResult<MigrationUserDto> change,
+            DeltaMigrationSettings settings,
             TargetContext target)
         {
             try
@@ -533,9 +536,9 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        private async Task<MigrationResult> ProcessUserCreationAsync(
-            UserDto user, 
-            DeltaMigrationSettings settings, 
+        private async Task<MigrationResultType> ProcessUserCreationAsync(
+            MigrationUserDto user,
+            DeltaMigrationSettings settings,
             TargetContext target)
         {
             // User creation logic using Graph API
@@ -556,10 +559,10 @@ namespace MandADiscoverySuite.MigrationProviders
             return MigrationResult.Success($"User {user.UserPrincipalName} created in target tenant");
         }
 
-        private async Task<MigrationResult> ProcessUserUpdateAsync(
-            UserDto user, 
-            Dictionary<string, object> metadata, 
-            DeltaMigrationSettings settings, 
+        private async Task<MigrationResultType> ProcessUserUpdateAsync(
+            MigrationUserDto user,
+            Dictionary<string, object> metadata,
+            DeltaMigrationSettings settings,
             TargetContext target)
         {
             // User update logic
@@ -589,9 +592,9 @@ namespace MandADiscoverySuite.MigrationProviders
             return MigrationResult.Success($"No updates required for user {user.UserPrincipalName}");
         }
 
-        private async Task<MigrationResult> ProcessUserDeletionAsync(
-            UserDto user, 
-            DeltaMigrationSettings settings, 
+        private async Task<MigrationResultType> ProcessUserDeletionAsync(
+            MigrationUserDto user,
+            DeltaMigrationSettings settings,
             TargetContext target)
         {
             // User deletion/deactivation logic

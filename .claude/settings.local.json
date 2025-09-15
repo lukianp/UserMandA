@@ -8,7 +8,8 @@
       "Bash(Get-Process -Name \"MandADiscoverySuite\" -ErrorAction SilentlyContinue)",
       "Bash(dotnet clean:*)",
       "Bash(pwsh:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": [],

@@ -10,6 +10,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Collections;
+using MandADiscoverySuite.Interfaces;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 

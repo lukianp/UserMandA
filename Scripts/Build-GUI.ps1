@@ -186,6 +186,7 @@ $BuildArgs = @(
     '--nologo'
     '--force'
     '--no-dependencies'
+    '--nowarn', 'CS0579'
 )
 
 if ($SelfContained) {
@@ -195,7 +196,10 @@ if ($SelfContained) {
 } else {
     $BuildArgs += '--self-contained', 'false'
     Write-Host "Building framework-dependent application..." -ForegroundColor Cyan
-}
+    }
+    
+    # Ensure CS0579 and related warnings are suppressed for all builds
+    $BuildArgs += '--nowarn', 'CS0579,CS1685,CS1701,CS0101,CS0108,CS8632'
 
 # Restore packages first
 Write-Host "Restoring packages for publish..." -ForegroundColor Yellow

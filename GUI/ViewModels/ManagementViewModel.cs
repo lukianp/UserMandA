@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
+using MandADiscoverySuite.Interfaces;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.ViewModels;

@@ -928,16 +928,89 @@ namespace MandADiscoverySuite.ViewModels
         
         private void PauseMigration()
         {
-            // TODO: Implement pause functionality
-            AddExecutionLog("Migration paused by user", LogLevel.Info);
-            CurrentExecutionPhase = "Paused";
+            if (!IsExecutionRunning)
+            {
+                MessageBox.Show("No migration is currently running.", "No Active Migration",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                // Set paused state
+                CurrentExecutionPhase = "Pausing...";
+                AddExecutionLog("Migration pause requested by user", LogLevel.Info);
+
+                // In a real implementation, this would signal the migration engine to pause
+                // For now, we'll simulate the pause by stopping the timer and setting status
+                _executionTimer?.Dispose();
+                _executionTimer = null;
+
+                // Mark execution as paused (this would normally be handled by the migration engine)
+                IsExecutionRunning = false; // Temporarily set to false to indicate paused state
+                CurrentExecutionPhase = "Paused";
+
+                AddExecutionLog("Migration paused successfully", LogLevel.Info);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error pausing migration");
+                AddExecutionLog($"Migration pause failed: {ex.Message}", LogLevel.Error);
+                MessageBox.Show($"Failed to pause migration: {ex.Message}", "Pause Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
         
         private void ResumeMigration()
         {
-            // TODO: Implement resume functionality
-            AddExecutionLog("Migration resumed by user", LogLevel.Info);
-            CurrentExecutionPhase = "Resuming";
+            if (IsExecutionRunning)
+            {
+                MessageBox.Show("Migration is already running.", "Migration Active",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (ExecutionItems.Count == 0)
+            {
+                MessageBox.Show("No migration items to resume.", "No Items",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                // Check if there's a paused migration to resume
+                var pausedItems = ExecutionItems.Where(i => i.Status == MigrationStatus.Paused || i.Status == MigrationStatus.NotStarted).ToList();
+                if (!pausedItems.Any())
+                {
+                    MessageBox.Show("No paused migration items found to resume.", "Nothing to Resume",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // Set resuming state
+                IsExecutionRunning = true;
+                CurrentExecutionPhase = "Resuming...";
+                AddExecutionLog("Migration resume requested by user", LogLevel.Info);
+
+                // Restart execution timer
+                _executionTimer = new Timer(UpdateExecutionTimer, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+
+                // In a real implementation, this would signal the migration engine to resume
+                // For now, we'll simulate resume by continuing the migration process
+                _ = Task.Run(ExecuteRealMigrationAsync);
+
+                CurrentExecutionPhase = "Resuming";
+                AddExecutionLog("Migration resumed successfully", LogLevel.Info);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error resuming migration");
+                AddExecutionLog($"Migration resume failed: {ex.Message}", LogLevel.Error);
+                MessageBox.Show($"Failed to resume migration: {ex.Message}", "Resume Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                IsExecutionRunning = false;
+            }
         }
         
         private async Task StopMigrationAsync()
@@ -1114,18 +1187,79 @@ namespace MandADiscoverySuite.ViewModels
         
         private async Task ExportLogsAsync()
         {
+            if (ExecutionLogs.Count == 0)
+            {
+                MessageBox.Show("No execution logs to export. Generate some logs first.",
+                    "No Logs", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             try
             {
-                // TODO: Implement log export functionality
-                MessageBox.Show("Export functionality will be implemented in Phase 2", "Feature Coming Soon", 
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                // Create export path with timestamp
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var exportPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                    $"MigrationExecutionLogs_{SelectedProfile}_{timestamp}.csv"
+                );
+
+                // Prepare CSV content
+                var csvLines = new List<string>();
+
+                // Header
+                csvLines.Add("Migration Execution Logs");
+                csvLines.Add($"Profile: {SelectedProfile}");
+                csvLines.Add($"Wave: {SelectedWave?.Name ?? "N/A"}");
+                csvLines.Add($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                csvLines.Add($"Total Logs: {ExecutionLogs.Count}");
+                csvLines.Add("");
+
+                // Column headers
+                csvLines.Add("Timestamp,Level,Source,Message");
+
+                // Log entries
+                foreach (var logEntry in ExecutionLogs.OrderBy(l => l.Timestamp))
+                {
+                    var timestampStr = logEntry.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                    var levelStr = logEntry.Level.ToString();
+                    var sourceStr = EscapeCsv(logEntry.Source ?? "");
+                    var messageStr = EscapeCsv(logEntry.Message ?? "");
+
+                    csvLines.Add($"{timestampStr},{levelStr},{sourceStr},{messageStr}");
+                }
+
+                // Write to file
+                await System.IO.File.WriteAllLinesAsync(exportPath, csvLines);
+
+                MessageBox.Show($"Logs exported successfully to: {exportPath}",
+                    "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                _logger?.LogInformation($"Exported {ExecutionLogs.Count} execution logs to: {exportPath}");
+                AddExecutionLog($"Logs exported to: {exportPath}", LogLevel.Info);
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error exporting logs");
-                MessageBox.Show($"Export failed: {ex.Message}", "Export Error", 
+                MessageBox.Show($"Export failed: {ex.Message}", "Export Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        /// <summary>
+        /// Escapes CSV values that contain commas, quotes, or newlines
+        /// </summary>
+        private string EscapeCsv(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return "";
+
+            // If value contains comma, quote, or newline, wrap in quotes and escape internal quotes
+            if (value.Contains(",") || value.Contains("\"") || value.Contains("\n") || value.Contains("\r"))
+            {
+                return "\"" + value.Replace("\"", "\"\"") + "\"";
+            }
+
+            return value;
         }
         
         private async Task RefreshStatusAsync()

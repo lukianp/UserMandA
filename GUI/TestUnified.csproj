@@ -6,6 +6,26 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>TestUnified</AssemblyName>
     <RootNamespace>MandADiscoverySuite</RootNamespace>
+    <!-- Disable auto-generated assembly info to avoid duplicates -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <!-- Explicit assembly attributes to avoid conflicts -->
+    <AssemblyTitle>Test Unified Discovery Suite</AssemblyTitle>
+    <AssemblyDescription>Test version of the MandA Discovery Suite</AssemblyDescription>
+    <AssemblyCompany>Your Company</AssemblyCompany>
+    <AssemblyProduct>TestUnified</AssemblyProduct>
+    <AssemblyCopyright>Copyright © 2025</AssemblyCopyright>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <AssemblyFileVersion>1.0.0.0</AssemblyFileVersion>
+    <AssemblyInformationalVersion>1.0.0.0</AssemblyInformationalVersion>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
+    <!-- Suppress CS0579 warnings -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS0579</WarningsNotAsErrors>
+    <NoWarn>$(NoWarn);CS0579;CS1685;CS1701</NoWarn>
+    <!-- Force suppress all duplicate attribute warnings for temp projects -->
+    <WarningsNotAsErrors Condition="'$(MSBuildProjectName.EndsWith(`_wpftmp`))' == 'true'">CS0579;CS1685;CS1701;$(WarningsNotAsErrors)</WarningsNotAsErrors>
+    <NoWarn Condition="'$(MSBuildProjectName.EndsWith(`_wpftmp`))' == 'true'">CS0579;CS1685;CS1701;$(NoWarn)</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +46,12 @@
     <PackageReference Include="Azure.Identity" Version="1.10.4" />
     <PackageReference Include="System.DirectoryServices" Version="6.0.0" />
     <PackageReference Include="System.DirectoryServices.AccountManagement" Version="6.0.0" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
+    <!-- AWS SDK packages -->
+    <PackageReference Include="AWSSDK.Core" Version="3.7.307" />
+    <PackageReference Include="AWSSDK.EC2" Version="3.7.305" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.307" />
   </ItemGroup>
 
 

@@ -104,7 +104,7 @@ namespace MandADiscoverySuite.ViewModels
         public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails { get; } = new ObservableCollection<KeyValuePair<string, string>>();
 
         // Header warnings collection
-        public ObservableCollection<string> HeaderWarnings { get; } = new ObservableCollection<string>();
+        public new ObservableCollection<string> HeaderWarnings { get; } = new ObservableCollection<string>();
 
         // Completion flags
         private bool _bindings_verified = true;
@@ -312,9 +312,52 @@ namespace MandADiscoverySuite.ViewModels
                     return;
                 }
 
-                // Implement export logic here
-                _log?.LogInformation("Exporting Active Directory data");
-                await Task.CompletedTask; // Placeholder
+                // Create CSV content from SelectedResults
+                var csvLines = new List<string>();
+                csvLines.Add("DisplayName,UserPrincipalName,SamAccountName,Email,Department,JobTitle,Company,Manager,CreatedDateTime,ObjectType,DistinguishedName,Description");
+
+                foreach (var item in SelectedResults)
+                {
+                    if (item is IDictionary<string, object> dict)
+                    {
+                        var line = new List<string>
+                        {
+                            GetDictValue(dict, "displayname"),
+                            GetDictValue(dict, "userprincipalname"),
+                            GetDictValue(dict, "samaccountname"),
+                            GetDictValue(dict, "mail"),
+                            GetDictValue(dict, "department"),
+                            GetDictValue(dict, "jobtitle"),
+                            GetDictValue(dict, "company"),
+                            GetDictValue(dict, "manager"),
+                            GetDictValue(dict, "createddatetime"),
+                            GetDictValue(dict, "objecttype"),
+                            GetDictValue(dict, "distinguishedname"),
+                            GetDictValue(dict, "description")
+                        };
+
+                        // Escape CSV values
+                        for (int i = 0; i < line.Count; i++)
+                        {
+                            if (line[i].Contains(",") || line[i].Contains("\"") || line[i].Contains("\n"))
+                            {
+                                line[i] = $"\"{line[i].Replace("\"", "\"\"")}\"";
+                            }
+                        }
+
+                        csvLines.Add(string.Join(",", line));
+                    }
+                }
+
+                // Save to file
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var fileName = $"ActiveDirectory_Export_{timestamp}.csv";
+                var filePath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), fileName);
+
+                await System.IO.File.WriteAllLinesAsync(filePath, csvLines);
+
+                _log?.LogInformation($"Exported {SelectedResults.Count} Active Directory records to {filePath}");
+                ShowInformation($"Export completed successfully. Saved {SelectedResults.Count} records to {fileName}");
             }
             catch (Exception ex)
             {
@@ -332,8 +375,7 @@ namespace MandADiscoverySuite.ViewModels
                 _log?.LogInformation($"Viewing details for user: {selectedItem}");
 
                 // Open UserDetailWindow with user data
-                var userDetailWindow = new Views.UserDetailWindow();
-                // TODO: Pass selectedItem to UserDetailWindow's ViewModel
+                var userDetailWindow = new Views.UserDetailWindow(selectedItem);
                 userDetailWindow.ShowDialog();
                 await Task.CompletedTask; // Placeholder for async
             }
@@ -577,6 +619,12 @@ namespace MandADiscoverySuite.ViewModels
 
             border.Child = stackPanel;
             return border;
+        }
+
+        private string GetDictValue(IDictionary<string, object> dict, string key)
+        {
+            dict.TryGetValue(key, out var value);
+            return value?.ToString() ?? "";
         }
 
         #endregion

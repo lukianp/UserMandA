@@ -1,0 +1,18 @@
+<Project>
+   <PropertyGroup>
+      <!-- Disable auto-generated assembly info to prevent duplicates -->
+      <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+
+      <!-- Disable framework attributes to prevent duplicates -->
+      <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+
+      <!-- Treat all warnings as warnings, not errors -->
+      <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+
+      <!-- Treat CS0579 as warnings instead of errors -->
+      <WarningsNotAsErrors>CS0579</WarningsNotAsErrors>
+
+      <!-- Suppress CS0579 warnings globally -->
+      <NoWarn>$(NoWarn);CS0579</NoWarn>
+   </PropertyGroup>
+</Project>

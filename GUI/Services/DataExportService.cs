@@ -15,14 +15,6 @@ using MandADiscoverySuite.Models;
 
 namespace MandADiscoverySuite.Services
 {
-    public interface IDataExportService
-    {
-        Task<bool> ExportToCsvAsync<T>(IEnumerable<T> data, string defaultFileName = null);
-        Task<bool> ExportToJsonAsync<T>(IEnumerable<T> data, string defaultFileName = null);
-        Task<bool> ExportToExcelAsync<T>(IEnumerable<T> data, string defaultFileName = null);
-        Task<bool> ExportToExcelAsync<T>(IEnumerable<T> data, string defaultFileName, string worksheetName, bool includeCharts = false);
-    }
-
     public class DataExportService : IDataExportService
     {
         private static DataExportService _instance;
@@ -387,6 +379,91 @@ namespace MandADiscoverySuite.Services
             }
 
             return field;
+        }
+
+        public async Task<string> ExportAssetDetailAsync(object assetDetail)
+        {
+            try
+            {
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var fileName = $"AssetDetail_{timestamp}.json";
+                var filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), fileName);
+
+                var json = JsonSerializer.Serialize(assetDetail, new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                await File.WriteAllTextAsync(filePath, json, Encoding.UTF8);
+                return filePath;
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = ErrorHandlingService.Instance.HandleException(ex, "Asset detail export");
+                DialogService.Instance.ShowErrorDialog("Export Error", errorMessage);
+                return string.Empty;
+            }
+        }
+
+        public async Task<string> ExportDiscoveryDataAsync(object data)
+        {
+            try
+            {
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var fileName = $"DiscoveryData_{timestamp}.csv";
+                var filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), fileName);
+
+                if (data is IEnumerable<object> enumerableData)
+                {
+                    var csv = ConvertToCsv(enumerableData);
+                    await File.WriteAllTextAsync(filePath, csv, Encoding.UTF8);
+                }
+                else if (data is string stringData)
+                {
+                    await File.WriteAllTextAsync(filePath, stringData, Encoding.UTF8);
+                }
+                else
+                {
+                    var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+                    fileName = $"DiscoveryData_{timestamp}.json";
+                    filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), fileName);
+                    await File.WriteAllTextAsync(filePath, json, Encoding.UTF8);
+                }
+
+                return filePath;
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = ErrorHandlingService.Instance.HandleException(ex, "Discovery data export");
+                DialogService.Instance.ShowErrorDialog("Export Error", errorMessage);
+                return string.Empty;
+            }
+        }
+
+        public async Task<string> ExportReportsAsync(object reports)
+        {
+            try
+            {
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var fileName = $"Reports_{timestamp}.json";
+                var filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), fileName);
+
+                var json = JsonSerializer.Serialize(reports, new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                await File.WriteAllTextAsync(filePath, json, Encoding.UTF8);
+                return filePath;
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = ErrorHandlingService.Instance.HandleException(ex, "Reports export");
+                DialogService.Instance.ShowErrorDialog("Export Error", errorMessage);
+                return string.Empty;
+            }
         }
     }
 

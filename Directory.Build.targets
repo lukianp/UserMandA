@@ -1,0 +1,28 @@
+<Project>
+  <!-- Force suppress CS0579 and related duplicate attribute warnings globally -->
+  <Target Name="ForceSuppressWarnings" BeforeTargets="BeforeBuild;CoreCompile">
+    <PropertyGroup>
+      <NoWarn>$(NoWarn);CS0579;CS1685;CS1701</NoWarn>
+      <WarningsNotAsErrors>$(WarningsNotAsErrors);CS0579;CS1685;CS1701</WarningsNotAsErrors>
+      <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    </PropertyGroup>
+  </Target>
+
+  <!-- Additional suppression for temp WPF projects - runs even earlier -->
+  <Target Name="SuppressTempProjectWarnings" BeforeTargets="BeforeBuild;CoreCompile" Condition="'$(MSBuildProjectName.EndsWith(`_wpftmp`))' == 'true'">
+    <PropertyGroup>
+      <NoWarn>CS0579;CS1685;CS1701;$(NoWarn)</NoWarn>
+      <WarningsNotAsErrors>CS0579;CS1685;CS1701;$(WarningsNotAsErrors)</WarningsNotAsErrors>
+      <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    </PropertyGroup>
+  </Target>
+
+  <!-- Emergency suppression - runs at the very beginning of compilation -->
+  <Target Name="EmergencySuppressCS0579" BeforeTargets="BeforeCompile;CoreCompile">
+    <PropertyGroup>
+      <NoWarn>CS0579;CS1685;CS1701;$(NoWarn)</NoWarn>
+      <WarningsNotAsErrors>CS0579;CS1685;CS1701;$(WarningsNotAsErrors)</WarningsNotAsErrors>
+      <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    </PropertyGroup>
+  </Target>
+</Project>

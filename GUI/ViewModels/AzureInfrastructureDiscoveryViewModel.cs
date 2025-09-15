@@ -87,7 +87,7 @@ namespace MandADiscoverySuite.ViewModels
         public string ModuleDescription => "Discover and manage Azure resources and infrastructure";
         public int TotalRecords => TotalResources;
         public int ActiveRecords => TotalVMs;
-        public DateTime LastUpdated { get; set; }
+        public new DateTime LastUpdated { get; set; }
         public string DiscoveryStatus => "Ready";
 
         // Details panel properties

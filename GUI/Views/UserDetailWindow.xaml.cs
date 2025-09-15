@@ -9,6 +9,12 @@ namespace MandADiscoverySuite.Views
             InitializeComponent();
         }
 
+        public UserDetailWindow(object userData) : this()
+        {
+            var viewModel = new ViewModels.UserDetailViewModel(userData);
+            UserDetailViewControl.DataContext = viewModel;
+        }
+
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close();

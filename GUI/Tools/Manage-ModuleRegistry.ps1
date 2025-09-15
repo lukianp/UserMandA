@@ -35,10 +35,10 @@ param(
     [Parameter(Mandatory = $true)]
     [ValidateSet('validate', 'health', 'generate', 'merge', 'fix', 'list')]
     [string]$Command,
-    
+
     [Parameter(Mandatory = $false)]
-    [string]$RootPath = "C:\EnterpriseDiscovery",
-    
+    [string]$RootPath = $(if ($env:MANDA_DISCOVERY_ROOT) { $env:MANDA_DISCOVERY_ROOT } else { "C:\EnterpriseDiscovery" }),
+
     [Parameter(Mandatory = $false)]
     [switch]$ShowVerbose
 )

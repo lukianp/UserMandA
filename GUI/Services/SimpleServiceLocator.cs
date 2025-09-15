@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Mvvm.Messaging;
+using MandADiscoverySuite.Interfaces;
 
 namespace MandADiscoverySuite.Services
 {

@@ -19,6 +19,7 @@
   <ItemGroup>
     <Compile Include="Services\CsvDataServiceNew.cs" />
     <Compile Include="Services\DataLoaderResult.cs" />
+    <Compile Include="Interfaces\ICsvDataLoader.cs" />
     <Compile Include="SimpleProfileService.cs" />
     <Compile Include="Models\UserData.cs" />
     <Compile Include="Models\GroupData.cs" />
@@ -27,6 +28,8 @@
     <Compile Include="Models\FileServerData.cs" />
     <Compile Include="Models\DatabaseData.cs" />
     <Compile Include="Models\PolicyData.cs" />
+    <Compile Include="Models\MigrationModels.cs" />
+    <Compile Include="Models\Entities.cs" />
     <Compile Include="TestPipelineDemo.cs" />
   </ItemGroup>
 

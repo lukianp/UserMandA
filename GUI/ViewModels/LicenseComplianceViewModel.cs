@@ -521,23 +521,82 @@ namespace MandADiscoverySuite.ViewModels
         {
             if (ComplianceReport == null)
             {
-                MessageBox.Show("No compliance report to export. Generate a report first.", 
+                MessageBox.Show("No compliance report to export. Generate a report first.",
                     "No Report", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             try
             {
-                // TODO: Implement report export functionality
-                MessageBox.Show("Export functionality will be implemented in Phase 2", 
-                    "Feature Coming Soon", MessageBoxButton.OK, MessageBoxImage.Information);
+                // Create export path with timestamp
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var exportPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                    $"LicenseComplianceReport_{SelectedTargetCompany}_{timestamp}.csv"
+                );
+
+                // Prepare CSV content
+                var csvLines = new List<string>();
+
+                // Header
+                csvLines.Add("License Compliance Report");
+                csvLines.Add($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                csvLines.Add($"Target Company: {SelectedTargetCompany}");
+                csvLines.Add($"Total Users: {ComplianceReport.TotalUsers}");
+                csvLines.Add($"Total Compliance Issues: {ComplianceReport.TotalComplianceIssues}");
+                csvLines.Add($"Overall Compliance Rate: {ComplianceReport.CompliancePercentage:P2}");
+                csvLines.Add("");
+
+                // User Assignments Section
+                csvLines.Add("USER LICENSE ASSIGNMENTS");
+                csvLines.Add("UserPrincipalName,DisplayName,Department,IsCompliant,AssignedLicenses,Issues");
+                foreach (var assignment in ComplianceReport.UserAssignments)
+                {
+                    var licenseNames = string.Join("; ", assignment.AssignedSkus?.Select(s => s.SkuPartNumber) ?? new List<string>());
+                    var issues = string.Join("; ", assignment.ComplianceIssues?.Select(i => i.IssueType) ?? new List<string>());
+                    csvLines.Add($"{EscapeCsv(assignment.UserPrincipalName)},{EscapeCsv(assignment.DisplayName)},{EscapeCsv(assignment.Department)},{assignment.IsCompliant},{EscapeCsv(licenseNames)},{EscapeCsv(issues)}");
+                }
+                csvLines.Add("");
+
+                // Compliance Issues Section
+                csvLines.Add("COMPLIANCE ISSUES");
+                csvLines.Add("UserPrincipalName,IssueType,Severity,Description,RecommendedAction");
+                foreach (var issue in ComplianceReport.ComplianceIssues)
+                {
+                    csvLines.Add($"{EscapeCsv(issue.UserPrincipalName)},{EscapeCsv(issue.IssueType)},{EscapeCsv(issue.Severity)},{EscapeCsv(issue.Description)},{EscapeCsv(issue.RecommendedAction)}");
+                }
+
+                // Write to file
+                await System.IO.File.WriteAllLinesAsync(exportPath, csvLines);
+
+                MessageBox.Show($"Report exported successfully to: {exportPath}",
+                    "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                _logger?.LogInformation($"Exported license compliance report to: {exportPath}");
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Failed to export report");
-                MessageBox.Show($"Export failed: {ex.Message}", "Export Error", 
+                MessageBox.Show($"Export failed: {ex.Message}", "Export Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        /// <summary>
+        /// Escapes CSV values that contain commas, quotes, or newlines
+        /// </summary>
+        private string EscapeCsv(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return "";
+
+            // If value contains comma, quote, or newline, wrap in quotes and escape internal quotes
+            if (value.Contains(",") || value.Contains("\"") || value.Contains("\n") || value.Contains("\r"))
+            {
+                return "\"" + value.Replace("\"", "\"\"") + "\"";
+            }
+
+            return value;
         }
         
         private async Task RefreshDataAsync()

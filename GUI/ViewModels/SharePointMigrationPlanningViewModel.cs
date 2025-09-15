@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Data;
+using MandADiscoverySuite.Interfaces;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using System.Windows;

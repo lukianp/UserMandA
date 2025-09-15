@@ -1,683 +1,141 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Input;
-using Microsoft.Extensions.Logging;
-using MandADiscoverySuite.Models;
+using System.Windows;
 using MandADiscoverySuite.Services;
-using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Input;
 
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
-    /// ViewModel for UserDetailView implementing the 9-tab detailed user information interface
-    /// Integrates with LogicEngineService for comprehensive user data projection
+    /// ViewModel for the UserDetailWindow
     /// </summary>
     public class UserDetailViewModel : BaseViewModel
     {
-        private readonly ILogicEngineService _logicEngineService;
-        private readonly IMigrationWaveService _migrationWaveService;
-        private readonly IDataExportService _dataExportService;
+        private object _userData;
+        private string _displayName;
+        private string _userPrincipalName;
+        private string _samAccountName;
+        private string _email;
+        private string _department;
+        private string _jobTitle;
+        private string _company;
+        private string _manager;
+        private string _createdDateTime;
+        private string _objectType;
+        private string _distinguishedName;
+        private string _description;
 
-        private string? _selectedUserSid;
-        private string? _selectedUserUpn;
-        private UserDetailProjection? _userDetail;
-
-        // Tab collections
-        private ObservableCollection<GroupDto> _groups = new();
-        private ObservableCollection<DeviceDto> _devices = new();
-        private ObservableCollection<AppDto> _apps = new();
-        private ObservableCollection<AclEntry> _fileAccess = new();
-        private ObservableCollection<MappedDriveDto> _mappedDrives = new();
-        private ObservableCollection<GpoDto> _gpoLinks = new();
-        private ObservableCollection<GpoDto> _gpoFilters = new();
-        private MailboxDto? _mailbox;
-        private ObservableCollection<AzureRoleAssignment> _azureRoles = new();
-        private ObservableCollection<SqlDbDto> _sqlDatabases = new();
-        private ObservableCollection<RiskAssessment> _risks = new();
-
-        // User basic info
-        private string? _displayName;
-        private string? _userPrincipalName;
-        private string? _email;
-        private string? _department;
-        private string? _jobTitle;
-        private string? _manager;
-        private bool _accountEnabled;
-        private DateTime? _createdDate;
-        private DateTime? _lastSignIn;
-
-        // Commands
-        public ICommand AddToMigrationWaveCommand { get; private set; }
-        public ICommand ExportSnapshotCommand { get; private set; }
-        public ICommand RefreshDataCommand { get; private set; }
-        public ICommand CloseCommand { get; private set; }
-
-        public UserDetailViewModel(
-            ILogicEngineService logicEngineService,
-            ILogger<UserDetailViewModel> logger,
-            IMigrationWaveService? migrationWaveService = null,
-            IDataExportService? dataExportService = null)
-            : base(logger)
+        public UserDetailViewModel(object userData)
         {
-            _logicEngineService = logicEngineService ?? throw new ArgumentNullException(nameof(logicEngineService));
-            _migrationWaveService = migrationWaveService ?? new StubMigrationWaveService(logger);
-            _dataExportService = dataExportService ?? new StubDataExportService(logger);
-
-            TabTitle = "User Details";
+            _userData = userData;
+            LoadUserData();
+            CloseCommand = new RelayCommand(Close);
         }
 
-        #region Properties
-
-        /// <summary>
-        /// Currently selected user SID or UPN for loading details
-        /// </summary>
-        public string? SelectedUserIdentifier
-        {
-            get => _selectedUserSid ?? _selectedUserUpn;
-            set
-            {
-                if (value != _selectedUserSid && value != _selectedUserUpn)
-                {
-                    // Determine if it's a SID or UPN
-                    if (value?.StartsWith("S-", StringComparison.OrdinalIgnoreCase) == true)
-                    {
-                        _selectedUserSid = value;
-                        _selectedUserUpn = null;
-                    }
-                    else
-                    {
-                        _selectedUserUpn = value;
-                        _selectedUserSid = null;
-                    }
-                    
-                    OnPropertyChanged();
-                    _ = Task.Run(LoadUserDetailAsync);
-                }
-            }
-        }
-
-        public UserDetailProjection? UserDetail
-        {
-            get => _userDetail;
-            private set => SetProperty(ref _userDetail, value);
-        }
-
-        // Basic user info properties
-        public string? DisplayName
+        public string DisplayName
         {
             get => _displayName;
-            private set => SetProperty(ref _displayName, value);
+            set => SetProperty(ref _displayName, value);
         }
 
-        public string? UserPrincipalName
+        public string UserPrincipalName
         {
             get => _userPrincipalName;
-            private set => SetProperty(ref _userPrincipalName, value);
+            set => SetProperty(ref _userPrincipalName, value);
         }
 
-        public string? Email
+        public string SamAccountName
+        {
+            get => _samAccountName;
+            set => SetProperty(ref _samAccountName, value);
+        }
+
+        public string Email
         {
             get => _email;
-            private set => SetProperty(ref _email, value);
+            set => SetProperty(ref _email, value);
         }
 
-        public string? Department
+        public string Department
         {
             get => _department;
-            private set => SetProperty(ref _department, value);
+            set => SetProperty(ref _department, value);
         }
 
-        public string? JobTitle
+        public string JobTitle
         {
             get => _jobTitle;
-            private set => SetProperty(ref _jobTitle, value);
+            set => SetProperty(ref _jobTitle, value);
         }
 
-        public string? Manager
+        public string Company
+        {
+            get => _company;
+            set => SetProperty(ref _company, value);
+        }
+
+        public string Manager
         {
             get => _manager;
-            private set => SetProperty(ref _manager, value);
+            set => SetProperty(ref _manager, value);
         }
 
-        public bool AccountEnabled
+        public string CreatedDateTime
         {
-            get => _accountEnabled;
-            private set => SetProperty(ref _accountEnabled, value);
+            get => _createdDateTime;
+            set => SetProperty(ref _createdDateTime, value);
         }
 
-        public DateTime? CreatedDate
+        public string ObjectType
         {
-            get => _createdDate;
-            private set => SetProperty(ref _createdDate, value);
+            get => _objectType;
+            set => SetProperty(ref _objectType, value);
         }
 
-        public DateTime? LastSignIn
+        public string DistinguishedName
         {
-            get => _lastSignIn;
-            private set => SetProperty(ref _lastSignIn, value);
+            get => _distinguishedName;
+            set => SetProperty(ref _distinguishedName, value);
         }
 
-        // Tab collections
-        public ObservableCollection<GroupDto> Groups
+        public string Description
         {
-            get => _groups;
-            private set => SetProperty(ref _groups, value);
+            get => _description;
+            set => SetProperty(ref _description, value);
         }
 
-        public ObservableCollection<DeviceDto> Devices
+        public RelayCommand CloseCommand { get; }
+
+        private void LoadUserData()
         {
-            get => _devices;
-            private set => SetProperty(ref _devices, value);
-        }
-
-        public ObservableCollection<AppDto> Apps
-        {
-            get => _apps;
-            private set => SetProperty(ref _apps, value);
-        }
-
-        public ObservableCollection<AclEntry> FileAccess
-        {
-            get => _fileAccess;
-            private set => SetProperty(ref _fileAccess, value);
-        }
-
-        public ObservableCollection<MappedDriveDto> MappedDrives
-        {
-            get => _mappedDrives;
-            private set => SetProperty(ref _mappedDrives, value);
-        }
-
-        public ObservableCollection<GpoDto> GpoLinks
-        {
-            get => _gpoLinks;
-            private set => SetProperty(ref _gpoLinks, value);
-        }
-
-        public ObservableCollection<GpoDto> GpoFilters
-        {
-            get => _gpoFilters;
-            private set => SetProperty(ref _gpoFilters, value);
-        }
-
-        public MailboxDto? Mailbox
-        {
-            get => _mailbox;
-            private set => SetProperty(ref _mailbox, value);
-        }
-
-        public ObservableCollection<AzureRoleAssignment> AzureRoles
-        {
-            get => _azureRoles;
-            private set => SetProperty(ref _azureRoles, value);
-        }
-
-        public ObservableCollection<SqlDbDto> SqlDatabases
-        {
-            get => _sqlDatabases;
-            private set => SetProperty(ref _sqlDatabases, value);
-        }
-
-        public ObservableCollection<RiskAssessment> Risks
-        {
-            get => _risks;
-            private set => SetProperty(ref _risks, value);
-        }
-
-        public override bool HasData => UserDetail != null;
-
-        #endregion
-
-        #region Methods
-
-        protected override void InitializeCommands()
-        {
-            base.InitializeCommands();
-
-            AddToMigrationWaveCommand = new AsyncRelayCommand(AddToMigrationWaveAsync, () => UserDetail != null);
-            ExportSnapshotCommand = new AsyncRelayCommand(ExportSnapshotAsync, () => UserDetail != null);
-            RefreshDataCommand = new AsyncRelayCommand(LoadUserDetailAsync);
-            CloseCommand = new RelayCommand(CloseUserDetail);
-        }
-
-        /// <summary>
-        /// Load user detail data from LogicEngineService
-        /// </summary>
-        private async Task LoadUserDetailAsync()
-        {
-            if (string.IsNullOrEmpty(SelectedUserIdentifier))
+            if (_userData is IDictionary<string, object> dict)
             {
-                ClearUserDetail();
-                return;
-            }
-
-            await ExecuteAsync(async () =>
-            {
-                StructuredLogger?.LogDebug(LogSourceName, 
-                    new { action = "load_user_detail_start", user_id = SelectedUserIdentifier }, 
-                    "Loading user detail projection");
-
-                var detail = await _logicEngineService.GetUserDetailAsync(SelectedUserIdentifier);
-                
-                if (detail != null)
-                {
-                    UserDetail = detail;
-                    UpdateUserBasicInfo(detail.User);
-                    UpdateTabCollections(detail);
-                    
-                    TabTitle = $"User Details - {detail.User.DisplayName ?? detail.User.UPN}";
-                    
-                    StructuredLogger?.LogInfo(LogSourceName, 
-                        new { 
-                            action = "load_user_detail_complete", 
-                            user_id = SelectedUserIdentifier,
-                            groups_count = detail.Groups.Count,
-                            devices_count = detail.Devices.Count,
-                            apps_count = detail.Apps.Count,
-                            risks_count = detail.Risks.Count
-                        }, 
-                        "User detail projection loaded successfully");
-                }
-                else
-                {
-                    ClearUserDetail();
-                    StatusMessage = "User not found";
-                    
-                    StructuredLogger?.LogWarning(LogSourceName, 
-                        new { action = "load_user_detail_notfound", user_id = SelectedUserIdentifier }, 
-                        "User not found in LogicEngine data");
-                }
-
-            }, "Loading user details");
-        }
-
-        /// <summary>
-        /// Update basic user information properties
-        /// </summary>
-        private void UpdateUserBasicInfo(UserDto user)
-        {
-            DisplayName = user.DisplayName;
-            UserPrincipalName = user.UPN;
-            Email = user.Mail;
-            Department = user.Dept;
-            JobTitle = null; // Not available in current UserDto - would need enrichment
-            Manager = user.ManagerSid ?? "N/A"; // SID-based, name resolution would require additional lookup
-            AccountEnabled = user.Enabled;
-            CreatedDate = user.DiscoveryTimestamp;
-            LastSignIn = null; // Not available in current UserDto - would need Azure/Entra data
-        }
-
-        /// <summary>
-        /// Update all tab collections from user detail projection
-        /// </summary>
-        private void UpdateTabCollections(UserDetailProjection detail)
-        {
-            // Update Groups tab
-            Groups.Clear();
-            foreach (var group in detail.Groups)
-                Groups.Add(group);
-
-            // Update Devices tab
-            Devices.Clear();
-            foreach (var device in detail.Devices)
-                Devices.Add(device);
-
-            // Update Apps tab
-            Apps.Clear();
-            foreach (var app in detail.Apps)
-                Apps.Add(app);
-
-            // Update File Access tab
-            FileAccess.Clear();
-            foreach (var acl in detail.Shares)
-                FileAccess.Add(acl);
-
-            // Update Mapped Drives tab
-            MappedDrives.Clear();
-            foreach (var drive in detail.Drives)
-                MappedDrives.Add(drive);
-
-            // Update GPO Links tab
-            GpoLinks.Clear();
-            foreach (var gpo in detail.GpoLinks)
-                GpoLinks.Add(gpo);
-
-            // Update GPO Filters tab
-            GpoFilters.Clear();
-            foreach (var gpo in detail.GpoFilters)
-                GpoFilters.Add(gpo);
-
-            // Update Mailbox
-            Mailbox = detail.Mailbox;
-
-            // Update Azure Roles tab
-            AzureRoles.Clear();
-            foreach (var role in detail.AzureRoles)
-                AzureRoles.Add(role);
-
-            // Update SQL Databases tab
-            SqlDatabases.Clear();
-            foreach (var db in detail.SqlDatabases)
-                SqlDatabases.Add(db);
-
-            // Update Risks tab
-            Risks.Clear();
-            foreach (var risk in detail.Risks)
-                Risks.Add(ConvertToRiskAssessment(risk));
-        }
-
-        /// <summary>
-        /// Clear all user detail data
-        /// </summary>
-        private void ClearUserDetail()
-        {
-            UserDetail = null;
-            
-            // Clear basic info
-            DisplayName = null;
-            UserPrincipalName = null;
-            Email = null;
-            Department = null;
-            JobTitle = null;
-            Manager = null;
-            AccountEnabled = false;
-            CreatedDate = null;
-            LastSignIn = null;
-
-            // Clear tab collections
-            Groups.Clear();
-            Devices.Clear();
-            Apps.Clear();
-            FileAccess.Clear();
-            MappedDrives.Clear();
-            GpoLinks.Clear();
-            GpoFilters.Clear();
-            Mailbox = null;
-            AzureRoles.Clear();
-            SqlDatabases.Clear();
-            Risks.Clear();
-
-            TabTitle = "User Details";
-        }
-
-        /// <summary>
-        /// Add current user to a migration wave
-        /// </summary>
-        private async Task AddToMigrationWaveAsync()
-        {
-            if (UserDetail == null) return;
-
-            await ExecuteAsync(async () =>
-            {
-                await _migrationWaveService.AddUserToWaveAsync(UserDetail.User);
-                StatusMessage = $"User {UserDetail.User.DisplayName} added to migration wave";
-                
-                StructuredLogger?.LogInfo(LogSourceName, 
-                    new { action = "add_to_migration_wave", user_id = UserDetail.User.Sid }, 
-                    "User added to migration wave");
-
-            }, "Adding to migration wave");
-        }
-
-        /// <summary>
-        /// Export user detail snapshot
-        /// </summary>
-        private async Task ExportSnapshotAsync()
-        {
-            if (UserDetail == null) return;
-
-            await ExecuteAsync(async () =>
-            {
-                var exportPath = await _dataExportService.ExportUserDetailAsync(UserDetail);
-                StatusMessage = $"User details exported to {exportPath}";
-                
-                StructuredLogger?.LogInfo(LogSourceName, 
-                    new { action = "export_snapshot", user_id = UserDetail.User.Sid, export_path = exportPath }, 
-                    "User detail snapshot exported");
-
-            }, "Exporting user details");
-        }
-
-        /// <summary>
-        /// Close user detail view
-        /// </summary>
-        private void CloseUserDetail()
-        {
-            // Send close message via messenger
-            SendMessage(new CloseUserDetailMessage());
-        }
-
-        public override async Task LoadAsync()
-        {
-            await LoadUserDetailAsync();
-        }
-
-        #endregion
-
-        #region Dispose
-
-        protected override void OnDisposing()
-        {
-            base.OnDisposing();
-            
-            // Clear collections to prevent memory leaks
-            Groups?.Clear();
-            Devices?.Clear();
-            Apps?.Clear();
-            FileAccess?.Clear();
-            MappedDrives?.Clear();
-            GpoLinks?.Clear();
-            GpoFilters?.Clear();
-            AzureRoles?.Clear();
-            SqlDatabases?.Clear();
-            Risks?.Clear();
-        }
-
-        /// <summary>
-        /// Convert LogicEngineRisk to UI RiskAssessment
-        /// </summary>
-        private RiskAssessment ConvertToRiskAssessment(LogicEngineRisk logicRisk)
-        {
-            return new RiskAssessment
-            {
-                Title = $"{logicRisk.EntityType} Risk for {logicRisk.EntityId}",
-                Description = $"Missing mappings: {string.Join(", ", logicRisk.MissingMappings)}\n" +
-                             $"Orphaned ACLs: {string.Join(", ", logicRisk.OrphanedAcls)}\n" +
-                             $"Unresolvable SID refs: {string.Join(", ", logicRisk.UnresolvableSidRefs)}",
-                Category = RiskCategory.Technical,
-                CurrentLevel = logicRisk.Severity switch
-                {
-                    "Critical" => RiskLevel.Critical,
-                    "High" => RiskLevel.High,
-                    "Medium" => RiskLevel.Medium,
-                    "Low" => RiskLevel.Low,
-                    _ => RiskLevel.Low
-                },
-                Status = RiskStatus.Open,
-                LastAssessed = DateTime.Now
-            };
-        }
-
-        #endregion
-    }
-
-    #region Messages
-
-    /// <summary>
-    /// Message to request closing user detail view
-    /// </summary>
-    public class CloseUserDetailMessage
-    {
-    }
-
-    #endregion
-
-    #region Stub Services
-
-    /// <summary>
-    /// Stub implementation for migration wave service until real implementation exists
-    /// </summary>
-    public class StubMigrationWaveService : IMigrationWaveService
-    {
-        internal readonly ILogger _logger;
-
-        public StubMigrationWaveService(ILogger logger)
-        {
-            _logger = logger;
-        }
-
-        public async Task AddUserToWaveAsync(UserDto user)
-        {
-            _logger.LogInformation("STUB: Adding user {UserName} ({UPN}) to migration wave", user.DisplayName, user.UPN);
-            await Task.Delay(100); // Simulate work
-        }
-
-        public async Task AddAssetToWaveAsync(DeviceDto device)
-        {
-            _logger.LogInformation("STUB: Adding asset {DeviceName} ({DNS}) to migration wave", device.Name, device.DNS);
-            await Task.Delay(100); // Simulate work
-        }
-    }
-
-    /// <summary>
-    /// Stub implementation for data export service until real implementation exists
-    /// </summary>
-    public class StubDataExportService : IDataExportService
-    {
-        internal readonly ILogger _logger;
-
-        public StubDataExportService(ILogger logger)
-        {
-            _logger = logger;
-        }
-
-        public async Task<string> ExportUserDetailAsync(UserDetailProjection userDetail)
-        {
-            try
-            {
-                var timestamp = DateTime.UtcNow;
-                var sidParts = userDetail.User.Sid.Split('-');
-                var sidSuffix = sidParts.Length > 0 ? sidParts[sidParts.Length - 1] : userDetail.User.Sid;
-                var safeSamAccount = string.IsNullOrEmpty(userDetail.User.Sam)
-                    ? sidSuffix
-                    : userDetail.User.Sam.Replace("\\", "_").Replace("/", "_");
-                var filename = $"UserDetail_{safeSamAccount}_{timestamp:yyyyMMdd_HHmmss}.json";
-                var exportPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), filename);
-
-                // Create basic export data with counts and simple information
-                var exportData = new
-                {
-                    ExportInfo = new
-                    {
-                        ExportedAt = timestamp,
-                        UserIdentifier = userDetail.User.Sid,
-                        DisplayName = userDetail.User.DisplayName,
-                        UserPrincipalName = userDetail.User.UPN,
-                        TotalDataPoints = CalculateTotalDataPoints(userDetail)
-                    },
-                    BasicCounts = new
-                    {
-                        Groups = userDetail.Groups.Count,
-                        Devices = userDetail.Devices.Count,
-                        Applications = userDetail.Apps.Count,
-                        FileAccessEntries = userDetail.Shares.Count,
-                        MappedDrives = userDetail.Drives.Count,
-                        GpoLinks = userDetail.GpoLinks.Count,
-                        GpoFilters = userDetail.GpoFilters.Count,
-                        MailboxExists = userDetail.Mailbox != null,
-                        AzureRoles = userDetail.AzureRoles.Count,
-                        SqlDatabases = userDetail.SqlDatabases.Count,
-                        Risks = userDetail.Risks.Count,
-                        MigrationHints = userDetail.MigrationHints.Count
-                    },
-                    UserDetails = new
-                    {
-                        userDetail.User.Sam,
-                        userDetail.User.DisplayName,
-                        userDetail.User.UPN,
-                        userDetail.User.Mail,
-                        userDetail.User.Dept,
-                        userDetail.User.OU,
-                        userDetail.User.Enabled,
-                        userDetail.User.DiscoveryTimestamp
-                    }
-                };
-
-                // Serialize to JSON and write to file
-                var jsonOptions = new System.Text.Json.JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-                };
-
-                var json = System.Text.Json.JsonSerializer.Serialize(exportData, jsonOptions);
-                await File.WriteAllTextAsync(exportPath, json, System.Text.Encoding.UTF8);
-
-                _logger.LogInformation("Successfully exported user detail for {UserName} to {Path}", userDetail.User.DisplayName, exportPath);
-
-                return exportPath;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to export user detail for {UserSid}", userDetail.User.Sid);
-                throw new InvalidOperationException($"Failed to export user details: {ex.Message}", ex);
+                DisplayName = GetValue(dict, "displayname");
+                UserPrincipalName = GetValue(dict, "userprincipalname");
+                SamAccountName = GetValue(dict, "samaccountname");
+                Email = GetValue(dict, "mail");
+                Department = GetValue(dict, "department");
+                JobTitle = GetValue(dict, "jobtitle");
+                Company = GetValue(dict, "company");
+                Manager = GetValue(dict, "manager");
+                CreatedDateTime = GetValue(dict, "createddatetime");
+                ObjectType = GetValue(dict, "objecttype");
+                DistinguishedName = GetValue(dict, "distinguishedname");
+                Description = GetValue(dict, "description");
             }
         }
 
-        /// <summary>
-        /// Calculate total data points for export summary
-        /// </summary>
-        private int CalculateTotalDataPoints(UserDetailProjection userDetail)
+        private string GetValue(IDictionary<string, object> dict, string key)
         {
-            return userDetail.Groups.Count +
-                   userDetail.Devices.Count +
-                   userDetail.Apps.Count +
-                   userDetail.Shares.Count +
-                   userDetail.Drives.Count +
-                   userDetail.GpoLinks.Count +
-                   userDetail.GpoFilters.Count +
-                   userDetail.AzureRoles.Count +
-                   userDetail.SqlDatabases.Count +
-                   userDetail.Risks.Count +
-                   userDetail.MigrationHints.Count;
+            return dict.TryGetValue(key, out var value) ? value?.ToString() ?? "" : "";
         }
 
-        public async Task<string> ExportAssetDetailAsync(AssetDetailProjection assetDetail)
+        private void Close()
         {
-            var filename = $"AssetDetail_{assetDetail.Device.Name}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
-            var exportPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), filename);
-            
-            _logger.LogInformation("STUB: Exporting asset detail for {DeviceName} to {Path}", assetDetail.Device.Name, exportPath);
-            
-            // Simulate export work
-            await Task.Delay(200);
-            
-            return exportPath;
+            // Close the window - this will be handled by the view
+            Application.Current.Windows.OfType<Views.UserDetailWindow>().FirstOrDefault()?.Close();
         }
     }
-
-    #endregion
-
-    #region Interfaces
-
-    /// <summary>
-    /// Interface for migration wave service
-    /// </summary>
-    public interface IMigrationWaveService
-    {
-        Task AddUserToWaveAsync(UserDto user);
-    }
-
-    /// <summary>
-    /// Interface for data export service
-    /// </summary>
-    public interface IDataExportService
-    {
-        Task<string> ExportUserDetailAsync(UserDetailProjection userDetail);
-    }
-
-    #endregion
 }

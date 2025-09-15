@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows;
+using MandADiscoverySuite.Interfaces;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Migration;

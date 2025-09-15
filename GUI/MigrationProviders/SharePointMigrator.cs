@@ -61,28 +61,28 @@ namespace MandADiscoverySuite.MigrationProviders
                 }
 
                 // Step 2: Create target site if it doesn't exist
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 20, 
-                    Message = "Creating target site structure..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 20,
+                    Message = "Creating target site structure..."
                 });
 
                 await CreateTargetSiteAsync(site, target);
 
                 // Step 3: Migrate site structure (lists, libraries, subsites)
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 30, 
-                    Message = "Migrating site structure..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 30,
+                    Message = "Migrating site structure..."
                 });
 
                 await MigrateSiteStructureAsync(site, settings, target, progress);
 
                 // Step 4: Migrate content (documents, metadata)
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 50, 
-                    Message = "Migrating content..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 50,
+                    Message = "Migrating content..."
                 });
 
                 var contentResult = await MigrateContentAsync(site, settings, target, progress);
@@ -92,10 +92,10 @@ namespace MandADiscoverySuite.MigrationProviders
                 // Step 5: Migrate permissions if enabled
                 if (settings.MigratePermissions)
                 {
-                    progress?.Report(new MigrationProgress 
-                    { 
-                        Percentage = 80, 
-                        Message = "Migrating permissions..." 
+                    progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                    {
+                        Percentage = 80,
+                        Message = "Migrating permissions..."
                     });
 
                     await MigratePermissionsAsync(site, settings, target);
@@ -105,10 +105,10 @@ namespace MandADiscoverySuite.MigrationProviders
                 // Step 6: Handle workflows and customizations
                 if (settings.MigrateWorkflows)
                 {
-                    progress?.Report(new MigrationProgress 
-                    { 
-                        Percentage = 90, 
-                        Message = "Migrating workflows..." 
+                    progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                    {
+                        Percentage = 90,
+                        Message = "Migrating workflows..."
                     });
 
                     var workflowResult = await MigrateWorkflowsAsync(site, settings, target);
@@ -119,10 +119,10 @@ namespace MandADiscoverySuite.MigrationProviders
                     }
                 }
 
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 100, 
-                    Message = "Site migration completed successfully" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 100,
+                    Message = "Site migration completed successfully"
                 });
 
                 result.Success = true;
@@ -155,52 +155,52 @@ namespace MandADiscoverySuite.MigrationProviders
 
             try
             {
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 0, 
-                    Message = $"Starting migration of library: {library.Title}" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 0,
+                    Message = $"Starting migration of library: {library.Title}"
                 });
 
                 // Step 1: Create target library
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 20, 
-                    Message = "Creating target library..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 20,
+                    Message = "Creating target library..."
                 });
 
                 await CreateTargetLibraryAsync(library, target);
 
                 // Step 2: Migrate library content using SharePoint Migration API
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 40, 
-                    Message = "Uploading migration package..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 40,
+                    Message = "Uploading migration package..."
                 });
 
                 var migrationJobId = await CreateMigrationJobAsync(library, settings, target);
 
                 // Step 3: Monitor migration progress
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 60, 
-                    Message = "Monitoring migration progress..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 60,
+                    Message = "Monitoring migration progress..."
                 });
 
                 var jobStatus = await MonitorMigrationJobAsync(migrationJobId, progress);
 
                 // Step 4: Process migration results
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 90, 
-                    Message = "Processing migration results..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 90,
+                    Message = "Processing migration results..."
                 });
 
                 await ProcessMigrationResultsAsync(migrationJobId, result);
 
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 100, 
-                    Message = "Library migration completed successfully" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 100,
+                    Message = "Library migration completed successfully"
                 });
 
                 result.Success = jobStatus == "Success";
@@ -238,17 +238,17 @@ namespace MandADiscoverySuite.MigrationProviders
                     return result;
                 }
 
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 0, 
-                    Message = $"Starting OneDrive migration for: {oneDrive.UserPrincipalName}" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 0,
+                    Message = $"Starting OneDrive migration for: {oneDrive.UserPrincipalName}"
                 });
 
                 // Step 1: Get user drive information
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 20, 
-                    Message = "Retrieving user drive information..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 20,
+                    Message = "Retrieving user drive information..."
                 });
 
                 var sourceDrive = await _graphClient.Users[oneDrive.UserPrincipalName].Drive
@@ -261,19 +261,19 @@ namespace MandADiscoverySuite.MigrationProviders
                 }
 
                 // Step 2: Create target OneDrive structure
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 40, 
-                    Message = "Creating target OneDrive structure..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 40,
+                    Message = "Creating target OneDrive structure..."
                 });
 
                 await CreateTargetOneDriveAsync(oneDrive, target);
 
                 // Step 3: Migrate files and folders
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 60, 
-                    Message = "Migrating files and folders..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 60,
+                    Message = "Migrating files and folders..."
                 });
 
                 var migrationResult = await MigrateOneDriveContentAsync(sourceDrive, oneDrive, settings, target, progress);
@@ -283,19 +283,19 @@ namespace MandADiscoverySuite.MigrationProviders
                 // Step 4: Handle shared items if enabled
                 if (oneDrive.MigrateSharedItems)
                 {
-                    progress?.Report(new MigrationProgress 
-                    { 
-                        Percentage = 80, 
-                        Message = "Migrating shared items..." 
+                    progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                    {
+                        Percentage = 80,
+                        Message = "Migrating shared items..."
                     });
 
                     await MigrateSharedItemsAsync(sourceDrive, oneDrive, target);
                 }
 
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 100, 
-                    Message = "OneDrive migration completed successfully" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 100,
+                    Message = "OneDrive migration completed successfully"
                 });
 
                 result.Success = true;
@@ -327,27 +327,27 @@ namespace MandADiscoverySuite.MigrationProviders
 
             try
             {
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 0, 
-                    Message = $"Starting delta migration for site: {site.Title}" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 0,
+                    Message = $"Starting delta migration for site: {site.Title}"
                 });
 
                 // Step 1: Identify changed content since last migration
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 30, 
-                    Message = "Identifying changed content..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 30,
+                    Message = "Identifying changed content..."
                 });
 
                 var changedItems = await IdentifyChangedContentAsync(site, lastMigrationDate);
 
                 if (changedItems.Count == 0)
                 {
-                    progress?.Report(new MigrationProgress 
-                    { 
-                        Percentage = 100, 
-                        Message = "No changes detected - delta migration completed" 
+                    progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                    {
+                        Percentage = 100,
+                        Message = "No changes detected - delta migration completed"
                     });
 
                     result.Success = true;
@@ -356,20 +356,20 @@ namespace MandADiscoverySuite.MigrationProviders
                 }
 
                 // Step 2: Migrate only changed content
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 70, 
-                    Message = $"Migrating {changedItems.Count} changed items..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 70,
+                    Message = $"Migrating {changedItems.Count} changed items..."
                 });
 
                 var deltaResult = await MigrateDeltaContentAsync(changedItems, settings, target, progress);
                 result.MigratedFiles = deltaResult.MigratedFiles;
                 result.MigratedSizeBytes = deltaResult.MigratedSizeBytes;
 
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 100, 
-                    Message = "Delta migration completed successfully" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 100,
+                    Message = "Delta migration completed successfully"
                 });
 
                 result.Success = true;
@@ -473,26 +473,26 @@ namespace MandADiscoverySuite.MigrationProviders
 
                         processedSites++;
                         var progressPercent = (int)((double)processedSites / totalSites * 100);
-                        progress?.Report(new MigrationProgress 
-                        { 
-                            Percentage = progressPercent, 
-                            Message = $"Discovered {processedSites} of {totalSites} sites" 
+                        progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                        {
+                            Percentage = progressPercent,
+                            Message = $"Discovered {processedSites} of {totalSites} sites"
                         });
                     }
                 }
 
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 100, 
-                    Message = $"Discovery completed - found {sites.Count} sites" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 100,
+                    Message = $"Discovery completed - found {sites.Count} sites"
                 });
             }
             catch (Exception ex)
             {
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 100, 
-                    Message = $"Site discovery failed: {ex.Message}" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 100,
+                    Message = $"Site discovery failed: {ex.Message}"
                 });
             }
 
@@ -512,10 +512,10 @@ namespace MandADiscoverySuite.MigrationProviders
                     throw new InvalidOperationException("Graph client not initialized");
                 }
 
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 0, 
-                    Message = "Discovering OneDrive libraries..." 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 0,
+                    Message = "Discovering OneDrive libraries..."
                 });
 
                 var users = await _graphClient.Users
@@ -558,33 +558,33 @@ namespace MandADiscoverySuite.MigrationProviders
                     catch (Exception userEx)
                     {
                         // Skip users without OneDrive provisioned
-                        progress?.Report(new MigrationProgress 
-                        { 
-                            Message = $"Skipped user {user.UserPrincipalName}: {userEx.Message}" 
+                        progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                        {
+                            Message = $"Skipped user {user.UserPrincipalName}: {userEx.Message}"
                         });
                     }
 
                     processedUsers++;
                     var progressPercent = (int)((double)processedUsers / totalUsers * 100);
-                    progress?.Report(new MigrationProgress 
-                    { 
-                        Percentage = progressPercent, 
-                        Message = $"Processed {processedUsers} of {totalUsers} users" 
+                    progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                    {
+                        Percentage = progressPercent,
+                        Message = $"Processed {processedUsers} of {totalUsers} users"
                     });
                 }
 
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 100, 
-                    Message = $"Discovery completed - found {libraries.Count} OneDrive libraries" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 100,
+                    Message = $"Discovery completed - found {libraries.Count} OneDrive libraries"
                 });
             }
             catch (Exception ex)
             {
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 100, 
-                    Message = $"OneDrive discovery failed: {ex.Message}" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 100,
+                    Message = $"OneDrive discovery failed: {ex.Message}"
                 });
             }
 
@@ -622,19 +622,19 @@ namespace MandADiscoverySuite.MigrationProviders
         {
             try
             {
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 0, 
-                    Message = $"Starting rollback for site: {site.Title}" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 0,
+                    Message = $"Starting rollback for site: {site.Title}"
                 });
 
                 // Delete target site if it was created during migration
                 await DeleteTargetSiteAsync(site, target);
 
-                progress?.Report(new MigrationProgress 
-                { 
-                    Percentage = 100, 
-                    Message = "Rollback completed successfully" 
+                progress?.Report(new MandADiscoverySuite.Migration.MigrationProgress
+                {
+                    Percentage = 100,
+                    Message = "Rollback completed successfully"
                 });
 
                 return RollbackResult.Succeeded("SharePoint site rollback completed successfully");

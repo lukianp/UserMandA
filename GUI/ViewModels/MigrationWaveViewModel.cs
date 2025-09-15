@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using MandADiscoverySuite.Models;
@@ -312,26 +313,307 @@ namespace MandADiscoverySuite.ViewModels
 
         private void ViewDetails()
         {
-            // TODO: Open detailed wave view window
-            _logger?.LogInformation($"Viewing details for wave: {_wave?.Name}");
+            if (_wave == null) return;
+
+            try
+            {
+                // Create comprehensive wave details
+                var details = $"Migration Wave Details\n\n" +
+                    $"Wave: {_wave.Name} (Order {_wave.Order})\n" +
+                    $"ID: {_wave.Id}\n" +
+                    $"Status: {_wave.Status}\n\n" +
+                    $"TIMING:\n" +
+                    $"Planned Start: {PlannedStartDate:g}\n" +
+                    $"Actual Start: {ActualStartDisplayText}\n" +
+                    $"Actual End: {ActualEndDisplayText}\n" +
+                    $"Duration: {DurationDisplayText}\n" +
+                    $"Time Remaining: {TimeRemainingDisplayText}\n\n" +
+                    $"PROGRESS:\n" +
+                    $"Batches: {BatchesProgressText}\n" +
+                    $"Items: {ItemsProgressText}\n" +
+                    $"Wave Progress: {WaveProgressPercentage:F1}%\n" +
+                    $"Items Progress: {ItemsProgressPercentage:F1}%\n" +
+                    $"Success Rate: {SuccessRate:F1}%\n\n" +
+                    $"STATISTICS:\n" +
+                    $"Total Batches: {TotalBatches}\n" +
+                    $"Completed Batches: {CompletedBatches}\n" +
+                    $"Failed Batches: {FailedBatches}\n" +
+                    $"In Progress Batches: {InProgressBatches}\n" +
+                    $"Pending Batches: {PendingBatches}\n\n" +
+                    $"Total Items: {TotalItems}\n" +
+                    $"Completed Items: {CompletedItems}\n" +
+                    $"Failed Items: {FailedItems}\n" +
+                    $"In Progress Items: {InProgressItems}\n" +
+                    $"Pending Items: {PendingItems}\n\n" +
+                    $"DATA TRANSFER:\n" +
+                    $"Total Size: {SizeDisplayText}\n" +
+                    $"Transferred: {FormatBytes(TransferredBytes)}\n" +
+                    $"Average Rate: {TransferRateDisplayText}\n\n";
+
+                if (!string.IsNullOrWhiteSpace(_wave.Notes))
+                {
+                    details += $"NOTES:\n{_wave.Notes}\n\n";
+                }
+
+                if (Prerequisites.Any())
+                {
+                    details += $"PREREQUISITES:\n" + string.Join("\n", Prerequisites) + "\n\n";
+                }
+
+                if (AllTags.Any())
+                {
+                    details += $"TAGS:\n" + string.Join(", ", AllTags) + "\n";
+                }
+
+                MessageBox.Show(details, $"Wave Details - {_wave.Name}",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+
+                _logger?.LogInformation($"Viewed details for wave: {_wave.Name}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to display wave details: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger?.LogError(ex, $"Failed to view details for wave {_wave?.Name}");
+            }
         }
 
         private void ViewErrors()
         {
-            // TODO: Open errors dialog showing all wave errors
-            _logger?.LogInformation($"Viewing errors for wave: {_wave?.Name}");
+            if (_wave == null || !HasErrors) return;
+
+            try
+            {
+                var errorDetails = $"Migration Wave Errors\n\n" +
+                    $"Wave: {_wave.Name}\n" +
+                    $"Total Errors: {AllErrors.Count} across {FailedBatches} batches\n\n";
+
+                // Group errors by batch
+                var errorsByBatch = new Dictionary<string, List<string>>();
+                foreach (var batch in _batches.Where(b => b.HasErrors))
+                {
+                    errorsByBatch[batch.Name] = batch.Errors;
+                }
+
+                foreach (var batchErrors in errorsByBatch)
+                {
+                    errorDetails += $"BATCH: {batchErrors.Key}\n";
+                    for (int i = 0; i < batchErrors.Value.Count; i++)
+                    {
+                        errorDetails += $"{i + 1}. {batchErrors.Value[i]}\n";
+                    }
+                    errorDetails += "\n";
+                }
+
+                if (HasWarnings)
+                {
+                    errorDetails += $"WARNINGS ({AllWarnings.Count}):\n";
+                    foreach (var warning in AllWarnings.Take(10)) // Limit to first 10 warnings
+                    {
+                        errorDetails += $"• {warning}\n";
+                    }
+                    if (AllWarnings.Count > 10)
+                    {
+                        errorDetails += $"• ... and {AllWarnings.Count - 10} more warnings\n";
+                    }
+                }
+
+                MessageBox.Show(errorDetails, $"Wave Errors - {_wave.Name}",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+
+                _logger?.LogInformation($"Viewed {AllErrors.Count} errors for wave: {_wave.Name}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to display wave errors: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger?.LogError(ex, $"Failed to view errors for wave {_wave?.Name}");
+            }
         }
 
         private void ViewLogs()
         {
-            // TODO: Open log viewer for wave
-            _logger?.LogInformation($"Viewing logs for wave: {_wave?.Name}");
+            if (_wave == null) return;
+
+            try
+            {
+                // Simulate gathering logs from all batches
+                var logDetails = $"Migration Wave Logs\n\n" +
+                    $"Wave: {_wave.Name}\n" +
+                    $"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n\n" +
+                    $"Note: This is a summary of wave-level logs.\n" +
+                    $"For detailed logs, view individual batch logs.\n\n";
+
+                // Add wave-level status logs
+                logDetails += $"WAVE STATUS LOGS:\n";
+                logDetails += $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - Wave '{_wave.Name}' status: {_wave.Status}\n";
+
+                if (_wave.ActualStartDate.HasValue)
+                {
+                    logDetails += $"{_wave.ActualStartDate.Value:yyyy-MM-dd HH:mm:ss} - Wave execution started\n";
+                }
+
+                if (_wave.ActualEndDate.HasValue)
+                {
+                    logDetails += $"{_wave.ActualEndDate.Value:yyyy-MM-dd HH:mm:ss} - Wave execution completed\n";
+                }
+
+                logDetails += "\nBATCH SUMMARY:\n";
+                foreach (var batch in _batches)
+                {
+                    logDetails += $"- {batch.Name}: {batch.Status} ({batch.CompletedItems}/{batch.TotalItems} items)\n";
+                }
+
+                if (AllErrors.Any())
+                {
+                    logDetails += $"\nRECENT ERRORS ({AllErrors.Count}):\n";
+                    foreach (var error in AllErrors.Take(5))
+                    {
+                        logDetails += $"- {error}\n";
+                    }
+                    if (AllErrors.Count > 5)
+                    {
+                        logDetails += $"- ... and {AllErrors.Count - 5} more errors\n";
+                    }
+                }
+
+                MessageBox.Show(logDetails, $"Wave Logs - {_wave.Name}",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+
+                _logger?.LogInformation($"Viewed logs for wave: {_wave.Name}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to display wave logs: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger?.LogError(ex, $"Failed to view logs for wave {_wave?.Name}");
+            }
         }
 
         private void ExportReport()
         {
-            // TODO: Export comprehensive wave report
-            _logger?.LogInformation($"Exporting report for wave: {_wave?.Name}");
+            if (_wave == null) return;
+
+            try
+            {
+                // Create export path with timestamp
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var exportPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                    $"MigrationWaveReport_{_wave.Name}_{timestamp}.csv"
+                );
+
+                // Prepare CSV content
+                var csvLines = new List<string>();
+
+                // Header
+                csvLines.Add("Migration Wave Report");
+                csvLines.Add($"Wave: {_wave.Name}");
+                csvLines.Add($"Order: {_wave.Order}");
+                csvLines.Add($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                csvLines.Add($"Status: {_wave.Status}");
+                csvLines.Add("");
+
+                // Wave Summary
+                csvLines.Add("WAVE SUMMARY");
+                csvLines.Add($"Planned Start Date,{PlannedStartDate:yyyy-MM-dd HH:mm:ss}");
+                csvLines.Add($"Actual Start Date,{ActualStartDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A"}");
+                csvLines.Add($"Actual End Date,{ActualEndDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A"}");
+                csvLines.Add($"Duration,{DurationDisplayText}");
+                csvLines.Add($"Total Batches,{TotalBatches}");
+                csvLines.Add($"Completed Batches,{CompletedBatches}");
+                csvLines.Add($"Failed Batches,{FailedBatches}");
+                csvLines.Add($"Total Items,{TotalItems}");
+                csvLines.Add($"Completed Items,{CompletedItems}");
+                csvLines.Add($"Failed Items,{FailedItems}");
+                csvLines.Add($"Success Rate,{SuccessRate:F2}%");
+                csvLines.Add($"Total Size,{SizeDisplayText}");
+                csvLines.Add($"Average Transfer Rate,{TransferRateDisplayText}");
+                csvLines.Add("");
+
+                // Batch Details
+                csvLines.Add("BATCH DETAILS");
+                csvLines.Add("Batch Name,Status,Total Items,Completed Items,Failed Items,Progress %");
+                foreach (var batch in _batches)
+                {
+                    var progress = batch.TotalItems > 0 ? (double)batch.CompletedItems / batch.TotalItems * 100 : 0;
+                    csvLines.Add($"{batch.Name},{batch.Status},{batch.TotalItems},{batch.CompletedItems},{batch.FailedItems},{progress:F1}");
+                }
+                csvLines.Add("");
+
+                // Errors and Warnings
+                if (AllErrors.Any())
+                {
+                    csvLines.Add("ERRORS");
+                    csvLines.Add("Error Message");
+                    foreach (var error in AllErrors)
+                    {
+                        csvLines.Add(EscapeCsv(error));
+                    }
+                    csvLines.Add("");
+                }
+
+                if (AllWarnings.Any())
+                {
+                    csvLines.Add("WARNINGS");
+                    csvLines.Add("Warning Message");
+                    foreach (var warning in AllWarnings)
+                    {
+                        csvLines.Add(EscapeCsv(warning));
+                    }
+                    csvLines.Add("");
+                }
+
+                // Prerequisites
+                if (Prerequisites.Any())
+                {
+                    csvLines.Add("PREREQUISITES");
+                    csvLines.Add("Prerequisite");
+                    foreach (var prereq in Prerequisites)
+                    {
+                        csvLines.Add(prereq);
+                    }
+                    csvLines.Add("");
+                }
+
+                // Notes
+                if (!string.IsNullOrWhiteSpace(_wave.Notes))
+                {
+                    csvLines.Add("NOTES");
+                    csvLines.Add(_wave.Notes);
+                }
+
+                // Write to file
+                System.IO.File.WriteAllLines(exportPath, csvLines);
+
+                MessageBox.Show($"Wave report exported successfully to: {exportPath}",
+                    "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                _logger?.LogInformation($"Exported wave report to: {exportPath}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to export wave report: {ex.Message}", "Export Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger?.LogError(ex, $"Failed to export report for wave {_wave?.Name}");
+            }
+        }
+
+        /// <summary>
+        /// Escapes CSV values that contain commas, quotes, or newlines
+        /// </summary>
+        private string EscapeCsv(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return "";
+
+            // If value contains comma, quote, or newline, wrap in quotes and escape internal quotes
+            if (value.Contains(",") || value.Contains("\"") || value.Contains("\n") || value.Contains("\r"))
+            {
+                return "\"" + value.Replace("\"", "\"\"") + "\"";
+            }
+
+            return value;
         }
 
         public void RefreshWave()
@@ -357,20 +639,186 @@ namespace MandADiscoverySuite.ViewModels
 
         private void AddBatch()
         {
-            // TODO: Open dialog to add new batch to wave
-            _logger?.LogInformation($"Adding batch to wave: {_wave?.Name}");
+            if (_wave == null) return;
+
+            try
+            {
+                // Show input dialog for batch name
+                var batchName = Microsoft.VisualBasic.Interaction.InputBox(
+                    "Enter name for the new batch:",
+                    "Add Batch to Wave",
+                    $"Batch {_batches.Count + 1}");
+
+                if (!string.IsNullOrWhiteSpace(batchName))
+                {
+                    // Create a new batch with default settings
+                    var newBatch = new MigrationBatch
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        Name = batchName,
+                        Description = $"Batch added to wave {_wave.Name}",
+                        PlannedStartDate = DateTime.Now.AddDays(1),
+                        PlannedEndDate = DateTime.Now.AddDays(2),
+                        Status = MigrationStatus.NotStarted,
+                        Priority = MigrationPriority.Normal,
+                        Items = new List<MigrationItem>() // Empty batch initially
+                    };
+
+                    // Add to wave
+                    _wave.Batches.Add(newBatch);
+
+                    // Create ViewModel and add to collection
+                    var batchViewModel = new MigrationBatchViewModel(newBatch);
+                    _batches.Add(batchViewModel);
+
+                    // Refresh properties
+                    RefreshProperties();
+
+                    MessageBox.Show($"Batch '{batchName}' added successfully to wave '{_wave.Name}'",
+                        "Batch Added", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    _logger?.LogInformation($"Added batch '{batchName}' to wave: {_wave.Name}");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to add batch: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger?.LogError(ex, $"Failed to add batch to wave {_wave?.Name}");
+            }
         }
 
         private void RemoveBatch()
         {
-            // TODO: Remove selected batch from wave
-            _logger?.LogInformation($"Removing batch from wave: {_wave?.Name}");
+            if (_wave == null || _batches.Count == 0) return;
+
+            try
+            {
+                // Show batch selection (simplified - in real implementation would use selected item)
+                var batchNames = _batches.Select(b => b.Name).ToArray();
+
+                var selectedBatchName = Microsoft.VisualBasic.Interaction.InputBox(
+                    $"Select batch to remove:\n\n{string.Join("\n", batchNames)}",
+                    "Remove Batch from Wave",
+                    batchNames.FirstOrDefault() ?? "");
+
+                if (!string.IsNullOrWhiteSpace(selectedBatchName))
+                {
+                    var batchToRemove = _batches.FirstOrDefault(b => b.Name == selectedBatchName);
+                    if (batchToRemove != null)
+                    {
+                        // Confirm removal
+                        var result = MessageBox.Show(
+                            $"Are you sure you want to remove batch '{selectedBatchName}' from wave '{_wave.Name}'?\n\nThis will permanently remove the batch and all its items.",
+                            "Confirm Batch Removal",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Warning);
+
+                        if (result == MessageBoxResult.Yes)
+                        {
+                            // Remove from wave
+                            _wave.Batches.Remove(batchToRemove.Batch);
+
+                            // Remove from ViewModel collection
+                            _batches.Remove(batchToRemove);
+
+                            // Refresh properties
+                            RefreshProperties();
+
+                            MessageBox.Show($"Batch '{selectedBatchName}' removed successfully from wave '{_wave.Name}'",
+                                "Batch Removed", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                            _logger?.LogInformation($"Removed batch '{selectedBatchName}' from wave: {_wave.Name}");
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Batch '{selectedBatchName}' not found.", "Batch Not Found",
+                            MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to remove batch: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger?.LogError(ex, $"Failed to remove batch from wave {_wave?.Name}");
+            }
         }
 
         private void ReorderBatches()
         {
-            // TODO: Open dialog to reorder batches
-            _logger?.LogInformation($"Reordering batches for wave: {_wave?.Name}");
+            if (_wave == null || _batches.Count < 2) return;
+
+            try
+            {
+                // Show current batch order
+                var currentOrder = string.Join("\n", _batches.Select((b, i) => $"{i + 1}. {b.Name}"));
+
+                var newOrderInput = Microsoft.VisualBasic.Interaction.InputBox(
+                    $"Current batch order:\n\n{currentOrder}\n\n" +
+                    "Enter new order as comma-separated list (e.g., 2,1,3):\n" +
+                    "Note: Numbers represent current positions (1-based)",
+                    "Reorder Batches",
+                    string.Join(",", Enumerable.Range(1, _batches.Count)));
+
+                if (!string.IsNullOrWhiteSpace(newOrderInput))
+                {
+                    // Parse the new order
+                    var orderParts = newOrderInput.Split(',').Select(p => p.Trim()).ToArray();
+                    var newIndices = new List<int>();
+
+                    foreach (var part in orderParts)
+                    {
+                        if (int.TryParse(part, out var index) && index >= 1 && index <= _batches.Count)
+                        {
+                            newIndices.Add(index - 1); // Convert to 0-based
+                        }
+                        else
+                        {
+                            MessageBox.Show($"Invalid order format. Use comma-separated numbers 1-{_batches.Count}",
+                                "Invalid Format", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+                    }
+
+                    if (newIndices.Count != _batches.Count || newIndices.Distinct().Count() != _batches.Count)
+                    {
+                        MessageBox.Show("Order must contain each position exactly once.",
+                            "Invalid Order", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    // Reorder the batches
+                    var reorderedBatches = newIndices.Select(i => _batches[i]).ToList();
+                    var reorderedWaveBatches = newIndices.Select(i => _wave.Batches[i]).ToList();
+
+                    // Update collections
+                    _batches.Clear();
+                    foreach (var batch in reorderedBatches)
+                    {
+                        _batches.Add(batch);
+                    }
+
+                    _wave.Batches.Clear();
+                    _wave.Batches.AddRange(reorderedWaveBatches);
+
+                    // Refresh properties
+                    RefreshProperties();
+
+                    var newOrderDisplay = string.Join("\n", _batches.Select((b, i) => $"{i + 1}. {b.Name}"));
+                    MessageBox.Show($"Batches reordered successfully!\n\nNew order:\n{newOrderDisplay}",
+                        "Batches Reordered", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    _logger?.LogInformation($"Reordered batches for wave: {_wave.Name}");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to reorder batches: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger?.LogError(ex, $"Failed to reorder batches for wave {_wave?.Name}");
+            }
         }
         #endregion
 

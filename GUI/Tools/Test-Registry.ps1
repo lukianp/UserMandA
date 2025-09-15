@@ -1,12 +1,22 @@
 param(
-    [string]$Command = "validate"
+    [string]$Command = "validate",
+    [string]$RegistryPath = $env:MANDA_REGISTRY_PATH,
+    [string]$ModulesRoot = $env:MANDA_MODULES_ROOT
 )
+
+# Set default paths if not provided via parameters or environment variables
+if (-not $RegistryPath) {
+    $RegistryPath = "C:\EnterpriseDiscovery\Configuration\ModuleRegistry.json"
+}
+if (-not $ModulesRoot) {
+    $ModulesRoot = "C:\EnterpriseDiscovery\Modules"
+}
 
 Write-Host "=== Module Registry Test ===" -ForegroundColor Green
 Write-Host ""
-
-$RegistryPath = "C:\EnterpriseDiscovery\Configuration\ModuleRegistry.json"
-$ModulesRoot = "C:\EnterpriseDiscovery\Modules"
+Write-Host "Registry Path: $RegistryPath" -ForegroundColor Gray
+Write-Host "Modules Root: $ModulesRoot" -ForegroundColor Gray
+Write-Host ""
 
 # Test 1: Check registry file
 Write-Host "Checking registry file..." -ForegroundColor Yellow

@@ -1,11 +1,13 @@
 # Test UI Interaction Logging System
-param()
+param(
+    [string]$LogsPath = $env:MANDA_LOGS_PATH
+)
 
 Write-Host "UI Interaction Logging System Test" -ForegroundColor Cyan
 Write-Host "===================================" -ForegroundColor Cyan
 
 # Get the latest log file using standardized path
-$logPath = if ($env:MANDA_DISCOVERY_PATH) { "$env:MANDA_DISCOVERY_PATH\ljpops\Logs" } else { "c:\discoverydata\ljpops\Logs" }
+$logPath = if ($LogsPath) { $LogsPath } elseif ($env:MANDA_DISCOVERY_PATH) { "$env:MANDA_DISCOVERY_PATH\ljpops\Logs" } else { "c:\discoverydata\ljpops\Logs" }
 $latestLog = Get-ChildItem "$logPath\MandADiscovery_*.log" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 if ($latestLog) {
@@ -55,4 +57,4 @@ if ($latestLog) {
 
 Write-Host ""
 Write-Host "To monitor logs in real-time:" -ForegroundColor Yellow
-Write-Host "Get-Content 'c:\discoverydata\ljpops\Logs\MandADiscovery_*.log' | Sort-Object LastWriteTime -Desc | Select -First 1 | Get-Content -Wait -Tail 5" -ForegroundColor Gray
+Write-Host "Get-Content '$logPath\MandADiscovery_*.log' | Sort-Object LastWriteTime -Desc | Select -First 1 | Get-Content -Wait -Tail 5" -ForegroundColor Gray
