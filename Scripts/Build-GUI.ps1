@@ -178,15 +178,13 @@ Write-Host "Building application..." -ForegroundColor Yellow
 $env:MSBuildEnableWorkloadResolver = "false"
 
 $BuildArgs = @(
-    'publish'
     'MandADiscoverySuite.csproj'
-    '--configuration', $Configuration
-    '--output', $OutputPath
-    '--verbosity', 'minimal'
-    '--nologo'
-    '--force'
-    '--no-dependencies'
-    '--nowarn', 'CS0579'
+    '/t:Publish'
+    '/p:Configuration=' + $Configuration
+    '/p:PublishDir=' + $OutputPath
+    '/verbosity:minimal'
+    '/nologo'
+    '/p:BuildProjectReferences=false'
 )
 
 if ($SelfContained) {
@@ -199,17 +197,17 @@ if ($SelfContained) {
     }
     
     # Ensure CS0579 and related warnings are suppressed for all builds
-    $BuildArgs += '--nowarn', 'CS0579,CS1685,CS1701,CS0101,CS0108,CS8632'
+    $BuildArgs += '/nowarn:CS0579;CS1685;CS1701;CS0101;CS0108;CS8632'
 
 # Restore packages first
 Write-Host "Restoring packages for publish..." -ForegroundColor Yellow
-& dotnet restore MandADiscoverySuite.csproj
+& "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe" MandADiscoverySuite.csproj /t:Restore
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to restore packages"
     exit 1
 }
 
-& dotnet @BuildArgs
+& "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe" @BuildArgs
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Build failed"

@@ -18,7 +18,7 @@
     <!-- Disable default SDK inclusion of XAML files to avoid duplicates -->
     <EnableDefaultPageItems>false</EnableDefaultPageItems>
     <!-- Disable auto-generated assembly info to avoid duplicates -->
-    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <!-- Disable framework attributes to avoid duplicates -->
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
