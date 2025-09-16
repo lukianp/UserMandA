@@ -41,6 +41,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.118" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Text.Json" Version="6.0.0" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.77" />
     <PackageReference Include="Microsoft.Graph" Version="5.56.0" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.61.3" />

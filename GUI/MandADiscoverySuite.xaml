@@ -1364,12 +1364,12 @@
                 <TabControl.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal" Margin="12,8">
-                            <TextBlock Text="{Binding TabTitle}" 
-                                       Foreground="{DynamicResource PrimaryTextBrush}" 
-                                       FontSize="16" 
+                            <TextBlock Text="{Binding Header}"
+                                       Foreground="{DynamicResource PrimaryTextBrush}"
+                                       FontSize="16"
                                        FontWeight="Medium"
                                        VerticalAlignment="Center"/>
-                            <Button Content="✕" 
+                            <Button Content="✕"
                                     Margin="8,0,0,0"
                                     Width="16" Height="16"
                                     FontSize="10"
@@ -1377,12 +1377,12 @@
                                     Foreground="{DynamicResource SecondaryTextBrush}"
                                     BorderThickness="0"
                                     Padding="0"
-                                    Visibility="{Binding CanClose, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    Visibility="Visible"
                                     Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}"
                                     CommandParameter="{Binding}"
                                     AutomationProperties.Name="Close Tab"
-                                    AutomationProperties.HelpText="{Binding TabTitle, StringFormat='Close {0} tab'}"
-                                    ToolTip="{Binding TabTitle, StringFormat='Close {0} (Ctrl+W)'}"/>
+                                    AutomationProperties.HelpText="{Binding Header, StringFormat='Close {0} tab'}"
+                                    ToolTip="{Binding Header, StringFormat='Close {0} (Ctrl+W)'}"/>
                         </StackPanel>
                     </DataTemplate>
                 </TabControl.ItemTemplate>
@@ -1390,7 +1390,7 @@
                 <!-- Tab Content Template - Simplified for unified pipeline -->
                 <TabControl.ContentTemplate>
                     <DataTemplate>
-                        <ContentPresenter Content="{Binding}"/>
+                        <ContentPresenter Content="{Binding Content}"/>
                     </DataTemplate>
                 </TabControl.ContentTemplate>
                 

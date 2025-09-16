@@ -2,11 +2,14 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(Select-String -Pattern \"CRITICAL|ERROR|EXCEPTION\" })",
-      "Bash(powershell:*)",
-      "Bash(dotnet build:*)",
-      "Bash(dotnet publish:*)",
-      "Bash(timeout:*)"
+      "Bash(find:*)",
+      "Bash(Get-WinEvent -FilterHashtable @{LogName='Application')",
+      "Bash(ProviderName='.NET Runtime'} -MaxEvents 10)",
+      "Bash(Format-List TimeCreated, Id, LevelDisplayName, Message)",
+      "Bash(dotnet restore:*)",
+      "Bash(.Build-GUI.ps1)",
+      "Bash(MandADiscoverySuite.exe --test-navigation)",
+      "Bash(./MandADiscoverySuite.exe)"
     ],
     "deny": [],
     "ask": [],

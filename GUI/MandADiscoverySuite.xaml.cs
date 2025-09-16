@@ -81,6 +81,9 @@ namespace MandADiscoverySuite
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            var logAction = Application.Current?.Properties["LogAction"] as Action<string>;
+            logAction?.Invoke("=== MainWindow_Loaded BEGIN ===");
+
             // StartupOptimizationService no longer needed - removed during simplification
             /*
             StartupOptimizationService startupService = null;
@@ -94,11 +97,13 @@ namespace MandADiscoverySuite
                 System.Diagnostics.Debug.WriteLine($"StartupOptimizationService not available: {ex.Message}");
             }
             */
-            
+
             try
             {
+                logAction?.Invoke("Initializing TabControl reference...");
                 // Initialize TabControl reference so TabsService can properly manage tab selection
                 ViewModel.InitializeTabControl(MainTabControl);
+                logAction?.Invoke("TabControl initialized for tab selection management");
                 System.Diagnostics.Debug.WriteLine("TabControl initialized for tab selection management");
                 
                 // Set up lazy loading for each view

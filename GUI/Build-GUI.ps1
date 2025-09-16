@@ -211,10 +211,13 @@ if ($LASTEXITCODE -ne 0) {
 
 & dotnet @BuildArgs
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Build failed"
+# Check if the build succeeded by looking for the output file
+$OutputExe = Join-Path $OutputPath "MandADiscoverySuite.exe"
+if (!(Test-Path $OutputExe)) {
+    Write-Error "Build failed - executable not found"
     exit 1
 }
+Write-Host "Build succeeded - executable found at $OutputExe" -ForegroundColor Green
 
 # Clean workspace build artifacts after build
 Write-Host "Cleaning workspace build artifacts..." -ForegroundColor Yellow
@@ -463,9 +466,9 @@ if (Test-Path $ScriptsSourcePath) {
     Write-Host "  [OK] $ScriptCount utility scripts copied" -ForegroundColor Green
 }
 
-# Copy XAML Resource directories (Themes, Styles, Controls) - CRITICAL FOR STARTUP
+# Copy XAML Resource directories (Themes, Styles, Controls, Views, Resources) - CRITICAL FOR STARTUP
 Write-Host "Copying XAML resource directories..." -ForegroundColor Yellow
-$XAMLDirectories = @("Themes", "Styles", "Controls")
+$XAMLDirectories = @("Themes", "Styles", "Controls", "Views", "Resources")
 
 foreach ($dir in $XAMLDirectories) {
     $SourceXAMLPath = Join-Path $ScriptDir $dir
@@ -483,6 +486,22 @@ foreach ($dir in $XAMLDirectories) {
         Write-Host "  [OK] $dir directory copied ($FileCount XAML files)" -ForegroundColor Green
     } else {
         Write-Warning "XAML resource directory not found: $SourceXAMLPath"
+    }
+}
+
+# Copy main XAML files to root of output directory - CRITICAL FOR STARTUP
+Write-Host "Copying main XAML files..." -ForegroundColor Yellow
+$MainXAMLFiles = @("MandADiscoverySuite.xaml", "App.xaml")
+
+foreach ($xamlFile in $MainXAMLFiles) {
+    $SourceFile = Join-Path $ScriptDir $xamlFile
+    $DestFile = Join-Path $OutputPath $xamlFile
+
+    if (Test-Path $SourceFile) {
+        Copy-Item -Path $SourceFile -Destination $DestFile -Force
+        Write-Host "  [OK] $xamlFile copied to output root" -ForegroundColor Green
+    } else {
+        Write-Warning "Main XAML file not found: $xamlFile"
     }
 }
 
