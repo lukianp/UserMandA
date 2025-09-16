@@ -4,21 +4,29 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
+    <UseWindowsForms>false</UseWindowsForms>
     <AssemblyName>MandADiscoverySuite</AssemblyName>
     <RootNamespace>MandADiscoverySuite</RootNamespace>
-    <Nullable>disable</Nullable>
+    <Version>1.0.1</Version>
+    <Authors>Lukian Poleschtschuk</Authors>
+    <Nullable>enable</Nullable>
     <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <PublishReadyToRun>false</PublishReadyToRun>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <LangVersion>latest</LangVersion>
+    <NeutralLanguage>en-US</NeutralLanguage>
     <!-- Enable binding optimization for better performance -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <NoWarn>$(NoWarn);CA1416</NoWarn>
-    <!-- Force suppress all duplicate attribute warnings -->
+        <!-- Force suppress all duplicate attribute warnings -->
     <!-- Disable default SDK inclusion of XAML files to avoid duplicates -->
     <EnableDefaultPageItems>false</EnableDefaultPageItems>
     <!-- Disable framework attributes to avoid duplicates -->
-    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+      </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS8625;CS8612;CS8767;CA1416</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -43,21 +51,35 @@
     <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="System.DirectoryServices.AccountManagement" Version="8.0.0" />
     <!-- Test framework dependencies -->
-    <PackageReference Include="MSTest.TestFramework" Version="3.1.1" />
-    <PackageReference Include="MSTest.TestAdapter" Version="3.1.1" />
-    <PackageReference Include="Moq" Version="4.18.4" />
-    <PackageReference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework" Version="11.0.50727.1" />
-  </ItemGroup>
+                  </ItemGroup>
 
   <!-- Explicitly include all XAML files as Page items with SubType Designer -->
   <ItemGroup>
-    <Page Include="**\*.xaml">
+    <Page Include="**\*.xaml" Exclude="bin\**\*;obj\**\*;Examples\**\*.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:UpdateDesignTimeXaml</Generator>
     </Page>
     <Compile Update="**\*.xaml.cs">
       <DependentUpon>%(Filename)</DependentUpon>
     </Compile>
+  </ItemGroup>
+  <!-- Exclude Examples from production build -->
+  <ItemGroup>
+    <Page Remove="Examples\**\*.xaml" />
+    <Compile Remove="Examples\**\*.cs" />
+  </ItemGroup>
+
+  <!-- Exclude build artifacts and tests from app build -->
+  <ItemGroup>
+    <Compile Remove="**\obj\**\*.cs;**\bin\**\*.cs" />
+    <None Remove="**\obj\**\*;**\bin\**\*" />
+    <Content Remove="**\obj\**\*;**\bin\**\*" />
+    <EmbeddedResource Remove="**\obj\**\*;**\bin\**\*" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Tests\**\*.cs" />
+    <Page Remove="Tests\**\*.xaml" />
+    <None Remove="Tests\**\*" />
   </ItemGroup>
 
   <!-- Copy all PowerShell modules to output directory -->

@@ -1,3 +1,4 @@
+#pragma warning disable CA1416 // Platform compatibility
 using System;
 using System.Security.Cryptography;
 using System.Text;

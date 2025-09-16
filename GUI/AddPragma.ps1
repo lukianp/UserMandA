@@ -1,3 +1,6 @@
+# Version: 1.0.0
+# Author: Lukian Poleschtschuk
+# Date Modified: 2025-09-16
 # PowerShell script to add #pragma warning disable CS0618 to C# files containing SimpleServiceLocator
 
 $files = @(

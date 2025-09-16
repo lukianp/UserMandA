@@ -13,7 +13,7 @@ namespace MandADiscoverySuite.Dialogs
         public SearchFilter AppliedFilter { get; private set; }
         public SearchFilter CurrentFilter => _viewModel.CurrentFilter;
 
-        public AdvancedSearchDialog(string viewName, SearchFilter existingFilter = null)
+        public AdvancedSearchDialog(string viewName, SearchFilter? existingFilter = null)
         {
             InitializeComponent();
             

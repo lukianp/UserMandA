@@ -9,7 +9,9 @@
       "Bash(dotnet clean:*)",
       "Bash(pwsh:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(powershell:*)",
+      "Bash(dotnet build:*)"
     ],
     "deny": [],
     "ask": [],

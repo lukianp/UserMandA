@@ -7,7 +7,7 @@ namespace MandADiscoverySuite.Messages
     /// </summary>
     public class ActionMessage
     {
-        public ActionMessage(string actionType, object data, object parameters = null)
+        public ActionMessage(string actionType, object data, object? parameters = null)
         {
             ActionType = actionType ?? throw new ArgumentNullException(nameof(actionType));
             Data = data;
@@ -28,7 +28,7 @@ namespace MandADiscoverySuite.Messages
         /// <summary>
         /// Additional parameters for the action
         /// </summary>
-        public object Parameters { get; }
+        public object? Parameters { get; }
 
         /// <summary>
         /// When the action was requested
@@ -41,7 +41,7 @@ namespace MandADiscoverySuite.Messages
     /// </summary>
     public class BulkActionMessage
     {
-        public BulkActionMessage(string actionType, object[] dataItems, object parameters = null)
+        public BulkActionMessage(string actionType, object[] dataItems, object? parameters = null)
         {
             ActionType = actionType ?? throw new ArgumentNullException(nameof(actionType));
             DataItems = dataItems ?? throw new ArgumentNullException(nameof(dataItems));
@@ -62,7 +62,7 @@ namespace MandADiscoverySuite.Messages
         /// <summary>
         /// Additional parameters for the action
         /// </summary>
-        public object Parameters { get; }
+        public object? Parameters { get; }
 
         /// <summary>
         /// When the action was requested
@@ -75,7 +75,7 @@ namespace MandADiscoverySuite.Messages
     /// </summary>
     public class ActionResultMessage
     {
-        public ActionResultMessage(string actionType, bool success, string message = null, object result = null, Exception exception = null)
+        public ActionResultMessage(string actionType, bool success, string? message = null, object? result = null, Exception? exception = null)
         {
             ActionType = actionType ?? throw new ArgumentNullException(nameof(actionType));
             Success = success;
@@ -98,17 +98,17 @@ namespace MandADiscoverySuite.Messages
         /// <summary>
         /// Optional message describing the result
         /// </summary>
-        public string Message { get; }
+        public string? Message { get; }
 
         /// <summary>
         /// Optional result data from the action
         /// </summary>
-        public object Result { get; }
+        public object? Result { get; }
 
         /// <summary>
         /// Exception if the action failed
         /// </summary>
-        public Exception Exception { get; }
+        public Exception? Exception { get; }
 
         /// <summary>
         /// When the action completed

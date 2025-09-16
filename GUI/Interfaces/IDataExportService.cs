@@ -8,9 +8,9 @@ namespace MandADiscoverySuite.Services
     /// </summary>
     public interface IDataExportService
     {
-        Task<bool> ExportToCsvAsync<T>(IEnumerable<T> data, string defaultFileName = null);
-        Task<bool> ExportToJsonAsync<T>(IEnumerable<T> data, string defaultFileName = null);
-        Task<bool> ExportToExcelAsync<T>(IEnumerable<T> data, string defaultFileName = null);
+        Task<bool> ExportToCsvAsync<T>(IEnumerable<T> data, string? defaultFileName = null);
+        Task<bool> ExportToJsonAsync<T>(IEnumerable<T> data, string? defaultFileName = null);
+        Task<bool> ExportToExcelAsync<T>(IEnumerable<T> data, string? defaultFileName = null);
         Task<bool> ExportToExcelAsync<T>(IEnumerable<T> data, string defaultFileName, string worksheetName, bool includeCharts = false);
         Task<string> ExportAssetDetailAsync(object assetDetail);
         Task<string> ExportDiscoveryDataAsync(object data);

@@ -1,3 +1,7 @@
+// Version: 1.0.0
+// Author: Lukian Poleschtschuk
+// Date Modified: 2025-09-16
+#pragma warning disable CA1416 // Platform compatibility
 using System;
 using System.IO;
 using System.Linq;

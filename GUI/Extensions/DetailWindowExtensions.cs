@@ -19,7 +19,7 @@ namespace MandADiscoverySuite.Extensions
         /// <summary>
         /// Shows a detail window for a user
         /// </summary>
-        public static async Task<Window> ShowUserDetailAsync(this object source, string userId, string displayName = null, string email = null)
+        public static async Task<Window> ShowUserDetailAsync(this object source, string userId, string? displayName = null, string? email = null)
         {
             var userData = new UserDetailData
             {
@@ -48,7 +48,7 @@ namespace MandADiscoverySuite.Extensions
         /// <summary>
         /// Shows a detail window for a computer
         /// </summary>
-        public static async Task<Window> ShowComputerDetailAsync(this object source, string computerId, string computerName = null, string ipAddress = null)
+        public static async Task<Window> ShowComputerDetailAsync(this object source, string computerId, string? computerName = null, string? ipAddress = null)
         {
             var computerData = new ComputerDetailData
             {
@@ -77,7 +77,7 @@ namespace MandADiscoverySuite.Extensions
         /// <summary>
         /// Shows a detail window for a group
         /// </summary>
-        public static async Task<Window> ShowGroupDetailAsync(this object source, string groupId, string groupName = null, string description = null)
+        public static async Task<Window> ShowGroupDetailAsync(this object source, string groupId, string? groupName = null, string? description = null)
         {
             var groupData = new GroupDetailData
             {
@@ -106,7 +106,7 @@ namespace MandADiscoverySuite.Extensions
         /// <summary>
         /// Shows a generic detail window for any data
         /// </summary>
-        public static async Task<Window> ShowDetailWindowAsync<T>(this object source, T data, DetailWindowConfiguration config = null) where T : DetailWindowDataBase
+        public static async Task<Window> ShowDetailWindowAsync<T>(this object source, T data, DetailWindowConfiguration? config = null) where T : DetailWindowDataBase
         {
             return await DetailWindowService.ShowDetailWindowAsync(data, config);
         }
@@ -114,7 +114,7 @@ namespace MandADiscoverySuite.Extensions
         /// <summary>
         /// Shows a custom detail window with any content
         /// </summary>
-        public static async Task<Window> ShowCustomDetailWindowAsync(this object source, string title, object content, DetailWindowConfiguration config = null)
+        public static async Task<Window> ShowCustomDetailWindowAsync(this object source, string title, object content, DetailWindowConfiguration? config = null)
         {
             return await DetailWindowService.ShowCustomDetailWindowAsync(title, content, config);
         }

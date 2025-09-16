@@ -24,7 +24,7 @@ namespace MandADiscoverySuite.Helpers
         /// <summary>
         /// Creates a simple one-way binding
         /// </summary>
-        public static Binding OneWay(string path, IValueConverter converter = null, string format = null)
+        public static Binding OneWay(string path, IValueConverter? converter = null, string? format = null)
         {
             return _bindingService?.CreateOneWayBinding(path, converter, null, format) 
                 ?? new Binding(path) { Mode = BindingMode.OneWay };
@@ -33,7 +33,7 @@ namespace MandADiscoverySuite.Helpers
         /// <summary>
         /// Creates a one-time binding for static data
         /// </summary>
-        public static Binding OneTime(string path, IValueConverter converter = null)
+        public static Binding OneTime(string path, IValueConverter? converter = null)
         {
             return _bindingService?.CreateOneTimeBinding(path, converter) 
                 ?? new Binding(path) { Mode = BindingMode.OneTime };
@@ -112,7 +112,7 @@ namespace MandADiscoverySuite.Helpers
             /// <summary>
             /// Creates optimized column binding
             /// </summary>
-            public static Binding Column(string path, string format = null)
+            public static Binding Column(string path, string? format = null)
             {
                 return format != null ? Formatted(path, format) : OneWay(path);
             }
@@ -202,8 +202,8 @@ namespace MandADiscoverySuite.Helpers
     {
         public string Path { get; set; }
         public BindingMode Mode { get; set; } = BindingMode.OneWay;
-        public string Format { get; set; }
-        public string Fallback { get; set; }
+        public string? Format { get; set; }
+        public string? Fallback { get; set; }
         public bool Async { get; set; } = false;
 
         public OptimizedBindingExtension() { }

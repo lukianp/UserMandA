@@ -18,7 +18,7 @@ namespace MandADiscoverySuite.Interfaces
         Task<MigrationResult<GpoMigrationResult>> MigrateAsync(
             GroupPolicyItem gpo,
             MigrationContext context,
-            IProgress<Migration.MigrationProgress> progress = null);
+            IProgress<Migration.MigrationProgress>? progress = null);
 
         /// <summary>
         /// Validate that a GPO can be migrated
@@ -33,7 +33,7 @@ namespace MandADiscoverySuite.Interfaces
         Task<Services.Migration.RollbackResult> RollbackAsync(
             GroupPolicyItem gpo,
             MigrationContext context,
-            IProgress<MandADiscoverySuite.Migration.MigrationProgress> progress = null);
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress>? progress = null);
 
         /// <summary>
         /// Check if the migrator supports the given GPO type
@@ -52,7 +52,7 @@ namespace MandADiscoverySuite.Interfaces
             GroupPolicyItem sourceGpo,
             string targetDomain,
             MigrationContext context,
-            IProgress<MandADiscoverySuite.Migration.MigrationProgress> progress = null);
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress>? progress = null);
 
         /// <summary>
         /// Migrate WMI filters associated with GPOs
@@ -60,7 +60,7 @@ namespace MandADiscoverySuite.Interfaces
         Task<WmiFilterMigrationResult> MigrateWmiFiltersAsync(
             List<WmiFilterItem> wmiFilters,
             MigrationContext context,
-            IProgress<MandADiscoverySuite.Migration.MigrationProgress> progress = null);
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress>? progress = null);
 
         /// <summary>
         /// Validate GPO compatibility with target domain
@@ -75,7 +75,7 @@ namespace MandADiscoverySuite.Interfaces
         Task<GpoSecurityFilterResult> MigrateSecurityFilteringAsync(
             GroupPolicyItem gpo,
             MigrationContext context,
-            IProgress<MandADiscoverySuite.Migration.MigrationProgress> progress = null);
+            IProgress<MandADiscoverySuite.Migration.MigrationProgress>? progress = null);
 
         /// <summary>
         /// Create backup of GPO before migration

@@ -1,3 +1,6 @@
+// Version: 1.0.0
+// Author: Lukian Poleschtschuk
+// Date Modified: 2025-09-16
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
