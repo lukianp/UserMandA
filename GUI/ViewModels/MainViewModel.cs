@@ -3921,7 +3921,7 @@ namespace MandADiscoverySuite.ViewModels
             // Stub implementation
             _logger?.LogInformation($"SetupLazyView called for {viewName}");
         }
-        
+
         public async Task OnClosingAsync()
         {
             // Stub implementation

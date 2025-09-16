@@ -1,0 +1,29 @@
+﻿CSV Data Validation Report
+===========================
+Generated: 2025-09-16 09:18:18
+
+BASE DATA PATH
+--------------
+Path: C:\discoverydata\ljpops\RawData
+Exists: True
+
+DISCOVERY FOLDERS
+-----------------
+Total Expected: 15
+Present: 0
+Missing: 15
+
+CSV FILES FOUND
+---------------Total CSV files: 
+
+
+PERMISSIONS TEST
+----------------C:\discoverydata\ljpops: OK
+C:\enterprisediscovery: OK
+C:\discoverydata\ljpops\Logs: OK
+C:\discoverydata: OK
+C:\discoverydata\ljpops\RawData: OK
+
+ROOT CAUSE ASSESSMENT
+---------------------CSV data files are present. Data loading should work correctly.
+Found  CSV files across discovery categories.

@@ -103,7 +103,7 @@ namespace MandADiscoverySuite.ViewModels
 
         public ObservableCollection<KeyValuePair<string, string>> SelectedItemDetails { get; } = new ObservableCollection<KeyValuePair<string, string>>();
 
-        // Header warnings collection
+        // Header warnings collection - explicitly hide base implementation
         public new ObservableCollection<string> HeaderWarnings { get; } = new ObservableCollection<string>();
 
         // Completion flags

@@ -87,6 +87,7 @@ namespace MandADiscoverySuite.ViewModels
         public string ModuleDescription => "Discover and manage Azure resources and infrastructure";
         public int TotalRecords => TotalResources;
         public int ActiveRecords => TotalVMs;
+        // Explicitly hide inherited LastUpdated property with module-specific implementation
         public new DateTime LastUpdated { get; set; }
         public string DiscoveryStatus => "Ready";
 

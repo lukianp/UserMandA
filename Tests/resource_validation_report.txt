@@ -1,0 +1,39 @@
+﻿Resource Validation Report
+==========================
+Generated: 2025-09-16 09:14:35
+
+SUMMARY
+-------CRITICAL ISSUES FOUND:
+  - StartupUri 'MandADiscoverySuite.xaml' not found
+  - Missing XAML resources will cause immediate crash
+  - Views folder missing
+
+DETAILED RESULTS
+----------------
+ApplicationConfig: PASS
+
+MainWindow: FAIL
+
+XamlResources: FAIL
+  Missing Resources:
+    - Resources\Converters.xaml
+    - Resources\DataGridTheme.xaml
+    - Resources\ButtonStyles.xaml
+    - Resources\DiscoveryViewStyles.xaml
+
+ViewFiles: FAIL
+
+ConfigurationFiles: PASS
+
+ServiceDependencies: FAIL
+
+ROOT CAUSE
+----------
+The application is exiting immediately because:1. XAML resource files are missing. The application cannot initialize its UI
+   without these theme and style files. This causes an immediate crash when
+   App.xaml tries to load the missing ResourceDictionaries.
+
+   Solution: Run Build-GUI.ps1 to copy all resources to the build directory.2. The main window XAML file is missing. The StartupUri in App.xaml points
+   to 'MandADiscoverySuite.xaml' which cannot be found.
+
+   Solution: Ensure the build process includes all XAML files.

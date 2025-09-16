@@ -2,16 +2,11 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(Sort-Object LastWriteTime -Descending)",
-      "Bash(Select-Object -First 1)",
-      "Bash(wmic process where \"name='MandADiscoverySuite.exe'\" get CommandLine:*)",
-      "Bash(Get-Process -Name \"MandADiscoverySuite\" -ErrorAction SilentlyContinue)",
-      "Bash(dotnet clean:*)",
-      "Bash(pwsh:*)",
-      "mcp__ide__getDiagnostics",
-      "Bash(dir:*)",
+      "Bash(Select-String -Pattern \"CRITICAL|ERROR|EXCEPTION\" })",
       "Bash(powershell:*)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(dotnet publish:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": [],
