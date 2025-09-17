@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="MandADiscoverySuite.Views.VMwareDiscoveryView"
+<UserControl x:Class="MandADiscoverySuite.Views.VMwareDiscoveryView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -46,7 +46,7 @@
                     <Border Grid.Column="0" Width="64" Height="64" CornerRadius="12"
                             Background="{StaticResource AccentBrush}"
                             VerticalAlignment="Center" Margin="0,0,24,0">
-                        <TextBlock Text="🔷" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="??" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
 
                     <!-- Title and Description -->
@@ -166,7 +166,7 @@
                                         <Setter Property="ContentTemplate">
                                             <Setter.Value>
                                                 <DataTemplate>
-                                                    <TextBlock Text="🏢 Cluster Name" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="?? Cluster Name" FontWeight="SemiBold"/>
                                                 </DataTemplate>
                                             </Setter.Value>
                                         </Setter>
@@ -182,7 +182,7 @@
                                         <Setter Property="ContentTemplate">
                                             <Setter.Value>
                                                 <DataTemplate>
-                                                    <TextBlock Text="🖥️ Host Name" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="??? Host Name" FontWeight="SemiBold"/>
                                                 </DataTemplate>
                                             </Setter.Value>
                                         </Setter>
@@ -198,7 +198,7 @@
                                         <Setter Property="ContentTemplate">
                                             <Setter.Value>
                                                 <DataTemplate>
-                                                    <TextBlock Text="🔢 VM Count" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="?? VM Count" FontWeight="SemiBold"/>
                                                 </DataTemplate>
                                             </Setter.Value>
                                         </Setter>
@@ -214,7 +214,7 @@
                                         <Setter Property="ContentTemplate">
                                             <Setter.Value>
                                                 <DataTemplate>
-                                                    <TextBlock Text="⚙️ vSphere Version" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="?? vSphere Version" FontWeight="SemiBold"/>
                                                 </DataTemplate>
                                             </Setter.Value>
                                         </Setter>
@@ -229,7 +229,7 @@
                                         <Setter Property="ContentTemplate">
                                             <Setter.Value>
                                                 <DataTemplate>
-                                                    <TextBlock Text="🔴 Status" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="?? Status" FontWeight="SemiBold"/>
                                                 </DataTemplate>
                                             </Setter.Value>
                                         </Setter>
@@ -268,7 +268,7 @@
                                         <Setter Property="ContentTemplate">
                                             <Setter.Value>
                                                 <DataTemplate>
-                                                    <TextBlock Text="⚡ Actions" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="? Actions" FontWeight="SemiBold"/>
                                                 </DataTemplate>
                                             </Setter.Value>
                                         </Setter>
@@ -297,10 +297,10 @@
                                                                 </Border>
                                                                 <ControlTemplate.Triggers>
                                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                                        <Setter Property="Background" Value="#FF059669"/>
+                                                                        <Setter Property="Background" Value="#059669"/>
                                                                     </Trigger>
                                                                     <Trigger Property="IsPressed" Value="True">
-                                                                        <Setter Property="Background" Value="#FF047857"/>
+                                                                        <Setter Property="Background" Value="#047857"/>
                                                                     </Trigger>
                                                                 </ControlTemplate.Triggers>
                                                             </ControlTemplate>
@@ -352,7 +352,7 @@
                                         <Border Grid.Row="1" Background="{StaticResource CardBrush}"
                                                 Visibility="{Binding HasResults, Converter={StaticResource InverseBoolConverter}, ConverterParameter=True}">
                                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                <TextBlock Text="🔍" FontSize="64" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                                                <TextBlock Text="??" FontSize="64" HorizontalAlignment="Center" Margin="0,0,0,16"/>
                                                 <TextBlock Text="No VMware Infrastructure Found"
                                                            FontSize="24" FontWeight="SemiBold"
                                                            Foreground="{StaticResource SecondaryTextBrush}"

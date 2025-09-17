@@ -5,13 +5,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="1200"
-             Background="#FF1A202C">
+             Background="#1A202C">
     
     <UserControl.Resources>
         <ResourceDictionary>
             <!-- Modern Card Style -->
             <Style x:Key="ModernCardStyle" TargetType="Border">
-                <Setter Property="Background" Value="#FF2D3748"/>
+                <Setter Property="Background" Value="#2D3748"/>
                 <Setter Property="CornerRadius" Value="12"/>
                 <Setter Property="Padding" Value="24"/>
                 <Setter Property="Effect">
@@ -25,14 +25,14 @@
             <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="28"/>
                 <Setter Property="FontWeight" Value="Bold"/>
-                <Setter Property="Foreground" Value="#FFF7FAFC"/>
+                <Setter Property="Foreground" Value="#F7FAFC"/>
             </Style>
 
             <!-- Section Header Style -->
             <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="18"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
-                <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                <Setter Property="Foreground" Value="#E2E8F0"/>
                 <Setter Property="Margin" Value="0,0,0,16"/>
             </Style>
         </ResourceDictionary>

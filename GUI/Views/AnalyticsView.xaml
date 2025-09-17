@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="1000"
-             Background="#FF0F1419">
+             Background="#0F1419">
     
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -22,7 +22,7 @@
             <TextBlock Text="Analytics" 
                        FontSize="28" 
                        FontWeight="SemiBold"
-                       Foreground="#FFE2E8F0"/>
+                       Foreground="#E2E8F0"/>
             <TextBlock Text="Data analytics and visualization dashboard" 
                        FontSize="14" 
                        Foreground="{StaticResource SecondaryTextBrush}" 
@@ -31,8 +31,8 @@
         
         <!-- Content -->
         <Border Grid.Row="1" 
-                Background="#FF1A202C" 
-                BorderBrush="#FF2D3748" 
+                Background="#1A202C" 
+                BorderBrush="#2D3748" 
                 BorderThickness="1" 
                 CornerRadius="8">
             <Grid>
@@ -52,66 +52,66 @@
                               Visibility="{Binding HasData, Converter={StaticResource BoolToVisibilityConverter}}">
                     <WrapPanel Margin="16">
                         <!-- Analytics cards with real data from CSV sources -->
-                        <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
+                        <Border Background="#2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
                             <StackPanel>
-                                <TextBlock Text="👥 Users" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
-                                <TextBlock Text="{Binding TotalUsers}" FontSize="28" FontWeight="Bold" Foreground="#FF3B82F6"/>
+                                <TextBlock Text="👥 Users" FontSize="16" FontWeight="Bold" Foreground="#E2E8F0" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding TotalUsers}" FontSize="28" FontWeight="Bold" Foreground="#3B82F6"/>
                                 <TextBlock Text="Active Directory Users" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
-                        <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
+                        <Border Background="#2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
                             <StackPanel>
-                                <TextBlock Text="👥 Groups" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
-                                <TextBlock Text="{Binding TotalGroups}" FontSize="28" FontWeight="Bold" Foreground="#FF8B5CF6"/>
+                                <TextBlock Text="👥 Groups" FontSize="16" FontWeight="Bold" Foreground="#E2E8F0" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding TotalGroups}" FontSize="28" FontWeight="Bold" Foreground="#8B5CF6"/>
                                 <TextBlock Text="Security Groups" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
-                        <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
+                        <Border Background="#2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
                             <StackPanel>
-                                <TextBlock Text="🖥️ Infrastructure" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
-                                <TextBlock Text="{Binding TotalInfrastructure}" FontSize="28" FontWeight="Bold" Foreground="#FF10B981"/>
+                                <TextBlock Text="🖥️ Infrastructure" FontSize="16" FontWeight="Bold" Foreground="#E2E8F0" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding TotalInfrastructure}" FontSize="28" FontWeight="Bold" Foreground="#10B981"/>
                                 <TextBlock Text="Servers &amp; Workstations" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
-                        <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
+                        <Border Background="#2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
                             <StackPanel>
-                                <TextBlock Text="📱 Applications" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
-                                <TextBlock Text="{Binding TotalApplications}" FontSize="28" FontWeight="Bold" Foreground="#FFF59E0B"/>
+                                <TextBlock Text="📱 Applications" FontSize="16" FontWeight="Bold" Foreground="#E2E8F0" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding TotalApplications}" FontSize="28" FontWeight="Bold" Foreground="#F59E0B"/>
                                 <TextBlock Text="Installed Software" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
-                        <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
+                        <Border Background="#2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
                             <StackPanel>
-                                <TextBlock Text="📁 File Servers" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
-                                <TextBlock Text="{Binding TotalFileServers}" FontSize="28" FontWeight="Bold" Foreground="#FF06B6D4"/>
+                                <TextBlock Text="📁 File Servers" FontSize="16" FontWeight="Bold" Foreground="#E2E8F0" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding TotalFileServers}" FontSize="28" FontWeight="Bold" Foreground="#06B6D4"/>
                                 <TextBlock Text="File Share Systems" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
-                        <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
+                        <Border Background="#2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
                             <StackPanel>
-                                <TextBlock Text="🗄️ Databases" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
-                                <TextBlock Text="{Binding TotalDatabases}" FontSize="28" FontWeight="Bold" Foreground="#FFEF4444"/>
+                                <TextBlock Text="🗄️ Databases" FontSize="16" FontWeight="Bold" Foreground="#E2E8F0" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding TotalDatabases}" FontSize="28" FontWeight="Bold" Foreground="#EF4444"/>
                                 <TextBlock Text="SQL Instances" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
-                        <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
+                        <Border Background="#2D3748" CornerRadius="8" Padding="16" Margin="8" Width="280">
                             <StackPanel>
-                                <TextBlock Text="📋 Policies" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
-                                <TextBlock Text="{Binding TotalPolicies}" FontSize="28" FontWeight="Bold" Foreground="#FF84CC16"/>
+                                <TextBlock Text="📋 Policies" FontSize="16" FontWeight="Bold" Foreground="#E2E8F0" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding TotalPolicies}" FontSize="28" FontWeight="Bold" Foreground="#84CC16"/>
                                 <TextBlock Text="Group Policy Objects" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>
                         
-                        <Border Background="#FF374151" CornerRadius="8" Padding="16" Margin="8" Width="280">
+                        <Border Background="#374151" CornerRadius="8" Padding="16" Margin="8" Width="280">
                             <StackPanel>
-                                <TextBlock Text="📊 Total Assets" FontSize="16" FontWeight="Bold" Foreground="#FFE2E8F0" Margin="0,0,0,8"/>
-                                <TextBlock Text="{Binding TotalAssets}" FontSize="28" FontWeight="Bold" Foreground="#FFFBBF24"/>
+                                <TextBlock Text="📊 Total Assets" FontSize="16" FontWeight="Bold" Foreground="#E2E8F0" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding TotalAssets}" FontSize="28" FontWeight="Bold" Foreground="#FBBF24"/>
                                 <TextBlock Text="Combined Infrastructure" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             </StackPanel>
                         </Border>

@@ -11,7 +11,7 @@
         <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#FF2D3748"/>
+            <Setter Property="Foreground" Value="#2D3748"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
         <Style x:Key="FilterComboBoxStyle" TargetType="ComboBox">
@@ -24,7 +24,7 @@
             <Setter Property="Margin" Value="8,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#FFE2E8F0"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
             <Setter Property="Padding" Value="8,6"/>
         </Style>
     </UserControl.Resources>
@@ -42,7 +42,7 @@
         <TextBlock Grid.Row="0" Text="Infrastructure &amp; Assets" Style="{StaticResource HeaderTextStyle}" FontSize="20"/>
 
         <!-- Filter and Search Controls -->
-        <Border Grid.Row="1" Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="0,0,0,16">
+        <Border Grid.Row="1" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" Padding="16" Margin="0,0,0,16">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -103,27 +103,27 @@
 
             <!-- Status Info -->
             <TextBlock Grid.Column="1" Text="{Binding StatusInfo}" VerticalAlignment="Center" 
-                       Foreground="#FF718096" FontSize="12"/>
+                       Foreground="#718096" FontSize="12"/>
         </Grid>
 
         <!-- Main Content Area -->
         <Grid Grid.Row="3">
             <!-- Loading Indicator -->
-            <Border Background="#FF1A202C" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
+            <Border Background="#1A202C" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
                     Panel.ZIndex="10">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,0,0,16"/>
                     <TextBlock Text="{Binding LoadingMessage}" HorizontalAlignment="Center" 
-                               Foreground="#FF4A5568" FontSize="14"/>
+                               Foreground="#4A5568" FontSize="14"/>
                 </StackPanel>
             </Border>
 
             <!-- Error Message -->
-            <Border Background="#FFFEF2F2" BorderBrush="#FFED8077" BorderThickness="1" Padding="16" Margin="0,0,0,16"
+            <Border Background="#FEF2F2" BorderBrush="#ED8077" BorderThickness="1" Padding="16" Margin="0,0,0,16"
                     Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibilityConverter}}">
                 <StackPanel>
-                    <TextBlock Text="Error" FontWeight="Bold" Foreground="#FFE53E3E" Margin="0,0,0,8"/>
-                    <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFE53E3E" TextWrapping="Wrap"/>
+                    <TextBlock Text="Error" FontWeight="Bold" Foreground="#E53E3E" Margin="0,0,0,8"/>
+                    <TextBlock Text="{Binding ErrorMessage}" Foreground="#E53E3E" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
 
@@ -139,9 +139,9 @@
                       GridLinesVisibility="Horizontal"
                       HeadersVisibility="Column"
                       RowHeaderWidth="0"
-                      AlternatingRowBackground="#FFF8FAFC"
-                      Background="#FF1A202C"
-                      BorderBrush="#FFE2E8F0"
+                      AlternatingRowBackground="#F8FAFC"
+                      Background="#1A202C"
+                      BorderBrush="#E2E8F0"
                       BorderThickness="1"
                       VirtualizingPanel.IsVirtualizing="True"
                       VirtualizingPanel.VirtualizationMode="Recycling">
@@ -261,7 +261,7 @@
                                         CommandParameter="{Binding}"
                                         Padding="8,4" Margin="4"
                                         FontSize="10"
-                                        Background="#FF3182CE"
+                                        Background="#3182CE"
                                         Foreground="White"
                                         BorderThickness="0"
                                         ToolTip="View detailed information and relationships for this asset">
@@ -269,7 +269,7 @@
                                         <Style TargetType="Button">
                                             <Style.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#FF2C5AA0"/>
+                                                    <Setter Property="Background" Value="#2C5AA0"/>
                                                 </Trigger>
                                             </Style.Triggers>
                                         </Style>
@@ -284,7 +284,7 @@
                     <Style TargetType="DataGridRow">
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FFF7FAFC"/>
+                                <Setter Property="Background" Value="#F7FAFC"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -295,7 +295,7 @@
         <!-- Empty State -->
         <Border Grid.Row="3" 
                 Visibility="{Binding HasAssets, Converter={StaticResource BoolToVisibilityConverter}}"
-                Background="#FF1A202C">
+                Background="#1A202C">
             <Border.Style>
                 <Style TargetType="Border">
                     <Style.Triggers>
@@ -312,11 +312,11 @@
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
                 <TextBlock Text="No Assets Found" FontSize="18" FontWeight="SemiBold" 
-                           HorizontalAlignment="Center" Foreground="#FF4A5568" Margin="0,0,0,8"/>
+                           HorizontalAlignment="Center" Foreground="#4A5568" Margin="0,0,0,8"/>
                 <TextBlock Text="No infrastructure assets were found in the CSV data files." 
-                           HorizontalAlignment="Center" Foreground="#FF718096" Margin="0,0,0,16"/>
+                           HorizontalAlignment="Center" Foreground="#718096" Margin="0,0,0,16"/>
                 <Button Content="Refresh Data" Command="{Binding RefreshAssetsCommand}" 
-                        Padding="16,8" Background="#FF3182CE" Foreground="White" BorderThickness="0"/>
+                        Padding="16,8" Background="#3182CE" Foreground="White" BorderThickness="0"/>
             </StackPanel>
         </Border>
     </Grid>

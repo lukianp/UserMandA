@@ -4,7 +4,7 @@
 
     <!-- System Overview Widget Template -->
     <DataTemplate DataType="{x:Type widgets:SystemOverviewWidget}">
-        <Border Background="#FF1C2433" BorderBrush="#FF374151" BorderThickness="1" CornerRadius="8" Padding="16">
+        <Border Background="#1C2433" BorderBrush="#374151" BorderThickness="1" CornerRadius="8" Padding="16">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -20,7 +20,7 @@
                     
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                         <TextBlock Text="{Binding Icon}" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding Title}" Foreground="#FFE2E8F0" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Title}" Foreground="#E2E8F0" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </StackPanel>
                     
                     <TextBlock Grid.Column="1" Text="{Binding LastUpdated, StringFormat='{}{0:HH:mm}'}" 
@@ -30,11 +30,11 @@
                 <!-- Content -->
                 <UniformGrid Grid.Row="1" Columns="2" Rows="2" Margin="0,16,0,0">
                     <!-- Users -->
-                    <Border Background="#FF2D3748" CornerRadius="6" Padding="12" Margin="4">
+                    <Border Background="#2D3748" CornerRadius="6" Padding="12" Margin="4">
                         <StackPanel>
                             <TextBlock Text="👥" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,4"/>
                             <TextBlock Text="{Binding TotalUsers, StringFormat='{}{0:N0}'}" 
-                                       Foreground="#FFE2E8F0" FontSize="18" FontWeight="Bold" 
+                                       Foreground="#E2E8F0" FontSize="18" FontWeight="Bold" 
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Users" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" 
                                        HorizontalAlignment="Center"/>
@@ -42,11 +42,11 @@
                     </Border>
 
                     <!-- Computers -->
-                    <Border Background="#FF2D3748" CornerRadius="6" Padding="12" Margin="4">
+                    <Border Background="#2D3748" CornerRadius="6" Padding="12" Margin="4">
                         <StackPanel>
                             <TextBlock Text="💻" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,4"/>
                             <TextBlock Text="{Binding TotalComputers, StringFormat='{}{0:N0}'}" 
-                                       Foreground="#FFE2E8F0" FontSize="18" FontWeight="Bold" 
+                                       Foreground="#E2E8F0" FontSize="18" FontWeight="Bold" 
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Computers" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" 
                                        HorizontalAlignment="Center"/>
@@ -54,11 +54,11 @@
                     </Border>
 
                     <!-- Groups -->
-                    <Border Background="#FF2D3748" CornerRadius="6" Padding="12" Margin="4">
+                    <Border Background="#2D3748" CornerRadius="6" Padding="12" Margin="4">
                         <StackPanel>
                             <TextBlock Text="👤" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,4"/>
                             <TextBlock Text="{Binding TotalGroups, StringFormat='{}{0:N0}'}" 
-                                       Foreground="#FFE2E8F0" FontSize="18" FontWeight="Bold" 
+                                       Foreground="#E2E8F0" FontSize="18" FontWeight="Bold" 
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Groups" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" 
                                        HorizontalAlignment="Center"/>
@@ -66,11 +66,11 @@
                     </Border>
 
                     <!-- Health Status -->
-                    <Border Background="#FF2D3748" CornerRadius="6" Padding="12" Margin="4">
+                    <Border Background="#2D3748" CornerRadius="6" Padding="12" Margin="4">
                         <StackPanel>
                             <TextBlock Text="❤️" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,4"/>
                             <TextBlock Text="{Binding HealthStatus}" 
-                                       Foreground="#FFE2E8F0" FontSize="14" FontWeight="Bold" 
+                                       Foreground="#E2E8F0" FontSize="14" FontWeight="Bold" 
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Health" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" 
                                        HorizontalAlignment="Center"/>
@@ -83,8 +83,8 @@
                         Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <ProgressBar IsIndeterminate="True" Width="100" Height="4" 
-                                     Background="Transparent" Foreground="#FF667eea"/>
-                        <TextBlock Text="Loading..." Foreground="#FFE2E8F0" FontSize="12" 
+                                     Background="Transparent" Foreground="#667eea"/>
+                        <TextBlock Text="Loading..." Foreground="#E2E8F0" FontSize="12" 
                                    HorizontalAlignment="Center" Margin="0,8,0,0"/>
                     </StackPanel>
                 </Border>
@@ -96,7 +96,7 @@
 
     <!-- Risk Assessment Widget Template -->
     <DataTemplate DataType="{x:Type widgets:RiskAssessmentWidget}">
-        <Border Background="#FF1C2433" BorderBrush="#FF374151" BorderThickness="1" CornerRadius="8" Padding="16">
+        <Border Background="#1C2433" BorderBrush="#374151" BorderThickness="1" CornerRadius="8" Padding="16">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -113,7 +113,7 @@
                     
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                         <TextBlock Text="{Binding Icon}" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding Title}" Foreground="#FFE2E8F0" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Title}" Foreground="#E2E8F0" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </StackPanel>
                     
                     <TextBlock Grid.Column="1" Text="{Binding LastUpdated, StringFormat='{}{0:HH:mm}'}" 
@@ -121,11 +121,11 @@
                 </Grid>
 
                 <!-- Risk Score -->
-                <Border Grid.Row="1" Background="#FF2D3748" CornerRadius="6" Padding="12" Margin="0,12,0,0">
+                <Border Grid.Row="1" Background="#2D3748" CornerRadius="6" Padding="12" Margin="0,12,0,0">
                     <StackPanel HorizontalAlignment="Center">
                         <TextBlock Text="Overall Risk Score" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding OverallRiskScore, StringFormat='{}{0:F1}'}" 
-                                   Foreground="#FFF56565" FontSize="24" FontWeight="Bold" 
+                                   Foreground="#F56565" FontSize="24" FontWeight="Bold" 
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Border>
@@ -135,7 +135,7 @@
                     <ItemsControl ItemsSource="{Binding RiskItems}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#FF2D3748" CornerRadius="4" Padding="8" Margin="0,2">
+                                <Border Background="#2D3748" CornerRadius="4" Padding="8" Margin="0,2">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -145,7 +145,7 @@
                                         
                                         <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                         <StackPanel Grid.Column="1">
-                                            <TextBlock Text="{Binding Category}" Foreground="#FFE2E8F0" FontSize="12" FontWeight="Medium"/>
+                                            <TextBlock Text="{Binding Category}" Foreground="#E2E8F0" FontSize="12" FontWeight="Medium"/>
                                             <TextBlock Text="{Binding Description}" Foreground="{StaticResource SecondaryTextBrush}" FontSize="10" TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" HorizontalAlignment="Right">
@@ -168,8 +168,8 @@
                         Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <ProgressBar IsIndeterminate="True" Width="100" Height="4" 
-                                     Background="Transparent" Foreground="#FF667eea"/>
-                        <TextBlock Text="Loading..." Foreground="#FFE2E8F0" FontSize="12" 
+                                     Background="Transparent" Foreground="#667eea"/>
+                        <TextBlock Text="Loading..." Foreground="#E2E8F0" FontSize="12" 
                                    HorizontalAlignment="Center" Margin="0,8,0,0"/>
                     </StackPanel>
                 </Border>
@@ -179,7 +179,7 @@
 
     <!-- Migration Progress Widget Template -->
     <DataTemplate DataType="{x:Type widgets:MigrationProgressWidget}">
-        <Border Background="#FF1C2433" BorderBrush="#FF374151" BorderThickness="1" CornerRadius="8" Padding="16">
+        <Border Background="#1C2433" BorderBrush="#374151" BorderThickness="1" CornerRadius="8" Padding="16">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -196,7 +196,7 @@
                     
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                         <TextBlock Text="{Binding Icon}" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding Title}" Foreground="#FFE2E8F0" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Title}" Foreground="#E2E8F0" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </StackPanel>
                     
                     <TextBlock Grid.Column="1" Text="{Binding LastUpdated, StringFormat='{}{0:HH:mm}'}" 
@@ -204,7 +204,7 @@
                 </Grid>
 
                 <!-- Overall Progress -->
-                <Border Grid.Row="1" Background="#FF2D3748" CornerRadius="6" Padding="12" Margin="0,12,0,0">
+                <Border Grid.Row="1" Background="#2D3748" CornerRadius="6" Padding="12" Margin="0,12,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -214,11 +214,11 @@
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="Overall Progress" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11"/>
                             <ProgressBar Value="{Binding OverallProgress}" Maximum="100" Height="8" 
-                                         Background="#FF4A5568" Foreground="#FF48BB78" Margin="0,4"/>
+                                         Background="#4A5568" Foreground="#48BB78" Margin="0,4"/>
                         </StackPanel>
                         
                         <TextBlock Grid.Column="1" Text="{Binding OverallProgress, StringFormat='{}{0:F1}%'}" 
-                                   Foreground="#FFE2E8F0" FontSize="16" FontWeight="Bold" 
+                                   Foreground="#E2E8F0" FontSize="16" FontWeight="Bold" 
                                    VerticalAlignment="Center" Margin="16,0,0,0"/>
                     </Grid>
                 </Border>
@@ -228,7 +228,7 @@
                     <ItemsControl ItemsSource="{Binding MigrationWaves}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#FF2D3748" CornerRadius="4" Padding="8" Margin="0,2">
+                                <Border Background="#2D3748" CornerRadius="4" Padding="8" Margin="0,2">
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
@@ -242,7 +242,7 @@
                                             </Grid.ColumnDefinitions>
                                             
                                             <TextBlock Grid.Column="0" Text="{Binding Name}" 
-                                                       Foreground="#FFE2E8F0" FontSize="12" FontWeight="Medium" 
+                                                       Foreground="#E2E8F0" FontSize="12" FontWeight="Medium" 
                                                        VerticalAlignment="Center"/>
                                             <TextBlock Grid.Column="1" Text="{Binding Status}" 
                                                        Foreground="{StaticResource SecondaryTextBrush}" FontSize="10" 
@@ -257,7 +257,7 @@
                                             
                                             <ProgressBar Grid.Column="0" Value="{Binding ProgressPercentage}" 
                                                          Maximum="100" Height="6" 
-                                                         Background="#FF4A5568" Foreground="#FF667eea"/>
+                                                         Background="#4A5568" Foreground="#667eea"/>
                                             <TextBlock Grid.Column="1" 
                                                        Text="{Binding ProgressText}"
                                                        Foreground="{StaticResource SecondaryTextBrush}" FontSize="10" 
@@ -275,8 +275,8 @@
                         Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <ProgressBar IsIndeterminate="True" Width="100" Height="4" 
-                                     Background="Transparent" Foreground="#FF667eea"/>
-                        <TextBlock Text="Loading..." Foreground="#FFE2E8F0" FontSize="12" 
+                                     Background="Transparent" Foreground="#667eea"/>
+                        <TextBlock Text="Loading..." Foreground="#E2E8F0" FontSize="12" 
                                    HorizontalAlignment="Center" Margin="0,8,0,0"/>
                     </StackPanel>
                 </Border>

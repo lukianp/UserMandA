@@ -6,14 +6,14 @@
              xmlns:services="clr-namespace:MandADiscoverySuite.Services"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="800"
-             Background="#FF0F1419">
+             Background="#0F1419">
     
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         
         <!-- Filter Rule Template -->
         <DataTemplate x:Key="FilterRuleTemplate">
-            <Border Background="#FF1C2433" BorderBrush="#FF374151" BorderThickness="1" 
+            <Border Background="#1C2433" BorderBrush="#374151" BorderThickness="1" 
                     CornerRadius="6" Padding="12" Margin="0,4">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -33,9 +33,9 @@
                     <ComboBox Grid.Column="1" 
                               Text="{Binding PropertyName}"
                               IsEditable="True"
-                              Background="#FF2D3748" 
-                              Foreground="#FFE2E8F0"
-                              BorderBrush="#FF4A5568"
+                              Background="#2D3748" 
+                              Foreground="#E2E8F0"
+                              BorderBrush="#4A5568"
                               BorderThickness="1"
                               Padding="8,6"
                               FontSize="12"
@@ -44,9 +44,9 @@
                     <!-- Operator -->
                     <ComboBox Grid.Column="2" 
                               SelectedItem="{Binding Operator}"
-                              Background="#FF2D3748" 
-                              Foreground="#FFE2E8F0"
-                              BorderBrush="#FF4A5568"
+                              Background="#2D3748" 
+                              Foreground="#E2E8F0"
+                              BorderBrush="#4A5568"
                               BorderThickness="1"
                               Padding="8,6"
                               FontSize="12"
@@ -63,9 +63,9 @@
                         <!-- Primary Value -->
                         <TextBox Grid.Column="0" 
                                  Text="{Binding Value}"
-                                 Background="#FF2D3748" 
-                                 Foreground="#FFE2E8F0"
-                                 BorderBrush="#FF4A5568"
+                                 Background="#2D3748" 
+                                 Foreground="#E2E8F0"
+                                 BorderBrush="#4A5568"
                                  BorderThickness="1"
                                  Padding="8,6"
                                  FontSize="12"/>
@@ -81,9 +81,9 @@
                         <!-- Secondary Value (for Between operators) -->
                         <TextBox Grid.Column="2" 
                                  Text="{Binding SecondaryValue}"
-                                 Background="#FF2D3748" 
-                                 Foreground="#FFE2E8F0"
-                                 BorderBrush="#FF4A5568"
+                                 Background="#2D3748" 
+                                 Foreground="#E2E8F0"
+                                 BorderBrush="#4A5568"
                                  BorderThickness="1"
                                  Padding="8,6"
                                  FontSize="12"
@@ -94,9 +94,9 @@
                     <ComboBox Grid.Column="4" 
                               SelectedItem="{Binding DataType}"
                               ItemsSource="{Binding DataContext.DataTypes, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                              Background="#FF2D3748" 
-                              Foreground="#FFE2E8F0"
-                              BorderBrush="#FF4A5568"
+                              Background="#2D3748" 
+                              Foreground="#E2E8F0"
+                              BorderBrush="#4A5568"
                               BorderThickness="1"
                               Padding="8,6"
                               FontSize="12"
@@ -108,7 +108,7 @@
                             Content="✕"
                             Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"
-                            Background="#FFF56565" 
+                            Background="#F56565" 
                             Foreground="White"
                             BorderThickness="0"
                             Width="28" Height="28"
@@ -121,18 +121,18 @@
         
         <!-- Quick Filter Template -->
         <DataTemplate x:Key="QuickFilterTemplate">
-            <Border Background="#FF2D3748" BorderBrush="#FF4A5568" BorderThickness="1" 
+            <Border Background="#2D3748" BorderBrush="#4A5568" BorderThickness="1" 
                     CornerRadius="4" Padding="8,4" Margin="0,0,8,4">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="{Binding DisplayName}" 
-                               Foreground="#FFE2E8F0" 
+                               Foreground="#E2E8F0" 
                                FontSize="11" 
                                FontWeight="Medium"
                                VerticalAlignment="Center"
                                Margin="0,0,6,0"/>
                     <ComboBox ItemsSource="{Binding PredefinedValues}"
                               Background="Transparent" 
-                              Foreground="#FFE2E8F0"
+                              Foreground="#E2E8F0"
                               BorderThickness="0"
                               FontSize="11"
                               MinWidth="60"/>
@@ -154,8 +154,8 @@
                 Panel.ZIndex="10"/>
         
         <!-- Filter Panel -->
-        <Border Background="#FF0F1419" 
-                BorderBrush="#FF374151" 
+        <Border Background="#0F1419" 
+                BorderBrush="#374151" 
                 BorderThickness="1,0,0,0"
                 Visibility="{Binding IsFilterPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"
                 HorizontalAlignment="Right"
@@ -180,7 +180,7 @@
                     
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="🔍" FontSize="18" Margin="0,0,8,0"/>
-                        <TextBlock Text="Advanced Filters" Foreground="#FFE2E8F0" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Text="Advanced Filters" Foreground="#E2E8F0" FontSize="16" FontWeight="SemiBold"/>
                     </StackPanel>
                     
                     <ToggleButton Grid.Column="1" 
@@ -235,9 +235,9 @@
                             <TextBlock Text="Logic:" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" Margin="0,0,8,0"/>
                             <ComboBox ItemsSource="{Binding FilterLogicOptions}" 
                                       SelectedItem="{Binding CurrentFilter.Logic}"
-                                      Background="#FF2D3748" 
-                                      Foreground="#FFE2E8F0"
-                                      BorderBrush="#FF4A5568"
+                                      Background="#2D3748" 
+                                      Foreground="#E2E8F0"
+                                      BorderBrush="#4A5568"
                                       FontSize="12"
                                       MinWidth="60"/>
                         </StackPanel>
@@ -246,7 +246,7 @@
                                 Content="+ Add Rule"
                                 Command="{Binding AddRuleCommand}"
                                 Style="{StaticResource ModernButtonStyle}"
-                                Background="#FF48BB78"
+                                Background="#48BB78"
                                 FontSize="12"
                                 Padding="8,4"/>
                     </Grid>
@@ -262,9 +262,9 @@
                                   ItemsSource="{Binding SavedFilters}"
                                   SelectedItem="{Binding SelectedSavedFilter}"
                                   DisplayMemberPath="Name"
-                                  Background="#FF2D3748" 
-                                  Foreground="#FFE2E8F0"
-                                  BorderBrush="#FF4A5568"
+                                  Background="#2D3748" 
+                                  Foreground="#E2E8F0"
+                                  BorderBrush="#4A5568"
                                   FontSize="12"
                                   Margin="0,0,8,0">
                             <ComboBox.ItemTemplate>
@@ -286,7 +286,7 @@
                                 Content="🗑️"
                                 Command="{Binding DeleteFilterCommand}"
                                 CommandParameter="{Binding SelectedSavedFilter}"
-                                Background="#FFF56565"
+                                Background="#F56565"
                                 Style="{StaticResource ModernButtonStyle}"
                                 FontSize="12"
                                 Width="28" Height="28"/>
@@ -318,9 +318,9 @@
                         
                         <TextBox Grid.Column="0" 
                                  Text="{Binding FilterName, UpdateSourceTrigger=PropertyChanged}"
-                                 Background="#FF2D3748" 
-                                 Foreground="#FFE2E8F0"
-                                 BorderBrush="#FF4A5568"
+                                 Background="#2D3748" 
+                                 Foreground="#E2E8F0"
+                                 BorderBrush="#4A5568"
                                  FontSize="12"
                                  Padding="8,6"
                                  Margin="0,0,8,0"
@@ -330,7 +330,7 @@
                                 Content="💾"
                                 Command="{Binding SaveFilterCommand}"
                                 Style="{StaticResource ModernButtonStyle}"
-                                Background="#FF667eea"
+                                Background="#667eea"
                                 FontSize="12"
                                 Width="32" Height="32"/>
                     </Grid>
@@ -347,7 +347,7 @@
                                 Content="Apply"
                                 Command="{Binding ApplyFilterCommand}"
                                 Style="{StaticResource ModernButtonStyle}"
-                                Background="#FF48BB78"
+                                Background="#48BB78"
                                 FontWeight="SemiBold"
                                 Margin="0,0,4,0"/>
                         
@@ -355,14 +355,14 @@
                                 Content="Clear"
                                 Command="{Binding ClearFilterCommand}"
                                 Style="{StaticResource ModernButtonStyle}"
-                                Background="#FFF56565"
+                                Background="#F56565"
                                 Margin="2,0"/>
                         
                         <Button Grid.Column="2" 
                                 Content="Export"
                                 Command="{Binding ExportFilterCommand}"
                                 Style="{StaticResource ModernButtonStyle}"
-                                Background="#FF667eea"
+                                Background="#667eea"
                                 Margin="4,0,0,0"/>
                     </Grid>
                 </Grid>
@@ -374,9 +374,9 @@
                         Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <ProgressBar IsIndeterminate="True" Width="200" Height="4" 
-                                     Background="Transparent" Foreground="#FF667eea" Margin="0,0,0,12"/>
+                                     Background="Transparent" Foreground="#667eea" Margin="0,0,0,12"/>
                         <TextBlock Text="Applying filters..." 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    FontSize="14" 
                                    HorizontalAlignment="Center"/>
                     </StackPanel>

@@ -4,58 +4,58 @@
     <!-- Dark Theme Color Palette -->
     
     <!-- Background Colors -->
-    <SolidColorBrush x:Key="BackgroundBrush" Color="#FF1F2937"/> <!-- Dark gray background -->
-    <SolidColorBrush x:Key="SurfaceBrush" Color="#FF374151"/> <!-- Medium gray surface -->
-    <SolidColorBrush x:Key="CardBrush" Color="#FF4B5563"/> <!-- Light gray cards -->
-    <SolidColorBrush x:Key="ElevatedBrush" Color="#FF6B7280"/> <!-- Elevated surfaces -->
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#1F2937"/> <!-- Dark gray background -->
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#374151"/> <!-- Medium gray surface -->
+    <SolidColorBrush x:Key="CardBrush" Color="#4B5563"/> <!-- Light gray cards -->
+    <SolidColorBrush x:Key="ElevatedBrush" Color="#6B7280"/> <!-- Elevated surfaces -->
 
     <!-- Primary Brushes -->
-    <SolidColorBrush x:Key="PrimaryBackgroundBrush" Color="#FF1F2937"/> <!-- Primary background -->
-    <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#FFF9FAFB"/> <!-- Primary foreground for text -->
+    <SolidColorBrush x:Key="PrimaryBackgroundBrush" Color="#1F2937"/> <!-- Primary background -->
+    <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#F9FAFB"/> <!-- Primary foreground for text -->
 
     <!-- Text Colors -->
-    <SolidColorBrush x:Key="ForegroundBrush" Color="#FFF9FAFB"/> <!-- Primary text -->
-    <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#FFE5E7EB"/> <!-- Secondary text -->
-    <SolidColorBrush x:Key="MutedForegroundBrush" Color="#FFD1D5DB"/> <!-- Muted text -->
-    <SolidColorBrush x:Key="DisabledForegroundBrush" Color="#FF9CA3AF"/> <!-- Disabled text -->
+    <SolidColorBrush x:Key="ForegroundBrush" Color="#F9FAFB"/> <!-- Primary text -->
+    <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#E5E7EB"/> <!-- Secondary text -->
+    <SolidColorBrush x:Key="MutedForegroundBrush" Color="#D1D5DB"/> <!-- Muted text -->
+    <SolidColorBrush x:Key="DisabledForegroundBrush" Color="#9CA3AF"/> <!-- Disabled text -->
     
     <!-- Border Colors -->
-    <SolidColorBrush x:Key="BorderBrush" Color="#FF6B7280"/> <!-- Default borders -->
-    <SolidColorBrush x:Key="FocusBorderBrush" Color="#FF3B82F6"/> <!-- Focus borders -->
-    <SolidColorBrush x:Key="HoverBorderBrush" Color="#FF93C5FD"/> <!-- Hover borders -->
+    <SolidColorBrush x:Key="BorderBrush" Color="#6B7280"/> <!-- Default borders -->
+    <SolidColorBrush x:Key="FocusBorderBrush" Color="#3B82F6"/> <!-- Focus borders -->
+    <SolidColorBrush x:Key="HoverBorderBrush" Color="#93C5FD"/> <!-- Hover borders -->
     
     <!-- Accent Colors (Default Blue) -->
-    <SolidColorBrush x:Key="AccentBrush" Color="#FF3B82F6"/> <!-- Primary accent -->
-    <SolidColorBrush x:Key="AccentLightBrush" Color="#FF93C5FD"/> <!-- Light accent -->
-    <SolidColorBrush x:Key="AccentDarkBrush" Color="#FF1D4ED8"/> <!-- Dark accent -->
-    <SolidColorBrush x:Key="AccentHoverBrush" Color="#FF60A5FA"/> <!-- Hover accent -->
-    <SolidColorBrush x:Key="AccentPressedBrush" Color="#FF2563EB"/> <!-- Pressed accent -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#3B82F6"/> <!-- Primary accent -->
+    <SolidColorBrush x:Key="AccentLightBrush" Color="#93C5FD"/> <!-- Light accent -->
+    <SolidColorBrush x:Key="AccentDarkBrush" Color="#1D4ED8"/> <!-- Dark accent -->
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#60A5FA"/> <!-- Hover accent -->
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#2563EB"/> <!-- Pressed accent -->
     
     <!-- State Colors -->
-    <SolidColorBrush x:Key="SuccessBrush" Color="#FF10B981"/> <!-- Success green -->
-    <SolidColorBrush x:Key="WarningBrush" Color="#FFF59E0B"/> <!-- Warning amber -->
-    <SolidColorBrush x:Key="ErrorBrush" Color="#FFEF4444"/> <!-- Error red -->
-    <SolidColorBrush x:Key="InfoBrush" Color="#FF06B6D4"/> <!-- Info cyan -->
+    <SolidColorBrush x:Key="SuccessBrush" Color="#10B981"/> <!-- Success green -->
+    <SolidColorBrush x:Key="WarningBrush" Color="#F59E0B"/> <!-- Warning amber -->
+    <SolidColorBrush x:Key="ErrorBrush" Color="#EF4444"/> <!-- Error red -->
+    <SolidColorBrush x:Key="InfoBrush" Color="#06B6D4"/> <!-- Info cyan -->
     
     <!-- Interactive States -->
-    <SolidColorBrush x:Key="HoverBrush" Color="#FF6B7280"/> <!-- Hover overlay -->
-    <SolidColorBrush x:Key="PressedBrush" Color="#FF9CA3AF"/> <!-- Pressed overlay -->
-    <SolidColorBrush x:Key="SelectedBrush" Color="#FF1E3A8A"/> <!-- Selected items -->
-    <SolidColorBrush x:Key="FocusBrush" Color="#FF3B82F6"/> <!-- Focus overlay -->
+    <SolidColorBrush x:Key="HoverBrush" Color="#6B7280"/> <!-- Hover overlay -->
+    <SolidColorBrush x:Key="PressedBrush" Color="#9CA3AF"/> <!-- Pressed overlay -->
+    <SolidColorBrush x:Key="SelectedBrush" Color="#1E3A8A"/> <!-- Selected items -->
+    <SolidColorBrush x:Key="FocusBrush" Color="#3B82F6"/> <!-- Focus overlay -->
     
     <!-- Input Controls -->
-    <SolidColorBrush x:Key="InputBackgroundBrush" Color="#FF374151"/> <!-- Input backgrounds -->
-    <SolidColorBrush x:Key="InputBorderBrush" Color="#FF6B7280"/> <!-- Input borders -->
-    <SolidColorBrush x:Key="InputFocusBrush" Color="#FF3B82F6"/> <!-- Input focus -->
-    <SolidColorBrush x:Key="InputDisabledBrush" Color="#FF4B5563"/> <!-- Disabled inputs -->
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="#374151"/> <!-- Input backgrounds -->
+    <SolidColorBrush x:Key="InputBorderBrush" Color="#6B7280"/> <!-- Input borders -->
+    <SolidColorBrush x:Key="InputFocusBrush" Color="#3B82F6"/> <!-- Input focus -->
+    <SolidColorBrush x:Key="InputDisabledBrush" Color="#4B5563"/> <!-- Disabled inputs -->
     
     <!-- Additional Theme Keys -->
-    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFF9FAFB"/> <!-- Primary text (same as ForegroundBrush) -->
-    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#FFE5E7EB"/> <!-- Secondary text (same as SecondaryForegroundBrush) -->
-    <SolidColorBrush x:Key="ButtonHoverBrush" Color="#FF60A5FA"/> <!-- Button hover (same as AccentHoverBrush) -->
-    <SolidColorBrush x:Key="ButtonPressedBrush" Color="#FF9CA3AF"/> <!-- Button pressed (same as PressedBrush) -->
-    <SolidColorBrush x:Key="InputFocusedBackgroundBrush" Color="#FF1E3A8A"/> <!-- Input focused background (same as SelectedBrush) -->
-    <SolidColorBrush x:Key="ValidBorderBrush" Color="#FF10B981"/> <!-- Valid input border -->
-    <SolidColorBrush x:Key="InvalidBorderBrush" Color="#FFEF4444"/> <!-- Invalid input border -->
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F9FAFB"/> <!-- Primary text (same as ForegroundBrush) -->
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#E5E7EB"/> <!-- Secondary text (same as SecondaryForegroundBrush) -->
+    <SolidColorBrush x:Key="ButtonHoverBrush" Color="#60A5FA"/> <!-- Button hover (same as AccentHoverBrush) -->
+    <SolidColorBrush x:Key="ButtonPressedBrush" Color="#9CA3AF"/> <!-- Button pressed (same as PressedBrush) -->
+    <SolidColorBrush x:Key="InputFocusedBackgroundBrush" Color="#1E3A8A"/> <!-- Input focused background (same as SelectedBrush) -->
+    <SolidColorBrush x:Key="ValidBorderBrush" Color="#10B981"/> <!-- Valid input border -->
+    <SolidColorBrush x:Key="InvalidBorderBrush" Color="#EF4444"/> <!-- Invalid input border -->
 
 </ResourceDictionary>

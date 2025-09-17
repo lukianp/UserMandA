@@ -5,15 +5,15 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="1200"
-             Background="#FF0F1419">
+             Background="#0F1419">
     
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         
         <!-- ShareGate-inspired Styles -->
         <Style x:Key="MigrationCard" TargetType="Border">
-            <Setter Property="Background" Value="#FF1A202C"/>
-            <Setter Property="BorderBrush" Value="#FF2D3748"/>
+            <Setter Property="Background" Value="#1A202C"/>
+            <Setter Property="BorderBrush" Value="#2D3748"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Margin" Value="8"/>
@@ -26,7 +26,7 @@
         </Style>
         
         <Style x:Key="PrimaryButton" TargetType="Button">
-            <Setter Property="Background" Value="#FF3B82F6"/>
+            <Setter Property="Background" Value="#3B82F6"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="16,8"/>
@@ -43,13 +43,13 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF2563EB"/>
+                                <Setter Property="Background" Value="#2563EB"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#FF1D4ED8"/>
+                                <Setter Property="Background" Value="#1D4ED8"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Background" Value="#FF6B7280"/>
+                                <Setter Property="Background" Value="#6B7280"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -59,8 +59,8 @@
         
         <Style x:Key="SecondaryButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#FF60A5FA"/>
-            <Setter Property="BorderBrush" Value="#FF60A5FA"/>
+            <Setter Property="Foreground" Value="#60A5FA"/>
+            <Setter Property="BorderBrush" Value="#60A5FA"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="16,8"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -78,8 +78,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF1E3A8A"/>
-                                <Setter Property="BorderBrush" Value="#FF3B82F6"/>
+                                <Setter Property="Background" Value="#1E3A8A"/>
+                                <Setter Property="BorderBrush" Value="#3B82F6"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -88,8 +88,8 @@
         </Style>
         
         <Style x:Key="MetricCard" TargetType="Border">
-            <Setter Property="Background" Value="#FF1E293B"/>
-            <Setter Property="BorderBrush" Value="#FF334155"/>
+            <Setter Property="Background" Value="#1E293B"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="20"/>
@@ -115,18 +115,18 @@
                             </Border>
                             <Rectangle Name="ActiveIndicator" 
                                      Height="3" 
-                                     Fill="#FF3B82F6" 
+                                     Fill="#3B82F6" 
                                      VerticalAlignment="Bottom" 
                                      Visibility="Collapsed"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="#FFE2E8F0"/>
-                                <Setter Property="Background" Value="#FF2D3748"/>
+                                <Setter Property="Foreground" Value="#E2E8F0"/>
+                                <Setter Property="Background" Value="#2D3748"/>
                             </Trigger>
                             <Trigger Property="Tag" Value="Active">
-                                <Setter Property="Foreground" Value="#FFE2E8F0"/>
-                                <Setter Property="Background" Value="#FF1A202C"/>
+                                <Setter Property="Foreground" Value="#E2E8F0"/>
+                                <Setter Property="Background" Value="#1A202C"/>
                                 <Setter TargetName="ActiveIndicator" Property="Visibility" Value="Visible"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -144,7 +144,7 @@
         </Grid.RowDefinitions>
         
         <!-- Header -->
-        <Border Grid.Row="0" Background="#FF1A202C" BorderBrush="#FF2D3748" BorderThickness="0,0,0,1" Padding="24,16">
+        <Border Grid.Row="0" Background="#1A202C" BorderBrush="#2D3748" BorderThickness="0,0,0,1" Padding="24,16">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -155,7 +155,7 @@
                     <TextBlock Text="Migration Orchestrator" 
                                FontSize="28" 
                                FontWeight="Bold"
-                               Foreground="#FFE2E8F0"/>
+                               Foreground="#E2E8F0"/>
                     <TextBlock Text="Enterprise migration planning, execution, and monitoring" 
                                FontSize="14" 
                                Foreground="{StaticResource SecondaryTextBrush}" 
@@ -175,7 +175,7 @@
         </Border>
         
         <!-- Tab Navigation -->
-        <Border Grid.Row="1" Background="#FF1A202C" BorderBrush="#FF2D3748" BorderThickness="0,0,0,1">
+        <Border Grid.Row="1" Background="#1A202C" BorderBrush="#2D3748" BorderThickness="0,0,0,1">
             <StackPanel Orientation="Horizontal" Margin="24,0">
                 <Button Content="📊 Dashboard" 
                         Command="{Binding SwitchTabCommand}" 
@@ -221,11 +221,11 @@
             <Border Background="#AA000000"/>
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <ProgressBar Width="200" Height="6" IsIndeterminate="True" 
-                           Foreground="#FF3B82F6" Background="#FF2D3748" 
+                           Foreground="#3B82F6" Background="#2D3748" 
                            BorderThickness="0" Margin="0,0,0,16"/>
                 <TextBlock Text="{Binding LoadingMessage}" 
                            FontSize="16" 
-                           Foreground="#FFE2E8F0" 
+                           Foreground="#E2E8F0" 
                            HorizontalAlignment="Center"/>
             </StackPanel>
         </Grid>
@@ -241,7 +241,7 @@
                 <TextBlock Text="Overview" 
                            FontSize="22" 
                            FontWeight="SemiBold" 
-                           Foreground="#FFE2E8F0" 
+                           Foreground="#E2E8F0" 
                            Margin="0,0,0,16"/>
                 
                 <UniformGrid Columns="4" Margin="0,0,0,24">
@@ -250,7 +250,7 @@
                             <TextBlock Text="{Binding Metrics.TotalProjects}" 
                                        FontSize="32" 
                                        FontWeight="Bold" 
-                                       Foreground="#FF60A5FA"/>
+                                       Foreground="#60A5FA"/>
                             <TextBlock Text="Total Projects" 
                                        FontSize="14" 
                                        Foreground="{StaticResource SecondaryTextBrush}"/>
@@ -262,7 +262,7 @@
                             <TextBlock Text="{Binding Metrics.ActiveMigrations}" 
                                        FontSize="32" 
                                        FontWeight="Bold" 
-                                       Foreground="#FF10B981"/>
+                                       Foreground="#10B981"/>
                             <TextBlock Text="Active Migrations" 
                                        FontSize="14" 
                                        Foreground="{StaticResource SecondaryTextBrush}"/>
@@ -274,7 +274,7 @@
                             <TextBlock Text="{Binding Metrics.CompletedMigrations}" 
                                        FontSize="32" 
                                        FontWeight="Bold" 
-                                       Foreground="#FF34D399"/>
+                                       Foreground="#34D399"/>
                             <TextBlock Text="Completed" 
                                        FontSize="14" 
                                        Foreground="{StaticResource SecondaryTextBrush}"/>
@@ -286,7 +286,7 @@
                             <TextBlock Text="{Binding Metrics.OverallCompletionPercentage, StringFormat={}{0:F1}%}" 
                                        FontSize="32" 
                                        FontWeight="Bold" 
-                                       Foreground="#FFF59E0B"/>
+                                       Foreground="#F59E0B"/>
                             <TextBlock Text="Overall Progress" 
                                        FontSize="14" 
                                        Foreground="{StaticResource SecondaryTextBrush}"/>
@@ -298,7 +298,7 @@
                 <TextBlock Text="Active Migrations" 
                            FontSize="22" 
                            FontWeight="SemiBold" 
-                           Foreground="#FFE2E8F0" 
+                           Foreground="#E2E8F0" 
                            Margin="0,0,0,16"/>
                 
                 <Border Style="{StaticResource MigrationCard}">
@@ -309,10 +309,10 @@
                               IsReadOnly="True"
                               GridLinesVisibility="None"
                               Background="Transparent"
-                              Foreground="#FFE2E8F0"
+                              Foreground="#E2E8F0"
                               HeadersVisibility="Column"
                               RowBackground="Transparent"
-                              AlternatingRowBackground="#FF2A3441">
+                              AlternatingRowBackground="#2A3441">
                         
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Project" Binding="{Binding ProjectName}" Width="200"/>
@@ -326,8 +326,8 @@
                                             <ProgressBar Value="{Binding CompletionPercentage}" 
                                                        Maximum="100" 
                                                        Height="20" 
-                                                       Foreground="#FF3B82F6" 
-                                                       Background="#FF2D3748"/>
+                                                       Foreground="#3B82F6" 
+                                                       Background="#2D3748"/>
                                             <TextBlock Text="{Binding CompletionPercentage, StringFormat={}{0:F1}%}" 
                                                      HorizontalAlignment="Center" 
                                                      VerticalAlignment="Center" 
@@ -348,7 +348,7 @@
                 <TextBlock Text="Quick Actions" 
                            FontSize="22" 
                            FontWeight="SemiBold" 
-                           Foreground="#FFE2E8F0" 
+                           Foreground="#E2E8F0" 
                            Margin="0,24,0,16"/>
                 
                 <UniformGrid Columns="3">
@@ -380,7 +380,7 @@
                 <TextBlock Text="Environment Discovery" 
                            FontSize="22" 
                            FontWeight="SemiBold" 
-                           Foreground="#FFE2E8F0" 
+                           Foreground="#E2E8F0" 
                            Margin="0,0,0,16"/>
                 
                 <!-- Environment Scanning -->
@@ -395,7 +395,7 @@
                             <TextBlock Text="🔍 Environment Scanning" 
                                        FontSize="18" 
                                        FontWeight="SemiBold" 
-                                       Foreground="#FFE2E8F0" 
+                                       Foreground="#E2E8F0" 
                                        VerticalAlignment="Center"/>
                             <Button Content="Start Discovery" 
                                     Command="{Binding StartDiscoveryCommand}" 
@@ -419,13 +419,13 @@
                                 <ComboBox ItemsSource="{Binding SourceEnvironmentTypes}" 
                                           SelectedItem="{Binding SelectedSourceEnvironment}" 
                                           Margin="0,0,0,8"
-                                          Background="#FF2D3748" 
-                                          Foreground="#FFE2E8F0" 
-                                          BorderBrush="#FF4A5568"/>
+                                          Background="#2D3748" 
+                                          Foreground="#E2E8F0" 
+                                          BorderBrush="#4A5568"/>
                                 <TextBox Text="{Binding SourceConnectionString}" 
-                                         Background="#FF2D3748" 
-                                         Foreground="#FFE2E8F0" 
-                                         BorderBrush="#FF4A5568" 
+                                         Background="#2D3748" 
+                                         Foreground="#E2E8F0" 
+                                         BorderBrush="#4A5568" 
                                          Margin="0,0,0,8"/>
                                 <Button Content="Test Connection" 
                                         Command="{Binding TestSourceConnectionCommand}" 
@@ -442,13 +442,13 @@
                                 <ComboBox ItemsSource="{Binding TargetEnvironmentTypes}" 
                                           SelectedItem="{Binding SelectedTargetEnvironment}" 
                                           Margin="0,0,0,8"
-                                          Background="#FF2D3748" 
-                                          Foreground="#FFE2E8F0" 
-                                          BorderBrush="#FF4A5568"/>
+                                          Background="#2D3748" 
+                                          Foreground="#E2E8F0" 
+                                          BorderBrush="#4A5568"/>
                                 <TextBox Text="{Binding TargetConnectionString}" 
-                                         Background="#FF2D3748" 
-                                         Foreground="#FFE2E8F0" 
-                                         BorderBrush="#FF4A5568" 
+                                         Background="#2D3748" 
+                                         Foreground="#E2E8F0" 
+                                         BorderBrush="#4A5568" 
                                          Margin="0,0,0,8"/>
                                 <Button Content="Test Connection" 
                                         Command="{Binding TestTargetConnectionCommand}" 
@@ -462,7 +462,7 @@
                 <TextBlock Text="Discovery Results" 
                            FontSize="18" 
                            FontWeight="SemiBold" 
-                           Foreground="#FFE2E8F0" 
+                           Foreground="#E2E8F0" 
                            Margin="0,24,0,16"/>
                 
                 <UniformGrid Columns="4" Margin="0,0,0,16">
@@ -471,7 +471,7 @@
                             <TextBlock Text="{Binding DiscoveryMetrics.UserCount}" 
                                        FontSize="24" 
                                        FontWeight="Bold" 
-                                       Foreground="#FF60A5FA"/>
+                                       Foreground="#60A5FA"/>
                             <TextBlock Text="Users Found" 
                                        FontSize="12" 
                                        Foreground="{StaticResource SecondaryTextBrush}"/>
@@ -483,7 +483,7 @@
                             <TextBlock Text="{Binding DiscoveryMetrics.MailboxCount}" 
                                        FontSize="24" 
                                        FontWeight="Bold" 
-                                       Foreground="#FF10B981"/>
+                                       Foreground="#10B981"/>
                             <TextBlock Text="Mailboxes" 
                                        FontSize="12" 
                                        Foreground="{StaticResource SecondaryTextBrush}"/>
@@ -495,7 +495,7 @@
                             <TextBlock Text="{Binding DiscoveryMetrics.FileShareCount}" 
                                        FontSize="24" 
                                        FontWeight="Bold" 
-                                       Foreground="#FF34D399"/>
+                                       Foreground="#34D399"/>
                             <TextBlock Text="File Shares" 
                                        FontSize="12" 
                                        Foreground="{StaticResource SecondaryTextBrush}"/>
@@ -507,7 +507,7 @@
                             <TextBlock Text="{Binding DiscoveryMetrics.DependencyCount}" 
                                        FontSize="24" 
                                        FontWeight="Bold" 
-                                       Foreground="#FFF59E0B"/>
+                                       Foreground="#F59E0B"/>
                             <TextBlock Text="Dependencies" 
                                        FontSize="12" 
                                        Foreground="{StaticResource SecondaryTextBrush}"/>
@@ -521,7 +521,7 @@
                         <TextBlock Text="🔗 Dependency Analysis" 
                                    FontSize="16" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         <DataGrid ItemsSource="{Binding DiscoveredDependencies}" 
                                   AutoGenerateColumns="False" 
@@ -530,10 +530,10 @@
                                   IsReadOnly="True"
                                   GridLinesVisibility="None"
                                   Background="Transparent"
-                                  Foreground="#FFE2E8F0"
+                                  Foreground="#E2E8F0"
                                   HeadersVisibility="Column"
                                   RowBackground="Transparent"
-                                  AlternatingRowBackground="#FF2A3441"
+                                  AlternatingRowBackground="#2A3441"
                                   MaxHeight="300">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="200"/>
@@ -560,7 +560,7 @@
                 <TextBlock Text="Migration Configuration" 
                            FontSize="22" 
                            FontWeight="SemiBold" 
-                           Foreground="#FFE2E8F0" 
+                           Foreground="#E2E8F0" 
                            Margin="0,0,0,16"/>
 
                 <!-- Source and Target Environment Selection -->
@@ -569,7 +569,7 @@
                         <TextBlock Text="🌐 Source and Target Environment Selection" 
                                    FontSize="18" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         
                         <Grid Margin="0,0,0,16">
@@ -584,14 +584,14 @@
                                 <TextBlock Text="Source Environment" 
                                            FontSize="14" 
                                            FontWeight="Medium" 
-                                           Foreground="#FFE2E8F0" 
+                                           Foreground="#E2E8F0" 
                                            Margin="0,0,0,8"/>
                                 <ComboBox ItemsSource="{Binding SourceProfiles}"
                                           SelectedItem="{Binding SelectedSourceProfile}"
                                           DisplayMemberPath="CompanyName"
-                                          Background="#FF2D3748" 
-                                          Foreground="#FFE2E8F0" 
-                                          BorderBrush="#FF4A5568"
+                                          Background="#2D3748" 
+                                          Foreground="#E2E8F0" 
+                                          BorderBrush="#4A5568"
                                           Height="32"
                                           Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding SelectedSourceProfile.CompanyName, StringFormat='Source: {0}'}" 
@@ -605,7 +605,7 @@
                                        Text="→" 
                                        FontSize="24" 
                                        FontWeight="Bold" 
-                                       Foreground="#FF60A5FA" 
+                                       Foreground="#60A5FA" 
                                        HorizontalAlignment="Center" 
                                        VerticalAlignment="Center"/>
                             
@@ -614,14 +614,14 @@
                                 <TextBlock Text="Target Environment" 
                                            FontSize="14" 
                                            FontWeight="Medium" 
-                                           Foreground="#FFE2E8F0" 
+                                           Foreground="#E2E8F0" 
                                            Margin="0,0,0,8"/>
                                 <ComboBox ItemsSource="{Binding TargetProfiles}"
                                           SelectedItem="{Binding SelectedTargetProfile}"
                                           DisplayMemberPath="Name"
-                                          Background="#FF2D3748" 
-                                          Foreground="#FFE2E8F0" 
-                                          BorderBrush="#FF4A5568"
+                                          Background="#2D3748" 
+                                          Foreground="#E2E8F0" 
+                                          BorderBrush="#4A5568"
                                           Height="32"
                                           Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding SelectedTargetProfile.Name, StringFormat='Target: {0}'}" 
@@ -639,11 +639,11 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             
-                            <Border Grid.Column="0" Background="#FF1E3A8A" CornerRadius="4" Padding="8,4">
+                            <Border Grid.Column="0" Background="#1E3A8A" CornerRadius="4" Padding="8,4">
                                 <TextBlock Text="Source Ready" FontSize="12" Foreground="White" HorizontalAlignment="Center"/>
                             </Border>
                             
-                            <Border Grid.Column="2" Background="#FF059669" CornerRadius="4" Padding="8,4">
+                            <Border Grid.Column="2" Background="#059669" CornerRadius="4" Padding="8,4">
                                 <TextBlock Text="Target Ready" FontSize="12" Foreground="White" HorizontalAlignment="Center"/>
                             </Border>
                         </Grid>
@@ -655,33 +655,33 @@
                         <TextBlock Text="📋 Migration Type Selection" 
                                    FontSize="18" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         
                         <UniformGrid Columns="3" Margin="0,0,0,16">
                             <CheckBox Content="Exchange Mailboxes" 
                                       IsChecked="{Binding IsExchangeMigrationEnabled}" 
-                                      Foreground="#FFE2E8F0" 
+                                      Foreground="#E2E8F0" 
                                       Margin="8"/>
                             <CheckBox Content="SharePoint Sites" 
                                       IsChecked="{Binding IsSharePointMigrationEnabled}" 
-                                      Foreground="#FFE2E8F0" 
+                                      Foreground="#E2E8F0" 
                                       Margin="8"/>
                             <CheckBox Content="File Systems" 
                                       IsChecked="{Binding IsFileSystemMigrationEnabled}" 
-                                      Foreground="#FFE2E8F0" 
+                                      Foreground="#E2E8F0" 
                                       Margin="8"/>
                             <CheckBox Content="Virtual Machines" 
                                       IsChecked="{Binding IsVMMigrationEnabled}" 
-                                      Foreground="#FFE2E8F0" 
+                                      Foreground="#E2E8F0" 
                                       Margin="8"/>
                             <CheckBox Content="User Profiles" 
                                       IsChecked="{Binding IsUserProfileMigrationEnabled}" 
-                                      Foreground="#FFE2E8F0" 
+                                      Foreground="#E2E8F0" 
                                       Margin="8"/>
                             <CheckBox Content="Security Groups" 
                                       IsChecked="{Binding IsSecurityGroupMigrationEnabled}" 
-                                      Foreground="#FFE2E8F0" 
+                                      Foreground="#E2E8F0" 
                                       Margin="8"/>
                         </UniformGrid>
                     </StackPanel>
@@ -693,7 +693,7 @@
                         <TextBlock Text="📝 Migration Policies" 
                                    FontSize="18" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         
                         <Grid>
@@ -705,57 +705,57 @@
                             <StackPanel Grid.Column="0" Margin="0,0,8,0">
                                 <CheckBox Content="Enable Rollback" 
                                           IsChecked="{Binding MigrationSettings.EnableRollback}" 
-                                          Foreground="#FFE2E8F0" 
+                                          Foreground="#E2E8F0" 
                                           Margin="0,0,0,8"/>
                                 <CheckBox Content="Validate Before Migration" 
                                           IsChecked="{Binding MigrationSettings.ValidateBeforeMigration}" 
-                                          Foreground="#FFE2E8F0" 
+                                          Foreground="#E2E8F0" 
                                           Margin="0,0,0,8"/>
                                 <CheckBox Content="Preserve Permissions" 
                                           IsChecked="{Binding MigrationSettings.PreservePermissions}" 
-                                          Foreground="#FFE2E8F0" 
+                                          Foreground="#E2E8F0" 
                                           Margin="0,0,0,8"/>
                                 <CheckBox Content="Pause on Error" 
                                           IsChecked="{Binding MigrationSettings.PauseOnError}" 
-                                          Foreground="#FFE2E8F0" 
+                                          Foreground="#E2E8F0" 
                                           Margin="0,0,0,8"/>
                             </StackPanel>
                             
                             <StackPanel Grid.Column="1" Margin="8,0,0,0">
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="Max Concurrent Migrations:" 
-                                               Foreground="#FFE2E8F0" 
+                                               Foreground="#E2E8F0" 
                                                VerticalAlignment="Center" 
                                                Margin="0,0,8,0"/>
                                     <TextBox Text="{Binding MigrationSettings.MaxConcurrentMigrations}" 
                                              Width="60" 
-                                             Background="#FF2D3748" 
-                                             Foreground="#FFE2E8F0" 
-                                             BorderBrush="#FF4A5568"/>
+                                             Background="#2D3748" 
+                                             Foreground="#E2E8F0" 
+                                             BorderBrush="#4A5568"/>
                                 </StackPanel>
                                 
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="Retry Attempts:" 
-                                               Foreground="#FFE2E8F0" 
+                                               Foreground="#E2E8F0" 
                                                VerticalAlignment="Center" 
                                                Margin="0,0,8,0"/>
                                     <TextBox Text="{Binding MigrationSettings.RetryAttempts}" 
                                              Width="60" 
-                                             Background="#FF2D3748" 
-                                             Foreground="#FFE2E8F0" 
-                                             BorderBrush="#FF4A5568"/>
+                                             Background="#2D3748" 
+                                             Foreground="#E2E8F0" 
+                                             BorderBrush="#4A5568"/>
                                 </StackPanel>
                                 
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="Notification Email:" 
-                                               Foreground="#FFE2E8F0" 
+                                               Foreground="#E2E8F0" 
                                                VerticalAlignment="Center" 
                                                Margin="0,0,8,0"/>
                                     <TextBox Text="{Binding MigrationSettings.NotificationEmail}" 
                                              Width="200" 
-                                             Background="#FF2D3748" 
-                                             Foreground="#FFE2E8F0" 
-                                             BorderBrush="#FF4A5568"/>
+                                             Background="#2D3748" 
+                                             Foreground="#E2E8F0" 
+                                             BorderBrush="#4A5568"/>
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
@@ -783,7 +783,7 @@
                                Text="Migration Planning &amp; Wave Management" 
                                FontSize="22" 
                                FontWeight="SemiBold" 
-                               Foreground="#FFE2E8F0" 
+                               Foreground="#E2E8F0" 
                                Margin="0,0,0,16"/>
                     
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
@@ -794,22 +794,22 @@
                         <Button Content="📧 Exchange Planning" 
                                 Command="{Binding NavigateToExchangePlanningCommand}" 
                                 Style="{StaticResource PrimaryButton}" 
-                                Background="#FF059669"
+                                Background="#059669"
                                 Margin="0,0,8,0"/>
                         <Button Content="📄 SharePoint Planning" 
                                 Command="{Binding NavigateToSharePointPlanningCommand}" 
                                 Style="{StaticResource PrimaryButton}" 
-                                Background="#FF0891B2"
+                                Background="#0891B2"
                                 Margin="0,0,8,0"/>
                         <Button Content="📁 OneDrive Planning" 
                                 Command="{Binding NavigateToOneDrivePlanningCommand}" 
                                 Style="{StaticResource PrimaryButton}" 
-                                Background="#FF1B4392"
+                                Background="#1B4392"
                                 Margin="0,0,8,0"/>
                         <Button Content="👥 Teams Planning" 
                                 Command="{Binding NavigateToTeamsPlanningCommand}" 
                                 Style="{StaticResource PrimaryButton}" 
-                                Background="#FF6264A7"
+                                Background="#6264A7"
                                 Margin="0,0,8,0"/>
                         <Button Content="💾 Save Plan" 
                                 Command="{Binding SavePlanCommand}" 
@@ -823,7 +823,7 @@
                         <TextBlock Text="🌊 Wave Summary" 
                                    FontSize="18" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         
                         <UniformGrid Columns="4">
@@ -831,7 +831,7 @@
                                 <TextBlock Text="{Binding PlanningMetrics.TotalWaves}" 
                                            FontSize="20" 
                                            FontWeight="Bold" 
-                                           Foreground="#FF60A5FA" 
+                                           Foreground="#60A5FA" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Total Waves" 
                                            FontSize="12" 
@@ -843,7 +843,7 @@
                                 <TextBlock Text="{Binding PlanningMetrics.TotalItems}" 
                                            FontSize="20" 
                                            FontWeight="Bold" 
-                                           Foreground="#FF10B981" 
+                                           Foreground="#10B981" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Items to Migrate" 
                                            FontSize="12" 
@@ -855,7 +855,7 @@
                                 <TextBlock Text="{Binding PlanningMetrics.EstimatedDuration, StringFormat={}{0:dd\\:hh\\:mm}}" 
                                            FontSize="20" 
                                            FontWeight="Bold" 
-                                           Foreground="#FF34D399" 
+                                           Foreground="#34D399" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Estimated Duration" 
                                            FontSize="12" 
@@ -867,7 +867,7 @@
                                 <TextBlock Text="{Binding PlanningMetrics.ComplexityScore}" 
                                            FontSize="20" 
                                            FontWeight="Bold" 
-                                           Foreground="#FFF59E0B" 
+                                           Foreground="#F59E0B" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Complexity Score" 
                                            FontSize="12" 
@@ -891,7 +891,7 @@
                                        Text="🔄 Migration Waves" 
                                        FontSize="18" 
                                        FontWeight="SemiBold" 
-                                       Foreground="#FFE2E8F0" 
+                                       Foreground="#E2E8F0" 
                                        Margin="0,0,0,16"/>
                             
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
@@ -912,10 +912,10 @@
                                   CanUserDeleteRows="False" 
                                   GridLinesVisibility="None"
                                   Background="Transparent"
-                                  Foreground="#FFE2E8F0"
+                                  Foreground="#E2E8F0"
                                   HeadersVisibility="Column"
                                   RowBackground="Transparent"
-                                  AlternatingRowBackground="#FF2A3441"
+                                  AlternatingRowBackground="#2A3441"
                                   MaxHeight="300">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Wave" Binding="{Binding Name}" Width="150"/>
@@ -930,8 +930,8 @@
                                                 <ProgressBar Value="{Binding ProgressPercentage}" 
                                                            Maximum="100" 
                                                            Height="16" 
-                                                           Foreground="#FF3B82F6" 
-                                                           Background="#FF2D3748"/>
+                                                           Foreground="#3B82F6" 
+                                                           Background="#2D3748"/>
                                                 <TextBlock Text="{Binding ProgressPercentage, StringFormat={}{0:F1}%}" 
                                                          HorizontalAlignment="Center" 
                                                          VerticalAlignment="Center" 
@@ -975,7 +975,7 @@
                         <TextBlock Text="{Binding SelectedWave.Name, StringFormat=🔍 Wave Details: {0}}" 
                                    FontSize="18" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         
                         <Grid>
@@ -1005,16 +1005,16 @@
                                     </Grid.RowDefinitions>
                                     
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Order:" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,8,4"/>
-                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedWave.Order}" Foreground="#FFE2E8F0" Margin="0,0,0,4"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedWave.Order}" Foreground="#E2E8F0" Margin="0,0,0,4"/>
                                     
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Status:" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,8,4"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedWave.Status}" Foreground="#FFE2E8F0" Margin="0,0,0,4"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedWave.Status}" Foreground="#E2E8F0" Margin="0,0,0,4"/>
                                     
                                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Start Date:" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,8,4"/>
-                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedWave.PlannedStartDate, StringFormat=yyyy-MM-dd HH:mm}" Foreground="#FFE2E8F0" Margin="0,0,0,4"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedWave.PlannedStartDate, StringFormat=yyyy-MM-dd HH:mm}" Foreground="#E2E8F0" Margin="0,0,0,4"/>
                                     
                                     <TextBlock Grid.Row="3" Grid.Column="0" Text="Items:" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,8,4"/>
-                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedWave.TotalItems}" Foreground="#FFE2E8F0" Margin="0,0,0,4"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedWave.TotalItems}" Foreground="#E2E8F0" Margin="0,0,0,4"/>
                                 </Grid>
                             </StackPanel>
                             
@@ -1029,7 +1029,7 @@
                                 <ListBox ItemsSource="{Binding SelectedWave.Prerequisites}" 
                                          Background="Transparent" 
                                          BorderThickness="0" 
-                                         Foreground="#FFE2E8F0" 
+                                         Foreground="#E2E8F0" 
                                          MaxHeight="100"/>
                             </StackPanel>
                         </Grid>
@@ -1047,10 +1047,10 @@
                                   CanUserDeleteRows="False" 
                                   GridLinesVisibility="None"
                                   Background="Transparent"
-                                  Foreground="#FFE2E8F0"
+                                  Foreground="#E2E8F0"
                                   HeadersVisibility="Column"
                                   RowBackground="Transparent"
-                                  AlternatingRowBackground="#FF2A3441"
+                                  AlternatingRowBackground="#2A3441"
                                   MaxHeight="200">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Batch" Binding="{Binding Name}" Width="150"/>
@@ -1064,8 +1064,8 @@
                                                 <ProgressBar Value="{Binding ProgressPercentage}" 
                                                            Maximum="100" 
                                                            Height="14" 
-                                                           Foreground="#FF3B82F6" 
-                                                           Background="#FF2D3748"/>
+                                                           Foreground="#3B82F6" 
+                                                           Background="#2D3748"/>
                                                 <TextBlock Text="{Binding ProgressPercentage, StringFormat={}{0:F0}%}" 
                                                          HorizontalAlignment="Center" 
                                                          VerticalAlignment="Center" 
@@ -1102,7 +1102,7 @@
                                Text="Migration Execution &amp; Monitoring" 
                                FontSize="22" 
                                FontWeight="SemiBold" 
-                               Foreground="#FFE2E8F0" 
+                               Foreground="#E2E8F0" 
                                Margin="0,0,0,16"/>
                     
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
@@ -1126,7 +1126,7 @@
                         <TextBlock Text="📈 Real-time Execution Metrics" 
                                    FontSize="18" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         
                         <UniformGrid Columns="5">
@@ -1134,7 +1134,7 @@
                                 <TextBlock Text="{Binding ExecutionMetrics.ActiveStreams}" 
                                            FontSize="24" 
                                            FontWeight="Bold" 
-                                           Foreground="#FF60A5FA" 
+                                           Foreground="#60A5FA" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Active Streams" 
                                            FontSize="12" 
@@ -1146,7 +1146,7 @@
                                 <TextBlock Text="{Binding ExecutionMetrics.ItemsPerMinute}" 
                                            FontSize="24" 
                                            FontWeight="Bold" 
-                                           Foreground="#FF10B981" 
+                                           Foreground="#10B981" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Items/Min" 
                                            FontSize="12" 
@@ -1158,7 +1158,7 @@
                                 <TextBlock Text="{Binding ExecutionMetrics.DataThroughputMBps, StringFormat={}{0:F1} MB/s}" 
                                            FontSize="24" 
                                            FontWeight="Bold" 
-                                           Foreground="#FF34D399" 
+                                           Foreground="#34D399" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Throughput" 
                                            FontSize="12" 
@@ -1170,7 +1170,7 @@
                                 <TextBlock Text="{Binding ExecutionMetrics.ErrorCount}" 
                                            FontSize="24" 
                                            FontWeight="Bold" 
-                                           Foreground="#FFEF4444" 
+                                           Foreground="#EF4444" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Errors" 
                                            FontSize="12" 
@@ -1182,7 +1182,7 @@
                                 <TextBlock Text="{Binding ExecutionMetrics.EtaMinutes, StringFormat={}{0:F0} min}" 
                                            FontSize="24" 
                                            FontWeight="Bold" 
-                                           Foreground="#FFF59E0B" 
+                                           Foreground="#F59E0B" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="ETA" 
                                            FontSize="12" 
@@ -1199,7 +1199,7 @@
                         <TextBlock Text="🌊 Active Migration Streams" 
                                    FontSize="18" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         
                         <DataGrid ItemsSource="{Binding ActiveMigrationStreams}" 
@@ -1208,10 +1208,10 @@
                                   CanUserDeleteRows="False" 
                                   GridLinesVisibility="None"
                                   Background="Transparent"
-                                  Foreground="#FFE2E8F0"
+                                  Foreground="#E2E8F0"
                                   HeadersVisibility="Column"
                                   RowBackground="Transparent"
-                                  AlternatingRowBackground="#FF2A3441"
+                                  AlternatingRowBackground="#2A3441"
                                   MaxHeight="300">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Stream" Binding="{Binding StreamId}" Width="80"/>
@@ -1227,8 +1227,8 @@
                                                 <ProgressBar Value="{Binding ProgressPercentage}" 
                                                            Maximum="100" 
                                                            Height="16" 
-                                                           Foreground="#FF3B82F6" 
-                                                           Background="#FF2D3748"/>
+                                                           Foreground="#3B82F6" 
+                                                           Background="#2D3748"/>
                                                 <TextBlock Text="{Binding ProgressPercentage, StringFormat={}{0:F1}%}" 
                                                          HorizontalAlignment="Center" 
                                                          VerticalAlignment="Center" 
@@ -1272,13 +1272,13 @@
                         <TextBlock Text="📉 Performance Trends" 
                                    FontSize="18" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         
                         <Grid Height="200">
                             <!-- Placeholder for charts - would integrate with a charting library -->
-                            <Border Background="#FF2D3748" 
-                                    BorderBrush="#FF4A5568" 
+                            <Border Background="#2D3748" 
+                                    BorderBrush="#4A5568" 
                                     BorderThickness="1" 
                                     CornerRadius="4">
                                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -1288,7 +1288,7 @@
                                                HorizontalAlignment="Center"/>
                                     <TextBlock Text="Real-time throughput and error rate tracking" 
                                                FontSize="12" 
-                                               Foreground="#FF718096" 
+                                               Foreground="#718096" 
                                                HorizontalAlignment="Center" 
                                                Margin="0,4,0,0"/>
                                 </StackPanel>
@@ -1303,7 +1303,7 @@
                         <TextBlock Text="📜 Recent Events" 
                                    FontSize="18" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         
                         <ListBox ItemsSource="{Binding RecentExecutionEvents}" 
@@ -1313,8 +1313,8 @@
                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#FF2A3441" 
-                                            BorderBrush="#FF4A5568" 
+                                    <Border Background="#2A3441" 
+                                            BorderBrush="#4A5568" 
                                             BorderThickness="0,0,0,1" 
                                             Padding="12,8">
                                         <Grid>
@@ -1332,7 +1332,7 @@
                                             
                                             <TextBlock Grid.Column="1" 
                                                        Text="{Binding Message}" 
-                                                       Foreground="#FFE2E8F0" 
+                                                       Foreground="#E2E8F0" 
                                                        TextWrapping="Wrap"/>
                                             
                                             <TextBlock Grid.Column="2" 
@@ -1368,7 +1368,7 @@
                                Text="Migration Validation &amp; Quality Assurance" 
                                FontSize="22" 
                                FontWeight="SemiBold" 
-                               Foreground="#FFE2E8F0" 
+                               Foreground="#E2E8F0" 
                                Margin="0,0,0,16"/>
                     
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
@@ -1388,7 +1388,7 @@
                         <TextBlock Text="📈 Validation Summary" 
                                    FontSize="18" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         
                         <UniformGrid Columns="4">
@@ -1396,7 +1396,7 @@
                                 <TextBlock Text="{Binding ValidationMetrics.TotalChecks}" 
                                            FontSize="24" 
                                            FontWeight="Bold" 
-                                           Foreground="#FF60A5FA" 
+                                           Foreground="#60A5FA" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Total Checks" 
                                            FontSize="12" 
@@ -1408,7 +1408,7 @@
                                 <TextBlock Text="{Binding ValidationMetrics.PassedChecks}" 
                                            FontSize="24" 
                                            FontWeight="Bold" 
-                                           Foreground="#FF10B981" 
+                                           Foreground="#10B981" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Passed" 
                                            FontSize="12" 
@@ -1420,7 +1420,7 @@
                                 <TextBlock Text="{Binding ValidationMetrics.FailedChecks}" 
                                            FontSize="24" 
                                            FontWeight="Bold" 
-                                           Foreground="#FFEF4444" 
+                                           Foreground="#EF4444" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Failed" 
                                            FontSize="12" 
@@ -1432,7 +1432,7 @@
                                 <TextBlock Text="{Binding ValidationMetrics.SuccessRate, StringFormat={}{0:F1}%}" 
                                            FontSize="24" 
                                            FontWeight="Bold" 
-                                           Foreground="#FF34D399" 
+                                           Foreground="#34D399" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Success Rate" 
                                            FontSize="12" 
@@ -1449,7 +1449,7 @@
                         <TextBlock Text="⚙️ Validation Tests" 
                                    FontSize="18" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         
                         <DataGrid ItemsSource="{Binding ValidationTests}" 
@@ -1458,10 +1458,10 @@
                                   CanUserDeleteRows="False" 
                                   GridLinesVisibility="None"
                                   Background="Transparent"
-                                  Foreground="#FFE2E8F0"
+                                  Foreground="#E2E8F0"
                                   HeadersVisibility="Column"
                                   RowBackground="Transparent"
-                                  AlternatingRowBackground="#FF2A3441"
+                                  AlternatingRowBackground="#2A3441"
                                   MaxHeight="300">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Test Category" Binding="{Binding Category}" Width="150"/>
@@ -1510,7 +1510,7 @@
                         <TextBlock Text="⚠️ Validation Issues" 
                                    FontSize="18" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         
                         <DataGrid ItemsSource="{Binding ValidationIssues}" 
@@ -1519,10 +1519,10 @@
                                   CanUserDeleteRows="False" 
                                   GridLinesVisibility="None"
                                   Background="Transparent"
-                                  Foreground="#FFE2E8F0"
+                                  Foreground="#E2E8F0"
                                   HeadersVisibility="Column"
                                   RowBackground="Transparent"
-                                  AlternatingRowBackground="#FF2A3441"
+                                  AlternatingRowBackground="#2A3441"
                                   MaxHeight="250">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="Severity" Width="80">
@@ -1560,14 +1560,14 @@
                         <TextBlock Text="📋 Pre-Migration Checklist" 
                                    FontSize="18" 
                                    FontWeight="SemiBold" 
-                                   Foreground="#FFE2E8F0" 
+                                   Foreground="#E2E8F0" 
                                    Margin="0,0,0,16"/>
                         
                         <ItemsControl ItemsSource="{Binding PreMigrationChecklist}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#FF2A3441" 
-                                            BorderBrush="#FF4A5568" 
+                                    <Border Background="#2A3441" 
+                                            BorderBrush="#4A5568" 
                                             BorderThickness="0,0,0,1" 
                                             Padding="12,8">
                                         <Grid>
@@ -1584,7 +1584,7 @@
                                             <StackPanel Grid.Column="1">
                                                 <TextBlock Text="{Binding Title}" 
                                                            FontWeight="SemiBold" 
-                                                           Foreground="#FFE2E8F0"/>
+                                                           Foreground="#E2E8F0"/>
                                                 <TextBlock Text="{Binding Description}" 
                                                            Foreground="{StaticResource SecondaryTextBrush}" 
                                                            FontSize="12" 
@@ -1621,18 +1621,18 @@
         <Border Grid.Row="2" 
                 Style="{StaticResource MigrationCard}"
                 Visibility="{Binding HasError, Converter={StaticResource BoolToVisibilityConverter}}"
-                Background="#FF7F1D1D" 
-                BorderBrush="#FFEF4444" 
+                Background="#7F1D1D" 
+                BorderBrush="#EF4444" 
                 VerticalAlignment="Top"
                 Margin="24">
             <StackPanel>
                 <TextBlock Text="❌ Error" 
                            FontSize="18" 
                            FontWeight="Bold" 
-                           Foreground="#FFEF4444" 
+                           Foreground="#EF4444" 
                            Margin="0,0,0,8"/>
                 <TextBlock Text="{Binding LastError}" 
-                           Foreground="#FFFECACA" 
+                           Foreground="#FECACA" 
                            TextWrapping="Wrap"/>
                 <Button Content="Dismiss" 
                         Command="{Binding DismissErrorCommand}" 

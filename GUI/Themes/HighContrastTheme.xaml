@@ -4,89 +4,89 @@
     <!-- High Contrast Theme Color Palette -->
 
     <!-- Background Colors -->
-    <SolidColorBrush x:Key="BackgroundBrush" Color="#FF000000"/>
-    <SolidColorBrush x:Key="SurfaceBrush" Color="#FF000000"/>
-    <SolidColorBrush x:Key="CardBrush" Color="#FF101010"/>
-    <SolidColorBrush x:Key="ElevatedBrush" Color="#FF202020"/>
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#000000"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#000000"/>
+    <SolidColorBrush x:Key="CardBrush" Color="#101010"/>
+    <SolidColorBrush x:Key="ElevatedBrush" Color="#202020"/>
 
     <!-- Primary Brushes -->
-    <SolidColorBrush x:Key="PrimaryBackgroundBrush" Color="#FF000000"/> <!-- Primary background -->
-    <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#FFFFFFFF"/> <!-- Primary foreground for text -->
+    <SolidColorBrush x:Key="PrimaryBackgroundBrush" Color="#000000"/> <!-- Primary background -->
+    <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#FFFFFF"/> <!-- Primary foreground for text -->
 
     <!-- Text Colors -->
-    <SolidColorBrush x:Key="ForegroundBrush" Color="#FFFFFFFF"/>
-    <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#FFCCCCCC"/>
-    <SolidColorBrush x:Key="MutedForegroundBrush" Color="#FF999999"/>
-    <SolidColorBrush x:Key="DisabledForegroundBrush" Color="#FF666666"/>
+    <SolidColorBrush x:Key="ForegroundBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#CCCCCC"/>
+    <SolidColorBrush x:Key="MutedForegroundBrush" Color="#999999"/>
+    <SolidColorBrush x:Key="DisabledForegroundBrush" Color="#666666"/>
 
     <!-- Border Colors -->
-    <SolidColorBrush x:Key="BorderBrush" Color="#FFFFFFFF"/>
-    <SolidColorBrush x:Key="FocusBorderBrush" Color="#FFFFFF00"/>
-    <SolidColorBrush x:Key="HoverBorderBrush" Color="#FFFFFF7F"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="FocusBorderBrush" Color="#FFFF00"/>
+    <SolidColorBrush x:Key="HoverBorderBrush" Color="#FFFF7F"/>
 
     <!-- Accent Colors (Default Yellow) -->
-    <SolidColorBrush x:Key="AccentBrush" Color="#FFFFFF00"/>
-    <SolidColorBrush x:Key="AccentLightBrush" Color="#FFFFFF7F"/>
-    <SolidColorBrush x:Key="AccentDarkBrush" Color="#FF999900"/>
-    <SolidColorBrush x:Key="AccentHoverBrush" Color="#FFFFFF33"/>
-    <SolidColorBrush x:Key="AccentPressedBrush" Color="#FFCCCC00"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="#FFFF00"/>
+    <SolidColorBrush x:Key="AccentLightBrush" Color="#FFFF7F"/>
+    <SolidColorBrush x:Key="AccentDarkBrush" Color="#999900"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#FFFF33"/>
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#CCCC00"/>
 
     <!-- State Colors -->
-    <SolidColorBrush x:Key="SuccessBrush" Color="#FF00FF00"/>
-    <SolidColorBrush x:Key="WarningBrush" Color="#FFFFA500"/>
-    <SolidColorBrush x:Key="ErrorBrush" Color="#FFFF0000"/>
-    <SolidColorBrush x:Key="InfoBrush" Color="#FF00FFFF"/>
+    <SolidColorBrush x:Key="SuccessBrush" Color="#00FF00"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#FFA500"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="#FF0000"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="#00FFFF"/>
 
     <!-- Interactive States -->
-    <SolidColorBrush x:Key="HoverBrush" Color="#FF202020"/>
-    <SolidColorBrush x:Key="PressedBrush" Color="#FF404040"/>
-    <SolidColorBrush x:Key="SelectedBrush" Color="#FFFFFF00"/>
-    <SolidColorBrush x:Key="FocusBrush" Color="#FFFFFF00"/>
+    <SolidColorBrush x:Key="HoverBrush" Color="#202020"/>
+    <SolidColorBrush x:Key="PressedBrush" Color="#404040"/>
+    <SolidColorBrush x:Key="SelectedBrush" Color="#FFFF00"/>
+    <SolidColorBrush x:Key="FocusBrush" Color="#FFFF00"/>
 
     <!-- Input Controls -->
-    <SolidColorBrush x:Key="InputBackgroundBrush" Color="#FF000000"/>
-    <SolidColorBrush x:Key="InputBorderBrush" Color="#FFFFFFFF"/>
-    <SolidColorBrush x:Key="InputFocusBrush" Color="#FFFFFF00"/>
-    <SolidColorBrush x:Key="InputDisabledBrush" Color="#FF101010"/>
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="#000000"/>
+    <SolidColorBrush x:Key="InputBorderBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="InputFocusBrush" Color="#FFFF00"/>
+    <SolidColorBrush x:Key="InputDisabledBrush" Color="#101010"/>
 
     <!-- Additional Theme Keys -->
-    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFFFFFFF"/>
-    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#FFCCCCCC"/>
-    <SolidColorBrush x:Key="ButtonHoverBrush" Color="#FFFFFF33"/>
-    <SolidColorBrush x:Key="ButtonPressedBrush" Color="#FF404040"/>
-    <SolidColorBrush x:Key="InputFocusedBackgroundBrush" Color="#FFFFFF00"/>
-    <SolidColorBrush x:Key="ValidBorderBrush" Color="#FF00FF00"/>
-    <SolidColorBrush x:Key="InvalidBorderBrush" Color="#FFFF0000"/>
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#CCCCCC"/>
+    <SolidColorBrush x:Key="ButtonHoverBrush" Color="#FFFF33"/>
+    <SolidColorBrush x:Key="ButtonPressedBrush" Color="#404040"/>
+    <SolidColorBrush x:Key="InputFocusedBackgroundBrush" Color="#FFFF00"/>
+    <SolidColorBrush x:Key="ValidBorderBrush" Color="#00FF00"/>
+    <SolidColorBrush x:Key="InvalidBorderBrush" Color="#FF0000"/>
 
     <!-- High Contrast Gradients -->
     <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#FFFFFF00" Offset="0"/>
-        <GradientStop Color="#FF999900" Offset="1"/>
+        <GradientStop Color="#FFFF00" Offset="0"/>
+        <GradientStop Color="#999900" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="AccentGradient" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#FFFFFF00" Offset="0"/>
-        <GradientStop Color="#FFCCCC00" Offset="1"/>
+        <GradientStop Color="#FFFF00" Offset="0"/>
+        <GradientStop Color="#CCCC00" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="SuccessGradient" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#FF00FF00" Offset="0"/>
-        <GradientStop Color="#FF00CC00" Offset="1"/>
+        <GradientStop Color="#00FF00" Offset="0"/>
+        <GradientStop Color="#00CC00" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="WarningGradient" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#FFFFA500" Offset="0"/>
-        <GradientStop Color="#FFCC8300" Offset="1"/>
+        <GradientStop Color="#FFA500" Offset="0"/>
+        <GradientStop Color="#CC8300" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="ErrorGradient" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#FFFF0000" Offset="0"/>
-        <GradientStop Color="#FFCC0000" Offset="1"/>
+        <GradientStop Color="#FF0000" Offset="0"/>
+        <GradientStop Color="#CC0000" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="DangerGradient" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#FFFF0000" Offset="0"/>
-        <GradientStop Color="#FFCC0000" Offset="1"/>
+        <GradientStop Color="#FF0000" Offset="0"/>
+        <GradientStop Color="#CC0000" Offset="1"/>
     </LinearGradientBrush>
 
 </ResourceDictionary>

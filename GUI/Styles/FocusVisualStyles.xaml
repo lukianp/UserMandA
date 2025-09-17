@@ -6,7 +6,7 @@
         <Setter Property="Control.Template">
             <Setter.Value>
                 <ControlTemplate>
-                    <Border BorderBrush="#FF007ACC"
+                    <Border BorderBrush="#007ACC"
                             BorderThickness="2"
                             CornerRadius="4"
                             SnapsToDevicePixels="True">
@@ -115,7 +115,7 @@
         <Setter Property="Control.Template">
             <Setter.Value>
                 <ControlTemplate>
-                    <Border BorderBrush="#FF007ACC"
+                    <Border BorderBrush="#007ACC"
                             BorderThickness="3"
                             CornerRadius="2">
                         <Border Background="#20007ACC"

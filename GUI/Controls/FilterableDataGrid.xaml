@@ -19,8 +19,8 @@
         
         <!-- Filter Bar -->
         <Border Grid.Row="0" 
-                Background="#FF1A202C" 
-                BorderBrush="#FF2D3748" 
+                Background="#1A202C" 
+                BorderBrush="#2D3748" 
                 BorderThickness="0,0,0,1"
                 Padding="12,8">
             <Grid>
@@ -32,8 +32,8 @@
                 <!-- Search and Quick Filters -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <!-- Global Search -->
-                    <Border Background="#FF2D3748" 
-                            BorderBrush="#FF4A5568" 
+                    <Border Background="#2D3748" 
+                            BorderBrush="#4A5568" 
                             BorderThickness="1" 
                             CornerRadius="4" 
                             Padding="8,6"
@@ -55,7 +55,7 @@
                             <TextBox Grid.Column="1" 
                                      Text="{Binding GlobalSearchText, UpdateSourceTrigger=PropertyChanged}"
                                      Background="Transparent" 
-                                     Foreground="#FFE2E8F0"
+                                     Foreground="#E2E8F0"
                                      BorderThickness="0"
                                      FontSize="13"
                                      VerticalAlignment="Center"/>
@@ -73,7 +73,7 @@
                     </Border>
                     
                     <!-- Active Filters Indicator -->
-                    <Border Background="#FF667eea" 
+                    <Border Background="#667eea" 
                             CornerRadius="12" 
                             Padding="8,4"
                             Margin="0,0,8,0"
@@ -125,7 +125,7 @@
                     <Button Content="🔍 Filters" 
                             Command="{Binding FilterViewModel.ToggleFilterPanelCommand}"
                             Style="{StaticResource ModernButtonStyle}"
-                            Background="{Binding FilterViewModel.IsFilterPanelVisible, Converter={StaticResource BoolToColorConverter}, ConverterParameter='#FF667eea|#FF2D3748'}"
+                            Background="{Binding FilterViewModel.IsFilterPanelVisible, Converter={StaticResource BoolToColorConverter}, ConverterParameter='#667eea|#2D3748'}"
                             Padding="8,4"
                             FontSize="12"/>
                 </StackPanel>
@@ -153,23 +153,23 @@
                       IsReadOnly="{Binding IsReadOnly}"
                       Background="Transparent"
                       BorderThickness="0"
-                      RowBackground="#FF0F1419"
-                      AlternatingRowBackground="#FF1A202C"
+                      RowBackground="#0F1419"
+                      AlternatingRowBackground="#1A202C"
                       HeadersVisibility="Column"
                       GridLinesVisibility="Horizontal"
-                      HorizontalGridLinesBrush="#FF374151"
+                      HorizontalGridLinesBrush="#374151"
                       SelectionMode="Extended"
                       SelectionUnit="FullRow">
                 
                 <!-- Column Header Style -->
                 <DataGrid.ColumnHeaderStyle>
                     <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="#FF2D3748"/>
-                        <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                        <Setter Property="Background" Value="#2D3748"/>
+                        <Setter Property="Foreground" Value="#E2E8F0"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
                         <Setter Property="FontSize" Value="12"/>
                         <Setter Property="Padding" Value="12,8"/>
-                        <Setter Property="BorderBrush" Value="#FF4A5568"/>
+                        <Setter Property="BorderBrush" Value="#4A5568"/>
                         <Setter Property="BorderThickness" Value="0,0,1,0"/>
                         <Setter Property="HorizontalContentAlignment" Value="Left"/>
                         <Setter Property="Template">
@@ -223,7 +223,7 @@
                 <DataGrid.CellStyle>
                     <Style TargetType="DataGridCell">
                         <Setter Property="Background" Value="Transparent"/>
-                        <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                        <Setter Property="Foreground" Value="#E2E8F0"/>
                         <Setter Property="BorderThickness" Value="0"/>
                         <Setter Property="Padding" Value="12,6"/>
                         <Setter Property="FontSize" Value="12"/>
@@ -241,14 +241,14 @@
                         </Setter>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#FF4A5568"/>
+                                <Setter Property="Background" Value="#4A5568"/>
                             </Trigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
                                     <Condition Property="IsSelected" Value="False"/>
                                     <Condition Property="IsMouseOver" Value="True"/>
                                 </MultiTrigger.Conditions>
-                                <Setter Property="Background" Value="#FF2D3748"/>
+                                <Setter Property="Background" Value="#2D3748"/>
                             </MultiTrigger>
                         </Style.Triggers>
                     </Style>
@@ -260,10 +260,10 @@
                         <Setter Property="Background" Value="Transparent"/>
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF1A202C"/>
+                                <Setter Property="Background" Value="#1A202C"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#FF374151"/>
+                                <Setter Property="Background" Value="#374151"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -300,10 +300,10 @@
                                  Width="200" 
                                  Height="4" 
                                  Background="Transparent" 
-                                 Foreground="#FF667eea" 
+                                 Foreground="#667eea" 
                                  Margin="0,0,0,16"/>
                     <TextBlock Text="Loading data..." 
-                               Foreground="#FFE2E8F0" 
+                               Foreground="#E2E8F0" 
                                FontSize="14" 
                                HorizontalAlignment="Center"/>
                 </StackPanel>

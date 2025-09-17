@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="1200"
-             Background="#FF0F1419">
+             Background="#0F1419">
     
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -14,13 +14,13 @@
         <Style x:Key="ChangeTypeColorStyle" TargetType="Border">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Type}" Value="Added">
-                    <Setter Property="Background" Value="#FF48BB78"/>
+                    <Setter Property="Background" Value="#48BB78"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Type}" Value="Removed">
-                    <Setter Property="Background" Value="#FFF56565"/>
+                    <Setter Property="Background" Value="#F56565"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Type}" Value="Modified">
-                    <Setter Property="Background" Value="#FFFBBF24"/>
+                    <Setter Property="Background" Value="#FBBF24"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -42,7 +42,7 @@
             
             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="📊" FontSize="24" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                <TextBlock Text="Snapshot Comparison" Foreground="#FFE2E8F0" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Text="Snapshot Comparison" Foreground="#E2E8F0" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center"/>
             </StackPanel>
             
             <StackPanel Grid.Column="1" Orientation="Horizontal">
@@ -56,7 +56,7 @@
         </Grid>
         
         <!-- Snapshot Selection -->
-        <Border Grid.Row="1" Background="#FF1C2433" BorderBrush="#FF374151" BorderThickness="1" 
+        <Border Grid.Row="1" Background="#1C2433" BorderBrush="#374151" BorderThickness="1" 
                 CornerRadius="8" Padding="20" Margin="0,0,0,16">
             <Grid>
                 <Grid.RowDefinitions>
@@ -74,13 +74,13 @@
                 
                 <!-- Baseline Snapshot Selection -->
                 <StackPanel Grid.Row="0" Grid.Column="0">
-                    <TextBlock Text="Baseline Snapshot" Foreground="#FFE2E8F0" FontSize="14" FontWeight="Medium" Margin="0,0,0,8"/>
+                    <TextBlock Text="Baseline Snapshot" Foreground="#E2E8F0" FontSize="14" FontWeight="Medium" Margin="0,0,0,8"/>
                     <ComboBox ItemsSource="{Binding AvailableSnapshots}" 
                               SelectedItem="{Binding BaselineSnapshot}"
                               DisplayMemberPath="Name"
-                              Background="#FF2D3748" 
-                              Foreground="#FFE2E8F0"
-                              BorderBrush="#FF4A5568"
+                              Background="#2D3748" 
+                              Foreground="#E2E8F0"
+                              BorderBrush="#4A5568"
                               BorderThickness="1"
                               Padding="12,8"
                               FontSize="13"/>
@@ -90,13 +90,13 @@
                 
                 <!-- Compare Snapshot Selection -->
                 <StackPanel Grid.Row="0" Grid.Column="2">
-                    <TextBlock Text="Compare Snapshot" Foreground="#FFE2E8F0" FontSize="14" FontWeight="Medium" Margin="0,0,0,8"/>
+                    <TextBlock Text="Compare Snapshot" Foreground="#E2E8F0" FontSize="14" FontWeight="Medium" Margin="0,0,0,8"/>
                     <ComboBox ItemsSource="{Binding AvailableSnapshots}" 
                               SelectedItem="{Binding CompareSnapshot}"
                               DisplayMemberPath="Name"
-                              Background="#FF2D3748" 
-                              Foreground="#FFE2E8F0"
-                              BorderBrush="#FF4A5568"
+                              Background="#2D3748" 
+                              Foreground="#E2E8F0"
+                              BorderBrush="#4A5568"
                               BorderThickness="1"
                               Padding="12,8"
                               FontSize="13"/>
@@ -111,7 +111,7 @@
                         VerticalAlignment="Bottom" MinWidth="120" Height="40"/>
                 
                 <!-- Comparison Summary -->
-                <Border Grid.Row="1" Grid.ColumnSpan="5" Background="#FF2D3748" CornerRadius="6" 
+                <Border Grid.Row="1" Grid.ColumnSpan="5" Background="#2D3748" CornerRadius="6" 
                         Padding="16" Margin="0,16,0,0"
                         Visibility="{Binding ComparisonResult, Converter={StaticResource BoolToVisibilityConverter}}">
                     <Grid>
@@ -124,25 +124,25 @@
                         
                         <StackPanel Grid.Column="0" HorizontalAlignment="Center">
                             <TextBlock Text="{Binding ComparisonResult.Summary.TotalChanges}" 
-                                       Foreground="#FFE2E8F0" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                       Foreground="#E2E8F0" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <TextBlock Text="Total Changes" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Center"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Column="1" HorizontalAlignment="Center">
                             <TextBlock Text="{Binding ComparisonResult.Summary.AddedItems}" 
-                                       Foreground="#FF48BB78" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                       Foreground="#48BB78" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <TextBlock Text="Added" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Center"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Column="2" HorizontalAlignment="Center">
                             <TextBlock Text="{Binding ComparisonResult.Summary.RemovedItems}" 
-                                       Foreground="#FFF56565" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                       Foreground="#F56565" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <TextBlock Text="Removed" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Center"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Column="3" HorizontalAlignment="Center">
                             <TextBlock Text="{Binding ComparisonResult.Summary.ModifiedItems}" 
-                                       Foreground="#FFFBBF24" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                       Foreground="#FBBF24" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <TextBlock Text="Modified" Foreground="{StaticResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Grid>
@@ -152,18 +152,18 @@
                 <StackPanel Grid.Row="2" Grid.ColumnSpan="5" Orientation="Horizontal" 
                             Margin="0,16,0,0"
                             Visibility="{Binding ComparisonResult, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <TextBlock Text="Filters:" Foreground="#FFE2E8F0" FontSize="13" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <TextBlock Text="Filters:" Foreground="#E2E8F0" FontSize="13" VerticalAlignment="Center" Margin="0,0,12,0"/>
                     
                     <ComboBox ItemsSource="{Binding ChangeTypes}" SelectedItem="{Binding SelectedChangeType}"
-                              Background="#FF2D3748" Foreground="#FFE2E8F0" BorderBrush="#FF4A5568"
+                              Background="#2D3748" Foreground="#E2E8F0" BorderBrush="#4A5568"
                               Width="100" Height="32" Margin="0,0,8,0"/>
                     
                     <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}"
-                              Background="#FF2D3748" Foreground="#FFE2E8F0" BorderBrush="#FF4A5568"
+                              Background="#2D3748" Foreground="#E2E8F0" BorderBrush="#4A5568"
                               Width="120" Height="32" Margin="0,0,8,0"/>
                     
                     <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
-                             Background="#FF2D3748" Foreground="#FFE2E8F0" BorderBrush="#FF4A5568"
+                             Background="#2D3748" Foreground="#E2E8F0" BorderBrush="#4A5568"
                              Width="200" Height="32" Padding="8,6" Margin="0,0,8,0"
                              Tag="Search changes..."/>
                     
@@ -174,7 +174,7 @@
         </Border>
         
         <!-- Changes List -->
-        <Border Grid.Row="2" Background="#FF1C2433" BorderBrush="#FF374151" BorderThickness="1" 
+        <Border Grid.Row="2" Background="#1C2433" BorderBrush="#374151" BorderThickness="1" 
                 CornerRadius="8" Padding="0">
             <Grid>
                 <DataGrid ItemsSource="{Binding FilteredChanges}" 
@@ -187,8 +187,8 @@
                           IsReadOnly="True"
                           Background="Transparent"
                           BorderThickness="0"
-                          RowBackground="#FF1C2433"
-                          AlternatingRowBackground="#FF2D3748"
+                          RowBackground="#1C2433"
+                          AlternatingRowBackground="#2D3748"
                           HeadersVisibility="Column"
                           GridLinesVisibility="None"
                           SelectionMode="Extended"
@@ -196,12 +196,12 @@
                     
                     <DataGrid.ColumnHeaderStyle>
                         <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="Background" Value="#FF374151"/>
-                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                            <Setter Property="Background" Value="#374151"/>
+                            <Setter Property="Foreground" Value="#E2E8F0"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
                             <Setter Property="FontSize" Value="12"/>
                             <Setter Property="Padding" Value="12,8"/>
-                            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+                            <Setter Property="BorderBrush" Value="#4A5568"/>
                             <Setter Property="BorderThickness" Value="0,0,1,0"/>
                         </Style>
                     </DataGrid.ColumnHeaderStyle>
@@ -209,13 +209,13 @@
                     <DataGrid.CellStyle>
                         <Style TargetType="DataGridCell">
                             <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                            <Setter Property="Foreground" Value="#E2E8F0"/>
                             <Setter Property="BorderThickness" Value="0"/>
                             <Setter Property="Padding" Value="12,6"/>
                             <Setter Property="FontSize" Value="12"/>
                             <Style.Triggers>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="#FF4A5568"/>
+                                    <Setter Property="Background" Value="#4A5568"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
@@ -293,8 +293,8 @@
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <ProgressBar IsIndeterminate="True" Width="200" Height="4" 
-                             Background="Transparent" Foreground="#FF667eea" Margin="0,0,0,16"/>
-                <TextBlock Text="Loading snapshots..." Foreground="#FFE2E8F0" FontSize="14" 
+                             Background="Transparent" Foreground="#667eea" Margin="0,0,0,16"/>
+                <TextBlock Text="Loading snapshots..." Foreground="#E2E8F0" FontSize="14" 
                            HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
@@ -304,8 +304,8 @@
                 Visibility="{Binding IsComparing, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <ProgressBar IsIndeterminate="True" Width="200" Height="4" 
-                             Background="Transparent" Foreground="#FF667eea" Margin="0,0,0,16"/>
-                <TextBlock Text="Comparing snapshots..." Foreground="#FFE2E8F0" FontSize="14" 
+                             Background="Transparent" Foreground="#667eea" Margin="0,0,0,16"/>
+                <TextBlock Text="Comparing snapshots..." Foreground="#E2E8F0" FontSize="14" 
                            HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>

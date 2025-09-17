@@ -119,7 +119,7 @@
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding TaskName}" FontWeight="Medium" 
                                                        Foreground="{Binding IsCriticalPath, Converter={StaticResource BoolToColorConverter}, 
-                                                                    ConverterParameter='#FF6B7280|#FFDC2626'}"/>
+                                                                    ConverterParameter='#6B7280|#DC2626'}"/>
                                             <ProgressBar Value="{Binding Progress}" Maximum="1" Height="4" 
                                                          Background="{DynamicResource SurfaceBrush}" 
                                                          Foreground="{Binding ProgressColor, Converter={StaticResource StringToBrushConverter}}"
@@ -279,7 +279,7 @@
                         <Line Visibility="{Binding ShowTodayLine, Converter={StaticResource BoolToVisibilityConverter}}"
                               X1="{Binding TodayPosition}" X2="{Binding TodayPosition}"
                               Y1="0" Y2="{Binding TimelineHeight}"
-                              Stroke="#FFDC2626" StrokeThickness="2" StrokeDashArray="5,3"/>
+                              Stroke="#DC2626" StrokeThickness="2" StrokeDashArray="5,3"/>
 
                     </Canvas>
                 </ScrollViewer>

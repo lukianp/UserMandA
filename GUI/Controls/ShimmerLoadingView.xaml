@@ -18,11 +18,11 @@
         <!-- Shimmer Gradient Brush -->
         <LinearGradientBrush x:Key="ShimmerBrush" StartPoint="0,0" EndPoint="1,0">
             <LinearGradientBrush.GradientStops>
-                <GradientStop Color="#FFE8E8E8" Offset="0"/>
-                <GradientStop Color="#FFF0F0F0" Offset="0.4"/>
-                <GradientStop Color="#FFFAFAFA" Offset="0.5" x:Name="ShimmerGradient"/>
-                <GradientStop Color="#FFF0F0F0" Offset="0.6"/>
-                <GradientStop Color="#FFE8E8E8" Offset="1"/>
+                <GradientStop Color="#E8E8E8" Offset="0"/>
+                <GradientStop Color="#F0F0F0" Offset="0.4"/>
+                <GradientStop Color="#FAFAFA" Offset="0.5" x:Name="ShimmerGradient"/>
+                <GradientStop Color="#F0F0F0" Offset="0.6"/>
+                <GradientStop Color="#E8E8E8" Offset="1"/>
             </LinearGradientBrush.GradientStops>
             <LinearGradientBrush.Transform>
                 <TranslateTransform x:Name="ShimmerTransform"/>
@@ -32,11 +32,11 @@
         <!-- Dark Theme Shimmer Brush -->
         <LinearGradientBrush x:Key="DarkShimmerBrush" StartPoint="0,0" EndPoint="1,0">
             <LinearGradientBrush.GradientStops>
-                <GradientStop Color="#FF2D2D30" Offset="0"/>
-                <GradientStop Color="#FF3E3E42" Offset="0.4"/>
-                <GradientStop Color="#FF4B4B50" Offset="0.5"/>
-                <GradientStop Color="#FF3E3E42" Offset="0.6"/>
-                <GradientStop Color="#FF2D2D30" Offset="1"/>
+                <GradientStop Color="#2D2D30" Offset="0"/>
+                <GradientStop Color="#3E3E42" Offset="0.4"/>
+                <GradientStop Color="#4B4B50" Offset="0.5"/>
+                <GradientStop Color="#3E3E42" Offset="0.6"/>
+                <GradientStop Color="#2D2D30" Offset="1"/>
             </LinearGradientBrush.GradientStops>
             <LinearGradientBrush.Transform>
                 <TranslateTransform x:Name="DarkShimmerTransform"/>

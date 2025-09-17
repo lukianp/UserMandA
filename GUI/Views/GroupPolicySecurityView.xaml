@@ -39,11 +39,11 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter TargetName="Border" Property="Background" Value="#FF10B981"/>
+                                    <Setter TargetName="Border" Property="Background" Value="#10B981"/>
                                     <Setter Property="Foreground" Value="White"/>
                                 </Trigger>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Border" Property="Background" Value="#FF059669"/>
+                                    <Setter TargetName="Border" Property="Background" Value="#059669"/>
                                     <Setter Property="Foreground" Value="White"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
@@ -113,51 +113,51 @@
             </Grid.ColumnDefinitions>
             
             <!-- Group Policies Card -->
-            <Border Grid.Column="0" Style="{StaticResource SecurityCardStyle}" BorderBrush="#FF10B981">
+            <Border Grid.Column="0" Style="{StaticResource SecurityCardStyle}" BorderBrush="#10B981">
                 <StackPanel>
                     <TextBlock Text="🛡️" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
                     <TextBlock Text="Group Policies" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{Binding DashboardMetrics.GroupPolicyCount}" FontSize="24" FontWeight="Bold" Foreground="#FF10B981" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding DashboardMetrics.GroupPolicyCount}" FontSize="24" FontWeight="Bold" Foreground="#10B981" HorizontalAlignment="Center"/>
                     <TextBlock Text="policies" FontSize="10" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
             
             <!-- Security Groups Card -->
-            <Border Grid.Column="1" Style="{StaticResource SecurityCardStyle}" BorderBrush="#FF3B82F6">
+            <Border Grid.Column="1" Style="{StaticResource SecurityCardStyle}" BorderBrush="#3B82F6">
                 <StackPanel>
                     <TextBlock Text="👥" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
                     <TextBlock Text="Security Groups" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{Binding DashboardMetrics.SecurityGroupCount}" FontSize="24" FontWeight="Bold" Foreground="#FF3B82F6" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding DashboardMetrics.SecurityGroupCount}" FontSize="24" FontWeight="Bold" Foreground="#3B82F6" HorizontalAlignment="Center"/>
                     <TextBlock Text="groups" FontSize="10" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
             
             <!-- Infrastructure Items Card -->
-            <Border Grid.Column="2" Style="{StaticResource SecurityCardStyle}" BorderBrush="#FF8B5CF6">
+            <Border Grid.Column="2" Style="{StaticResource SecurityCardStyle}" BorderBrush="#8B5CF6">
                 <StackPanel>
                     <TextBlock Text="🏗️" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
                     <TextBlock Text="Infrastructure" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{Binding DashboardMetrics.InfrastructureItemCount}" FontSize="24" FontWeight="Bold" Foreground="#FF8B5CF6" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding DashboardMetrics.InfrastructureItemCount}" FontSize="24" FontWeight="Bold" Foreground="#8B5CF6" HorizontalAlignment="Center"/>
                     <TextBlock Text="items" FontSize="10" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
             
             <!-- Threat Indicators Card -->
-            <Border Grid.Column="3" Style="{StaticResource SecurityCardStyle}" BorderBrush="#FFEF4444">
+            <Border Grid.Column="3" Style="{StaticResource SecurityCardStyle}" BorderBrush="#EF4444">
                 <StackPanel>
                     <TextBlock Text="⚠️" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
                     <TextBlock Text="Threats" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{Binding DashboardMetrics.ThreatIndicatorCount}" FontSize="24" FontWeight="Bold" Foreground="#FFEF4444" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding DashboardMetrics.ThreatIndicatorCount}" FontSize="24" FontWeight="Bold" Foreground="#EF4444" HorizontalAlignment="Center"/>
                     <TextBlock Text="indicators" FontSize="10" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
             
             <!-- Compliance Score Card -->
-            <Border Grid.Column="4" Style="{StaticResource SecurityCardStyle}" BorderBrush="#FFFBBF24">
+            <Border Grid.Column="4" Style="{StaticResource SecurityCardStyle}" BorderBrush="#FBBF24">
                 <StackPanel>
                     <TextBlock Text="📊" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,5"/>
                     <TextBlock Text="Compliance" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{Binding DashboardMetrics.ComplianceScore, StringFormat='{}{0:F0}%'}" FontSize="24" FontWeight="Bold" Foreground="#FFFBBF24" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding DashboardMetrics.ComplianceScore, StringFormat='{}{0:F0}%'}" FontSize="24" FontWeight="Bold" Foreground="#FBBF24" HorizontalAlignment="Center"/>
                     <TextBlock Text="score" FontSize="10" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
@@ -223,13 +223,13 @@
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                             <Border CornerRadius="4" Margin="0,0,10,0">
                                 <Button Content="📊 Export" Command="{Binding ExportCommand}" 
-                                        Background="#FF10B981" Foreground="White" 
+                                        Background="#10B981" Foreground="White" 
                                         BorderThickness="0" Padding="15,8" 
                                         FontWeight="SemiBold"/>
                             </Border>
                             <Border CornerRadius="4">
                                 <Button Content="🔄 Refresh" Command="{Binding RefreshCommand}" 
-                                        Background="#FF3B82F6" Foreground="White" 
+                                        Background="#3B82F6" Foreground="White" 
                                         BorderThickness="0" Padding="15,8" 
                                         FontWeight="SemiBold"/>
                             </Border>
@@ -445,14 +445,14 @@
                                     <StackPanel Grid.Column="0" HorizontalAlignment="Center">
                                         <TextBlock Text="Overall Score" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
                                         <TextBlock Text="{Binding DashboardMetrics.ComplianceScore, StringFormat='{}{0:F0}%'}" 
-                                                   FontSize="32" FontWeight="Bold" Foreground="#FF10B981" HorizontalAlignment="Center"/>
+                                                   FontSize="32" FontWeight="Bold" Foreground="#10B981" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                     
                                     <!-- Passed Controls -->
                                     <StackPanel Grid.Column="1" HorizontalAlignment="Center">
                                         <TextBlock Text="Passed Controls" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
                                         <TextBlock Text="{Binding DashboardMetrics.PassedControls}" 
-                                                   FontSize="24" FontWeight="Bold" Foreground="#FF10B981" HorizontalAlignment="Center"/>
+                                                   FontSize="24" FontWeight="Bold" Foreground="#10B981" HorizontalAlignment="Center"/>
                                         <TextBlock Text="{Binding DashboardMetrics.TotalControls, StringFormat='of {0}'}" 
                                                    FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
                                     </StackPanel>
@@ -461,7 +461,7 @@
                                     <StackPanel Grid.Column="2" HorizontalAlignment="Center">
                                         <TextBlock Text="Failed Controls" FontSize="14" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
                                         <TextBlock Text="{Binding DashboardMetrics.FailedControls}" 
-                                                   FontSize="24" FontWeight="Bold" Foreground="#FFEF4444" HorizontalAlignment="Center"/>
+                                                   FontSize="24" FontWeight="Bold" Foreground="#EF4444" HorizontalAlignment="Center"/>
                                         <TextBlock Text="require attention" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </Grid>

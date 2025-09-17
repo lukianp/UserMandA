@@ -8,7 +8,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="1200"
              d:DataContext="{d:DesignInstance Type=vm:PreMigrationCheckViewModel}"
-             Background="#FF0F1419">
+             Background="#0F1419">
 
     <UserControl.Resources>
         <!-- Style for status indicators -->
@@ -327,7 +327,7 @@
 
         <!-- Empty State -->
         <Border Grid.Row="3" Grid.ColumnSpan="3"
-               Background="#FF1E1E1E" BorderBrush="#FF4A5568" BorderThickness="1"
+               Background="#1E1E1E" BorderBrush="#4A5568" BorderThickness="1"
                Visibility="{Binding AllItems.Count, 
                Converter={StaticResource IntToVisibilityConverter}, 
                ConverterParameter=Inverse}"

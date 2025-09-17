@@ -2,12 +2,12 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Modern Chart Color Palette -->
-    <SolidColorBrush x:Key="ChartPrimary" Color="#FF2196F3"/>
-    <SolidColorBrush x:Key="ChartSecondary" Color="#FF4CAF50"/>
-    <SolidColorBrush x:Key="ChartTertiary" Color="#FFFF9800"/>
-    <SolidColorBrush x:Key="ChartQuaternary" Color="#FFE91E63"/>
-    <SolidColorBrush x:Key="ChartQuinary" Color="#FF9C27B0"/>
-    <SolidColorBrush x:Key="ChartSenary" Color="#FF00BCD4"/>
+    <SolidColorBrush x:Key="ChartPrimary" Color="#2196F3"/>
+    <SolidColorBrush x:Key="ChartSecondary" Color="#4CAF50"/>
+    <SolidColorBrush x:Key="ChartTertiary" Color="#FF9800"/>
+    <SolidColorBrush x:Key="ChartQuaternary" Color="#E91E63"/>
+    <SolidColorBrush x:Key="ChartQuinary" Color="#9C27B0"/>
+    <SolidColorBrush x:Key="ChartSenary" Color="#00BCD4"/>
     <SolidColorBrush x:Key="ChartBackground" Color="#FAFAFA"/>
     <SolidColorBrush x:Key="ChartGridLines" Color="#E0E0E0"/>
     <SolidColorBrush x:Key="ChartAxisText" Color="#616161"/>
@@ -15,17 +15,17 @@
 
     <!-- Chart Series Gradient Brushes -->
     <LinearGradientBrush x:Key="ChartGradient1" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#FF2196F3" Offset="0"/>
+        <GradientStop Color="#2196F3" Offset="0"/>
         <GradientStop Color="#801976D2" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="ChartGradient2" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#FF4CAF50" Offset="0"/>
+        <GradientStop Color="#4CAF50" Offset="0"/>
         <GradientStop Color="#80388E3C" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="ChartGradient3" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#FFFF9800" Offset="0"/>
+        <GradientStop Color="#FF9800" Offset="0"/>
         <GradientStop Color="#80F57C00" Offset="1"/>
     </LinearGradientBrush>
 
@@ -124,7 +124,7 @@
                 <Setter Property="Height" Value="12"/>
                 <Setter Property="Effect">
                     <Setter.Value>
-                        <DropShadowEffect Color="#FF2196F3" 
+                        <DropShadowEffect Color="#2196F3" 
                                         BlurRadius="8" 
                                         ShadowDepth="0" 
                                         Opacity="0.6"/>
@@ -285,18 +285,18 @@
 
     <!-- Modern Gradient Backgrounds -->
     <LinearGradientBrush x:Key="ModernChartBackground1" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#FFF8F9FA" Offset="0"/>
-        <GradientStop Color="#FFF1F3F4" Offset="1"/>
+        <GradientStop Color="#F8F9FA" Offset="0"/>
+        <GradientStop Color="#F1F3F4" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="ModernChartBackground2" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#FFF3E5F5" Offset="0"/>
-        <GradientStop Color="#FFE8EAF6" Offset="1"/>
+        <GradientStop Color="#F3E5F5" Offset="0"/>
+        <GradientStop Color="#E8EAF6" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="ModernChartBackground3" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#FFE3F2FD" Offset="0"/>
-        <GradientStop Color="#FFE1F5FE" Offset="1"/>
+        <GradientStop Color="#E3F2FD" Offset="0"/>
+        <GradientStop Color="#E1F5FE" Offset="1"/>
     </LinearGradientBrush>
 
 </ResourceDictionary>

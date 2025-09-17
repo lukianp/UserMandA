@@ -36,6 +36,9 @@ namespace MandADiscoverySuite.ViewModels
 
             // Initialize commands
             ViewDetailsCommand = new AsyncRelayCommand<object>(OpenDetailViewAsync);
+
+            // Initialize non-nullable fields
+            _selectedItem = null;
         }
 
         #endregion
@@ -111,8 +114,8 @@ namespace MandADiscoverySuite.ViewModels
         // Additional commands beyond inherited ones
         public AsyncRelayCommand RunDiscoveryCommand => new AsyncRelayCommand(RunDiscoveryAsync);
         public AsyncRelayCommand RefreshDataCommand => new AsyncRelayCommand(RefreshDataAsync);
-        public AsyncRelayCommand ExportCommand => new AsyncRelayCommand(ExportDataAsync);
-        public new AsyncRelayCommand ViewLogsCommand => new AsyncRelayCommand(ViewLogsAsync);
+        public RelayCommand ExportCommand => new RelayCommand(ExportData);
+        public new RelayCommand ViewLogsCommand => new RelayCommand(ViewLogs);
         public ICommand ViewDetailsCommand { get; private set; }
 
         #endregion
@@ -223,7 +226,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task ExportDataAsync()
+        private void ExportData()
         {
             try
             {
@@ -266,7 +269,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        protected override async Task ViewLogsAsync()
+        protected void ViewLogs()
         {
             try
             {
@@ -292,7 +295,8 @@ namespace MandADiscoverySuite.ViewModels
                 if (selectedItem is System.Collections.Generic.IDictionary<string, object> mailboxData)
                 {
                     // Create AssetDetailViewModel and load the mailbox data
-                    var assetDetailViewModel = new MandADiscoverySuite.ViewModels.AssetDetailViewModel(null, _log, null, null);
+                    var assetDetailViewModel = new MandADiscoverySuite.ViewModels.AssetDetailViewModel(
+                        null, _log ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance, null, null);
                     assetDetailViewModel.LoadAssetDetails(selectedItem);
 
                     var assetDetailView = new MandADiscoverySuite.Views.AssetDetailView();
@@ -315,6 +319,8 @@ namespace MandADiscoverySuite.ViewModels
                         _log?.LogInformation("Asset detail view closed without changes");
                     }
                 }
+
+                await Task.CompletedTask; // Ensure method is properly async
             }
             catch (Exception ex)
             {

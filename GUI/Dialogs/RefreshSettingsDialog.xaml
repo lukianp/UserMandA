@@ -3,12 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Refresh Settings" Height="450" Width="500"
         WindowStartupLocation="CenterOwner"
-        Background="#FF1A202C"
+        Background="#1A202C"
         ResizeMode="NoResize">
     
     <Window.Resources>
         <Style x:Key="ModernTextStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
         </Style>
         
@@ -19,8 +19,8 @@
         </Style>
         
         <Style x:Key="ModernButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#FF4A5568"/>
-            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="Background" Value="#4A5568"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="16,8"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
@@ -34,7 +34,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF718096"/>
+                                <Setter Property="Background" Value="#718096"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -43,9 +43,9 @@
         </Style>
         
         <Style x:Key="ModernComboBoxStyle" TargetType="ComboBox">
-            <Setter Property="Background" Value="#FF2D3748"/>
-            <Setter Property="Foreground" Value="#FFE2E8F0"/>
-            <Setter Property="BorderBrush" Value="#FF4A5568"/>
+            <Setter Property="Background" Value="#2D3748"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
+            <Setter Property="BorderBrush" Value="#4A5568"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
@@ -53,7 +53,7 @@
         </Style>
         
         <Style x:Key="ModernCheckBoxStyle" TargetType="CheckBox">
-            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Margin" Value="0,4"/>
@@ -75,7 +75,7 @@
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <!-- Global Refresh Interval -->
-                    <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                    <Border Background="#2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
                         <StackPanel>
                             <TextBlock Text="🕒 Refresh Interval" Style="{StaticResource ModernTextStyle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
                             <TextBlock Text="How often should data be automatically refreshed?" Style="{StaticResource ModernTextStyle}" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,0,12"/>
@@ -95,7 +95,7 @@
                     </Border>
                     
                     <!-- View-Specific Settings -->
-                    <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                    <Border Background="#2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
                         <StackPanel>
                             <TextBlock Text="📊 Views to Refresh" Style="{StaticResource ModernTextStyle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
                             <TextBlock Text="Select which views should be automatically refreshed" Style="{StaticResource ModernTextStyle}" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,0,12"/>
@@ -107,7 +107,7 @@
                     </Border>
                     
                     <!-- Refresh Behavior -->
-                    <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                    <Border Background="#2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
                         <StackPanel>
                             <TextBlock Text="⚙️ Refresh Behavior" Style="{StaticResource ModernTextStyle}" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,8"/>
                             <TextBlock Text="Configure how automatic refresh behaves" Style="{StaticResource ModernTextStyle}" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,0,12"/>
@@ -133,7 +133,7 @@
             <!-- Buttons -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
                 <Button x:Name="ApplyButton" Content="Apply" Style="{StaticResource ModernButtonStyle}" 
-                        Background="#FF48BB78" Margin="0,0,12,0" Click="ApplyButton_Click"/>
+                        Background="#48BB78" Margin="0,0,12,0" Click="ApplyButton_Click"/>
                 <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource ModernButtonStyle}" 
                         Click="CancelButton_Click"/>
             </StackPanel>

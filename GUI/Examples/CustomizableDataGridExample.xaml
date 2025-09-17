@@ -19,10 +19,10 @@
             <Setter Property="HeadersVisibility" Value="Column"/>
             <Setter Property="SelectionMode" Value="Extended"/>
             <Setter Property="SelectionUnit" Value="FullRow"/>
-            <Setter Property="AlternatingRowBackground" Value="#FFF8F8F8"/>
+            <Setter Property="AlternatingRowBackground" Value="#F8F8F8"/>
             <Setter Property="RowBackground" Value="White"/>
             <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#FFCCCCCC"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
     </UserControl.Resources>
@@ -35,7 +35,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="#FF2D5A87" Padding="15">
+        <Border Grid.Row="0" Background="#2D5A87" Padding="15">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

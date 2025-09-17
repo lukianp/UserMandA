@@ -2,18 +2,18 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     
     <!-- Report-specific colors -->
-    <SolidColorBrush x:Key="ReportPrimaryBrush" Color="#FF4299E1"/>
-    <SolidColorBrush x:Key="ReportSecondaryBrush" Color="#FF68D391"/>
-    <SolidColorBrush x:Key="ReportAccentBrush" Color="#FFED8936"/>
-    <SolidColorBrush x:Key="ReportDangerBrush" Color="#FFEF4444"/>
-    <SolidColorBrush x:Key="ReportWarningBrush" Color="#FFF6E05E"/>
-    <SolidColorBrush x:Key="ReportInfoBrush" Color="#FF63B3ED"/>
+    <SolidColorBrush x:Key="ReportPrimaryBrush" Color="#4299E1"/>
+    <SolidColorBrush x:Key="ReportSecondaryBrush" Color="#68D391"/>
+    <SolidColorBrush x:Key="ReportAccentBrush" Color="#ED8936"/>
+    <SolidColorBrush x:Key="ReportDangerBrush" Color="#EF4444"/>
+    <SolidColorBrush x:Key="ReportWarningBrush" Color="#F6E05E"/>
+    <SolidColorBrush x:Key="ReportInfoBrush" Color="#63B3ED"/>
     
     <!-- Report Panel Styles -->
     <Style x:Key="ReportPanelStyle" TargetType="Border">
-        <Setter Property="Background" Value="#FF1A202C"/>
+        <Setter Property="Background" Value="#1A202C"/>
         <Setter Property="CornerRadius" Value="8"/>
-        <Setter Property="BorderBrush" Value="#FF2D3748"/>
+        <Setter Property="BorderBrush" Value="#2D3748"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Margin" Value="8"/>
         <Setter Property="Padding" Value="16"/>
@@ -26,9 +26,9 @@
     
     <!-- Report Card Style -->
     <Style x:Key="ReportCardStyle" TargetType="Border">
-        <Setter Property="Background" Value="#FF2D3748"/>
+        <Setter Property="Background" Value="#2D3748"/>
         <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="BorderBrush" Value="#FF4A5568"/>
+        <Setter Property="BorderBrush" Value="#4A5568"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="12"/>
         <Setter Property="Margin" Value="0,4"/>
@@ -40,7 +40,7 @@
         </Setter>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="#FF4A5568"/>
+                <Setter Property="Background" Value="#4A5568"/>
                 <Setter Property="BorderBrush" Value="{StaticResource ReportPrimaryBrush}"/>
             </Trigger>
         </Style.Triggers>
@@ -65,13 +65,13 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#FF3182CE"/>
+                            <Setter Property="Background" Value="#3182CE"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Background" Value="#FF2C5AA0"/>
+                            <Setter Property="Background" Value="#2C5AA0"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Background" Value="#FF4A5568"/>
+                            <Setter Property="Background" Value="#4A5568"/>
                             <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -84,10 +84,10 @@
         <Setter Property="Background" Value="{StaticResource ReportSecondaryBrush}"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="#FF48BB78"/>
+                <Setter Property="Background" Value="#48BB78"/>
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
-                <Setter Property="Background" Value="#FF38A169"/>
+                <Setter Property="Background" Value="#38A169"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -96,19 +96,19 @@
         <Setter Property="Background" Value="{StaticResource ReportDangerBrush}"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="#FFE53E3E"/>
+                <Setter Property="Background" Value="#E53E3E"/>
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
-                <Setter Property="Background" Value="#FFC53030"/>
+                <Setter Property="Background" Value="#C53030"/>
             </Trigger>
         </Style.Triggers>
     </Style>
     
     <!-- Report Input Styles -->
     <Style x:Key="ReportTextBoxStyle" TargetType="TextBox">
-        <Setter Property="Background" Value="#FF2D3748"/>
-        <Setter Property="Foreground" Value="#FFE2E8F0"/>
-        <Setter Property="BorderBrush" Value="#FF4A5568"/>
+        <Setter Property="Background" Value="#2D3748"/>
+        <Setter Property="Foreground" Value="#E2E8F0"/>
+        <Setter Property="BorderBrush" Value="#4A5568"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="12,8"/>
         <Setter Property="Margin" Value="0,4"/>
@@ -131,7 +131,7 @@
                             <Setter Property="BorderBrush" Value="{StaticResource ReportPrimaryBrush}"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="BorderBrush" Value="#FF68D391"/>
+                            <Setter Property="BorderBrush" Value="#68D391"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -140,9 +140,9 @@
     </Style>
     
     <Style x:Key="ReportComboBoxStyle" TargetType="ComboBox">
-        <Setter Property="Background" Value="#FF2D3748"/>
-        <Setter Property="Foreground" Value="#FFE2E8F0"/>
-        <Setter Property="BorderBrush" Value="#FF4A5568"/>
+        <Setter Property="Background" Value="#2D3748"/>
+        <Setter Property="Foreground" Value="#E2E8F0"/>
+        <Setter Property="BorderBrush" Value="#4A5568"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="12,8"/>
         <Setter Property="Margin" Value="0,4"/>
@@ -212,9 +212,9 @@
                                  SnapsToDevicePixels="True" 
                                  MinWidth="{TemplateBinding ActualWidth}" 
                                  MaxHeight="{TemplateBinding MaxDropDownHeight}">
-                                <Border Background="#FF2D3748" 
+                                <Border Background="#2D3748" 
                                        BorderThickness="1" 
-                                       BorderBrush="#FF4A5568" 
+                                       BorderBrush="#4A5568" 
                                        CornerRadius="4"
                                        Margin="0,1,0,0">
                                     <ScrollViewer Margin="4,6,4,6" SnapsToDevicePixels="True">
@@ -231,15 +231,15 @@
     
     <!-- Report DataGrid Style -->
     <Style x:Key="ReportDataGridStyle" TargetType="DataGrid">
-        <Setter Property="Background" Value="#FF2D3748"/>
-        <Setter Property="Foreground" Value="#FFE2E8F0"/>
+        <Setter Property="Background" Value="#2D3748"/>
+        <Setter Property="Foreground" Value="#E2E8F0"/>
         <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-        <Setter Property="HorizontalGridLinesBrush" Value="#FF4A5568"/>
-        <Setter Property="VerticalGridLinesBrush" Value="#FF4A5568"/>
-        <Setter Property="BorderBrush" Value="#FF4A5568"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="#4A5568"/>
+        <Setter Property="VerticalGridLinesBrush" Value="#4A5568"/>
+        <Setter Property="BorderBrush" Value="#4A5568"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="RowBackground" Value="Transparent"/>
-        <Setter Property="AlternatingRowBackground" Value="#FF1A202C"/>
+        <Setter Property="AlternatingRowBackground" Value="#1A202C"/>
         <Setter Property="HeadersVisibility" Value="Column"/>
         <Setter Property="AutoGenerateColumns" Value="True"/>
         <Setter Property="CanUserSortColumns" Value="True"/>
@@ -249,9 +249,9 @@
         <Setter Property="ColumnHeaderStyle">
             <Setter.Value>
                 <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#FF4A5568"/>
-                    <Setter Property="Foreground" Value="#FFF7FAFC"/>
-                    <Setter Property="BorderBrush" Value="#FF2D3748"/>
+                    <Setter Property="Background" Value="#4A5568"/>
+                    <Setter Property="Foreground" Value="#F7FAFC"/>
+                    <Setter Property="BorderBrush" Value="#2D3748"/>
                     <Setter Property="BorderThickness" Value="0,0,1,1"/>
                     <Setter Property="Padding" Value="8"/>
                     <Setter Property="FontWeight" Value="Bold"/>
@@ -268,7 +268,7 @@
                             <Setter Property="Background" Value="{StaticResource ReportPrimaryBrush}"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#FF4A5568"/>
+                            <Setter Property="Background" Value="#4A5568"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
@@ -318,7 +318,7 @@
     <!-- Report Progress Bar Style -->
     <Style x:Key="ReportProgressBarStyle" TargetType="ProgressBar">
         <Setter Property="Height" Value="8"/>
-        <Setter Property="Background" Value="#FF4A5568"/>
+        <Setter Property="Background" Value="#4A5568"/>
         <Setter Property="Foreground" Value="{StaticResource ReportPrimaryBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Template">
@@ -342,7 +342,7 @@
     <Style x:Key="ReportSectionHeaderStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="16"/>
         <Setter Property="FontWeight" Value="Bold"/>
-        <Setter Property="Foreground" Value="#FFF7FAFC"/>
+        <Setter Property="Foreground" Value="#F7FAFC"/>
         <Setter Property="Margin" Value="0,0,0,12"/>
     </Style>
     
@@ -354,8 +354,8 @@
     </Style>
     
     <Style x:Key="ReportTabItemStyle" TargetType="TabItem">
-        <Setter Property="Background" Value="#FF2D3748"/>
-        <Setter Property="Foreground" Value="#FFE2E8F0"/>
+        <Setter Property="Background" Value="#2D3748"/>
+        <Setter Property="Foreground" Value="#E2E8F0"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Padding" Value="16,8"/>
         <Setter Property="Margin" Value="0,0,4,0"/>
@@ -373,11 +373,11 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#FF4A5568"/>
+                            <Setter Property="Background" Value="#4A5568"/>
                             <Setter Property="Foreground" Value="White"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#FF4A5568"/>
+                            <Setter Property="Background" Value="#4A5568"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -33,7 +33,7 @@
         
         <!-- Multi-sort Order Number -->
         <Border x:Name="SortOrderBadge"
-                Background="#FF2196F3"
+                Background="#2196F3"
                 CornerRadius="8"
                 MinWidth="16"
                 MinHeight="16"

@@ -57,19 +57,19 @@
             </Grid.ColumnDefinitions>
             
             <Border Grid.Column="0" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" 
-                    Padding="15" Margin="0,0,10,0" BorderBrush="#FF10B981" BorderThickness="2">
+                    Padding="15" Margin="0,0,10,0" BorderBrush="#10B981" BorderThickness="2">
                 <StackPanel>
                     <TextBlock Text="Security Groups" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding SecurityGroups.Count}" FontSize="24" FontWeight="Bold" Foreground="#FF10B981"/>
+                    <TextBlock Text="{Binding SecurityGroups.Count}" FontSize="24" FontWeight="Bold" Foreground="#10B981"/>
                     <TextBlock Text="groups loaded" FontSize="10" Foreground="{DynamicResource MutedForegroundBrush}"/>
                 </StackPanel>
             </Border>
             
             <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" 
-                    Padding="15" Margin="5,0" BorderBrush="#FFFBBF24" BorderThickness="2">
+                    Padding="15" Margin="5,0" BorderBrush="#FBBF24" BorderThickness="2">
                 <StackPanel>
                     <TextBlock Text="Group Policies" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                    <TextBlock Text="{Binding GroupPolicies.Count}" FontSize="24" FontWeight="Bold" Foreground="#FFFBBF24"/>
+                    <TextBlock Text="{Binding GroupPolicies.Count}" FontSize="24" FontWeight="Bold" Foreground="#FBBF24"/>
                     <TextBlock Text="policies loaded" FontSize="10" Foreground="{DynamicResource MutedForegroundBrush}"/>
                 </StackPanel>
             </Border>

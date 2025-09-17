@@ -3,9 +3,9 @@
     
     <!-- TextBox with validation visual feedback -->
     <Style x:Key="ValidatingTextBoxStyle" TargetType="TextBox">
-        <Setter Property="Background" Value="#FF2D3748"/>
-        <Setter Property="Foreground" Value="#FFE2E8F0"/>
-        <Setter Property="BorderBrush" Value="#FF4A5568"/>
+        <Setter Property="Background" Value="#2D3748"/>
+        <Setter Property="Foreground" Value="#E2E8F0"/>
+        <Setter Property="BorderBrush" Value="#4A5568"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="8,6"/>
         <Setter Property="FontSize" Value="14"/>
@@ -27,7 +27,7 @@
                         
                         <!-- Validation Error Indicator -->
                         <Border x:Name="ValidationErrorBorder" 
-                                BorderBrush="#FFDC2626" 
+                                BorderBrush="#DC2626" 
                                 BorderThickness="2" 
                                 CornerRadius="4" 
                                 Visibility="Collapsed"/>
@@ -36,13 +36,13 @@
                     <ControlTemplate.Triggers>
                         <!-- Focus state -->
                         <Trigger Property="IsKeyboardFocused" Value="true">
-                            <Setter TargetName="border" Property="BorderBrush" Value="#FF63B3ED"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="#63B3ED"/>
                             <Setter TargetName="border" Property="BorderThickness" Value="2"/>
                         </Trigger>
                         
                         <!-- Mouse over state -->
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter TargetName="border" Property="BorderBrush" Value="#FF718096"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="#718096"/>
                         </Trigger>
                         
                         <!-- Validation Error state -->
@@ -67,7 +67,7 @@
                     <BeginStoryboard>
                         <Storyboard>
                             <ColorAnimation Storyboard.TargetProperty="(TextBox.BorderBrush).(SolidColorBrush.Color)"
-                                            To="#FFDC2626" Duration="0:0:0.2"/>
+                                            To="#DC2626" Duration="0:0:0.2"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </Trigger.EnterActions>
@@ -75,7 +75,7 @@
                     <BeginStoryboard>
                         <Storyboard>
                             <ColorAnimation Storyboard.TargetProperty="(TextBox.BorderBrush).(SolidColorBrush.Color)"
-                                            To="#FF4A5568" Duration="0:0:0.2"/>
+                                            To="#4A5568" Duration="0:0:0.2"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </Trigger.ExitActions>
@@ -109,7 +109,7 @@
                     <BeginStoryboard>
                         <Storyboard>
                             <ColorAnimation Storyboard.TargetProperty="(TextBox.BorderBrush).(SolidColorBrush.Color)"
-                                            To="#FF48BB78" Duration="0:0:0.2"/>
+                                            To="#48BB78" Duration="0:0:0.2"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </Trigger.EnterActions>

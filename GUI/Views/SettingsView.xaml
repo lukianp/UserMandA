@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="1000"
-             Background="#FF0F1419">
+             Background="#0F1419">
     
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -22,7 +22,7 @@
             <TextBlock Text="Settings" 
                        FontSize="28" 
                        FontWeight="SemiBold"
-                       Foreground="#FFE2E8F0"/>
+                       Foreground="#E2E8F0"/>
             <TextBlock Text="Configure application settings and preferences" 
                        FontSize="14" 
                        Foreground="{StaticResource SecondaryTextBrush}" 
@@ -31,8 +31,8 @@
         
         <!-- Content -->
         <Border Grid.Row="1" 
-                Background="#FF1A202C" 
-                BorderBrush="#FF2D3748" 
+                Background="#1A202C" 
+                BorderBrush="#2D3748" 
                 BorderThickness="1" 
                 CornerRadius="8">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -51,10 +51,10 @@
                     <!-- Settings Sections -->
                     <StackPanel Visibility="{Binding HasData, Converter={StaticResource BoolToVisibilityConverter}}">
                         <!-- General Settings -->
-                        <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                        <Border Background="#2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
                             <StackPanel>
                                 <TextBlock Text="⚙️ General Settings" FontSize="18" FontWeight="Bold" 
-                                           Foreground="#FFE2E8F0" Margin="0,0,0,16"/>
+                                           Foreground="#E2E8F0" Margin="0,0,0,16"/>
                                 
                                 <Grid Margin="0,0,0,12">
                                     <Grid.ColumnDefinitions>
@@ -91,10 +91,10 @@
                         </Border>
                         
                         <!-- Path Settings -->
-                        <Border Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                        <Border Background="#2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
                             <StackPanel>
                                 <TextBlock Text="📁 Path Settings" FontSize="18" FontWeight="Bold" 
-                                           Foreground="#FFE2E8F0" Margin="0,0,0,16"/>
+                                           Foreground="#E2E8F0" Margin="0,0,0,16"/>
                                 
                                 <Grid Margin="0,0,0,12">
                                     <Grid.ColumnDefinitions>
@@ -102,7 +102,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Data Directory:" VerticalAlignment="Center" Foreground="{StaticResource SecondaryTextBrush}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding DataDirectory}" Foreground="#FFE2E8F0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding DataDirectory}" Foreground="#E2E8F0"/>
                                 </Grid>
                                 
                                 <Grid Margin="0,0,0,12">
@@ -111,7 +111,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="Log Directory:" VerticalAlignment="Center" Foreground="{StaticResource SecondaryTextBrush}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding LogDirectory}" Foreground="#FFE2E8F0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding LogDirectory}" Foreground="#E2E8F0"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -119,10 +119,10 @@
                         <!-- Actions -->
                         <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                             <Button Content="Save Settings" Command="{Binding SaveSettingsCommand}" 
-                                    Background="#FF10B981" Foreground="White" BorderThickness="0" 
+                                    Background="#10B981" Foreground="White" BorderThickness="0" 
                                     Padding="16,8" Margin="0,0,8,0" FontWeight="Bold"/>
                             <Button Content="Reset to Defaults" Command="{Binding ResetSettingsCommand}" 
-                                    Background="#FF6B7280" Foreground="White" BorderThickness="0" 
+                                    Background="#6B7280" Foreground="White" BorderThickness="0" 
                                     Padding="16,8" FontWeight="Bold"/>
                         </StackPanel>
                     </StackPanel>

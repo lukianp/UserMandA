@@ -43,6 +43,15 @@ namespace MandADiscoverySuite.ViewModels
 
             // Initialize content for template
             InitializeContent();
+
+            // Initialize non-nullable fields to prevent CS8618 errors
+            _selectedItem = null;
+            _headerContent = new StackPanel();
+            _summaryCardsContent = new UniformGrid();
+            _actionButtonsContent = new ToolBar();
+            _dataGridContent = new DataGrid();
+            _detailsPanelContent = new Border();
+            _footerContent = new Border();
         }
 
         #endregion
@@ -454,7 +463,8 @@ namespace MandADiscoverySuite.ViewModels
 
             foreach (var kvp in dict)
             {
-                if (kvp.Value != null)
+                string? value = kvp.Value?.ToString();
+                if (!string.IsNullOrEmpty(value))
                 {
                     string displayName = kvp.Key switch
                     {
@@ -473,7 +483,7 @@ namespace MandADiscoverySuite.ViewModels
                         _ => kvp.Key
                     };
 
-                    SelectedItemDetails.Add(new KeyValuePair<string, string>(displayName, kvp.Value.ToString()));
+                    SelectedItemDetails.Add(new KeyValuePair<string, string>(displayName, value));
                 }
             }
         }

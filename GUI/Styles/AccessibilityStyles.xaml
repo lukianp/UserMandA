@@ -8,7 +8,7 @@
         <Setter Property="Control.Template">
             <Setter.Value>
                 <ControlTemplate>
-                    <Rectangle Stroke="#FF00D4FF" 
+                    <Rectangle Stroke="#00D4FF" 
                               StrokeThickness="3" 
                               StrokeDashArray="2,2"
                               SnapsToDevicePixels="True"
@@ -26,7 +26,7 @@
         <Setter Property="Control.Template">
             <Setter.Value>
                 <ControlTemplate>
-                    <Rectangle Stroke="#FF00D4FF" 
+                    <Rectangle Stroke="#00D4FF" 
                               StrokeThickness="3" 
                               SnapsToDevicePixels="True"
                               Margin="1"
@@ -43,7 +43,7 @@
         <Setter Property="Control.Template">
             <Setter.Value>
                 <ControlTemplate>
-                    <Rectangle Stroke="#FF00D4FF" 
+                    <Rectangle Stroke="#00D4FF" 
                               StrokeThickness="2" 
                               StrokeDashArray="1,1"
                               SnapsToDevicePixels="True"
@@ -61,7 +61,7 @@
         <Setter Property="Control.Template">
             <Setter.Value>
                 <ControlTemplate>
-                    <Rectangle Stroke="#FF00D4FF" 
+                    <Rectangle Stroke="#00D4FF" 
                               StrokeThickness="2" 
                               SnapsToDevicePixels="True"
                               Margin="0"
@@ -76,7 +76,7 @@
         <Setter Property="Control.Template">
             <Setter.Value>
                 <ControlTemplate>
-                    <Rectangle Stroke="#FF00D4FF" 
+                    <Rectangle Stroke="#00D4FF" 
                               StrokeThickness="2" 
                               SnapsToDevicePixels="True"
                               Margin="-2"
@@ -95,7 +95,7 @@
         <Setter Property="AutomationProperties.AutomationId" Value="{Binding RelativeSource={RelativeSource Self}, Path=Name}"/>
         <Style.Triggers>
             <Trigger Property="IsFocused" Value="True">
-                <Setter Property="BorderBrush" Value="#FF00D4FF"/>
+                <Setter Property="BorderBrush" Value="#00D4FF"/>
                 <Setter Property="BorderThickness" Value="2"/>
             </Trigger>
         </Style.Triggers>
@@ -122,18 +122,18 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Border" Property="Background" Value="#FF2D3748"/>
-                            <Setter TargetName="Border" Property="BorderBrush" Value="#FF00D4FF"/>
+                            <Setter TargetName="Border" Property="Background" Value="#2D3748"/>
+                            <Setter TargetName="Border" Property="BorderBrush" Value="#00D4FF"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Border" Property="Background" Value="#FF4A5568"/>
+                            <Setter TargetName="Border" Property="Background" Value="#4A5568"/>
                         </Trigger>
                         <Trigger Property="IsFocused" Value="True">
-                            <Setter TargetName="Border" Property="BorderBrush" Value="#FF00D4FF"/>
+                            <Setter TargetName="Border" Property="BorderBrush" Value="#00D4FF"/>
                             <Setter TargetName="Border" Property="BorderThickness" Value="0,0,0,3"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Foreground" Value="#FF718096"/>
+                            <Setter Property="Foreground" Value="#718096"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -145,19 +145,19 @@
     <Style x:Key="AccessibleTextBoxStyle" TargetType="TextBox">
         <Setter Property="FocusVisualStyle" Value="{StaticResource AccessibleTextBoxFocusStyle}"/>
         <Setter Property="KeyboardNavigation.IsTabStop" Value="True"/>
-        <Setter Property="Background" Value="#FF2D3748"/>
-        <Setter Property="Foreground" Value="#FFE2E8F0"/>
-        <Setter Property="BorderBrush" Value="#FF4A5568"/>
+        <Setter Property="Background" Value="#2D3748"/>
+        <Setter Property="Foreground" Value="#E2E8F0"/>
+        <Setter Property="BorderBrush" Value="#4A5568"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="8"/>
         <Setter Property="FontSize" Value="14"/>
         <Style.Triggers>
             <Trigger Property="IsFocused" Value="True">
-                <Setter Property="BorderBrush" Value="#FF00D4FF"/>
+                <Setter Property="BorderBrush" Value="#00D4FF"/>
                 <Setter Property="BorderThickness" Value="2"/>
             </Trigger>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="BorderBrush" Value="#FF718096"/>
+                <Setter Property="BorderBrush" Value="#718096"/>
             </Trigger>
         </Style.Triggers>
     </Style>

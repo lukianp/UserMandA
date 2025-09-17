@@ -18,26 +18,26 @@
                 <Setter Property="Height" Value="20"/>
                 <Setter Property="RadiusX" Value="2"/>
                 <Setter Property="RadiusY" Value="2"/>
-                <Setter Property="Stroke" Value="#FF334155"/>
+                <Setter Property="Stroke" Value="#334155"/>
                 <Setter Property="StrokeThickness" Value="1"/>
             </Style>
 
             <Style x:Key="CriticalTaskBar" TargetType="Rectangle" BasedOn="{StaticResource TaskBar}">
-                <Setter Property="Fill" Value="#FFEF4444"/>
-                <Setter Property="Stroke" Value="#FFDC2626"/>
+                <Setter Property="Fill" Value="#EF4444"/>
+                <Setter Property="Stroke" Value="#DC2626"/>
                 <Setter Property="StrokeThickness" Value="2"/>
             </Style>
 
             <!-- Task Status Colors -->
-            <SolidColorBrush x:Key="NotStartedBrush" Color="#FF6B7280"/>
-            <SolidColorBrush x:Key="InProgressBrush" Color="#FF3B82F6"/>
-            <SolidColorBrush x:Key="CompletedBrush" Color="#FF10B981"/>
-            <SolidColorBrush x:Key="AtRiskBrush" Color="#FFF59E0B"/>
-            <SolidColorBrush x:Key="BlockedBrush" Color="#FFEF4444"/>
+            <SolidColorBrush x:Key="NotStartedBrush" Color="#6B7280"/>
+            <SolidColorBrush x:Key="InProgressBrush" Color="#3B82F6"/>
+            <SolidColorBrush x:Key="CompletedBrush" Color="#10B981"/>
+            <SolidColorBrush x:Key="AtRiskBrush" Color="#F59E0B"/>
+            <SolidColorBrush x:Key="BlockedBrush" Color="#EF4444"/>
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid Background="#FF0F172A">
+    <Grid Background="#0F172A">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -58,18 +58,18 @@
                        Foreground="White"/>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Border Background="#FFEF4444" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
+                <Border Background="#EF4444" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
                     <TextBlock Text="Critical Path" Foreground="White" FontSize="12" FontWeight="Bold"/>
                 </Border>
                 <TextBlock Text="{Binding TimelineDays, StringFormat='Timeline: {0} days'}" 
-                           Foreground="#FF94A3B8" 
+                           Foreground="#94A3B8" 
                            FontSize="14" 
                            VerticalAlignment="Center"/>
             </StackPanel>
         </Grid>
 
         <!-- Timeline Header -->
-        <Border Grid.Row="1" Background="#FF1E293B" BorderBrush="#FF334155" BorderThickness="0,1">
+        <Border Grid.Row="1" Background="#1E293B" BorderBrush="#334155" BorderThickness="0,1">
             <ScrollViewer x:Name="HeaderScrollViewer" 
                           HorizontalScrollBarVisibility="Hidden" 
                           VerticalScrollBarVisibility="Disabled"
@@ -95,7 +95,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- Task List (Left Panel) -->
-            <Border Grid.Column="0" Background="#FF1E293B" BorderBrush="#FF334155" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0" Background="#1E293B" BorderBrush="#334155" BorderThickness="0,0,1,0">
                 <ScrollViewer x:Name="TaskListScrollViewer" 
                               VerticalScrollBarVisibility="Auto" 
                               HorizontalScrollBarVisibility="Disabled"
@@ -103,7 +103,7 @@
                     <ItemsControl ItemsSource="{Binding FlattenedTasks}" Margin="8">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#FF334155" 
+                                <Border Background="#334155" 
                                         CornerRadius="4" 
                                         Margin="0,0,0,2" 
                                         Padding="12,8"
@@ -124,7 +124,7 @@
 
                                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                                             <TextBlock Text="{Binding Owner}" 
-                                                       Foreground="#FF94A3B8" 
+                                                       Foreground="#94A3B8" 
                                                        FontSize="10" 
                                                        Margin="0,0,8,0"/>
                                             <Border Background="{Binding StatusColor}" 
@@ -161,13 +161,13 @@
                           VerticalScrollBarVisibility="Auto"
                           ScrollChanged="TimelineScrollViewer_ScrollChanged">
                 <Canvas x:Name="TimelineCanvas" 
-                        Background="#FF0F172A" 
+                        Background="#0F172A" 
                         Height="{Binding FlattenedTasks.Count, Converter={StaticResource TaskCountToHeightConverter}}"
                         Width="2000"
                         MinWidth="800">
 
                     <!-- Grid Lines -->
-                    <Rectangle Fill="#FF334155" Width="1" Height="{Binding ElementName=TimelineCanvas, Path=Height}" 
+                    <Rectangle Fill="#334155" Width="1" Height="{Binding ElementName=TimelineCanvas, Path=Height}" 
                                Canvas.Left="0" Opacity="0.3"/>
 
                     <!-- Task Bars -->

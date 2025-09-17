@@ -7,20 +7,20 @@
         Title="Detail Window" Height="600" Width="800"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Icon="pack://application:,,,/Resources/Icons/detail_window.ico"
-        Background="#FF0F1419">
+        Background="#0F1419">
 
     <Window.Resources>
         <Style x:Key="HeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="18"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#FF2D5A87"/>
+            <Setter Property="Foreground" Value="#2D5A87"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>
         
         <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#FF2D5A87"/>
+            <Setter Property="Foreground" Value="#2D5A87"/>
             <Setter Property="Margin" Value="0,15,0,5"/>
         </Style>
         
@@ -61,7 +61,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="#FF2D5A87" Padding="20,15">
+        <Border Grid.Row="0" Background="#2D5A87" Padding="20,15">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -89,7 +89,7 @@
         </Border>
 
         <!-- Content -->
-        <TabControl Grid.Row="1" Margin="0" Background="#FF1E1E1E">
+        <TabControl Grid.Row="1" Margin="0" Background="#1E1E1E">
             
             <!-- General Tab -->
             <TabItem Header="General" IsSelected="True">
@@ -97,7 +97,7 @@
                     <StackPanel>
                         
                         <!-- Loading Indicator -->
-                        <Border Background="#FFF0F8FF" BorderBrush="#FF4682B4" BorderThickness="1"
+                        <Border Background="#F0F8FF" BorderBrush="#4682B4" BorderThickness="1"
                                 Padding="15" Margin="0,0,0,20" CornerRadius="5"
                                 Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <StackPanel Orientation="Horizontal">
@@ -195,7 +195,7 @@
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" 
                                 HorizontalScrollBarVisibility="Auto">
                         <TextBox x:Name="RawDataTextBox" IsReadOnly="True" 
-                               Background="#FFF8F8F8" BorderThickness="1" 
+                               Background="#F8F8F8" BorderThickness="1" 
                                FontFamily="Consolas, Courier New" FontSize="12"
                                Padding="10" TextWrapping="Wrap"
                                VerticalScrollBarVisibility="Auto"/>

@@ -9,22 +9,22 @@
     <UserControl.Resources>
         <!-- Card Style -->
         <Style x:Key="WaveCard" TargetType="Border">
-            <Setter Property="Background" Value="#FF1E293B"/>
+            <Setter Property="Background" Value="#1E293B"/>
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="BorderBrush" Value="#FF334155"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Margin" Value="8"/>
             <Setter Property="Padding" Value="16"/>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect Color="#FF000000" BlurRadius="8" ShadowDepth="2" Opacity="0.3"/>
+                    <DropShadowEffect Color="#000000" BlurRadius="8" ShadowDepth="2" Opacity="0.3"/>
                 </Setter.Value>
             </Setter>
         </Style>
 
         <!-- Button Styles -->
         <Style x:Key="PrimaryButton" TargetType="Button">
-            <Setter Property="Background" Value="#FF3B82F6"/>
+            <Setter Property="Background" Value="#3B82F6"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="16,8"/>
@@ -40,10 +40,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF2563EB"/>
+                                <Setter Property="Background" Value="#2563EB"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Background" Value="#FF6B7280"/>
+                                <Setter Property="Background" Value="#6B7280"/>
                                 <Setter Property="Cursor" Value="Arrow"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -53,19 +53,19 @@
         </Style>
 
         <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
-            <Setter Property="Background" Value="#FFEF4444"/>
+            <Setter Property="Background" Value="#EF4444"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#FFDC2626"/>
+                    <Setter Property="Background" Value="#DC2626"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
-            <Setter Property="Background" Value="#FF374151"/>
+            <Setter Property="Background" Value="#374151"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#FF4B5563"/>
+                    <Setter Property="Background" Value="#4B5563"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -74,14 +74,14 @@
         <Style x:Key="HeaderText" TargetType="TextBlock">
             <Setter Property="FontSize" Value="18"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
             <Setter Property="Margin" Value="0,0,0,16"/>
         </Style>
 
         <!-- Status Color Converters would go here in a real implementation -->
     </UserControl.Resources>
 
-    <Grid Background="#FF0F172A">
+    <Grid Background="#0F172A">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -125,7 +125,7 @@
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#FF374151" 
+                                <Border Background="#374151" 
                                         CornerRadius="6" 
                                         Margin="0,0,0,8" 
                                         Padding="12">
@@ -141,14 +141,14 @@
                                         <TextBlock Grid.Row="0" 
                                                    Text="{Binding Name}" 
                                                    FontWeight="Bold" 
-                                                   Foreground="#FFE2E8F0" 
+                                                   Foreground="#E2E8F0" 
                                                    FontSize="14"
                                                    TextTrimming="CharacterEllipsis"/>
 
                                         <!-- Description -->
                                         <TextBlock Grid.Row="1" 
                                                    Text="{Binding Description}" 
-                                                   Foreground="#FF94A3B8" 
+                                                   Foreground="#94A3B8" 
                                                    FontSize="12" 
                                                    Margin="0,4,0,0"
                                                    TextTrimming="CharacterEllipsis"/>
@@ -156,11 +156,11 @@
                                         <!-- Dates -->
                                         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
                                             <TextBlock Text="{Binding StartDate, StringFormat='{}{0:MMM dd}'}" 
-                                                       Foreground="#FF94A3B8" 
+                                                       Foreground="#94A3B8" 
                                                        FontSize="11"/>
-                                            <TextBlock Text=" - " Foreground="#FF94A3B8" FontSize="11"/>
+                                            <TextBlock Text=" - " Foreground="#94A3B8" FontSize="11"/>
                                             <TextBlock Text="{Binding EndDate, StringFormat='{}{0:MMM dd}'}" 
-                                                       Foreground="#FF94A3B8" 
+                                                       Foreground="#94A3B8" 
                                                        FontSize="11"/>
                                         </StackPanel>
 
@@ -175,8 +175,8 @@
                                                          Value="{Binding Progress}" 
                                                          Maximum="100" 
                                                          Height="6" 
-                                                         Background="#FF4B5563" 
-                                                         Foreground="#FF3B82F6" 
+                                                         Background="#4B5563" 
+                                                         Foreground="#3B82F6" 
                                                          BorderThickness="0"/>
 
                                             <Border Grid.Column="1" 
@@ -234,7 +234,7 @@
                                        FontWeight="Bold" 
                                        Foreground="White"/>
                             <TextBlock Text="{Binding SelectedWave.Description}" 
-                                       Foreground="#FF94A3B8" 
+                                       Foreground="#94A3B8" 
                                        FontSize="14" 
                                        Margin="0,4,0,0"/>
                         </StackPanel>
@@ -260,29 +260,29 @@
 
                         <!-- Start Date -->
                         <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,12,12">
-                            <TextBlock Text="Start Date" Foreground="#FF94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBlock Text="Start Date" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
                             <DatePicker SelectedDate="{Binding SelectedWave.StartDate, Mode=TwoWay}"
-                                        Background="#FF374151"
+                                        Background="#374151"
                                         Foreground="White"
-                                        BorderBrush="#FF4B5563"/>
+                                        BorderBrush="#4B5563"/>
                         </StackPanel>
 
                         <!-- End Date -->
                         <StackPanel Grid.Row="0" Grid.Column="1" Margin="12,0,0,12">
-                            <TextBlock Text="End Date" Foreground="#FF94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBlock Text="End Date" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
                             <DatePicker SelectedDate="{Binding SelectedWave.EndDate, Mode=TwoWay}"
-                                        Background="#FF374151"
+                                        Background="#374151"
                                         Foreground="White"
-                                        BorderBrush="#FF4B5563"/>
+                                        BorderBrush="#4B5563"/>
                         </StackPanel>
 
                         <!-- Status -->
                         <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,12">
-                            <TextBlock Text="Status" Foreground="#FF94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBlock Text="Status" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
                             <ComboBox SelectedItem="{Binding SelectedWave.Status, Mode=TwoWay}"
-                                      Background="#FF374151"
+                                      Background="#374151"
                                       Foreground="White"
-                                      BorderBrush="#FF4B5563">
+                                      BorderBrush="#4B5563">
                                 <ComboBox.Items>
                                     <ComboBoxItem Content="Planned"/>
                                     <ComboBoxItem Content="Active"/>
@@ -293,13 +293,13 @@
 
                         <!-- Progress -->
                         <StackPanel Grid.Row="1" Grid.Column="1" Margin="12,0,0,12">
-                            <TextBlock Text="Progress" Foreground="#FF94A3B8" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBlock Text="Progress" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,4"/>
                             <Grid>
                                 <ProgressBar Value="{Binding SelectedWave.Progress}" 
                                              Maximum="100" 
                                              Height="24" 
-                                             Background="#FF374151" 
-                                             Foreground="#FF3B82F6" 
+                                             Background="#374151" 
+                                             Foreground="#3B82F6" 
                                              BorderThickness="0"/>
                                 <TextBlock Text="{Binding SelectedWave.Progress, StringFormat='{}{0:F1}%'}" 
                                            HorizontalAlignment="Center" 
@@ -323,9 +323,9 @@
                             <TextBlock Text="Assigned Users" Style="{StaticResource HeaderText}"/>
                             
                             <DataGrid ItemsSource="{Binding SelectedWaveUsers}"
-                                      Background="#FF374151"
+                                      Background="#374151"
                                       BorderThickness="1"
-                                      BorderBrush="#FF4B5563"
+                                      BorderBrush="#4B5563"
                                       GridLinesVisibility="None"
                                       HeadersVisibility="Column"
                                       AutoGenerateColumns="False"
@@ -345,7 +345,7 @@
                                     <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="120">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="#FF94A3B8"/>
+                                                <Setter Property="Foreground" Value="#94A3B8"/>
                                                 <Setter Property="Padding" Value="8,4"/>
                                             </Style>
                                         </DataGridTextColumn.ElementStyle>
@@ -371,9 +371,9 @@
                             <TextBlock Text="Available Users" Style="{StaticResource HeaderText}"/>
                             
                             <DataGrid ItemsSource="{Binding UnassignedUsers}"
-                                      Background="#FF374151"
+                                      Background="#374151"
                                       BorderThickness="1"
-                                      BorderBrush="#FF4B5563"
+                                      BorderBrush="#4B5563"
                                       GridLinesVisibility="None"
                                       HeadersVisibility="Column"
                                       AutoGenerateColumns="False"
@@ -393,7 +393,7 @@
                                     <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="120">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="#FF94A3B8"/>
+                                                <Setter Property="Foreground" Value="#94A3B8"/>
                                                 <Setter Property="Padding" Value="8,4"/>
                                             </Style>
                                         </DataGridTextColumn.ElementStyle>
@@ -423,11 +423,11 @@
                     <TextBlock Text="No Wave Selected" 
                                FontSize="18" 
                                FontWeight="Bold" 
-                               Foreground="#FF6B7280" 
+                               Foreground="#6B7280" 
                                HorizontalAlignment="Center"/>
                     <TextBlock Text="Select a wave from the list to view details" 
                                FontSize="14" 
-                               Foreground="#FF6B7280" 
+                               Foreground="#6B7280" 
                                HorizontalAlignment="Center" 
                                Margin="0,8,0,0"/>
                 </StackPanel>

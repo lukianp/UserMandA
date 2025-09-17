@@ -6,7 +6,7 @@
         <DrawingImage.Drawing>
             <DrawingGroup>
                 <!-- Background Circle -->
-                <GeometryDrawing Brush="#FF2196F3">
+                <GeometryDrawing Brush="#2196F3">
                     <GeometryDrawing.Geometry>
                         <EllipseGeometry Center="32,32" RadiusX="30" RadiusY="30"/>
                     </GeometryDrawing.Geometry>
@@ -37,7 +37,7 @@
                 </GeometryDrawing>
                 
                 <!-- Inner Detail -->
-                <GeometryDrawing Brush="#FF1976D2">
+                <GeometryDrawing Brush="#1976D2">
                     <GeometryDrawing.Geometry>
                         <EllipseGeometry Center="26,32" RadiusX="3" RadiusY="3"/>
                     </GeometryDrawing.Geometry>
@@ -51,21 +51,21 @@
         <DrawingImage.Drawing>
             <DrawingGroup>
                 <!-- Background Circle -->
-                <GeometryDrawing Brush="#FF37474F">
+                <GeometryDrawing Brush="#37474F">
                     <GeometryDrawing.Geometry>
                         <EllipseGeometry Center="32,32" RadiusX="30" RadiusY="30"/>
                     </GeometryDrawing.Geometry>
                 </GeometryDrawing>
                 
                 <!-- Inner Circle -->
-                <GeometryDrawing Brush="#FF546E7A">
+                <GeometryDrawing Brush="#546E7A">
                     <GeometryDrawing.Geometry>
                         <EllipseGeometry Center="32,32" RadiusX="24" RadiusY="24"/>
                     </GeometryDrawing.Geometry>
                 </GeometryDrawing>
                 
                 <!-- Discovery Elements -->
-                <GeometryDrawing Brush="#FF00E5FF">
+                <GeometryDrawing Brush="#00E5FF">
                     <GeometryDrawing.Geometry>
                         <PathGeometry>
                             <PathFigure StartPoint="20,20">
@@ -99,17 +99,17 @@
                 </GeometryDrawing>
                 
                 <!-- Border -->
-                <GeometryDrawing Brush="#FFE0E0E0">
+                <GeometryDrawing Brush="#E0E0E0">
                     <GeometryDrawing.Geometry>
                         <EllipseGeometry Center="32,32" RadiusX="30" RadiusY="30"/>
                     </GeometryDrawing.Geometry>
                     <GeometryDrawing.Pen>
-                        <Pen Brush="#FFE0E0E0" Thickness="2"/>
+                        <Pen Brush="#E0E0E0" Thickness="2"/>
                     </GeometryDrawing.Pen>
                 </GeometryDrawing>
                 
                 <!-- Discovery Icon -->
-                <GeometryDrawing Brush="#FF2196F3">
+                <GeometryDrawing Brush="#2196F3">
                     <GeometryDrawing.Geometry>
                         <PathGeometry>
                             <PathFigure StartPoint="16,16">
@@ -129,13 +129,13 @@
                 </GeometryDrawing>
                 
                 <!-- Inner Elements -->
-                <GeometryDrawing Brush="#FF4CAF50">
+                <GeometryDrawing Brush="#4CAF50">
                     <GeometryDrawing.Geometry>
                         <RectangleGeometry Rect="26,26,12,4"/>
                     </GeometryDrawing.Geometry>
                 </GeometryDrawing>
                 
-                <GeometryDrawing Brush="#FFFF9800">
+                <GeometryDrawing Brush="#FF9800">
                     <GeometryDrawing.Geometry>
                         <RectangleGeometry Rect="26,34,12,4"/>
                     </GeometryDrawing.Geometry>
@@ -196,7 +196,7 @@
         <DrawingImage.Drawing>
             <DrawingGroup>
                 <!-- Base Icon -->
-                <GeometryDrawing Brush="#FF2196F3">
+                <GeometryDrawing Brush="#2196F3">
                     <GeometryDrawing.Geometry>
                         <EllipseGeometry Center="24,24" RadiusX="22" RadiusY="22"/>
                     </GeometryDrawing.Geometry>
@@ -216,7 +216,7 @@
                 </GeometryDrawing>
                 
                 <!-- Notification Badge -->
-                <GeometryDrawing Brush="#FFFF4444">
+                <GeometryDrawing Brush="#FF4444">
                     <GeometryDrawing.Geometry>
                         <EllipseGeometry Center="38,10" RadiusX="8" RadiusY="8"/>
                     </GeometryDrawing.Geometry>
@@ -246,8 +246,8 @@
                     </GeometryDrawing.Geometry>
                     <GeometryDrawing.Brush>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#FF2196F3" Offset="0"/>
-                            <GradientStop Color="#FF1976D2" Offset="1"/>
+                            <GradientStop Color="#2196F3" Offset="0"/>
+                            <GradientStop Color="#1976D2" Offset="1"/>
                         </LinearGradientBrush>
                     </GeometryDrawing.Brush>
                 </GeometryDrawing>
@@ -267,7 +267,7 @@
                 </GeometryDrawing>
                 
                 <!-- Inner Detail -->
-                <GeometryDrawing Brush="#FF1976D2">
+                <GeometryDrawing Brush="#1976D2">
                     <GeometryDrawing.Geometry>
                         <PathGeometry>
                             <PathFigure StartPoint="32,16">

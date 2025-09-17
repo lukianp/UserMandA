@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
              d:DesignHeight="900" d:DesignWidth="1400"
-             Background="#FF0F1419">
+             Background="#0F1419">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -13,20 +13,20 @@
         <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="24"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#FF2D3748"/>
+            <Setter Property="Foreground" Value="#2D3748"/>
             <Setter Property="Margin" Value="0,0,0,16"/>
         </Style>
         
         <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="18"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#FF4A5568"/>
+            <Setter Property="Foreground" Value="#4A5568"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
         
         <Style x:Key="StatsCardStyle" TargetType="Border">
             <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#FFE2E8F0"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16"/>
@@ -35,7 +35,7 @@
         </Style>
         
         <Style x:Key="FilterButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#FF4299E1"/>
+            <Setter Property="Background" Value="#4299E1"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="12,6"/>
@@ -63,7 +63,7 @@
             
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button Content="🔄 Refresh" Command="{Binding RefreshGroupsCommand}" 
-                        Style="{StaticResource FilterButtonStyle}" Background="#FF10B981"/>
+                        Style="{StaticResource FilterButtonStyle}" Background="#10B981"/>
                 <Button Content="📤 Export" Command="{Binding ExportGroupsCommand}" 
                         Style="{StaticResource FilterButtonStyle}"/>
             </StackPanel>
@@ -74,7 +74,7 @@
             <Border Style="{StaticResource StatsCardStyle}">
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="{Binding TotalGroupsCount}" FontSize="28" FontWeight="Bold" 
-                              Foreground="#FF3182CE" HorizontalAlignment="Center"/>
+                              Foreground="#3182CE" HorizontalAlignment="Center"/>
                     <TextBlock Text="Total Groups" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
@@ -82,7 +82,7 @@
             <Border Style="{StaticResource StatsCardStyle}">
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="{Binding SecurityGroupsCount}" FontSize="28" FontWeight="Bold" 
-                              Foreground="#FFE53E3E" HorizontalAlignment="Center"/>
+                              Foreground="#E53E3E" HorizontalAlignment="Center"/>
                     <TextBlock Text="Security Groups" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
@@ -90,7 +90,7 @@
             <Border Style="{StaticResource StatsCardStyle}">
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="{Binding DistributionGroupsCount}" FontSize="28" FontWeight="Bold" 
-                              Foreground="#FF10B981" HorizontalAlignment="Center"/>
+                              Foreground="#10B981" HorizontalAlignment="Center"/>
                     <TextBlock Text="Distribution Groups" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
@@ -98,7 +98,7 @@
             <Border Style="{StaticResource StatsCardStyle}">
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="{Binding MailEnabledSecurityGroupsCount}" FontSize="28" FontWeight="Bold" 
-                              Foreground="#FFED8936" HorizontalAlignment="Center"/>
+                              Foreground="#ED8936" HorizontalAlignment="Center"/>
                     <TextBlock Text="Mail-Enabled Security" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
@@ -124,32 +124,32 @@
                           Width="200" Height="32" Padding="8"/>
                 
                 <Button Content="Clear Filters" Command="{Binding ClearFiltersCommand}" 
-                        Style="{StaticResource FilterButtonStyle}" Background="#FF718096" Margin="16,0,0,0"/>
+                        Style="{StaticResource FilterButtonStyle}" Background="#718096" Margin="16,0,0,0"/>
             </WrapPanel>
             
             <!-- Status Row -->
             <TextBlock Grid.Row="1" Text="{Binding StatusInfo}" 
-                      Foreground="#FF718096" FontSize="14" Margin="0,4,0,0"/>
+                      Foreground="#718096" FontSize="14" Margin="0,4,0,0"/>
         </Grid>
 
         <!-- Loading Indicator -->
-        <Border Grid.Row="3" Background="#FF1E1E1E" Opacity="0.9"
+        <Border Grid.Row="3" Background="#1E1E1E" Opacity="0.9"
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
                 Panel.ZIndex="100">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,0,0,16"/>
                 <TextBlock Text="{Binding LoadingMessage}" HorizontalAlignment="Center" 
-                           Foreground="#FF4A5568" FontSize="14"/>
+                           Foreground="#4A5568" FontSize="14"/>
             </StackPanel>
         </Border>
 
         <!-- Error Message -->
-        <Border Grid.Row="3" Background="#FFFEF2F2" BorderBrush="#FFED8077" 
+        <Border Grid.Row="3" Background="#FEF2F2" BorderBrush="#ED8077" 
                 BorderThickness="1" Padding="16" Margin="16"
                 Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel>
-                <TextBlock Text="Error" FontWeight="Bold" Foreground="#FFE53E3E" Margin="0,0,0,8"/>
-                <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFE53E3E" TextWrapping="Wrap"/>
+                <TextBlock Text="Error" FontWeight="Bold" Foreground="#E53E3E" Margin="0,0,0,8"/>
+                <TextBlock Text="{Binding ErrorMessage}" Foreground="#E53E3E" TextWrapping="Wrap"/>
             </StackPanel>
         </Border>
 
@@ -165,9 +165,9 @@
                   SelectionMode="Single"
                   GridLinesVisibility="Horizontal"
                   HeadersVisibility="Column"
-                  AlternatingRowBackground="#FFF8FAFC"
-                  Background="#FF1E1E1E"
-                  BorderBrush="#FFE2E8F0"
+                  AlternatingRowBackground="#F8FAFC"
+                  Background="#1E1E1E"
+                  BorderBrush="#E2E8F0"
                   BorderThickness="1"
                   RowHeight="40">
 
@@ -276,7 +276,7 @@
                                     CommandParameter="{Binding}"
                                     Padding="8,4" Margin="4"
                                     FontSize="10"
-                                    Background="#FF3182CE"
+                                    Background="#3182CE"
                                     Foreground="White"
                                     BorderThickness="0"
                                     ToolTip="View detailed information and relationships for this group">
@@ -285,7 +285,7 @@
                                         <Setter Property="Cursor" Value="Hand"/>
                                         <Style.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#FF2C5282"/>
+                                                <Setter Property="Background" Value="#2C5282"/>
                                             </Trigger>
                                         </Style.Triggers>
                                     </Style>
@@ -312,7 +312,7 @@
                    Visibility="{Binding HasGroups, Converter={StaticResource BoolToVisibilityConverter}}">
             <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
             <TextBlock Text="No Security Groups Found" FontSize="20" FontWeight="SemiBold" 
-                      Foreground="#FF4A5568" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                      Foreground="#4A5568" HorizontalAlignment="Center" Margin="0,0,0,8"/>
             <TextBlock Text="Run discovery modules to populate this view with security groups" 
                       FontSize="14" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center" TextAlignment="Center"/>
         </StackPanel>

@@ -41,25 +41,25 @@
     <DataTemplate x:Key="SummaryCardsTemplate">
         <UniformGrid Columns="4" Margin="0,0,0,16">
             <!-- Default summary cards implementation -->
-            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
+            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
                     <TextBlock Text="Total Items" FontWeight="Bold" FontSize="14"/>
                     <TextBlock Text="{Binding TotalRecords}" FontSize="24" FontWeight="SemiBold"/>
                 </StackPanel>
             </Border>
-            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
+            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
                     <TextBlock Text="Active Items" FontWeight="Bold" FontSize="14"/>
                     <TextBlock Text="{Binding ActiveRecords}" FontSize="24" FontWeight="SemiBold"/>
                 </StackPanel>
             </Border>
-            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
+            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
                     <TextBlock Text="Last Updated" FontWeight="Bold" FontSize="14"/>
                     <TextBlock Text="{Binding LastUpdated, StringFormat='{}{0:MM/dd/yyyy}'}" FontSize="16" FontWeight="SemiBold"/>
                 </StackPanel>
             </Border>
-            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
+            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
                     <TextBlock Text="Status" FontWeight="Bold" FontSize="14"/>
                     <TextBlock Text="{Binding DiscoveryStatus}" FontSize="16" FontWeight="SemiBold"/>
@@ -83,19 +83,19 @@
                 <ColumnDefinition Width="5"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Background="#FF1A202C" BorderBrush="#FFE2E8F0" BorderThickness="1">
-                <TextBlock Text="DataGrid Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF4A5568"/>
+            <Border Grid.Column="0" Background="#1A202C" BorderBrush="#E2E8F0" BorderThickness="1">
+                <TextBlock Text="DataGrid Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#4A5568"/>
             </Border>
             <GridSplitter Grid.Column="1" Width="5" Background="Gray" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
-            <Border Grid.Column="2" Background="#FF1A202C" BorderBrush="#FFE2E8F0" BorderThickness="1">
-                <TextBlock Text="Details Panel Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF4A5568"/>
+            <Border Grid.Column="2" Background="#1A202C" BorderBrush="#E2E8F0" BorderThickness="1">
+                <TextBlock Text="Details Panel Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#4A5568"/>
             </Border>
         </Grid>
     </DataTemplate>
 
     <DataTemplate x:Key="FooterTemplate">
-        <Border Background="#FF1A202C" Padding="16">
-            <TextBlock Text="Footer/Empty State Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF4A5568"/>
+        <Border Background="#1A202C" Padding="16">
+            <TextBlock Text="Footer/Empty State Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#4A5568"/>
         </Border>
     </DataTemplate>
 

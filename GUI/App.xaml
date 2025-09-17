@@ -108,7 +108,7 @@
                                     </Trigger.ExitActions>
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="ButtonBorder" Property="Background" Value="#FF4A5568"/>
+                                    <Setter TargetName="ButtonBorder" Property="Background" Value="#4A5568"/>
                                     <Setter Property="RenderTransform">
                                         <Setter.Value>
                                             <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>

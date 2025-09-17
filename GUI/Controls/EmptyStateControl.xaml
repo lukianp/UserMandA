@@ -106,7 +106,7 @@
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <!-- Simple rotating animation instead of ProgressRing -->
                 <Ellipse Width="48" Height="48" 
-                        Stroke="#FF667EEA" 
+                        Stroke="#667EEA" 
                         StrokeThickness="4"
                         StrokeDashArray="10 5">
                     <Ellipse.RenderTransform>

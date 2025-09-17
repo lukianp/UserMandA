@@ -40,7 +40,7 @@ Notes:
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             <Border.Effect>
-                                <DropShadowEffect Color="#FF000000" Direction="270" ShadowDepth="2" BlurRadius="8" Opacity="0.2"/>
+                                <DropShadowEffect Color="#000000" Direction="270" ShadowDepth="2" BlurRadius="8" Opacity="0.2"/>
                             </Border.Effect>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -48,8 +48,8 @@ Notes:
                                 <Setter Property="Background">
                                     <Setter.Value>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                            <GradientStop Color="#FF2a4c82" Offset="0"/>
-                                            <GradientStop Color="#FF3a62a8" Offset="1"/>
+                                            <GradientStop Color="#2a4c82" Offset="0"/>
+                                            <GradientStop Color="#3a62a8" Offset="1"/>
                                         </LinearGradientBrush>
                                     </Setter.Value>
                                 </Setter>
@@ -58,8 +58,8 @@ Notes:
                                 <Setter Property="Background">
                                     <Setter.Value>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                            <GradientStop Color="#FF1a2c52" Offset="0"/>
-                                            <GradientStop Color="#FF2a4278" Offset="1"/>
+                                            <GradientStop Color="#1a2c52" Offset="0"/>
+                                            <GradientStop Color="#2a4278" Offset="1"/>
                                         </LinearGradientBrush>
                                     </Setter.Value>
                                 </Setter>
@@ -103,7 +103,7 @@ Notes:
                          Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" 
                          Background="Transparent" BorderThickness="0"
                          IsReadOnly="True" 
-                         SelectionBrush="#FF4299E1"
+                         SelectionBrush="#4299E1"
                          VerticalScrollBarVisibility="Disabled"
                          HorizontalScrollBarVisibility="Disabled"
                          KeyDown="OutputText_KeyDown">
@@ -133,13 +133,13 @@ Notes:
                     Background="{DynamicResource ErrorBrush}"/>
             <Button x:Name="CopyButton" Content="📋 Copy Output" Style="{StaticResource ModernButtonStyle}" 
                     Click="CopyButton_Click" Margin="0,0,12,0"
-                    Background="#FF4299E1"/>
+                    Background="#4299E1"/>
             <Button x:Name="ClearButton" Content="🗑 Clear" Style="{StaticResource ModernButtonStyle}" 
                     Click="ClearButton_Click" Margin="0,0,12,0"
                     Background="{DynamicResource BorderBrush}"/>
             <Button x:Name="CloseButton" Content="✖ Close" Style="{StaticResource ModernButtonStyle}" 
                     Click="CloseButton_Click"
-                    Background="#FF4A5568"/>
+                    Background="#4A5568"/>
         </StackPanel>
     </Grid>
 </Window>

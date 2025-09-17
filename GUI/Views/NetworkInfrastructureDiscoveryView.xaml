@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="MandADiscoverySuite.Views.NetworkInfrastructureDiscoveryView"
+<UserControl x:Class="MandADiscoverySuite.Views.NetworkInfrastructureDiscoveryView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -18,7 +18,7 @@
             <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="16"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
-                <Setter Property="Foreground" Value="#FF2D3748"/>
+                <Setter Property="Foreground" Value="#2D3748"/>
                 <Setter Property="Margin" Value="0,0,0,8"/>
             </Style>
             <Style x:Key="FilterComboBoxStyle" TargetType="ComboBox">
@@ -31,7 +31,7 @@
                 <Setter Property="Margin" Value="8,0"/>
                 <Setter Property="VerticalAlignment" Value="Center"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="BorderBrush" Value="#FFE2E8F0"/>
+                <Setter Property="BorderBrush" Value="#E2E8F0"/>
                 <Setter Property="Padding" Value="8,6"/>
             </Style>
         </ResourceDictionary>
@@ -79,28 +79,28 @@
             <!-- Total Devices -->
             <Border Style="{StaticResource SummaryCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="📊 Total Devices" Style="{StaticResource MetricLabelStyle}"/>
+                    <TextBlock Text="?? Total Devices" Style="{StaticResource MetricLabelStyle}"/>
                     <TextBlock Text="{Binding TotalDevices}" Style="{StaticResource MetricNumberStyle}" Foreground="{DynamicResource AccentBrush}"/>
                 </StackPanel>
             </Border>
             <!-- Switches -->
             <Border Style="{StaticResource SummaryCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="🔀 Switches" Style="{StaticResource MetricLabelStyle}"/>
+                    <TextBlock Text="?? Switches" Style="{StaticResource MetricLabelStyle}"/>
                     <TextBlock Text="{Binding TotalSwitches}" Style="{StaticResource MetricNumberStyle}" Foreground="{DynamicResource SecondaryBrush}"/>
                 </StackPanel>
             </Border>
             <!-- Routers -->
             <Border Style="{StaticResource SummaryCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="🛣️ Routers" Style="{StaticResource MetricLabelStyle}"/>
+                    <TextBlock Text="??? Routers" Style="{StaticResource MetricLabelStyle}"/>
                     <TextBlock Text="{Binding TotalRouters}" Style="{StaticResource MetricNumberStyle}" Foreground="{DynamicResource TertiaryBrush}"/>
                 </StackPanel>
             </Border>
             <!-- Firewalls -->
             <Border Style="{StaticResource SummaryCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="🔥 Firewalls" Style="{StaticResource MetricLabelStyle}"/>
+                    <TextBlock Text="?? Firewalls" Style="{StaticResource MetricLabelStyle}"/>
                     <TextBlock Text="{Binding TotalFirewalls}" Style="{StaticResource MetricNumberStyle}" Foreground="{DynamicResource QuaternaryBrush}"/>
                 </StackPanel>
             </Border>
@@ -108,10 +108,10 @@
 
         <!-- ToolBar for Action Buttons -->
         <ToolBar Grid.Row="2" Margin="0,0,0,16">
-            <Button Content="🔍 Run Discovery" Command="{Binding RunDiscoveryCommand}" Padding="12,6" Margin="0,0,8,0"/>
-            <Button Content="🔄 Refresh" Command="{Binding RefreshDataCommand}" Padding="12,6" Margin="0,0,8,0"/>
-            <Button Content="📤 Export" Command="{Binding ExportCommand}" Padding="12,6" Margin="0,0,8,0"/>
-            <Button Content="📋 Show Logs" Command="{Binding ViewLogsCommand}" Padding="12,6" Margin="0,0,8,0"/>
+            <Button Content="?? Run Discovery" Command="{Binding RunDiscoveryCommand}" Padding="12,6" Margin="0,0,8,0"/>
+            <Button Content="?? Refresh" Command="{Binding RefreshDataCommand}" Padding="12,6" Margin="0,0,8,0"/>
+            <Button Content="?? Export" Command="{Binding ExportCommand}" Padding="12,6" Margin="0,0,8,0"/>
+            <Button Content="?? Show Logs" Command="{Binding ViewLogsCommand}" Padding="12,6" Margin="0,0,8,0"/>
         </ToolBar>
 
         <!-- Grid with GridSplitter to separate DataGrid from Details Panel -->
@@ -157,7 +157,7 @@
                                         <Button Content="View Details"
                                                 FontSize="11"
                                                 Padding="8,4"
-                                                Background="#FF10B981"
+                                                Background="#10B981"
                                                 Foreground="White"
                                                 BorderThickness="0"
                                                 Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
@@ -175,7 +175,7 @@
                                                                 </Border>
                                                                 <ControlTemplate.Triggers>
                                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                                        <Setter Property="Background" Value="#FF059669"/>
+                                                                        <Setter Property="Background" Value="#059669"/>
                                                                     </Trigger>
                                                                 </ControlTemplate.Triggers>
                                                             </ControlTemplate>

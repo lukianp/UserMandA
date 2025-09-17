@@ -66,11 +66,11 @@
             </Border>
             
             <Border Grid.Column="3" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" 
-                    Padding="15" Margin="10,0,0,0" BorderBrush="#FF9B59B6" BorderThickness="1">
+                    Padding="15" Margin="10,0,0,0" BorderBrush="#9B59B6" BorderThickness="1">
                 <StackPanel>
                     <TextBlock Text="Large Files (>1GB)" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}"/>
                     <TextBlock Text="{Binding LargeFilesCount}" FontSize="20" FontWeight="Bold" 
-                               Foreground="#FF9B59B6"/>
+                               Foreground="#9B59B6"/>
                 </StackPanel>
             </Border>
         </Grid>

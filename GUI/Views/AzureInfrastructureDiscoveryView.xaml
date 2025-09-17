@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="MandADiscoverySuite.Views.AzureInfrastructureDiscoveryView"
+<UserControl x:Class="MandADiscoverySuite.Views.AzureInfrastructureDiscoveryView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Name="AzureInfraDiscoveryControl"
@@ -85,40 +85,40 @@
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="16" Margin="4" CornerRadius="12">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Text="☁️" FontSize="20" Margin="0,0,8,0"/>
+                        <TextBlock Text="??" FontSize="20" Margin="0,0,8,0"/>
                         <TextBlock Text="Total Resources" FontWeight="Bold" FontSize="14"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding TotalRecords}" FontSize="32" FontWeight="Bold" Foreground="#FF0078D4" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalRecords}" FontSize="32" FontWeight="Bold" Foreground="#0078D4" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
             <!-- Summary Card 2: Virtual Machines -->
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="16" Margin="4" CornerRadius="12">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Text="🖥️" FontSize="20" Margin="0,0,8,0"/>
+                        <TextBlock Text="???" FontSize="20" Margin="0,0,8,0"/>
                         <TextBlock Text="Virtual Machines" FontWeight="Bold" FontSize="14"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding TotalVMs}" FontSize="32" FontWeight="Bold" Foreground="#FF107C10" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalVMs}" FontSize="32" FontWeight="Bold" Foreground="#107C10" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
             <!-- Summary Card 3: Storage Accounts -->
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="16" Margin="4" CornerRadius="12">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Text="💾" FontSize="20" Margin="0,0,8,0"/>
+                        <TextBlock Text="??" FontSize="20" Margin="0,0,8,0"/>
                         <TextBlock Text="Storage Accounts" FontWeight="Bold" FontSize="14"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding TotalStorageAccounts}" FontSize="32" FontWeight="Bold" Foreground="#FF5C2D91" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalStorageAccounts}" FontSize="32" FontWeight="Bold" Foreground="#5C2D91" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
             <!-- Summary Card 4: Resource Groups -->
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="16" Margin="4" CornerRadius="12">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Text="📦" FontSize="20" Margin="0,0,8,0"/>
+                        <TextBlock Text="??" FontSize="20" Margin="0,0,8,0"/>
                         <TextBlock Text="Resource Groups" FontWeight="Bold" FontSize="14"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding TotalResourceGroups}" FontSize="32" FontWeight="Bold" Foreground="#FFFF8C00" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalResourceGroups}" FontSize="32" FontWeight="Bold" Foreground="#FF8C00" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
         </UniformGrid>
@@ -126,10 +126,10 @@
         <!-- ToolBar for Action Buttons -->
         <Border Grid.Row="2" Background="{DynamicResource CardBrush}" CornerRadius="8" Margin="20,0,20,10">
             <StackPanel Orientation="Horizontal" Margin="12">
-                <Button Content="🔍 Run Discovery" Command="{Binding RunDiscoveryCommand}" Style="{StaticResource RoundedButtonStyle}" Padding="12,6" Margin="0,0,8,0"/>
-                <Button Content="🔄 Refresh Data" Command="{Binding RefreshDataCommand}" Style="{StaticResource RoundedButtonStyle}" Padding="12,6" Margin="0,0,8,0"/>
-                <Button Content="📤 Export" Command="{Binding ExportCommand}" Style="{StaticResource RoundedButtonStyle}" Padding="12,6" Margin="0,0,8,0"/>
-                <Button Content="📋 Show Logs" Command="{Binding ViewLogsCommand}" Style="{StaticResource RoundedButtonStyle}" Padding="12,6"/>
+                <Button Content="?? Run Discovery" Command="{Binding RunDiscoveryCommand}" Style="{StaticResource RoundedButtonStyle}" Padding="12,6" Margin="0,0,8,0"/>
+                <Button Content="?? Refresh Data" Command="{Binding RefreshDataCommand}" Style="{StaticResource RoundedButtonStyle}" Padding="12,6" Margin="0,0,8,0"/>
+                <Button Content="?? Export" Command="{Binding ExportCommand}" Style="{StaticResource RoundedButtonStyle}" Padding="12,6" Margin="0,0,8,0"/>
+                <Button Content="?? Show Logs" Command="{Binding ViewLogsCommand}" Style="{StaticResource RoundedButtonStyle}" Padding="12,6"/>
             </StackPanel>
         </Border>
 

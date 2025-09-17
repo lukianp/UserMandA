@@ -7,14 +7,14 @@
         Title="Schedule Migration Wave" 
         Height="700" Width="900"
         WindowStartupLocation="CenterOwner"
-        Background="#FF0F172A"
+        Background="#0F172A"
         WindowStyle="SingleBorderWindow"
         ResizeMode="CanResize">
 
     <Window.Resources>
         <!-- Modern Dark Theme Styles -->
         <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Background" Value="#FF3B82F6"/>
+            <Setter Property="Background" Value="#3B82F6"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="16,8"/>
@@ -30,10 +30,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF2563EB"/>
+                                <Setter Property="Background" Value="#2563EB"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Background" Value="#FF6B7280"/>
+                                <Setter Property="Background" Value="#6B7280"/>
                                 <Setter Property="Cursor" Value="Arrow"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -43,35 +43,35 @@
         </Style>
 
         <Style x:Key="CancelButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
-            <Setter Property="Background" Value="#FF374151"/>
+            <Setter Property="Background" Value="#374151"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#FF4B5563"/>
+                    <Setter Property="Background" Value="#4B5563"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style x:Key="ModernTextBox" TargetType="TextBox">
-            <Setter Property="Background" Value="#FF374151"/>
+            <Setter Property="Background" Value="#374151"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#FF4B5563"/>
+            <Setter Property="BorderBrush" Value="#4B5563"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8"/>
             <Setter Property="FontSize" Value="13"/>
         </Style>
 
         <Style x:Key="ModernDatePicker" TargetType="DatePicker">
-            <Setter Property="Background" Value="#FF374151"/>
+            <Setter Property="Background" Value="#374151"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#FF4B5563"/>
+            <Setter Property="BorderBrush" Value="#4B5563"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8"/>
         </Style>
 
         <Style x:Key="ModernComboBox" TargetType="ComboBox">
-            <Setter Property="Background" Value="#FF374151"/>
+            <Setter Property="Background" Value="#374151"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#FF4B5563"/>
+            <Setter Property="BorderBrush" Value="#4B5563"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8"/>
         </Style>
@@ -79,20 +79,20 @@
         <Style x:Key="SectionTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
         </Style>
 
         <Style x:Key="FieldLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#FF94A3B8"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
 
         <Style x:Key="InfoCard" TargetType="Border">
-            <Setter Property="Background" Value="#FF1E293B"/>
+            <Setter Property="Background" Value="#1E293B"/>
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="BorderBrush" Value="#FF334155"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="16"/>
             <Setter Property="Margin" Value="0,0,0,16"/>
@@ -322,9 +322,9 @@
                         </Grid>
 
                         <DataGrid ItemsSource="{Binding BlackoutPeriods}"
-                                  Background="#FF374151"
+                                  Background="#374151"
                                   BorderThickness="1"
-                                  BorderBrush="#FF4B5563"
+                                  BorderBrush="#4B5563"
                                   GridLinesVisibility="Horizontal"
                                   HeadersVisibility="Column"
                                   AutoGenerateColumns="False"
@@ -347,7 +347,7 @@
                                                     Width="140">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="#FF94A3B8"/>
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
                                             <Setter Property="Padding" Value="8,4"/>
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
@@ -357,7 +357,7 @@
                                                     Width="140">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="#FF94A3B8"/>
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
                                             <Setter Property="Padding" Value="8,4"/>
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
@@ -367,7 +367,7 @@
                                                     Width="100">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="#FF94A3B8"/>
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
                                             <Setter Property="Padding" Value="8,4"/>
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
@@ -456,7 +456,7 @@
 
                 <!-- Validation Summary -->
                 <Border Style="{StaticResource InfoCard}" 
-                        Background="#FF1F2937"
+                        Background="#1F2937"
                         Visibility="{Binding HasValidationErrors, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <StackPanel>
                         <TextBlock Text="Validation Issues" 

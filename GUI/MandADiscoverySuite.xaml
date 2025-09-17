@@ -99,20 +99,20 @@
         
         <!-- ✨ AWESOME GLASSMORPHISM EFFECTS ✨ -->
         <LinearGradientBrush x:Key="GlassmorphismBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.15">
-            <GradientStop Color="#FFFFFFFF" Offset="0"/>
-            <GradientStop Color="#FF000000" Offset="0.5"/>
-            <GradientStop Color="#FFFFFFFF" Offset="1"/>
+            <GradientStop Color="#FFFFFF" Offset="0"/>
+            <GradientStop Color="#000000" Offset="0.5"/>
+            <GradientStop Color="#FFFFFF" Offset="1"/>
         </LinearGradientBrush>
         
         <!-- 🌈 NEON GLOW GRADIENTS 🌈 -->
         <LinearGradientBrush x:Key="NeonCyanGradient" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#FF00FFFF" Offset="0"/>
-            <GradientStop Color="#FF0080FF" Offset="1"/>
+            <GradientStop Color="#00FFFF" Offset="0"/>
+            <GradientStop Color="#0080FF" Offset="1"/>
         </LinearGradientBrush>
         
         <LinearGradientBrush x:Key="NeonPinkGradient" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#FFFF1493" Offset="0"/>
-            <GradientStop Color="#FFFF69B4" Offset="1"/>
+            <GradientStop Color="#FF1493" Offset="0"/>
+            <GradientStop Color="#FF69B4" Offset="1"/>
         </LinearGradientBrush>
         
         <!-- Input Validation Styles -->
@@ -145,9 +145,9 @@
         </Style>
         
         <LinearGradientBrush x:Key="HolographicGradient" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#FF8A2387" Offset="0"/>
-            <GradientStop Color="#FFE94057" Offset="0.5"/>
-            <GradientStop Color="#FFF27121" Offset="1"/>
+            <GradientStop Color="#8A2387" Offset="0"/>
+            <GradientStop Color="#E94057" Offset="0.5"/>
+            <GradientStop Color="#F27121" Offset="1"/>
         </LinearGradientBrush>
         
         <!-- ✨ ENHANCED MODERN CARD STYLE WITH GLASSMORPHISM ✨ -->
@@ -155,16 +155,16 @@
             <Setter Property="Background">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1" Opacity="0.8">
-                        <GradientStop Color="#FF1C2433" Offset="0"/>
-                        <GradientStop Color="#FF2D3748" Offset="1"/>
+                        <GradientStop Color="#1C2433" Offset="0"/>
+                        <GradientStop Color="#2D3748" Offset="1"/>
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
             <Setter Property="BorderBrush">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1" Opacity="0.3">
-                        <GradientStop Color="#FFFFFFFF" Offset="0"/>
-                        <GradientStop Color="#FF4299E1" Offset="1"/>
+                        <GradientStop Color="#FFFFFF" Offset="0"/>
+                        <GradientStop Color="#4299E1" Offset="1"/>
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
@@ -174,7 +174,7 @@
             <Setter Property="Padding" Value="20"/>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect Color="#FF00FFFF" Direction="270" ShadowDepth="6" BlurRadius="20" Opacity="0.2"/>
+                    <DropShadowEffect Color="#00FFFF" Direction="270" ShadowDepth="6" BlurRadius="20" Opacity="0.2"/>
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
@@ -183,14 +183,14 @@
                     <Setter Property="Background">
                         <Setter.Value>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1" Opacity="0.9">
-                                <GradientStop Color="#FF2A3441" Offset="0"/>
-                                <GradientStop Color="#FF3C4D62" Offset="1"/>
+                                <GradientStop Color="#2A3441" Offset="0"/>
+                                <GradientStop Color="#3C4D62" Offset="1"/>
                             </LinearGradientBrush>
                         </Setter.Value>
                     </Setter>
                     <Setter Property="Effect">
                         <Setter.Value>
-                            <DropShadowEffect Color="#FF00FFFF" Direction="270" ShadowDepth="8" BlurRadius="25" Opacity="0.4"/>
+                            <DropShadowEffect Color="#00FFFF" Direction="270" ShadowDepth="8" BlurRadius="25" Opacity="0.4"/>
                         </Setter.Value>
                     </Setter>
                 </Trigger>
@@ -202,16 +202,16 @@
             <Setter Property="Background">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1" Opacity="0.9">
-                        <GradientStop Color="#FF1C2433" Offset="0"/>
-                        <GradientStop Color="#FF2D3748" Offset="1"/>
+                        <GradientStop Color="#1C2433" Offset="0"/>
+                        <GradientStop Color="#2D3748" Offset="1"/>
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
             <Setter Property="BorderBrush">
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#FF374151" Offset="0"/>
-                        <GradientStop Color="#FF4B5563" Offset="1"/>
+                        <GradientStop Color="#374151" Offset="0"/>
+                        <GradientStop Color="#4B5563" Offset="1"/>
                     </LinearGradientBrush>
                 </Setter.Value>
             </Setter>
@@ -366,7 +366,7 @@
             </Setter>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect Color="#FF000000" Direction="270" ShadowDepth="2" BlurRadius="8" Opacity="0.2"/>
+                    <DropShadowEffect Color="#000000" Direction="270" ShadowDepth="2" BlurRadius="8" Opacity="0.2"/>
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
@@ -374,7 +374,7 @@
                     <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBrush}"/>
                     <Setter Property="Effect">
                         <Setter.Value>
-                            <DropShadowEffect Color="#FF000000" Direction="270" ShadowDepth="4" BlurRadius="12" Opacity="0.3"/>
+                            <DropShadowEffect Color="#000000" Direction="270" ShadowDepth="4" BlurRadius="12" Opacity="0.3"/>
                         </Setter.Value>
                     </Setter>
                     <Trigger.EnterActions>
@@ -425,20 +425,20 @@
                         </Trigger>
                     </Style.Triggers>
                 </Style>
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#FF4A90E2"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#4A90E2"/>
                 <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFF"/>
             </Style.Resources>
         </Style>
 
         <!-- Data Grid Modern Style -->
         <Style x:Key="ModernDataGridStyle" TargetType="DataGrid">
-            <Setter Property="Background" Value="#FF1A202C"/>
-            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="Background" Value="#1A202C"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="#FF2D3748"/>
-            <Setter Property="RowBackground" Value="#FF1A202C"/>
-            <Setter Property="AlternatingRowBackground" Value="#FF2D3748"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#2D3748"/>
+            <Setter Property="RowBackground" Value="#1A202C"/>
+            <Setter Property="AlternatingRowBackground" Value="#2D3748"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
             <Setter Property="CanUserResizeColumns" Value="True"/>
             <Setter Property="CanUserSortColumns" Value="True"/>
@@ -447,9 +447,9 @@
             <Setter Property="ColumnHeaderStyle">
                 <Setter.Value>
                     <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="#FF2D3748"/>
-                        <Setter Property="Foreground" Value="#FFE2E8F0"/>
-                        <Setter Property="BorderBrush" Value="#FF4A5568"/>
+                        <Setter Property="Background" Value="#2D3748"/>
+                        <Setter Property="Foreground" Value="#E2E8F0"/>
+                        <Setter Property="BorderBrush" Value="#4A5568"/>
                         <Setter Property="BorderThickness" Value="0,0,1,0"/>
                         <Setter Property="Padding" Value="12,8,24,8"/>
                         <Setter Property="FontWeight" Value="Medium"/>
@@ -481,7 +481,7 @@
                                                      Grid.Column="1"
                                                      Width="10" Height="6"
                                                      Margin="4,0,8,0"
-                                                     Fill="#FF667EEA"
+                                                     Fill="#667EEA"
                                                      Visibility="Collapsed"
                                                      HorizontalAlignment="Center"
                                                      VerticalAlignment="Center"
@@ -497,25 +497,25 @@
                                         <Trigger Property="SortDirection" Value="Ascending">
                                             <Setter TargetName="SortArrow" Property="Visibility" Value="Visible"/>
                                             <Setter TargetName="SortArrow" Property="Data" Value="M0,6 L5,0 L10,6 Z"/>
-                                            <Setter TargetName="SortArrow" Property="Fill" Value="#FF48BB78"/>
+                                            <Setter TargetName="SortArrow" Property="Fill" Value="#48BB78"/>
                                         </Trigger>
                                         
                                         <!-- Descending Sort -->
                                         <Trigger Property="SortDirection" Value="Descending">
                                             <Setter TargetName="SortArrow" Property="Visibility" Value="Visible"/>
                                             <Setter TargetName="SortArrow" Property="Data" Value="M0,0 L5,6 L10,0 Z"/>
-                                            <Setter TargetName="SortArrow" Property="Fill" Value="#FFED8936"/>
+                                            <Setter TargetName="SortArrow" Property="Fill" Value="#ED8936"/>
                                         </Trigger>
                                         
                                         <!-- Hover Effect -->
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#FF374151"/>
-                                            <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                                            <Setter Property="Background" Value="#374151"/>
+                                            <Setter Property="Foreground" Value="#FFFFFF"/>
                                         </Trigger>
                                         
                                         <!-- Pressed Effect -->
                                         <Trigger Property="IsPressed" Value="True">
-                                            <Setter Property="Background" Value="#FF4A5568"/>
+                                            <Setter Property="Background" Value="#4A5568"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -530,7 +530,7 @@
         
         <!-- Header Text Style -->
         <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#FFF7FAFC"/>
+            <Setter Property="Foreground" Value="#F7FAFC"/>
             <Setter Property="FontSize" Value="32"/>
             <Setter Property="FontWeight" Value="Light"/>
             <Setter Property="Margin" Value="0,0,0,24"/>
@@ -538,7 +538,7 @@
         
         <!-- Section Header Style -->
         <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
             <Setter Property="FontSize" Value="20"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Margin" Value="0,0,0,16"/>
@@ -546,7 +546,7 @@
         
         <!-- Page Header Style -->
         <Style x:Key="PageHeaderStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#FFF7FAFC"/>
+            <Setter Property="Foreground" Value="#F7FAFC"/>
             <Setter Property="FontSize" Value="28"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
@@ -554,7 +554,7 @@
         
         <!-- Progress Ring Style -->
         <Style x:Key="ProgressRingStyle" TargetType="ProgressBar">
-            <Setter Property="Background" Value="#FF2D3748"/>
+            <Setter Property="Background" Value="#2D3748"/>
             <Setter Property="Foreground" Value="{StaticResource PrimaryGradient}"/>
             <Setter Property="Height" Value="4"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -587,9 +587,9 @@
                                                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                                         <TextBlock Text="&#x1F4CA;" FontSize="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                         <TextBlock Text="Dashboard" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                                        <Border Background="#FF374151" CornerRadius="4" Padding="4,2" Margin="12,0,0,0" 
+                                                        <Border Background="#374151" CornerRadius="4" Padding="4,2" Margin="12,0,0,0" 
                                                                 Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                            <TextBlock Text="EDIT MODE" Foreground="#FFFBBF24" FontSize="10" FontWeight="Bold"/>
+                                                            <TextBlock Text="EDIT MODE" Foreground="#FBBF24" FontSize="10" FontWeight="Bold"/>
                                                         </Border>
                                                     </StackPanel>
 
@@ -653,7 +653,7 @@
                                                         Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
                                                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                                         <ProgressBar IsIndeterminate="True" Width="200" Height="4" 
-                                                                     Background="Transparent" Foreground="#FF667eea"/>
+                                                                     Background="Transparent" Foreground="#667eea"/>
                                                         <TextBlock Text="Loading Dashboard..." Foreground="{DynamicResource PrimaryTextBrush}" FontSize="14" 
                                                                    HorizontalAlignment="Center" Margin="0,16,0,0"/>
                                                     </StackPanel>
@@ -664,7 +664,7 @@
                                                         Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}">
                                                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                                         <TextBlock Text="❌" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
-                                                        <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFF56565" FontSize="14" 
+                                                        <TextBlock Text="{Binding ErrorMessage}" Foreground="#F56565" FontSize="14" 
                                                                    HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="400"/>
                                                     </StackPanel>
                                                 </Border>
@@ -841,7 +841,7 @@
         </Grid.ColumnDefinitions>
         
         <!-- Enhanced Sidebar -->
-        <Border Grid.Column="0" Background="{DynamicResource CardBrush}" BorderBrush="#FF2D3748" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="{DynamicResource CardBrush}" BorderBrush="#2D3748" BorderThickness="0,0,1,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -856,7 +856,7 @@
                 <!-- Enhanced Logo/Title -->
                 <Border Grid.Row="0" Padding="24,32,24,24">
                     <StackPanel>
-                        <TextBlock Text="M&amp;A Discovery" Foreground="#FFF7FAFC" FontSize="24" FontWeight="Bold"/>
+                        <TextBlock Text="M&amp;A Discovery" Foreground="#F7FAFC" FontSize="24" FontWeight="Bold"/>
                         <TextBlock Text="Suite" Foreground="{DynamicResource AccentBrush}" FontSize="24" FontWeight="Light"/>
                         <TextBlock Text="Enterprise Edition" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="Medium" Margin="0,4,0,0"/>
                     </StackPanel>
@@ -891,7 +891,7 @@
                             
                             <Button Grid.Column="1" x:Name="TestSourceConnectionButton"
                                     Command="{Binding TestSourceConnectionCommand}"
-                                    Background="#FF4A5568"
+                                    Background="#4A5568"
                                     BorderThickness="0"
                                     Width="32" Height="36"
                                     Margin="0,0,4,0"
@@ -931,7 +931,7 @@
                             
                             <Button Grid.Column="5" x:Name="SourceAppRegistrationButton"
                                     Command="{Binding RunAppRegistrationCommand}"
-                                    Background="#FF10B981"
+                                    Background="#10B981"
                                     BorderThickness="0"
                                     Width="32" Height="36"
                                     Margin="0,0,4,0"
@@ -945,19 +945,19 @@
                             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Environment: " Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"/>
-                                    <TextBlock Text="{Binding SourceEnvironmentStatus}" Foreground="#FF9AE6B4" FontSize="10" FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding SourceEnvironmentStatus}" Foreground="#9AE6B4" FontSize="10" FontWeight="Medium"/>
                                 </StackPanel>
                             </Border>
                             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="4" Padding="8,4">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Connection: " Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"/>
-                                    <TextBlock Text="{Binding SourceConnectionStatus}" Foreground="#FF9AE6B4" FontSize="10" FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding SourceConnectionStatus}" Foreground="#9AE6B4" FontSize="10" FontWeight="Medium"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
                         
                         <!-- Separator -->
-                        <Border Height="1" Background="#FF4A5568" Margin="0,12,0,12" Opacity="0.3"/>
+                        <Border Height="1" Background="#4A5568" Margin="0,12,0,12" Opacity="0.3"/>
 
                         <!-- Target Company Profile Section -->
                             <TextBlock Text="Target Company Profile" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" FontWeight="Medium" Margin="0,0,0,8"/>
@@ -986,7 +986,7 @@
                             
                             <Button Grid.Column="1" x:Name="TestTargetConnectionButton"
                                     Command="{Binding TestTargetConnectionCommand}"
-                                    Background="#FF4A5568"
+                                    Background="#4A5568"
                                     BorderThickness="0"
                                     Width="32" Height="36"
                                     Margin="0,0,4,0"
@@ -1026,7 +1026,7 @@
                             
                             <Button Grid.Column="5" x:Name="TargetAppRegistrationButton"
                                     Command="{Binding RunTargetAppRegistrationCommand}"
-                                    Background="#FF10B981"
+                                    Background="#10B981"
                                     BorderThickness="0"
                                     Width="32" Height="36"
                                     Margin="0,0,4,0"
@@ -1040,13 +1040,13 @@
                             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Environment: " Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"/>
-                                    <TextBlock Text="{Binding TargetEnvironmentStatus}" Foreground="#FFFF9800" FontSize="10" FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding TargetEnvironmentStatus}" Foreground="#FF9800" FontSize="10" FontWeight="Medium"/>
                                 </StackPanel>
                             </Border>
                             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="4" Padding="8,4">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Connection: " Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"/>
-                                    <TextBlock Text="{Binding TargetConnectionStatus}" Foreground="#FFFF9800" FontSize="10" FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding TargetConnectionStatus}" Foreground="#FF9800" FontSize="10" FontWeight="Medium"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -1310,7 +1310,7 @@
                 <Border Grid.Row="5" Background="{StaticResource PrimaryGradient}" Padding="24,16">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                            <Ellipse Width="8" Height="8" Fill="#FF48BB78" Margin="0,0,8,0"/>
+                            <Ellipse Width="8" Height="8" Fill="#48BB78" Margin="0,0,8,0"/>
                             <TextBlock Text="System Ready" Foreground="White" FontSize="13" FontWeight="Medium"/>
                         </StackPanel>
                         <TextBlock x:Name="StatusDetails" Text="Last discovery: 2 hours ago" Foreground="White" FontSize="11" Opacity="0.8"/>
@@ -1326,9 +1326,9 @@
                 <Border Grid.Row="6" Padding="24,16">
                     <Button x:Name="ExitButton" 
                             Command="{Binding ExitCommand}"
-                            Background="#FF4A5568"
+                            Background="#4A5568"
                             Foreground="{DynamicResource PrimaryTextBrush}"
-                            BorderBrush="#FF718096"
+                            BorderBrush="#718096"
                             BorderThickness="1"
                             Padding="12,8"
                             HorizontalAlignment="Stretch"
@@ -1343,7 +1343,7 @@
         </Border>
         
         <!-- Main Content Area -->
-        <Grid Grid.Column="1" Background="#FF0F1419">
+        <Grid Grid.Column="1" Background="#0F1419">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
@@ -1408,7 +1408,7 @@
                                         </Grid.RowDefinitions>
                                         
                                         <!-- Tab Headers -->
-                                        <Border Grid.Row="0" Background="{DynamicResource CardBrush}" BorderBrush="#FF2D3748" BorderThickness="0,0,0,1">
+                                        <Border Grid.Row="0" Background="{DynamicResource CardBrush}" BorderBrush="#2D3748" BorderThickness="0,0,0,1">
                                             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Hidden">
                                                 <TabPanel x:Name="HeaderPanel" 
                                                          Panel.ZIndex="1" 
@@ -1453,11 +1453,11 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="Border" Property="Background" Value="#FF2D3748"/>
-                                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                            <Setter TargetName="Border" Property="Background" Value="#2D3748"/>
+                                            <Setter Property="Foreground" Value="#E2E8F0"/>
                                         </Trigger>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Border" Property="Background" Value="#FF374151"/>
+                                            <Setter TargetName="Border" Property="Background" Value="#374151"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -1505,7 +1505,7 @@
                                     Background="{StaticResource AccentGradient}" Command="{Binding RefreshDashboardCommand}" 
                                     Width="32" Height="32" Margin="0,0,8,0" FontSize="14"/>
                             <Button Content="⚙️" ToolTip="Refresh Settings" Style="{StaticResource RoundedButtonStyle}" 
-                                    Background="#FF4A5568" Command="{Binding ShowRefreshSettingsCommand}" 
+                                    Background="#4A5568" Command="{Binding ShowRefreshSettingsCommand}" 
                                     Width="32" Height="32" Margin="0,0,8,0" FontSize="14"/>
                             <Button Content="&#x1F4CA; Export Report" Command="{Binding ExportResultsCommand}" Style="{StaticResource RoundedButtonStyle}"/>
                         </StackPanel>
@@ -1524,7 +1524,7 @@
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="↗" Foreground="{DynamicResource SuccessBrush}" FontSize="14" Margin="0,0,4,0"/>
-                                    <TextBlock Text="+12% from last scan" Foreground="#FF9AE6B4" FontSize="11"/>
+                                    <TextBlock Text="+12% from last scan" Foreground="#9AE6B4" FontSize="11"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -1539,8 +1539,8 @@
                                     </StackPanel>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="→" Foreground="#FFED8936" FontSize="14" Margin="0,0,4,0"/>
-                                    <TextBlock Text="No changes" Foreground="#FFFBB859" FontSize="11"/>
+                                    <TextBlock Text="→" Foreground="#ED8936" FontSize="14" Margin="0,0,4,0"/>
+                                    <TextBlock Text="No changes" Foreground="#FBB859" FontSize="11"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -1550,13 +1550,13 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="&#x1F310;" FontSize="24" Margin="0,0,12,0"/>
                                     <StackPanel>
-                                        <TextBlock x:Name="TotalInfrastructureTextBlock" Text="0" Foreground="#FFED8936" FontSize="28" FontWeight="Bold"/>
+                                        <TextBlock x:Name="TotalInfrastructureTextBlock" Text="0" Foreground="#ED8936" FontSize="28" FontWeight="Bold"/>
                                         <TextBlock Text="Infrastructure" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
                                     </StackPanel>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="↗" Foreground="{DynamicResource SuccessBrush}" FontSize="14" Margin="0,0,4,0"/>
-                                    <TextBlock Text="+3 new devices" Foreground="#FF9AE6B4" FontSize="11"/>
+                                    <TextBlock Text="+3 new devices" Foreground="#9AE6B4" FontSize="11"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -1566,11 +1566,11 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="✅" FontSize="24" Margin="0,0,12,0"/>
                                     <StackPanel>
-                                        <TextBlock x:Name="DiscoveryProgressTextBlock" Text="0%" Foreground="#FF9F7AEA" FontSize="28" FontWeight="Bold"/>
+                                        <TextBlock x:Name="DiscoveryProgressTextBlock" Text="0%" Foreground="#9F7AEA" FontSize="28" FontWeight="Bold"/>
                                         <TextBlock Text="Discovery Complete" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
                                     </StackPanel>
                                 </StackPanel>
-                                <ProgressBar x:Name="DiscoveryProgressBar" Value="{Binding OverallProgress}" Maximum="100" Height="4" Background="{DynamicResource SurfaceBrush}" Foreground="#FF9F7AEA" BorderThickness="0"/>
+                                <ProgressBar x:Name="DiscoveryProgressBar" Value="{Binding OverallProgress}" Maximum="100" Height="4" Background="{DynamicResource SurfaceBrush}" Foreground="#9F7AEA" BorderThickness="0"/>
                             </StackPanel>
                         </Border>
                     </UniformGrid>
@@ -1624,7 +1624,7 @@
                                 <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="16">
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                            <Ellipse Width="6" Height="6" Fill="#FF48BB78" Margin="0,0,8,0"/>
+                                            <Ellipse Width="6" Height="6" Fill="#48BB78" Margin="0,0,8,0"/>
                                             <StackPanel>
                                                 <TextBlock Text="Palo Alto Discovery" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="Medium"/>
                                                 <TextBlock Text="2 minutes ago" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"/>
@@ -1632,7 +1632,7 @@
                                         </StackPanel>
                                         
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                            <Ellipse Width="6" Height="6" Fill="#FF4299E1" Margin="0,0,8,0"/>
+                                            <Ellipse Width="6" Height="6" Fill="#4299E1" Margin="0,0,8,0"/>
                                             <StackPanel>
                                                 <TextBlock Text="User Data Updated" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="Medium"/>
                                                 <TextBlock Text="15 minutes ago" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"/>
@@ -1640,7 +1640,7 @@
                                         </StackPanel>
                                         
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                            <Ellipse Width="6" Height="6" Fill="#FFED8936" Margin="0,0,8,0"/>
+                                            <Ellipse Width="6" Height="6" Fill="#ED8936" Margin="0,0,8,0"/>
                                             <StackPanel>
                                                 <TextBlock Text="Exchange Discovery" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="Medium"/>
                                                 <TextBlock Text="1 hour ago" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"/>
@@ -1689,7 +1689,7 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Active Directory" Foreground="White"/>
-                                    <Ellipse x:Name="ADStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                    <Ellipse x:Name="ADStatusIndicator" Width="8" Height="8" Fill="#F59E0B" Margin="8,0,0,0"/>
                                 </StackPanel>
                                 <TextBlock x:Name="ADStatusText" Text="Ready" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -1698,7 +1698,7 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Azure AD / Entra" Foreground="White"/>
-                                    <Ellipse x:Name="EntraStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                    <Ellipse x:Name="EntraStatusIndicator" Width="8" Height="8" Fill="#F59E0B" Margin="8,0,0,0"/>
                                 </StackPanel>
                                 <TextBlock x:Name="EntraStatusText" Text="Ready" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -1707,7 +1707,7 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Infrastructure" Foreground="White"/>
-                                    <Ellipse x:Name="InfraStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                    <Ellipse x:Name="InfraStatusIndicator" Width="8" Height="8" Fill="#F59E0B" Margin="8,0,0,0"/>
                                 </StackPanel>
                                 <TextBlock x:Name="InfraStatusText" Text="Ready" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -1716,7 +1716,7 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Applications" Foreground="White"/>
-                                    <Ellipse x:Name="AppsStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                    <Ellipse x:Name="AppsStatusIndicator" Width="8" Height="8" Fill="#F59E0B" Margin="8,0,0,0"/>
                                 </StackPanel>
                                 <TextBlock x:Name="AppsStatusText" Text="Ready" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -1725,7 +1725,7 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Domain Discovery" Foreground="White"/>
-                                    <Ellipse x:Name="DomainStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                    <Ellipse x:Name="DomainStatusIndicator" Width="8" Height="8" Fill="#F59E0B" Margin="8,0,0,0"/>
                                 </StackPanel>
                                 <TextBlock x:Name="DomainStatusText" Text="Ready" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -1734,7 +1734,7 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="File Servers" Foreground="White"/>
-                                    <Ellipse x:Name="FileServersStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                    <Ellipse x:Name="FileServersStatusIndicator" Width="8" Height="8" Fill="#F59E0B" Margin="8,0,0,0"/>
                                 </StackPanel>
                                 <TextBlock x:Name="FileServersStatusText" Text="Ready" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -1743,7 +1743,7 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Databases" Foreground="White"/>
-                                    <Ellipse x:Name="DatabasesStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                    <Ellipse x:Name="DatabasesStatusIndicator" Width="8" Height="8" Fill="#F59E0B" Margin="8,0,0,0"/>
                                 </StackPanel>
                                 <TextBlock x:Name="DatabasesStatusText" Text="Ready" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -1752,13 +1752,13 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Group Policies" Foreground="White"/>
-                                    <Ellipse x:Name="GroupPoliciesStatusIndicator" Width="8" Height="8" Fill="#FFF59E0B" Margin="8,0,0,0"/>
+                                    <Ellipse x:Name="GroupPoliciesStatusIndicator" Width="8" Height="8" Fill="#F59E0B" Margin="8,0,0,0"/>
                                 </StackPanel>
                                 <TextBlock x:Name="GroupPoliciesStatusText" Text="Ready" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Content="👁️ Show All" Style="{StaticResource RoundedButtonStyle}" Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Command="{Binding ShowAllDiscoveryDataCommand}"/>
-                        <Button Content="👤 Select Manager" Style="{StaticResource RoundedButtonStyle}" Background="#FF9F7AEA" Margin="12,0,0,8" Command="{Binding SelectManagerCommand}" ToolTip="Demo: Manager Selection Dialog"/>
+                        <Button Content="👤 Select Manager" Style="{StaticResource RoundedButtonStyle}" Background="#9F7AEA" Margin="12,0,0,8" Command="{Binding SelectManagerCommand}" ToolTip="Demo: Manager Selection Dialog"/>
                     </WrapPanel>
                     
                     <ItemsControl Grid.Row="2" x:Name="DiscoveryModules" ItemsSource="{Binding DiscoveryModules}">
@@ -1802,7 +1802,7 @@
                                             <Button Content="Configure" 
                                                     Command="{Binding ConfigureCommand}"
                                                     Style="{StaticResource RoundedButtonStyle}"
-                                                    Background="#FF4A5568" Foreground="{DynamicResource PrimaryTextBrush}"
+                                                    Background="#4A5568" Foreground="{DynamicResource PrimaryTextBrush}"
                                                     FontSize="12" Padding="16,8" Margin="0,0,8,0"
                                                     IsEnabled="{Binding CanConfigure}"/>
                                             <Button Content="Run Discovery" 
@@ -1863,7 +1863,7 @@
                                     Background="{StaticResource AccentGradient}" Command="{Binding RefreshUsersCommand}" 
                                     Width="32" Height="32" Margin="0,0,8,0" FontSize="14"/>
                             <Button Content="⚙️" ToolTip="Refresh Settings" Style="{StaticResource RoundedButtonStyle}" 
-                                    Background="#FF4A5568" Command="{Binding ShowRefreshSettingsCommand}" 
+                                    Background="#4A5568" Command="{Binding ShowRefreshSettingsCommand}" 
                                     Width="32" Height="32" Margin="0,0,12,0" FontSize="14"/>
                             <TextBox x:Name="UserSearchBox" Width="250" Height="32" 
                                      Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryTextBrush}" 
@@ -1879,7 +1879,7 @@
                             <Button Content="📋 Copy Selected" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding CopySelectedUsersCommand}"/>
                             <Button Content="📋 Copy All" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding CopyAllUsersCommand}"/>
                             <Button Content="👁️ Columns" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding ShowColumnVisibilityCommand}" CommandParameter="users"/>
-                            <Button Content="&#x1F50D; Advanced Search" Style="{StaticResource RoundedButtonStyle}" Background="#FF4299E1" Margin="8,0,0,0" Command="{Binding ShowUsersAdvancedSearchCommand}"/>
+                            <Button Content="&#x1F50D; Advanced Search" Style="{StaticResource RoundedButtonStyle}" Background="#4299E1" Margin="8,0,0,0" Command="{Binding ShowUsersAdvancedSearchCommand}"/>
                             <Button Content="🗑️ Delete Selected" Style="{StaticResource RoundedButtonStyle}" Background="{StaticResource DangerGradient}" Margin="8,0,0,0" Command="{Binding DeleteSelectedUsersCommand}"/>
                         </StackPanel>
                     </StackPanel>
@@ -1899,19 +1899,19 @@
                         </Border>
                         <Border Style="{StaticResource MetricCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="91" Foreground="#FFED8936" FontSize="24" FontWeight="Bold"/>
+                                <TextBlock Text="91" Foreground="#ED8936" FontSize="24" FontWeight="Bold"/>
                                 <TextBlock Text="Disabled Users" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource MetricCardStyle}">
                             <StackPanel>
-                                <TextBlock x:Name="ServiceAccountsTextBlock" Text="0" Foreground="#FF9F7AEA" FontSize="24" FontWeight="Bold"/>
+                                <TextBlock x:Name="ServiceAccountsTextBlock" Text="0" Foreground="#9F7AEA" FontSize="24" FontWeight="Bold"/>
                                 <TextBlock Text="Service Accounts" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource MetricCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="67" Foreground="#FFED8936" FontSize="24" FontWeight="Bold"/>
+                                <TextBlock Text="67" Foreground="#ED8936" FontSize="24" FontWeight="Bold"/>
                                 <TextBlock Text="Privileged Users" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                             </StackPanel>
                         </Border>
@@ -1946,9 +1946,9 @@
                                         </TextBlock.Triggers>
                                     </TextBlock>
                                     <StackPanel>
-                                        <TextBlock Text="{Binding UsersLoadingMessage}" Foreground="#FF67D391" FontWeight="Medium"/>
+                                        <TextBlock Text="{Binding UsersLoadingMessage}" Foreground="#67D391" FontWeight="Medium"/>
                                         <ProgressBar Value="{Binding UsersLoadingProgress}" Maximum="100" Width="200" Height="4" 
-                                                   Background="#FF374151" Foreground="#FF10B981" Margin="0,5,0,0"/>
+                                                   Background="#374151" Foreground="#10B981" Margin="0,5,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -1994,7 +1994,7 @@
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <Button Content="View" 
-                                                        Background="#FF4299E1" 
+                                                        Background="#4299E1" 
                                                         Foreground="White" 
                                                         BorderThickness="0" 
                                                         Padding="8,4" 
@@ -2029,7 +2029,7 @@
                                            Margin="0,0,0,8"/>
                                 <TextBlock Text="Run a discovery operation to populate user data"
                                            FontSize="14"
-                                           Foreground="#FF718096"
+                                           Foreground="#718096"
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                             
@@ -2082,7 +2082,7 @@
                                                 FontSize="14"/>
                                         
                                         <!-- Current Page Info -->
-                                        <Border Background="#FF4A5568" 
+                                        <Border Background="#4A5568" 
                                                 CornerRadius="4" 
                                                 Padding="8,4" 
                                                 Margin="0,0,4,0">
@@ -2168,11 +2168,11 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="🔥" FontSize="20" Margin="0,0,8,0"/>
                                     <StackPanel>
-                                        <TextBlock Text="5" Foreground="#FFED8936" FontSize="24" FontWeight="Bold"/>
+                                        <TextBlock Text="5" Foreground="#ED8936" FontSize="24" FontWeight="Bold"/>
                                         <TextBlock Text="Palo Alto Devices" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                                     </StackPanel>
                                 </StackPanel>
-                                <TextBlock Text="2 HA Pairs" Foreground="#FF9AE6B4" FontSize="10"/>
+                                <TextBlock Text="2 HA Pairs" Foreground="#9AE6B4" FontSize="10"/>
                             </StackPanel>
                         </Border>
                         
@@ -2185,7 +2185,7 @@
                                         <TextBlock Text="Network Devices" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                                     </StackPanel>
                                 </StackPanel>
-                                <TextBlock Text="Switches &amp; Routers" Foreground="#FF63B3ED" FontSize="10"/>
+                                <TextBlock Text="Switches &amp; Routers" Foreground="#63B3ED" FontSize="10"/>
                             </StackPanel>
                         </Border>
                         
@@ -2198,7 +2198,7 @@
                                         <TextBlock Text="Servers" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                                     </StackPanel>
                                 </StackPanel>
-                                <TextBlock Text="Physical &amp; Virtual" Foreground="#FF9AE6B4" FontSize="10"/>
+                                <TextBlock Text="Physical &amp; Virtual" Foreground="#9AE6B4" FontSize="10"/>
                             </StackPanel>
                         </Border>
                         
@@ -2207,11 +2207,11 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="☁️" FontSize="20" Margin="0,0,8,0"/>
                                     <StackPanel>
-                                        <TextBlock Text="8" Foreground="#FF9F7AEA" FontSize="24" FontWeight="Bold"/>
+                                        <TextBlock Text="8" Foreground="#9F7AEA" FontSize="24" FontWeight="Bold"/>
                                         <TextBlock Text="Cloud Services" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                                     </StackPanel>
                                 </StackPanel>
-                                <TextBlock Text="Azure &amp; AWS" Foreground="#FFD6BCFA" FontSize="10"/>
+                                <TextBlock Text="Azure &amp; AWS" Foreground="#D6BCFA" FontSize="10"/>
                             </StackPanel>
                         </Border>
                     </UniformGrid>
@@ -2229,11 +2229,11 @@
                                     <TextBlock Text="Network Topology" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center"/>
                                     <Button x:Name="RefreshTopologyButton" Content="🔄 Refresh" 
                                             Style="{StaticResource RoundedButtonStyle}" 
-                                            Background="#FF4299E1" Margin="16,0,0,0" Padding="8,4"
+                                            Background="#4299E1" Margin="16,0,0,0" Padding="8,4"
                                             Command="{Binding RefreshTopologyCommand}" FontSize="12"/>
                                     <Button x:Name="AutoLayoutButton" Content="📐 Auto Layout" 
                                             Style="{StaticResource RoundedButtonStyle}" 
-                                            Background="#FF48BB78" Margin="8,0,0,0" Padding="8,4"
+                                            Background="#48BB78" Margin="8,0,0,0" Padding="8,4"
                                             Command="{Binding AutoLayoutTopologyCommand}" FontSize="12"/>
                                 </StackPanel>
                                 <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Height="300" Padding="10">
@@ -2258,11 +2258,11 @@
                                                 CornerRadius="8" Visibility="Collapsed">
                                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                                 <TextBlock Text="&#x1F50D;" FontSize="32" HorizontalAlignment="Center" 
-                                                           Foreground="#FF718096" Margin="0,0,0,8"/>
+                                                           Foreground="#718096" Margin="0,0,0,8"/>
                                                 <TextBlock Text="No network topology data available" 
-                                                           Foreground="#FF718096" FontSize="14" HorizontalAlignment="Center"/>
+                                                           Foreground="#718096" FontSize="14" HorizontalAlignment="Center"/>
                                                 <TextBlock Text="Run Network Infrastructure Discovery to populate this view" 
-                                                           Foreground="#FF4A5568" FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                                           Foreground="#4A5568" FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                                             </StackPanel>
                                         </Border>
                                     </Grid>
@@ -2274,34 +2274,34 @@
                                 <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="16">
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                            <Ellipse Width="8" Height="8" Fill="#FF48BB78" Margin="0,0,8,0"/>
+                                            <Ellipse Width="8" Height="8" Fill="#48BB78" Margin="0,0,8,0"/>
                                             <StackPanel>
                                                 <TextBlock Text="Firewall Rules" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="Medium"/>
-                                                <TextBlock Text="347 rules optimized" Foreground="#FF9AE6B4" FontSize="10"/>
+                                                <TextBlock Text="347 rules optimized" Foreground="#9AE6B4" FontSize="10"/>
                                             </StackPanel>
                                         </StackPanel>
                                         
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                            <Ellipse Width="8" Height="8" Fill="#FFED8936" Margin="0,0,8,0"/>
+                                            <Ellipse Width="8" Height="8" Fill="#ED8936" Margin="0,0,8,0"/>
                                             <StackPanel>
                                                 <TextBlock Text="VPN Tunnels" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="Medium"/>
-                                                <TextBlock Text="12 active connections" Foreground="#FFFBB859" FontSize="10"/>
+                                                <TextBlock Text="12 active connections" Foreground="#FBB859" FontSize="10"/>
                                             </StackPanel>
                                         </StackPanel>
                                         
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                            <Ellipse Width="8" Height="8" Fill="#FF4299E1" Margin="0,0,8,0"/>
+                                            <Ellipse Width="8" Height="8" Fill="#4299E1" Margin="0,0,8,0"/>
                                             <StackPanel>
                                                 <TextBlock Text="SSL Decryption" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="Medium"/>
-                                                <TextBlock Text="89% coverage" Foreground="#FF63B3ED" FontSize="10"/>
+                                                <TextBlock Text="89% coverage" Foreground="#63B3ED" FontSize="10"/>
                                             </StackPanel>
                                         </StackPanel>
                                         
                                         <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="8" Height="8" Fill="#FFF56565" Margin="0,0,8,0"/>
+                                            <Ellipse Width="8" Height="8" Fill="#F56565" Margin="0,0,8,0"/>
                                             <StackPanel>
                                                 <TextBlock Text="Threat Detection" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="Medium"/>
-                                                <TextBlock Text="3 alerts today" Foreground="#FFFED7D7" FontSize="10"/>
+                                                <TextBlock Text="3 alerts today" Foreground="#FED7D7" FontSize="10"/>
                                             </StackPanel>
                                         </StackPanel>
                                     </StackPanel>
@@ -2368,7 +2368,7 @@
                                     <Button Content="📋 Copy Selected" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding CopySelectedInfrastructureCommand}"/>
                                     <Button Content="📋 Copy All" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding CopyAllInfrastructureCommand}"/>
                                     <Button Content="👁️ Columns" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding ShowColumnVisibilityCommand}" CommandParameter="infrastructure"/>
-                                    <Button Content="&#x1F50D; Advanced Search" Style="{StaticResource RoundedButtonStyle}" Background="#FF4299E1" Margin="8,0,0,0" Command="{Binding ShowInfrastructureAdvancedSearchCommand}"/>
+                                    <Button Content="&#x1F50D; Advanced Search" Style="{StaticResource RoundedButtonStyle}" Background="#4299E1" Margin="8,0,0,0" Command="{Binding ShowInfrastructureAdvancedSearchCommand}"/>
                                 </StackPanel>
                             </StackPanel>
                             
@@ -2393,9 +2393,9 @@
                                         </TextBlock.Triggers>
                                     </TextBlock>
                                     <StackPanel>
-                                        <TextBlock Text="{Binding InfrastructureLoadingMessage}" Foreground="#FF67D391" FontWeight="Medium"/>
+                                        <TextBlock Text="{Binding InfrastructureLoadingMessage}" Foreground="#67D391" FontWeight="Medium"/>
                                         <ProgressBar Value="{Binding InfrastructureLoadingProgress}" Maximum="100" Width="200" Height="4" 
-                                                   Background="#FF374151" Foreground="#FF10B981" Margin="0,5,0,0"/>
+                                                   Background="#374151" Foreground="#10B981" Margin="0,5,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -2463,7 +2463,7 @@
                                            Margin="0,0,0,8"/>
                                 <TextBlock Text="Run a discovery operation to populate infrastructure data"
                                            FontSize="14"
-                                           Foreground="#FF718096"
+                                           Foreground="#718096"
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                             
@@ -2516,7 +2516,7 @@
                                                 FontSize="14"/>
                                         
                                         <!-- Current Page Info -->
-                                        <Border Background="#FF4A5568" 
+                                        <Border Background="#4A5568" 
                                                 CornerRadius="4" 
                                                 Padding="8,4" 
                                                 Margin="0,0,4,0">
@@ -2617,7 +2617,7 @@
                             <Button Content="📋 Copy Selected" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding CopySelectedGroupsCommand}"/>
                             <Button Content="📋 Copy All" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding CopyAllGroupsCommand}"/>
                             <Button Content="👁️ Columns" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding ShowColumnVisibilityCommand}" CommandParameter="groups"/>
-                            <Button Content="&#x1F50D; Advanced Search" Style="{StaticResource RoundedButtonStyle}" Background="#FF4299E1" Margin="8,0,0,0" Command="{Binding ShowGroupsAdvancedSearchCommand}"/>
+                            <Button Content="&#x1F50D; Advanced Search" Style="{StaticResource RoundedButtonStyle}" Background="#4299E1" Margin="8,0,0,0" Command="{Binding ShowGroupsAdvancedSearchCommand}"/>
                             <Button Content="🗑️ Delete Selected" Style="{StaticResource RoundedButtonStyle}" Background="{StaticResource DangerGradient}" Margin="8,0,0,0" Command="{Binding DeleteSelectedGroupsCommand}"/>
                         </StackPanel>
                     </Border>
@@ -2651,9 +2651,9 @@
                                         </TextBlock.Triggers>
                                     </TextBlock>
                                     <StackPanel>
-                                        <TextBlock Text="{Binding GroupsLoadingMessage}" Foreground="#FF67D391" FontWeight="Medium"/>
+                                        <TextBlock Text="{Binding GroupsLoadingMessage}" Foreground="#67D391" FontWeight="Medium"/>
                                         <ProgressBar Value="{Binding GroupsLoadingProgress}" Maximum="100" Width="200" Height="4" 
-                                                   Background="#FF374151" Foreground="#FF10B981" Margin="0,5,0,0"/>
+                                                   Background="#374151" Foreground="#10B981" Margin="0,5,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -2794,7 +2794,7 @@
                                         <TextBlock Text="Migration Waves" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                                     </StackPanel>
                                 </StackPanel>
-                                <TextBlock Text="Optimized grouping" Foreground="#FF63B3ED" FontSize="10"/>
+                                <TextBlock Text="Optimized grouping" Foreground="#63B3ED" FontSize="10"/>
                             </StackPanel>
                         </Border>
                         
@@ -2807,7 +2807,7 @@
                                         <TextBlock Text="High Priority Users" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                                     </StackPanel>
                                 </StackPanel>
-                                <TextBlock Text="Wave 1 candidates" Foreground="#FF9AE6B4" FontSize="10"/>
+                                <TextBlock Text="Wave 1 candidates" Foreground="#9AE6B4" FontSize="10"/>
                             </StackPanel>
                         </Border>
                         
@@ -2816,11 +2816,11 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="🔄" FontSize="20" Margin="0,0,8,0"/>
                                     <StackPanel>
-                                        <TextBlock Text="67" Foreground="#FFED8936" FontSize="24" FontWeight="Bold"/>
+                                        <TextBlock Text="67" Foreground="#ED8936" FontSize="24" FontWeight="Bold"/>
                                         <TextBlock Text="Dependencies" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                                     </StackPanel>
                                 </StackPanel>
-                                <TextBlock Text="Mapped relations" Foreground="#FFFBB859" FontSize="10"/>
+                                <TextBlock Text="Mapped relations" Foreground="#FBB859" FontSize="10"/>
                             </StackPanel>
                         </Border>
                         
@@ -2829,11 +2829,11 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                     <TextBlock Text="📅" FontSize="20" Margin="0,0,8,0"/>
                                     <StackPanel>
-                                        <TextBlock Text="12" Foreground="#FF9F7AEA" FontSize="24" FontWeight="Bold"/>
+                                        <TextBlock Text="12" Foreground="#9F7AEA" FontSize="24" FontWeight="Bold"/>
                                         <TextBlock Text="Weeks Timeline" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                                     </StackPanel>
                                 </StackPanel>
-                                <TextBlock Text="Estimated duration" Foreground="#FFD6BCFA" FontSize="10"/>
+                                <TextBlock Text="Estimated duration" Foreground="#D6BCFA" FontSize="10"/>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -2908,9 +2908,9 @@
                                                 AllowDrop="True" Drop="WaveDropZone_Drop" DragOver="WaveDropZone_DragOver" 
                                                 DragLeave="WaveDropZone_DragLeave" CornerRadius="4" BorderThickness="2" BorderBrush="Transparent">
                                             <StackPanel>
-                                                <TextBlock Text="Wave 3 - Sales &amp; Marketing" Foreground="#FFED8936" FontSize="13" FontWeight="Medium"/>
+                                                <TextBlock Text="Wave 3 - Sales &amp; Marketing" Foreground="#ED8936" FontSize="13" FontWeight="Medium"/>
                                                 <TextBlock x:Name="Wave3UserCount" Text="Week 6-8 • 456 users" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
-                                                <ProgressBar Value="20" Maximum="100" Height="4" Background="{DynamicResource CardBrush}" Foreground="#FFED8936" BorderThickness="0" Margin="0,4,0,0"/>
+                                                <ProgressBar Value="20" Maximum="100" Height="4" Background="{DynamicResource CardBrush}" Foreground="#ED8936" BorderThickness="0" Margin="0,4,0,0"/>
                                             </StackPanel>
                                         </Border>
                                         
@@ -2918,9 +2918,9 @@
                                                 AllowDrop="True" Drop="WaveDropZone_Drop" DragOver="WaveDropZone_DragOver" 
                                                 DragLeave="WaveDropZone_DragLeave" CornerRadius="4" BorderThickness="2" BorderBrush="Transparent">
                                             <StackPanel>
-                                                <TextBlock Text="Wave 4 - Operations" Foreground="#FF9F7AEA" FontSize="13" FontWeight="Medium"/>
+                                                <TextBlock Text="Wave 4 - Operations" Foreground="#9F7AEA" FontSize="13" FontWeight="Medium"/>
                                                 <TextBlock x:Name="Wave4UserCount" Text="Week 9-11 • 298 users" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
-                                                <ProgressBar Value="0" Maximum="100" Height="4" Background="{DynamicResource CardBrush}" Foreground="#FF9F7AEA" BorderThickness="0" Margin="0,4,0,0"/>
+                                                <ProgressBar Value="0" Maximum="100" Height="4" Background="{DynamicResource CardBrush}" Foreground="#9F7AEA" BorderThickness="0" Margin="0,4,0,0"/>
                                             </StackPanel>
                                         </Border>
                                         
@@ -2928,9 +2928,9 @@
                                                 AllowDrop="True" Drop="WaveDropZone_Drop" DragOver="WaveDropZone_DragOver" 
                                                 DragLeave="WaveDropZone_DragLeave" CornerRadius="4" BorderThickness="2" BorderBrush="Transparent">
                                             <StackPanel>
-                                                <TextBlock Text="Wave 5 - General Users" Foreground="#FFF56565" FontSize="13" FontWeight="Medium"/>
+                                                <TextBlock Text="Wave 5 - General Users" Foreground="#F56565" FontSize="13" FontWeight="Medium"/>
                                                 <TextBlock x:Name="Wave5UserCount" Text="Week 12+ • 70 users" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
-                                                <ProgressBar Value="0" Maximum="100" Height="4" Background="{DynamicResource CardBrush}" Foreground="#FFF56565" BorderThickness="0" Margin="0,4,0,0"/>
+                                                <ProgressBar Value="0" Maximum="100" Height="4" Background="{DynamicResource CardBrush}" Foreground="#F56565" BorderThickness="0" Margin="0,4,0,0"/>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
@@ -2940,18 +2940,18 @@
                                 <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="16">
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                            <Ellipse Width="8" Height="8" Fill="#FF48BB78" Margin="0,0,8,0"/>
-                                            <TextBlock Text="Low Risk: 67%" Foreground="#FF9AE6B4" FontSize="12"/>
+                                            <Ellipse Width="8" Height="8" Fill="#48BB78" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Low Risk: 67%" Foreground="#9AE6B4" FontSize="12"/>
                                         </StackPanel>
                                         
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                            <Ellipse Width="8" Height="8" Fill="#FFED8936" Margin="0,0,8,0"/>
-                                            <TextBlock Text="Medium Risk: 28%" Foreground="#FFFBB859" FontSize="12"/>
+                                            <Ellipse Width="8" Height="8" Fill="#ED8936" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Medium Risk: 28%" Foreground="#FBB859" FontSize="12"/>
                                         </StackPanel>
                                         
                                         <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="8" Height="8" Fill="#FFF56565" Margin="0,0,8,0"/>
-                                            <TextBlock Text="High Risk: 5%" Foreground="#FFFED7D7" FontSize="12"/>
+                                            <Ellipse Width="8" Height="8" Fill="#F56565" Margin="0,0,8,0"/>
+                                            <TextBlock Text="High Risk: 5%" Foreground="#FED7D7" FontSize="12"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -2974,7 +2974,7 @@
                     <TabControl.Resources>
                         <Style TargetType="TabItem">
                             <Setter Property="Foreground" Value="White"/>
-                            <Setter Property="Background" Value="#FF2D2D30"/>
+                            <Setter Property="Background" Value="#2D2D30"/>
                             <Setter Property="BorderThickness" Value="0"/>
                             <Setter Property="Padding" Value="20,10"/>
                             <Setter Property="Template">
@@ -2992,7 +2992,7 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter Property="Background" Value="#FF007ACC"/>
+                                                <Setter Property="Background" Value="#007ACC"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -3014,19 +3014,19 @@
                             
                             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,20">
                                 <Button Content="Select Users" Command="{Binding SelectUsersCommand}"
-                                        Background="#FF3E3E42" Foreground="White"
+                                        Background="#3E3E42" Foreground="White"
                                         Padding="15,8" Margin="0,0,10,0" BorderThickness="0"/>
                                 <Button Content="Map Security Groups" Command="{Binding MapSecurityGroupsCommand}"
-                                        Background="#FF3E3E42" Foreground="White"
+                                        Background="#3E3E42" Foreground="White"
                                         Padding="15,8" Margin="0,0,10,0" BorderThickness="0"/>
                                 <Button Content="Start Migration" Command="{Binding StartUserMigrationCommand}"
-                                        Background="#FF007ACC" Foreground="White"
+                                        Background="#007ACC" Foreground="White"
                                         Padding="15,8" BorderThickness="0"/>
                             </StackPanel>
                             
                             <DataGrid Grid.Row="2" x:Name="UserMigrationGrid"
-                                      Background="#FF2D2D30" Foreground="White"
-                                      BorderBrush="#FF3E3E42"
+                                      Background="#2D2D30" Foreground="White"
+                                      BorderBrush="#3E3E42"
                                       VirtualizingStackPanel.IsVirtualizing="True" 
                                       EnableRowVirtualization="True" 
                                       EnableColumnVirtualization="True"
@@ -3283,14 +3283,14 @@
                                     
                                     <Border Style="{StaticResource MetricCardStyle}" Margin="4,0">
                                         <StackPanel>
-                                            <TextBlock Text="{Binding DataVisualization.AverageItemsPerModule, StringFormat=N0}" Foreground="#FFED8936" FontSize="24" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding DataVisualization.AverageItemsPerModule, StringFormat=N0}" Foreground="#ED8936" FontSize="24" FontWeight="Bold"/>
                                             <TextBlock Text="Avg Items/Module" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
                                         </StackPanel>
                                     </Border>
                                     
                                     <Border Style="{StaticResource MetricCardStyle}" Margin="8,0,0,0">
                                         <StackPanel>
-                                            <TextBlock Text="{Binding DataVisualization.LastDiscoveryTime, StringFormat=MM/dd HH:mm}" Foreground="#FF9F7AEA" FontSize="16" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding DataVisualization.LastDiscoveryTime, StringFormat=MM/dd HH:mm}" Foreground="#9F7AEA" FontSize="16" FontWeight="Bold"/>
                                             <TextBlock Text="Last Discovery" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
                                         </StackPanel>
                                     </Border>
@@ -3350,10 +3350,10 @@
                                     
                                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                                         <Button Content="📤 Export Chart" Style="{StaticResource RoundedButtonStyle}" 
-                                                Background="#FF4299E1" Command="{Binding DataVisualization.ExportChartCommand}" 
+                                                Background="#4299E1" Command="{Binding DataVisualization.ExportChartCommand}" 
                                                 Margin="0,0,12,0"/>
                                         <Button Content="&#x1F50D; Drill Down" Style="{StaticResource RoundedButtonStyle}" 
-                                                Background="#FF48BB78" Command="{Binding DataVisualization.DrillDownCommand}"/>
+                                                Background="#48BB78" Command="{Binding DataVisualization.DrillDownCommand}"/>
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>
@@ -3432,7 +3432,7 @@
                                 </Grid>
                                 
                                 <TextBlock Text="Note: Changing the path will require restarting the application" 
-                                           Foreground="#FFFBB859" FontSize="11" Margin="0,8,0,0"/>
+                                           Foreground="#FBB859" FontSize="11" Margin="0,8,0,0"/>
                             </StackPanel>
                         </Border>
                         
@@ -3616,7 +3616,7 @@
                             <StackPanel>
                                 <TextBlock Text="🔄" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,8"/>
                                 <TextBlock x:Name="PendingReviewCount" Text="0" FontSize="24" FontWeight="Bold" 
-                                           Foreground="#FFFBB859" HorizontalAlignment="Center"/>
+                                           Foreground="#FBB859" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Pending Review" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -3642,7 +3642,7 @@
                                 </Button>
                                 
                                 <Button x:Name="ImportAppListButton" Style="{StaticResource RoundedButtonStyle}" 
-                                        Background="#FF48BB78" Foreground="White"
+                                        Background="#48BB78" Foreground="White"
                                         Margin="0,0,12,12" Padding="20,12"
                                         Command="{Binding ImportAppListCommand}">
                                     <StackPanel Orientation="Horizontal">
@@ -3652,7 +3652,7 @@
                                 </Button>
                                 
                                 <Button x:Name="RefreshAppsButton" Style="{StaticResource RoundedButtonStyle}" 
-                                        Background="#FF805AD5" Foreground="White"
+                                        Background="#805AD5" Foreground="White"
                                         Margin="0,0,12,12" Padding="20,12"
                                         Command="{Binding RefreshAppsCommand}">
                                     <StackPanel Orientation="Horizontal">
@@ -3714,9 +3714,9 @@
                             </Grid>
                             
                             <DataGrid x:Name="ApplicationsGrid" Margin="0,16,0,0" Height="400"
-                                      Background="{DynamicResource CardBrush}" Foreground="White" BorderBrush="#FF2D3748"
+                                      Background="{DynamicResource CardBrush}" Foreground="White" BorderBrush="#2D3748"
                                       HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                                      RowBackground="#FF2D2D30" AlternatingRowBackground="{DynamicResource CardBrush}"
+                                      RowBackground="#2D2D30" AlternatingRowBackground="{DynamicResource CardBrush}"
                                       SelectionMode="Single" IsReadOnly="True"
                                       AutoGenerateColumns="False"
                                       behaviors:VirtualizationBehavior.EnableVirtualization="True"
@@ -3733,14 +3733,14 @@
                                 </DataGrid.Columns>
                                 <DataGrid.RowStyle>
                                     <Style TargetType="DataGridRow">
-                                        <Setter Property="Background" Value="#FF2D2D30"/>
+                                        <Setter Property="Background" Value="#2D2D30"/>
                                         <Setter Property="Foreground" Value="White"/>
                                         <Style.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#FF3E3E42"/>
+                                                <Setter Property="Background" Value="#3E3E42"/>
                                             </Trigger>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter Property="Background" Value="#FF007ACC"/>
+                                                <Setter Property="Background" Value="#007ACC"/>
                                             </Trigger>
                                         </Style.Triggers>
                                     </Style>
@@ -3784,7 +3784,7 @@
                                     
                                     <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="12" Margin="0,0,0,8">
                                         <StackPanel>
-                                            <TextBlock Text="🟡 Medium Priority" FontSize="12" FontWeight="Medium" Foreground="#FFFBB859"/>
+                                            <TextBlock Text="🟡 Medium Priority" FontSize="12" FontWeight="Medium" Foreground="#FBB859"/>
                                             <TextBlock Text="Update application inventory with latest versions" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </Border>
@@ -3833,7 +3833,7 @@
                                     
                                     <StackPanel Margin="0,0,0,12">
                                         <TextBlock Text="Circular Dependencies" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                        <TextBlock x:Name="CircularDepsCount" Text="0" FontSize="20" FontWeight="Bold" Foreground="#FFFBB859"/>
+                                        <TextBlock x:Name="CircularDepsCount" Text="0" FontSize="20" FontWeight="Bold" Foreground="#FBB859"/>
                                     </StackPanel>
                                     
                                     <StackPanel Margin="0,0,0,16">
@@ -3862,11 +3862,11 @@
         <!-- Enhanced Progress Overlay -->
         <Grid x:Name="ProgressOverlay" Grid.ColumnSpan="2" 
               Background="#DD000000" Visibility="Collapsed">
-            <Border Background="{DynamicResource CardBrush}" BorderBrush="#FF2D3748" BorderThickness="1"
+            <Border Background="{DynamicResource CardBrush}" BorderBrush="#2D3748" BorderThickness="1"
                     CornerRadius="12" Width="500" Height="280"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Border.Effect>
-                    <DropShadowEffect Color="#FF000000" Direction="270" ShadowDepth="8" BlurRadius="24" Opacity="0.4"/>
+                    <DropShadowEffect Color="#000000" Direction="270" ShadowDepth="8" BlurRadius="24" Opacity="0.4"/>
                 </Border.Effect>
                 <Grid Margin="40">
                     <Grid.RowDefinitions>
@@ -3879,7 +3879,7 @@
                     
                     <TextBlock Grid.Row="0" x:Name="ProgressTitle" 
                                Text="Operation in Progress" 
-                               Foreground="#FFF7FAFC" FontSize="20" FontWeight="SemiBold"
+                               Foreground="#F7FAFC" FontSize="20" FontWeight="SemiBold"
                                HorizontalAlignment="Center" Margin="0,0,0,24"/>
                     
                     <ProgressBar Grid.Row="1" x:Name="ProgressBar" 
@@ -3954,7 +3954,7 @@
                                     </Button>
                                     
                                     <Button x:Name="DnsLookupButton" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FF48BB78" Foreground="White"
+                                            Background="#48BB78" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
                                             Command="{Binding DnsLookupCommand}">
                                         <StackPanel Orientation="Horizontal">
@@ -3964,7 +3964,7 @@
                                     </Button>
                                     
                                     <Button x:Name="SubdomainEnumButton" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FF9F7AEA" Foreground="White"
+                                            Background="#9F7AEA" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
                                             Command="{Binding SubdomainEnumCommand}">
                                         <StackPanel Orientation="Horizontal">
@@ -4047,7 +4047,7 @@
                                     </Button>
                                     
                                     <Button x:Name="AnalyzeSharesButton" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FF48BB78" Foreground="White"
+                                            Background="#48BB78" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
                                             Command="{Binding AnalyzeSharesCommand}">
                                         <StackPanel Orientation="Horizontal">
@@ -4057,7 +4057,7 @@
                                     </Button>
                                     
                                     <Button x:Name="StorageReportButton" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FF9F7AEA" Foreground="White"
+                                            Background="#9F7AEA" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
                                             Command="{Binding StorageReportCommand}">
                                         <StackPanel Orientation="Horizontal">
@@ -4143,7 +4143,7 @@
                                     </Button>
                                     
                                     <Button x:Name="AnalyzeSQLButton" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FF48BB78" Foreground="White"
+                                            Background="#48BB78" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
                                             Command="{Binding AnalyzeSQLCommand}">
                                         <StackPanel Orientation="Horizontal">
@@ -4153,7 +4153,7 @@
                                     </Button>
                                     
                                     <Button x:Name="DatabaseReportButton" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FF9F7AEA" Foreground="White"
+                                            Background="#9F7AEA" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
                                             Command="{Binding DatabaseReportCommand}">
                                         <StackPanel Orientation="Horizontal">
@@ -4163,7 +4163,7 @@
                                     </Button>
                                     
                                     <Button x:Name="CheckDatabaseVersionsButton" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FFE53E3E" Foreground="White"
+                                            Background="#E53E3E" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
                                             Command="{Binding CheckDatabaseVersionsCommand}">
                                         <StackPanel Orientation="Horizontal">
@@ -4250,7 +4250,7 @@
                                     </Button>
                                     
                                     <Button x:Name="SecurityAuditButton" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FFE53E3E" Foreground="White"
+                                            Background="#E53E3E" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
                                             Command="{Binding SecurityAuditCommand}">
                                         <StackPanel Orientation="Horizontal">
@@ -4260,7 +4260,7 @@
                                     </Button>
                                     
                                     <Button x:Name="ComplianceCheckButton" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FF48BB78" Foreground="White"
+                                            Background="#48BB78" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
                                             Command="{Binding ComplianceCheckCommand}">
                                         <StackPanel Orientation="Horizontal">
@@ -4270,7 +4270,7 @@
                                     </Button>
                                     
                                     <Button x:Name="VulnerabilityAssessmentButton" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FF9F7AEA" Foreground="White"
+                                            Background="#9F7AEA" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
                                             Command="{Binding VulnerabilityAssessmentCommand}">
                                         <StackPanel Orientation="Horizontal">
@@ -4280,7 +4280,7 @@
                                     </Button>
                                     
                                     <Button x:Name="PasswordPolicyButton" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FFED8936" Foreground="White"
+                                            Background="#ED8936" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
                                             Command="{Binding PasswordPolicyCommand}">
                                         <StackPanel Orientation="Horizontal">
@@ -4290,7 +4290,7 @@
                                     </Button>
                                     
                                     <Button x:Name="PasswordGeneratorButton" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FF9F7AEA" Foreground="White"
+                                            Background="#9F7AEA" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
                                             Command="{Binding PasswordGeneratorCommand}">
                                         <StackPanel Orientation="Horizontal">
@@ -4300,7 +4300,7 @@
                                     </Button>
                                     
                                     <Button x:Name="FirewallAnalysisButton" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FF38B2AC" Foreground="White"
+                                            Background="#38B2AC" Foreground="White"
                                             Margin="0,0,12,12" Padding="20,12"
                                             Command="{Binding FirewallAnalysisCommand}">
                                         <StackPanel Orientation="Horizontal">
@@ -4323,13 +4323,13 @@
                                             Background="{StaticResource AccentGradient}" Margin="0,0,8,0" Padding="16,8"
                                             Command="{Binding SecurityTabCommand}" CommandParameter="GPO"/>
                                     <Button x:Name="SecurityTabButton" Content="Security Issues" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FF4A5568" Margin="0,0,8,0" Padding="16,8"
+                                            Background="#4A5568" Margin="0,0,8,0" Padding="16,8"
                                             Command="{Binding SecurityTabCommand}" CommandParameter="security"/>
                                     <Button x:Name="ComplianceTabButton" Content="Compliance" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FF4A5568" Margin="0,0,8,0" Padding="16,8"
+                                            Background="#4A5568" Margin="0,0,8,0" Padding="16,8"
                                             Command="{Binding SecurityTabCommand}" CommandParameter="Compliance"/>
                                     <Button x:Name="VulnerabilitiesTabButton" Content="Vulnerabilities" Style="{StaticResource RoundedButtonStyle}"
-                                            Background="#FF4A5568" Margin="0,0,8,0" Padding="16,8"
+                                            Background="#4A5568" Margin="0,0,8,0" Padding="16,8"
                                             Command="{Binding SecurityTabCommand}" CommandParameter="Vulnerabilities"/>
                                 </StackPanel>
                                 
@@ -4401,8 +4401,8 @@
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                             <Button x:Name="VulnerabilitiesColumnChooserButton" Content="⚙ Columns" 
                                                     Click="VulnerabilitiesColumnChooser_Click"
-                                                    Background="#FF4A5568" Foreground="{DynamicResource PrimaryTextBrush}" 
-                                                    BorderBrush="#FF63B3ED" Padding="8,4" Margin="4,0"
+                                                    Background="#4A5568" Foreground="{DynamicResource PrimaryTextBrush}" 
+                                                    BorderBrush="#63B3ED" Padding="8,4" Margin="4,0"
                                                     ToolTip="Choose which columns to display"/>
                                         </StackPanel>
                                     </Border>

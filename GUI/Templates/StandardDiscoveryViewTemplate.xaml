@@ -11,7 +11,7 @@
         <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#FF2D3748"/>
+            <Setter Property="Foreground" Value="#2D3748"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
         <Style x:Key="FilterComboBoxStyle" TargetType="ComboBox">
@@ -24,7 +24,7 @@
             <Setter Property="Margin" Value="8,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#FFE2E8F0"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
             <Setter Property="Padding" Value="8,6"/>
         </Style>
     </UserControl.Resources>
@@ -45,28 +45,28 @@
         <!-- UniformGrid for 4 Summary Statistic Cards -->
         <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,16">
             <!-- Placeholder for Summary Card 1 -->
-            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
+            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
                     <TextBlock Text="Card 1 Title" FontWeight="Bold" FontSize="14"/>
                     <TextBlock Text="Value: 0" FontSize="24" FontWeight="SemiBold"/>
                 </StackPanel>
             </Border>
             <!-- Placeholder for Summary Card 2 -->
-            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
+            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
                     <TextBlock Text="Card 2 Title" FontWeight="Bold" FontSize="14"/>
                     <TextBlock Text="Value: 0" FontSize="24" FontWeight="SemiBold"/>
                 </StackPanel>
             </Border>
             <!-- Placeholder for Summary Card 3 -->
-            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
+            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
                     <TextBlock Text="Card 3 Title" FontWeight="Bold" FontSize="14"/>
                     <TextBlock Text="Value: 0" FontSize="24" FontWeight="SemiBold"/>
                 </StackPanel>
             </Border>
             <!-- Placeholder for Summary Card 4 -->
-            <Border Background="#FFF8FAFC" BorderBrush="#FFE2E8F0" BorderThickness="1" Padding="16" Margin="4">
+            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
                     <TextBlock Text="Card 4 Title" FontWeight="Bold" FontSize="14"/>
                     <TextBlock Text="Value: 0" FontSize="24" FontWeight="SemiBold"/>
@@ -91,23 +91,23 @@
             </Grid.ColumnDefinitions>
 
             <!-- Main DataGrid Placeholder -->
-            <Border Grid.Column="0" Background="#FF1A202C" BorderBrush="#FFE2E8F0" BorderThickness="1">
-                <TextBlock Text="DataGrid Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF4A5568"/>
+            <Border Grid.Column="0" Background="#1A202C" BorderBrush="#E2E8F0" BorderThickness="1">
+                <TextBlock Text="DataGrid Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#4A5568"/>
                 <!-- Placeholder: Replace with actual DataGrid in each view -->
             </Border>
 
             <GridSplitter Grid.Column="1" Width="5" Background="Gray" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
 
             <!-- Right-hand Details Panel Placeholder -->
-            <Border Grid.Column="2" Background="#FF1A202C" BorderBrush="#FFE2E8F0" BorderThickness="1">
-                <TextBlock Text="Details Panel Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF4A5568"/>
+            <Border Grid.Column="2" Background="#1A202C" BorderBrush="#E2E8F0" BorderThickness="1">
+                <TextBlock Text="Details Panel Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#4A5568"/>
                 <!-- Placeholder: Replace with details content in each view -->
             </Border>
         </Grid>
 
         <!-- Footer or Empty State Placeholder -->
-        <Border Grid.Row="4" Background="#FF1A202C" Padding="16" Margin="0,16,0,0">
-            <TextBlock Text="Footer/Empty State Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF4A5568"/>
+        <Border Grid.Row="4" Background="#1A202C" Padding="16" Margin="0,16,0,0">
+            <TextBlock Text="Footer/Empty State Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#4A5568"/>
             <!-- Placeholder: Replace with footer or empty state content in each view -->
         </Border>
     </Grid>

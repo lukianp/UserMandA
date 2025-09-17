@@ -11,8 +11,8 @@
     <UserControl.Resources>
         <!-- Tab Style -->
         <Style x:Key="ManagementTab" TargetType="Button">
-            <Setter Property="Background" Value="#FF334155"/>
-            <Setter Property="Foreground" Value="#FF94A3B8"/>
+            <Setter Property="Background" Value="#334155"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="20,12"/>
             <Setter Property="Margin" Value="0,0,4,0"/>
@@ -21,24 +21,24 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#FF475569"/>
-                    <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                    <Setter Property="Background" Value="#475569"/>
+                    <Setter Property="Foreground" Value="#E2E8F0"/>
                 </Trigger>
                 <!-- Use a simpler approach for active state -->
                 <DataTrigger Binding="{Binding DataContext.ActiveTab, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="Projects">
-                    <Setter Property="Background" Value="#FF3B82F6"/>
+                    <Setter Property="Background" Value="#3B82F6"/>
                     <Setter Property="Foreground" Value="White"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding DataContext.ActiveTab, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="Timeline">
-                    <Setter Property="Background" Value="#FF3B82F6"/>
+                    <Setter Property="Background" Value="#3B82F6"/>
                     <Setter Property="Foreground" Value="White"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding DataContext.ActiveTab, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="Dashboard">
-                    <Setter Property="Background" Value="#FF3B82F6"/>
+                    <Setter Property="Background" Value="#3B82F6"/>
                     <Setter Property="Foreground" Value="White"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding DataContext.ActiveTab, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="Analytics">
-                    <Setter Property="Background" Value="#FF3B82F6"/>
+                    <Setter Property="Background" Value="#3B82F6"/>
                     <Setter Property="Foreground" Value="White"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -47,7 +47,7 @@
         <!-- Active tab indicator -->
         <Style x:Key="ActiveTabIndicator" TargetType="Border">
             <Setter Property="Height" Value="3"/>
-            <Setter Property="Background" Value="#FF3B82F6"/>
+            <Setter Property="Background" Value="#3B82F6"/>
             <Setter Property="Visibility" Value="Collapsed"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding DataContext.ActiveTab, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="Projects">
@@ -66,7 +66,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="#FF0F172A">
+    <Grid Background="#0F172A">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -74,7 +74,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="#FF1E293B" BorderBrush="#FF334155" BorderThickness="0,0,0,1" Padding="24,16">
+        <Border Grid.Row="0" Background="#1E293B" BorderBrush="#334155" BorderThickness="0,0,0,1" Padding="24,16">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -88,12 +88,12 @@
                                Foreground="White"/>
                     <TextBlock Text="Comprehensive project management with Gantt charts, timeline tracking, and risk management" 
                                FontSize="14" 
-                               Foreground="#FF94A3B8" 
+                               Foreground="#94A3B8" 
                                Margin="0,4,0,0"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="#FF10B981" CornerRadius="16" Padding="12,6" Margin="0,0,12,0">
+                    <Border Background="#10B981" CornerRadius="16" Padding="12,6" Margin="0,0,12,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🟢" FontSize="12" Margin="0,0,6,0"/>
                             <TextBlock Text="{Binding OverallProgressText}" 
@@ -105,14 +105,14 @@
                     <Button Content="⚙️ Settings" 
                             Style="{StaticResource ManagementTab}" 
                             Background="Transparent" 
-                            BorderBrush="#FF475569" 
+                            BorderBrush="#475569" 
                             BorderThickness="1"/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- Navigation Tabs -->
-        <Border Grid.Row="1" Background="#FF1E293B" BorderBrush="#FF334155" BorderThickness="0,0,0,1">
+        <Border Grid.Row="1" Background="#1E293B" BorderBrush="#334155" BorderThickness="0,0,0,1">
             <StackPanel Orientation="Horizontal" Margin="24,0">
                 <Button Content="📊 Dashboard" 
                         Style="{StaticResource ManagementTab}"

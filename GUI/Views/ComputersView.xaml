@@ -6,7 +6,7 @@
              xmlns:converters="clr-namespace:MandADiscoverySuite.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="1000"
-             Background="#FF0F1419">
+             Background="#0F1419">
     
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -29,7 +29,7 @@
             <TextBlock Text="Computer Inventory" 
                        FontSize="28" 
                        FontWeight="SemiBold"
-                       Foreground="#FFE2E8F0"/>
+                       Foreground="#E2E8F0"/>
             <TextBlock Text="Infrastructure assets including computers, servers, and devices" 
                        FontSize="14" 
                        Foreground="{StaticResource SecondaryTextBrush}" 
@@ -56,8 +56,8 @@
         
         <!-- Content -->
         <Border Grid.Row="3" 
-                Background="#FF1A202C" 
-                BorderBrush="#FF2D3748" 
+                Background="#1A202C" 
+                BorderBrush="#2D3748" 
                 BorderThickness="1" 
                 CornerRadius="8"
                 Padding="24">
@@ -116,7 +116,7 @@
                                     <Button Content="View Details" 
                                             FontSize="11" 
                                             Padding="8,4"
-                                            Background="#FF10B981" 
+                                            Background="#10B981" 
                                             Foreground="White" 
                                             BorderThickness="0"
                                             Command="{Binding DataContext.ShowAssetDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
@@ -134,7 +134,7 @@
                                                             </Border>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter Property="Background" Value="#FF059669"/>
+                                                                    <Setter Property="Background" Value="#059669"/>
                                                                 </Trigger>
                                                             </ControlTemplate.Triggers>
                                                         </ControlTemplate>
@@ -149,14 +149,14 @@
                     </DataGrid.Columns>
                     <DataGrid.Resources>
                         <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="Background" Value="#FF2D3748"/>
-                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                            <Setter Property="Background" Value="#2D3748"/>
+                            <Setter Property="Foreground" Value="#E2E8F0"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
                             <Setter Property="Padding" Value="12,8"/>
                         </Style>
                         <Style TargetType="DataGridRow">
                             <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                            <Setter Property="Foreground" Value="#E2E8F0"/>
                         </Style>
                         <Style TargetType="DataGridCell">
                             <Setter Property="BorderThickness" Value="0"/>
@@ -182,15 +182,15 @@
                             </Style.Triggers>
                         </Style>
                     </StackPanel.Style>
-                    <TextBlock Text="💻" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="#FF6B7280"/>
+                    <TextBlock Text="💻" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="#6B7280"/>
                     <TextBlock Text="No computers found" 
                                FontSize="18" 
-                               Foreground="#FF6B7280" 
+                               Foreground="#6B7280" 
                                HorizontalAlignment="Center" 
                                Margin="0,0,0,8"/>
                     <TextBlock Text="Computers will appear here once discovery is run" 
                                FontSize="14" 
-                               Foreground="#FF4B5563" 
+                               Foreground="#4B5563" 
                                HorizontalAlignment="Center"/>
                 </StackPanel>
             </Grid>

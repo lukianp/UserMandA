@@ -24,7 +24,7 @@
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             <Border.Effect>
-                                <DropShadowEffect Color="#FF000000" Direction="270" ShadowDepth="2" BlurRadius="8" Opacity="0.2"/>
+                                <DropShadowEffect Color="#000000" Direction="270" ShadowDepth="2" BlurRadius="8" Opacity="0.2"/>
                             </Border.Effect>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -32,8 +32,8 @@
                                 <Setter Property="Background">
                                     <Setter.Value>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                            <GradientStop Color="#FF2a4c82" Offset="0"/>
-                                            <GradientStop Color="#FF3a62a8" Offset="1"/>
+                                            <GradientStop Color="#2a4c82" Offset="0"/>
+                                            <GradientStop Color="#3a62a8" Offset="1"/>
                                         </LinearGradientBrush>
                                     </Setter.Value>
                                 </Setter>
@@ -110,7 +110,7 @@
                     Background="{DynamicResource AccentBrush}"/>
             <Button x:Name="CloseButton" Content="Close" Style="{StaticResource ModernButtonStyle}" 
                     Command="{Binding CloseCommand}"
-                    Background="#FF4A5568"/>
+                    Background="#4A5568"/>
         </StackPanel>
     </Grid>
 </Window>

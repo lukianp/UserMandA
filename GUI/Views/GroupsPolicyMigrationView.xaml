@@ -14,13 +14,13 @@
         <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#FF2D3748"/>
+            <Setter Property="Foreground" Value="#2D3748"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>
 
         <Style x:Key="SummaryCardStyle" TargetType="Border">
             <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#FFE2E8F0"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16"/>
@@ -34,8 +34,8 @@
 
         <Style x:Key="ProgressBarStyle" TargetType="ProgressBar">
             <Setter Property="Height" Value="20"/>
-            <Setter Property="Background" Value="#FFE2E8F0"/>
-            <Setter Property="Foreground" Value="#FF4299E1"/>
+            <Setter Property="Background" Value="#E2E8F0"/>
+            <Setter Property="Foreground" Value="#4299E1"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -53,7 +53,7 @@
         </Style>
 
         <Style x:Key="ActionButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#FF4299E1"/>
+            <Setter Property="Background" Value="#4299E1"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="12,6"/>
@@ -69,10 +69,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF3182CE"/>
+                                <Setter Property="Background" Value="#3182CE"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#FF2C5282"/>
+                                <Setter Property="Background" Value="#2C5282"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Background" Value="{StaticResource SecondaryTextBrush}"/>
@@ -84,17 +84,17 @@
         </Style>
 
         <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
-            <Setter Property="Background" Value="#FFE2E8F0"/>
-            <Setter Property="Foreground" Value="#FF2D3748"/>
+            <Setter Property="Background" Value="#E2E8F0"/>
+            <Setter Property="Foreground" Value="#2D3748"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#FFD1D5DB"/>
+                    <Setter Property="Background" Value="#D1D5DB"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="#FFF7FAFC">
+    <Grid Background="#F7FAFC">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -103,7 +103,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="White" BorderBrush="#FFE2E8F0" BorderThickness="0,0,0,1" Padding="20">
+        <Border Grid.Row="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="20">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -112,9 +112,9 @@
 
                 <!-- Title and Description -->
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="Groups, GPOs &amp; ACLs Migration" FontSize="24" FontWeight="Bold" Foreground="#FF1A202C" Margin="0,0,0,8"/>
+                    <TextBlock Text="Groups, GPOs &amp; ACLs Migration" FontSize="24" FontWeight="Bold" Foreground="#1A202C" Margin="0,0,0,8"/>
                     <TextBlock Text="Replicate security groups, Group Policy Objects, and Access Control Lists to Azure AD and cloud services" 
-                               FontSize="14" Foreground="#FF718096" TextWrapping="Wrap"/>
+                               FontSize="14" Foreground="#718096" TextWrapping="Wrap"/>
                 </StackPanel>
 
                 <!-- Profile Selection -->
@@ -128,7 +128,7 @@
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ComboBox">
-                                            <Border Background="White" BorderBrush="#FFE2E8F0" BorderThickness="1" CornerRadius="4">
+                                            <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="4">
                                                 <Grid>
                                                     <ToggleButton Grid.Column="2" Focusable="false" IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" >
                                                         <ToggleButton.Template>
@@ -141,7 +141,7 @@
                                                                     </Grid.ColumnDefinitions>
                                                                     <Border Grid.ColumnSpan="3" Background="Transparent"/>
                                                                     <ContentPresenter Grid.Column="1" HorizontalAlignment="Left" Margin="3,3,23,3" VerticalAlignment="Center" Content="{Binding Path=SelectionBoxItem, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}"/>
-                                                                    <Path Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#FF4A5568"/>
+                                                                    <Path Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#4A5568"/>
                                                                 </Grid>
                                                             </ControlTemplate>
                                                         </ToggleButton.Template>
@@ -150,7 +150,7 @@
                                                     <TextBox x:Name="PART_EditableTextBox" Visibility="Hidden" Template="{DynamicResource ComboBoxTextBox}" HorizontalAlignment="Left" VerticalAlignment="Center" Focusable="True" Background="Transparent" IsReadOnly="{TemplateBinding IsReadOnly}"/>
                                                     <Popup Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
                                                         <Grid Name="DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
-                                                            <Border x:Name="DropDownBorder" Background="White" BorderThickness="1" BorderBrush="#FFE2E8F0"/>
+                                                            <Border x:Name="DropDownBorder" Background="White" BorderThickness="1" BorderBrush="#E2E8F0"/>
                                                             <ScrollViewer Margin="4,6,4,6" SnapsToDevicePixels="True">
                                                                 <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
                                                             </ScrollViewer>
@@ -165,7 +165,7 @@
                         </ComboBox.Style>
                     </ComboBox>
 
-                    <TextBlock Text="→" FontSize="16" Margin="5,8" Foreground="#FF718096"/>
+                    <TextBlock Text="→" FontSize="16" Margin="5,8" Foreground="#718096"/>
 
                     <ComboBox x:Name="TargetProfileCombo" MinWidth="180" Height="32"
                               ItemsSource="{Binding TargetProfiles}" 
@@ -180,36 +180,36 @@
             <!-- Groups Summary -->
             <Border Style="{StaticResource SummaryCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="Security Groups" FontSize="14" Foreground="#FF718096" Margin="0,0,0,4"/>
-                    <TextBlock Text="{Binding TotalGroups}" FontSize="24" FontWeight="Bold" Foreground="#FF1A202C"/>
-                    <TextBlock Text="{Binding MigratedGroups, StringFormat='{}({0} migrated)'}" FontSize="12" Foreground="#FF38A169"/>
+                    <TextBlock Text="Security Groups" FontSize="14" Foreground="#718096" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding TotalGroups}" FontSize="24" FontWeight="Bold" Foreground="#1A202C"/>
+                    <TextBlock Text="{Binding MigratedGroups, StringFormat='{}({0} migrated)'}" FontSize="12" Foreground="#38A169"/>
                 </StackPanel>
             </Border>
 
             <!-- GPOs Summary -->
             <Border Style="{StaticResource SummaryCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="Group Policies" FontSize="14" Foreground="#FF718096" Margin="0,0,0,4"/>
-                    <TextBlock Text="{Binding TotalGpos}" FontSize="24" FontWeight="Bold" Foreground="#FF1A202C"/>
-                    <TextBlock Text="{Binding MigratedGpos, StringFormat='{}({0} migrated)'}" FontSize="12" Foreground="#FF38A169"/>
+                    <TextBlock Text="Group Policies" FontSize="14" Foreground="#718096" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding TotalGpos}" FontSize="24" FontWeight="Bold" Foreground="#1A202C"/>
+                    <TextBlock Text="{Binding MigratedGpos, StringFormat='{}({0} migrated)'}" FontSize="12" Foreground="#38A169"/>
                 </StackPanel>
             </Border>
 
             <!-- ACLs Summary -->
             <Border Style="{StaticResource SummaryCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="Access Control Lists" FontSize="14" Foreground="#FF718096" Margin="0,0,0,4"/>
-                    <TextBlock Text="{Binding TotalAcls}" FontSize="24" FontWeight="Bold" Foreground="#FF1A202C"/>
-                    <TextBlock Text="{Binding MigratedAcls, StringFormat='{}({0} migrated)'}" FontSize="12" Foreground="#FF38A169"/>
+                    <TextBlock Text="Access Control Lists" FontSize="14" Foreground="#718096" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding TotalAcls}" FontSize="24" FontWeight="Bold" Foreground="#1A202C"/>
+                    <TextBlock Text="{Binding MigratedAcls, StringFormat='{}({0} migrated)'}" FontSize="12" Foreground="#38A169"/>
                 </StackPanel>
             </Border>
 
             <!-- Last Migration -->
             <Border Style="{StaticResource SummaryCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="Last Migration" FontSize="14" Foreground="#FF718096" Margin="0,0,0,4"/>
-                    <TextBlock Text="{Binding LastMigrationDate, StringFormat='{}{0:MMM dd, yyyy}'}" FontSize="16" FontWeight="Bold" Foreground="#FF1A202C"/>
-                    <TextBlock Text="{Binding LastMigrationDate, StringFormat='{}{0:HH:mm}'}" FontSize="12" Foreground="#FF718096"/>
+                    <TextBlock Text="Last Migration" FontSize="14" Foreground="#718096" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding LastMigrationDate, StringFormat='{}{0:MMM dd, yyyy}'}" FontSize="16" FontWeight="Bold" Foreground="#1A202C"/>
+                    <TextBlock Text="{Binding LastMigrationDate, StringFormat='{}{0:HH:mm}'}" FontSize="12" Foreground="#718096"/>
                 </StackPanel>
             </Border>
         </StackPanel>
@@ -227,7 +227,7 @@
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
                                     <TabPanel Grid.Row="0" Panel.ZIndex="1" IsItemsHost="True" Background="Transparent"/>
-                                    <Border Grid.Row="1" Background="White" BorderBrush="#FFE2E8F0" BorderThickness="1" CornerRadius="0,8,8,8">
+                                    <Border Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="0,8,8,8">
                                         <ContentPresenter ContentSource="SelectedContent" Margin="20"/>
                                     </Border>
                                 </Grid>
@@ -244,13 +244,13 @@
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="TabItem">
-                                    <Border Name="Border" Background="White" BorderBrush="#FFE2E8F0" BorderThickness="1,1,1,0" 
+                                    <Border Name="Border" Background="White" BorderBrush="#E2E8F0" BorderThickness="1,1,1,0" 
                                             CornerRadius="8,8,0,0" Padding="16,8" Margin="0,0,4,0">
                                         <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsSelected" Value="False">
-                                            <Setter TargetName="Border" Property="Background" Value="#FFF7FAFC"/>
+                                            <Setter TargetName="Border" Property="Background" Value="#F7FAFC"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -406,7 +406,7 @@
                         <!-- Groups Results -->
                         <TabItem Header="Groups" Visibility="{Binding IsGroupsSelected, Converter={StaticResource BoolToVisConverter}}">
                             <DataGrid ItemsSource="{Binding GroupMigrationResults}" AutoGenerateColumns="False" IsReadOnly="True"
-                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#FFF7FAFC">
+                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#F7FAFC">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Group Name" Binding="{Binding GroupName}" Width="200"/>
                                     <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
@@ -427,7 +427,7 @@
                         <!-- GPO Results -->
                         <TabItem Header="Group Policies" Visibility="{Binding IsGposSelected, Converter={StaticResource BoolToVisConverter}}">
                             <DataGrid ItemsSource="{Binding GpoMigrationResults}" AutoGenerateColumns="False" IsReadOnly="True"
-                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#FFF7FAFC">
+                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#F7FAFC">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="GPO Name" Binding="{Binding GpoName}" Width="200"/>
                                     <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
@@ -449,7 +449,7 @@
                         <!-- ACL Results -->
                         <TabItem Header="Access Control Lists" Visibility="{Binding IsAclsSelected, Converter={StaticResource BoolToVisConverter}}">
                             <DataGrid ItemsSource="{Binding AclMigrationResults}" AutoGenerateColumns="False" IsReadOnly="True"
-                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#FFF7FAFC">
+                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#F7FAFC">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Source Path" Binding="{Binding SourcePath}" Width="300"/>
                                     <DataGridTextColumn Header="Target Path" Binding="{Binding TargetPath}" Width="300"/>
@@ -473,7 +473,7 @@
         </TabControl>
 
         <!-- Status Bar -->
-        <Border Grid.Row="3" Background="White" BorderBrush="#FFE2E8F0" BorderThickness="0,1,0,0" Padding="20,10">
+        <Border Grid.Row="3" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="20,10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -483,7 +483,7 @@
 
                 <!-- Status Message -->
                 <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" VerticalAlignment="Center" 
-                           Foreground="#FF4A5568" FontSize="14"/>
+                           Foreground="#4A5568" FontSize="14"/>
 
                 <!-- Progress Bar -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" 
@@ -491,7 +491,7 @@
                     <ProgressBar Value="{Binding ProgressPercentage}" Maximum="100" Width="150" 
                                  Style="{StaticResource ProgressBarStyle}" Margin="0,0,10,0"/>
                     <TextBlock Text="{Binding ProgressPercentage, StringFormat='{}{0}%'}" VerticalAlignment="Center" 
-                               FontSize="12" Foreground="#FF718096"/>
+                               FontSize="12" Foreground="#718096"/>
                 </StackPanel>
 
                 <!-- Cancel Button -->

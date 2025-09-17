@@ -10,15 +10,15 @@
     <UserControl.Resources>
         <!-- Card Style -->
         <Style x:Key="DashboardCard" TargetType="Border">
-            <Setter Property="Background" Value="#FF1E293B"/>
+            <Setter Property="Background" Value="#1E293B"/>
             <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="BorderBrush" Value="#FF334155"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Margin" Value="8"/>
             <Setter Property="Padding" Value="16"/>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect Color="#FF000000" BlurRadius="8" ShadowDepth="2" Opacity="0.3"/>
+                    <DropShadowEffect Color="#000000" BlurRadius="8" ShadowDepth="2" Opacity="0.3"/>
                 </Setter.Value>
             </Setter>
         </Style>
@@ -27,7 +27,7 @@
         <Style x:Key="CardHeader" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
         </Style>
 
@@ -35,18 +35,18 @@
         <Style x:Key="MetricValue" TargetType="TextBlock">
             <Setter Property="FontSize" Value="24"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#FF3B82F6"/>
+            <Setter Property="Foreground" Value="#3B82F6"/>
         </Style>
 
         <!-- Metric Label Style -->
         <Style x:Key="MetricLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="#FF94A3B8"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
             <Setter Property="Margin" Value="0,4,0,0"/>
         </Style>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Background="#FF0F172A">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Background="#0F172A">
         <Grid Margin="16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -79,8 +79,8 @@
                         <ProgressBar Value="{Binding OverallProgress}" 
                                      Maximum="100" 
                                      Height="12" 
-                                     Background="#FF334155" 
-                                     Foreground="#FF10B981" 
+                                     Background="#334155" 
+                                     Foreground="#10B981" 
                                      BorderThickness="0" 
                                      Margin="0,0,0,8"/>
                         <TextBlock Text="{Binding OverallProgressText}" Style="{StaticResource MetricValue}"/>
@@ -97,8 +97,8 @@
                                    Foreground="{Binding TasksAtRisk, Converter={StaticResource RiskLevelToBrushConverter}}"/>
                         <TextBlock Text="Need Attention" Style="{StaticResource MetricLabel}"/>
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                            <TextBlock Text="{Binding BlockedTasks}" Foreground="#FFEF4444" FontWeight="Bold" Margin="0,0,4,0"/>
-                            <TextBlock Text="Blocked" Foreground="#FF94A3B8" FontSize="10"/>
+                            <TextBlock Text="{Binding BlockedTasks}" Foreground="#EF4444" FontWeight="Bold" Margin="0,0,4,0"/>
+                            <TextBlock Text="Blocked" Foreground="#94A3B8" FontSize="10"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -110,7 +110,7 @@
                         <TextBlock Text="{Binding DaysRemaining}" Style="{StaticResource MetricValue}"/>
                         <TextBlock Text="Days Remaining" Style="{StaticResource MetricLabel}"/>
                         <TextBlock Text="{Binding ProjectDuration}" 
-                                   Foreground="#FF94A3B8" 
+                                   Foreground="#94A3B8" 
                                    FontSize="12" 
                                    Margin="0,4,0,0"/>
                     </StackPanel>
@@ -149,10 +149,10 @@
                                 <TextBlock Text="{Binding TotalTasks}" 
                                            FontSize="32" 
                                            FontWeight="Bold" 
-                                           Foreground="#FF3B82F6" 
+                                           Foreground="#3B82F6" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Total Tasks" 
-                                           Foreground="#FF94A3B8" 
+                                           Foreground="#94A3B8" 
                                            FontSize="12" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -161,10 +161,10 @@
                                 <TextBlock Text="{Binding CompletedTasks}" 
                                            FontSize="32" 
                                            FontWeight="Bold" 
-                                           Foreground="#FF10B981" 
+                                           Foreground="#10B981" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Completed" 
-                                           Foreground="#FF94A3B8" 
+                                           Foreground="#94A3B8" 
                                            FontSize="12" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -173,10 +173,10 @@
                                 <TextBlock Text="{Binding InProgressTasks}" 
                                            FontSize="32" 
                                            FontWeight="Bold" 
-                                           Foreground="#FFF59E0B" 
+                                           Foreground="#F59E0B" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="In Progress" 
-                                           Foreground="#FF94A3B8" 
+                                           Foreground="#94A3B8" 
                                            FontSize="12" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -185,10 +185,10 @@
                                 <TextBlock Text="{Binding BlockedTasks}" 
                                            FontSize="32" 
                                            FontWeight="Bold" 
-                                           Foreground="#FFEF4444" 
+                                           Foreground="#EF4444" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="Blocked" 
-                                           Foreground="#FF94A3B8" 
+                                           Foreground="#94A3B8" 
                                            FontSize="12" 
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -202,21 +202,21 @@
                         <TextBlock Text="Risk Overview" Style="{StaticResource CardHeader}"/>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <Ellipse Width="12" Height="12" Fill="#FFEF4444" Margin="0,0,8,0"/>
+                            <Ellipse Width="12" Height="12" Fill="#EF4444" Margin="0,0,8,0"/>
                             <TextBlock Text="{Binding HighRiskItems}" Foreground="White" FontWeight="Bold" Margin="0,0,4,0"/>
-                            <TextBlock Text="High Risk" Foreground="#FF94A3B8" FontSize="12"/>
+                            <TextBlock Text="High Risk" Foreground="#94A3B8" FontSize="12"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <Ellipse Width="12" Height="12" Fill="#FFF59E0B" Margin="0,0,8,0"/>
+                            <Ellipse Width="12" Height="12" Fill="#F59E0B" Margin="0,0,8,0"/>
                             <TextBlock Text="{Binding MediumRiskItems}" Foreground="White" FontWeight="Bold" Margin="0,0,4,0"/>
-                            <TextBlock Text="Medium Risk" Foreground="#FF94A3B8" FontSize="12"/>
+                            <TextBlock Text="Medium Risk" Foreground="#94A3B8" FontSize="12"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="12" Height="12" Fill="#FF10B981" Margin="0,0,8,0"/>
+                            <Ellipse Width="12" Height="12" Fill="#10B981" Margin="0,0,8,0"/>
                             <TextBlock Text="{Binding LowRiskItems}" Foreground="White" FontWeight="Bold" Margin="0,0,4,0"/>
-                            <TextBlock Text="Low Risk" Foreground="#FF94A3B8" FontSize="12"/>
+                            <TextBlock Text="Low Risk" Foreground="#94A3B8" FontSize="12"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -247,7 +247,7 @@
                                 <DataGridTextColumn Header="Task" Binding="{Binding Name}" Width="*">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+                                            <Setter Property="Foreground" Value="#E2E8F0"/>
                                             <Setter Property="Padding" Value="8,4"/>
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
@@ -255,7 +255,7 @@
                                 <DataGridTextColumn Header="Owner" Binding="{Binding Owner}" Width="120">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="#FF94A3B8"/>
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
                                             <Setter Property="Padding" Value="8,4"/>
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
@@ -263,7 +263,7 @@
                                 <DataGridTextColumn Header="Due Date" Binding="{Binding EndDate, StringFormat='{}{0:MMM dd}'}" Width="80">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="#FF94A3B8"/>
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
                                             <Setter Property="Padding" Value="8,4"/>
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
@@ -309,19 +309,19 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" 
                                                        Text="{Binding WaveName}" 
-                                                       Foreground="#FFE2E8F0" 
+                                                       Foreground="#E2E8F0" 
                                                        FontWeight="Bold" 
                                                        FontSize="12"/>
                                             <TextBlock Grid.Column="1" 
                                                        Text="{Binding Completion, StringFormat='{}{0:F0}%'}" 
-                                                       Foreground="#FF94A3B8" 
+                                                       Foreground="#94A3B8" 
                                                        FontSize="12"/>
                                         </Grid>
                                         <ProgressBar Value="{Binding Completion}" 
                                                      Maximum="100" 
                                                      Height="8" 
-                                                     Background="#FF334155" 
-                                                     Foreground="#FF3B82F6" 
+                                                     Background="#334155" 
+                                                     Foreground="#3B82F6" 
                                                      BorderThickness="0" 
                                                      Margin="0,4,0,0"/>
                                     </StackPanel>

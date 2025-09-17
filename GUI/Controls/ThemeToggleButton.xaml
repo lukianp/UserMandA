@@ -61,7 +61,7 @@
                            Text="&#xE706;"
                            FontFamily="Segoe MDL2 Assets"
                            FontSize="14"
-                           Foreground="#FFF59E0B"
+                           Foreground="#F59E0B"
                            Canvas.Left="48"
                            Canvas.Top="8"
                            Opacity="{Binding SunOpacity}"/>
@@ -70,7 +70,7 @@
                            Text="&#xE708;"
                            FontFamily="Segoe MDL2 Assets"
                            FontSize="14"
-                           Foreground="#FF6366F1"
+                           Foreground="#6366F1"
                            Canvas.Left="12"
                            Canvas.Top="8"
                            Opacity="{Binding MoonOpacity}"/>

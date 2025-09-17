@@ -5,11 +5,11 @@
         Height="400" Width="600"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
-        Background="#FF0F1419">
+        Background="#0F1419">
     
     <Window.Resources>
         <Style x:Key="ErrorButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#FF4299E1"/>
+            <Setter Property="Background" Value="#4299E1"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="16,8"/>
@@ -27,7 +27,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FF2B6CB0"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#2B6CB0"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -46,12 +46,12 @@
         </Grid.RowDefinitions>
         
         <!-- Header with Icon -->
-        <Border Grid.Row="0" Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+        <Border Grid.Row="0" Background="#2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="⚠️" FontSize="24" Margin="0,0,12,0" VerticalAlignment="Center"/>
                 <StackPanel>
                     <TextBlock x:Name="TitleText" Text="{Binding Title}" 
-                              Foreground="#FFF7FAFC" FontSize="18" FontWeight="Bold"/>
+                              Foreground="#F7FAFC" FontSize="18" FontWeight="Bold"/>
                     <TextBlock x:Name="TimestampText" Text="{Binding Timestamp}"
                               Foreground="{DynamicResource MutedForegroundBrush}" FontSize="12"/>
                 </StackPanel>
@@ -59,13 +59,13 @@
         </Border>
         
         <!-- Error Message -->
-        <Border Grid.Row="1" Background="#FF1A202C" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+        <Border Grid.Row="1" Background="#1A202C" CornerRadius="8" Padding="16" Margin="0,0,0,16">
             <TextBlock x:Name="ErrorMessageText" Text="{Binding ErrorMessage}"
-                      Foreground="#FFE2E8F0" FontSize="14" TextWrapping="Wrap"/>
+                      Foreground="#E2E8F0" FontSize="14" TextWrapping="Wrap"/>
         </Border>
         
         <!-- Details Section -->
-        <Border Grid.Row="2" Background="#FF1A202C" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+        <Border Grid.Row="2" Background="#1A202C" CornerRadius="8" Padding="16" Margin="0,0,0,16">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -74,7 +74,7 @@
                 
                 <Button Grid.Row="0" x:Name="ToggleDetailsButton" Content="{Binding ToggleButtonText}" 
                         Command="{Binding ToggleDetailsCommand}"
-                        Background="Transparent" Foreground="#FF4299E1" 
+                        Background="Transparent" Foreground="#4299E1" 
                         BorderThickness="0" HorizontalAlignment="Left"
                         Visibility="{Binding HasDetails, Converter={StaticResource BooleanToVisibilityConverter}}"
                         Margin="0,0,0,8" Cursor="Hand"/>
@@ -85,7 +85,7 @@
                         <TextBlock Text="Error Details:" Foreground="{DynamicResource MutedForegroundBrush}"
                                   FontWeight="Bold" Margin="0,0,0,8"/>
                         <TextBlock x:Name="DetailsText" Text="{Binding ExceptionDetails}"
-                                  Foreground="#FFE2E8F0" FontSize="12" 
+                                  Foreground="#E2E8F0" FontSize="12" 
                                   FontFamily="Consolas" TextWrapping="Wrap"/>
                     </StackPanel>
                 </ScrollViewer>
@@ -93,7 +93,7 @@
         </Border>
         
         <!-- Action Buttons -->
-        <Border Grid.Row="3" Background="#FF2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+        <Border Grid.Row="3" Background="#2D3748" CornerRadius="8" Padding="16" Margin="0,0,0,16">
             <StackPanel>
                 <TextBlock Text="What would you like to do?" Foreground="{DynamicResource MutedForegroundBrush}"
                           FontSize="12" Margin="0,0,0,8"/>
@@ -101,16 +101,16 @@
                     <Button x:Name="RetryButton" Content="🔄 Retry" 
                             Command="{Binding RetryCommand}" Style="{StaticResource ErrorButtonStyle}"
                             Visibility="{Binding CanRetry, Converter={StaticResource BooleanToVisibilityConverter}}"
-                            Background="#FF48BB78"/>
+                            Background="#48BB78"/>
                     <Button x:Name="IgnoreButton" Content="⏭️ Continue" 
                             Command="{Binding IgnoreCommand}" Style="{StaticResource ErrorButtonStyle}"
                             Visibility="{Binding CanRetry, Converter={StaticResource BooleanToVisibilityConverter}}"
-                            Background="#FFED8936"/>
+                            Background="#ED8936"/>
                     <Button x:Name="CopyButton" Content="📋 Copy Error" 
                             Click="Copy_Click" Style="{StaticResource ErrorButtonStyle}"/>
                     <Button x:Name="ReportButton" Content="📧 Report Issue" 
                             Click="Report_Click" Style="{StaticResource ErrorButtonStyle}"
-                            Background="#FF6B46C1"/>
+                            Background="#6B46C1"/>
                 </WrapPanel>
             </StackPanel>
         </Border>
@@ -119,7 +119,7 @@
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button x:Name="CloseButton" Content="Close" 
                     Command="{Binding CloseCommand}" Style="{StaticResource ErrorButtonStyle}"
-                    Background="#FF718096"/>
+                    Background="#718096"/>
         </StackPanel>
     </Grid>
 </Window>

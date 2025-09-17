@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Column Visibility" Height="450" Width="400"
         WindowStartupLocation="CenterOwner"
-        Background="#FF1A202C"
+        Background="#1A202C"
         WindowStyle="None"
         AllowsTransparency="True"
         ResizeMode="NoResize">
@@ -11,7 +11,7 @@
     <Window.Resources>
         <!-- Modern Button Style -->
         <Style x:Key="ModernButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#FF4299E1"/>
+            <Setter Property="Background" Value="#4299E1"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="16,8"/>
@@ -29,10 +29,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FF3182CE"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#3182CE"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FF2C5282"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#2C5282"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -42,17 +42,17 @@
 
         <!-- Secondary Button Style -->
         <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-            <Setter Property="Background" Value="#FF2D3748"/>
+            <Setter Property="Background" Value="#2D3748"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#FF4A5568"/>
+                    <Setter Property="Background" Value="#4A5568"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <!-- CheckBox Style -->
         <Style x:Key="ModernCheckBoxStyle" TargetType="CheckBox">
-            <Setter Property="Foreground" Value="#FFE2E8F0"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Margin" Value="0,4"/>
             <Setter Property="Template">
@@ -66,14 +66,14 @@
                             <Border x:Name="CheckBorder" 
                                     Grid.Column="0"
                                     Width="18" Height="18" 
-                                    Background="#FF2D3748" 
-                                    BorderBrush="#FF4A5568" 
+                                    Background="#2D3748" 
+                                    BorderBrush="#4A5568" 
                                     BorderThickness="1" 
                                     CornerRadius="3" 
                                     Margin="0,0,8,0">
                                 <Path x:Name="CheckMark" 
                                       Data="M 0 2 L 2 4 L 6 0" 
-                                      Stroke="#FF4299E1" 
+                                      Stroke="#4299E1" 
                                       StrokeThickness="2" 
                                       Visibility="Collapsed"
                                       HorizontalAlignment="Center"
@@ -86,11 +86,11 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
-                                <Setter TargetName="CheckBorder" Property="Background" Value="#FF1A365D"/>
-                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#FF4299E1"/>
+                                <Setter TargetName="CheckBorder" Property="Background" Value="#1A365D"/>
+                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#4299E1"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#FF4299E1"/>
+                                <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#4299E1"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -99,7 +99,7 @@
         </Style>
     </Window.Resources>
 
-    <Border CornerRadius="12" Background="#FF1A202C" BorderBrush="#FF4A5568" BorderThickness="1">
+    <Border CornerRadius="12" Background="#1A202C" BorderBrush="#4A5568" BorderThickness="1">
         <Grid Margin="24">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -114,7 +114,7 @@
                 <TextBlock Text="{Binding WindowTitle}" 
                            FontSize="18" 
                            FontWeight="SemiBold" 
-                           Foreground="#FFE2E8F0" 
+                           Foreground="#E2E8F0" 
                            HorizontalAlignment="Left"/>
                 <Button Content="✕"
                         HorizontalAlignment="Right"
