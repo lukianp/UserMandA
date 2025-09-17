@@ -47,6 +47,7 @@
             <converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter"/>
             <converters:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
             <converters:BoolToExpandIconConverter x:Key="BoolToExpandIconConverter"/>
+            <converters:BoolToStrokeDashArrayConverter x:Key="BoolToStrokeDashArrayConverter"/>
             <converters:InverseBoolConverter x:Key="InverseBooleanConverter"/>
             <converters:StringListToStringConverter x:Key="StringListToStringConverter"/>
             <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>

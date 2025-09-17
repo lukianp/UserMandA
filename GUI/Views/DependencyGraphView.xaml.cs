@@ -6,6 +6,8 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using MandADiscoverySuite.ViewModels;
 
+#nullable enable
+
 namespace MandADiscoverySuite.Views
 {
     /// <summary>
@@ -16,7 +18,7 @@ namespace MandADiscoverySuite.Views
         private Point _lastMousePosition;
         private bool _isPanning;
         private bool _isDraggingNode;
-        private FrameworkElement _draggedNode;
+        private FrameworkElement? _draggedNode;
         private Point _clickOffset;
 
         public DependencyGraphView()
@@ -24,17 +26,18 @@ namespace MandADiscoverySuite.Views
             InitializeComponent();
             
             // Set up mouse event handlers for canvas interaction
-            if (GraphCanvas != null)
+            var graphCanvas = (Canvas?)this.FindName("GraphCanvas");
+            if (graphCanvas != null)
             {
-                GraphCanvas.MouseLeftButtonDown += OnCanvasMouseLeftButtonDown;
-                GraphCanvas.MouseLeftButtonUp += OnCanvasMouseLeftButtonUp;
-                GraphCanvas.MouseMove += OnCanvasMouseMove;
-                GraphCanvas.MouseWheel += OnCanvasMouseWheel;
-                GraphCanvas.MouseRightButtonDown += OnCanvasMouseRightButtonDown;
+                graphCanvas.MouseLeftButtonDown += OnCanvasMouseLeftButtonDown;
+                graphCanvas.MouseLeftButtonUp += OnCanvasMouseLeftButtonUp;
+                graphCanvas.MouseMove += OnCanvasMouseMove;
+                graphCanvas.MouseWheel += OnCanvasMouseWheel;
+                graphCanvas.MouseRightButtonDown += OnCanvasMouseRightButtonDown;
             }
         }
 
-        private void OnCanvasMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void OnCanvasMouseLeftButtonDown(object? sender, MouseButtonEventArgs e)
         {
             var canvas = sender as Canvas;
             if (canvas == null) return;
@@ -68,7 +71,7 @@ namespace MandADiscoverySuite.Views
             }
         }
 
-        private void OnCanvasMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        private void OnCanvasMouseLeftButtonUp(object? sender, MouseButtonEventArgs e)
         {
             var canvas = sender as Canvas;
             if (canvas == null) return;
@@ -88,7 +91,7 @@ namespace MandADiscoverySuite.Views
             canvas.ReleaseMouseCapture();
         }
 
-        private void OnCanvasMouseMove(object sender, MouseEventArgs e)
+        private void OnCanvasMouseMove(object? sender, MouseEventArgs e)
         {
             var canvas = sender as Canvas;
             if (canvas == null) return;
@@ -134,7 +137,7 @@ namespace MandADiscoverySuite.Views
             }
         }
 
-        private void OnCanvasMouseWheel(object sender, MouseWheelEventArgs e)
+        private void OnCanvasMouseWheel(object? sender, MouseWheelEventArgs e)
         {
             if (Keyboard.Modifiers == ModifierKeys.Control)
             {
@@ -148,7 +151,7 @@ namespace MandADiscoverySuite.Views
             }
         }
 
-        private void OnCanvasMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        private void OnCanvasMouseRightButtonDown(object? sender, MouseButtonEventArgs e)
         {
             // Context menu for adding nodes/edges
             var canvas = sender as Canvas;
@@ -186,7 +189,7 @@ namespace MandADiscoverySuite.Views
             e.Handled = true;
         }
 
-        private FrameworkElement GetNodeElement(DependencyObject obj)
+        private FrameworkElement? GetNodeElement(DependencyObject? obj)
         {
             while (obj != null)
             {
@@ -206,7 +209,7 @@ namespace MandADiscoverySuite.Views
         /// <summary>
         /// Draw edge between two nodes
         /// </summary>
-        private Line DrawEdge(Point start, Point end, Brush stroke = null, double thickness = 2)
+        private Line DrawEdge(Point start, Point end, Brush? stroke = null, double thickness = 2)
         {
             var line = new Line
             {
@@ -224,7 +227,7 @@ namespace MandADiscoverySuite.Views
         /// <summary>
         /// Calculate edge position based on node centers
         /// </summary>
-        private Point GetNodeCenter(FrameworkElement nodeElement)
+        private Point GetNodeCenter(FrameworkElement? nodeElement)
         {
             if (nodeElement == null) return new Point(0, 0);
             

@@ -1095,7 +1095,7 @@ Tips:
 
             var columnChooser = new Controls.ColumnChooser
             {
-                TargetDataGrid = VulnerabilitiesDataGrid
+                TargetDataGrid = VulnerabilitiesDataGridInstance
             };
 
             columnChooserWindow.Content = columnChooser;

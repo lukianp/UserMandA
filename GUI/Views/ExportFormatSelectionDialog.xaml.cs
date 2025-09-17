@@ -20,13 +20,12 @@ namespace MandADiscoverySuite.Views
 
         private void ExportButton_Click(object sender, RoutedEventArgs e)
         {
-            // Determine selected format with null safety checks
             if (ExcelRadioButton?.IsChecked == true)
             {
                 SelectedFormat = "Excel";
-                WorksheetName = WorksheetNameTextBox?.Text?.Trim();
-                if (string.IsNullOrEmpty(WorksheetName))
-                    WorksheetName = "Data";
+                WorksheetName = string.IsNullOrWhiteSpace(WorksheetNameTextBox?.Text)
+                    ? "Data"
+                    : WorksheetNameTextBox.Text.Trim();
                 IncludeCharts = IncludeChartsCheckBox?.IsChecked == true;
             }
             else if (JsonRadioButton?.IsChecked == true)
@@ -39,7 +38,6 @@ namespace MandADiscoverySuite.Views
             }
             else
             {
-                // Default to CSV if no radio button is selected (shouldn't happen, but defensive programming)
                 SelectedFormat = "CSV";
             }
 

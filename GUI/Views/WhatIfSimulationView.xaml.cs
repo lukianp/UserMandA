@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.Windows;
 using System.Windows.Controls;
 using MandADiscoverySuite.ViewModels;
@@ -12,44 +14,41 @@ namespace MandADiscoverySuite.Views
         public WhatIfSimulationView()
         {
             InitializeComponent();
+            Loaded += OnLoaded;
         }
 
-        /// <summary>
-        /// Handle tab switching
-        /// </summary>
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            var selectedTab = (DataContext as WhatIfSimulationViewModel)?.SelectedTab ?? "Parameters";
+            UpdateTabVisibility(selectedTab);
+        }
+
         private void OnTabClicked(object sender, RoutedEventArgs e)
         {
             if (sender is Button button && button.Tag is string tabName)
             {
-                // Hide all tabs
-                ParametersTab.Visibility = Visibility.Collapsed;
-                ScenariosTab.Visibility = Visibility.Collapsed;
-                ResultsTab.Visibility = Visibility.Collapsed;
-                AnalysisTab.Visibility = Visibility.Collapsed;
+                UpdateTabVisibility(tabName);
 
-                // Show selected tab
-                switch (tabName)
-                {
-                    case "Parameters":
-                        ParametersTab.Visibility = Visibility.Visible;
-                        break;
-                    case "Scenarios":
-                        ScenariosTab.Visibility = Visibility.Visible;
-                        break;
-                    case "Results":
-                        ResultsTab.Visibility = Visibility.Visible;
-                        break;
-                    case "Analysis":
-                        AnalysisTab.Visibility = Visibility.Visible;
-                        break;
-                }
-
-                // Update ViewModel if needed
                 if (DataContext is WhatIfSimulationViewModel viewModel)
                 {
                     viewModel.SelectedTab = tabName;
                 }
             }
+        }
+
+        private void UpdateTabVisibility(string tabName)
+        {
+            var parametersTab = this.FindName("ParametersTab") as FrameworkElement;
+            if (parametersTab != null) parametersTab.Visibility = tabName == "Parameters" ? Visibility.Visible : Visibility.Collapsed;
+
+            var scenariosTab = this.FindName("ScenariosTab") as FrameworkElement;
+            if (scenariosTab != null) scenariosTab.Visibility = tabName == "Scenarios" ? Visibility.Visible : Visibility.Collapsed;
+
+            var resultsTab = this.FindName("ResultsTab") as FrameworkElement;
+            if (resultsTab != null) resultsTab.Visibility = tabName == "Results" ? Visibility.Visible : Visibility.Collapsed;
+
+            var analysisTab = this.FindName("AnalysisTab") as FrameworkElement;
+            if (analysisTab != null) analysisTab.Visibility = tabName == "Analysis" ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 }

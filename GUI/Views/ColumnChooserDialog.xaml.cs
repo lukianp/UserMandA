@@ -1,6 +1,9 @@
 using System.Windows;
 using System.Windows.Input;
 using MandADiscoverySuite.ViewModels;
+using System.Windows.Controls;
+
+#nullable enable
 
 namespace MandADiscoverySuite.Views
 {
@@ -22,12 +25,12 @@ namespace MandADiscoverySuite.Views
                 viewModel.CloseRequested += OnCloseRequested;
                 
                 // Enable double-click to show/hide columns
-                AvailableColumnsListBox.MouseDoubleClick += AvailableColumnsListBox_MouseDoubleClick;
-                VisibleColumnsListBox.MouseDoubleClick += VisibleColumnsListBox_MouseDoubleClick;
+                ((ListBox?)this.FindName("AvailableColumnsListBox"))!.MouseDoubleClick += AvailableColumnsListBox_MouseDoubleClick;
+                ((ListBox?)this.FindName("VisibleColumnsListBox"))!.MouseDoubleClick += VisibleColumnsListBox_MouseDoubleClick;
             }
         }
 
-        private void OnCloseRequested(object sender, bool result)
+        private void OnCloseRequested(object? sender, bool result)
         {
             DialogResult = result;
             Close();

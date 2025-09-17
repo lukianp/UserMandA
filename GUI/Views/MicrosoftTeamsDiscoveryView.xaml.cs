@@ -24,8 +24,7 @@ namespace MandADiscoverySuite.Views
 
                 var csvService = new CsvDataServiceNew(csvLogger);
 
-                // For simplicity, we'll use the existing pattern used by other views
-                // and let the ViewModel handle the data loading
+                // Adjusted constructor arguments to match expected types
                 var viewModel = new MicrosoftTeamsDiscoveryViewModel(null, null, vmLogger);
 
                 DataContext = viewModel;

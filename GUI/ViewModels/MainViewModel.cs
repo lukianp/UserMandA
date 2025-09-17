@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -22,30 +23,30 @@ namespace MandADiscoverySuite.ViewModels
     /// </summary>
     public class MainViewModel : INotifyPropertyChanged
     {
-        private readonly TabsService _tabsService;
+        private readonly TabsService _tabsService = null!;
         
         /// <summary>
         /// Static reference to TabsService for access from other ViewModels
         /// TODO: Replace with proper DI when restructuring services
         /// </summary>
         public static TabsService? CurrentTabsService { get; private set; }
-        private readonly NavigationService _navigationService;
+        private readonly NavigationService _navigationService = null!;
         private readonly ILogger<MainViewModel>? _logger;
         
         // Service instances for real functionality
-        private readonly IDiscoveryService _discoveryService;
-        private readonly DataExportService _dataExportService;
-        private readonly ModuleRegistryService _moduleRegistryService;
-        private readonly LogicEngineService _logicEngineService;
-        private readonly IEnvironmentDetectionService _environmentDetectionService;
-        private readonly IConnectionTestService _connectionTestService;
+        private readonly IDiscoveryService _discoveryService = null!;
+        private readonly DataExportService _dataExportService = null!;
+        private readonly ModuleRegistryService _moduleRegistryService = null!;
+        private readonly LogicEngineService _logicEngineService = null!;
+        private readonly IEnvironmentDetectionService _environmentDetectionService = null!;
+        private readonly IConnectionTestService _connectionTestService = null!;
         private TabItem? _selectedTab;
-        private ObservableCollection<CompanyProfile> _companyProfiles;
-        private ObservableCollection<CompanyProfile> _targetCompanyProfiles;
-        private ObservableCollection<TargetProfile> _targetProfiles;
-        private CompanyProfile _selectedProfile;
-        private CompanyProfile _selectedTargetCompany;
-        private TargetProfile _selectedTargetProfile;
+        private ObservableCollection<CompanyProfile> _companyProfiles = null!;
+        private ObservableCollection<CompanyProfile> _targetCompanyProfiles = null!;
+        private ObservableCollection<TargetProfile> _targetProfiles = null!;
+        private CompanyProfile? _selectedProfile;
+        private CompanyProfile? _selectedTargetCompany;
+        private TargetProfile? _selectedTargetProfile;
         private string _currentProfileName = "ljpops";
         private bool _isDarkTheme = false;
         private string _currentView = "Dashboard";
@@ -88,125 +89,125 @@ namespace MandADiscoverySuite.ViewModels
         
         public ObservableCollection<TabItem> OpenTabs => _tabsService.Tabs;
         public ObservableCollection<TabItem> Tabs => _tabsService.Tabs; // For TabViewControl binding
-        public ICommand OpenTabCommand { get; }
-        public ICommand NewTabCommand { get; }  // For TabViewControl binding
-        public ICommand CloseTabCommand { get; }
-        public ICommand ShowAllTabsCommand { get; }  // For TabViewControl binding
+        public ICommand OpenTabCommand { get; } = null!;
+        public ICommand NewTabCommand { get; } = null!;  // For TabViewControl binding
+        public ICommand CloseTabCommand { get; } = null!;
+        public ICommand ShowAllTabsCommand { get; } = null!;  // For TabViewControl binding
         
         public bool HasTabs => _tabsService.Tabs.Count > 0;  // For TabViewControl binding
         public bool IsCommandPaletteVisible { get; set; }
         
         // Common commands for main window buttons
-        public ICommand RefreshDashboardCommand { get; }
-        public ICommand StartDiscoveryCommand { get; }
-        public ICommand ImportDataCommand { get; }
-        public ICommand ToggleModuleCommand { get; }
-        public ICommand ShowAllDiscoveryDataCommand { get; }
-        public ICommand SelectManagerCommand { get; }
-        public ICommand RefreshDataCommand { get; }
-        public ICommand ExportResultsCommand { get; }
-        public ICommand ShowRefreshSettingsCommand { get; }
+        public ICommand RefreshDashboardCommand { get; } = null!;
+        public ICommand StartDiscoveryCommand { get; } = null!;
+        public ICommand ImportDataCommand { get; } = null!;
+        public ICommand ToggleModuleCommand { get; } = null!;
+        public ICommand ShowAllDiscoveryDataCommand { get; } = null!;
+        public ICommand SelectManagerCommand { get; } = null!;
+        public ICommand RefreshDataCommand { get; } = null!;
+        public ICommand ExportResultsCommand { get; } = null!;
+        public ICommand ShowRefreshSettingsCommand { get; } = null!;
         
         // Company profile commands
-        public ICommand CreateProfileCommand { get; }
-        public ICommand SelectProfileCommand { get; }
-        public ICommand DeleteProfileCommand { get; }
-        public ICommand SwitchProfileCommand { get; }
-        public ICommand SwitchTargetProfileCommand { get; }
-        public ICommand SetActiveTargetProfileCommand { get; }
+        public ICommand CreateProfileCommand { get; } = null!;
+        public ICommand SelectProfileCommand { get; } = null!;
+        public ICommand DeleteProfileCommand { get; } = null!;
+        public ICommand SwitchProfileCommand { get; } = null!;
+        public ICommand SwitchTargetProfileCommand { get; } = null!;
+        public ICommand SetActiveTargetProfileCommand { get; } = null!;
         
         // App Registration commands
-        public ICommand RunAppRegistrationCommand { get; }
-        public ICommand AppRegistrationCommand { get; }
-        public ICommand RunTargetAppRegistrationCommand { get; }
-        public ICommand ImportTargetAppRegistrationCommand { get; }
-        public ICommand ShowTargetProfilesCommand { get; }
-        public ICommand AddTargetProfileCommand { get; }
+        public ICommand RunAppRegistrationCommand { get; } = null!;
+        public ICommand AppRegistrationCommand { get; } = null!;
+        public ICommand RunTargetAppRegistrationCommand { get; } = null!;
+        public ICommand ImportTargetAppRegistrationCommand { get; } = null!;
+        public ICommand ShowTargetProfilesCommand { get; } = null!;
+        public ICommand AddTargetProfileCommand { get; } = null!;
         
         // Theme commands
-        public ICommand ToggleThemeCommand { get; }
-        public ICommand ShowThemeSelectionCommand { get; }
-        
+        public ICommand ToggleThemeCommand { get; } = null!;
+        public ICommand ShowThemeSelectionCommand { get; } = null!;
+
         // Logs commands
-        public ICommand ShowLogsCommand { get; }
+        public ICommand ShowLogsCommand { get; } = null!;
 
         // New Discovery Views commands
-        public ICommand ShowFileServerDiscoveryCommand { get; }
-        public ICommand ShowTeamsDiscoveryCommand { get; }
-        public ICommand ShowMicrosoftTeamsDiscoveryCommand { get; }
-        public ICommand ShowVMwareDiscoveryCommand { get; }
-        public ICommand ShowAzureDiscoveryCommand { get; }
-        public ICommand ShowDataLossPreventionDiscoveryCommand { get; }
-        public ICommand ShowWebServerConfigurationDiscoveryCommand { get; }
-        public ICommand ShowEnvironmentRiskAssessmentCommand { get; }
-        public ICommand ShowExchangeDiscoveryCommand { get; }
-        public ICommand ShowNetworkInfrastructureDiscoveryCommand { get; }
-        public ICommand ShowSharePointDiscoveryCommand { get; }
-        public ICommand ShowActiveDirectoryDiscoveryCommand { get; }
-        public ICommand ShowOneDriveBusinessDiscoveryCommand { get; }
-        public ICommand ShowSQLServerDiscoveryCommand { get; }
+        public ICommand ShowFileServerDiscoveryCommand { get; } = null!;
+        public ICommand ShowTeamsDiscoveryCommand { get; } = null!;
+        public ICommand ShowMicrosoftTeamsDiscoveryCommand { get; } = null!;
+        public ICommand ShowVMwareDiscoveryCommand { get; } = null!;
+        public ICommand ShowAzureDiscoveryCommand { get; } = null!;
+        public ICommand ShowDataLossPreventionDiscoveryCommand { get; } = null!;
+        public ICommand ShowWebServerConfigurationDiscoveryCommand { get; } = null!;
+        public ICommand ShowEnvironmentRiskAssessmentCommand { get; } = null!;
+        public ICommand ShowExchangeDiscoveryCommand { get; } = null!;
+        public ICommand ShowNetworkInfrastructureDiscoveryCommand { get; } = null!;
+        public ICommand ShowSharePointDiscoveryCommand { get; } = null!;
+        public ICommand ShowActiveDirectoryDiscoveryCommand { get; } = null!;
+        public ICommand ShowOneDriveBusinessDiscoveryCommand { get; } = null!;
+        public ICommand ShowSQLServerDiscoveryCommand { get; } = null!;
 
         // Report commands
-        public ICommand GenerateReportCommand { get; }
+        public ICommand GenerateReportCommand { get; } = null!;
         
         // Configuration commands
-        public ICommand ChangeDataPathCommand { get; }
-        public ICommand ConfigureCredentialsCommand { get; }
-        public ICommand TestConnectionCommand { get; }
-        
+        public ICommand ChangeDataPathCommand { get; } = null!;
+        public ICommand ConfigureCredentialsCommand { get; } = null!;
+        public ICommand TestConnectionCommand { get; } = null!;
+
         // Connection test commands for T-000
-        public ICommand TestSourceConnectionCommand { get; }
-        public ICommand TestTargetConnectionCommand { get; }
-        public ICommand RefreshEnvironmentStatusCommand { get; }
+        public ICommand TestSourceConnectionCommand { get; } = null!;
+        public ICommand TestTargetConnectionCommand { get; } = null!;
+        public ICommand RefreshEnvironmentStatusCommand { get; } = null!;
         
         // Additional commands referenced by XAML (stubs for now)
-        public ICommand RefreshUsersCommand { get; }
-        public ICommand RefreshInfrastructureCommand { get; }
-        public ICommand RefreshGroupsCommand { get; }
-        public ICommand RefreshComputersCommand { get; }
-        public ICommand FirstUserPageCommand { get; }
-        public ICommand PreviousUserPageCommand { get; }
-        public ICommand NextUserPageCommand { get; }
-        public ICommand LastUserPageCommand { get; }
-        public ICommand FirstGroupPageCommand { get; }
-        public ICommand PreviousGroupPageCommand { get; }
-        public ICommand NextGroupPageCommand { get; }
-        public ICommand LastGroupPageCommand { get; }
-        public ICommand DeleteSelectedUsersCommand { get; }
-        public ICommand DeleteSelectedGroupsCommand { get; }
-        public ICommand PasswordPolicyCommand { get; }
-        public ICommand PasswordGeneratorCommand { get; }
-        public ICommand RefreshTopologyCommand { get; }
-        public ICommand AutoLayoutTopologyCommand { get; }
-        public ICommand CancelOperationCommand { get; }
-        
+        public ICommand RefreshUsersCommand { get; } = null!;
+        public ICommand RefreshInfrastructureCommand { get; } = null!;
+        public ICommand RefreshGroupsCommand { get; } = null!;
+        public ICommand RefreshComputersCommand { get; } = null!;
+        public ICommand FirstUserPageCommand { get; } = null!;
+        public ICommand PreviousUserPageCommand { get; } = null!;
+        public ICommand NextUserPageCommand { get; } = null!;
+        public ICommand LastUserPageCommand { get; } = null!;
+        public ICommand FirstGroupPageCommand { get; } = null!;
+        public ICommand PreviousGroupPageCommand { get; } = null!;
+        public ICommand NextGroupPageCommand { get; } = null!;
+        public ICommand LastGroupPageCommand { get; } = null!;
+        public ICommand DeleteSelectedUsersCommand { get; } = null!;
+        public ICommand DeleteSelectedGroupsCommand { get; } = null!;
+        public ICommand PasswordPolicyCommand { get; } = null!;
+        public ICommand PasswordGeneratorCommand { get; } = null!;
+        public ICommand RefreshTopologyCommand { get; } = null!;
+        public ICommand AutoLayoutTopologyCommand { get; } = null!;
+        public ICommand CancelOperationCommand { get; } = null!;
+
         // Additional missing commands
-        public ICommand StopDiscoveryCommand { get; }
-        public ICommand NavigateCommand { get; }
-        public ICommand RefreshCurrentViewCommand { get; }
-        public ICommand ExportUsersCommand { get; }
-        public ICommand ExportInfrastructureCommand { get; }
-        public ICommand ExportGroupsCommand { get; }
-        public ICommand ShowUsersAdvancedSearchCommand { get; }
-        public ICommand ShowInfrastructureAdvancedSearchCommand { get; }
-        public ICommand ShowGroupsAdvancedSearchCommand { get; }
-        public ICommand ShowColumnVisibilityCommand { get; }
-        public ICommand PreviousPageCommand { get; }
-        public ICommand NextPageCommand { get; }
-        public ICommand FirstPageCommand { get; }
-        public ICommand LastPageCommand { get; }
-        public ICommand PreviousInfrastructurePageCommand { get; }
-        public ICommand NextInfrastructurePageCommand { get; }
-        public ICommand FirstInfrastructurePageCommand { get; }
-        public ICommand LastInfrastructurePageCommand { get; }
-        
+        public ICommand StopDiscoveryCommand { get; } = null!;
+        public ICommand NavigateCommand { get; } = null!;
+        public ICommand RefreshCurrentViewCommand { get; } = null!;
+        public ICommand ExportUsersCommand { get; } = null!;
+        public ICommand ExportInfrastructureCommand { get; } = null!;
+        public ICommand ExportGroupsCommand { get; } = null!;
+        public ICommand ShowUsersAdvancedSearchCommand { get; } = null!;
+        public ICommand ShowInfrastructureAdvancedSearchCommand { get; } = null!;
+        public ICommand ShowGroupsAdvancedSearchCommand { get; } = null!;
+        public ICommand ShowColumnVisibilityCommand { get; } = null!;
+        public ICommand PreviousPageCommand { get; } = null!;
+        public ICommand NextPageCommand { get; } = null!;
+        public ICommand FirstPageCommand { get; } = null!;
+        public ICommand LastPageCommand { get; } = null!;
+        public ICommand PreviousInfrastructurePageCommand { get; } = null!;
+        public ICommand NextInfrastructurePageCommand { get; } = null!;
+        public ICommand FirstInfrastructurePageCommand { get; } = null!;
+        public ICommand LastInfrastructurePageCommand { get; } = null!;
+
         // Selection commands
-        public ICommand SelectAllUsersCommand { get; }
-        public ICommand SelectAllInfrastructureCommand { get; }
-        public ICommand SelectAllGroupsCommand { get; }
-        public ICommand CopySelectedUsersCommand { get; }
-        public ICommand CopySelectedInfrastructureCommand { get; }
-        public ICommand CopySelectedGroupsCommand { get; }
+        public ICommand SelectAllUsersCommand { get; } = null!;
+        public ICommand SelectAllInfrastructureCommand { get; } = null!;
+        public ICommand SelectAllGroupsCommand { get; } = null!;
+        public ICommand CopySelectedUsersCommand { get; } = null!;
+        public ICommand CopySelectedInfrastructureCommand { get; } = null!;
+        public ICommand CopySelectedGroupsCommand { get; } = null!;
         
         public TabItem? SelectedTab
         {
@@ -278,7 +279,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        public CompanyProfile SelectedProfile
+        public CompanyProfile? SelectedProfile
         {
             get => _selectedProfile;
             set
@@ -296,7 +297,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        public CompanyProfile SelectedTargetCompany
+        public CompanyProfile? SelectedTargetCompany
         {
             get => _selectedTargetCompany;
             set
@@ -308,7 +309,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        public TargetProfile SelectedTargetProfile
+        public TargetProfile? SelectedTargetProfile
         {
             get => _selectedTargetProfile;
             set
@@ -641,21 +642,21 @@ namespace MandADiscoverySuite.ViewModels
             // Company profile commands
             CreateProfileCommand = new AsyncRelayCommand(CreateProfileAsync);
             SelectProfileCommand = new AsyncRelayCommand(SelectProfileAsync);
-            DeleteProfileCommand = new RelayCommand<object>(async param => await DeleteProfileAsync(param));
+            DeleteProfileCommand = new RelayCommand<object>(param => DeleteProfileAsync(param));
             SwitchProfileCommand = new AsyncRelayCommand(SwitchToSelectedProfileAsync);
             SwitchTargetProfileCommand = new AsyncRelayCommand(SwitchToSelectedTargetProfileAsync);
             SetActiveTargetProfileCommand = new AsyncRelayCommand(SetActiveTargetProfileAsync);
             
             // App Registration commands
-            RunAppRegistrationCommand = new AsyncRelayCommand(RunAppRegistrationAsync);
-            AppRegistrationCommand = new AsyncRelayCommand(RunAppRegistrationAsync);
+            RunAppRegistrationCommand = new RelayCommand(() => RunAppRegistrationAsync());
+            AppRegistrationCommand = new RelayCommand(() => RunAppRegistrationAsync());
             RunTargetAppRegistrationCommand = new AsyncRelayCommand(RunTargetAppRegistrationAsync);
             ImportTargetAppRegistrationCommand = new AsyncRelayCommand(ImportTargetAppRegistrationAsync);
             ShowTargetProfilesCommand = new AsyncRelayCommand(ShowTargetProfilesAsync);
             AddTargetProfileCommand = new AsyncRelayCommand(AddTargetProfileAsync);
             
             // Theme commands
-            ToggleThemeCommand = new AsyncRelayCommand(ToggleThemeAsync);
+            ToggleThemeCommand = new RelayCommand(() => ToggleThemeAsync());
             ShowThemeSelectionCommand = new AsyncRelayCommand(ShowThemeSelectionAsync);
             
             // Logs commands
@@ -708,24 +709,24 @@ namespace MandADiscoverySuite.ViewModels
             NextInfrastructurePageCommand = new AsyncRelayCommand(NextInfrastructurePageAsync);
             LastInfrastructurePageCommand = new AsyncRelayCommand(LastInfrastructurePageAsync);
             DeleteSelectedUsersCommand = new AsyncRelayCommand(DeleteSelectedUsersAsync);
-            DeleteSelectedGroupsCommand = new AsyncRelayCommand(DeleteSelectedGroupsAsync);
-            PasswordPolicyCommand = new AsyncRelayCommand(PasswordPolicyAsync);
-            PasswordGeneratorCommand = new AsyncRelayCommand(PasswordGeneratorAsync);
-            RefreshTopologyCommand = new AsyncRelayCommand(RefreshTopologyAsync);
-            AutoLayoutTopologyCommand = new AsyncRelayCommand(AutoLayoutTopologyAsync);
-            CancelOperationCommand = new AsyncRelayCommand(CancelOperationAsync);
+            DeleteSelectedGroupsCommand = new RelayCommand(() => DeleteSelectedGroupsAsync());
+            PasswordPolicyCommand = new RelayCommand(() => PasswordPolicyAsync());
+            PasswordGeneratorCommand = new RelayCommand(() => PasswordGeneratorAsync());
+            RefreshTopologyCommand = new RelayCommand(() => RefreshTopologyAsync());
+            AutoLayoutTopologyCommand = new RelayCommand(() => AutoLayoutTopologyAsync());
+            CancelOperationCommand = new RelayCommand(() => CancelOperationAsync());
             
             // Initialize additional missing commands
-            StopDiscoveryCommand = new AsyncRelayCommand(StopDiscoveryAsync);
+            StopDiscoveryCommand = new RelayCommand(() => StopDiscoveryAsync());
             NavigateCommand = new AsyncRelayCommand<string>(NavigateAsync);
             RefreshCurrentViewCommand = new AsyncRelayCommand(RefreshCurrentViewAsync);
             ExportUsersCommand = new AsyncRelayCommand(ExportUsersAsync);
             ExportInfrastructureCommand = new AsyncRelayCommand(ExportInfrastructureAsync);
             ExportGroupsCommand = new AsyncRelayCommand(ExportGroupsAsync);
-            ShowUsersAdvancedSearchCommand = new AsyncRelayCommand(ShowUsersAdvancedSearchAsync);
-            ShowInfrastructureAdvancedSearchCommand = new AsyncRelayCommand(ShowInfrastructureAdvancedSearchAsync);
-            ShowGroupsAdvancedSearchCommand = new AsyncRelayCommand(ShowGroupsAdvancedSearchAsync);
-            ShowColumnVisibilityCommand = new AsyncRelayCommand(ShowColumnVisibilityAsync);
+            ShowUsersAdvancedSearchCommand = new RelayCommand(() => ShowUsersAdvancedSearchAsync());
+            ShowInfrastructureAdvancedSearchCommand = new RelayCommand(() => ShowInfrastructureAdvancedSearchAsync());
+            ShowGroupsAdvancedSearchCommand = new RelayCommand(() => ShowGroupsAdvancedSearchAsync());
+            ShowColumnVisibilityCommand = new RelayCommand(() => ShowColumnVisibilityAsync());
             PreviousPageCommand = new AsyncRelayCommand(PreviousPageAsync);
             NextPageCommand = new AsyncRelayCommand(NextPageAsync);
             FirstPageCommand = new AsyncRelayCommand(FirstPageAsync);
@@ -739,9 +740,9 @@ namespace MandADiscoverySuite.ViewModels
             SelectAllUsersCommand = new AsyncRelayCommand(SelectAllUsersAsync);
             SelectAllInfrastructureCommand = new AsyncRelayCommand(SelectAllInfrastructureAsync);
             SelectAllGroupsCommand = new AsyncRelayCommand(SelectAllGroupsAsync);
-            CopySelectedUsersCommand = new AsyncRelayCommand(CopySelectedUsersAsync);
-            CopySelectedInfrastructureCommand = new AsyncRelayCommand(CopySelectedInfrastructureAsync);
-            CopySelectedGroupsCommand = new AsyncRelayCommand(CopySelectedGroupsAsync);
+            CopySelectedUsersCommand = new RelayCommand(() => CopySelectedUsersAsync());
+            CopySelectedInfrastructureCommand = new RelayCommand(() => CopySelectedInfrastructureAsync());
+            CopySelectedGroupsCommand = new RelayCommand(() => CopySelectedGroupsAsync());
             
             _logger?.LogInformation("MainViewModel initialized with new architecture");
             _logger?.LogInformation($"CreateProfileCommand initialized: {CreateProfileCommand != null}");
@@ -946,7 +947,7 @@ namespace MandADiscoverySuite.ViewModels
                 var saved = ConfigurationService.Instance.SelectedTargetCompany;
                 if (!string.IsNullOrWhiteSpace(saved))
                 {
-                    SelectedTargetCompany = TargetCompanyProfiles.FirstOrDefault(p => p.CompanyName.Equals(saved, StringComparison.OrdinalIgnoreCase));
+                    SelectedTargetCompany = TargetCompanyProfiles.FirstOrDefault(p => p.CompanyName.Equals(saved, StringComparison.OrdinalIgnoreCase)) ?? null;
                 }
                 if (SelectedTargetCompany == null && TargetCompanyProfiles.Count > 0)
                 {
@@ -1257,7 +1258,7 @@ namespace MandADiscoverySuite.ViewModels
 
                 _logger?.LogInformation($"Creating target profile for source profile: {CurrentProfileName}");
 
-                string companyName = null;
+                string? companyName = null;
                 
                 // Create a styled input dialog that matches the application theme - EXACT SAME AS SOURCE PROFILE
                 var inputDialog = new System.Windows.Window
@@ -1349,9 +1350,9 @@ namespace MandADiscoverySuite.ViewModels
                     FontWeight = FontWeights.Medium
                 };
                 
-                okButton.Click += (s, e) => { companyName = textBox.Text; inputDialog.DialogResult = true; };
+                okButton.Click += (s, e) => { companyName = textBox.Text!; inputDialog.DialogResult = true; };
                 cancelButton.Click += (s, e) => { inputDialog.DialogResult = false; };
-                
+
                 buttonPanel.Children.Add(cancelButton);
                 buttonPanel.Children.Add(okButton);
                 stackPanel.Children.Add(buttonPanel);
@@ -1579,7 +1580,7 @@ namespace MandADiscoverySuite.ViewModels
 
                 // Check if this is a module discovery request; if so, use specialized handling
                 Console.WriteLine($"[DEBUG] Checking if '{tabKey}' is a discovery module...");
-                if (await IsDiscoveryModuleAsync(tabKey))
+                if (IsDiscoveryModuleAsync(tabKey))
                 {
                     Console.WriteLine($"[DEBUG] '{tabKey}' identified as discovery module, using OpenModuleTabAsync");
                     _logger?.LogInformation($"[MainViewModel] Detected module discovery request for: {tabKey}");
@@ -1646,7 +1647,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Check if the tab key represents a discovery module request
         /// </summary>
-        private async Task<bool> IsDiscoveryModuleAsync(string? tabKey)
+        private bool IsDiscoveryModuleAsync(string? tabKey)
         {
             if (string.IsNullOrWhiteSpace(tabKey))
                 return false;
@@ -2044,7 +2045,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Run Azure App Registration setup
         /// </summary>
-        private async Task RunAppRegistrationAsync()
+        private void RunAppRegistrationAsync()
         {
             try
             {
@@ -2095,7 +2096,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Toggle between dark and light theme
         /// </summary>
-        private async Task ToggleThemeAsync()
+        private void ToggleThemeAsync()
         {
             try
             {
@@ -2172,7 +2173,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 _logger?.LogInformation("[MainViewModel] CreateProfileAsync called - Starting profile creation");
                 
-                string companyName = null;
+                string? companyName = null;
                 
                 // Create a styled input dialog that matches the application theme
                 var inputDialog = new System.Windows.Window
@@ -2264,7 +2265,7 @@ namespace MandADiscoverySuite.ViewModels
                     FontWeight = FontWeights.Medium
                 };
                 
-                okButton.Click += (s, e) => { companyName = textBox.Text; inputDialog.DialogResult = true; };
+                okButton.Click += (s, e) => { companyName = textBox.Text!; inputDialog.DialogResult = true; };
                 cancelButton.Click += (s, e) => { inputDialog.DialogResult = false; };
                 
                 buttonPanel.Children.Add(cancelButton);
@@ -2369,7 +2370,7 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Delete a company profile
         /// </summary>
-        private async Task DeleteProfileAsync(object? parameter)
+        private void DeleteProfileAsync(object? parameter)
         {
             try
             {
@@ -3462,7 +3463,7 @@ namespace MandADiscoverySuite.ViewModels
             });
         }
 
-        private async Task DeleteSelectedGroupsAsync()
+        private void DeleteSelectedGroupsAsync()
         {
             try
             {
@@ -3487,7 +3488,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task PasswordPolicyAsync()
+        private void PasswordPolicyAsync()
         {
             try
             {
@@ -3505,7 +3506,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task PasswordGeneratorAsync()
+        private void PasswordGeneratorAsync()
         {
             try
             {
@@ -3523,7 +3524,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task RefreshTopologyAsync()
+        private void RefreshTopologyAsync()
         {
             try
             {
@@ -3542,7 +3543,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task AutoLayoutTopologyAsync()
+        private void AutoLayoutTopologyAsync()
         {
             try
             {
@@ -3560,7 +3561,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task CancelOperationAsync()
+        private void CancelOperationAsync()
         {
             try
             {
@@ -3579,7 +3580,7 @@ namespace MandADiscoverySuite.ViewModels
         }
 
         // Additional implementations
-        private async Task StopDiscoveryAsync()
+        private void StopDiscoveryAsync()
         {
             try
             {
@@ -3734,7 +3735,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task ShowUsersAdvancedSearchAsync()
+        private void ShowUsersAdvancedSearchAsync()
         {
             try
             {
@@ -3749,7 +3750,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task ShowInfrastructureAdvancedSearchAsync()
+        private void ShowInfrastructureAdvancedSearchAsync()
         {
             try
             {
@@ -3764,7 +3765,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task ShowGroupsAdvancedSearchAsync()
+        private void ShowGroupsAdvancedSearchAsync()
         {
             try
             {
@@ -3779,7 +3780,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task ShowColumnVisibilityAsync()
+        private void ShowColumnVisibilityAsync()
         {
             try
             {
@@ -3863,7 +3864,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task CopySelectedUsersAsync()
+        private void CopySelectedUsersAsync()
         {
             try
             {
@@ -3881,7 +3882,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task CopySelectedInfrastructureAsync()
+        private void CopySelectedInfrastructureAsync()
         {
             try
             {
@@ -3898,7 +3899,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task CopySelectedGroupsAsync()
+        private void CopySelectedGroupsAsync()
         {
             try
             {

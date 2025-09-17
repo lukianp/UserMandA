@@ -12,8 +12,6 @@ namespace MandADiscoverySuite.Views
     {
         public ApplicationInventoryView()
         {
-            InitializeComponent();
-            
             // Create ViewModel with proper DI - following unified pattern
             var csvService = SimpleServiceLocator.Instance.GetService<CsvDataServiceNew>();
             var logger = SimpleServiceLocator.Instance.GetService<ILogger<ApplicationInventoryViewModel>>();

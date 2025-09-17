@@ -1350,8 +1350,8 @@
             </Grid.RowDefinitions>
             
             <!-- Tabbed Document Interface -->
-            <TabControl Grid.Row="0" x:Name="MainTabControl" 
-                        ItemsSource="{Binding OpenTabs}" 
+            <TabControl Grid.Row="0" x:Name="MainTabControlInstance"
+                        ItemsSource="{Binding OpenTabs}"
                         SelectedItem="{Binding SelectedTab}"
                         Background="Transparent"
                         BorderThickness="0"
@@ -4407,7 +4407,7 @@
                                         </StackPanel>
                                     </Border>
                                     
-                                    <DataGrid Grid.Row="1" x:Name="VulnerabilitiesDataGrid" Style="{StaticResource ModernDataGridStyle}"
+                                    <DataGrid Grid.Row="1" x:Name="VulnerabilitiesDataGridInstance" Style="{StaticResource ModernDataGridStyle}"
                                               Height="300"
                                               behaviors:VirtualizationBehavior.EnableVirtualization="True"
                                               behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"

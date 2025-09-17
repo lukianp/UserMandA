@@ -15,12 +15,16 @@ namespace MandADiscoverySuite.Views
         public ScriptEditorView()
         {
             InitializeComponent();
-            
+
             // Handle data context changes to wire up events
             DataContextChanged += OnDataContextChanged;
-            
+
             // Set up keyboard shortcuts for the text editor
-            ScriptEditor.KeyDown += OnScriptEditorKeyDown;
+            var scriptEditor = this.FindName("ScriptEditor") as TextBox;
+            if (scriptEditor != null)
+            {
+                scriptEditor.KeyDown += OnScriptEditorKeyDown;
+            }
         }
 
         private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -30,27 +34,35 @@ namespace MandADiscoverySuite.Views
             {
                 oldViewModel.PropertyChanged -= OnViewModelPropertyChanged;
             }
-            
+
             if (e.NewValue is ScriptEditorViewModel newViewModel)
             {
                 newViewModel.PropertyChanged += OnViewModelPropertyChanged;
-                
+
                 // Initialize the editor with the current script text
                 if (!string.IsNullOrEmpty(newViewModel.ScriptText))
                 {
-                    ScriptEditor.Text = newViewModel.ScriptText;
+                    var scriptEditor = this.FindName("ScriptEditor") as TextBox;
+                    if (scriptEditor != null)
+                    {
+                        scriptEditor.Text = newViewModel.ScriptText;
+                    }
                 }
             }
         }
 
-        private void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+        private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(ScriptEditorViewModel.ScriptText))
             {
                 var viewModel = sender as ScriptEditorViewModel;
-                if (viewModel != null && ScriptEditor.Text != viewModel.ScriptText)
+                var scriptEditor = this.FindName("ScriptEditor") as TextBox;
+                if (viewModel != null && scriptEditor?.Text != viewModel.ScriptText)
                 {
-                    ScriptEditor.Text = viewModel.ScriptText ?? string.Empty;
+                    if (scriptEditor != null)
+                    {
+                        scriptEditor.Text = viewModel.ScriptText ?? string.Empty;
+                    }
                 }
             }
         }
@@ -68,7 +80,7 @@ namespace MandADiscoverySuite.Views
                     case Key.N: // New
                         if (viewModel.NewFileCommand.CanExecute(null))
                         {
-                            viewModel.NewFileCommand.Execute(null);
+                            viewModel.NewFileCommand.Execute(null!);
                             e.Handled = true;
                         }
                         break;
@@ -76,7 +88,7 @@ namespace MandADiscoverySuite.Views
                     case Key.O: // Open
                         if (viewModel.OpenFileCommand.CanExecute(null))
                         {
-                            await System.Threading.Tasks.Task.Run(() => viewModel.OpenFileCommand.Execute(null));
+                            await System.Threading.Tasks.Task.Run(() => viewModel.OpenFileCommand.Execute(null!));
                             e.Handled = true;
                         }
                         break;
@@ -84,7 +96,7 @@ namespace MandADiscoverySuite.Views
                     case Key.S: // Save
                         if (viewModel.SaveFileCommand.CanExecute(null))
                         {
-                            await System.Threading.Tasks.Task.Run(() => viewModel.SaveFileCommand.Execute(null));
+                            await System.Threading.Tasks.Task.Run(() => viewModel.SaveFileCommand.Execute(null!));
                             e.Handled = true;
                         }
                         break;
@@ -94,7 +106,7 @@ namespace MandADiscoverySuite.Views
             {
                 if (viewModel.ExecuteScriptCommand.CanExecute(null))
                 {
-                    await System.Threading.Tasks.Task.Run(() => viewModel.ExecuteScriptCommand.Execute(null));
+                    await System.Threading.Tasks.Task.Run(() => viewModel.ExecuteScriptCommand.Execute(null!));
                     e.Handled = true;
                 }
             }

@@ -5,7 +5,7 @@
   },
   "projects": {
     "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj": {
-      "version": "1.0.0",
+      "version": "1.0.1",
       "restore": {
         "projectUniqueName": "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
         "projectName": "MandADiscoverySuite",
@@ -27,12 +27,29 @@
             "targetAlias": "net6.0-windows",
             "projectReferences": {}
           }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
         }
       },
       "frameworks": {
         "net6.0-windows7.0": {
           "targetAlias": "net6.0-windows",
           "dependencies": {
+            "AWSSDK.Core": {
+              "target": "Package",
+              "version": "[4.0.0.27, )"
+            },
+            "AWSSDK.EC2": {
+              "target": "Package",
+              "version": "[4.0.37, )"
+            },
+            "AWSSDK.S3": {
+              "target": "Package",
+              "version": "[4.0.7.1, )"
+            },
             "AvalonEdit": {
               "target": "Package",
               "version": "[6.2.0.78, )"
@@ -48,14 +65,6 @@
             "EPPlus": {
               "target": "Package",
               "version": "[6.2.10, )"
-            },
-            "MSTest.TestAdapter": {
-              "target": "Package",
-              "version": "[3.1.1, )"
-            },
-            "MSTest.TestFramework": {
-              "target": "Package",
-              "version": "[3.1.1, )"
             },
             "Microsoft.Data.SqlClient": {
               "target": "Package",
@@ -89,17 +98,9 @@
               "target": "Package",
               "version": "[4.61.3, )"
             },
-            "Microsoft.VisualStudio.QualityTools.UnitTestFramework": {
-              "target": "Package",
-              "version": "[11.0.50727.1, )"
-            },
             "Microsoft.Xaml.Behaviors.Wpf": {
               "target": "Package",
               "version": "[1.1.77, )"
-            },
-            "Moq": {
-              "target": "Package",
-              "version": "[4.18.4, )"
             },
             "Newtonsoft.Json": {
               "target": "Package",
@@ -116,6 +117,10 @@
             "System.Management.Automation": {
               "target": "Package",
               "version": "[7.2.0, )"
+            },
+            "System.Text.Json": {
+              "target": "Package",
+              "version": "[6.0.0, )"
             }
           },
           "imports": [
@@ -133,7 +138,7 @@
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             },
-            "Microsoft.WindowsDesktop.App": {
+            "Microsoft.WindowsDesktop.App.WPF": {
               "privateAssets": "none"
             }
           },

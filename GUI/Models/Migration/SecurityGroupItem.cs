@@ -44,7 +44,7 @@ namespace MandADiscoverySuite.Models.Migration
             return $"{DisplayName ?? Name} ({SamAccountName})";
         }
         
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return obj is SecurityGroupItem other && Sid == other.Sid;
         }

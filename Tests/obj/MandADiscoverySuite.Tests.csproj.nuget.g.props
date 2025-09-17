@@ -26,5 +26,8 @@
     <PkgEntityFramework Condition=" '$(PkgEntityFramework)' == '' ">C:\Users\lukia\.nuget\packages\entityframework\6.4.4</PkgEntityFramework>
     <PkgSystem_Data_SQLite_EF6 Condition=" '$(PkgSystem_Data_SQLite_EF6)' == '' ">C:\Users\lukia\.nuget\packages\system.data.sqlite.ef6\1.0.118</PkgSystem_Data_SQLite_EF6>
     <PkgMicrosoft_Xaml_Behaviors_Wpf Condition=" '$(PkgMicrosoft_Xaml_Behaviors_Wpf)' == '' ">C:\Users\lukia\.nuget\packages\microsoft.xaml.behaviors.wpf\1.1.77</PkgMicrosoft_Xaml_Behaviors_Wpf>
+    <PkgAWSSDK_Core Condition=" '$(PkgAWSSDK_Core)' == '' ">C:\Users\lukia\.nuget\packages\awssdk.core\4.0.0.27</PkgAWSSDK_Core>
+    <PkgAWSSDK_S3 Condition=" '$(PkgAWSSDK_S3)' == '' ">C:\Users\lukia\.nuget\packages\awssdk.s3\4.0.7.1</PkgAWSSDK_S3>
+    <PkgAWSSDK_EC2 Condition=" '$(PkgAWSSDK_EC2)' == '' ">C:\Users\lukia\.nuget\packages\awssdk.ec2\4.0.37</PkgAWSSDK_EC2>
   </PropertyGroup>
 </Project>

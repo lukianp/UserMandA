@@ -8,6 +8,8 @@ using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Views;
 
+#nullable enable
+
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>

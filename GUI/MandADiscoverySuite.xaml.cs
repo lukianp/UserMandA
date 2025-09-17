@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Threading.Tasks;
 using System.Windows;
@@ -17,7 +19,6 @@ namespace MandADiscoverySuite
     {
         public MainViewModel ViewModel { get; private set; }
         private KeyboardShortcutManager? _shortcutManager;
-
 
         public MainWindow()
         {
@@ -102,6 +103,9 @@ namespace MandADiscoverySuite
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            var localMainTabControl = this.FindName("MainTabControlInstance") as TabControl;
+            var localVulnerabilitiesDataGrid = this.FindName("VulnerabilitiesDataGridInstance") as DataGrid;
+
             var logAction = Application.Current?.Properties["LogAction"] as Action<string>;
             logAction?.Invoke("=== MainWindow_Loaded BEGIN ===");
 
@@ -123,7 +127,7 @@ namespace MandADiscoverySuite
             {
                 logAction?.Invoke("Initializing TabControl reference...");
                 // Initialize TabControl reference so TabsService can properly manage tab selection
-                ViewModel.InitializeTabControl(MainTabControl);
+                ViewModel.InitializeTabControl(localMainTabControl);
                 logAction?.Invoke("TabControl initialized for tab selection management");
                 System.Diagnostics.Debug.WriteLine("TabControl initialized for tab selection management");
                 
@@ -286,7 +290,7 @@ namespace MandADiscoverySuite
                 {
                     _shortcutManager = new KeyboardShortcutManager(shortcutService);
                     
-                    // Register window-specific shortcuts for main window context
+                    // Register window shortcuts for main window context
                     _shortcutManager.RegisterWindowShortcuts(this, "MainWindow");
                     
                     System.Diagnostics.Debug.WriteLine("MainWindow keyboard shortcuts initialized");
@@ -384,7 +388,7 @@ namespace MandADiscoverySuite
                         e.Handled = true;
                     }
                     break;
-
+                
                 case Key.E:
                     if (ctrl)
                     {
@@ -1125,9 +1129,10 @@ Tips:
                 Owner = this
             };
 
+            var vulnerabilitiesGrid = this.FindName("VulnerabilitiesDataGridInstance") as DataGrid;
             var columnChooser = new Controls.ColumnChooser
             {
-                TargetDataGrid = VulnerabilitiesDataGrid
+                TargetDataGrid = vulnerabilitiesGrid
             };
 
             columnChooserWindow.Content = columnChooser;

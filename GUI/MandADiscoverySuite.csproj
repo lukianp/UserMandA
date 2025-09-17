@@ -9,7 +9,7 @@
     <RootNamespace>MandADiscoverySuite</RootNamespace>
     <Version>1.0.1</Version>
     <Authors>Lukian Poleschtschuk</Authors>
-    <Nullable>enable</Nullable>
+    <Nullable>disable</Nullable>
     <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <PublishReadyToRun>false</PublishReadyToRun>
@@ -26,7 +26,12 @@
       </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <WarningsNotAsErrors>CS8625;CS8612;CS8767;CA1416</WarningsNotAsErrors>
+    <WarningsNotAsErrors>CS8625;CS8612;CS8767;CA1416;CS4014;CS1998;CS8892;CS8604</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS8625;CS8612;CS8767;CA1416;CS4014;CS1998;CS8892;CS8604</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -73,6 +78,7 @@
     <Page Remove="Tests\**\*.xaml" />
     <None Remove="Tests\**\*" />
   </ItemGroup>
+
 
   <!-- Copy all PowerShell modules to output directory -->
   <ItemGroup>

@@ -11,6 +11,8 @@ using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using CommunityToolkit.Mvvm.Messaging;
 
+#nullable enable
+
 namespace MandADiscoverySuite.ViewModels
 {
     /// <summary>
@@ -22,10 +24,8 @@ namespace MandADiscoverySuite.ViewModels
         private readonly ILogicEngineService _logicEngineService;
         private readonly IMigrationWaveService _migrationWaveService;
         private readonly IDataExportService _dataExportService;
-
         private string? _selectedDeviceName;
         private AssetDetailProjection? _assetDetail;
-
         // Tab collections
         private ObservableCollection<UserDto> _users = new();
         private ObservableCollection<AppDto> _apps = new();
@@ -34,7 +34,6 @@ namespace MandADiscoverySuite.ViewModels
         private ObservableCollection<GroupDto> _groups = new();
         private ObservableCollection<SqlDbDto> _sqlDatabases = new();
         private ObservableCollection<RiskAssessment> _risks = new();
-
         // Asset basic info
         private string? _deviceName;
         private string? _dnsName;
@@ -45,14 +44,12 @@ namespace MandADiscoverySuite.ViewModels
         private bool _isOnline;
         private DateTime? _lastSeen;
         private DateTime? _createdDate;
-
         // Hardware Information
         private object? _hardware;
         private string? _ownerDepartment;
         private string? _ownerLocation;
         private string? _ownerManager;
         private string? _ownerEmployeeId;
-
         // Risk and Status information
         private int _highRiskCount;
         private string? _migrationReadinessStatus;
@@ -60,19 +57,16 @@ namespace MandADiscoverySuite.ViewModels
         private string? _backupStatus;
         private DateTime? _lastRiskAssessment;
         private DateTime? _lastAppsScan;
-
         // App summary collections
         private ObservableCollection<AppDto> _microsoftApps = new();
         private ObservableCollection<AppDto> _thirdPartyApps = new();
         private ObservableCollection<AppDto> _crowdStrikeApps = new();
         private ObservableCollection<AppDto> _criticalApps = new();
-
         // Commands
         public ICommand AddToMigrationWaveCommand { get; private set; }
         public ICommand ExportSnapshotCommand { get; private set; }
         public ICommand RefreshDataCommand { get; private set; }
         public ICommand CloseCommand { get; private set; }
-
         public AssetDetailViewModel(
             ILogicEngineService logicEngineService,
             ILogger logger,
@@ -83,10 +77,8 @@ namespace MandADiscoverySuite.ViewModels
             _logicEngineService = logicEngineService ?? throw new ArgumentNullException(nameof(logicEngineService));
             _migrationWaveService = migrationWaveService ?? new StubMigrationWaveService(logger);
             _dataExportService = dataExportService ?? new StubDataExportService(logger);
-
             TabTitle = "Asset Details";
         }
-
         /// <summary>
         /// Constructor that receives object asset and loads its details
         /// </summary>
@@ -100,9 +92,7 @@ namespace MandADiscoverySuite.ViewModels
         {
             LoadAssetDetails(asset);
         }
-
         #region Properties
-
         /// <summary>
         /// Currently selected device name for loading details
         /// </summary>
@@ -119,227 +109,188 @@ namespace MandADiscoverySuite.ViewModels
                 }
             }
         }
-
         public AssetDetailProjection? AssetDetail
         {
             get => _assetDetail;
             private set => SetProperty(ref _assetDetail, value);
         }
-
         // Basic asset info properties
         public string? DeviceName
         {
             get => _deviceName;
             private set => SetProperty(ref _deviceName, value);
         }
-
         public string? DnsName
         {
             get => _dnsName;
             private set => SetProperty(ref _dnsName, value);
         }
-
         public string? OperatingSystem
         {
             get => _operatingSystem;
             private set => SetProperty(ref _operatingSystem, value);
         }
-
         public string? OrganizationalUnit
         {
             get => _organizationalUnit;
             private set => SetProperty(ref _organizationalUnit, value);
         }
-
         public string? PrimaryUserSid
         {
             get => _primaryUserSid;
             private set => SetProperty(ref _primaryUserSid, value);
         }
-
         public string? PrimaryUserName
         {
             get => _primaryUserName;
             private set => SetProperty(ref _primaryUserName, value);
         }
-
         public bool IsOnline
         {
             get => _isOnline;
             private set => SetProperty(ref _isOnline, value);
         }
-
         public DateTime? LastSeen
         {
             get => _lastSeen;
             private set => SetProperty(ref _lastSeen, value);
         }
-
         public DateTime? CreatedDate
         {
             get => _createdDate;
             private set => SetProperty(ref _createdDate, value);
         }
-
         // Hardware properties
         public object? Hardware
         {
             get => _hardware;
             private set => SetProperty(ref _hardware, value);
         }
-
         // Owner properties
         public string? OwnerDepartment
         {
             get => _ownerDepartment;
             private set => SetProperty(ref _ownerDepartment, value);
         }
-
         public string? OwnerLocation
         {
             get => _ownerLocation;
             private set => SetProperty(ref _ownerLocation, value);
         }
-
         public string? OwnerManager
         {
             get => _ownerManager;
             private set => SetProperty(ref _ownerManager, value);
         }
-
         public string? OwnerEmployeeId
         {
             get => _ownerEmployeeId;
             private set => SetProperty(ref _ownerEmployeeId, value);
         }
-
         // Risk and Status properties
         public int HighRiskCount
         {
             get => _highRiskCount;
             private set => SetProperty(ref _highRiskCount, value);
         }
-
         public string? MigrationReadinessStatus
         {
             get => _migrationReadinessStatus;
             private set => SetProperty(ref _migrationReadinessStatus, value);
         }
-
         public string? OSCompatibilityStatus
         {
             get => _osCompatibilityStatus;
             private set => SetProperty(ref _osCompatibilityStatus, value);
         }
-
         public string? BackupStatus
         {
             get => _backupStatus;
             private set => SetProperty(ref _backupStatus, value);
         }
-
         public DateTime? LastRiskAssessment
         {
             get => _lastRiskAssessment;
             private set => SetProperty(ref _lastRiskAssessment, value);
         }
-
         public DateTime? LastAppsScan
         {
             get => _lastAppsScan;
             private set => SetProperty(ref _lastAppsScan, value);
         }
-
         // App summary collections
         public ObservableCollection<AppDto> MicrosoftApps
         {
             get => _microsoftApps;
             private set => SetProperty(ref _microsoftApps, value);
         }
-
         public ObservableCollection<AppDto> ThirdPartyApps
         {
             get => _thirdPartyApps;
             private set => SetProperty(ref _thirdPartyApps, value);
         }
-
         public ObservableCollection<AppDto> CrowdStrikeApps
         {
             get => _crowdStrikeApps;
             private set => SetProperty(ref _crowdStrikeApps, value);
         }
-
         public ObservableCollection<AppDto> CriticalApps
         {
             get => _criticalApps;
             private set => SetProperty(ref _criticalApps, value);
         }
-
         // Tab collections
         public ObservableCollection<UserDto> Users
         {
             get => _users;
             private set => SetProperty(ref _users, value);
         }
-
         public ObservableCollection<AppDto> Apps
         {
             get => _apps;
             private set => SetProperty(ref _apps, value);
         }
-
         public ObservableCollection<AclEntry> FileAccess
         {
             get => _fileAccess;
             private set => SetProperty(ref _fileAccess, value);
         }
-
         public ObservableCollection<GpoDto> GpoLinks
         {
             get => _gpoLinks;
             private set => SetProperty(ref _gpoLinks, value);
         }
-
         public ObservableCollection<GroupDto> Groups
         {
             get => _groups;
             private set => SetProperty(ref _groups, value);
         }
-
         public ObservableCollection<SqlDbDto> SqlDatabases
         {
             get => _sqlDatabases;
             private set => SetProperty(ref _sqlDatabases, value);
         }
-
         public ObservableCollection<RiskAssessment> Risks
         {
             get => _risks;
             private set => SetProperty(ref _risks, value);
         }
-
         public override bool HasData => AssetDetail != null;
-
         #endregion
-
         #region Methods
-
         protected override void InitializeCommands()
         {
             base.InitializeCommands();
-
             AddToMigrationWaveCommand = new AsyncRelayCommand(AddToMigrationWaveAsync, () => AssetDetail != null);
             ExportSnapshotCommand = new AsyncRelayCommand(ExportSnapshotAsync, () => AssetDetail != null);
             RefreshDataCommand = new AsyncRelayCommand(LoadAssetDetailAsync);
             CloseCommand = new RelayCommand(CloseAssetDetail);
             OpenAssetDetailCommand = new RelayCommand<string>(OpenAssetDetail);
         }
-
         /// <summary>
         /// Open Asset Detail Command - used for integration with main lists
         /// </summary>
         public ICommand OpenAssetDetailCommand { get; private set; }
-
         /// <summary>
         /// Load asset detail data from LogicEngineService
         /// </summary>
@@ -350,23 +301,18 @@ namespace MandADiscoverySuite.ViewModels
                 ClearAssetDetail();
                 return;
             }
-
             await ExecuteAsync(async () =>
             {
                 StructuredLogger?.LogDebug(LogSourceName,
                     new { action = "load_asset_detail_start", device_name = SelectedDeviceName },
                     "Loading asset detail projection");
-
                 var detail = await _logicEngineService.GetAssetDetailAsync(SelectedDeviceName);
-
                 if (detail != null)
                 {
                     AssetDetail = detail;
                     UpdateAssetBasicInfo(detail.Device);
                     await UpdateTabCollectionsAsync(detail);
-
                     TabTitle = $"Asset Details - {detail.Device.Name ?? SelectedDeviceName}";
-
                     StructuredLogger?.LogInfo(LogSourceName,
                         new {
                             action = "load_asset_detail_complete",
@@ -381,15 +327,12 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     ClearAssetDetail();
                     StatusMessage = "Asset not found";
-
                     StructuredLogger?.LogWarning(LogSourceName,
                         new { action = "load_asset_detail_notfound", device_name = SelectedDeviceName },
                         "Asset not found in LogicEngine data");
                 }
-
             }, "Loading asset details");
         }
-
         /// <summary>
         /// Load asset details from incoming asset object, identifying type and fetching related data
         /// </summary>
@@ -401,15 +344,12 @@ namespace MandADiscoverySuite.ViewModels
                 ClearAssetDetail();
                 return;
             }
-
             // Reset all collections at start
             ResetCollections();
-
             try
             {
                 string assetType = IdentifyAssetType(asset);
                 Debug.WriteLine($"AssetDetailViewModel.LoadAssetDetails: Identified asset type: {assetType}");
-
                 switch (assetType)
                 {
                     case "UserData":
@@ -459,7 +399,6 @@ namespace MandADiscoverySuite.ViewModels
                         LoadDefaultAssetDetails(asset);
                         break;
                 }
-
                 Debug.WriteLine($"AssetDetailViewModel.LoadAssetDetails: Completed loading for asset type {assetType}");
                 StructuredLogger?.LogInfo(LogSourceName,
                     new { action = "load_asset_details_complete", asset_type = assetType },
@@ -474,7 +413,6 @@ namespace MandADiscoverySuite.ViewModels
                 ClearAssetDetail();
             }
         }
-
         /// <summary>
         /// Update basic asset information properties
         /// </summary>
@@ -485,24 +423,18 @@ namespace MandADiscoverySuite.ViewModels
             OperatingSystem = device.OS;
             OrganizationalUnit = device.OU;
             PrimaryUserSid = device.PrimaryUserSid;
-
             // Resolve primary user name from SID
             PrimaryUserName = ResolveUserNameFromSid(device.PrimaryUserSid);
-
             // Get online status from discovery data (placeholder - would need enhanced discovery)
             IsOnline = DetermineOnlineStatus(device);
-
             LastSeen = device.DiscoveryTimestamp;
             // Enhanced discovery would provide separate creation date, for now use discovery timestamp
             CreatedDate = device.DiscoveryTimestamp != default(DateTime) ? device.DiscoveryTimestamp : DateTime.Now;
-
             // Set up hardware information from detailed discovery
             Hardware = GetHardwareInformation(device);
-
             // Set up owner information from user directory data
             UpdateOwnerInformation(device.PrimaryUserSid);
         }
-
         /// <summary>
         /// Update all tab collections from asset detail projection
         /// </summary>
@@ -512,33 +444,26 @@ namespace MandADiscoverySuite.ViewModels
             Users.Clear();
             if (detail.PrimaryUser != null)
                 Users.Add(detail.PrimaryUser);
-
             // Update Apps tab
             Apps.Clear();
             foreach (var app in detail.InstalledApps)
                 Apps.Add(app);
-
             // Categorize applications for summary
             CategorizeApplications(detail.InstalledApps);
-
             // Update File Access tab
             FileAccess.Clear();
             foreach (var acl in detail.SharesUsed)
                 FileAccess.Add(acl);
-
             // Update GPO Links tab
             GpoLinks.Clear();
             foreach (var gpo in detail.GposApplied)
                 GpoLinks.Add(gpo);
-
             // Update Groups tab - fetch groups for the primary user
             Groups.Clear();
             await LoadUserGroupsAsync(detail.Device, detail.PrimaryUser?.Sid);
-
             // Update SQL Databases tab - fetch databases for this device
             SqlDatabases.Clear();
             await LoadDeviceDatabasesAsync(detail.Device);
-
             // Update Risks tab
             Risks.Clear();
             HighRiskCount = 0;
@@ -549,7 +474,6 @@ namespace MandADiscoverySuite.ViewModels
                 if (riskAssessment.CurrentLevel == RiskLevel.High || riskAssessment.CurrentLevel == RiskLevel.Critical)
                     HighRiskCount++;
             }
-
             // Set additional status information
             MigrationReadinessStatus = HighRiskCount == 0 ? "Ready" : $"{HighRiskCount} issues to resolve";
             OSCompatibilityStatus = OperatingSystem?.Contains("Windows") == true ? "Compatible" : "Check Required";
@@ -557,7 +481,6 @@ namespace MandADiscoverySuite.ViewModels
             LastRiskAssessment = DateTime.Now;
             LastAppsScan = DateTime.Now;
         }
-
         /// <summary>
         /// Categorize installed applications into summary collections
         /// </summary>
@@ -567,7 +490,6 @@ namespace MandADiscoverySuite.ViewModels
             ThirdPartyApps.Clear();
             CrowdStrikeApps.Clear();
             CriticalApps.Clear();
-
             foreach (var app in installedApps)
             {
                 // Categorize Microsoft apps
@@ -575,17 +497,14 @@ namespace MandADiscoverySuite.ViewModels
                     MicrosoftApps.Add(app);
                 else
                     ThirdPartyApps.Add(app);
-
                 // Categorize CrowdStrike apps (example categorization)
                 if (app.Name?.Contains("CrowdStrike") == true)
                     CrowdStrikeApps.Add(app);
-
                 // Categorize critical business applications (example)
                 if (app.Name?.Contains("Office") == true || app.Name?.Contains("Teams") == true || app.Name?.Contains("Azure") == true)
                     CriticalApps.Add(app);
             }
         }
-
         /// <summary>
         /// Reset all collections at start of loading
         /// </summary>
@@ -599,13 +518,11 @@ namespace MandADiscoverySuite.ViewModels
             Groups.Clear();
             SqlDatabases.Clear();
             Risks.Clear();
-
             // Clear app summary collections
             MicrosoftApps.Clear();
             ThirdPartyApps.Clear();
             CrowdStrikeApps.Clear();
             CriticalApps.Clear();
-
             // Clear basic info
             DeviceName = null;
             DnsName = null;
@@ -616,14 +533,12 @@ namespace MandADiscoverySuite.ViewModels
             IsOnline = false;
             LastSeen = null;
             CreatedDate = null;
-
             // Clear hardware info
             Hardware = null;
             OwnerDepartment = null;
             OwnerLocation = null;
             OwnerManager = null;
             OwnerEmployeeId = null;
-
             // Clear risk and status info
             HighRiskCount = 0;
             MigrationReadinessStatus = null;
@@ -631,18 +546,15 @@ namespace MandADiscoverySuite.ViewModels
             BackupStatus = null;
             LastRiskAssessment = null;
             LastAppsScan = null;
-
             AssetDetail = null;
             TabTitle = "Asset Details";
         }
-
         /// <summary>
         /// Identify the type of the incoming asset object
         /// </summary>
         private string IdentifyAssetType(object asset)
         {
             if (asset is null) return "Unknown";
-
             // Try to get Type property
             var typeProperty = asset.GetType().GetProperty("Type");
             if (typeProperty != null)
@@ -653,7 +565,6 @@ namespace MandADiscoverySuite.ViewModels
                     return typeValue;
                 }
             }
-
             // Try to get from dictionary if it's a dict
             if (asset is Dictionary<string, object> dict)
             {
@@ -662,7 +573,6 @@ namespace MandADiscoverySuite.ViewModels
                     return typeStr;
                 }
             }
-
             // Default based on properties
             if (asset.GetType().Name.Contains("User") || asset.GetType().GetProperty("DisplayName") != null)
             {
@@ -680,7 +590,6 @@ namespace MandADiscoverySuite.ViewModels
             {
                 return "DatabaseData";
             }
-
             // New discovery source type detection
             if (asset.GetType().Name.Contains("FileServer") || asset.GetType().GetProperty("FileServerType") != null ||
                 asset.GetType().GetProperty("FileShare") != null)
@@ -731,17 +640,14 @@ namespace MandADiscoverySuite.ViewModels
             {
                 return "OneDriveBusinessData";
             }
-
             return "Unknown";
         }
-
         /// <summary>
         /// Load details for UserData from Active Directory
         /// </summary>
         private void LoadUserDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadUserDataDetails: Loading UserData details");
-
             try
             {
                 string csvPath = "ActiveDirectory.csv"; // Assume CSV file for AD users
@@ -750,17 +656,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadUserDataDetails: ActiveDirectory.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadUserDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -770,7 +673,6 @@ namespace MandADiscoverySuite.ViewModels
                         if (values.Length > 1) DeviceName = values[0];
                         if (values.Length > 2) PrimaryUserName = values[1];
                         // Add more fields as per CSV structure
-
                         Users.Add(new UserDto(
                             UPN: assetName.Contains("@") ? assetName : $"{assetName}@domain.com",
                             Sam: assetName,
@@ -797,14 +699,12 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadUserDataDetails: Error loading UserData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load details for ComputerData from Infrastructure
         /// </summary>
         private void LoadComputerDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadComputerDataDetails: Loading ComputerData details from Infrastructure.csv");
-
             try
             {
                 string csvPath = "Infrastructure.csv";
@@ -813,17 +713,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadComputerDataDetails: Infrastructure.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadComputerDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -834,7 +731,6 @@ namespace MandADiscoverySuite.ViewModels
                         OperatingSystem = values.Length > 4 ? values[4] : null;
                         DnsName = values.Length > 3 ? values[3] : null;
                         OrganizationalUnit = values.Length > 6 ? values[6] : null;
-
                         // Add to apps or other collections based on type
                         if (values.Length > 1)
                         {
@@ -851,7 +747,6 @@ namespace MandADiscoverySuite.ViewModels
                             ));
                             Debug.WriteLine($"AssetDetailViewModel.LoadComputerDataDetails: Populated Apps collection with 1 item");
                         }
-
                         break;
                     }
                 }
@@ -861,14 +756,12 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadComputerDataDetails: Error loading ComputerData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load details for MailboxData
         /// </summary>
         private void LoadMailboxDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadMailboxDataDetails: Loading MailboxData details");
-
             try
             {
                 string csvPath = "ExchangeMailboxes.csv"; // Assume CSV file for Exchange mailboxes
@@ -877,17 +770,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadMailboxDataDetails: ExchangeMailboxes.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadMailboxDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -896,7 +786,6 @@ namespace MandADiscoverySuite.ViewModels
                         // Populate mailbox details
                         DeviceName = values[0];
                         // Add mailbox-specific data
-
                         Apps.Add(new AppDto(
                             Id: Guid.NewGuid().ToString(),
                             Name: "Exchange Mailbox",
@@ -918,14 +807,12 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadMailboxDataDetails: Error loading MailboxData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load details for DatabaseData
         /// </summary>
         private void LoadDatabaseDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadDatabaseDataDetails: Loading DatabaseData details");
-
             try
             {
                 string csvPath = "DatabaseServers.csv"; // Assume CSV file for databases
@@ -934,17 +821,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadDatabaseDataDetails: DatabaseServers.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadDatabaseDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -953,7 +837,6 @@ namespace MandADiscoverySuite.ViewModels
                         // Populate database details
                         DeviceName = values[0];
                         // Add to SQLDatabases
-
                         SqlDatabases.Add(new SqlDbDto(
                             Server: values[0],
                             Instance: null,
@@ -974,14 +857,12 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadDatabaseDataDetails: Error loading DatabaseData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load details for FileServerData
         /// </summary>
         private void LoadFileServerDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadFileServerDataDetails: Loading FileServerData details");
-
             try
             {
                 string csvPath = "FileServerDiscovery.csv";
@@ -990,17 +871,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadFileServerDataDetails: FileServerDiscovery.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadFileServerDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -1010,7 +888,6 @@ namespace MandADiscoverySuite.ViewModels
                         DeviceName = values.Length > 0 ? values[0] : null;
                         OperatingSystem = values.Length > 2 ? values[2] : null;
                         DnsName = values.Length > 1 ? values[1] : null;
-
                         // Add to Apps collection
                         Apps.Add(new AppDto(
                             Id: Guid.NewGuid().ToString(),
@@ -1033,14 +910,12 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadFileServerDataDetails: Error loading FileServerData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load details for NetworkDeviceData
         /// </summary>
         private void LoadNetworkDeviceDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadNetworkDeviceDataDetails: Loading NetworkDeviceData details");
-
             try
             {
                 string csvPath = "NetworkInfrastructureDiscovery.csv";
@@ -1049,17 +924,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadNetworkDeviceDataDetails: NetworkInfrastructureDiscovery.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadNetworkDeviceDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -1069,7 +941,6 @@ namespace MandADiscoverySuite.ViewModels
                         DeviceName = values.Length > 0 ? values[0] : null;
                         DnsName = values.Length > 1 ? values[1] : null;
                         OperatingSystem = values.Length > 3 ? values[3] : null;
-
                         // Add to Apps collection
                         Apps.Add(new AppDto(
                             Id: Guid.NewGuid().ToString(),
@@ -1092,14 +963,12 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadNetworkDeviceDataDetails: Error loading NetworkDeviceData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load details for PhysicalServerData
         /// </summary>
         private void LoadPhysicalServerDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadPhysicalServerDataDetails: Loading PhysicalServerData details");
-
             try
             {
                 string csvPath = "PhysicalServerDiscovery.csv";
@@ -1108,17 +977,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadPhysicalServerDataDetails: PhysicalServerDiscovery.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadPhysicalServerDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -1128,7 +994,6 @@ namespace MandADiscoverySuite.ViewModels
                         DeviceName = values.Length > 0 ? values[0] : null;
                         OperatingSystem = values.Length > 2 ? values[2] : null;
                         DnsName = values.Length > 1 ? values[1] : null;
-
                         // Add to Apps collection
                         Apps.Add(new AppDto(
                             Id: Guid.NewGuid().ToString(),
@@ -1151,14 +1016,12 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadPhysicalServerDataDetails: Error loading PhysicalServerData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load details for SQLServerData
         /// </summary>
         private void LoadSQLServerDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadSQLServerDataDetails: Loading SQLServerData details");
-
             try
             {
                 string csvPath = "SQLServerDiscovery.csv";
@@ -1167,17 +1030,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadSQLServerDataDetails: SQLServerDiscovery.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadSQLServerDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -1185,7 +1045,6 @@ namespace MandADiscoverySuite.ViewModels
                     {
                         // Populate SQL server details
                         DeviceName = values.Length > 0 ? values[0] : null;
-
                         // Add to SQLDatabases collection
                         SqlDatabases.Add(new SqlDbDto(
                             Server: values.Length > 0 ? values[0] : assetName,
@@ -1207,14 +1066,12 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadSQLServerDataDetails: Error loading SQLServerData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load details for VMwareData
         /// </summary>
         private void LoadVMwareDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadVMwareDataDetails: Loading VMwareData details");
-
             try
             {
                 string csvPath = "VMwareDiscovery.csv";
@@ -1223,17 +1080,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadVMwareDataDetails: VMwareDiscovery.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadVMwareDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -1243,7 +1097,6 @@ namespace MandADiscoverySuite.ViewModels
                         DeviceName = values.Length > 0 ? values[0] : null;
                         OperatingSystem = values.Length > 3 ? values[3] : null;
                         DnsName = values.Length > 1 ? values[1] : null;
-
                         // Add to Apps collection
                         Apps.Add(new AppDto(
                             Id: Guid.NewGuid().ToString(),
@@ -1266,14 +1119,12 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadVMwareDataDetails: Error loading VMwareData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load details for AzureData
         /// </summary>
         private void LoadAzureDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadAzureDataDetails: Loading AzureData details");
-
             try
             {
                 string csvPath = "AzureDiscovery.csv";
@@ -1282,17 +1133,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadAzureDataDetails: AzureDiscovery.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadAzureDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -1300,7 +1148,6 @@ namespace MandADiscoverySuite.ViewModels
                     {
                         // Populate Azure details
                         DeviceName = values.Length > 0 ? values[0] : null;
-
                         // Add to Apps collection
                         Apps.Add(new AppDto(
                             Id: Guid.NewGuid().ToString(),
@@ -1323,14 +1170,12 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadAzureDataDetails: Error loading AzureData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load details for AzureInfrastructureData
         /// </summary>
         private void LoadAzureInfrastructureDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadAzureInfrastructureDataDetails: Loading AzureInfrastructureData details");
-
             try
             {
                 string csvPath = "AzureInfrastructureDiscovery.csv";
@@ -1339,17 +1184,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadAzureInfrastructureDataDetails: AzureInfrastructureDiscovery.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadAzureInfrastructureDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -1357,7 +1199,6 @@ namespace MandADiscoverySuite.ViewModels
                     {
                         // Populate Azure infrastructure details
                         DeviceName = values.Length > 0 ? values[0] : null;
-
                         // Add to Apps collection
                         Apps.Add(new AppDto(
                             Id: Guid.NewGuid().ToString(),
@@ -1380,14 +1221,12 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadAzureInfrastructureDataDetails: Error loading AzureInfrastructureData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load details for ActiveDirectoryData
         /// </summary>
         private void LoadActiveDirectoryDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadActiveDirectoryDataDetails: Loading ActiveDirectoryData details");
-
             try
             {
                 string csvPath = "ActiveDirectoryDiscovery.csv";
@@ -1396,17 +1235,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadActiveDirectoryDataDetails: ActiveDirectoryDiscovery.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadActiveDirectoryDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -1414,7 +1250,6 @@ namespace MandADiscoverySuite.ViewModels
                     {
                         // Populate Active Directory details
                         DeviceName = values.Length > 0 ? values[0] : null;
-
                         // Add to Apps collection
                         Apps.Add(new AppDto(
                             Id: Guid.NewGuid().ToString(),
@@ -1437,14 +1272,12 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadActiveDirectoryDataDetails: Error loading ActiveDirectoryData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load details for ExchangeData
         /// </summary>
         private void LoadExchangeDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadExchangeDataDetails: Loading ExchangeData details");
-
             try
             {
                 string csvPath = "ExchangeDiscovery.csv";
@@ -1453,17 +1286,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadExchangeDataDetails: ExchangeDiscovery.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadExchangeDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -1471,7 +1301,6 @@ namespace MandADiscoverySuite.ViewModels
                     {
                         // Populate Exchange details
                         DeviceName = values.Length > 0 ? values[0] : null;
-
                         // Add to Apps collection
                         Apps.Add(new AppDto(
                             Id: Guid.NewGuid().ToString(),
@@ -1494,14 +1323,12 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadExchangeDataDetails: Error loading ExchangeData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load details for OneDriveBusinessData
         /// </summary>
         private void LoadOneDriveBusinessDataDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadOneDriveBusinessDataDetails: Loading OneDriveBusinessData details");
-
             try
             {
                 string csvPath = "OneDriveBusinessDiscovery.csv";
@@ -1510,17 +1337,14 @@ namespace MandADiscoverySuite.ViewModels
                     Debug.WriteLine("AssetDetailViewModel.LoadOneDriveBusinessDataDetails: OneDriveBusinessDiscovery.csv not found");
                     return;
                 }
-
                 var lines = File.ReadAllLines(csvPath);
                 if (lines.Length < 2)
                 {
                     Debug.WriteLine("AssetDetailViewModel.LoadOneDriveBusinessDataDetails: CSV file is empty or has no data rows");
                     return;
                 }
-
                 var headers = lines[0].Split(',');
                 var assetName = GetAssetName(asset);
-
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
@@ -1528,7 +1352,6 @@ namespace MandADiscoverySuite.ViewModels
                     {
                         // Populate OneDrive Business details
                         DeviceName = values.Length > 0 ? values[0] : null;
-
                         // Add to Apps collection
                         Apps.Add(new AppDto(
                             Id: Guid.NewGuid().ToString(),
@@ -1551,49 +1374,41 @@ namespace MandADiscoverySuite.ViewModels
                 Debug.WriteLine($"AssetDetailViewModel.LoadOneDriveBusinessDataDetails: Error loading OneDriveBusinessData: {ex.Message}");
             }
         }
-
         /// <summary>
         /// Load default asset details
         /// </summary>
         private void LoadDefaultAssetDetails(object asset)
         {
             Debug.WriteLine("AssetDetailViewModel.LoadDefaultAssetDetails: Loading default asset details");
-
             var assetName = GetAssetName(asset);
             DeviceName = assetName;
             Debug.WriteLine($"AssetDetailViewModel.LoadDefaultAssetDetails: Set DeviceName to {assetName}");
         }
-
         /// <summary>
         /// Get asset name from object
         /// </summary>
         private string GetAssetName(object asset)
         {
             if (asset == null) return "Unknown";
-
             // Try Name property
             var nameProperty = asset.GetType().GetProperty("Name");
             if (nameProperty != null)
             {
                 return nameProperty.GetValue(asset)?.ToString() ?? "Unknown";
             }
-
             // Try from dictionary
             if (asset is Dictionary<string, object> dict && dict.TryGetValue("Name", out var nameObj))
             {
                 return nameObj?.ToString() ?? "Unknown";
             }
-
             return asset.ToString() ?? "Unknown";
         }
-
         /// <summary>
         /// Clear all asset detail data
         /// </summary>
         private void ClearAssetDetail()
         {
             AssetDetail = null;
-
             // Clear basic info
             DeviceName = null;
             DnsName = null;
@@ -1604,14 +1419,12 @@ namespace MandADiscoverySuite.ViewModels
             IsOnline = false;
             LastSeen = null;
             CreatedDate = null;
-
             // Clear hardware info
             Hardware = null;
             OwnerDepartment = null;
             OwnerLocation = null;
             OwnerManager = null;
             OwnerEmployeeId = null;
-
             // Clear risk and status info
             HighRiskCount = 0;
             MigrationReadinessStatus = null;
@@ -1619,13 +1432,11 @@ namespace MandADiscoverySuite.ViewModels
             BackupStatus = null;
             LastRiskAssessment = null;
             LastAppsScan = null;
-
             // Clear app summary collections
             MicrosoftApps.Clear();
             ThirdPartyApps.Clear();
             CrowdStrikeApps.Clear();
             CriticalApps.Clear();
-
             // Clear tab collections
             Users.Clear();
             Apps.Clear();
@@ -1634,17 +1445,14 @@ namespace MandADiscoverySuite.ViewModels
             Groups.Clear();
             SqlDatabases.Clear();
             Risks.Clear();
-
             TabTitle = "Asset Details";
         }
-
         /// <summary>
         /// Add current asset to a migration wave
         /// </summary>
         private async Task AddToMigrationWaveAsync()
         {
             if (AssetDetail == null) return;
-
             await ExecuteAsync(async () =>
             {
                 // Use stub service for now - proper implementation will be added later
@@ -1652,23 +1460,20 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     await stub.AddAssetToWaveAsync(AssetDetail.Device);
                 }
-                
+               
                 StatusMessage = $"Asset {AssetDetail.Device.Name} added to migration wave";
-                
-                StructuredLogger?.LogInfo(LogSourceName, 
-                    new { action = "add_to_migration_wave", device_name = AssetDetail.Device.Name }, 
+               
+                StructuredLogger?.LogInfo(LogSourceName,
+                    new { action = "add_to_migration_wave", device_name = AssetDetail.Device.Name },
                     "Asset added to migration wave");
-
             }, "Adding to migration wave");
         }
-
         /// <summary>
         /// Export asset detail snapshot
         /// </summary>
         private async Task ExportSnapshotAsync()
         {
             if (AssetDetail == null) return;
-
             await ExecuteAsync(async () =>
             {
                 // Use stub service for now - proper implementation will be added later
@@ -1677,16 +1482,14 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     exportPath = await stub.ExportAssetDetailAsync(AssetDetail);
                 }
-                
+               
                 StatusMessage = $"Asset details exported to {exportPath}";
-                
-                StructuredLogger?.LogInfo(LogSourceName, 
-                    new { action = "export_snapshot", device_name = AssetDetail.Device.Name, export_path = exportPath }, 
+               
+                StructuredLogger?.LogInfo(LogSourceName,
+                    new { action = "export_snapshot", device_name = AssetDetail.Device.Name, export_path = exportPath },
                     "Asset detail snapshot exported");
-
             }, "Exporting asset details");
         }
-
         /// <summary>
         /// Close asset detail view
         /// </summary>
@@ -1695,7 +1498,6 @@ namespace MandADiscoverySuite.ViewModels
             // Send close message via messenger
             SendMessage(new CloseAssetDetailMessage());
         }
-
         /// <summary>
         /// Open asset detail from external source (main asset list)
         /// </summary>
@@ -1703,20 +1505,16 @@ namespace MandADiscoverySuite.ViewModels
         {
             SelectedDeviceName = deviceName;
         }
-
         public override async Task LoadAsync()
         {
             await LoadAssetDetailAsync();
         }
-
         #endregion
-
         #region Dispose
-
         protected override void OnDisposing()
         {
             base.OnDisposing();
-            
+           
             // Clear collections to prevent memory leaks
             Users?.Clear();
             Apps?.Clear();
@@ -1726,7 +1524,6 @@ namespace MandADiscoverySuite.ViewModels
             SqlDatabases?.Clear();
             Risks?.Clear();
         }
-
         /// <summary>
         /// Convert LogicEngineRisk to UI RiskAssessment
         /// </summary>
@@ -1751,7 +1548,6 @@ namespace MandADiscoverySuite.ViewModels
                 LastAssessed = DateTime.Now
             };
         }
-
         /// <summary>
         /// Resolve user name from SID using system or directory services
         /// </summary>
@@ -1759,7 +1555,6 @@ namespace MandADiscoverySuite.ViewModels
         {
             if (string.IsNullOrEmpty(sid))
                 return "Unknown User";
-
             try
             {
                 // In a real implementation, this would query Active Directory or local accounts
@@ -1780,7 +1575,6 @@ namespace MandADiscoverySuite.ViewModels
                         _ => $"BuiltIn_{sid.Split('-').Last()}"
                     };
                 }
-
                 return sid; // Fallback to SID
             }
             catch (Exception ex)
@@ -1790,7 +1584,6 @@ namespace MandADiscoverySuite.ViewModels
                 return sid ?? "Unknown User";
             }
         }
-
         /// <summary>
         /// Determine if device is online based on last seen timestamp
         /// </summary>
@@ -1802,10 +1595,8 @@ namespace MandADiscoverySuite.ViewModels
                 // Consider online if seen within last 30 minutes
                 return timeSinceLastSeen.TotalMinutes <= 30;
             }
-
             return false; // Unknown status
         }
-
         /// <summary>
         /// Get hardware information for the device
         /// </summary>
@@ -1815,7 +1606,6 @@ namespace MandADiscoverySuite.ViewModels
             {
                 // In a real implementation, this would query WMI or other hardware discovery services
                 // For now, return mock data based on device name patterns
-
                 string processor = "Unknown";
                 string ram = "Unknown";
                 string storage = "Unknown";
@@ -1825,7 +1615,6 @@ namespace MandADiscoverySuite.ViewModels
                 string manufacturer = "Unknown";
                 string chassisType = "Unknown";
                 string ipAddress = device.DNS ?? "Not Available";
-
                 // Try to infer from device name patterns
                 if (device.Name?.Contains("LAPTOP", StringComparison.OrdinalIgnoreCase) == true)
                 {
@@ -1854,9 +1643,7 @@ namespace MandADiscoverySuite.ViewModels
                     chassisType = "Server";
                     serialNumber = $"SN{device.Name.GetHashCode():X8}";
                 }
-
                 biosVersion = $"1.{new Random().Next(0, 9)}.{new Random().Next(0, 9)}";
-
                 return new
                 {
                     Processor = processor,
@@ -1874,7 +1661,6 @@ namespace MandADiscoverySuite.ViewModels
             {
                 StructuredLogger?.LogWarning(LogSourceName, new { action = "hardware_discovery_error", device = device.Name, error = ex.Message },
                     "Failed to get hardware information");
-
                 // Return basic fallback
                 return new
                 {
@@ -1890,7 +1676,6 @@ namespace MandADiscoverySuite.ViewModels
                 };
             }
         }
-
         /// <summary>
         /// Update owner information from user directory data
         /// </summary>
@@ -1904,18 +1689,15 @@ namespace MandADiscoverySuite.ViewModels
                 OwnerEmployeeId = "Unknown";
                 return;
             }
-
             try
             {
                 // In a real implementation, this would query HR system or Active Directory
                 // For now, use mock data based on SID patterns
-
                 if (userSid.StartsWith("S-1-5-21-"))
                 {
                     // Domain user - mock HR data
                     var userId = userSid.Split('-').Last();
                     var hash = Math.Abs(userId.GetHashCode());
-
                     var deptIndex = hash % 4;
                     OwnerDepartment = deptIndex switch
                     {
@@ -1924,7 +1706,6 @@ namespace MandADiscoverySuite.ViewModels
                         2 => "HR Department",
                         _ => "Operations Department"
                     };
-
                     var locIndex = hash % 3;
                     OwnerLocation = locIndex switch
                     {
@@ -1932,7 +1713,6 @@ namespace MandADiscoverySuite.ViewModels
                         1 => "Branch Office A",
                         _ => "Branch Office B"
                     };
-
                     OwnerManager = hash % 2 == 0 ? "John Smith" : "Jane Doe";
                     OwnerEmployeeId = $"EMP{hash % 10000:D4}";
                 }
@@ -1949,7 +1729,6 @@ namespace MandADiscoverySuite.ViewModels
             {
                 StructuredLogger?.LogWarning(LogSourceName, new { action = "owner_info_error", sid = userSid, error = ex.Message },
                     "Failed to update owner information");
-
                 // Set fallback values
                 OwnerDepartment = "Unknown";
                 OwnerLocation = "Unknown";
@@ -1957,7 +1736,6 @@ namespace MandADiscoverySuite.ViewModels
                 OwnerEmployeeId = "Unknown";
             }
         }
-
         /// <summary>
         /// Load user groups for the primary user
         /// </summary>
@@ -1965,14 +1743,11 @@ namespace MandADiscoverySuite.ViewModels
         {
             if (string.IsNullOrEmpty(userSid))
                 return;
-
             try
             {
                 // In a real implementation, this would query Active Directory for user groups
                 // For now, simulate loading groups
-
                 await Task.Delay(200); // Simulate async operation
-
                 // Mock groups based on user SID
                 var groups = new List<GroupDto>();
                 if (userSid.StartsWith("S-1-5-21-"))
@@ -1986,7 +1761,6 @@ namespace MandADiscoverySuite.ViewModels
                         DiscoveryModule: "AssetDetailViewModel",
                         SessionId: Guid.NewGuid().ToString()
                     ));
-
                     // Add department-specific group
                     var hash = Math.Abs(userSid.GetHashCode());
                     var deptIndex = hash % 4;
@@ -1997,7 +1771,6 @@ namespace MandADiscoverySuite.ViewModels
                         2 => "HR Staff",
                         _ => "Operations Team"
                     };
-
                     groups.Add(new GroupDto(
                         Sid: $"S-1-5-21-1234567890-1234567890-1234567890-{1000 + hash % 1000}",
                         Name: deptGroup,
@@ -2008,12 +1781,10 @@ namespace MandADiscoverySuite.ViewModels
                         SessionId: Guid.NewGuid().ToString()
                     ));
                 }
-
                 foreach (var group in Groups)
                 {
                     Groups.Add(group);
                 }
-
                 StructuredLogger?.LogInfo(LogSourceName, new {
                     action = "user_groups_loaded",
                     device_name = device.Name,
@@ -2031,7 +1802,6 @@ namespace MandADiscoverySuite.ViewModels
                 }, "Failed to load user groups");
             }
         }
-
         /// <summary>
         /// Load SQL databases for the device
         /// </summary>
@@ -2041,11 +1811,8 @@ namespace MandADiscoverySuite.ViewModels
             {
                 // In a real implementation, this would query SQL Server instances on the device
                 // For now, simulate loading databases
-
                 await Task.Delay(300); // Simulate async operation
-
                 var databases = new List<SqlDbDto>();
-
                 // Mock databases based on device type
                 if (device.Name?.Contains("SQL") == true || device.Name?.Contains("DB") == true)
                 {
@@ -2059,7 +1826,6 @@ namespace MandADiscoverySuite.ViewModels
                         DiscoveryModule: "AssetDetailViewModel",
                         SessionId: Guid.NewGuid().ToString()
                     ));
-
                     databases.Add(new SqlDbDto(
                         Server: device.Name ?? "Unknown",
                         Instance: "MSSQLSERVER",
@@ -2085,12 +1851,24 @@ namespace MandADiscoverySuite.ViewModels
                         SessionId: Guid.NewGuid().ToString()
                     ));
                 }
-
+                else
+                {
+                    // Generic server - might have SQL
+                    databases.Add(new SqlDbDto(
+                        Server: device.Name ?? "Unknown",
+                        Instance: "SQLEXPRESS",
+                        Database: "tempdb",
+                        Owners: new List<string> { "NT AUTHORITY\\SYSTEM" },
+                        AppHints: new List<string> { "Temporary Database" },
+                        DiscoveryTimestamp: DateTime.Now,
+                        DiscoveryModule: "AssetDetailViewModel",
+                        SessionId: Guid.NewGuid().ToString()
+                    ));
+                }
                 foreach (var db in SqlDatabases)
                 {
                     SqlDatabases.Add(db);
                 }
-
                 StructuredLogger?.LogInfo(LogSourceName, new {
                     action = "device_databases_loaded",
                     device_name = device.Name,
@@ -2106,7 +1884,6 @@ namespace MandADiscoverySuite.ViewModels
                 }, "Failed to load device databases");
             }
         }
-
         /// <summary>
         /// Get backup status from backup monitoring system
         /// </summary>
@@ -2116,9 +1893,7 @@ namespace MandADiscoverySuite.ViewModels
             {
                 // In a real implementation, this would query backup monitoring services
                 // For now, simulate backup status check
-
                 await Task.Delay(150); // Simulate async operation
-
                 // Mock backup status based on device properties
                 if (device.Name?.Contains("CRITICAL") == true || device.Name?.Contains("PROD") == true)
                 {
@@ -2148,22 +1923,17 @@ namespace MandADiscoverySuite.ViewModels
                     device_name = device.Name,
                     error = ex.Message
                 }, "Failed to get backup status");
-
                 return "Check Required";
             }
         }
-
         #endregion
     }
-
     #region Messages
-
     /// <summary>
     /// Message to request closing asset detail view
     /// </summary>
     public class CloseAssetDetailMessage
     {
     }
-
     #endregion
 }

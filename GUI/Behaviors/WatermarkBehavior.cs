@@ -44,8 +44,8 @@ namespace MandADiscoverySuite.Behaviors
         {
             var textBox = (TextBox)sender;
             var watermark = GetWatermark(textBox);
-            
-            if (textBox.Text == watermark)
+
+            if (textBox.Text! == watermark)
             {
                 textBox.Text = string.Empty;
                 textBox.Foreground = (Brush)Application.Current.Resources["PrimaryTextBrush"] ?? Brushes.White;
@@ -67,13 +67,13 @@ namespace MandADiscoverySuite.Behaviors
         private static void UpdateWatermark(TextBox textBox)
         {
             var watermark = GetWatermark(textBox);
-            
-            if (string.IsNullOrEmpty(textBox.Text) && !textBox.IsFocused)
+
+            if (string.IsNullOrEmpty(textBox.Text!) && !textBox.IsFocused)
             {
-                textBox.Text = watermark;
+                textBox.Text = watermark!;
                 textBox.Foreground = new SolidColorBrush(Color.FromRgb(160, 174, 192)); // #FFA0AEC0
             }
-            else if (textBox.Text != watermark)
+            else if (textBox.Text! != watermark)
             {
                 textBox.Foreground = (Brush)Application.Current.Resources["PrimaryTextBrush"] ?? Brushes.White;
             }
