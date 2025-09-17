@@ -1255,6 +1255,7 @@
                             </StackPanel>
                         </StackPanel>
                     </Button>
+
                     
                     <Button x:Name="HelpButton" Style="{StaticResource RoundedButtonStyle}" Click="HelpButton_Click"
                             ToolTip="Show keyboard shortcuts and help information">

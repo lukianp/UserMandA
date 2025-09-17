@@ -16,7 +16,8 @@ namespace MandADiscoverySuite
     public partial class MainWindow : Window
     {
         public MainViewModel ViewModel { get; private set; }
-        private KeyboardShortcutManager _shortcutManager;
+        private KeyboardShortcutManager? _shortcutManager;
+
 
         public MainWindow()
         {
@@ -24,7 +25,27 @@ namespace MandADiscoverySuite
             try
             {
                 logAction?.Invoke("=== MainWindow Constructor BEGIN ===");
-                
+
+                // Initialize keyboard shortcut manager (optional - may be disabled in unified pipeline)
+                try
+                {
+                    var shortcutService = SimpleServiceLocator.Instance.GetService<IKeyboardShortcutService>();
+                    if (shortcutService != null)
+                    {
+                        _shortcutManager = new KeyboardShortcutManager(shortcutService);
+                        logAction?.Invoke("Keyboard shortcut manager initialized successfully");
+                    }
+                    else
+                    {
+                        logAction?.Invoke("Keyboard shortcut service not available (disabled in unified pipeline)");
+                    }
+                }
+                catch (Exception shortcutEx)
+                {
+                    // Keyboard shortcuts are optional - continue without them
+                    logAction?.Invoke($"Keyboard shortcut service not available: {shortcutEx.Message}");
+                }
+
                 logAction?.Invoke("Calling InitializeComponent...");
                 InitializeComponent();
                 logAction?.Invoke("InitializeComponent completed successfully");
@@ -242,9 +263,12 @@ namespace MandADiscoverySuite
 
                 // Initialize keyboard shortcuts for this window
                 InitializeWindowShortcuts();
+                logAction?.Invoke("=== MainWindow_Loaded COMPLETED SUCCESSFULLY ===");
             }
             catch (Exception ex)
             {
+                logAction?.Invoke($"Error setting up lazy loading: {ex.Message}");
+                logAction?.Invoke($"Stack trace: {ex.StackTrace}");
                 System.Diagnostics.Debug.WriteLine($"Error setting up lazy loading: {ex.Message}");
             }
             finally

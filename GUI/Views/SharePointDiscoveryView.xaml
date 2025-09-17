@@ -249,7 +249,7 @@
            <StackPanel HorizontalAlignment="Center">
                <TextBlock Text="SharePoint Discovery Module - Ready" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF4A5568"/>
                <TextBlock Text="{Binding StatusText}" FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,0" Foreground="#FF718096"/>
-               <TextBlock Text="{Binding LastUpdated, StringFormat='{}{0:g}'}" FontSize="10" HorizontalAlignment="Center" Margin="0,4,0,0" Foreground="#FFA0AEC0"/>
+               <TextBlock Text="{Binding LastUpdated, StringFormat='{}{0:g}'}" FontSize="10" HorizontalAlignment="Center" Margin="0,4,0,0" Foreground="#A0AEC0"/>
            </StackPanel>
        </Border>
    </Grid>

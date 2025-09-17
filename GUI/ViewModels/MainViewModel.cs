@@ -586,8 +586,13 @@ namespace MandADiscoverySuite.ViewModels
             _tabsService = new TabsService(tabsLogger);
             CurrentTabsService = _tabsService; // Set static reference for other ViewModels
             
-            // Subscribe to tabs collection changes to notify HasTabs property
-            _tabsService.Tabs.CollectionChanged += (s, e) => OnPropertyChanged(nameof(HasTabs));
+            // Subscribe to tabs collection changes to notify HasTabs and OpenTabs properties
+            _tabsService.Tabs.CollectionChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(HasTabs));
+                OnPropertyChanged(nameof(OpenTabs));
+                Console.WriteLine($"[DEBUG] Tabs collection changed, count: {_tabsService.Tabs.Count}");
+            };
             
             var navLogger = loggerFactory.CreateLogger<NavigationService>();
             _navigationService = new NavigationService(_tabsService, navLogger);
@@ -610,8 +615,14 @@ namespace MandADiscoverySuite.ViewModels
             _targetCompanyProfiles = new ObservableCollection<CompanyProfile>();
             _targetProfiles = new ObservableCollection<TargetProfile>();
             
-            // Initialize commands
-            OpenTabCommand = new RelayCommand<string>(async (param) => await OpenTabAsync(param));
+            // Initialize commands - Use AsyncRelayCommand for async operations
+            Console.WriteLine("[DEBUG] Creating OpenTabCommand with AsyncRelayCommand");
+            OpenTabCommand = new AsyncRelayCommand<string>(async (param) =>
+            {
+                Console.WriteLine($"[DEBUG] OpenTabCommand lambda called with param: {param}");
+                await OpenTabAsync(param);
+            });
+            Console.WriteLine("[DEBUG] OpenTabCommand created successfully");
             NewTabCommand = new RelayCommand<object>(async _ => await OpenTabAsync("Dashboard", "Dashboard"));
             CloseTabCommand = new RelayCommand<object>(async (param) => await CloseTabAsync(param));
             ShowAllTabsCommand = new RelayCommand<object>(_ => ShowAllTabs());
@@ -780,16 +791,35 @@ namespace MandADiscoverySuite.ViewModels
             }, TaskScheduler.Default);
             
             // Open default dashboard tab
-            _ = Task.Run(async () => 
+            _ = Task.Run(async () =>
             {
                 await Task.Delay(1000); // Give services time to initialize
                 try
                 {
-                    await OpenTabAsync("Dashboard", "📊 Overview");
+                    _logger?.LogInformation("[MainViewModel] Opening default Dashboard tab");
+                    System.Diagnostics.Debug.WriteLine("[MainViewModel] Opening default Dashboard tab");
+
+                    // Try to open Dashboard tab with multiple fallbacks
+                    await OpenTabAsync("dashboard");
+
+                    // If no tabs are open after 2 seconds, force create a dashboard
+                    await Task.Delay(2000);
+                    if (_tabsService.Tabs.Count == 0)
+                    {
+                        _logger?.LogWarning("[MainViewModel] No tabs created, forcing Dashboard tab creation");
+                        System.Diagnostics.Debug.WriteLine("[MainViewModel] Forcing Dashboard tab creation");
+
+                        // Force direct tab creation on UI thread
+                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
+                        {
+                            await _tabsService.OpenTabAsync("dashboard", "📊 Dashboard");
+                        });
+                    }
                 }
                 catch (Exception ex)
                 {
                     _logger?.LogError(ex, "[MainViewModel] Failed to open default Dashboard tab");
+                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] Failed to open default Dashboard tab: {ex.Message}");
                 }
             });
             }
@@ -1522,40 +1552,82 @@ namespace MandADiscoverySuite.ViewModels
 
             try
             {
-                _logger?.LogInformation($"[MainViewModel] OpenTabAsync called with key: {tabKey}");
-                System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenTabAsync called with key: {tabKey}");
+                // SUPER VISIBLE DEBUG OUTPUT - MULTIPLE CHANNELS
+                var debugMsg = $"[NAVIGATION DEBUG] OpenTabAsync called with key: {tabKey}";
+                _logger?.LogInformation(debugMsg);
+                System.Diagnostics.Debug.WriteLine(debugMsg);
+                Console.WriteLine(debugMsg);
+
+                // Debug output without blocking UI
+                System.Diagnostics.Debug.WriteLine($"Navigation Debug: Attempting to open tab '{tabKey}'");
+
+                // CRITICAL DEBUG: Add console output to verify command execution
+                Console.WriteLine($"[DEBUG] OpenTabAsync CALLED with key: {tabKey}");
+
+                // ENHANCED: Force UI thread execution to ensure tab creation works properly
+                if (!System.Windows.Application.Current.Dispatcher.CheckAccess())
+                {
+                    Console.WriteLine($"[DEBUG] Not on UI thread, invoking on dispatcher for key: {tabKey}");
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
+                    {
+                        await OpenTabAsync(tabKey);
+                    });
+                    return;
+                }
+
+                Console.WriteLine($"[DEBUG] On UI thread, proceeding with navigation for key: {tabKey}");
 
                 // Check if this is a module discovery request; if so, use specialized handling
+                Console.WriteLine($"[DEBUG] Checking if '{tabKey}' is a discovery module...");
                 if (await IsDiscoveryModuleAsync(tabKey))
                 {
+                    Console.WriteLine($"[DEBUG] '{tabKey}' identified as discovery module, using OpenModuleTabAsync");
                     _logger?.LogInformation($"[MainViewModel] Detected module discovery request for: {tabKey}");
                     await OpenModuleTabAsync(tabKey);
                     return;
                 }
 
-                // Use NavigationService to handle async navigation safely for non-module tabs
+                Console.WriteLine($"[DEBUG] '{tabKey}' is not a discovery module, using NavigationService");
+
+                // ENHANCED: Add direct fallback if NavigationService fails
+                Console.WriteLine($"[DEBUG] Calling NavigationService.NavigateToTabAsync for key: {tabKey}");
                 var success = await _navigationService.NavigateToTabAsync(tabKey, GetTabTitle(tabKey));
+                Console.WriteLine($"[DEBUG] NavigationService result for '{tabKey}': {success}");
 
                 if (!success)
                 {
-                    _logger?.LogWarning($"Failed to open tab: {tabKey}");
+                    _logger?.LogWarning($"NavigationService failed for tab: {tabKey}, trying direct TabsService approach");
+
+                    // FALLBACK: Try direct TabsService call if NavigationService fails
+                    try
+                    {
+                        success = await _tabsService.OpenTabAsync(tabKey, GetTabTitle(tabKey));
+                        if (success)
+                        {
+                            _logger?.LogInformation($"Direct TabsService succeeded for tab: {tabKey}");
+                        }
+                    }
+                    catch (Exception fallbackEx)
+                    {
+                        _logger?.LogError(fallbackEx, $"Direct TabsService also failed for tab: {tabKey}");
+                    }
+                }
+
+                if (!success)
+                {
+                    _logger?.LogWarning($"All attempts failed to open tab: {tabKey}");
 
                     // Show user-friendly error on UI thread
-                    if (System.Windows.Application.Current?.Dispatcher != null)
-                    {
-                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-                        {
-                            System.Windows.MessageBox.Show(
-                                $"Unable to open {GetTabTitle(tabKey)} view. Please check the logs for details.",
-                                "Navigation Error",
-                                System.Windows.MessageBoxButton.OK,
-                                System.Windows.MessageBoxImage.Warning);
-                        });
-                    }
+                    System.Windows.MessageBox.Show(
+                        $"Unable to open {GetTabTitle(tabKey)} view. The navigation system may need to be refreshed.",
+                        "Navigation Error",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Warning);
                 }
                 else
                 {
                     _logger?.LogInformation($"Successfully opened tab: {tabKey}");
+                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] Successfully opened tab: {tabKey}");
                 }
             }
             catch (Exception ex)
@@ -1563,17 +1635,11 @@ namespace MandADiscoverySuite.ViewModels
                 _logger?.LogError(ex, $"Error opening tab: {tabKey}");
 
                 // Show error to user on UI thread
-                if (System.Windows.Application.Current?.Dispatcher != null)
-                {
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        System.Windows.MessageBox.Show(
-                            $"Error navigating to {GetTabTitle(tabKey)}: {ex.Message}",
-                            "Navigation Error",
-                            System.Windows.MessageBoxButton.OK,
-                            System.Windows.MessageBoxImage.Error);
-                    });
-                }
+                System.Windows.MessageBox.Show(
+                    $"Error navigating to {GetTabTitle(tabKey)}: {ex.Message}",
+                    "Navigation Error",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
             }
         }
 
@@ -3547,9 +3613,21 @@ namespace MandADiscoverySuite.ViewModels
         {
             try
             {
-                _logger?.LogInformation("[MainViewModel] Refreshing current view");
+                _logger?.LogInformation("[MainViewModel] Refreshing current view and navigation system");
+
+                // Ensure at least one tab is open
+                if (_tabsService.Tabs.Count == 0)
+                {
+                    _logger?.LogInformation("[MainViewModel] No tabs open, creating Dashboard tab");
+                    await OpenTabAsync("dashboard");
+                }
+
                 await ReloadDataAsync();
                 UpdateAllViews();
+
+                // Force property change notification to ensure UI updates
+                OnPropertyChanged(nameof(OpenTabs));
+                OnPropertyChanged(nameof(HasTabs));
             }
             catch (Exception ex)
             {

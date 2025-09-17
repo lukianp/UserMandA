@@ -85,8 +85,8 @@
         </StackPanel>
 
         <!-- Header Warnings Banner -->
-        <ItemsControl Grid.Row="1" ItemsSource="{Binding HeaderWarnings}" 
-                      Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibilityConverter}}">
+        <ItemsControl Grid.Row="1" ItemsSource="{Binding HeaderWarnings}"
+                      Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibility}}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Border Background="#55FF0000" Padding="10" Margin="0,0,0,5" CornerRadius="4">
@@ -98,7 +98,7 @@
 
         <!-- Error Banner -->
         <Border Grid.Row="2" Background="#55FF6B6B" Padding="10" Margin="0,0,0,10" CornerRadius="4"
-                Visibility="{Binding LastError, Converter={StaticResource NullToVisibilityConverter}}">
+                Visibility="{Binding LastError, Converter={StaticResource NullToVisibility}}">
             <TextBlock Text="{Binding LastError}" Foreground="White" FontWeight="Medium"/>
         </Border>
         
@@ -198,10 +198,10 @@
                                                             BorderBrush="{TemplateBinding BorderBrush}" 
                                                             BorderThickness="1" CornerRadius="4">
                                                         <Grid>
-                                                            <TextBlock Text="🔍 Search..." 
-                                                                       Foreground="{DynamicResource MutedForegroundBrush}" 
+                                                            <TextBlock Text="🔍 Search..."
+                                                                       Foreground="{DynamicResource MutedForegroundBrush}"
                                                                        Margin="8,0" VerticalAlignment="Center"
-                                                                       Visibility="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=Inverted}"/>
+                                                                       Visibility="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource EmptyStringToVisibility}, ConverterParameter=Inverted}"/>
                                                             <ScrollViewer x:Name="PART_ContentHost" Margin="8,0" VerticalAlignment="Center"/>
                                                         </Grid>
                                                     </Border>

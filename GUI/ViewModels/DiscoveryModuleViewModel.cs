@@ -131,7 +131,11 @@ namespace MandADiscoverySuite.ViewModels
                 }
 
                 var currentProfile = _mainViewModel?.CurrentProfileName ?? "ljpops";
-                
+
+                // Check if this module requires administrator privileges
+                bool requiresAdmin = ModuleId.Contains("ActiveDirectory") || ModuleId.Contains("Infrastructure") ||
+                                     ModuleId == "ActiveDirectoryDiscovery" || ModuleId == "MultiDomainForestDiscovery";
+
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = "powershell.exe",
@@ -140,6 +144,13 @@ namespace MandADiscoverySuite.ViewModels
                     UseShellExecute = true,
                     CreateNoWindow = false
                 };
+
+                // Request administrator privileges for modules that need them
+                if (requiresAdmin)
+                {
+                    startInfo.Verb = "runas";
+                    _ = _logger.LogInformationAsync($"Requesting administrator privileges for module: {ModuleId}");
+                }
 
                 _ = _logger.LogInformationAsync($"Executing: {startInfo.FileName} {startInfo.Arguments}");
 

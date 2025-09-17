@@ -41,85 +41,91 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<bool> OpenTabAsync(string key, string? title = null)
         {
-            return await Task.Run(() =>
+            // Ensure we're on the UI thread since we're manipulating UI elements
+            if (!System.Windows.Application.Current.Dispatcher.CheckAccess())
+            {
+                return await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    return OpenTabAsync(key, title);
+                }).Task.Unwrap();
+            }
+
+            try
             {
                 if (string.IsNullOrWhiteSpace(key))
                     return false;
 
-                try
+                // Check if tab already exists
+                var existingTab = _tabs.FirstOrDefault(t =>
+                    t.Tag?.ToString()?.Equals(key, StringComparison.OrdinalIgnoreCase) == true);
+
+                if (existingTab != null)
                 {
-                    // Check if tab already exists
-                    var existingTab = _tabs.FirstOrDefault(t =>
-                        t.Tag?.ToString()?.Equals(key, StringComparison.OrdinalIgnoreCase) == true);
-
-                    if (existingTab != null)
-                    {
-                        // Activate existing tab
-                        if (_tabControl != null)
-                        {
-                            _tabControl.SelectedItem = existingTab;
-                        }
-
-                        _logger?.LogInformation($"[TabsService] Activated existing tab: {key}");
-                        LogClickToFile("Tab", key, "Reactivated");
-                        return true;
-                    }
-
-                    // Create new view
-                    var view = _viewRegistry.CreateView(key);
-                    if (view == null)
-                    {
-                        _logger?.LogWarning($"[TabsService] Failed to create view for key: {key}");
-                        return false;
-                    }
-
-                    // Initialize view if it has a ViewModel with LoadAsync - MUST happen before adding tab
-                    if (view.DataContext is BaseViewModel viewModel)
-                    {
-                        // Start loading asynchronously but marshal back to UI thread for safety
-                        // This prevents cross-thread issues during data binding
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                await viewModel.LoadAsync();
-                                _logger?.LogInformation($"[TabsService] Loaded data for view: {key}");
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger?.LogError(ex, $"[TabsService] Failed to load data for view: {key}");
-                            }
-                        });
-                    }
-
-                    // Create tab
-                    var tab = new TabItem
-                    {
-                        Header = title ?? key,
-                        Content = view,
-                        Tag = key
-                    };
-
-                    // Add to collection
-                    _tabs.Add(tab);
-
-                    // Select the new tab
+                    // Activate existing tab
                     if (_tabControl != null)
                     {
-                        _tabControl.SelectedItem = tab;
+                        _tabControl.SelectedItem = existingTab;
                     }
 
-                    _logger?.LogInformation($"[TabsService] Opened new tab: {key} with title: {title ?? key}");
-                    LogClickToFile("Tab", key, "Opened");
-
+                    _logger?.LogInformation($"[TabsService] Activated existing tab: {key}");
+                    LogClickToFile("Tab", key, "Reactivated");
                     return true;
                 }
-                catch (Exception ex)
+
+                // Create new view
+                var view = _viewRegistry.CreateView(key);
+                if (view == null)
                 {
-                    _logger?.LogError(ex, $"[TabsService] Error opening tab for key: {key}");
+                    _logger?.LogWarning($"[TabsService] Failed to create view for key: {key}");
                     return false;
                 }
-            });
+
+                // Initialize view if it has a ViewModel with LoadAsync - MUST happen before adding tab
+                if (view.DataContext is BaseViewModel viewModel)
+                {
+                    // Start loading asynchronously but marshal back to UI thread for safety
+                    // This prevents cross-thread issues during data binding
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await viewModel.LoadAsync();
+                            _logger?.LogInformation($"[TabsService] Loaded data for view: {key}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger?.LogError(ex, $"[TabsService] Failed to load data for view: {key}");
+                        }
+                    });
+                }
+
+                // Create tab
+                var tab = new TabItem
+                {
+                    Header = title ?? key,
+                    Content = view,
+                    Tag = key
+                };
+
+                // Add to collection
+                _tabs.Add(tab);
+
+                // Select the new tab
+                if (_tabControl != null)
+                {
+                    _tabControl.SelectedItem = tab;
+                }
+
+                _logger?.LogInformation($"[TabsService] Opened new tab: {key} with title: {title ?? key}");
+                LogClickToFile("Tab", key, "Opened");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"[TabsService] Error opening tab for key: {key}");
+                return false;
+            }
         }
 
         /// <summary>
