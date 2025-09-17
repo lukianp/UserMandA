@@ -13,7 +13,12 @@
             <ResourceDictionary.MergedDictionaries>
                 <!-- Core converters resource dictionary -->
                 <ResourceDictionary Source="Resources/Converters.xaml"/>
-                
+
+                <!-- NEW: Extracted modular resources -->
+                <ResourceDictionary Source="Resources/Converters/Converters.xaml"/>
+                <ResourceDictionary Source="Resources/Templates/DataTemplates.xaml"/>
+                <ResourceDictionary Source="Resources/Styles/MainStyles.xaml"/>
+
                 <!-- Theme and styling dictionaries -->
                 <ResourceDictionary Source="Themes/OptimizedResources.xaml"/>
                 <ResourceDictionary Source="Themes/OptimizedAnimations.xaml"/>
@@ -34,12 +39,9 @@
                 <ResourceDictionary Source="Resources/DiscoveryViewStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
-            <!-- Standard Converters -->
-            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <!-- Standard Converters (Note: Basic converters moved to Resources/Converters/Converters.xaml) -->
             <converters:InvertedBoolToVisibilityConverter x:Key="InvertedBoolToVisibilityConverter"/>
             <converters:ViewModelTypeComparisonConverter x:Key="ViewModelTypeComparisonConverter"/>
-            <converters:RiskLevelToBrushConverter x:Key="RiskLevelToBrushConverter"/>
-            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
             <converters:TaskCountToHeightConverter x:Key="TaskCountToHeightConverter"/>
             <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
             <converters:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
@@ -61,66 +63,7 @@
             <SolidColorBrush x:Key="DarkForegroundBrush" Color="#CCCCCC"/>
             
             
-            <!-- Modern Button Style -->
-            <Style x:Key="ModernButtonStyle" TargetType="Button">
-                <Setter Property="Background" Value="{DynamicResource PrimaryGradient}"/>
-                <Setter Property="Foreground" Value="White"/>
-                <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="Padding" Value="20,12"/>
-                <Setter Property="FontSize" Value="14"/>
-                <Setter Property="FontWeight" Value="Medium"/>
-                <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
-                <Setter Property="RenderTransform">
-                    <Setter.Value>
-                        <ScaleTransform ScaleX="1" ScaleY="1"/>
-                    </Setter.Value>
-                </Setter>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="ButtonBorder" 
-                                    Background="{TemplateBinding Background}" 
-                                    CornerRadius="8"
-                                    Padding="{TemplateBinding Padding}">
-                                <Border.Effect>
-                                    <DropShadowEffect ShadowDepth="2" Direction="270" BlurRadius="5" Opacity="0.3" Color="Black"/>
-                                </Border.Effect>
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource AccentGradient}"/>
-                                    <Trigger.EnterActions>
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="1.05" Duration="0:0:0.15"/>
-                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="1.05" Duration="0:0:0.15"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </Trigger.EnterActions>
-                                    <Trigger.ExitActions>
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.15"/>
-                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.15"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </Trigger.ExitActions>
-                                </Trigger>
-                                <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="ButtonBorder" Property="Background" Value="#4A5568"/>
-                                    <Setter Property="RenderTransform">
-                                        <Setter.Value>
-                                            <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
+            <!-- Note: Modern Button Style moved to Resources/Styles/MainStyles.xaml -->
             
             <!-- Animation performance settings -->
             <Duration x:Key="FastAnimationDuration">0:0:0.15</Duration>

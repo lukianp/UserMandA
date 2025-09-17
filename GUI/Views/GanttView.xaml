@@ -4,38 +4,162 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Background="{DynamicResource BackgroundBrush}">
+
+    <UserControl.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}"/>
+        <Style TargetType="TextBlock" BasedOn="{StaticResource ModernTextBlockStyle}"/>
+        <Style TargetType="ComboBox" BasedOn="{StaticResource ModernComboBoxStyle}"/>
+        <Style TargetType="CheckBox" BasedOn="{StaticResource ModernCheckBoxStyle}"/>
+    </UserControl.Resources>
+
     <Grid>
-        <Border Background="{DynamicResource BackgroundBrush}"
-                BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="20">
-            <StackPanel>
-                <TextBlock Text="Gantt Chart View"
-                           FontSize="24"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource PrimaryTextBrush}"
-                           Margin="0,0,0,20"/>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-                <TextBlock Text="Migration timeline and project planning will be displayed here."
-                           FontSize="14"
-                           Foreground="{DynamicResource SecondaryTextBrush}"
-                           TextWrapping="Wrap"/>
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16">
+            <TextBlock Text="Project Gantt Chart"
+                       FontSize="24" FontWeight="Bold"
+                       Foreground="{DynamicResource PrimaryTextBrush}"/>
+        </Border>
 
-                <!-- Placeholder for Gantt chart implementation -->
-                <Grid Height="300" Margin="0,20,0,0">
-                    <Border Background="{DynamicResource SurfaceBrush}"
-                            BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="4">
-                        <TextBlock Text="Gantt Chart Implementation Pending"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
-                    </Border>
-                </Grid>
-            </StackPanel>
+        <!-- Toolbar -->
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Time Scale Selection -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Time Scale:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox ItemsSource="{Binding TimeScaleOptions}"
+                              SelectedItem="{Binding SelectedTimeScale}" Width="120"/>
+                </StackPanel>
+
+                <!-- View Options -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0,0,0">
+                    <CheckBox Content="Critical Path" IsChecked="{Binding ShowCriticalPath}" Margin="0,0,16,0"/>
+                    <CheckBox Content="Dependencies" IsChecked="{Binding ShowDependencies}" Margin="0,0,16,0"/>
+                    <CheckBox Content="Milestones" IsChecked="{Binding ShowMilestones}" Margin="0,0,16,0"/>
+                    <CheckBox Content="Today Line" IsChecked="{Binding ShowTodayLine}"/>
+                </StackPanel>
+
+                <!-- Zoom Controls -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Command="{Binding ZoomOutCommand}" Content="−" Width="32" Height="24" Margin="0,0,4,0"/>
+                    <TextBlock Text="{Binding ZoomLevel, StringFormat='{}{0:P0}'}" VerticalAlignment="Center"
+                               MinWidth="40" TextAlignment="Center"/>
+                    <Button Command="{Binding ZoomInCommand}" Content="+" Width="32" Height="24" Margin="4,0,8,0"/>
+                    <Button Command="{Binding GoToTodayCommand}" Content="Today" Margin="8,0,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="4"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Task List Panel -->
+            <Border Grid.Column="0" Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+                <ScrollViewer x:Name="TaskListScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding FlattenedTasks}" Margin="8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="Transparent" Height="32" BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="0,0,0,1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Task Info -->
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="8,0">
+                                            <TextBlock Text="{Binding Name}" FontWeight="Medium"
+                                                       Foreground="{Binding IsCriticalPath, Converter={StaticResource BoolToColorConverter}, ConverterParameter='#6B7280|#DC2626'}"/>
+                                            <TextBlock Text="{Binding Status}" FontSize="12"
+                                                       Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                        </StackPanel>
+
+                                        <!-- Progress -->
+                                        <TextBlock Grid.Column="1" Text="{Binding Progress, StringFormat='{}{0:P0}'}" VerticalAlignment="Center" Margin="8,0"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Splitter -->
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          Background="{DynamicResource BorderBrush}"/>
+
+            <!-- Timeline Panel -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Timeline Header -->
+                <ScrollViewer Grid.Row="0" x:Name="HeaderScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Hidden"
+                              Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                    <StackPanel x:Name="TimelineHeader" Orientation="Horizontal" Margin="8">
+                        <!-- Date headers will be populated dynamically -->
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Timeline Canvas -->
+                <ScrollViewer Grid.Row="1" x:Name="TimelineScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                    <Canvas x:Name="TimelineCanvas" Width="2000" Height="400" Background="Transparent">
+                        <!-- Task bars and timeline elements will be drawn here -->
+                    </Canvas>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="Ready" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,16,0"/>
+                    <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,16,0">
+                        <Run Text="Tasks:"/>
+                        <Run Text="{Binding FlattenedTasks.Count}" FontWeight="Medium"/>
+                    </TextBlock>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="{Binding TimelineStart, StringFormat='Start: {0:MMM dd}'}"
+                               Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,16,0"/>
+                    <TextBlock Text="{Binding TimelineEnd, StringFormat='End: {0:MMM dd}'}"
+                               Foreground="{DynamicResource SecondaryTextBrush}"/>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>

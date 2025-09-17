@@ -22,11 +22,7 @@ namespace MandADiscoverySuite.Views
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            var fontSizeSlider = this.FindName("FontSizeSlider") as Slider;
-            if (fontSizeSlider != null)
-            {
-                fontSizeSlider.ValueChanged += FontSizeSlider_ValueChanged;
-            }
+            FontSizeSlider.ValueChanged += FontSizeSlider_ValueChanged;
         }
 
         public ThemeType SelectedTheme { get; private set; } = ThemeType.Dark;
@@ -46,31 +42,23 @@ namespace MandADiscoverySuite.Views
                 switch (currentTheme?.ToLower())
                 {
                     case "light":
-                        var lightThemeRadio = this.FindName("LightThemeRadio") as RadioButton;
-                        if (lightThemeRadio != null) lightThemeRadio.IsChecked = true;
+                        LightThemeRadio.IsChecked = true;
                         SelectedTheme = ThemeType.Light;
                         break;
                     case "highcontrast":
-                        var highContrastThemeRadio = this.FindName("HighContrastThemeRadio") as RadioButton;
-                        if (highContrastThemeRadio != null) highContrastThemeRadio.IsChecked = true;
+                        HighContrastThemeRadio.IsChecked = true;
                         SelectedTheme = ThemeType.HighContrast;
                         break;
                     default:
-                        var darkThemeRadio = this.FindName("DarkThemeRadio") as RadioButton;
-                        if (darkThemeRadio != null) darkThemeRadio.IsChecked = true;
+                        DarkThemeRadio.IsChecked = true;
                         SelectedTheme = ThemeType.Dark;
                         break;
                 }
 
                 // Load other settings
-                var useSystemThemeCheckBox = this.FindName("UseSystemThemeCheckBox") as CheckBox;
-                if (useSystemThemeCheckBox != null) useSystemThemeCheckBox.IsChecked = configService.Settings.UseSystemTheme;
-
-                var reducedMotionCheckBox = this.FindName("ReducedMotionCheckBox") as CheckBox;
-                if (reducedMotionCheckBox != null) reducedMotionCheckBox.IsChecked = configService.Settings.ReduceMotion;
-
-                var fontSizeSlider = this.FindName("FontSizeSlider") as Slider;
-                if (fontSizeSlider != null) fontSizeSlider.Value = configService.Settings.FontSize;
+                UseSystemThemeCheckBox.IsChecked = configService.Settings.UseSystemTheme;
+                ReducedMotionCheckBox.IsChecked = configService.Settings.ReduceMotion;
+                FontSizeSlider.Value = configService.Settings.FontSize;
 
                 UpdateFontSizeLabel();
             }
@@ -78,8 +66,7 @@ namespace MandADiscoverySuite.Views
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading theme settings: {ex.Message}");
                 // Use defaults if loading fails
-                var darkThemeRadio = this.FindName("DarkThemeRadio") as RadioButton;
-                if (darkThemeRadio != null) darkThemeRadio.IsChecked = true;
+                DarkThemeRadio.IsChecked = true;
                 SelectedTheme = ThemeType.Dark;
             }
         }
@@ -91,13 +78,8 @@ namespace MandADiscoverySuite.Views
 
         private void UpdateFontSizeLabel()
         {
-            var fontSizeLabel = this.FindName("FontSizeLabel") as TextBlock;
-            var fontSizeSlider = this.FindName("FontSizeSlider") as Slider;
-            if (fontSizeLabel != null && fontSizeSlider != null)
-            {
-                var percentage = (int)(fontSizeSlider.Value * 100);
-                fontSizeLabel.Text = $"{percentage}%";
-            }
+            var percentage = (int)(FontSizeSlider.Value * 100);
+            FontSizeLabel.Text = $"{percentage}%";
         }
 
         private void ApplyButton_Click(object sender, RoutedEventArgs e)
@@ -105,14 +87,11 @@ namespace MandADiscoverySuite.Views
             try
             {
                 // Determine selected theme
-                var lightThemeRadio = this.FindName("LightThemeRadio") as RadioButton;
-                var highContrastThemeRadio = this.FindName("HighContrastThemeRadio") as RadioButton;
-
-                if (lightThemeRadio?.IsChecked == true)
+                if (LightThemeRadio?.IsChecked == true)
                 {
                     SelectedTheme = ThemeType.Light;
                 }
-                else if (highContrastThemeRadio?.IsChecked == true)
+                else if (HighContrastThemeRadio?.IsChecked == true)
                 {
                     SelectedTheme = ThemeType.HighContrast;
                 }
@@ -122,13 +101,9 @@ namespace MandADiscoverySuite.Views
                 }
 
                 // Get additional settings
-                var useSystemThemeCheckBox = this.FindName("UseSystemThemeCheckBox") as CheckBox;
-                var reducedMotionCheckBox = this.FindName("ReducedMotionCheckBox") as CheckBox;
-                var fontSizeSlider = this.FindName("FontSizeSlider") as Slider;
-
-                UseSystemTheme = useSystemThemeCheckBox?.IsChecked == true;
-                ReducedMotion = reducedMotionCheckBox?.IsChecked == true;
-                FontScale = fontSizeSlider?.Value ?? 1.0;
+                UseSystemTheme = UseSystemThemeCheckBox?.IsChecked == true;
+                ReducedMotion = ReducedMotionCheckBox?.IsChecked == true;
+                FontScale = FontSizeSlider?.Value ?? 1.0;
 
                 // Apply theme immediately
                 var themeManager = ThemeManager.Instance;

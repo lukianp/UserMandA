@@ -1,0 +1,428 @@
+                <Grid Margin="32">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Text="Network Infrastructure" Style="{StaticResource HeaderTextStyle}"/>
+                            <TextBlock Text="Network topology, security devices, and infrastructure components" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="16"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0">
+                            <!-- Refresh Status Indicator -->
+                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="4" Padding="8,6" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🕒" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding RefreshService.ViewStatuses[Infrastructure].LastRefreshText}" 
+                                               Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <!-- Progress Bar -->
+                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="4" Padding="4" Margin="0,0,8,0"
+                                    Visibility="{Binding RefreshService.ViewStatuses[Infrastructure].IsRefreshing, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <ProgressBar Width="60" Height="16" 
+                                           Value="{Binding RefreshService.ViewStatuses[Infrastructure].RefreshProgress}"
+                                           Background="{DynamicResource CardBrush}" Foreground="{DynamicResource SuccessBrush}" BorderThickness="0"/>
+                            </Border>
+                            <!-- Refresh Button -->
+                            <Button Content="🔄" ToolTip="Refresh Infrastructure" Style="{StaticResource RoundedButtonStyle}" 
+                                    Background="{StaticResource AccentGradient}" Command="{Binding RefreshInfrastructureCommand}" 
+                                    Width="32" Height="32" Margin="0,0,8,0" FontSize="14"/>
+                            <Button Content="&#x1F310; Network Map" Style="{StaticResource RoundedButtonStyle}" Background="{StaticResource AccentGradient}" Margin="0,0,8,0"/>
+                            <Button Content="🔒 Security Scan" Style="{StaticResource RoundedButtonStyle}" Background="{StaticResource DangerGradient}"/>
+                        </StackPanel>
+                    </StackPanel>
+                    
+                    <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,24">
+                        <Border Style="{StaticResource MetricCardStyle}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="🔥" FontSize="20" Margin="0,0,8,0"/>
+                                    <StackPanel>
+                                        <TextBlock Text="5" Foreground="#ED8936" FontSize="24" FontWeight="Bold"/>
+                                        <TextBlock Text="Palo Alto Devices" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <TextBlock Text="2 HA Pairs" Foreground="#9AE6B4" FontSize="10"/>
+                            </StackPanel>
+                        </Border>
+                        
+                        <Border Style="{StaticResource MetricCardStyle}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="&#x1F310;" FontSize="20" Margin="0,0,8,0"/>
+                                    <StackPanel>
+                                        <TextBlock Text="12" Foreground="{DynamicResource AccentBrush}" FontSize="24" FontWeight="Bold"/>
+                                        <TextBlock Text="Network Devices" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <TextBlock Text="Switches &amp; Routers" Foreground="#63B3ED" FontSize="10"/>
+                            </StackPanel>
+                        </Border>
+                        
+                        <Border Style="{StaticResource MetricCardStyle}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="🖥️" FontSize="20" Margin="0,0,8,0"/>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Infrastructure.Count}" Foreground="{DynamicResource SuccessBrush}" FontSize="24" FontWeight="Bold"/>
+                                        <TextBlock Text="Servers" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <TextBlock Text="Physical &amp; Virtual" Foreground="#9AE6B4" FontSize="10"/>
+                            </StackPanel>
+                        </Border>
+                        
+                        <Border Style="{StaticResource MetricCardStyle}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="☁️" FontSize="20" Margin="0,0,8,0"/>
+                                    <StackPanel>
+                                        <TextBlock Text="8" Foreground="#9F7AEA" FontSize="24" FontWeight="Bold"/>
+                                        <TextBlock Text="Cloud Services" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <TextBlock Text="Azure &amp; AWS" Foreground="#D6BCFA" FontSize="10"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+                    
+                    <!-- Dynamic Network Topology Visualization -->
+                    <Border Grid.Row="2" Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <TextBlock Text="Network Topology" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center"/>
+                                    <Button x:Name="RefreshTopologyButton" Content="🔄 Refresh" 
+                                            Style="{StaticResource RoundedButtonStyle}" 
+                                            Background="#4299E1" Margin="16,0,0,0" Padding="8,4"
+                                            Command="{Binding RefreshTopologyCommand}" FontSize="12"/>
+                                    <Button x:Name="AutoLayoutButton" Content="📐 Auto Layout" 
+                                            Style="{StaticResource RoundedButtonStyle}" 
+                                            Background="#48BB78" Margin="8,0,0,0" Padding="8,4"
+                                            Command="{Binding AutoLayoutTopologyCommand}" FontSize="12"/>
+                                </StackPanel>
+                                <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Height="300" Padding="10">
+                                    <Grid>
+                                        <Canvas x:Name="NetworkTopologyCanvas" ClipToBounds="True">
+                                            <!-- Dynamic network nodes and connections will be added here -->
+                                        </Canvas>
+                                        
+                                        <!-- Loading Indicator -->
+                                        <Border x:Name="TopologyLoadingPanel" Background="#AA1A202C" 
+                                                CornerRadius="8" Visibility="Collapsed">
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="⏳" FontSize="24" HorizontalAlignment="Center" 
+                                                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                                                <TextBlock Text="Scanning network topology..." 
+                                                           Foreground="{DynamicResource PrimaryTextBrush}" FontSize="14" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                        
+                                        <!-- No Data Indicator -->
+                                        <Border x:Name="TopologyNoDataPanel" Background="Transparent" 
+                                                CornerRadius="8" Visibility="Collapsed">
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="&#x1F50D;" FontSize="32" HorizontalAlignment="Center" 
+                                                           Foreground="#718096" Margin="0,0,0,8"/>
+                                                <TextBlock Text="No network topology data available" 
+                                                           Foreground="#718096" FontSize="14" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="Run Network Infrastructure Discovery to populate this view" 
+                                                           Foreground="#4A5568" FontSize="12" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Column="1" Margin="24,0,0,0">
+                                <TextBlock Text="Security Posture" Style="{StaticResource SectionHeaderStyle}"/>
+                                <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="16">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                            <Ellipse Width="8" Height="8" Fill="#48BB78" Margin="0,0,8,0"/>
+                                            <StackPanel>
+                                                <TextBlock Text="Firewall Rules" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="Medium"/>
+                                                <TextBlock Text="347 rules optimized" Foreground="#9AE6B4" FontSize="10"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                        
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                            <Ellipse Width="8" Height="8" Fill="#ED8936" Margin="0,0,8,0"/>
+                                            <StackPanel>
+                                                <TextBlock Text="VPN Tunnels" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="Medium"/>
+                                                <TextBlock Text="12 active connections" Foreground="#FBB859" FontSize="10"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                        
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                            <Ellipse Width="8" Height="8" Fill="#4299E1" Margin="0,0,8,0"/>
+                                            <StackPanel>
+                                                <TextBlock Text="SSL Decryption" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="Medium"/>
+                                                <TextBlock Text="89% coverage" Foreground="#63B3ED" FontSize="10"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                        
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="8" Height="8" Fill="#F56565" Margin="0,0,8,0"/>
+                                            <StackPanel>
+                                                <TextBlock Text="Threat Detection" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="Medium"/>
+                                                <TextBlock Text="3 alerts today" Foreground="#FED7D7" FontSize="10"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                                
+                                <TextBlock Text="Device Health" Style="{StaticResource SectionHeaderStyle}" Margin="0,16,0,8"/>
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="PA-5220-1" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" Width="80"/>
+                                        <ProgressBar Value="95" Maximum="100" Height="4" Width="80" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource SuccessBrush}" BorderThickness="0"/>
+                                        <TextBlock Text="95%" Foreground="{DynamicResource SuccessBrush}" FontSize="10" Margin="8,0,0,0"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="PA-5220-2" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" Width="80"/>
+                                        <ProgressBar Value="97" Maximum="100" Height="4" Width="80" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource SuccessBrush}" BorderThickness="0"/>
+                                        <TextBlock Text="97%" Foreground="{DynamicResource SuccessBrush}" FontSize="10" Margin="8,0,0,0"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="Panorama" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" Width="80"/>
+                                        <ProgressBar Value="92" Maximum="100" Height="4" Width="80" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource AccentBrush}" BorderThickness="0"/>
+                                        <TextBlock Text="92%" Foreground="{DynamicResource AccentBrush}" FontSize="10" Margin="8,0,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Infrastructure Device List -->
+                    <Border Grid.Row="3" Style="{StaticResource ModernCardStyle}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Infrastructure Toolbar -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <TextBlock Text="Infrastructure Devices" Style="{StaticResource SectionHeaderStyle}"/>
+                                    <TextBlock Text="Network devices, servers, and infrastructure components" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="32,0,0,0">
+                                    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="4" Padding="8,6" Margin="0,0,12,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#x1F4BB;" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="InfrastructureResultCount" Text="0 devices" Foreground="{DynamicResource AccentBrush}" 
+                                                       FontSize="12" FontWeight="Medium" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBox x:Name="InfrastructureSearchBox" Width="250" Height="32" 
+                                             Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryTextBrush}" 
+                                             BorderBrush="{DynamicResource BorderBrush}" Padding="12,6"
+                                             FontSize="13" Text="{Binding InfrastructureSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                             behaviors:WatermarkBehavior.Watermark="Search infrastructure..."
+                                             behaviors:VisualFeedbackBehavior.EnableHoverEffect="True"
+                                             behaviors:VisualFeedbackBehavior.HoverScale="1.02"
+                                             behaviors:KeyboardNavigationBehavior.EnableEnhancedNavigation="True"/>
+                                    <Button Content="☑️ Select All" Style="{StaticResource RoundedButtonStyle}" Margin="12,0,0,0" Command="{Binding SelectAllInfrastructureCommand}"/>
+                                    <Button Content="☐ Deselect All" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding DeselectAllInfrastructureCommand}"/>
+                                    <Button Content="📤 Export Selected" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding ExportSelectedInfrastructureCommand}"/>
+                                    <Button Content="📋 Copy Selected" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding CopySelectedInfrastructureCommand}"/>
+                                    <Button Content="📋 Copy All" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding CopyAllInfrastructureCommand}"/>
+                                    <Button Content="👁️ Columns" Style="{StaticResource RoundedButtonStyle}" Margin="8,0,0,0" Command="{Binding ShowColumnVisibilityCommand}" CommandParameter="infrastructure"/>
+                                    <Button Content="&#x1F50D; Advanced Search" Style="{StaticResource RoundedButtonStyle}" Background="#4299E1" Margin="8,0,0,0" Command="{Binding ShowInfrastructureAdvancedSearchCommand}"/>
+                                </StackPanel>
+                            </StackPanel>
+                            
+                            <!-- Loading Indicator for Infrastructure -->
+                            <Border Grid.Row="1" Background="{DynamicResource CardBrush}" Padding="10" 
+                                    Visibility="{Binding IsInfrastructureLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="🔄" FontSize="16" Margin="0,0,10,0" RenderTransformOrigin="0.5,0.5">
+                                        <TextBlock.RenderTransform>
+                                            <RotateTransform x:Name="InfraLoadingRotation"/>
+                                        </TextBlock.RenderTransform>
+                                        <TextBlock.Triggers>
+                                            <EventTrigger RoutedEvent="Loaded">
+                                                <BeginStoryboard>
+                                                    <Storyboard RepeatBehavior="Forever">
+                                                        <DoubleAnimation Storyboard.TargetName="InfraLoadingRotation" 
+                                                                       Storyboard.TargetProperty="Angle" 
+                                                                       From="0" To="360" Duration="0:0:2"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </TextBlock.Triggers>
+                                    </TextBlock>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding InfrastructureLoadingMessage}" Foreground="#67D391" FontWeight="Medium"/>
+                                        <ProgressBar Value="{Binding InfrastructureLoadingProgress}" Maximum="100" Width="200" Height="4" 
+                                                   Background="#374151" Foreground="#10B981" Margin="0,5,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            
+                            <DataGrid x:Name="InfrastructureDataGrid" Grid.Row="1" ItemsSource="{Binding Infrastructure}" Style="{StaticResource ModernDataGridStyle}"
+                                      CanUserSortColumns="True" AutoGenerateColumns="False" SelectionMode="Extended"
+                                      VirtualizingStackPanel.IsVirtualizing="True" 
+                                      EnableRowVirtualization="True" 
+                                      EnableColumnVirtualization="True"
+                                      behaviors:ColumnVisibilityBehavior.GridName="Infrastructure"
+                                      behaviors:VirtualizationBehavior.EnableVirtualization="True"
+                                      behaviors:VirtualizationBehavior.VirtualizationMode="Recycling"
+                                      behaviors:VirtualizationBehavior.ScrollUnit="Item"
+                                      behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
+                                      behaviors:VirtualizationBehavior.EnableRowVirtualization="True"
+                                      behaviors:VisualFeedbackBehavior.EnableHoverEffect="True"
+                                      behaviors:VisualFeedbackBehavior.EnableLoadingState="True"
+                                      behaviors:VisualFeedbackBehavior.IsLoading="{Binding IsInfrastructureLoading}"
+                                      behaviors:KeyboardNavigationBehavior.EnableVirtualizedNavigation="True"
+                                      behaviors:ResponsiveLayoutBehavior.AdaptiveColumns="True">
+                                <DataGrid.Columns>
+                                    <DataGridCheckBoxColumn Header="✓" Width="40" Binding="{Binding IsSelected, Mode=TwoWay}"/>
+                                    <DataGridTextColumn Header="Device Name" Binding="{Binding Name}" Width="200" CanUserSort="True" SortMemberPath="Name">
+                                        <DataGridTextColumn.HeaderStyle>
+                                            <Style TargetType="DataGridColumnHeader">
+                                                <Setter Property="Background" Value="{StaticResource PrimaryGradient}"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="12,8"/>
+                                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                            </Style>
+                                        </DataGridTextColumn.HeaderStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150" CanUserSort="True" SortMemberPath="Type"/>
+                                    <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="120" CanUserSort="True" SortMemberPath="IPAddress"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" CanUserSort="True" SortMemberPath="Status"/>
+                                    <DataGridTextColumn Header="OS" Binding="{Binding OperatingSystem}" Width="150" CanUserSort="True" SortMemberPath="OperatingSystem"/>
+                                    <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="120" CanUserSort="True" SortMemberPath="Version"/>
+                                    <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="120" CanUserSort="True" SortMemberPath="Location"/>
+                                    <DataGridTextColumn Header="Manufacturer" Binding="{Binding Manufacturer}" Width="120" CanUserSort="True" SortMemberPath="Manufacturer"/>
+                                    <DataGridTextColumn Header="Model" Binding="{Binding Model}" Width="140" CanUserSort="True" SortMemberPath="Model"/>
+                                    <DataGridTextColumn Header="Last Seen" Binding="{Binding LastSeen}" Width="140" CanUserSort="True" SortMemberPath="LastSeen"/>
+                                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="200" CanUserSort="True" SortMemberPath="Description"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            
+                            <!-- Empty State Message -->
+                            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Infrastructure.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+                                <TextBlock Text="&#x1F4BB;" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Opacity="0.3"/>
+                                <TextBlock Text="No infrastructure devices found" 
+                                           FontSize="18" 
+                                           FontWeight="SemiBold" 
+                                           Foreground="{DynamicResource SecondaryTextBrush}" 
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,8"/>
+                                <TextBlock Text="Run a discovery operation to populate infrastructure data"
+                                           FontSize="14"
+                                           Foreground="#718096"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            
+                            <!-- Infrastructure Pagination Controls -->
+                            <Border Grid.Row="2" Background="{DynamicResource SurfaceBrush}" Margin="0,8,0,0" CornerRadius="8" Padding="12,8">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Infrastructure.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <!-- Page Info -->
+                                    <TextBlock Grid.Column="0" 
+                                               Text="{Binding InfrastructurePageInfo}" 
+                                               Foreground="{DynamicResource PrimaryTextBrush}" 
+                                               VerticalAlignment="Center"
+                                               FontSize="13"/>
+                                    
+                                    <!-- Page Navigation -->
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <!-- First Page Button -->
+                                        <Button Content="⏮️" 
+                                                Command="{Binding FirstInfrastructurePageCommand}"
+                                                IsEnabled="{Binding HasPreviousInfrastructurePage}"
+                                                Style="{StaticResource RoundedButtonStyle}"
+                                                Width="32" Height="32" 
+                                                Margin="0,0,4,0"
+                                                ToolTip="First Page"
+                                                FontSize="14"/>
+                                        
+                                        <!-- Previous Page Button -->
+                                        <Button Content="◀️" 
+                                                Command="{Binding PreviousInfrastructurePageCommand}"
+                                                IsEnabled="{Binding HasPreviousInfrastructurePage}"
+                                                Style="{StaticResource RoundedButtonStyle}"
+                                                Width="32" Height="32" 
+                                                Margin="0,0,4,0"
+                                                ToolTip="Previous Page"
+                                                FontSize="14"/>
+                                        
+                                        <!-- Current Page Info -->
+                                        <Border Background="#4A5568" 
+                                                CornerRadius="4" 
+                                                Padding="8,4" 
+                                                Margin="0,0,4,0">
+                                            <TextBlock>
+                                                <Run Text="Page "/>
+                                                <Run Text="{Binding CurrentInfrastructurePage, Mode=OneWay}"/>
+                                                <Run Text=" of "/>
+                                                <Run Text="{Binding TotalInfrastructurePages, Mode=OneWay}"/>
+                                            </TextBlock>
+                                        </Border>
+                                        
+                                        <!-- Next Page Button -->
+                                        <Button Content="▶️" 
+                                                Command="{Binding NextInfrastructurePageCommand}"
+                                                IsEnabled="{Binding HasNextInfrastructurePage}"
+                                                Style="{StaticResource RoundedButtonStyle}"
+                                                Width="32" Height="32" 
+                                                Margin="0,0,4,0"
+                                                ToolTip="Next Page"
+                                                FontSize="14"/>
+                                        
+                                        <!-- Last Page Button -->
+                                        <Button Content="⏭️" 
+                                                Command="{Binding LastInfrastructurePageCommand}"
+                                                IsEnabled="{Binding HasNextInfrastructurePage}"
+                                                Style="{StaticResource RoundedButtonStyle}"
+                                                Width="32" Height="32"
+                                                ToolTip="Last Page"
+                                                FontSize="14"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
