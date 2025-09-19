@@ -10,28 +10,28 @@
     
     <UserControl.Resources>
         <!-- Teams-inspired purple color scheme -->
-        <SolidColorBrush x:Key="TeamsPrimaryBrush" Color="#6264A7"/>
-        <SolidColorBrush x:Key="TeamsSecondaryBrush" Color="#464775"/>
-        <SolidColorBrush x:Key="TeamsAccentBrush" Color="#8B5CF6"/>
-        <SolidColorBrush x:Key="TeamsLightBrush" Color="#E0E7FF"/>
+        <SolidColorBrush x:Key="TeamsPrimaryBrush" Color="{StaticResource BrandPrimaryColor}"/>
+        <SolidColorBrush x:Key="TeamsSecondaryBrush" Color="{StaticResource BrandSecondaryColor}"/>
+        <SolidColorBrush x:Key="TeamsAccentBrush" Color="{StaticResource InfoColor}"/>
+        <SolidColorBrush x:Key="TeamsLightBrush" Color="{StaticResource LightHoverColor}"/>
         
         <!-- Gradient brushes for modern appeal -->
         <LinearGradientBrush x:Key="TeamsGradientBrush" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#6264A7" Offset="0"/>
-            <GradientStop Color="#8B5CF6" Offset="1"/>
+            <GradientStop Color="{StaticResource BrandPrimaryColor}" Offset="0"/>
+            <GradientStop Color="{StaticResource InfoColor}" Offset="1"/>
         </LinearGradientBrush>
         
         <!-- Metric card style -->
         <Style x:Key="TeamsMetricCard" TargetType="Border">
-            <Setter Property="Background" Value="#2D3748"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="20"/>
             <Setter Property="Margin" Value="8"/>
-            <Setter Property="BorderBrush" Value="#4A5568"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect Color="#000000" BlurRadius="8" ShadowDepth="2" Opacity="0.3"/>
+                    <DropShadowEffect Color="{StaticResource DarkBackgroundColor}" BlurRadius="8" ShadowDepth="2" Opacity="0.3"/>
                 </Setter.Value>
             </Setter>
         </Style>
@@ -55,7 +55,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#5A5FCF"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter Property="Background" Value="#4C51BF"/>
@@ -67,7 +67,7 @@
         </Style>
         
         <Style x:Key="TeamsSecondaryButton" TargetType="Button">
-            <Setter Property="Background" Value="#4A5568"/>
+            <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="Foreground" Value="#E2E8F0"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="#6B7280"/>

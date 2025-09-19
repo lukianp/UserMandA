@@ -36,7 +36,7 @@
                       Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibilityConverter}}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Border Background="#55FF0000" Padding="10" Margin="0,0,0,5" CornerRadius="4">
+                    <Border Background="{DynamicResource ErrorBrush}" Opacity="0.3" Padding="10" Margin="0,0,0,5" CornerRadius="4">
                         <TextBlock Text="{Binding}" Foreground="White" FontWeight="Medium"/>
                     </Border>
                 </DataTemplate>
@@ -44,7 +44,7 @@
         </ItemsControl>
 
         <!-- Error Banner -->
-        <Border Grid.Row="2" Background="#55FF6B6B" Padding="10" Margin="0,0,0,10" CornerRadius="4"
+        <Border Grid.Row="2" Background="{DynamicResource ErrorBrush}" Opacity="0.3" Padding="10" Margin="0,0,0,10" CornerRadius="4"
                 Visibility="{Binding LastError, Converter={StaticResource NullToVisibilityConverter}}">
             <TextBlock Text="{Binding LastError}" Foreground="White" FontWeight="Medium"/>
         </Border>

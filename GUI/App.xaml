@@ -35,6 +35,8 @@
                 <!-- Data grid theming -->
                 <ResourceDictionary Source="Resources/DataGridTheme.xaml"/>
                 <ResourceDictionary Source="Resources/ButtonStyles.xaml"/>
+                <!-- Modern Styles -->
+                <ResourceDictionary Source="Styles/ModernButtonStyle.xaml"/>
                 <!-- Discovery view styles -->
                 <ResourceDictionary Source="Resources/DiscoveryViewStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>

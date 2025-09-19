@@ -20,7 +20,10 @@
       "Bash(./MandADiscoverySuite.exe)",
       "Bash(PowerShell.exe:*)",
       "Bash(Get-Process -Name \"MandADiscoverySuite\" -ErrorAction SilentlyContinue)",
-      "Bash(Select-Object Name, Id, WorkingSet, CPU, StartTime)"
+      "Bash(Select-Object Name, Id, WorkingSet, CPU, StartTime)",
+      "Bash(.Build-GUI.ps1 -Configuration Release)",
+      "Bash(pwsh:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": [],

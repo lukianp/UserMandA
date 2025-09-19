@@ -11,7 +11,7 @@
         <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#2D3748"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
         <Style x:Key="FilterComboBoxStyle" TargetType="ComboBox">
@@ -24,7 +24,7 @@
             <Setter Property="Margin" Value="8,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="Padding" Value="8,6"/>
         </Style>
     </UserControl.Resources>
@@ -45,43 +45,43 @@
         <!-- UniformGrid for 4 Summary Statistic Cards -->
         <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,16">
             <!-- Web Servers Card -->
-            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" Padding="16" Margin="4">
+            <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <TextBlock Text="???" FontSize="20" Margin="0,0,8,0"/>
                         <TextBlock Text="Web Servers" FontWeight="Bold" FontSize="14"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding WebServersCount}" FontSize="24" FontWeight="SemiBold" Foreground="#2B6CB0"/>
+                    <TextBlock Text="{Binding WebServersCount}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
                 </StackPanel>
             </Border>
             <!-- IIS Card -->
-            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" Padding="16" Margin="4">
+            <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <TextBlock Text="??" FontSize="20" Margin="0,0,8,0"/>
                         <TextBlock Text="IIS" FontWeight="Bold" FontSize="14"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding IISCount}" FontSize="24" FontWeight="SemiBold" Foreground="#3182CE"/>
+                    <TextBlock Text="{Binding IISCount}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
                 </StackPanel>
             </Border>
             <!-- Apache Card -->
-            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" Padding="16" Margin="4">
+            <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <TextBlock Text="??" FontSize="20" Margin="0,0,8,0"/>
                         <TextBlock Text="Apache" FontWeight="Bold" FontSize="14"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding ApacheCount}" FontSize="24" FontWeight="SemiBold" Foreground="#D69E2E"/>
+                    <TextBlock Text="{Binding ApacheCount}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}"/>
                 </StackPanel>
             </Border>
             <!-- Total Websites Card -->
-            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" Padding="16" Margin="4">
+            <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="16" Margin="4">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <TextBlock Text="??" FontSize="20" Margin="0,0,8,0"/>
                         <TextBlock Text="Total Websites" FontWeight="Bold" FontSize="14"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding TotalWebsites}" FontSize="24" FontWeight="SemiBold" Foreground="#38A169"/>
+                    <TextBlock Text="{Binding TotalWebsites}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}"/>
                 </StackPanel>
             </Border>
         </UniformGrid>
@@ -162,7 +162,7 @@
             <GridSplitter Grid.Column="1" Width="5" Background="Gray" HorizontalAlignment="Stretch" ResizeBehavior="PreviousAndNext"/>
 
             <!-- Right-hand Details Panel for Website Configuration and Security Settings -->
-            <Border Grid.Column="2" Background="#1A202C" BorderBrush="#E2E8F0" BorderThickness="1">
+            <Border Grid.Column="2" Background="#1A202C" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="15">
                     <StackPanel>
                         <TextBlock Text="Website Configuration &amp; Security" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" Foreground="#E2E8F0"/>

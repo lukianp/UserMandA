@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="800"
-             Background="#0F1419">
+             Background="{DynamicResource BackgroundBrush}">
     
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -50,7 +50,7 @@
                 <TextBlock Text="📊 Overview" 
                           FontSize="32" 
                           FontWeight="Bold" 
-                          Foreground="#F7FAFC" 
+                          Foreground="{DynamicResource ForegroundBrush}" 
                           Margin="0,0,0,8"/>
                 <TextBlock Text="Project status and discovered IT infrastructure overview" 
                           FontSize="16" 
@@ -59,7 +59,7 @@
             
             <!-- Loading Indicator -->
             <Border Grid.Row="1" 
-                    Background="#2D3748" 
+                    Background="{DynamicResource SurfaceBrush}" 
                     CornerRadius="8" 
                     Padding="16" 
                     Margin="0,0,0,24"
@@ -68,7 +68,7 @@
                     <TextBlock Text="🔄" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
                     <TextBlock Text="Loading dashboard statistics..." 
                               FontSize="14" 
-                              Foreground="#E2E8F0" 
+                              Foreground="{DynamicResource ForegroundBrush}" 
                               VerticalAlignment="Center"/>
                 </StackPanel>
             </Border>
@@ -154,31 +154,33 @@
                 </Grid>
                 
                 <!-- Right Side - Project Countdown Widget -->
-                <Border Grid.Column="1" Background="#1A202C" CornerRadius="8" Padding="24">
+                <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="24">
                     <StackPanel>
                         <TextBlock Text="Project Countdown" FontSize="18" FontWeight="SemiBold" 
-                                   Foreground="#E2E8F0" Margin="0,0,0,16"/>
+                                   Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,16"/>
                         
                         <TextBlock Text="{Binding ProjectName, FallbackValue='Not set'}" FontSize="16" FontWeight="Bold"
-                                   Foreground="#3B82F6" Margin="0,0,0,12"/>
+                                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,12"/>
                         
                         <StackPanel Margin="0,0,0,8">
                             <TextBlock Text="Target Cutover" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             <TextBlock Text="{Binding DaysToCutover.Days, FallbackValue='--'}" FontSize="24" FontWeight="Bold" 
-                                       Foreground="#FBBF24"/>
+                                       Foreground="{DynamicResource WarningBrush}"/>
                             <TextBlock Text="days remaining" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                         </StackPanel>
                         
                         <StackPanel Margin="0,0,0,16">
                             <TextBlock Text="Next Wave" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                             <TextBlock Text="{Binding DaysToNextWave.Days, FallbackValue='--'}" FontSize="20" FontWeight="Bold" 
-                                       Foreground="#10B981"/>
+                                       Foreground="{DynamicResource SuccessBrush}"/>
                             <TextBlock Text="days remaining" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
                         </StackPanel>
                         
                         <Button Content="Configure" Command="{Binding ConfigureProjectCommand}" 
-                                Background="#374151" Foreground="#E2E8F0" BorderThickness="0" 
-                                Padding="12,6" HorizontalAlignment="Left"/>
+                                Background="{DynamicResource SecondaryBrush}" Foreground="{DynamicResource ForegroundBrush}" BorderThickness="0" 
+                                Padding="12,6" HorizontalAlignment="Left"
+                                Style="{DynamicResource ModernButtonStyle}"
+                                TabIndex="1"/>
                     </StackPanel>
                 </Border>
                 
