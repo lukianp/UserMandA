@@ -42,9 +42,9 @@ namespace MandADiscoverySuite.ViewModels
         private InfrastructureItem? _selectedAsset;
 
         // Commands
-        public ICommand RefreshCommand { get; private set; }
-        public ICommand ShowAssetDetailCommand { get; private set; }
-        public ICommand DoubleClickCommand { get; private set; }
+        public ICommand RefreshCommand { get; private set; } = null!;
+        public ICommand ShowAssetDetailCommand { get; private set; } = null!;
+        public ICommand DoubleClickCommand { get; private set; } = null!;
 
         public ComputersViewModel(
             ILogicEngineService logicEngineService,
@@ -55,6 +55,7 @@ namespace MandADiscoverySuite.ViewModels
             _logger = logger;
 
             TabTitle = "Computer Inventory";
+            InitializeCommands();
         }
 
         #region Properties

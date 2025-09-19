@@ -1,0 +1,266 @@
+<UserControl x:Class="GUI.Views.Modules.ReportsAnalyticsViewModule"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <TabControl Background="Transparent" BorderThickness="0">
+        <!-- Reports Tab -->
+        <TabItem Header="Reports">
+            <Grid Margin="32">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Reports &amp; Analytics" Style="{StaticResource HeaderTextStyle}"/>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Executive Summary Reports -->
+                        <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="Executive Summary Reports" Style="{StaticResource SectionHeaderStyle}"/>
+                                <TextBlock Text="High-level overview reports for management and stakeholders"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,16"/>
+
+                                <WrapPanel>
+                                    <Button Style="{StaticResource RoundedButtonStyle}"
+                                            Background="{StaticResource AccentGradient}"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Discovery Summary">
+                                        <StackPanel>
+                                            <TextBlock Text="&#x1F4CA;" FontSize="24" Margin="0,0,0,4"/>
+                                            <TextBlock Text="Discovery Summary"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Style="{StaticResource RoundedButtonStyle}"
+                                            Background="{DynamicResource SurfaceBrush}"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="User Analytics">
+                                        <StackPanel>
+                                            <TextBlock Text="📈" FontSize="24" Margin="0,0,0,4"/>
+                                            <TextBlock Text="User Analytics"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Style="{StaticResource RoundedButtonStyle}"
+                                            Background="{DynamicResource SurfaceBrush}"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Infrastructure Report">
+                                        <StackPanel>
+                                            <TextBlock Text="🏢" FontSize="24" Margin="0,0,0,4"/>
+                                            <TextBlock Text="Infrastructure Report"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Style="{StaticResource RoundedButtonStyle}"
+                                            Background="{DynamicResource SurfaceBrush}"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Migration Readiness">
+                                        <StackPanel>
+                                            <TextBlock Text="📉" FontSize="24" Margin="0,0,0,4"/>
+                                            <TextBlock Text="Migration Readiness"/>
+                                        </StackPanel>
+                                    </Button>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Technical Reports -->
+                        <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="Technical Reports" Style="{StaticResource SectionHeaderStyle}"/>
+                                <TextBlock Text="Detailed technical reports for IT teams and architects"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,16"/>
+
+                                <WrapPanel>
+                                    <Button Style="{StaticResource RoundedButtonStyle}"
+                                            Background="{DynamicResource SurfaceBrush}"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Security Audit">
+                                        <StackPanel>
+                                            <TextBlock Text="🔒" FontSize="24" Margin="0,0,0,4"/>
+                                            <TextBlock Text="Security Audit"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Style="{StaticResource RoundedButtonStyle}"
+                                            Background="{DynamicResource SurfaceBrush}"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Dependency Map">
+                                        <StackPanel>
+                                            <TextBlock Text="🔗" FontSize="24" Margin="0,0,0,4"/>
+                                            <TextBlock Text="Dependency Map"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Style="{StaticResource RoundedButtonStyle}"
+                                            Background="{DynamicResource SurfaceBrush}"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Configuration Report">
+                                        <StackPanel>
+                                            <TextBlock Text="🔧" FontSize="24" Margin="0,0,0,4"/>
+                                            <TextBlock Text="Configuration Report"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Style="{StaticResource RoundedButtonStyle}"
+                                            Background="{DynamicResource SurfaceBrush}"
+                                            Margin="0,0,12,12" Padding="20,12"
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Network Topology">
+                                        <StackPanel>
+                                            <TextBlock Text="📡" FontSize="24" Margin="0,0,0,4"/>
+                                            <TextBlock Text="Network Topology"/>
+                                        </StackPanel>
+                                    </Button>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Custom Reports -->
+                        <Border Style="{StaticResource ModernCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Custom Reports" Style="{StaticResource SectionHeaderStyle}"/>
+                                <TextBlock Text="Create custom reports based on discovery data"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,16"/>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Report Type:" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" Margin="0,0,0,8"/>
+                                        <ComboBox Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryTextBrush}"
+                                                  BorderBrush="{DynamicResource BorderBrush}" Height="36" Margin="0,0,0,12">
+                                            <ComboBoxItem>User Distribution by Department</ComboBoxItem>
+                                            <ComboBoxItem>Device Compliance Status</ComboBoxItem>
+                                            <ComboBoxItem>Application Usage Analysis</ComboBoxItem>
+                                            <ComboBoxItem>Security Group Membership</ComboBoxItem>
+                                            <ComboBoxItem>Migration Wave Summary</ComboBoxItem>
+                                        </ComboBox>
+
+                                        <TextBlock Text="Format:" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" Margin="0,0,0,8"/>
+                                        <WrapPanel>
+                                            <RadioButton Content="PDF" Foreground="{DynamicResource PrimaryTextBrush}" IsChecked="True" Margin="0,0,20,0"/>
+                                            <RadioButton Content="Excel" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,20,0"/>
+                                            <RadioButton Content="HTML" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,20,0"/>
+                                            <RadioButton Content="CSV" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        </WrapPanel>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1" Content="Generate Report"
+                                            Style="{StaticResource RoundedButtonStyle}"
+                                            Background="{StaticResource SuccessGradient}"
+                                            VerticalAlignment="Bottom" Margin="16,0,0,0"
+                                            Command="{Binding GenerateReportCommand}" CommandParameter="Custom Report"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </TabItem>
+
+        <!-- Analytics Tab -->
+        <TabItem Header="Analytics">
+            <Grid Margin="32">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,24">
+                    <TextBlock Text="Analytics Dashboard" Style="{StaticResource HeaderTextStyle}" Margin="0,0,24,0"/>
+
+                    <!-- Chart Type Selector -->
+                    <ComboBox Width="200" Height="32"
+                              Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryTextBrush}"
+                              BorderBrush="{DynamicResource BorderBrush}" Padding="12,6"
+                              FontSize="13"
+                              ItemsSource="{Binding DataVisualization.ChartTypes}"
+                              SelectedValue="{Binding DataVisualization.SelectedChartType}"
+                              SelectedValuePath="Key"
+                              DisplayMemberPath="DisplayName"
+                              Margin="0,0,12,0"/>
+
+                    <!-- Time Period Selector -->
+                    <ComboBox Width="150" Height="32"
+                              Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryTextBrush}"
+                              BorderBrush="{DynamicResource BorderBrush}" Padding="12,6"
+                              FontSize="13"
+                              ItemsSource="{Binding DataVisualization.TimePeriods}"
+                              SelectedItem="{Binding DataVisualization.SelectedTimePeriod}"
+                              Margin="0,0,12,0"/>
+
+                    <!-- Refresh Button -->
+                    <Button Content="🔄 Refresh" Style="{StaticResource RoundedButtonStyle}"
+                            Background="{StaticResource AccentGradient}"
+                            Command="{Binding DataVisualization.RefreshDataCommand}"
+                            Width="100" Height="32" FontSize="13"/>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Key Statistics -->
+                        <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
+                            <StackPanel>
+                                <TextBlock Text="Key Statistics" Style="{StaticResource SectionHeaderStyle}"/>
+
+                                <UniformGrid Columns="4" Margin="0,16,0,0">
+                                    <Border Style="{StaticResource MetricCardStyle}" Margin="0,0,8,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DataVisualization.TotalItems}" Foreground="{DynamicResource AccentBrush}" FontSize="24" FontWeight="Bold"/>
+                                            <TextBlock Text="Total Items" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Style="{StaticResource MetricCardStyle}" Margin="4,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DataVisualization.TotalModules}" Foreground="{DynamicResource SuccessBrush}" FontSize="24" FontWeight="Bold"/>
+                                            <TextBlock Text="Total Modules" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Style="{StaticResource MetricCardStyle}" Margin="4,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DataVisualization.AverageItemsPerModule, StringFormat=N0}" Foreground="#ED8936" FontSize="24" FontWeight="Bold"/>
+                                            <TextBlock Text="Avg Items/Module" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Style="{StaticResource MetricCardStyle}" Margin="8,0,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DataVisualization.LastDiscoveryTime, StringFormat=MM/dd HH:mm}" Foreground="#9F7AEA" FontSize="16" FontWeight="Bold"/>
+                                            <TextBlock Text="Last Discovery" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Main Chart Area -->
+                        <Border Style="{StaticResource ModernCardStyle}" Margin="0,0,0,24">
+                            <StackPanel>
+                                <TextBlock Text="Data Visualization" Style="{StaticResource SectionHeaderStyle}"/>
+
+                                <!-- Chart placeholder - will be replaced with actual charting component -->
+                                <Border Background="{DynamicResource CardBrush}" Height="400" CornerRadius="8" Margin="0,16,0,0">
+                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock Text="📊" FontSize="64" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                                        <TextBlock Text="Chart Visualization Area" FontSize="18" Foreground="{DynamicResource PrimaryTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                        <TextBlock Text="Dynamic charts based on selected data and time period" FontSize="14" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </TabItem>
+    </TabControl>
+</UserControl>

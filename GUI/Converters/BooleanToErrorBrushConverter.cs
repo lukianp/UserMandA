@@ -14,9 +14,9 @@ namespace MandADiscoverySuite.Converters
         {
             if (value is bool isError && isError)
             {
-                return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFEF4444")); // Red
+                return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EF4444")); // Red
             }
-            return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF6B7280")); // Gray
+            return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280")); // Gray
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

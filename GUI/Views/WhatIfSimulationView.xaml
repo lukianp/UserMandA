@@ -216,7 +216,7 @@
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="20">
                         <Grid>
                             <!-- Parameters Tab -->
-                            <StackPanel x:Name="ParametersTab" Visibility="Visible">
+                            <StackPanel x:Name="ParametersPanel" Visibility="Visible">
                                 <TextBlock Text="Simulation Parameters" Style="{StaticResource SectionHeaderStyle}"/>
                                 
                                 <StackPanel Orientation="Horizontal" Margin="0,5,0,15">
@@ -242,7 +242,7 @@
                             </StackPanel>
 
                             <!-- Scenarios Tab -->
-                            <StackPanel x:Name="ScenariosTab" Visibility="Collapsed">
+                            <StackPanel x:Name="ScenariosPanel" Visibility="Collapsed">
                                 <TextBlock Text="Simulation Scenarios" Style="{StaticResource SectionHeaderStyle}"/>
                                 
                                 <StackPanel Orientation="Horizontal" Margin="0,5,0,15">
@@ -268,7 +268,7 @@
                             </StackPanel>
 
                             <!-- Results Tab -->
-                            <StackPanel x:Name="ResultsTab" Visibility="Collapsed">
+                            <StackPanel x:Name="ResultsPanel" Visibility="Collapsed">
                                 <TextBlock Text="Simulation Results" Style="{StaticResource SectionHeaderStyle}"/>
                                 
                                 <Grid Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -329,7 +329,7 @@
                             </StackPanel>
 
                             <!-- Analysis Tab -->
-                            <StackPanel x:Name="AnalysisTab" Visibility="Collapsed">
+                            <StackPanel x:Name="AnalysisPanel" Visibility="Collapsed">
                                 <TextBlock Text="Analysis Results" Style="{StaticResource SectionHeaderStyle}"/>
                                 
                                 <TabControl Background="Transparent" BorderThickness="0">

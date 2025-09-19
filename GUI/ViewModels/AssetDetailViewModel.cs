@@ -63,10 +63,11 @@ namespace MandADiscoverySuite.ViewModels
         private ObservableCollection<AppDto> _crowdStrikeApps = new();
         private ObservableCollection<AppDto> _criticalApps = new();
         // Commands
-        public ICommand AddToMigrationWaveCommand { get; private set; }
-        public ICommand ExportSnapshotCommand { get; private set; }
-        public ICommand RefreshDataCommand { get; private set; }
-        public ICommand CloseCommand { get; private set; }
+        public ICommand AddToMigrationWaveCommand { get; private set; } = null!;
+        public ICommand ExportSnapshotCommand { get; private set; } = null!;
+        public ICommand RefreshDataCommand { get; private set; } = null!;
+        public ICommand CloseCommand { get; private set; } = null!;
+        public ICommand OpenAssetDetailCommand { get; private set; } = null!;
         public AssetDetailViewModel(
             ILogicEngineService logicEngineService,
             ILogger logger,
@@ -78,6 +79,7 @@ namespace MandADiscoverySuite.ViewModels
             _migrationWaveService = migrationWaveService ?? new StubMigrationWaveService(logger);
             _dataExportService = dataExportService ?? new StubDataExportService(logger);
             TabTitle = "Asset Details";
+            InitializeCommands();
         }
         /// <summary>
         /// Constructor that receives object asset and loads its details
@@ -290,7 +292,6 @@ namespace MandADiscoverySuite.ViewModels
         /// <summary>
         /// Open Asset Detail Command - used for integration with main lists
         /// </summary>
-        public ICommand OpenAssetDetailCommand { get; private set; }
         /// <summary>
         /// Load asset detail data from LogicEngineService
         /// </summary>

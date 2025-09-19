@@ -94,6 +94,15 @@ namespace MandADiscoverySuite
             // Register navigation service
             services.AddSingleton<NavigationService>();
 
+            // Register Discovery Services
+            services.AddSingleton<DiscoveryService>();
+            services.AddSingleton<IDiscoveryService>(provider => provider.GetRequiredService<DiscoveryService>());
+            services.AddSingleton<ModuleRegistryService>(provider => ModuleRegistryService.Instance);
+
+            // Register ViewModels that require DI
+            services.AddTransient<DiscoveryViewModel>();
+            services.AddSingleton<MainViewModel>();
+
             // Register additional services that may be needed
             services.AddSingleton<ProfileService>();
             services.AddSingleton<IKeyboardShortcutService, KeyboardShortcutService>();

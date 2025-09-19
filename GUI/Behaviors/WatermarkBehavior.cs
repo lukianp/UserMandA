@@ -71,7 +71,7 @@ namespace MandADiscoverySuite.Behaviors
             if (string.IsNullOrEmpty(textBox.Text!) && !textBox.IsFocused)
             {
                 textBox.Text = watermark!;
-                textBox.Foreground = new SolidColorBrush(Color.FromRgb(160, 174, 192)); // #FFA0AEC0
+                textBox.Foreground = new SolidColorBrush(Color.FromRgb(160, 174, 192)); // #A0AEC0
             }
             else if (textBox.Text! != watermark)
             {

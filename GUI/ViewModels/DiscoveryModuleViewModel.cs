@@ -14,7 +14,7 @@ namespace MandADiscoverySuite.ViewModels
 {
     public class DiscoveryModuleViewModel : ObservableObject
     {
-        private readonly MainViewModel _mainViewModel;
+        private readonly MainViewModel? _mainViewModel;
         private readonly EnhancedLoggingService _logger;
         private string _moduleId;
         private string _displayName;
@@ -26,7 +26,7 @@ namespace MandADiscoverySuite.ViewModels
         private double _progress;
         private Process _runningProcess;
 
-        public DiscoveryModuleViewModel(MainViewModel mainViewModel)
+        public DiscoveryModuleViewModel(MainViewModel? mainViewModel)
         {
             _mainViewModel = mainViewModel;
             _logger = EnhancedLoggingService.Instance;

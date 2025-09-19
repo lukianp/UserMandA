@@ -15,14 +15,14 @@ namespace MandADiscoverySuite.Converters
             if (value is double healthScore)
             {
                 if (healthScore >= 80)
-                    return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF10B981")); // Green
+                    return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#10B981")); // Green
                 else if (healthScore >= 60)
-                    return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFF59E0B")); // Yellow
+                    return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F59E0B")); // Yellow
                 else
-                    return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFEF4444")); // Red
+                    return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EF4444")); // Red
             }
 
-            return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF6B7280")); // Gray default
+            return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6B7280")); // Gray default
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

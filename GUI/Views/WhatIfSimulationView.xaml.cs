@@ -38,16 +38,16 @@ namespace MandADiscoverySuite.Views
 
         private void UpdateTabVisibility(string tabName)
         {
-            var parametersTab = this.FindName("ParametersTab") as FrameworkElement;
+            var parametersTab = this.FindName("ParametersPanel") as FrameworkElement;
             if (parametersTab != null) parametersTab.Visibility = tabName == "Parameters" ? Visibility.Visible : Visibility.Collapsed;
 
-            var scenariosTab = this.FindName("ScenariosTab") as FrameworkElement;
+            var scenariosTab = this.FindName("ScenariosPanel") as FrameworkElement;
             if (scenariosTab != null) scenariosTab.Visibility = tabName == "Scenarios" ? Visibility.Visible : Visibility.Collapsed;
 
-            var resultsTab = this.FindName("ResultsTab") as FrameworkElement;
+            var resultsTab = this.FindName("ResultsPanel") as FrameworkElement;
             if (resultsTab != null) resultsTab.Visibility = tabName == "Results" ? Visibility.Visible : Visibility.Collapsed;
 
-            var analysisTab = this.FindName("AnalysisTab") as FrameworkElement;
+            var analysisTab = this.FindName("AnalysisPanel") as FrameworkElement;
             if (analysisTab != null) analysisTab.Visibility = tabName == "Analysis" ? Visibility.Visible : Visibility.Collapsed;
         }
     }

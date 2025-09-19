@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using Microsoft.Extensions.DependencyInjection;
 using MandADiscoverySuite.ViewModels;
 
 namespace MandADiscoverySuite.Views
@@ -11,9 +12,17 @@ namespace MandADiscoverySuite.Views
         public DiscoveryView()
         {
             InitializeComponent();
-            
-            // Set the DataContext to DiscoveryViewModel
-            DataContext = new DiscoveryViewModel();
+
+            // Use dependency injection to get DiscoveryViewModel
+            if (App.ServiceProvider != null)
+            {
+                DataContext = App.ServiceProvider.GetRequiredService<DiscoveryViewModel>();
+            }
+            else
+            {
+                // Fallback for design-time or if DI not available
+                DataContext = new DiscoveryViewModel();
+            }
         }
     }
 }

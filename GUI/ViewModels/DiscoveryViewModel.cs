@@ -19,20 +19,32 @@ namespace MandADiscoverySuite.ViewModels
         private readonly ILogger<DiscoveryViewModel>? _logger;
         private readonly DiscoveryService _discoveryService;
         private readonly ModuleRegistryService _moduleRegistryService;
+        private readonly MainViewModel? _mainViewModel;
         private ObservableCollection<DiscoveryModuleViewModel> _discoveryModules;
         private bool _isLoading;
 
-        public DiscoveryViewModel()
+        // Parameterless constructor for fallback scenarios
+        public DiscoveryViewModel() : this(null, null, null, null)
         {
-            _logger = null; // Will be set by dependency injection in the future
-            _discoveryService = new DiscoveryService();
-            _moduleRegistryService = ModuleRegistryService.Instance;
+        }
+
+        // DI Constructor
+        public DiscoveryViewModel(
+            ILogger<DiscoveryViewModel>? logger = null,
+            DiscoveryService? discoveryService = null,
+            ModuleRegistryService? moduleRegistryService = null,
+            MainViewModel? mainViewModel = null)
+        {
+            _logger = logger;
+            _discoveryService = discoveryService ?? new DiscoveryService();
+            _moduleRegistryService = moduleRegistryService ?? ModuleRegistryService.Instance;
+            _mainViewModel = mainViewModel;
             _discoveryModules = new ObservableCollection<DiscoveryModuleViewModel>();
-            
+
             // Initialize commands
             StartDiscoveryCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(StartDiscoveryAsync, CanStartDiscovery);
             RefreshDataCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(RefreshDataAsync);
-            
+
             // Load discovery modules
             _ = LoadAsync();
         }
@@ -71,26 +83,23 @@ namespace MandADiscoverySuite.ViewModels
                 IsLoading = true;
                 _logger?.LogInformation("[DiscoveryViewModel] Loading discovery modules...");
 
-                // Create a placeholder for MainViewModel since it's complex to instantiate
-                MainViewModel? mainViewModel = null;
-
                 // Clear existing modules
                 DiscoveryModules.Clear();
 
                 // Load modules from registry
                 var modules = await _moduleRegistryService.GetAvailableModulesAsync();
-                
+
                 _logger?.LogInformation($"[DiscoveryViewModel] Found {modules.Count} modules in registry");
 
                 foreach (var module in modules)
                 {
-                    var moduleViewModel = new DiscoveryModuleViewModel(mainViewModel)
+                    var moduleViewModel = new DiscoveryModuleViewModel(_mainViewModel)
                     {
                         ModuleId = module.DisplayName ?? "Unknown",
-                        DisplayName = module.DisplayName,
-                        Description = module.Description,
-                        Icon = !string.IsNullOrEmpty(module.Icon) ? module.Icon : GetModuleIcon(module.Category),
-                        Category = module.Category,
+                        DisplayName = module.DisplayName ?? "Unknown Module",
+                        Description = module.Description ?? "No description available",
+                        Icon = !string.IsNullOrEmpty(module.Icon) ? module.Icon : GetModuleIcon(module.Category ?? "general"),
+                        Category = module.Category ?? "General",
                         Enabled = module.Enabled,
                         Status = "Ready"
                     };
