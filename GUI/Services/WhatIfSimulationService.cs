@@ -488,6 +488,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
+                await Task.CompletedTask; // Satisfy async requirement
                 lock (_lockObject)
                 {
                     if (_runningSimulations.TryGetValue(simulationId, out var cts))

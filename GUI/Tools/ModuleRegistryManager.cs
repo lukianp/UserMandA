@@ -213,7 +213,7 @@ namespace MandADiscoverySuite.Tools
                 return 1;
             }
             
-            var registry = await ModuleRegistryGenerator.GenerateRegistryFromFilesystemAsync(rootPath);
+            var registry = ModuleRegistryGenerator.GenerateRegistryFromFilesystem(rootPath);
             await ModuleRegistryService.Instance.SaveRegistryAsync(registry);
             
             Console.WriteLine();
@@ -243,7 +243,7 @@ namespace MandADiscoverySuite.Tools
                 Console.WriteLine($"  ➕ {module.ModuleId}: {module.FilePath}");
             }
             
-            var updatedRegistry = await ModuleRegistryGenerator.MergeDiscoveredModulesAsync(registry, discovered);
+            var updatedRegistry = ModuleRegistryGenerator.MergeDiscoveredModules(registry, discovered);
             await service.SaveRegistryAsync(updatedRegistry);
             
             Console.WriteLine();
@@ -274,7 +274,7 @@ namespace MandADiscoverySuite.Tools
             {
                 Console.WriteLine("Step 3: Merging discovered modules...");
                 var registry = await service.LoadRegistryAsync();
-                var updatedRegistry = await ModuleRegistryGenerator.MergeDiscoveredModulesAsync(registry, discovered);
+                var updatedRegistry = ModuleRegistryGenerator.MergeDiscoveredModules(registry, discovered);
                 await service.SaveRegistryAsync(updatedRegistry);
                 Console.WriteLine($"  Merged {discovered.Count} modules");
             }

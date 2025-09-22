@@ -98,12 +98,12 @@ namespace MandADiscoverySuite.Services
                 Opacity = 0
             };
 
-            element.MouseEnter += (s, e) =>
+            element.MouseEnter += async (s, e) =>
             {
                 if (_microInteractionsEnabled)
                 {
                     element.Effect = glowEffect;
-                    AnimateGlowOpacity(glowEffect, 0, intensity, TimeSpan.FromMilliseconds(200));
+                    await AnimateGlowOpacity(glowEffect, 0, intensity, TimeSpan.FromMilliseconds(200));
                 }
             };
 

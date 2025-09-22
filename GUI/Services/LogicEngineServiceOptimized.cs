@@ -449,13 +449,13 @@ namespace MandADiscoverySuite.Services
             var user = _usersBySid.GetValueOrDefault(sidOrUpn) ?? _usersByUpn.GetValueOrDefault(sidOrUpn);
             if (user == null) return null;
 
-            var groups = _groupsByUserSid.GetValueOrDefault(user.Sid, new List<string>())
+            var groups = (_groupsByUserSid.GetValueOrDefault(user.Sid, new List<string>()) ?? new List<string>())
                 .Select(groupSid => _groupsBySid.GetValueOrDefault(groupSid))
                 .Where(group => group != null)
                 .Cast<GroupDto>()
                 .ToList();
 
-            var devices = _devicesByPrimaryUserSid.GetValueOrDefault(user.Sid, new List<DeviceDto>());
+            var devices = _devicesByPrimaryUserSid.GetValueOrDefault(user.Sid, new List<DeviceDto>()) ?? new List<DeviceDto>();
 
             // Continue with existing logic...
             return new UserDetailProjection(

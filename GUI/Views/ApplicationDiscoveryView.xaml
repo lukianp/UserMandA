@@ -108,7 +108,7 @@
                         <TextBlock Text="Install Date:" FontSize="12" FontWeight="SemiBold" Foreground="#718096"/>
                         <TextBlock Text="{Binding SelectedItem.installdate, StringFormat=d}" FontSize="14" Margin="0,2,0,12" TextWrapping="Wrap" Foreground="#E2E8F0"/>
                         <TextBlock Text="Size:" FontSize="12" FontWeight="SemiBold" Foreground="#718096"/>
-                        <TextBlock Text="{Binding SelectedItem.size, StringFormat=N1} MB" FontSize="14" Margin="0,2,0,16" TextWrapping="Wrap" Foreground="#E2E8F0"/>
+                        <TextBlock Text="{Binding SelectedItem.size, StringFormat=\{0:N1\} MB}" FontSize="14" Margin="0,2,0,16" TextWrapping="Wrap" Foreground="#E2E8F0"/>
                     </StackPanel>
                 </ScrollViewer>
             </Border>

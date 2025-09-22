@@ -449,6 +449,7 @@ namespace MandADiscoverySuite.Services
             };
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "Registry access is Windows-specific but used in context where Windows is expected")]
         private ThemeMode GetSystemTheme()
         {
             try
@@ -457,7 +458,7 @@ namespace MandADiscoverySuite.Services
                 var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
                 var value = key?.GetValue("AppsUseLightTheme");
                 key?.Dispose();
-                
+
                 return value is int intValue && intValue == 1 ? ThemeMode.Light : ThemeMode.Dark;
             }
             catch

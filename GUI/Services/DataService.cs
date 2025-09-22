@@ -212,15 +212,15 @@ namespace MandADiscoverySuite.Services
             return results;
         }
 
-        public async Task<ExportResult> ExportDataAsync(string profileName, ExportOptions exportOptions, CancellationToken cancellationToken = default)
+        public Task<ExportResult> ExportDataAsync(string profileName, ExportOptions exportOptions, CancellationToken cancellationToken = default)
         {
             // Basic implementation - can be enhanced later
-            return new ExportResult
+            return Task.FromResult(new ExportResult
             {
                 Success = false,
                 ErrorMessage = "Export functionality not yet implemented",
                 Duration = TimeSpan.Zero
-            };
+            });
         }
 
         public Task ClearCacheAsync(string profileName)

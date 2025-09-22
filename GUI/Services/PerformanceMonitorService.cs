@@ -121,6 +121,7 @@ namespace MandADiscoverySuite.Services
         /// Gets current system performance metrics
         /// </summary>
         /// <returns>System performance metrics</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "PerformanceCounter is used for Windows-specific monitoring functionality")]
         public SystemPerformanceMetrics GetSystemMetrics()
         {
             var metrics = new SystemPerformanceMetrics();
@@ -148,6 +149,7 @@ namespace MandADiscoverySuite.Services
             return metrics;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "PerformanceCounter is used for Windows-specific monitoring functionality")]
         private void InitializeCounters()
         {
             try

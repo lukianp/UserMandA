@@ -35,6 +35,7 @@ namespace MandADiscoverySuite.Services
             InitializePerformanceCounters();
         }
         
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "PerformanceCounter is Windows-specific and properly guarded by RuntimeInformation.IsOSPlatform(OSPlatform.Windows) check")]
         private void InitializePerformanceCounters()
         {
             try
@@ -273,6 +274,7 @@ namespace MandADiscoverySuite.Services
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "ManagementObjectSearcher is Windows-specific and properly guarded by RuntimeInformation.IsOSPlatform(OSPlatform.Windows) check")]
         private bool TryCollectWmiNetworkMetrics()
         {
             try
@@ -518,6 +520,7 @@ namespace MandADiscoverySuite.Services
         
         #endregion
         
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "PerformanceCounter disposal is Windows-specific and properly guarded by RuntimeInformation.IsOSPlatform(OSPlatform.Windows) check")]
         public void Dispose()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -555,6 +558,7 @@ namespace MandADiscoverySuite.Services
             StartSecurityEventLogMonitoring();
         }
         
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "EventLog is Windows-specific and properly guarded by RuntimeInformation.IsOSPlatform(OSPlatform.Windows) check")]
         private void StartSecurityEventLogMonitoring()
         {
             try
@@ -601,12 +605,13 @@ namespace MandADiscoverySuite.Services
             }
         }
         
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "EventLogEntry properties are Windows-specific and this method is only called from Windows-specific EventLog monitoring code")]
         private void OnSecurityEventWritten(object sender, EntryWrittenEventArgs e)
         {
             try
             {
                 var eventEntry = e.Entry;
-                
+
                 // Filter for security-relevant events
                 if (IsSecurityRelevantEvent(eventEntry.InstanceId))
                 {
@@ -618,19 +623,19 @@ namespace MandADiscoverySuite.Services
                         Timestamp = eventEntry.TimeGenerated,
                         Severity = GetSeverityFromEventId(eventEntry.InstanceId)
                     };
-                    
+
                     // Extract user account and IP if available
                     ExtractSecurityEventDetails(securityEvent, eventEntry.Message);
-                    
+
                     lock (_eventsLock)
                     {
                         _recentSecurityEvents.Add(securityEvent);
-                        
+
                         // Keep only events from the last 24 hours
                         _recentSecurityEvents.RemoveAll(e => e.Timestamp < DateTime.Now.AddHours(-24));
                     }
-                    
-                    _logger?.LogInformation("Security event detected: {EventType} - {Description}", 
+
+                    _logger?.LogInformation("Security event detected: {EventType} - {Description}",
                         securityEvent.EventType, securityEvent.Description);
                 }
             }

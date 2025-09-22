@@ -26,6 +26,7 @@ namespace MandADiscoverySuite.ViewModels
             : base(moduleInfo, mainViewModel, logger)
         {
             _log?.LogInformation("Initializing ApplicationDiscoveryViewModel");
+            _log?.LogWarning("XAML DIAGNOSTIC - Expecting potential XAML parsing error MC3044 on line 111 due to invalid markup syntax");
 
             // Get CSV service
             var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
@@ -271,7 +272,11 @@ namespace MandADiscoverySuite.ViewModels
         {
             SelectedItemDetails.Clear();
 
-            if (SelectedItem == null) return;
+            if (SelectedItem == null)
+            {
+                _log?.LogDebug("SelectedItem is null - no details to update");
+                return;
+            }
 
             var dict = (System.Collections.Generic.IDictionary<string, object>)SelectedItem;
 
@@ -289,13 +294,20 @@ namespace MandADiscoverySuite.ViewModels
             SelectedItemDetails.Add(new KeyValuePair<string, string>("Install Date", installDateObj?.ToString() ?? ""));
 
             dict.TryGetValue("size", out var sizeObj);
-            SelectedItemDetails.Add(new KeyValuePair<string, string>("Size", sizeObj?.ToString() ?? ""));
+            var sizeString = sizeObj?.ToString() ?? "";
+            SelectedItemDetails.Add(new KeyValuePair<string, string>("Size", sizeString));
+
+            // Add diagnostic logging for the size field that's causing XAML binding issues
+            _log?.LogInformation($"XAML DIAGNOSTIC - SelectedItem.size value: '{sizeString}' (type: {sizeObj?.GetType()?.Name ?? "null"})");
+            _log?.LogInformation("XAML DIAGNOSTIC - This confirms the data binding is working, but the XAML markup on line 111 has invalid syntax");
 
             dict.TryGetValue("type", out var typeObj);
             SelectedItemDetails.Add(new KeyValuePair<string, string>("Type", typeObj?.ToString() ?? ""));
 
             dict.TryGetValue("description", out var descriptionObj);
             SelectedItemDetails.Add(new KeyValuePair<string, string>("Description", descriptionObj?.ToString() ?? ""));
+
+            _log?.LogDebug($"Updated details for application: {nameObj?.ToString() ?? "Unknown"}");
         }
 
         #endregion

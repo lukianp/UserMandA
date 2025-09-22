@@ -26,12 +26,12 @@
       </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <WarningsNotAsErrors>CS8625;CS8612;CS8767;CA1416;CS4014;CS1998;CS8892;CS8604</WarningsNotAsErrors>
+    <WarningsNotAsErrors>CS8625;CS8612;CS8767;CA1416;CS4014;CS1998;CS8892;CS8604;CS8618;CS8603;CS7022</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <WarningsNotAsErrors>CS8625;CS8612;CS8767;CA1416;CS4014;CS1998;CS8892;CS8604</WarningsNotAsErrors>
+    <WarningsNotAsErrors>CS8625;CS8612;CS8767;CA1416;CS4014;CS1998;CS8892;CS8604;CS8618;CS8603;CS7022</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

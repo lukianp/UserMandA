@@ -207,16 +207,16 @@ namespace MandADiscoverySuite.Services
             if (_cacheService != null)
             {
                 var cacheKey = $"UserDetail:{sidOrUpn}";
-                
-                return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
+
+                return await _cacheService.GetOrCreateAsync<UserDetailProjection?>(cacheKey, () =>
                 {
-                    return await BuildUserDetailProjectionAsync(sidOrUpn).ConfigureAwait(false);
+                    return Task.FromResult(BuildUserDetailProjection(sidOrUpn));
                 }, CacheTier.Hot, TimeSpan.FromMinutes(15)).ConfigureAwait(false);
             }
             else
             {
                 // Fallback to direct computation without caching
-                return await BuildUserDetailProjectionAsync(sidOrUpn).ConfigureAwait(false);
+                return BuildUserDetailProjection(sidOrUpn);
             }
         }
 
@@ -224,6 +224,11 @@ namespace MandADiscoverySuite.Services
         /// T-030: Helper method to build user detail projection (separated for caching compatibility)
         /// </summary>
         private async Task<UserDetailProjection?> BuildUserDetailProjectionAsync(string sidOrUpn)
+        {
+            return await Task.FromResult(BuildUserDetailProjection(sidOrUpn)).ConfigureAwait(false);
+        }
+
+        private UserDetailProjection? BuildUserDetailProjection(string sidOrUpn)
         {
             var user = _usersBySid.GetValueOrDefault(sidOrUpn) ?? _usersByUpn.GetValueOrDefault(sidOrUpn);
             if (user == null) return null;
@@ -248,7 +253,7 @@ namespace MandADiscoverySuite.Services
 
             var gpoLinks = GetUserApplicableGpos(user);
             var gpoFilters = _gposBySidFilter.GetValueOrDefault(user.Sid, new List<GpoDto>());
-            
+
             var mailbox = _mailboxByUpn.GetValueOrDefault(user.UPN);
             var azureRoles = _rolesByPrincipalId.GetValueOrDefault(user.AzureObjectId ?? "", new List<AzureRoleAssignment>());
             var sqlDatabases = GetUserSqlDatabases(user.Sid);
@@ -288,12 +293,22 @@ namespace MandADiscoverySuite.Services
 
         public async Task<SqlDbDto?> GetDatabaseDetailAsync(string databaseName)
         {
+            return await Task.FromResult(GetDatabaseDetail(databaseName)).ConfigureAwait(false);
+        }
+
+        public SqlDbDto? GetDatabaseDetail(string databaseName)
+        {
             // T-027 Migration Engine compatibility - stub implementation
             var database = _sqlDbsByKey.Values.FirstOrDefault(db => db.Name?.Equals(databaseName, StringComparison.OrdinalIgnoreCase) == true);
             return database;
         }
 
         public async Task<List<MigrationHint>> SuggestEntitlementsForUserAsync(string sid)
+        {
+            return await Task.FromResult(SuggestEntitlementsForUser(sid)).ConfigureAwait(false);
+        }
+
+        public List<MigrationHint> SuggestEntitlementsForUser(string sid)
         {
             var suggestions = new List<MigrationHint>();
 
@@ -408,11 +423,16 @@ namespace MandADiscoverySuite.Services
 
         public async Task<List<UserDto>> GetUsersAsync(string? filter = null, int skip = 0, int take = 100)
         {
+            return await Task.FromResult(GetUsers(filter, skip, take)).ConfigureAwait(false);
+        }
+
+        public List<UserDto> GetUsers(string? filter = null, int skip = 0, int take = 100)
+        {
             var users = _usersBySid.Values.AsQueryable();
-            
+
             if (!string.IsNullOrEmpty(filter))
             {
-                users = users.Where(u => 
+                users = users.Where(u =>
                     (u.DisplayName != null && u.DisplayName.Contains(filter, StringComparison.OrdinalIgnoreCase)) ||
                     (u.UPN != null && u.UPN.Contains(filter, StringComparison.OrdinalIgnoreCase)) ||
                     (u.Sam != null && u.Sam.Contains(filter, StringComparison.OrdinalIgnoreCase))
@@ -424,11 +444,16 @@ namespace MandADiscoverySuite.Services
 
         public async Task<List<DeviceDto>> GetDevicesAsync(string? filter = null, int skip = 0, int take = 100)
         {
+            return await Task.FromResult(GetDevices(filter, skip, take)).ConfigureAwait(false);
+        }
+
+        public List<DeviceDto> GetDevices(string? filter = null, int skip = 0, int take = 100)
+        {
             var devices = _devicesByName.Values.AsQueryable();
-            
+
             if (!string.IsNullOrEmpty(filter))
             {
-                devices = devices.Where(d => 
+                devices = devices.Where(d =>
                     d.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
                     (d.DNS != null && d.DNS.Contains(filter, StringComparison.OrdinalIgnoreCase))
                 );
@@ -465,75 +490,77 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<RiskDashboardProjection> GenerateRiskDashboardProjectionAsync()
         {
-            return await Task.Run(() =>
-            {
-                var allThreats = _threatsByThreatId.Values.ToList();
-                var allGovernance = _governanceByAssetId.Values.ToList();
-                var allLineage = _lineageByLineageId.Values.ToList();
-                var allExternalIds = _externalIdentitiesById.Values.ToList();
-                
-                // Calculate threat metrics
-                var totalThreats = allThreats.Count;
-                var criticalThreats = allThreats.Count(t => t.RiskLevel == "Critical");
-                var highThreats = allThreats.Count(t => t.RiskLevel == "High");
-                var avgThreatScore = allThreats.Count > 0 ? allThreats.Average(t => t.ThreatScore) : 0.0;
-                var topThreats = allThreats.OrderByDescending(t => t.ThreatScore).Take(10).ToList();
-                
-                // Calculate governance metrics
-                var totalGovernanceIssues = allGovernance.Count(g => g.ViolationsFound.Count > 0);
-                var criticalCompliance = allGovernance.Count(g => g.RiskLevel == "Critical");
-                var avgComplianceScore = allGovernance.Count > 0 ? allGovernance.Average(g => g.ComplianceScore) : 0.0;
-                var topGovernanceRisks = allGovernance.OrderByDescending(g => g.GovernanceRisk).Take(10).ToList();
-                
-                // Calculate lineage metrics  
-                var totalLineageGaps = allLineage.Count(l => l.Issues.Count > 0);
-                var orphanedSources = allLineage.Count(l => l.IsOrphaned);
-                var brokenLinks = allLineage.Count(l => l.HasBrokenLinks);
-                var topLineageIssues = allLineage.OrderByDescending(l => l.LineageRisk).Take(10).ToList();
-                
-                // Calculate identity metrics
-                var totalExternalIds = allExternalIds.Count;
-                var unmappedIds = allExternalIds.Count(e => e.MappingStatus == "Unmapped");
-                var conflictedMappings = allExternalIds.Count(e => e.MappingStatus == "Conflict");
-                var avgIdentityRisk = allExternalIds.Count > 0 ? allExternalIds.Average(e => e.IdentityRisk) : 0.0;
-                var topIdentityRisks = allExternalIds.OrderByDescending(e => e.IdentityRisk).Take(10).ToList();
-                
-                // Calculate overall risk score (weighted average)
-                var overallRisk = CalculateOverallRiskScore(avgThreatScore, avgComplianceScore, 
-                    totalLineageGaps / Math.Max(allLineage.Count, 1.0), avgIdentityRisk);
-                
-                // Generate top recommendations
-                var recommendations = GenerateTopRecommendations(
-                    criticalThreats, criticalCompliance, orphanedSources, unmappedIds);
-                
-                return new RiskDashboardProjection(
-                    TotalThreats: totalThreats,
-                    CriticalThreats: criticalThreats,
-                    HighThreats: highThreats,
-                    AverageThreatScore: avgThreatScore,
-                    TopThreats: topThreats,
-                    
-                    TotalGovernanceIssues: totalGovernanceIssues,
-                    CriticalComplianceViolations: criticalCompliance,
-                    AverageComplianceScore: avgComplianceScore,
-                    TopGovernanceRisks: topGovernanceRisks,
-                    
-                    TotalLineageGaps: totalLineageGaps,
-                    OrphanedDataSources: orphanedSources,
-                    BrokenLineageLinks: brokenLinks,
-                    TopLineageIssues: topLineageIssues,
-                    
-                    TotalExternalIdentities: totalExternalIds,
-                    UnmappedIdentities: unmappedIds,
-                    ConflictedMappings: conflictedMappings,
-                    AverageIdentityRisk: avgIdentityRisk,
-                    TopIdentityRisks: topIdentityRisks,
-                    
-                    OverallRiskScore: overallRisk,
-                    TopRecommendations: recommendations,
-                    GeneratedAt: DateTime.UtcNow
-                );
-            });
+            return await Task.FromResult(GenerateRiskDashboardProjection()).ConfigureAwait(false);
+        }
+
+        public RiskDashboardProjection GenerateRiskDashboardProjection()
+        {
+            var allThreats = _threatsByThreatId.Values.ToList();
+            var allGovernance = _governanceByAssetId.Values.ToList();
+            var allLineage = _lineageByLineageId.Values.ToList();
+            var allExternalIds = _externalIdentitiesById.Values.ToList();
+
+            // Calculate threat metrics
+            var totalThreats = allThreats.Count;
+            var criticalThreats = allThreats.Count(t => t.RiskLevel == "Critical");
+            var highThreats = allThreats.Count(t => t.RiskLevel == "High");
+            var avgThreatScore = allThreats.Count > 0 ? allThreats.Average(t => t.ThreatScore) : 0.0;
+            var topThreats = allThreats.OrderByDescending(t => t.ThreatScore).Take(10).ToList();
+
+            // Calculate governance metrics
+            var totalGovernanceIssues = allGovernance.Count(g => g.ViolationsFound.Count > 0);
+            var criticalCompliance = allGovernance.Count(g => g.RiskLevel == "Critical");
+            var avgComplianceScore = allGovernance.Count > 0 ? allGovernance.Average(g => g.ComplianceScore) : 0.0;
+            var topGovernanceRisks = allGovernance.OrderByDescending(g => g.GovernanceRisk).Take(10).ToList();
+
+            // Calculate lineage metrics
+            var totalLineageGaps = allLineage.Count(l => l.Issues.Count > 0);
+            var orphanedSources = allLineage.Count(l => l.IsOrphaned);
+            var brokenLinks = allLineage.Count(l => l.HasBrokenLinks);
+            var topLineageIssues = allLineage.OrderByDescending(l => l.LineageRisk).Take(10).ToList();
+
+            // Calculate identity metrics
+            var totalExternalIds = allExternalIds.Count;
+            var unmappedIds = allExternalIds.Count(e => e.MappingStatus == "Unmapped");
+            var conflictedMappings = allExternalIds.Count(e => e.MappingStatus == "Conflict");
+            var avgIdentityRisk = allExternalIds.Count > 0 ? allExternalIds.Average(e => e.IdentityRisk) : 0.0;
+            var topIdentityRisks = allExternalIds.OrderByDescending(e => e.IdentityRisk).Take(10).ToList();
+
+            // Calculate overall risk score (weighted average)
+            var overallRisk = CalculateOverallRiskScore(avgThreatScore, avgComplianceScore,
+                totalLineageGaps / Math.Max(allLineage.Count, 1.0), avgIdentityRisk);
+
+            // Generate top recommendations
+            var recommendations = GenerateTopRecommendations(
+                criticalThreats, criticalCompliance, orphanedSources, unmappedIds);
+
+            return new RiskDashboardProjection(
+                TotalThreats: totalThreats,
+                CriticalThreats: criticalThreats,
+                HighThreats: highThreats,
+                AverageThreatScore: avgThreatScore,
+                TopThreats: topThreats,
+
+                TotalGovernanceIssues: totalGovernanceIssues,
+                CriticalComplianceViolations: criticalCompliance,
+                AverageComplianceScore: avgComplianceScore,
+                TopGovernanceRisks: topGovernanceRisks,
+
+                TotalLineageGaps: totalLineageGaps,
+                OrphanedDataSources: orphanedSources,
+                BrokenLineageLinks: brokenLinks,
+                TopLineageIssues: topLineageIssues,
+
+                TotalExternalIdentities: totalExternalIds,
+                UnmappedIdentities: unmappedIds,
+                ConflictedMappings: conflictedMappings,
+                AverageIdentityRisk: avgIdentityRisk,
+                TopIdentityRisks: topIdentityRisks,
+
+                OverallRiskScore: overallRisk,
+                TopRecommendations: recommendations,
+                GeneratedAt: DateTime.UtcNow
+            );
         }
         
         /// <summary>
@@ -541,83 +568,105 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         public async Task<ThreatAnalysisProjection> GenerateThreatAnalysisProjectionAsync()
         {
-            return await Task.Run(() =>
-            {
-                var allThreats = _threatsByThreatId.Values.ToList();
-                
-                // Group by category
-                var threatsByCategory = _threatsByCategory.ToDictionary(
-                    kvp => kvp.Key, 
-                    kvp => kvp.Value.ToList()
-                );
-                
-                // Group by severity  
-                var threatsBySeverity = _threatsBySeverity.ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => kvp.Value.ToList()
-                );
-                
-                // Group by asset
-                var threatsByAsset = _threatsByAsset.ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => kvp.Value.ToList()
-                );
-                
-                // Calculate threat correlations
-                var correlations = CalculateThreatCorrelations(allThreats);
-                
-                // Generate MITRE tactic summaries
-                var mitreTactics = GenerateMitreTacticSummaries(allThreats);
-                
-                return new ThreatAnalysisProjection(
-                    AllThreats: allThreats,
-                    ThreatsByCategory: threatsByCategory,
-                    ThreatsBySeverity: threatsBySeverity,
-                    ThreatsByAsset: threatsByAsset,
-                    ThreatCorrelations: correlations,
-                    MitreTactics: mitreTactics,
-                    GeneratedAt: DateTime.UtcNow
-                );
-            });
+            return await Task.FromResult(GenerateThreatAnalysisProjection()).ConfigureAwait(false);
+        }
+
+        public ThreatAnalysisProjection GenerateThreatAnalysisProjection()
+        {
+            var allThreats = _threatsByThreatId.Values.ToList();
+
+            // Group by category
+            var threatsByCategory = _threatsByCategory.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.ToList()
+            );
+
+            // Group by severity
+            var threatsBySeverity = _threatsBySeverity.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.ToList()
+            );
+
+            // Group by asset
+            var threatsByAsset = _threatsByAsset.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.ToList()
+            );
+
+            // Calculate threat correlations
+            var correlations = CalculateThreatCorrelations(allThreats);
+
+            // Generate MITRE tactic summaries
+            var mitreTactics = GenerateMitreTacticSummaries(allThreats);
+
+            return new ThreatAnalysisProjection(
+                AllThreats: allThreats,
+                ThreatsByCategory: threatsByCategory,
+                ThreatsBySeverity: threatsBySeverity,
+                ThreatsByAsset: threatsByAsset,
+                ThreatCorrelations: correlations,
+                MitreTactics: mitreTactics,
+                GeneratedAt: DateTime.UtcNow
+            );
         }
         
         /// <summary>
         /// Gets threats affecting a specific asset
         /// </summary>
-        public Task<List<ThreatDetectionDTO>> GetThreatsForAssetAsync(string assetId)
+        public async Task<List<ThreatDetectionDTO>> GetThreatsForAssetAsync(string assetId)
         {
-            return Task.FromResult(_threatsByAsset.GetValueOrDefault(assetId, new List<ThreatDetectionDTO>()));
+            return await Task.FromResult(GetThreatsForAsset(assetId)).ConfigureAwait(false);
         }
-        
+
+        public List<ThreatDetectionDTO> GetThreatsForAsset(string assetId)
+        {
+            return _threatsByAsset.GetValueOrDefault(assetId, new List<ThreatDetectionDTO>());
+        }
+
         /// <summary>
         /// Gets governance information for a specific asset
         /// </summary>
-        public Task<DataGovernanceDTO?> GetGovernanceForAssetAsync(string assetId)
+        public async Task<DataGovernanceDTO?> GetGovernanceForAssetAsync(string assetId)
         {
-            return Task.FromResult(_governanceByAssetId.GetValueOrDefault(assetId));
+            return await Task.FromResult(GetGovernanceForAsset(assetId)).ConfigureAwait(false);
         }
-        
+
+        public DataGovernanceDTO? GetGovernanceForAsset(string assetId)
+        {
+            return _governanceByAssetId.GetValueOrDefault(assetId);
+        }
+
         /// <summary>
         /// Gets lineage flows involving a specific asset
         /// </summary>
-        public Task<List<DataLineageDTO>> GetLineageForAssetAsync(string assetId)
+        public async Task<List<DataLineageDTO>> GetLineageForAssetAsync(string assetId)
+        {
+            return await Task.FromResult(GetLineageForAsset(assetId)).ConfigureAwait(false);
+        }
+
+        public List<DataLineageDTO> GetLineageForAsset(string assetId)
         {
             var sourceFlows = _lineageBySourceAsset.GetValueOrDefault(assetId, new List<DataLineageDTO>());
             var targetFlows = _lineageByTargetAsset.GetValueOrDefault(assetId, new List<DataLineageDTO>());
-            
-            return Task.FromResult(sourceFlows.Concat(targetFlows).Distinct().ToList());
+
+            return sourceFlows.Concat(targetFlows).Distinct().ToList();
         }
-        
+
         /// <summary>
         /// Gets external identity mapping for internal user
         /// </summary>
-        public Task<List<ExternalIdentityDTO>> GetExternalIdentitiesForUserAsync(string userSid)
+        public async Task<List<ExternalIdentityDTO>> GetExternalIdentitiesForUserAsync(string userSid)
+        {
+            return await Task.FromResult(GetExternalIdentitiesForUser(userSid)).ConfigureAwait(false);
+        }
+
+        public List<ExternalIdentityDTO> GetExternalIdentitiesForUser(string userSid)
         {
             var result = _externalIdentitiesById.Values
                 .Where(e => e.InternalUserSid == userSid)
                 .ToList();
-                
-            return Task.FromResult(result);
+
+            return result;
         }
 
         #region Private Methods

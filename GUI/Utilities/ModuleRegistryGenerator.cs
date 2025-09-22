@@ -15,7 +15,7 @@ namespace MandADiscoverySuite.Utilities
         /// <summary>
         /// Generates a new module registry by scanning the filesystem
         /// </summary>
-        public static async Task<ModuleRegistry> GenerateRegistryFromFilesystemAsync(string rootPath)
+        public static ModuleRegistry GenerateRegistryFromFilesystem(string rootPath)
         {
             if (string.IsNullOrWhiteSpace(rootPath))
                 throw new ArgumentException("Root path cannot be null or empty", nameof(rootPath));
@@ -107,7 +107,7 @@ namespace MandADiscoverySuite.Utilities
         /// <summary>
         /// Merges discovered modules into an existing registry
         /// </summary>
-        public static async Task<ModuleRegistry> MergeDiscoveredModulesAsync(ModuleRegistry existingRegistry, List<DiscoveredModule> discoveredModules)
+        public static ModuleRegistry MergeDiscoveredModules(ModuleRegistry existingRegistry, List<DiscoveredModule> discoveredModules)
         {
             if (existingRegistry == null)
                 throw new ArgumentNullException(nameof(existingRegistry));
@@ -392,7 +392,7 @@ namespace MandADiscoverySuite.Utilities
         private static async Task GenerateRegistryCommand(string rootPath)
         {
             Console.WriteLine($"Generating module registry from: {rootPath}");
-            var registry = await GenerateRegistryFromFilesystemAsync(rootPath);
+            var registry = GenerateRegistryFromFilesystem(rootPath);
             
             var outputPath = Path.Combine(Environment.CurrentDirectory, "ModuleRegistry.json");
             await ModuleRegistryService.Instance.SaveRegistryAsync(registry);
@@ -478,7 +478,7 @@ namespace MandADiscoverySuite.Utilities
                 return;
             }
 
-            var updated = await MergeDiscoveredModulesAsync(registry, discovered);
+            var updated = MergeDiscoveredModules(registry, discovered);
             await service.SaveRegistryAsync(updated);
             
             Console.WriteLine($"Merged {discovered.Count} new modules into registry");

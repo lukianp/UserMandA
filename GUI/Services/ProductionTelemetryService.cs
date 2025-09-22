@@ -31,51 +31,52 @@ namespace MandADiscoverySuite.Services
             _logger?.LogInformation("Production telemetry service initialized");
         }
         
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "PerformanceCounter is Windows-specific but used in production environment where Windows is expected")]
         private Dictionary<string, PerformanceCounter> InitializePerformanceCounters()
         {
             var counters = new Dictionary<string, PerformanceCounter>();
-            
+
             try
             {
                 // CPU Usage
                 counters["cpu"] = new PerformanceCounter(
-                    "Processor", 
-                    "% Processor Time", 
-                    "_Total", 
+                    "Processor",
+                    "% Processor Time",
+                    "_Total",
                     true);
-                
+
                 // Memory Usage
                 counters["memory"] = new PerformanceCounter(
-                    "Memory", 
-                    "Available MBytes", 
+                    "Memory",
+                    "Available MBytes",
                     true);
-                
+
                 // Process-specific counters
                 var processName = Process.GetCurrentProcess().ProcessName;
-                
+
                 counters["process_cpu"] = new PerformanceCounter(
-                    "Process", 
-                    "% Processor Time", 
-                    processName, 
+                    "Process",
+                    "% Processor Time",
+                    processName,
                     true);
-                
+
                 counters["process_memory"] = new PerformanceCounter(
-                    "Process", 
-                    "Working Set", 
-                    processName, 
+                    "Process",
+                    "Working Set",
+                    processName,
                     true);
-                
+
                 counters["process_threads"] = new PerformanceCounter(
-                    "Process", 
-                    "Thread Count", 
-                    processName, 
+                    "Process",
+                    "Thread Count",
+                    processName,
                     true);
             }
             catch (Exception ex)
             {
                 _logger?.LogWarning(ex, "Failed to initialize some performance counters");
             }
-            
+
             return counters;
         }
         
@@ -231,6 +232,7 @@ namespace MandADiscoverySuite.Services
             }
         }
         
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "PerformanceCounter.NextValue() is Windows-specific but used in production environment where Windows is expected")]
         private void CollectMetrics(object state)
         {
             try
@@ -248,7 +250,7 @@ namespace MandADiscoverySuite.Services
                         // Ignore individual counter failures
                     }
                 }
-                
+
                 // Collect GC metrics
                 RecordGauge("dotnet.gc.gen0", GC.CollectionCount(0));
                 RecordGauge("dotnet.gc.gen1", GC.CollectionCount(1));
@@ -315,15 +317,16 @@ namespace MandADiscoverySuite.Services
             // TODO: Implement telemetry service integration
         }
         
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "PerformanceCounter disposal is Windows-specific but used in production environment where Windows is expected")]
         public void Dispose()
         {
             _metricsTimer?.Dispose();
-            
+
             foreach (var counter in _performanceCounters.Values)
             {
                 counter?.Dispose();
             }
-            
+
             _logger?.LogInformation("Production telemetry service disposed");
         }
     }

@@ -933,8 +933,8 @@ namespace MandADiscoverySuite.Services
             return format.ToLower() switch
             {
                 "json" => JsonConvert.SerializeObject(graph, Formatting.Indented),
-                "xml" => await ExportToXmlAsync(graph),
-                "csv" => await ExportToCsvAsync(graph),
+                "xml" => ExportToXmlAsync(graph),
+                "csv" => ExportToCsvAsync(graph),
                 _ => JsonConvert.SerializeObject(graph, Formatting.Indented)
             };
         }
@@ -949,23 +949,23 @@ namespace MandADiscoverySuite.Services
             return format.ToLower() switch
             {
                 "json" => JsonConvert.DeserializeObject<DependencyGraph>(content),
-                "xml" => await ImportFromXmlAsync(content),
+                "xml" => ImportFromXmlAsync(content),
                 _ => JsonConvert.DeserializeObject<DependencyGraph>(content)
             };
         }
 
         #region Export/Import Helpers
 
-        private async Task<string> ExportToXmlAsync(DependencyGraph graph)
+        private string ExportToXmlAsync(DependencyGraph graph)
         {
             var xml = new System.Xml.XmlDocument();
             var root = xml.CreateElement("DependencyGraph");
-            
+
             // Add graph properties
             root.SetAttribute("Id", graph.Id);
             root.SetAttribute("Name", graph.Name);
             root.SetAttribute("CreatedDate", graph.Created.ToString("o"));
-            
+
             // Add nodes
             var nodesElement = xml.CreateElement("Nodes");
             foreach (var node in graph.Nodes)
@@ -980,8 +980,8 @@ namespace MandADiscoverySuite.Services
                 nodesElement.AppendChild(nodeElement);
             }
             root.AppendChild(nodesElement);
-            
-            // Add edges  
+
+            // Add edges
             var edgesElement = xml.CreateElement("Edges");
             foreach (var edge in graph.Edges)
             {
@@ -994,15 +994,15 @@ namespace MandADiscoverySuite.Services
                 edgesElement.AppendChild(edgeElement);
             }
             root.AppendChild(edgesElement);
-            
+
             xml.AppendChild(root);
             return xml.OuterXml;
         }
 
-        private async Task<string> ExportToCsvAsync(DependencyGraph graph)
+        private string ExportToCsvAsync(DependencyGraph graph)
         {
             var csv = new System.Text.StringBuilder();
-            
+
             // Export nodes
             csv.AppendLine("# Nodes");
             csv.AppendLine("Id,Label,Type,X,Y,IsSelected");
@@ -1010,9 +1010,9 @@ namespace MandADiscoverySuite.Services
             {
                 csv.AppendLine($"\"{node.Id}\",\"{node.Name}\",\"{node.Type}\",{node.Position.X},{node.Position.Y},{node.IsSelected}");
             }
-            
+
             csv.AppendLine();
-            
+
             // Export edges
             csv.AppendLine("# Edges");
             csv.AppendLine("Id,Source,Target,Type,Weight");
@@ -1020,15 +1020,15 @@ namespace MandADiscoverySuite.Services
             {
                 csv.AppendLine($"\"{edge.Id}\",\"{edge.SourceNodeId}\",\"{edge.TargetNodeId}\",\"{edge.EdgeType}\",{edge.Weight}");
             }
-            
+
             return csv.ToString();
         }
 
-        private async Task<DependencyGraph> ImportFromXmlAsync(string xmlContent)
+        private DependencyGraph ImportFromXmlAsync(string xmlContent)
         {
             var xml = new System.Xml.XmlDocument();
             xml.LoadXml(xmlContent);
-            
+
             var root = xml.DocumentElement;
             var graph = new DependencyGraph
             {
@@ -1036,7 +1036,7 @@ namespace MandADiscoverySuite.Services
                 Name = root.GetAttribute("Name"),
                 Created = DateTime.Parse(root.GetAttribute("CreatedDate"))
             };
-            
+
             // Import nodes
             var nodesElement = root.SelectSingleNode("Nodes");
             if (nodesElement != null)
@@ -1060,7 +1060,7 @@ namespace MandADiscoverySuite.Services
                     }
                 }
             }
-            
+
             // Import edges
             var edgesElement = root.SelectSingleNode("Edges");
             if (edgesElement != null)
@@ -1081,7 +1081,7 @@ namespace MandADiscoverySuite.Services
                     }
                 }
             }
-            
+
             return graph;
         }
 

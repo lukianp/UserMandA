@@ -16,7 +16,8 @@
       "Bash(tasklist:*)",
       "Bash(pwsh \"./Build-GUI.ps1\" -Configuration Release)",
       "Bash(start MandADiscoverySuite.exe)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": [],
