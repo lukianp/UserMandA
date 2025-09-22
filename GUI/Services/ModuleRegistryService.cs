@@ -39,12 +39,51 @@ namespace MandADiscoverySuite.Services
 
         private ModuleRegistryService()
         {
-            _rootPath = ConfigurationService.Instance.EnterpriseDiscoveryRootPath;
-            _registryPath = Path.Combine(
-                Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? Environment.CurrentDirectory,
-                "Configuration", 
-                "ModuleRegistry.json"
-            );
+            // CRITICAL FIX: Handle ConfigurationService initialization failure gracefully
+            try
+            {
+                _rootPath = ConfigurationService.Instance?.EnterpriseDiscoveryRootPath;
+            }
+            catch (Exception ex)
+            {
+                // Fallback: Use default enterprise discovery path if ConfigurationService fails
+                _rootPath = @"C:\enterprisediscovery";
+                System.Diagnostics.Debug.WriteLine($"[ModuleRegistryService] ConfigurationService.Instance failed, using fallback path: {_rootPath}. Error: {ex.Message}");
+            }
+
+            // Use robust path resolution with multiple fallback strategies
+            string assemblyDirectory;
+            try
+            {
+                var assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                assemblyDirectory = Path.GetDirectoryName(assemblyLocation);
+
+                if (string.IsNullOrEmpty(assemblyDirectory))
+                {
+                    throw new InvalidOperationException("Assembly location returned null or empty directory");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Fallback 1: Use current directory
+                assemblyDirectory = Environment.CurrentDirectory;
+                System.Diagnostics.Debug.WriteLine($"[ModuleRegistryService] Assembly location failed, using current directory: {assemblyDirectory}. Error: {ex.Message}");
+
+                // Fallback 2: If current directory doesn't contain Configuration, use enterprise discovery path
+                var configTestPath = Path.Combine(assemblyDirectory, "Configuration");
+                if (!Directory.Exists(configTestPath))
+                {
+                    assemblyDirectory = @"C:\enterprisediscovery";
+                    System.Diagnostics.Debug.WriteLine($"[ModuleRegistryService] Configuration directory not found, using enterprise discovery path: {assemblyDirectory}");
+                }
+            }
+
+            _registryPath = Path.Combine(assemblyDirectory, "Configuration", "ModuleRegistry.json");
+
+            System.Diagnostics.Debug.WriteLine($"[ModuleRegistryService] Initialized with paths:");
+            System.Diagnostics.Debug.WriteLine($"  Root Path: {_rootPath ?? "null"}");
+            System.Diagnostics.Debug.WriteLine($"  Registry Path: {_registryPath}");
+            System.Diagnostics.Debug.WriteLine($"  Registry File Exists: {File.Exists(_registryPath)}");
         }
 
         /// <summary>

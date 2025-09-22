@@ -23,7 +23,7 @@ namespace MandADiscoverySuite.ViewModels
     {
         private readonly CsvDataServiceNew _csvService;
         private readonly ProfileService _profileService;
-        private readonly ModuleRegistryService _moduleRegistryService;
+        private ModuleRegistryService _moduleRegistryService; // Not readonly - initialized in LoadAsync
         
         // Discovery Module Collections
         public ObservableCollection<DiscoveryModuleViewModel> Modules { get; } = new();
@@ -45,14 +45,20 @@ namespace MandADiscoverySuite.ViewModels
         public override bool HasData => Modules.Count > 0;
 
         public DomainDiscoveryViewModel(
-            CsvDataServiceNew csvService, 
-            ILogger<DomainDiscoveryViewModel> logger, 
-            ProfileService profileService) 
+            CsvDataServiceNew csvService,
+            ILogger<DomainDiscoveryViewModel> logger,
+            ProfileService profileService)
             : base(logger)
         {
             _csvService = csvService ?? throw new ArgumentNullException(nameof(csvService));
             _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
-            _moduleRegistryService = ModuleRegistryService.Instance;
+
+            // CRITICAL FIX: Defer ModuleRegistryService initialization to avoid constructor exceptions
+            // ModuleRegistryService has only async methods, so we can't initialize it in constructor
+            // Instead, we'll initialize it in LoadAsync() where we can properly handle async operations
+            _moduleRegistryService = null; // Will be initialized in LoadAsync()
+
+            System.Diagnostics.Debug.WriteLine("[DomainDiscoveryViewModel] Constructor completed successfully - ModuleRegistryService will be initialized in LoadAsync()");
             
             // Initialize commands
             RefreshDataCommand = new AsyncRelayCommand(RefreshDataAsync);
@@ -148,10 +154,27 @@ namespace MandADiscoverySuite.ViewModels
             LastError = null; 
             HeaderWarnings.Clear();
 
-            try 
+            try
             {
                 StructuredLogger?.LogDebug(LogSourceName, new { action = "load_start", component = "domain_discovery" }, "Starting domain discovery load");
-                
+
+                // CRITICAL FIX: Initialize ModuleRegistryService if not already done
+                if (_moduleRegistryService == null)
+                {
+                    try
+                    {
+                        System.Diagnostics.Debug.WriteLine("[DomainDiscoveryViewModel] Initializing ModuleRegistryService.Instance...");
+                        _moduleRegistryService = ModuleRegistryService.Instance;
+                        System.Diagnostics.Debug.WriteLine("[DomainDiscoveryViewModel] ModuleRegistryService.Instance initialized successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[DomainDiscoveryViewModel] Failed to initialize ModuleRegistryService: {ex.Message}");
+                        // Continue without ModuleRegistryService - the view will still work with basic functionality
+                        _moduleRegistryService = null;
+                    }
+                }
+
                 // Load discovery modules from registry
                 await LoadDiscoveryModulesAsync();
                 

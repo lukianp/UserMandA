@@ -20,18 +20,90 @@
             <RowDefinition Height="Auto"/>  <!-- Header -->
             <RowDefinition Height="Auto"/>  <!-- Warning Banners -->
             <RowDefinition Height="Auto"/>  <!-- Error Banner -->
+            <RowDefinition Height="Auto"/>  <!-- Filters Panel -->
             <RowDefinition Height="Auto"/>  <!-- Loading -->
-            <RowDefinition Height="*"/>     <!-- Data -->
+            <RowDefinition Height="*"/>     <!-- Data Grid -->
         </Grid.RowDefinitions>
         
         <!-- Header Section -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10">
-            <TextBlock Text="Groups" FontSize="24" FontWeight="Bold" 
-                       VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding Groups.Count, StringFormat='({0} items)'}" 
-                       FontSize="16" Margin="10,0,0,0" VerticalAlignment="Center"
-                       Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}"/>
-        </StackPanel>
+        <Border Grid.Row="0" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="24" Margin="20,20,20,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="🔐 Security Groups" FontSize="24" FontWeight="Bold"
+                               VerticalAlignment="Center" Foreground="{DynamicResource ForegroundBrush}"/>
+                    <TextBlock Text="Active Directory security groups and distribution lists for access management"
+                               FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding Groups.Count, StringFormat='Total: {0} groups'}"
+                               FontSize="14" Margin="0,4,0,0" VerticalAlignment="Center"
+                               Foreground="{DynamicResource AccentBrush}" FontWeight="Medium"
+                               Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBox Width="200" Height="32" Margin="0,0,8,0"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalContentAlignment="Center"
+                             Background="{DynamicResource BackgroundBrush}"
+                             Foreground="{DynamicResource ForegroundBrush}"
+                             BorderBrush="{DynamicResource BorderBrush}"
+                             ToolTip="Search groups by name, type, or description">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="TextBox">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="1" CornerRadius="4">
+                                                <Grid>
+                                                    <TextBlock Text="🔍 Search groups..."
+                                                               Foreground="{DynamicResource MutedForegroundBrush}"
+                                                               VerticalAlignment="Center" Margin="8,0,0,0"
+                                                               IsHitTestVisible="False">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource TemplatedParent}}" Value="">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <ScrollViewer x:Name="PART_ContentHost" Margin="8,0,0,0"/>
+                                                </Grid>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+
+                    <Button Content="📊 Export"
+                            Command="{Binding ExportGroupsCommand}"
+                            Background="{DynamicResource AccentBrush}"
+                            Foreground="{DynamicResource WhiteBrush}"
+                            BorderThickness="0" Padding="12,6" Margin="0,0,8,0"
+                            Style="{DynamicResource ModernButtonStyle}"
+                            ToolTip="Export groups list to CSV"/>
+
+                    <Button Content="🔄 Refresh"
+                            Command="{Binding RefreshGroupsCommand}"
+                            Background="{DynamicResource SecondaryBrush}"
+                            Foreground="{DynamicResource ForegroundBrush}"
+                            BorderThickness="0" Padding="12,6"
+                            Style="{DynamicResource ModernButtonStyle}"
+                            ToolTip="Refresh groups data from directory"/>
+                </StackPanel>
+            </Grid>
+        </Border>
         
         <!-- Red Warning Banners for Missing CSV Headers -->
         <ItemsControl Grid.Row="1" ItemsSource="{Binding HeaderWarnings}" 
@@ -64,22 +136,66 @@
             </StackPanel>
         </Border>
         
+        <!-- Filters Panel -->
+        <Border Grid.Row="3" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,1,0,1" Padding="20,12" Margin="20,0,20,0"
+                Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Filters:" VerticalAlignment="Center" Margin="0,0,12,0"
+                           FontWeight="Medium" Foreground="{DynamicResource ForegroundBrush}"/>
+
+                <ComboBox Width="120" Height="28" Margin="0,0,12,0"
+                          ItemsSource="{Binding GroupTypeFilters}"
+                          SelectedItem="{Binding SelectedGroupTypeFilter}"
+                          ToolTip="Filter by group type">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" FontSize="12"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <CheckBox Content="Mail Enabled" IsChecked="{Binding ShowMailEnabledOnly}"
+                          Margin="0,0,12,0" VerticalAlignment="Center"
+                          Foreground="{DynamicResource ForegroundBrush}"
+                          ToolTip="Show only mail-enabled groups"/>
+
+                <CheckBox Content="Security Enabled" IsChecked="{Binding ShowSecurityEnabledOnly}"
+                          Margin="0,0,12,0" VerticalAlignment="Center"
+                          Foreground="{DynamicResource ForegroundBrush}"
+                          ToolTip="Show only security-enabled groups"/>
+
+                <Button Content="❌ Clear Filters"
+                        Command="{Binding ClearFiltersCommand}"
+                        Background="Transparent"
+                        Foreground="{DynamicResource AccentBrush}"
+                        BorderBrush="{DynamicResource AccentBrush}"
+                        BorderThickness="1" Padding="8,4"
+                        Style="{DynamicResource ModernButtonStyle}"
+                        ToolTip="Clear all active filters"/>
+
+                <TextBlock Text="{Binding FilteredGroupsCount, StringFormat='Showing {0} groups'}"
+                           VerticalAlignment="Center" Margin="16,0,0,0"
+                           Foreground="{DynamicResource MutedForegroundBrush}" FontSize="12"/>
+            </StackPanel>
+        </Border>
+
         <!-- Loading Spinner -->
-        <Border Grid.Row="3" HorizontalAlignment="Center" Margin="10"
+        <Border Grid.Row="4" HorizontalAlignment="Center" Margin="10"
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}">
             <StackPanel Orientation="Horizontal">
-                <ProgressBar IsIndeterminate="True" Width="200" Height="20" 
+                <ProgressBar IsIndeterminate="True" Width="200" Height="20"
                              VerticalAlignment="Center"/>
-                <TextBlock Text="Loading Groups..." Margin="10,0,0,0" 
+                <TextBlock Text="Loading Groups..." Margin="10,0,0,0"
                            VerticalAlignment="Center"/>
             </StackPanel>
         </Border>
         
         <!-- Data Grid -->
-        <DataGrid Grid.Row="4" ItemsSource="{Binding Groups}" 
-                  AutoGenerateColumns="False" Margin="10"
+        <DataGrid Grid.Row="5" ItemsSource="{Binding FilteredGroups}"
+                  AutoGenerateColumns="False" Margin="20,0,20,20"
                   Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}"
-                  CanUserAddRows="False" CanUserDeleteRows="False" 
+                  CanUserAddRows="False" CanUserDeleteRows="False"
                   SelectionMode="Extended" GridLinesVisibility="Horizontal">
             
             <DataGrid.Columns>
@@ -97,14 +213,14 @@
         </DataGrid>
         
         <!-- No Data Message -->
-        <Border Grid.Row="4" HorizontalAlignment="Center" VerticalAlignment="Center"
+        <Border Grid.Row="5" HorizontalAlignment="Center" VerticalAlignment="Center"
                 Visibility="{Binding HasData, Converter={StaticResource InverseBoolToVisibility}}">
             <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-                <TextBlock Text="👥" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
-                <TextBlock Text="No Groups data found" FontSize="16" HorizontalAlignment="Center" 
-                           Margin="0,10,0,0" Opacity="0.7"/>
-                <TextBlock Text="Check CSV files in data directory" FontSize="12" HorizontalAlignment="Center" 
-                           Margin="0,5,0,0" Opacity="0.5"/>
+                <TextBlock Text="🔐" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
+                <TextBlock Text="No security groups data found" FontSize="16" HorizontalAlignment="Center"
+                           Margin="0,10,0,0" Opacity="0.7" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                <TextBlock Text="Run discovery modules or check CSV files in data directory" FontSize="12" HorizontalAlignment="Center"
+                           Margin="0,5,0,0" Opacity="0.5" Foreground="{DynamicResource MutedForegroundBrush}"/>
             </StackPanel>
         </Border>
         

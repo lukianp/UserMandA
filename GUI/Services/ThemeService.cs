@@ -278,7 +278,7 @@ namespace MandADiscoverySuite.Services
                 UseSystemTheme = false,
                 FontSize = 1.0,
                 ReducedMotion = false,
-                HighContrast = false
+                HighContrast = true  // Set high contrast as default
             };
         }
 

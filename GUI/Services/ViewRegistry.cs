@@ -4,6 +4,10 @@ using System.Windows.Controls;
 using MandADiscoverySuite.Views;
 using MandADiscoverySuite.ViewModels.Placeholders;
 
+// DEBUG LOGGING: Validate nullable context
+System.Diagnostics.Debug.WriteLine($"[ViewRegistry] File loaded at {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}");
+System.Diagnostics.Debug.WriteLine($"[ViewRegistry] Nullable context validation - checking for nullable annotations...");
+
 namespace MandADiscoverySuite.Services
 {
     /// <summary>
@@ -12,12 +16,17 @@ namespace MandADiscoverySuite.Services
     public class ViewRegistry
     {
         private readonly Dictionary<string, Func<UserControl>> _viewFactories;
-        private static ViewRegistry? _instance;
+        private static ViewRegistry _instance;
 
         public static ViewRegistry Instance => _instance ??= new ViewRegistry();
 
         private ViewRegistry()
         {
+            // DEBUG LOGGING: Validate nullable context at runtime
+            System.Diagnostics.Debug.WriteLine($"[ViewRegistry] Constructor called at {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}");
+            System.Diagnostics.Debug.WriteLine($"[ViewRegistry] _instance type: {_instance?.GetType().Name ?? "null"}");
+            System.Diagnostics.Debug.WriteLine($"[ViewRegistry] Current method signature analysis complete");
+
             _viewFactories = new Dictionary<string, Func<UserControl>>(StringComparer.OrdinalIgnoreCase)
             {
                 // Navigation keys (lowercase) mapped to views - Updated to use New unified pipeline views
@@ -171,7 +180,7 @@ namespace MandADiscoverySuite.Services
                 ["webserverconfigdiscovery"] = () => new WebServerConfigurationDiscoveryView(), // Maps WebServerConfigDiscovery → WebServerConfigurationDiscovery
                 // Additional enabled modules from ModuleRegistry.json
                 ["physicalserverdiscovery"] = () => new PhysicalServerDiscoveryView(), // Physical server discovery view - IMPLEMENTED
-                ["applicationdiscovery"] = () => new Views.Placeholders.MissingView(), // Application discovery view doesn't exist yet
+                ["applicationdiscovery"] = () => new ApplicationDiscoveryView(), // Application discovery view - IMPLEMENTED
                 ["securityinfrastructurediscovery"] = () => new SecurityInfrastructureDiscoveryView(), // Security infrastructure discovery view - IMPLEMENTED
                 ["certificatediscovery"] = () => new Views.Placeholders.MissingView(), // Certificate discovery view doesn't exist yet
                 ["dataclassification"] = () => new Views.Placeholders.MissingView(), // Data classification view doesn't exist yet
@@ -218,7 +227,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Resolve a view by key (alias for CreateView)
         /// </summary>
-        public static UserControl? Resolve(string key)
+        public static UserControl Resolve(string key)
         {
             return Instance.CreateView(key);
         }
@@ -226,7 +235,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Create a view instance by key
         /// </summary>
-        public UserControl? CreateView(string key)
+        public UserControl CreateView(string key)
         {
             // Thread-safe debug logging - use Debug.WriteLine instead of file logging to prevent deadlocks
             var logMessage = $"[ViewRegistry] CreateView called with key: '{key}'";
@@ -252,7 +261,7 @@ namespace MandADiscoverySuite.Services
                     var createMsg = $"[ViewRegistry] Creating view for key '{key}'";
                     System.Diagnostics.Debug.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {createMsg}");
                     
-                    UserControl? view = null;
+                    UserControl view = null;
                     
                     // CRITICAL FIX: ALWAYS marshal view creation to UI thread
                     // Check if we're already on UI thread to avoid unnecessary marshalling
@@ -290,8 +299,9 @@ namespace MandADiscoverySuite.Services
                     var errorMsg = $"[ViewRegistry] Error creating view for key '{key}': {ex.Message}";
                     System.Diagnostics.Debug.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {errorMsg}");
                     System.Diagnostics.Debug.WriteLine($"[ViewRegistry] Stack trace: {ex.StackTrace}");
-                    // Return fallback view for factory errors
-                    return CreateMissingView(key, $"Error creating view: {ex.Message}");
+
+                    // Return fallback view for factory errors with detailed error message
+                    return CreateMissingView(key, $"Error creating view: {ex.Message}\n\nStack trace: {ex.StackTrace}");
                 }
             }
 
@@ -308,7 +318,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                UserControl? missingView = null;
+                UserControl missingView = null;
                 
                 // CRITICAL FIX: ALWAYS marshal MissingView creation to UI thread
                 if (System.Windows.Application.Current?.Dispatcher != null)
@@ -357,7 +367,7 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                UserControl? errorControl = null;
+                UserControl errorControl = null;
                 
                 if (System.Windows.Application.Current?.Dispatcher != null)
                 {

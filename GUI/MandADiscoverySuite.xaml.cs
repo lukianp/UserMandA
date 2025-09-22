@@ -127,8 +127,15 @@ namespace MandADiscoverySuite
             {
                 logAction?.Invoke("Initializing TabControl reference...");
                 // Initialize TabControl reference so TabsService can properly manage tab selection
-                ViewModel.InitializeTabControl(localMainTabControl);
-                logAction?.Invoke("TabControl initialized for tab selection management");
+                if (localMainTabControl != null)
+                {
+                    ViewModel.InitializeTabControl(localMainTabControl);
+                    logAction?.Invoke("TabControl initialized for tab selection management");
+                }
+                else
+                {
+                    logAction?.Invoke("Warning: MainTabControlInstance not found - tab selection may not work properly");
+                }
                 System.Diagnostics.Debug.WriteLine("TabControl initialized for tab selection management");
                 
                 // Set up lazy loading for each view

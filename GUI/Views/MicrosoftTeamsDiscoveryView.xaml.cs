@@ -15,7 +15,7 @@ namespace MandADiscoverySuite.Views
         {
             try
             {
-                InitializeComponent();
+                // InitializeComponent(); // Temporarily commented out to isolate SolidColorBrush.Color parsing error
 
                 // Create and set ViewModel
                 var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
@@ -24,8 +24,24 @@ namespace MandADiscoverySuite.Views
 
                 var csvService = new CsvDataServiceNew(csvLogger);
 
-                // Adjusted constructor arguments to match expected types
-                var viewModel = new MicrosoftTeamsDiscoveryViewModel(null, null, vmLogger);
+                // Create proper ModuleInfo for Teams Discovery
+                var moduleInfo = new MandADiscoverySuite.Services.ModuleInfo
+                {
+                    Icon = "👥",
+                    DisplayName = "Microsoft Teams Discovery",
+                    Description = "Discovery and analysis of Microsoft Teams environments",
+                    Category = "Collaboration",
+                    Priority = 2,
+                    Timeout = 300,
+                    FilePath = "Data/TeamsDiscovery.csv",
+                    Enabled = true
+                };
+
+                // Create MainViewModel instance (basic implementation)
+                var mainViewModel = new MandADiscoverySuite.ViewModels.MainViewModel();
+
+                // Create ViewModel with proper arguments
+                var viewModel = new MicrosoftTeamsDiscoveryViewModel(moduleInfo, mainViewModel, vmLogger);
 
                 DataContext = viewModel;
 

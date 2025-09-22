@@ -1093,4 +1093,114 @@ namespace MandADiscoverySuite.Models
             Priority = 5;
         }
     }
+
+
+    /// <summary>
+    /// ViewModel for individual discovery modules in the domain discovery view
+    /// </summary>
+    public class DiscoveryModuleViewModel : INotifyPropertyChanged
+    {
+        private DiscoveryModuleStatus _status;
+        private bool _isEnabled;
+        private string _statusMessage;
+        private double _progress;
+        private DateTime? _lastRun;
+        private int _resultCount;
+
+        public string ModuleId { get; set; }
+        public string DisplayName { get; set; }
+        public string Description { get; set; }
+        public string Category { get; set; }
+        public string Icon { get; set; }
+        public int Priority { get; set; }
+        public string FilePath { get; set; }
+        public int Timeout { get; set; }
+
+        public DiscoveryModuleStatus Status
+        {
+            get => _status;
+            set
+            {
+                _status = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(StatusText));
+                OnPropertyChanged(nameof(IsRunning));
+                OnPropertyChanged(nameof(CanRun));
+            }
+        }
+
+        public bool IsEnabled
+        {
+            get => _isEnabled;
+            set
+            {
+                _isEnabled = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CanRun));
+            }
+        }
+
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set
+            {
+                _statusMessage = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double Progress
+        {
+            get => _progress;
+            set
+            {
+                _progress = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public DateTime? LastRun
+        {
+            get => _lastRun;
+            set
+            {
+                _lastRun = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(LastRunText));
+            }
+        }
+
+        public int ResultCount
+        {
+            get => _resultCount;
+            set
+            {
+                _resultCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ResultCountText));
+            }
+        }
+
+        // Computed properties
+        public string StatusText => Status.ToString();
+        public bool IsRunning => Status == DiscoveryModuleStatus.Running;
+        public bool CanRun => IsEnabled && !IsRunning;
+        public string LastRunText => LastRun?.ToString("yyyy-MM-dd HH:mm") ?? "Never";
+        public string ResultCountText => ResultCount > 0 ? $"{ResultCount:N0} items" : "No results";
+        public string PriorityText => Priority switch { 1 => "High", 2 => "Medium", _ => "Low" };
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public DiscoveryModuleViewModel()
+        {
+            Status = DiscoveryModuleStatus.Ready;
+            IsEnabled = true;
+            Progress = 0;
+        }
+    }
 }

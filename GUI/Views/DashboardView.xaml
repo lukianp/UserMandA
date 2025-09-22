@@ -46,16 +46,42 @@
             </Grid.RowDefinitions>
             
             <!-- Header -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,32">
-                <TextBlock Text="📊 Overview" 
-                          FontSize="32" 
-                          FontWeight="Bold" 
-                          Foreground="{DynamicResource ForegroundBrush}" 
-                          Margin="0,0,0,8"/>
-                <TextBlock Text="Project status and discovered IT infrastructure overview" 
-                          FontSize="16" 
-                          Foreground="{StaticResource SecondaryTextBrush}"/>
-            </StackPanel>
+            <Border Grid.Row="0" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="24" Margin="0,0,0,24">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="📊 M&amp;A Discovery Dashboard"
+                                  FontSize="32"
+                                  FontWeight="Bold"
+                                  Foreground="{DynamicResource ForegroundBrush}"
+                                  Margin="0,0,0,8"/>
+                        <TextBlock Text="Real-time project status and discovered IT infrastructure overview"
+                                  FontSize="16"
+                                  Foreground="{DynamicResource SecondaryTextBrush}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Content="🔄 Refresh"
+                                Command="{Binding RefreshDashboardCommand}"
+                                Style="{DynamicResource ModernButtonStyle}"
+                                Background="{DynamicResource AccentBrush}"
+                                Foreground="{DynamicResource WhiteBrush}"
+                                Padding="12,6" Margin="0,0,8,0"
+                                ToolTip="Refresh dashboard statistics"/>
+                        <Button Content="📊 Reports"
+                                Command="{Binding OpenReportsCommand}"
+                                Style="{DynamicResource ModernButtonStyle}"
+                                Background="{DynamicResource SecondaryBrush}"
+                                Foreground="{DynamicResource ForegroundBrush}"
+                                Padding="12,6"
+                                ToolTip="View detailed reports"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
             
             <!-- Loading Indicator -->
             <Border Grid.Row="1" 
@@ -91,29 +117,50 @@
                 <UniformGrid Grid.Row="0" Columns="3" Margin="0,0,0,16">
                     
                     <!-- Users Card -->
-                    <Border Style="{DynamicResource DashboardCardStyle}">
+                    <Border Style="{DynamicResource DashboardCardStyle}" Cursor="Hand"
+                            ToolTip="Click to view user details">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToUsersCommand}"/>
+                        </Border.InputBindings>
                         <StackPanel>
                             <TextBlock Text="👥" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                            <TextBlock Text="{Binding TotalUsers}" Style="{DynamicResource StatNumberStyle}"/>
-                            <TextBlock Text="Users" Style="{DynamicResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding TotalUsers, StringFormat=N0}" Style="{DynamicResource StatNumberStyle}"/>
+                            <TextBlock Text="Active Users" Style="{DynamicResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding UsersChangeText}" FontSize="12"
+                                       Foreground="{DynamicResource SuccessBrush}"
+                                       HorizontalAlignment="Center" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
                     
                     <!-- Computers Card -->
-                    <Border Style="{DynamicResource DashboardCardStyle}">
+                    <Border Style="{DynamicResource DashboardCardStyle}" Cursor="Hand"
+                            ToolTip="Click to view infrastructure details">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToInfrastructureCommand}"/>
+                        </Border.InputBindings>
                         <StackPanel>
                             <TextBlock Text="💻" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                            <TextBlock Text="{Binding TotalComputers}" Style="{DynamicResource StatNumberStyle}"/>
-                            <TextBlock Text="Computers" Style="{DynamicResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding TotalComputers, StringFormat=N0}" Style="{DynamicResource StatNumberStyle}"/>
+                            <TextBlock Text="Managed Devices" Style="{DynamicResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding ComputersChangeText}" FontSize="12"
+                                       Foreground="{DynamicResource SuccessBrush}"
+                                       HorizontalAlignment="Center" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
                     
                     <!-- Applications Card -->
-                    <Border Style="{DynamicResource DashboardCardStyle}">
+                    <Border Style="{DynamicResource DashboardCardStyle}" Cursor="Hand"
+                            ToolTip="Click to view application inventory">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToApplicationsCommand}"/>
+                        </Border.InputBindings>
                         <StackPanel>
                             <TextBlock Text="📱" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                            <TextBlock Text="{Binding TotalApplications}" Style="{DynamicResource StatNumberStyle}"/>
+                            <TextBlock Text="{Binding TotalApplications, StringFormat=N0}" Style="{DynamicResource StatNumberStyle}"/>
                             <TextBlock Text="Applications" Style="{DynamicResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding ApplicationsChangeText}" FontSize="12"
+                                       Foreground="{DynamicResource SuccessBrush}"
+                                       HorizontalAlignment="Center" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
                     
@@ -123,29 +170,50 @@
                 <UniformGrid Grid.Row="1" Columns="3">
                     
                     <!-- Groups Card -->
-                    <Border Style="{DynamicResource DashboardCardStyle}">
+                    <Border Style="{DynamicResource DashboardCardStyle}" Cursor="Hand"
+                            ToolTip="Click to view security groups">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToGroupsCommand}"/>
+                        </Border.InputBindings>
                         <StackPanel>
                             <TextBlock Text="🔐" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                            <TextBlock Text="{Binding TotalGroups}" Style="{DynamicResource StatNumberStyle}"/>
-                            <TextBlock Text="Groups" Style="{DynamicResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding TotalGroups, StringFormat=N0}" Style="{DynamicResource StatNumberStyle}"/>
+                            <TextBlock Text="Security Groups" Style="{DynamicResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding GroupsChangeText}" FontSize="12"
+                                       Foreground="{DynamicResource SuccessBrush}"
+                                       HorizontalAlignment="Center" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
                     
                     <!-- File Servers Card -->
-                    <Border Style="{DynamicResource DashboardCardStyle}">
+                    <Border Style="{DynamicResource DashboardCardStyle}" Cursor="Hand"
+                            ToolTip="Click to view file server infrastructure">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToInfrastructureCommand}"/>
+                        </Border.InputBindings>
                         <StackPanel>
                             <TextBlock Text="📁" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                            <TextBlock Text="{Binding TotalFileServers}" Style="{DynamicResource StatNumberStyle}"/>
+                            <TextBlock Text="{Binding TotalFileServers, StringFormat=N0}" Style="{DynamicResource StatNumberStyle}"/>
                             <TextBlock Text="File Servers" Style="{DynamicResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding FileServersChangeText}" FontSize="12"
+                                       Foreground="{DynamicResource SuccessBrush}"
+                                       HorizontalAlignment="Center" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
                     
                     <!-- Databases Card -->
-                    <Border Style="{DynamicResource DashboardCardStyle}">
+                    <Border Style="{DynamicResource DashboardCardStyle}" Cursor="Hand"
+                            ToolTip="Click to view database infrastructure">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToInfrastructureCommand}"/>
+                        </Border.InputBindings>
                         <StackPanel>
                             <TextBlock Text="🗄️" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                            <TextBlock Text="{Binding TotalDatabases}" Style="{DynamicResource StatNumberStyle}"/>
-                            <TextBlock Text="Databases" Style="{DynamicResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding TotalDatabases, StringFormat=N0}" Style="{DynamicResource StatNumberStyle}"/>
+                            <TextBlock Text="Database Systems" Style="{DynamicResource StatLabelStyle}"/>
+                            <TextBlock Text="{Binding DatabasesChangeText}" FontSize="12"
+                                       Foreground="{DynamicResource SuccessBrush}"
+                                       HorizontalAlignment="Center" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
                     
@@ -153,36 +221,66 @@
                 
                 </Grid>
                 
-                <!-- Right Side - Project Countdown Widget -->
-                <Border Grid.Column="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="24">
-                    <StackPanel>
-                        <TextBlock Text="Project Countdown" FontSize="18" FontWeight="SemiBold" 
-                                   Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,16"/>
-                        
-                        <TextBlock Text="{Binding ProjectName, FallbackValue='Not set'}" FontSize="16" FontWeight="Bold"
-                                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,12"/>
-                        
-                        <StackPanel Margin="0,0,0,8">
-                            <TextBlock Text="Target Cutover" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
-                            <TextBlock Text="{Binding DaysToCutover.Days, FallbackValue='--'}" FontSize="24" FontWeight="Bold" 
-                                       Foreground="{DynamicResource WarningBrush}"/>
-                            <TextBlock Text="days remaining" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
+                <!-- Right Side - Project Status & Quick Actions Widget -->
+                <StackPanel Grid.Column="1">
+                    <!-- Project Countdown Widget -->
+                    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="24" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="📅 Project Timeline" FontSize="18" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,16"/>
+
+                            <TextBlock Text="{Binding ProjectName, FallbackValue='Configure Project'}" FontSize="16" FontWeight="Bold"
+                                       Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,12"/>
+
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Text="Target Cutover" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                <TextBlock Text="{Binding DaysToCutover.Days, FallbackValue='--'}" FontSize="24" FontWeight="Bold"
+                                           Foreground="{DynamicResource WarningBrush}"/>
+                                <TextBlock Text="days remaining" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,0,0,16">
+                                <TextBlock Text="Next Wave" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                <TextBlock Text="{Binding DaysToNextWave.Days, FallbackValue='--'}" FontSize="20" FontWeight="Bold"
+                                           Foreground="{DynamicResource SuccessBrush}"/>
+                                <TextBlock Text="days remaining" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                            </StackPanel>
+
+                            <Button Content="⚙️ Configure Project" Command="{Binding ConfigureProjectCommand}"
+                                    Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource WhiteBrush}" BorderThickness="0"
+                                    Padding="12,6" HorizontalAlignment="Stretch"
+                                    Style="{DynamicResource ModernButtonStyle}"
+                                    ToolTip="Configure project settings and timeline"
+                                    TabIndex="1"/>
                         </StackPanel>
-                        
-                        <StackPanel Margin="0,0,0,16">
-                            <TextBlock Text="Next Wave" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
-                            <TextBlock Text="{Binding DaysToNextWave.Days, FallbackValue='--'}" FontSize="20" FontWeight="Bold" 
-                                       Foreground="{DynamicResource SuccessBrush}"/>
-                            <TextBlock Text="days remaining" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"/>
+                    </Border>
+
+                    <!-- Quick Actions Widget -->
+                    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="24">
+                        <StackPanel>
+                            <TextBlock Text="⚡ Quick Actions" FontSize="18" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,16"/>
+
+                            <Button Content="🔍 Start Discovery" Command="{Binding StartDiscoveryCommand}"
+                                    Background="{DynamicResource SuccessBrush}" Foreground="{DynamicResource WhiteBrush}" BorderThickness="0"
+                                    Padding="12,6" Margin="0,0,0,8" HorizontalAlignment="Stretch"
+                                    Style="{DynamicResource ModernButtonStyle}"
+                                    ToolTip="Launch domain discovery modules"/>
+
+                            <Button Content="📊 Generate Report" Command="{Binding GenerateReportCommand}"
+                                    Background="{DynamicResource SecondaryBrush}" Foreground="{DynamicResource ForegroundBrush}" BorderThickness="0"
+                                    Padding="12,6" Margin="0,0,0,8" HorizontalAlignment="Stretch"
+                                    Style="{DynamicResource ModernButtonStyle}"
+                                    ToolTip="Generate comprehensive discovery report"/>
+
+                            <Button Content="🚀 Migration Planning" Command="{Binding OpenMigrationPlanningCommand}"
+                                    Background="{DynamicResource WarningBrush}" Foreground="{DynamicResource WhiteBrush}" BorderThickness="0"
+                                    Padding="12,6" HorizontalAlignment="Stretch"
+                                    Style="{DynamicResource ModernButtonStyle}"
+                                    ToolTip="Access migration planning tools"/>
                         </StackPanel>
-                        
-                        <Button Content="Configure" Command="{Binding ConfigureProjectCommand}" 
-                                Background="{DynamicResource SecondaryBrush}" Foreground="{DynamicResource ForegroundBrush}" BorderThickness="0" 
-                                Padding="12,6" HorizontalAlignment="Left"
-                                Style="{DynamicResource ModernButtonStyle}"
-                                TabIndex="1"/>
-                    </StackPanel>
-                </Border>
+                    </Border>
+                </StackPanel>
                 
             </Grid>
         </Grid>
