@@ -101,8 +101,8 @@ namespace MandADiscoverySuite.ViewModels
                     UpdateConfigurationServiceStatusAsync(),
                     UpdateCurrentOperationStatusAsync(),
                     UpdateConnectionStatusAsync(),
-                    UpdateMemoryUsageStatusAsync(),
-                    UpdateSystemHealthStatusAsync()
+                    Task.Run(UpdateMemoryUsageStatus),
+                    Task.Run(UpdateSystemHealthStatus)
                 );
 
                 LastUpdated = DateTime.Now;
@@ -314,16 +314,16 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task UpdateMemoryUsageStatusAsync()
+        private void UpdateMemoryUsageStatus()
         {
             try
             {
                 var memoryUsage = GetMemoryUsagePercentage();
                 var memoryMB = GetMemoryUsageMB();
-                
+
                 StatusType status;
                 string statusText;
-                
+
                 if (memoryUsage < 70)
                 {
                     status = StatusType.Ready;
@@ -339,7 +339,7 @@ namespace MandADiscoverySuite.ViewModels
                     status = StatusType.Critical;
                     statusText = $"{memoryUsage:F0}% ({memoryMB:F0} MB)";
                 }
-                
+
                 MemoryUsageStatus.UpdateStatus(status, statusText, memoryUsage,
                     $"Memory usage: {memoryUsage:F1}% ({memoryMB:F0} MB of available memory)");
             }
@@ -350,16 +350,16 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task UpdateSystemHealthStatusAsync()
+        private void UpdateSystemHealthStatus()
         {
             try
             {
                 // Aggregate health from all other indicators
                 var healthScore = CalculateOverallHealthScore();
-                
+
                 StatusType status;
                 string statusText;
-                
+
                 if (healthScore >= 90)
                 {
                     status = StatusType.Ready;
@@ -385,7 +385,7 @@ namespace MandADiscoverySuite.ViewModels
                     status = StatusType.Critical;
                     statusText = "Critical";
                 }
-                
+
                 SystemHealthStatus.UpdateStatus(status, statusText, null,
                     $"Overall system health score: {healthScore:F0}%");
             }

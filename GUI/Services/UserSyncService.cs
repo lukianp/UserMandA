@@ -38,18 +38,23 @@ namespace MandADiscoverySuite.Services
         #region Constructor
 
         public UserSyncService(
-            ILogger<UserSyncService> logger = null,
-            IIdentityMigrator identityMigrator = null,
-            IAuditService auditService = null)
+            ILogger<UserSyncService> logger = null!,
+            IIdentityMigrator identityMigrator = null!,
+            IAuditService auditService = null!)
         {
             _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<UserSyncService>.Instance;
             _identityMigrator = identityMigrator ?? throw new ArgumentNullException(nameof(identityMigrator));
             _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
-            
+
             _activeSyncJobs = new ConcurrentDictionary<string, SyncJobInfo>();
             _userSyncStatuses = new ConcurrentDictionary<string, UserSyncStatus>();
             _syncTimers = new ConcurrentDictionary<string, Timer>();
             _syncSemaphore = new SemaphoreSlim(5, 5); // Limit concurrent sync operations
+
+            // Initialize events to prevent CS8618 warnings
+            SyncJobStatusChanged = delegate { };
+            UserSyncStatusChanged = delegate { };
+            SyncProgressUpdated = delegate { };
         }
 
         #endregion
@@ -82,7 +87,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Starts a periodic synchronization job for the specified users
         /// </summary>
-        public async Task<string> StartPeriodicSyncAsync(
+        public Task<string> StartPeriodicSyncAsync(
             IEnumerable<UserData> users,
             PeriodicSyncSettings settings,
             TargetContext target,
@@ -150,8 +155,8 @@ namespace MandADiscoverySuite.Services
                 }
 
                 _logger.LogInformation($"Periodic sync job {syncJobId} started successfully");
-                
-                return syncJobId;
+
+                return Task.FromResult(syncJobId);
             }
             catch (Exception ex)
             {
@@ -170,7 +175,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Stops a periodic synchronization job
         /// </summary>
-        public async Task<bool> StopPeriodicSyncAsync(string syncJobId, CancellationToken cancellationToken = default)
+        public Task<bool> StopPeriodicSyncAsync(string syncJobId, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -179,7 +184,7 @@ namespace MandADiscoverySuite.Services
                 if (!_activeSyncJobs.TryGetValue(syncJobId, out var syncJob))
                 {
                     _logger.LogWarning($"Sync job {syncJobId} not found");
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 // Stop the timer
@@ -212,13 +217,13 @@ namespace MandADiscoverySuite.Services
                 });
 
                 _logger.LogInformation($"Periodic sync job {syncJobId} stopped successfully");
-                
-                return true;
+
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Failed to stop sync job {syncJobId}");
-                return false;
+                return Task.FromResult(false);
             }
         }
 

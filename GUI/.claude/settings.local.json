@@ -6,7 +6,6 @@
       "Bash(xcopy:*)",
       "Bash(\"C:/enterprisediscovery/MandADiscoverySuite.exe\")"
     ],
-    "deny": [],
-    "ask": []
+    "deny": []
   }
 }

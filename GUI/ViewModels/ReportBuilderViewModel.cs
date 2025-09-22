@@ -279,8 +279,8 @@ namespace MandADiscoverySuite.ViewModels
             LoadReportCommand = new RelayCommand<ReportDefinition>(LoadReport);
             SaveReportCommand = new AsyncRelayCommand(SaveReportAsync, () => CanSaveReport);
             SaveAsReportCommand = new AsyncRelayCommand(SaveAsReportAsync);
-            DeleteReportCommand = new RelayCommand<ReportDefinition>(report => DeleteReportAsync(report));
-            CloneReportCommand = new RelayCommand<ReportDefinition>(report => CloneReportAsync(report));
+            DeleteReportCommand = new AsyncRelayCommand<ReportDefinition>(DeleteReportAsync);
+            CloneReportCommand = new AsyncRelayCommand<ReportDefinition>(CloneReportAsync);
 
             // Data sources
             AddDataSourceCommand = new RelayCommand<ReportDataSource>(AddDataSource);

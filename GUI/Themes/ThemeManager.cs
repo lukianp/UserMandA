@@ -52,6 +52,9 @@ namespace MandADiscoverySuite.Themes
         {
             _themes = new Dictionary<ThemeType, ResourceDictionary>();
             InitializeThemes();
+
+            // Initialize events to prevent CS8618 warnings
+            ThemeChanged = delegate { };
         }
 
         private void InitializeThemes()
@@ -331,6 +334,7 @@ namespace MandADiscoverySuite.Themes
 
         public ThemeType CurrentTheme => _currentTheme;
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "Registry access is Windows-specific but used in context where Windows is expected")]
         public bool IsSystemDarkModeEnabled()
         {
             try

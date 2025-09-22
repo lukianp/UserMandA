@@ -32,10 +32,19 @@ namespace MandADiscoverySuite.Services
         public DependencyGraphService()
         {
             _graphs = new Dictionary<string, DependencyGraph>();
-            _graphsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
+            _graphsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "MandADiscoverySuite", "DependencyGraphs");
-            
+
             Directory.CreateDirectory(_graphsDirectory);
+
+            // Initialize events to prevent CS8618 warnings
+            NodeAdded = delegate { };
+            NodeUpdated = delegate { };
+            NodeRemoved = delegate { };
+            EdgeAdded = delegate { };
+            EdgeUpdated = delegate { };
+            EdgeRemoved = delegate { };
+            LayoutUpdated = delegate { };
         }
 
         #region Graph Management
@@ -933,8 +942,8 @@ namespace MandADiscoverySuite.Services
             return format.ToLower() switch
             {
                 "json" => JsonConvert.SerializeObject(graph, Formatting.Indented),
-                "xml" => ExportToXmlAsync(graph),
-                "csv" => ExportToCsvAsync(graph),
+                "xml" => ExportToXml(graph),
+                "csv" => ExportToCsv(graph),
                 _ => JsonConvert.SerializeObject(graph, Formatting.Indented)
             };
         }
@@ -949,14 +958,14 @@ namespace MandADiscoverySuite.Services
             return format.ToLower() switch
             {
                 "json" => JsonConvert.DeserializeObject<DependencyGraph>(content),
-                "xml" => ImportFromXmlAsync(content),
+                "xml" => ImportFromXml(content),
                 _ => JsonConvert.DeserializeObject<DependencyGraph>(content)
             };
         }
 
         #region Export/Import Helpers
 
-        private string ExportToXmlAsync(DependencyGraph graph)
+        private string ExportToXml(DependencyGraph graph)
         {
             var xml = new System.Xml.XmlDocument();
             var root = xml.CreateElement("DependencyGraph");
@@ -999,7 +1008,7 @@ namespace MandADiscoverySuite.Services
             return xml.OuterXml;
         }
 
-        private string ExportToCsvAsync(DependencyGraph graph)
+        private string ExportToCsv(DependencyGraph graph)
         {
             var csv = new System.Text.StringBuilder();
 
@@ -1024,7 +1033,7 @@ namespace MandADiscoverySuite.Services
             return csv.ToString();
         }
 
-        private DependencyGraph ImportFromXmlAsync(string xmlContent)
+        private DependencyGraph ImportFromXml(string xmlContent)
         {
             var xml = new System.Xml.XmlDocument();
             xml.LoadXml(xmlContent);

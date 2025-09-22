@@ -99,7 +99,7 @@ namespace MandADiscoverySuite.ViewModels
         // Data binding collections
         public ObservableCollection<dynamic> SelectedResults { get; } = new ObservableCollection<dynamic>();
 
-        private object _selectedItem;
+        private object? _selectedItem;
         public object SelectedItem
         {
             get => _selectedItem;

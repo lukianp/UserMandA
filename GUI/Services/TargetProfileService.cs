@@ -17,7 +17,7 @@ namespace MandADiscoverySuite.Services
     /// </summary>
     public class TargetProfileService
     {
-        private static TargetProfileService _instance;
+        private static TargetProfileService? _instance;
         public static TargetProfileService Instance => _instance ??= new TargetProfileService();
 
         private readonly object _lock = new();
@@ -134,7 +134,7 @@ namespace MandADiscoverySuite.Services
             return DataProtectionService.UnprotectFromBase64(profile.ClientSecretEncrypted);
         }
 
-        public async Task<TargetProfile> GetActiveProfileAsync(string companyName)
+        public async Task<TargetProfile?> GetActiveProfileAsync(string companyName)
         {
             var list = await GetProfilesAsync(companyName).ConfigureAwait(false);
             return list.FirstOrDefault(p => p.IsActive) ?? list.FirstOrDefault();

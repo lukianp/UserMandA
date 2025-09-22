@@ -71,7 +71,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Detects the environment type for a target profile based on connection information
         /// </summary>
-        public async Task<EnvironmentDetectionResult> DetectEnvironmentAsync(TargetProfile targetProfile)
+        public Task<EnvironmentDetectionResult> DetectEnvironmentAsync(TargetProfile targetProfile)
         {
             var result = new EnvironmentDetectionResult
             {
@@ -93,7 +93,7 @@ namespace MandADiscoverySuite.Services
                 if (!string.IsNullOrWhiteSpace(targetProfile.Domain))
                 {
                     result.PrimaryDomain = targetProfile.Domain;
-                    
+
                     // Check for common cloud domain patterns
                     if (targetProfile.Domain.EndsWith(".onmicrosoft.com", StringComparison.OrdinalIgnoreCase))
                     {
@@ -117,7 +117,7 @@ namespace MandADiscoverySuite.Services
                 }
 
                 result.DisplayStatus = result.GetEnvironmentDescription();
-                
+
                 _logger?.LogInformation($"Environment detection completed for {targetProfile.Name}: {result.EnvironmentType}");
             }
             catch (Exception ex)
@@ -127,7 +127,7 @@ namespace MandADiscoverySuite.Services
                 result.DisplayStatus = "Detection Failed";
             }
 
-            return result;
+            return Task.FromResult(result);
         }
 
         /// <summary>

@@ -47,16 +47,16 @@ namespace MandADiscoverySuite.Services
         #region Constructor
 
         public GraphNotificationService(
-            NotificationTemplateService templateService = null,
-            ILogicEngineService logicEngineService = null,
-            ILogger<GraphNotificationService> logger = null)
+            NotificationTemplateService templateService = null!,
+            ILogicEngineService logicEngineService = null!,
+            ILogger<GraphNotificationService> logger = null!)
         {
             _logger = logger;
-            _templateService = templateService ?? new NotificationTemplateService(logger: null);
+            _templateService = templateService ?? new NotificationTemplateService(logger: null!);
             _logicEngineService = logicEngineService;
-            
+
             _configuration = new GraphNotificationConfiguration();
-            
+
             _logger?.LogInformation("GraphNotificationService initialized");
         }
 
@@ -605,18 +605,18 @@ namespace MandADiscoverySuite.Services
 
         #region Private Methods
 
-        private async Task<UserNotificationData> GetUserDataFromLogicEngineAsync(string userIdentifier)
+        private Task<UserNotificationData> GetUserDataFromLogicEngineAsync(string userIdentifier)
         {
             try
             {
                 // This would integrate with the actual logic engine service
                 // For now, return null to indicate no data found
-                return null;
+                return Task.FromResult<UserNotificationData>(null);
             }
             catch (Exception ex)
             {
                 _logger?.LogWarning(ex, "Error getting user data from logic engine for {UserIdentifier}", userIdentifier);
-                return null;
+                return Task.FromResult<UserNotificationData>(null);
             }
         }
 

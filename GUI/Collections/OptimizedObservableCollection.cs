@@ -148,7 +148,7 @@ namespace MandADiscoverySuite.Collections
         /// Sorts the collection in place using the provided comparer
         /// </summary>
         /// <param name="comparer">Comparer to use for sorting</param>
-        public void Sort(IComparer<T> comparer = null)
+        public void Sort(IComparer<T> comparer = null!)
         {
             if (Count <= 1) return;
             

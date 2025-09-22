@@ -220,14 +220,6 @@ namespace MandADiscoverySuite.Services
             }
         }
 
-        /// <summary>
-        /// T-030: Helper method to build user detail projection (separated for caching compatibility)
-        /// </summary>
-        private async Task<UserDetailProjection?> BuildUserDetailProjectionAsync(string sidOrUpn)
-        {
-            return await Task.FromResult(BuildUserDetailProjection(sidOrUpn)).ConfigureAwait(false);
-        }
-
         private UserDetailProjection? BuildUserDetailProjection(string sidOrUpn)
         {
             var user = _usersBySid.GetValueOrDefault(sidOrUpn) ?? _usersByUpn.GetValueOrDefault(sidOrUpn);
@@ -291,17 +283,18 @@ namespace MandADiscoverySuite.Services
             );
         }
 
-        public async Task<SqlDbDto?> GetDatabaseDetailAsync(string databaseName)
-        {
-            return await Task.FromResult(GetDatabaseDetail(databaseName)).ConfigureAwait(false);
-        }
-
         public SqlDbDto? GetDatabaseDetail(string databaseName)
         {
             // T-027 Migration Engine compatibility - stub implementation
             var database = _sqlDbsByKey.Values.FirstOrDefault(db => db.Name?.Equals(databaseName, StringComparison.OrdinalIgnoreCase) == true);
             return database;
         }
+
+        public Task<SqlDbDto?> GetDatabaseDetailAsync(string databaseName)
+        {
+            return Task.FromResult(GetDatabaseDetail(databaseName));
+        }
+
 
         public async Task<List<MigrationHint>> SuggestEntitlementsForUserAsync(string sid)
         {

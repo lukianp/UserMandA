@@ -34,8 +34,8 @@ namespace MandADiscoverySuite.Services
         };
 
         public LicenseAssignmentService(
-            ILogger<LicenseAssignmentService> logger = null,
-            ICredentialStorageService credentialService = null)
+            ILogger<LicenseAssignmentService> logger = null!,
+            ICredentialStorageService credentialService = null!)
         {
             _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<LicenseAssignmentService>.Instance;
             _credentialService = credentialService ?? new CredentialStorageService();
@@ -43,6 +43,11 @@ namespace MandADiscoverySuite.Services
             _skuCache = new ConcurrentDictionary<string, List<LicenseSku>>();
             _bulkOperations = new ConcurrentDictionary<string, BulkLicenseOperation>();
             _cacheSemaphore = new SemaphoreSlim(1, 1);
+
+            // Initialize events to prevent CS8618 warnings
+            OperationProgress = delegate { };
+            ComplianceIssueDetected = delegate { };
+            BulkOperationCompleted = delegate { };
         }
 
         #region Events
@@ -603,7 +608,7 @@ namespace MandADiscoverySuite.Services
             return await Task.FromResult(operation);
         }
 
-        public async Task<bool> CancelBulkOperationAsync(string operationId)
+        public Task<bool> CancelBulkOperationAsync(string operationId)
         {
             if (_bulkOperations.TryGetValue(operationId, out var operation))
             {
@@ -612,10 +617,10 @@ namespace MandADiscoverySuite.Services
                     operation.Status = BulkOperationStatus.Cancelled;
                     operation.CompletedDate = DateTime.Now;
                     _logger.LogInformation($"Cancelled bulk operation {operationId}");
-                    return true;
+                    return Task.FromResult(true);
                 }
             }
-            return false;
+            return Task.FromResult(false);
         }
 
         #endregion

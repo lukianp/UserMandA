@@ -63,9 +63,9 @@ namespace MandADiscoverySuite.ViewModels
         #region Constructor
 
         public WaveSchedulingDialogViewModel(
-            MigrationSchedulerService schedulerService = null,
-            NotificationTemplateService templateService = null,
-            ILogger<WaveSchedulingDialogViewModel> logger = null)
+            MigrationSchedulerService schedulerService = null!,
+            NotificationTemplateService templateService = null!,
+            ILogger<WaveSchedulingDialogViewModel> logger = null!)
         {
             _schedulerService = schedulerService;
             _templateService = templateService;
@@ -296,7 +296,7 @@ namespace MandADiscoverySuite.ViewModels
                 await LoadNotificationTemplatesAsync();
 
                 // Load existing blackout periods from scheduler service
-                await LoadBlackoutPeriodsAsync();
+                LoadBlackoutPeriods();
 
                 _logger?.LogInformation("Wave scheduling dialog initialized");
             }
@@ -350,10 +350,10 @@ namespace MandADiscoverySuite.ViewModels
 
         private void InitializeCommands()
         {
-            AddBlackoutPeriodCommand = new AsyncRelayCommand(AddBlackoutPeriodAsync);
+            AddBlackoutPeriodCommand = new RelayCommand(AddBlackoutPeriod);
             RemoveBlackoutPeriodCommand = new RelayCommand<BlackoutPeriodViewModel>(RemoveBlackoutPeriod);
-            PreviewScheduleCommand = new AsyncRelayCommand(PreviewScheduleAsync);
-            TestNotificationsCommand = new AsyncRelayCommand(TestNotificationsAsync);
+            PreviewScheduleCommand = new RelayCommand(PreviewSchedule);
+            TestNotificationsCommand = new RelayCommand(TestNotifications);
             ScheduleWaveCommand = new AsyncRelayCommand(ScheduleWaveAsync, () => CanScheduleWave);
             CancelCommand = new RelayCommand(Cancel);
         }
@@ -437,7 +437,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task LoadBlackoutPeriodsAsync()
+        private void LoadBlackoutPeriods()
         {
             try
             {
@@ -463,7 +463,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task AddBlackoutPeriodAsync()
+        private void AddBlackoutPeriod()
         {
             try
             {
@@ -504,7 +504,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task PreviewScheduleAsync()
+        private void PreviewSchedule()
         {
             try
             {
@@ -534,7 +534,7 @@ namespace MandADiscoverySuite.ViewModels
 
                 // Show preview (this would open a preview dialog)
                 _logger?.LogInformation("Schedule preview created for wave: {WaveName}", WaveName);
-                
+
                 // For now, just add a validation message
                 ValidationErrors.Clear();
                 ValidationErrors.Add($"Schedule Preview: Wave '{WaveName}' scheduled for {ScheduledDateTime:yyyy-MM-dd HH:mm}");
@@ -546,7 +546,7 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
 
-        private async Task TestNotificationsAsync()
+        private void TestNotifications()
         {
             try
             {
@@ -558,7 +558,7 @@ namespace MandADiscoverySuite.ViewModels
 
                 // This would integrate with the GraphNotificationService to send test notifications
                 _logger?.LogInformation("Testing notifications for template: {TemplateId}", NotificationTemplateId);
-                
+
                 ValidationErrors.Clear();
                 ValidationErrors.Add($"Test notification sent using template: {NotificationTemplateId}");
             }

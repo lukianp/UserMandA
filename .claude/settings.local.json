@@ -17,10 +17,11 @@
       "Bash(pwsh \"./Build-GUI.ps1\" -Configuration Release)",
       "Bash(start MandADiscoverySuite.exe)",
       "Bash(taskkill:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(tee:*)"
     ],
     "deny": [],
-    "ask": [],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [
       "C:\\enterprisediscovery",

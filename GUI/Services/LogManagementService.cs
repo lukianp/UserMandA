@@ -44,6 +44,9 @@ namespace MandADiscoverySuite.Services
             // Initialize file system watchers
             _enterpriseWatcher = CreateFileWatcher(@"C:\enterprisediscovery\Logs");
             _profileWatcher = CreateFileWatcher(@"C:\discoverydata\ljpops\Logs");
+
+            // Initialize events to prevent CS8618 warnings
+            LogsUpdated = delegate { };
         }
 
         public async Task<ObservableCollection<LogAuditEntry>> GetLogsAsync()
@@ -474,7 +477,7 @@ namespace MandADiscoverySuite.Services
             await File.WriteAllTextAsync(filePath, json);
         }
 
-        private FileSystemWatcher CreateFileWatcher(string path)
+        private FileSystemWatcher? CreateFileWatcher(string path)
         {
             if (!Directory.Exists(path))
             {
