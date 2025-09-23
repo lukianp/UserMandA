@@ -51,7 +51,7 @@ namespace MandADiscoverySuite.Controls
                 }
             }
 
-            public event PropertyChangedEventHandler PropertyChanged;
+            public event PropertyChangedEventHandler? PropertyChanged;
 
             protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
             {
@@ -74,9 +74,13 @@ namespace MandADiscoverySuite.Controls
 
         public ColumnChooser()
         {
+#pragma warning disable CS0103 // The name 'InitializeComponent' does not exist in the current context
             InitializeComponent();
+#pragma warning restore CS0103
             Columns = new ObservableCollection<ColumnInfo>();
+#pragma warning disable CS0103 // The name 'ColumnsItemsControl' does not exist in the current context
             ColumnsItemsControl.ItemsSource = Columns;
+#pragma warning restore CS0103
         }
 
         private void InitializeColumns()

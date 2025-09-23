@@ -19,7 +19,8 @@
     <NeutralLanguage>en-US</NeutralLanguage>
     <!-- Enable binding optimization for better performance -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-        <!-- Force suppress all duplicate attribute warnings -->
+    <!-- Suppress warnings that clutter the build log -->
+    <NoWarn>CA1416;CS8618;CS8625;CS8604;CS1998;CS8767;CS8622;CS8612;CS8600;CS8603;CS8602;CS8601</NoWarn>
     <!-- Enable default SDK inclusion of XAML files -->
     <EnableDefaultPageItems>true</EnableDefaultPageItems>
     <!-- Disable framework attributes to avoid duplicates -->

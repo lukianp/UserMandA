@@ -8,6 +8,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Services.Audit;
+using MandADiscoverySuite.Models.Migration.MigrationDtos;
+using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.Tests.Audit
 {
@@ -16,10 +19,10 @@ namespace MandADiscoverySuite.Tests.Audit
     {
         private Mock<ILogger<AuditService>> _mockAuditLogger;
         private Mock<ILogger<MigrationService>> _mockMigrationLogger;
-        private Mock<IIdentityMigrator> _mockIdentityMigrator;
-        private Mock<IMailMigrator> _mockMailMigrator;
-        private Mock<IFileMigrator> _mockFileMigrator;
-        private Mock<ISqlMigrator> _mockSqlMigrator;
+        private Mock<MandADiscoverySuite.Migration.IIdentityMigrator> _mockIdentityMigrator;
+        private Mock<MandADiscoverySuite.Migration.IMailMigrator> _mockMailMigrator;
+        private Mock<MandADiscoverySuite.Migration.IFileMigrator> _mockFileMigrator;
+        private Mock<MandADiscoverySuite.Migration.ISqlMigrator> _mockSqlMigrator;
         private string _testDatabasePath;
         private AuditService _auditService;
         private MigrationService _migrationService;
@@ -42,7 +45,11 @@ namespace MandADiscoverySuite.Tests.Audit
                 _mockMailMigrator.Object,
                 _mockFileMigrator.Object,
                 _mockSqlMigrator.Object,
+                new Mock<IGroupMigrator>().Object,
+                new Mock<IGroupPolicyMigrator>().Object,
+                new Mock<IAclMigrator>().Object,
                 _auditService,
+                new Mock<ILicenseAssignmentService>().Object,
                 _mockMigrationLogger.Object);
 
             // Set audit context
@@ -67,7 +74,7 @@ namespace MandADiscoverySuite.Tests.Audit
         public async Task MigrateWaveAsync_WithSuccessfulUserMigration_ShouldLogAuditEvents()
         {
             // Arrange
-            var user = new UserDto { UserPrincipalName = "john.doe@test.com", DisplayName = "John Doe" };
+            var user = new UserData("John Doe", "john.doe@test.com", "john.doe@test.com", null, null, true, null, null, null, null);
             var wave = new MigrationWave();
             wave.Users.Add(user);
 
@@ -193,8 +200,8 @@ namespace MandADiscoverySuite.Tests.Audit
 
             // Setup all migrators to succeed
             _mockIdentityMigrator
-                .Setup(m => m.MigrateUserAsync(It.IsAny<UserDto>(), It.IsAny<MigrationSettings>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<MigrationProgress>>()))
-                .ReturnsAsync(MigrationResult.Succeeded());
+                .Setup(m => m.MigrateUserAsync(It.IsAny<UserData>(), It.IsAny<MandADiscoverySuite.Models.Migration.MigrationSettings>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<MandADiscoverySuite.Migration.MigrationProgress>>()))
+                .ReturnsAsync(MandADiscoverySuite.Models.MigrationResult.Succeeded());
 
             _mockMailMigrator
                 .Setup(m => m.MigrateMailboxAsync(It.IsAny<MailboxDto>(), It.IsAny<MigrationSettings>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<MigrationProgress>>()))

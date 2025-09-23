@@ -411,7 +411,7 @@ namespace MandADiscoverySuite.Services
                     
                     foreach (var child in children)
                     {
-                        queue.Enqueue((child, level + 1));
+                        queue.Enqueue((child!, level + 1));
                     }
                 }
                 
@@ -651,7 +651,7 @@ namespace MandADiscoverySuite.Services
                     
                     foreach (var connectedId in connectedIds)
                     {
-                        queue.Enqueue((connectedId, depth + 1));
+                        queue.Enqueue((connectedId!, depth + 1));
                     }
                 }
                 

@@ -280,8 +280,8 @@ namespace MandADiscoverySuite.Migration
                         if (successfulUserIds.Any() && !string.IsNullOrEmpty(_sourceProfile))
                         {
                             var sourceCleanupResults = await _licenseService.RemoveSourceLicensesAsync(
-                                _sourceProfile, successfulUserIds);
-                                
+                                _sourceProfile, successfulUserIds.Where(id => id != null).Select(id => id!).ToList());
+
                             _logger.LogInformation("Source license cleanup completed: {SuccessfulRemovals} successful, {FailedRemovals} failed",
                                 sourceCleanupResults.Count(r => r.IsSuccess), sourceCleanupResults.Count(r => !r.IsSuccess));
                         }

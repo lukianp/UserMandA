@@ -151,8 +151,8 @@ namespace MandADiscoverySuite.Services
                     }
 
                     // Set additional properties
-                    sku.MonthlyCost = CommonLicenseSkus.SkuMonthlyCosts.GetValueOrDefault(sku.SkuPartNumber, 0);
-                    sku.Tier = CommonLicenseSkus.SkuTiers.GetValueOrDefault(sku.SkuPartNumber, LicenseTier.Standard);
+                    sku.MonthlyCost = sku.SkuPartNumber != null ? CommonLicenseSkus.SkuMonthlyCosts.GetValueOrDefault(sku.SkuPartNumber, 0) : 0;
+                    sku.Tier = sku.SkuPartNumber != null ? CommonLicenseSkus.SkuTiers.GetValueOrDefault(sku.SkuPartNumber, LicenseTier.Standard) : LicenseTier.Standard;
                     
                     skus.Add(sku);
                 }
@@ -973,7 +973,7 @@ namespace MandADiscoverySuite.Services
 
                         if (user.AssignedLicenses?.Any() == true)
                         {
-                            var skusToRemove = user.AssignedLicenses.Select(l => l.SkuId.ToString()).ToList();
+                            var skusToRemove = user.AssignedLicenses.Where(l => l.SkuId.HasValue).Select(l => l.SkuId.Value.ToString()).ToList();
                             var result = await RemoveLicensesFromUserAsync(sourceTenantId, userId, skusToRemove, cancellationToken);
                             results.Add(result);
                         }

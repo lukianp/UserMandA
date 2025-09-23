@@ -325,8 +325,8 @@ namespace MandADiscoverySuite.MigrationProviders
                 progress?.Report(new Migration.MigrationProgress { Message = "Removing licenses...", Percentage = 70 });
                 if (targetUser.AssignedLicenses?.Any() == true)
                 {
-                    var removeLicenses = targetUser.AssignedLicenses.Select(l => l.SkuId).ToList();
-                    await _licenseService.RemoveLicensesFromUserAsync(target.TenantId, targetUser.Id, removeLicenses.Select(l => l.ToString()).ToList());
+                    var removeLicenses = targetUser.AssignedLicenses.Where(l => l.SkuId.HasValue).Select(l => l.SkuId!.Value.ToString()).ToList();
+                    await _licenseService.RemoveLicensesFromUserAsync(target.TenantId, targetUser.Id, removeLicenses);
                 }
 
                 // Optionally delete the account (configurable)

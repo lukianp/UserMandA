@@ -589,7 +589,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
                        OR Status IS NULL";
 
                 using var command = new SQLiteCommand(validationSql, connection);
-                var invalidRecords = (long)await command.ExecuteScalarAsync();
+                var invalidRecords = (long)(await command.ExecuteScalarAsync() ?? 0);
 
                 if (invalidRecords > 0)
                 {
@@ -599,7 +599,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
 
                 // Run SQLite integrity check
                 using var integrityCommand = new SQLiteCommand("PRAGMA integrity_check", connection);
-                var integrityResult = (string)await integrityCommand.ExecuteScalarAsync();
+                var integrityResult = (string)(await integrityCommand.ExecuteScalarAsync() ?? string.Empty);
 
                 if (integrityResult != "ok")
                 {

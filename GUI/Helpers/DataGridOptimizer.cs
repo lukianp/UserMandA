@@ -14,8 +14,8 @@ namespace MandADiscoverySuite.Helpers
         /// <summary>
         /// Creates an optimized text column with minimal verbosity
         /// </summary>
-        public static DataGridTextColumn CreateTextColumn(string header, string binding, 
-            double width = double.NaN, string format = null, bool canSort = true)
+        public static DataGridTextColumn CreateTextColumn(string header, string binding,
+            double width = double.NaN, string? format = null, bool canSort = true)
         {
             var column = new DataGridTextColumn
             {
@@ -46,7 +46,7 @@ namespace MandADiscoverySuite.Helpers
         /// Creates an optimized template column
         /// </summary>
         public static DataGridTemplateColumn CreateTemplateColumn(string header, DataTemplate cellTemplate,
-            DataTemplate editTemplate = null, double width = double.NaN, bool canSort = false)
+            DataTemplate? editTemplate = null, double width = double.NaN, bool canSort = false)
         {
             var column = new DataGridTemplateColumn
             {

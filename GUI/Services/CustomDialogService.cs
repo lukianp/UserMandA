@@ -66,7 +66,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Shows a custom input dialog
         /// </summary>
-        public static Task<string> ShowInputAsync(
+        public static Task<string?> ShowInputAsync(
             string title,
             string message,
             string defaultValue = "",

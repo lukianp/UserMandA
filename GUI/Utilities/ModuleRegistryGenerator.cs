@@ -327,53 +327,7 @@ namespace MandADiscoverySuite.Utilities
 
         #endregion
 
-        /// <summary>
-        /// Console application entry point for registry management
-        /// </summary>
-#if DEBUG
-        public static async Task<int> Main(string[] args)
-        {
-            try
-            {
-                if (args.Length == 0)
-                {
-                    PrintUsage();
-                    return 1;
-                }
-
-                var command = args[0].ToLowerInvariant();
-                var rootPath = args.Length > 1 ? args[1] : GetDefaultRootPath();
-
-                switch (command)
-                {
-                    case "generate":
-                        await GenerateRegistryCommand(rootPath);
-                        return 0;
-
-                    case "validate":
-                        return await ValidateRegistryCommand(rootPath);
-
-                    case "health":
-                        await HealthReportCommand(rootPath);
-                        return 0;
-
-                    case "merge":
-                        await MergeCommand(rootPath);
-                        return 0;
-
-                    default:
-                        Console.WriteLine($"Unknown command: {command}");
-                        PrintUsage();
-                        return 1;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error: {ex.Message}");
-                return 1;
-            }
-        }
-#endif
+        // Entry point moved to separate test project to avoid conflicts
 
         private static void PrintUsage()
         {

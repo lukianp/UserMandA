@@ -200,7 +200,7 @@ namespace MandADiscoverySuite.Controls
                 _previousValue = _currentValue;
                 _currentValue = newValue;
 
-                _animationService.AnimateMetricChange(ValueText, _previousValue, newValue, 
+                _animationService.AnimateMetricChange(ValueText, _previousValue, newValue,
                     AnimationType, TimeSpan.FromMilliseconds(1500), Format, OnAnimationComplete);
 
                 // Add visual feedback for significant changes
@@ -377,7 +377,7 @@ namespace MandADiscoverySuite.Controls
 
         #region INotifyPropertyChanged
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         #endregion
 

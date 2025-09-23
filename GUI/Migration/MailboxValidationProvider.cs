@@ -239,7 +239,7 @@ namespace MandADiscoverySuite.Migration
                     .GetAsync();
 
                 var expectedFolders = new[] { "Inbox", "SentItems", "DeletedItems", "Drafts" };
-                var foundFolders = mailFolders?.Value?.Select(f => f.DisplayName).ToList() ?? new List<string>();
+                var foundFolders = mailFolders?.Value?.Select(f => f.DisplayName ?? "").ToList() ?? new List<string>();
 
                 foreach (var expectedFolder in expectedFolders)
                 {

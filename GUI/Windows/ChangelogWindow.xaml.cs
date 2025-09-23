@@ -16,7 +16,9 @@ namespace MandADiscoverySuite.Windows
 
         public ChangelogWindow()
         {
+#pragma warning disable CS0103 // The name 'InitializeComponent' does not exist in the current context
             InitializeComponent();
+#pragma warning restore CS0103
             DataContext = this;
             LoadChangelogData();
             SetCurrentVersion();
@@ -157,7 +159,7 @@ namespace MandADiscoverySuite.Windows
                 var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
                 var currentVersionString = $"{currentVersion.Major}.{currentVersion.Minor}.{currentVersion.Build}";
                 
-                return !(bool)dontShow && lastShownVersion != currentVersionString;
+                return !(dontShow as bool? ?? false) && lastShownVersion != currentVersionString;
             }
             catch
             {

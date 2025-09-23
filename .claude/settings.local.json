@@ -19,7 +19,8 @@
       "Bash(taskkill:*)",
       "Bash(findstr:*)",
       "Bash(dotnet restore:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

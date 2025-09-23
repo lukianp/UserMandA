@@ -122,15 +122,15 @@ namespace MandADiscoverySuite.Services
                     TotalApplications = applications.Count(),
                     UsersByDepartment = users
                         .Where(u => !string.IsNullOrEmpty(u.Department))
-                        .GroupBy(u => u.Department)
+                        .GroupBy(u => u.Department!)
                         .ToDictionary(g => g.Key, g => g.Count()),
                     ComputersByOperatingSystem = infrastructure
                         .Where(i => !string.IsNullOrEmpty(i.OperatingSystem))
-                        .GroupBy(i => i.OperatingSystem)
+                        .GroupBy(i => i.OperatingSystem!)
                         .ToDictionary(g => g.Key, g => g.Count()),
                     ApplicationsByCategory = applications
                         .Where(a => !string.IsNullOrEmpty(a.Type))
-                        .GroupBy(a => a.Type)
+                        .GroupBy(a => a.Type!)
                         .ToDictionary(g => g.Key, g => g.Count()),
                     EnvironmentType = DetermineEnvironmentType(users, groups),
                     DiscoveredDomains = ExtractDomains(users),
@@ -258,6 +258,7 @@ namespace MandADiscoverySuite.Services
                 .Select(u => u.UserPrincipalName.Split('@').LastOrDefault())
                 .Where(d => !string.IsNullOrEmpty(d))
                 .Distinct()
+                .Cast<string>()
                 .ToList();
         }
 

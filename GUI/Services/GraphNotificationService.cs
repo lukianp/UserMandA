@@ -509,7 +509,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Gets user data from the logic engine or Graph API
         /// </summary>
-        public async Task<UserNotificationData> GetUserDataAsync(string userIdentifier)
+        public async Task<UserNotificationData?> GetUserDataAsync(string userIdentifier)
         {
             try
             {
@@ -529,7 +529,7 @@ namespace MandADiscoverySuite.Services
                     return await GetUserDataFromGraphAsync(userIdentifier);
                 }
 
-                _logger?.LogWarning("Unable to retrieve user data for {UserIdentifier} - no data sources available", 
+                _logger?.LogWarning("Unable to retrieve user data for {UserIdentifier} - no data sources available",
                     userIdentifier);
                 return null;
             }
@@ -605,22 +605,22 @@ namespace MandADiscoverySuite.Services
 
         #region Private Methods
 
-        private Task<UserNotificationData> GetUserDataFromLogicEngineAsync(string userIdentifier)
+        private Task<UserNotificationData?> GetUserDataFromLogicEngineAsync(string userIdentifier)
         {
             try
             {
                 // This would integrate with the actual logic engine service
                 // For now, return null to indicate no data found
-                return Task.FromResult<UserNotificationData>(null);
+                return Task.FromResult<UserNotificationData?>(null);
             }
             catch (Exception ex)
             {
                 _logger?.LogWarning(ex, "Error getting user data from logic engine for {UserIdentifier}", userIdentifier);
-                return Task.FromResult<UserNotificationData>(null);
+                return Task.FromResult<UserNotificationData?>(null);
             }
         }
 
-        private async Task<UserNotificationData> GetUserDataFromGraphAsync(string userIdentifier)
+        private async Task<UserNotificationData?> GetUserDataFromGraphAsync(string userIdentifier)
         {
             try
             {

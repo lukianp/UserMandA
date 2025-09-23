@@ -26,7 +26,7 @@ namespace MandADiscoverySuite.MigrationProviders
             _client = client;
         }
 
-        public async Task<MigrationResult> MigrateFileAsync(FileItemDto file, MigrationSettings settings, TargetContext target, IProgress<Migration.MigrationProgress> progress = null)
+        public async Task<MigrationResult> MigrateFileAsync(FileItemDto file, MigrationSettings settings, TargetContext target, IProgress<Migration.MigrationProgress>? progress = null)
         {
             try
             {
@@ -41,7 +41,7 @@ namespace MandADiscoverySuite.MigrationProviders
             }
         }
 
-        public async Task<RollbackResult> RollbackFileAsync(FileItemDto file, TargetContext target, IProgress<Migration.MigrationProgress> progress = null)
+        public async Task<RollbackResult> RollbackFileAsync(FileItemDto file, TargetContext target, IProgress<Migration.MigrationProgress>? progress = null)
         {
             try
             {

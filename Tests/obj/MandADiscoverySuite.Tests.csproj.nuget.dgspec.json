@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "d:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj": {}
+    "D:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj": {}
   },
   "projects": {
-    "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj": {
+    "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj": {
       "version": "1.0.1",
       "restore": {
-        "projectUniqueName": "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
+        "projectUniqueName": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
         "projectName": "MandADiscoverySuite",
-        "projectPath": "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
+        "projectPath": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
         "packagesPath": "C:\\Users\\lukia\\.nuget\\packages\\",
-        "outputPath": "d:\\Scripts\\UserMandA\\GUI\\obj\\",
+        "outputPath": "D:\\Scripts\\UserMandA\\GUI\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\lukia\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -146,14 +146,14 @@
         }
       }
     },
-    "d:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj": {
+    "D:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj",
+        "projectUniqueName": "D:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj",
         "projectName": "MandADiscoverySuite.Tests",
-        "projectPath": "d:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj",
+        "projectPath": "D:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj",
         "packagesPath": "C:\\Users\\lukia\\.nuget\\packages\\",
-        "outputPath": "d:\\Scripts\\UserMandA\\Tests\\obj\\",
+        "outputPath": "D:\\Scripts\\UserMandA\\Tests\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\lukia\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -168,8 +168,8 @@
           "net6.0-windows7.0": {
             "targetAlias": "net6.0-windows7.0",
             "projectReferences": {
-              "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj": {
-                "projectPath": "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj"
+              "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj": {
+                "projectPath": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj"
               }
             }
           }
@@ -184,6 +184,14 @@
         "net6.0-windows7.0": {
           "targetAlias": "net6.0-windows7.0",
           "dependencies": {
+            "MSTest.TestAdapter": {
+              "target": "Package",
+              "version": "[3.1.1, )"
+            },
+            "MSTest.TestFramework": {
+              "target": "Package",
+              "version": "[3.1.1, )"
+            },
             "Microsoft.NET.Test.Sdk": {
               "target": "Package",
               "version": "[17.8.0, )"
@@ -197,16 +205,6 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[6.0.0, )"
-            },
-            "xunit": {
-              "target": "Package",
-              "version": "[2.6.1, )"
-            },
-            "xunit.runner.visualstudio": {
-              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[2.4.5, )"
             }
           },
           "imports": [

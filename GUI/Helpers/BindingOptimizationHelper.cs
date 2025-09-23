@@ -34,7 +34,7 @@ namespace MandADiscoverySuite.Helpers
             DependencyObject target,
             DependencyProperty targetProperty,
             BindingMode mode = BindingMode.OneWay,
-            IValueConverter converter = null,
+            IValueConverter? converter = null,
             UpdateSourceTrigger updateSourceTrigger = UpdateSourceTrigger.PropertyChanged)
         {
             var binding = new Binding(sourcePath)
@@ -117,7 +117,7 @@ namespace MandADiscoverySuite.Helpers
             string sourcePath,
             DependencyObject target,
             DependencyProperty targetProperty,
-            IValueConverter converter = null)
+            IValueConverter? converter = null)
         {
             var binding = new Binding(sourcePath)
             {

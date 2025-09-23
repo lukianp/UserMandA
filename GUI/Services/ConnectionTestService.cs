@@ -903,11 +903,11 @@ namespace MandADiscoverySuite.Services
                     // Simple test query
                     using (var command = new System.Data.SqlClient.SqlCommand("SELECT @@VERSION", connection))
                     {
-                        var version = await command.ExecuteScalarAsync() as string;
-                        
+                        var version = (await command.ExecuteScalarAsync()) as string ?? string.Empty;
+
                         result.Success = true;
                         result.Message = "Azure SQL Database connection test successful.";
-                        result.Details["DatabaseVersion"] = version?.Substring(0, Math.Min(100, version?.Length ?? 0));
+                        result.Details["DatabaseVersion"] = version.Substring(0, Math.Min(100, version.Length));
                         result.Details["ConnectionState"] = connection.State.ToString();
                         result.Details["Database"] = connection.Database;
                         result.Details["DataSource"] = connection.DataSource;

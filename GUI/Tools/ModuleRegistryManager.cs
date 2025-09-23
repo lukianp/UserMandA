@@ -12,63 +12,7 @@ namespace MandADiscoverySuite.Tools
     /// </summary>
     class ModuleRegistryManager
     {
-#if DEBUG
-        static async Task<int> Main(string[] args)
-        {
-            Console.WriteLine("=== M&A Discovery Suite - Module Registry Manager ===");
-            Console.WriteLine();
-
-            if (args.Length == 0)
-            {
-                PrintUsage();
-                return 1;
-            }
-
-            try
-            {
-                var command = args[0].ToLowerInvariant();
-                var rootPath = args.Length > 1 ? args[1] : GetDefaultRootPath();
-
-                Console.WriteLine($"Working with root path: {rootPath}");
-                Console.WriteLine();
-
-                switch (command)
-                {
-                    case "validate":
-                        return await ValidateCommand(rootPath);
-
-                    case "health":
-                        return await HealthCommand(rootPath);
-
-                    case "generate":
-                        return await GenerateCommand(rootPath);
-
-                    case "merge":
-                        return await MergeCommand(rootPath);
-
-                    case "fix":
-                        return await FixCommand(rootPath);
-
-                    case "list":
-                        return await ListCommand(rootPath);
-
-                    default:
-                        Console.WriteLine($"❌ Unknown command: {command}");
-                        PrintUsage();
-                        return 1;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error: {ex.Message}");
-                if (args != null && args.Any(arg => arg.Equals("--verbose", StringComparison.OrdinalIgnoreCase)))
-                {
-                    Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                }
-                return 1;
-            }
-        }
-#endif
+        // Entry point moved to separate test project to avoid conflicts
 
         static void PrintUsage()
         {

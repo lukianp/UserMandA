@@ -259,7 +259,8 @@ namespace MandADiscoverySuite.ViewModels
             {
                 if (ScheduledDate.HasValue && DateTime.TryParse(ScheduledTime, out var time))
                 {
-                    return ScheduledDate.Value.Date.Add(time.TimeOfDay);
+                    var scheduledDate = ScheduledDate.Value;
+                    return scheduledDate.Date.Add(time.TimeOfDay);
                 }
                 return null;
             }
@@ -517,7 +518,7 @@ namespace MandADiscoverySuite.ViewModels
                 var schedulePreview = new SchedulePreview
                 {
                     WaveName = WaveName,
-                    ScheduledDateTime = ScheduledDateTime.Value,
+                    ScheduledDateTime = ScheduledDateTime ?? DateTime.Now.AddDays(1),
                     EstimatedDuration = TimeSpan.FromHours(EstimatedItems / 50.0), // Rough estimate
                     EstimatedItems = EstimatedItems,
                     MaxConcurrentTasks = MaxConcurrentTasks,

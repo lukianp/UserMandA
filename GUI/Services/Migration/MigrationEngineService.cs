@@ -735,7 +735,7 @@ namespace MandADiscoverySuite.Services.Migration
                 SamAccountName = ExtractSamAccountName(item.SourceIdentity),
                 SourceDomain = ExtractDomain(item.SourceIdentity),
                 SecurityGroups = item.Dependencies?.ToList() ?? new List<string>(),
-                Attributes = item.Properties?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value?.ToString()) ?? new Dictionary<string, string>(),
+                Attributes = item.Properties?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value?.ToString() ?? "") ?? new Dictionary<string, string>(),
                 IsEnabled = true,
                 ProfileSizeMB = item.SizeBytes.HasValue ? item.SizeBytes.Value / (1024 * 1024) : 0
             };

@@ -286,17 +286,17 @@ namespace MandADiscoverySuite.Migration
             // Get table count
             var tableQuery = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
             using var tableCommand = new SqlCommand(tableQuery, connection);
-            schema.TableCount = (int)await tableCommand.ExecuteScalarAsync();
+            schema.TableCount = (int)(await tableCommand.ExecuteScalarAsync() ?? 0);
 
             // Get view count
             var viewQuery = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.VIEWS";
             using var viewCommand = new SqlCommand(viewQuery, connection);
-            schema.ViewCount = (int)await viewCommand.ExecuteScalarAsync();
+            schema.ViewCount = (int)(await viewCommand.ExecuteScalarAsync() ?? 0);
 
             // Get stored procedure count
             var procQuery = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE'";
             using var procCommand = new SqlCommand(procQuery, connection);
-            schema.ProcedureCount = (int)await procCommand.ExecuteScalarAsync();
+            schema.ProcedureCount = (int)(await procCommand.ExecuteScalarAsync() ?? 0);
 
             return schema;
         }
@@ -396,7 +396,7 @@ namespace MandADiscoverySuite.Migration
                 {
                     var countQuery = $"SELECT COUNT(*) FROM [{tableName}]";
                     using var countCommand = new SqlCommand(countQuery, connection);
-                    var count = (int)await countCommand.ExecuteScalarAsync();
+                    var count = (int)(await countCommand.ExecuteScalarAsync() ?? 0);
                     rowCounts[tableName] = count;
                 }
                 catch (SqlException)
@@ -425,7 +425,7 @@ namespace MandADiscoverySuite.Migration
                 // Check database users
                 var usersQuery = "SELECT COUNT(*) FROM sys.database_principals WHERE type IN ('S', 'U', 'G')";
                 using var usersCommand = new SqlCommand(usersQuery, connection);
-                var userCount = (int)await usersCommand.ExecuteScalarAsync();
+                var userCount = (int)(await usersCommand.ExecuteScalarAsync() ?? 0);
 
                 if (userCount == 0)
                 {
@@ -441,7 +441,7 @@ namespace MandADiscoverySuite.Migration
                 // Check database roles
                 var rolesQuery = "SELECT COUNT(*) FROM sys.database_role_members";
                 using var rolesCommand = new SqlCommand(rolesQuery, connection);
-                var roleCount = (int)await rolesCommand.ExecuteScalarAsync();
+                var roleCount = (int)(await rolesCommand.ExecuteScalarAsync() ?? 0);
 
                 if (roleCount == 0)
                 {

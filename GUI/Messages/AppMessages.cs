@@ -21,7 +21,7 @@ namespace MandADiscoverySuite.Messages
         public CompanyProfile NewProfile { get; set; }
         public CompanyProfile OldProfile { get; set; }
 
-        public ProfileChangedMessage(CompanyProfile newProfile, CompanyProfile oldProfile = null)
+        public ProfileChangedMessage(CompanyProfile newProfile, CompanyProfile? oldProfile = null)
         {
             NewProfile = newProfile;
             OldProfile = oldProfile;
@@ -53,7 +53,7 @@ namespace MandADiscoverySuite.Messages
         public string ErrorMessage { get; set; }
         public TimeSpan Duration { get; set; }
 
-        public DiscoveryCompletedMessage(string profileName, bool success, string errorMessage = null, TimeSpan duration = default)
+        public DiscoveryCompletedMessage(string profileName, bool success, string? errorMessage = null, TimeSpan duration = default)
         {
             ProfileName = profileName;
             Success = success;
@@ -90,7 +90,7 @@ namespace MandADiscoverySuite.Messages
         public object Parameter { get; set; }
         public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
 
-        public NavigationMessage(string viewName, object parameter = null)
+        public NavigationMessage(string viewName, object? parameter = null)
         {
             ViewName = viewName;
             Parameter = parameter;
@@ -151,7 +151,7 @@ namespace MandADiscoverySuite.Messages
         public bool Success { get; set; }
         public string ErrorMessage { get; set; }
 
-        public DataRefreshedMessage(string dataType, string profileName, int recordCount, bool success = true, string errorMessage = null)
+        public DataRefreshedMessage(string dataType, string profileName, int recordCount, bool success = true, string? errorMessage = null)
         {
             DataType = dataType;
             ProfileName = profileName;

@@ -1,17 +1,16 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MandADiscoverySuite.Services;
 
-namespace TestPipeline
+namespace TestPipelineDemo
 {
     /// <summary>
     /// Standalone demonstration of the unified loading pipeline
     /// </summary>
-    public class TestPipelineDemo
+    public class Program
     {
-#if DEBUG
         public static async Task Main(string[] args)
         {
             Console.WriteLine("=== M&A Discovery Suite - Unified Pipeline Demonstration ===");
@@ -176,6 +175,5 @@ namespace TestPipeline
             Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
         }
-#endif
     }
 }

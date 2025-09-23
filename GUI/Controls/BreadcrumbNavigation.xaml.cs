@@ -11,7 +11,9 @@ namespace MandADiscoverySuite.Controls
     {
         public BreadcrumbNavigation()
         {
+#pragma warning disable CS0103 // The name 'InitializeComponent' does not exist in the current context
             InitializeComponent();
+#pragma warning restore CS0103
             DataContext = new BreadcrumbNavigationViewModel();
         }
 

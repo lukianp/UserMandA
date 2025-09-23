@@ -43,6 +43,10 @@
                        "environment":  {
                                            "type":  "object",
                                            "properties":  {
+                                                              "profilesBasePath":  {
+                                                                                       "type":  "string",
+                                                                                       "minLength":  1
+                                                                                   },
                                                               "outputPath":  {
                                                                                  "type":  "string",
                                                                                  "minLength":  1
@@ -102,7 +106,10 @@
                                                                                                  "logRetentionDays":  {
                                                                                                                           "type":  "integer",
                                                                                                                           "minimum":  0
-                                                                                                                      }
+                                                                                                                      },
+                                                                                                 "verboseProgress":  {
+                                                                                                                      "type":  "boolean"
+                                                                                                                  }
                                                                                              },
                                                                               "required":  [
                                                                                                "maxLogSizeMB",
@@ -129,23 +136,53 @@
                                                                                                                                 "maximum":  300
                                                                                                                             },
                                                                                                       "retryDelaySeconds":  {
-                                                                                                                                "type":  "integer",
-                                                                                                                                "minimum":  1,
-                                                                                                                                "maximum":  60
-                                                                                                                            },
+                                                                                                                                                        "type":  "integer",
+                                                                                                                                                        "minimum":  1,
+                                                                                                                                                        "maximum":  60
+                                                                                                                                                    },
                                                                                                       "haltOnConnectionError":  {
-                                                                                                                                    "type":  "array",
-                                                                                                                                    "items":  {
-                                                                                                                                                  "type":  "string"
-                                                                                                                                              }
-                                                                                                                                }
-                                                                                                  },
-                                                                                   "required":  [
-                                                                                                    "maxConnectionRetries",
-                                                                                                    "connectionTimeout",
-                                                                                                    "retryDelaySeconds"
-                                                                                                ]
-                                                                               }
+                                                                                                                                                            "type":  "array",
+                                                                                                                                                            "items":  {
+                                                                                                                                                                          "type":  "string"
+                                                                                                                                                                      }
+                                                                                                                                                        }
+                                                                                                                          },
+                                                                                                           "required":  [
+                                                                                                                            "maxConnectionRetries",
+                                                                                                                            "connectionTimeout",
+                                                                                                                            "retryDelaySeconds"
+                                                                                                                        ]
+                                                                                                       },
+                                                                                      "timeouts":  {
+                                                                                                       "type":  "object",
+                                                                                                       "properties":  {
+                                                                                                                          "default":  {
+                                                                                                                                          "type":  "integer",
+                                                                                                                                          "minimum":  1
+                                                                                                                                      },
+                                                                                                                          "discovery":  {
+                                                                                                                                            "type":  "integer",
+                                                                                                                                            "minimum":  1
+                                                                                                                                        },
+                                                                                                                          "export":  {
+                                                                                                                                         "type":  "integer",
+                                                                                                                                         "minimum":  1
+                                                                                                                                     },
+                                                                                                                          "authentication":  {
+                                                                                                                                                 "type":  "integer",
+                                                                                                                                                 "minimum":  1
+                                                                                                                                             },
+                                                                                                                          "moduleExecution":  {
+                                                                                                                                                  "type":  "integer",
+                                                                                                                                                  "minimum":  1
+                                                                                                                                              },
+                                                                                                                          "longRunningTasks":  {
+                                                                                                                                                   "type":  "integer",
+                                                                                                                                                   "minimum":  1
+                                                                                                                                               }
+                                                                                                                      },
+                                                                                                       "additionalProperties":  false
+                                                                                                   }
                                                           },
                                            "required":  [
                                                             "outputPath",
@@ -359,6 +396,15 @@
                                                                                                                                                         "minimum":  0
                                                                                                                                                     }
                                                                                               }
+                                                                           },
+                                                            "sharepoint":  {
+                                                                               "type":  "object",
+                                                                               "properties":  {
+                                                                                                  "tenantName":  {
+                                                                                                                     "type":  "string"
+                                                                                                                 }
+                                                                                              },
+                                                                               "additionalProperties":  false
                                                                            }
                                                         },
                                          "required":  [

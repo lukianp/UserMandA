@@ -78,7 +78,7 @@ namespace MandADiscoverySuite.ViewModels
                 {
                     // Create enhanced dynamic object with computed properties
                     var enhancedItem = new System.Dynamic.ExpandoObject();
-                    var itemDict = (System.Collections.Generic.IDictionary<string, object>)enhancedItem;
+                    var itemDict = (System.Collections.Generic.IDictionary<string, object?>)enhancedItem;
 
                     // Copy all original properties
                     var originalDict = (System.Collections.Generic.IDictionary<string, object>)item;

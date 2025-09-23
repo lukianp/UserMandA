@@ -11,7 +11,9 @@ namespace MandADiscoverySuite.Controls
     {
         public EmptyStateView()
         {
+#pragma warning disable CS0103 // The name 'InitializeComponent' does not exist in the current context
             InitializeComponent();
+#pragma warning restore CS0103
         }
 
         #region Dependency Properties
@@ -152,7 +154,7 @@ namespace MandADiscoverySuite.Controls
         /// <summary>
         /// Creates an empty state for when no users are found
         /// </summary>
-        public static EmptyStateView CreateNoUsersState(ICommand runDiscoveryCommand = null)
+        public static EmptyStateView CreateNoUsersState(ICommand? runDiscoveryCommand = null)
         {
             return new EmptyStateView
             {

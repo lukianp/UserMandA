@@ -309,7 +309,7 @@ namespace MandADiscoverySuite.Services
 
                     var results = await Task.Run(() => powerShell.Invoke(), combinedCts.Token);
 
-                    result.Output = results?.Select(r => r?.ToString())?.Where(s => !string.IsNullOrEmpty(s))?.ToList() ?? new List<string>();
+                    result.Output = results?.Select(r => r?.ToString() ?? "")?.Where(s => !string.IsNullOrEmpty(s))?.ToList() ?? new List<string>();
                     result.State = powerShell.HadErrors ? PowerShellExecutionState.Failed : PowerShellExecutionState.Completed;
                     result.EndTime = DateTime.Now;
 
