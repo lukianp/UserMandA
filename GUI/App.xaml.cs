@@ -66,6 +66,20 @@ namespace MandADiscoverySuite
             });
             services.AddSingleton<LogicEngineService>(sp => (LogicEngineService)sp.GetRequiredService<ILogicEngineService>());
 
+            // Register sample data service for LogicEngine
+            services.AddSingleton<LogicEngineSampleDataService>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<LogicEngineSampleDataService>>();
+                return new LogicEngineSampleDataService(logger);
+            });
+
+            // Register CSV data validation service
+            services.AddSingleton<CsvDataValidationService>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<CsvDataValidationService>>();
+                return new CsvDataValidationService(logger);
+            });
+
             // Register log management service
             services.AddSingleton<ILogManagementService, LogManagementService>();
             services.AddSingleton<LogManagementService>();

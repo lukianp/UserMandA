@@ -8,7 +8,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Services.Audit;
-using MandADiscoverySuite.Models.Migration.MigrationDtos;
+using MandADiscoverySuite.Models.Migration;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services.Migration;
 
@@ -201,7 +201,7 @@ namespace MandADiscoverySuite.Tests.Audit
             // Setup all migrators to succeed
             _mockIdentityMigrator
                 .Setup(m => m.MigrateUserAsync(It.IsAny<UserData>(), It.IsAny<MandADiscoverySuite.Models.Migration.MigrationSettings>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<MandADiscoverySuite.Migration.MigrationProgress>>()))
-                .ReturnsAsync(MandADiscoverySuite.Models.MigrationResult.Succeeded());
+                .ReturnsAsync(MandADiscoverySuite.Migration.MigrationResult.Succeeded());
 
             _mockMailMigrator
                 .Setup(m => m.MigrateMailboxAsync(It.IsAny<MailboxDto>(), It.IsAny<MigrationSettings>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<MigrationProgress>>()))

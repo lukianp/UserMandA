@@ -4,8 +4,14 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Timers;
 using FluentAssertions;
 using MandADiscoverySuite.Models;
+using MandADiscoverySuite.Models.Migration;
+using MigrationUserDto = MandADiscoverySuite.Models.Migration.UserDto;
+using MigrationMailboxDto = MandADiscoverySuite.Models.Migration.MailboxDto;
+using MigrationFileShareDto = MandADiscoverySuite.Models.Migration.FileShareDto;
+using MigrationSqlDatabaseDto = MandADiscoverySuite.Models.Migration.SqlDatabaseDto;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Services.Migration;
 using Microsoft.Extensions.Logging;
@@ -58,12 +64,35 @@ namespace MigrationTestSuite.Functional
             var fileShares = GenerateLargeFileShareDataset(5000); // 5K file shares
             var databases = GenerateLargeDatabaseDataset(500); // 500 databases
 
-            _mockLogicEngine.Setup(x => x.GetAllUsersAsync()).ReturnsAsync(users);
-            _mockLogicEngine.Setup(x => x.GetAllMailboxesAsync()).ReturnsAsync(mailboxes);
-            _mockLogicEngine.Setup(x => x.GetAllFileSharesAsync()).ReturnsAsync(fileShares);
-            _mockLogicEngine.Setup(x => x.GetAllSqlDatabasesAsync()).ReturnsAsync(databases);
+            _mockLogicEngine.Setup(x => x.GetAllUsersAsync()).Returns(Task.FromResult(users.ConvertAll(u => new MandADiscoverySuite.Models.UserDto(
+                UPN: u.UserPrincipalName ?? string.Empty,
+                Sam: u.UserPrincipalName ?? string.Empty,
+                Sid: $"S-1-5-21-{Guid.NewGuid().ToString().Replace("-", "")}",
+                Mail: null,
+                DisplayName: u.DisplayName ?? string.Empty,
+                Enabled: u.IsEnabled,
+                OU: null,
+                ManagerSid: null,
+                Dept: null,
+                AzureObjectId: null,
+                Groups: new List<string>(),
+                DiscoveryTimestamp: DateTime.UtcNow,
+                DiscoveryModule: "Test",
+                SessionId: "TestSession"
+            ))));
+            _mockLogicEngine.Setup(x => x.GetAllMailboxesAsync()).Returns(Task.FromResult(mailboxes.ConvertAll(m => new MandADiscoverySuite.Models.MailboxDto(
+                UPN: m.UserPrincipalName ?? string.Empty,
+                MailboxGuid: null,
+                SizeMB: m.TotalSizeBytes / (1024 * 1024),
+                Type: m.MailboxType ?? "UserMailbox",
+                DiscoveryTimestamp: DateTime.UtcNow,
+                DiscoveryModule: "Test",
+                SessionId: "TestSession"
+            ))));
+            _mockLogicEngine.Setup(x => x.GetAllFileSharesAsync()).Returns(Task.FromResult(new List<MandADiscoverySuite.Models.FileShareDto>()));
+            _mockLogicEngine.Setup(x => x.GetAllSqlDatabasesAsync()).Returns(Task.FromResult(new List<MandADiscoverySuite.Models.SqlDbDto>()));
             _mockLogicEngine.Setup(x => x.GetMailboxByUpnAsync(It.IsAny<string>()))
-                .ReturnsAsync((MailboxDto)null);
+                .ReturnsAsync((MandADiscoverySuite.Models.MailboxDto)null);
 
             // Act
             var startTime = DateTime.UtcNow;
@@ -80,7 +109,7 @@ namespace MigrationTestSuite.Functional
             
             // Verify performance logging
             _mockLogger.Verify(x => x.Log(
-                LogLevel.Information,
+                Microsoft.Extensions.Logging.LogLevel.Information,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Pre-migration checks completed")),
                 It.IsAny<Exception>(),
@@ -93,47 +122,47 @@ namespace MigrationTestSuite.Functional
         public async Task RealisticEnterpriseScenario_MixedEligibility_ShouldCategorizeCorrectly()
         {
             // Arrange - Mixed scenario with typical enterprise issues
-            var users = new List<UserDto>
+            var users = new List<MigrationUserDto>
             {
                 // Eligible users (70%)
                 CreateUser("S-1", "John Doe", "john.doe@contoso.com", true, "johndoe"),
                 CreateUser("S-2", "Jane Smith", "jane.smith@contoso.com", true, "jsmith"),
                 CreateUser("S-3", "Bob Johnson", "bob.johnson@contoso.com", true, "bjohnson"),
-                
+
                 // Blocked users (30%)
                 CreateUser("S-4", "Disabled User", "disabled@contoso.com", false, "disabled"), // Disabled
                 CreateUser("S-5", "Invalid UPN", "bad upn@contoso.com", true, "badupn"), // Space in UPN
                 CreateUser("S-6", "Bad<Display>", "badchar@contoso.com", true, "badchar") // Invalid display name chars
             };
 
-            var mailboxes = new List<MailboxDto>
+            var mailboxes = new List<MigrationMailboxDto>
             {
                 // Normal mailboxes
                 CreateMailbox("john.doe@contoso.com", 25000, "UserMailbox"),
                 CreateMailbox("jane.smith@contoso.com", 45000, "UserMailbox"),
-                
+
                 // Large mailbox (blocked)
                 CreateMailbox("large@contoso.com", 150000, "UserMailbox"),
-                
+
                 // Unsupported type (blocked)
                 CreateMailbox("discovery@contoso.com", 5000, "DiscoveryMailbox")
             };
 
-            var fileShares = new List<FileShareDto>
+            var fileShares = new List<MigrationFileShareDto>
             {
                 CreateFileShare(Path.GetTempPath(), "ValidShare1"),
                 CreateFileShare(@"C:\TestShare", "ValidShare2"),
-                
+
                 // Invalid shares
                 CreateFileShare(new string('x', 300), "LongPath"), // Too long
                 CreateFileShare(@"Z:\NonExistent", "Missing") // Inaccessible
             };
 
-            var databases = new List<SqlDatabaseDto>
+            var databases = new List<MigrationSqlDatabaseDto>
             {
                 CreateDatabase("SQL01", "DEFAULT", "ValidDB1"),
                 CreateDatabase("SQL02", "DEFAULT", "ValidDB2"),
-                
+
                 // Invalid databases
                 CreateDatabase("SQL03", "DEFAULT", "Invalid<DB>"), // Invalid chars
                 CreateDatabase("SQL04", "DEFAULT", null) // Missing name
@@ -182,7 +211,7 @@ namespace MigrationTestSuite.Functional
             };
 
             // Create mock target users with name variations
-            var mockTargetUsers = new List<UserDto>
+            var mockTargetUsers = new List<MigrationUserDto>
             {
                 CreateUser("T-1", "Mike Johnson", "mike.johnson@target.com", true, "mike.johnson"),
                 CreateUser("T-2", "Kate Smith", "kate.smith@target.com", true, "kate.smith"),
@@ -191,7 +220,7 @@ namespace MigrationTestSuite.Functional
                 CreateUser("T-5", "John Doe", "john.doe@target.com", true, "john.doe") // No match
             };
 
-            SetupMockData(sourceUsers, new List<MailboxDto>(), new List<FileShareDto>(), new List<SqlDatabaseDto>());
+            SetupMockData(sourceUsers, new List<MigrationMailboxDto>(), new List<MigrationFileShareDto>(), new List<MigrationSqlDatabaseDto>());
 
             // Mock the private GetTargetUsersAsync method by using reflection or creating a derived class
             // For this test, we'll verify the fuzzy matching algorithm separately
@@ -217,13 +246,13 @@ namespace MigrationTestSuite.Functional
         public async Task MappingPersistenceWorkflow_CrossSession_ShouldMaintainIntegrity()
         {
             // Arrange - Session 1: Initial eligibility check and manual mapping
-            var users = new List<UserDto>
+            var users = new List<MigrationUserDto>
             {
                 CreateUser("S-1", "John Doe", "john.doe@contoso.com", true, "johndoe"),
                 CreateUser("S-2", "Jane Smith", "jane.smith@contoso.com", true, "jsmith")
             };
 
-            SetupMockData(users, new List<MailboxDto>(), new List<FileShareDto>(), new List<SqlDatabaseDto>());
+            SetupMockData(users, new List<MigrationMailboxDto>(), new List<MigrationFileShareDto>(), new List<MigrationSqlDatabaseDto>());
 
             var report1 = await _service.GetEligibilityReportAsync();
 
@@ -262,7 +291,7 @@ namespace MigrationTestSuite.Functional
                 _mockLogicEngine.Object,
                 _testProfilePath);
 
-            SetupMockData(users, new List<MailboxDto>(), new List<FileShareDto>(), new List<SqlDatabaseDto>());
+            SetupMockData(users, new List<MigrationMailboxDto>(), new List<MigrationFileShareDto>(), new List<MigrationSqlDatabaseDto>());
             var report2 = await newService.GetEligibilityReportAsync();
 
             // Assert - Mappings should be restored
@@ -298,21 +327,35 @@ namespace MigrationTestSuite.Functional
         public async Task BlockedItemsPrevention_ShouldEnforceBusinessRules()
         {
             // Arrange - Mix of valid and invalid items
-            var users = new List<UserDto>
+            var users = new List<MigrationUserDto>
             {
                 CreateUser("Valid-1", "Valid User", "valid@contoso.com", true, "validuser"),
                 CreateUser("Blocked-1", "Blocked User", "blocked@contoso.com", false, "blockeduser"), // Disabled
                 CreateUser("Blocked-2", "Invalid UPN", "bad upn@contoso.com", true, "badupn") // Invalid UPN
             };
 
-            var mailboxes = new List<MailboxDto>
+            var mailboxes = new List<MigrationMailboxDto>
             {
                 CreateMailbox("valid@contoso.com", 50000, "UserMailbox"),
                 CreateMailbox("toolarge@contoso.com", 150000, "UserMailbox"), // Too large
                 CreateMailbox("unsupported@contoso.com", 5000, "DiscoveryMailbox") // Unsupported type
             };
 
-            SetupMockData(users, mailboxes, new List<FileShareDto>(), new List<SqlDatabaseDto>());
+            var fileShares = new List<MigrationFileShareDto>
+            {
+                new MigrationFileShareDto { Path = "\\\\server1\\share1", Name = "Valid Share", Description = "Valid file share", ShareType = "ReadWrite" },
+                new MigrationFileShareDto { Path = "\\\\server2\\share2", Name = "Large Share", Description = "Large file share", ShareType = "ReadWrite" }, // Too large
+                new MigrationFileShareDto { Path = "\\\\server3\\share3", Name = "Invalid Share", Description = "Invalid permissions", ShareType = "ReadOnly" } // Invalid permissions
+            };
+
+            var sqlDatabases = new List<MigrationSqlDatabaseDto>
+            {
+                new MigrationSqlDatabaseDto { Name = "ProductionDB", Server = "SQL-PROD-01", Database = "ProductionDB", SizeMB = 1000 },
+                new MigrationSqlDatabaseDto { Name = "LargeDB", Server = "SQL-PROD-02", Database = "LargeDB", SizeMB = 100000 }, // Too large
+                new MigrationSqlDatabaseDto { Name = "TestDB", Server = "MYSQL-TEST-01", Database = "TestDB", SizeMB = 100 } // Unsupported database type
+            };
+
+            SetupMockData(users, mailboxes, fileShares, sqlDatabases);
 
             // Act
             var report = await _service.GetEligibilityReportAsync();
@@ -350,28 +393,51 @@ namespace MigrationTestSuite.Functional
         public async Task ErrorHandling_InvalidData_ShouldHandleGracefully()
         {
             // Arrange - Data with various edge cases and invalid inputs
-            var problematicUsers = new List<UserDto>
+            var problematicUsers = new List<MigrationUserDto>
             {
-                new UserDto { Sid = null, DisplayName = "Null SID", UPN = "nullsid@contoso.com", Enabled = true },
-                new UserDto { Sid = "", DisplayName = "Empty SID", UPN = "emptysid@contoso.com", Enabled = true },
-                new UserDto { Sid = "S-1", DisplayName = null, UPN = "nullname@contoso.com", Enabled = true },
-                new UserDto { Sid = "S-2", DisplayName = "", UPN = null, Enabled = true },
-                new UserDto { Sid = "S-3", DisplayName = "Unicode Test \u00A0\u200B", UPN = "unicode@contoso.com", Enabled = true }
+                new MigrationUserDto { UserPrincipalName = "nullsid@contoso.com", DisplayName = "Null SID", IsEnabled = true },
+                new MigrationUserDto { UserPrincipalName = "emptysid@contoso.com", DisplayName = "Empty SID", IsEnabled = true },
+                new MigrationUserDto { UserPrincipalName = "nullname@contoso.com", DisplayName = null, IsEnabled = true },
+                new MigrationUserDto { UserPrincipalName = null, DisplayName = "", IsEnabled = true },
+                new MigrationUserDto { UserPrincipalName = "unicode@contoso.com", DisplayName = "Unicode Test \u00A0\u200B", IsEnabled = true }
             };
 
-            var problematicMailboxes = new List<MailboxDto>
+            var problematicMailboxes = new List<MigrationMailboxDto>
             {
-                new MailboxDto { UPN = null, SizeMB = 5000, Type = "UserMailbox" },
-                new MailboxDto { UPN = "", SizeMB = -1000, Type = null },
-                new MailboxDto { UPN = "negative@contoso.com", SizeMB = -500, Type = "UserMailbox" }
+                new MigrationMailboxDto { UserPrincipalName = null, TotalSizeBytes = 5242880L, MailboxType = "UserMailbox" },
+                new MigrationMailboxDto { UserPrincipalName = "", TotalSizeBytes = -1000, MailboxType = null },
+                new MigrationMailboxDto { UserPrincipalName = "negative@contoso.com", TotalSizeBytes = -500, MailboxType = "UserMailbox" }
             };
 
-            _mockLogicEngine.Setup(x => x.GetAllUsersAsync()).ReturnsAsync(problematicUsers);
-            _mockLogicEngine.Setup(x => x.GetAllMailboxesAsync()).ReturnsAsync(problematicMailboxes);
-            _mockLogicEngine.Setup(x => x.GetAllFileSharesAsync()).ReturnsAsync(new List<FileShareDto>());
-            _mockLogicEngine.Setup(x => x.GetAllSqlDatabasesAsync()).ReturnsAsync(new List<SqlDatabaseDto>());
+            _mockLogicEngine.Setup(x => x.GetAllUsersAsync()).Returns(Task.FromResult(problematicUsers.ConvertAll(u => new MandADiscoverySuite.Models.UserDto(
+                UPN: u.UserPrincipalName ?? string.Empty,
+                Sam: u.UserPrincipalName ?? string.Empty,
+                Sid: $"S-1-5-21-{Guid.NewGuid().ToString().Replace("-", "")}",
+                Mail: null,
+                DisplayName: u.DisplayName ?? string.Empty,
+                Enabled: u.IsEnabled,
+                OU: null,
+                ManagerSid: null,
+                Dept: null,
+                AzureObjectId: null,
+                Groups: new List<string>(),
+                DiscoveryTimestamp: DateTime.UtcNow,
+                DiscoveryModule: "Test",
+                SessionId: "TestSession"
+            ))));
+            _mockLogicEngine.Setup(x => x.GetAllMailboxesAsync()).Returns(Task.FromResult(problematicMailboxes.ConvertAll(m => new MandADiscoverySuite.Models.MailboxDto(
+                UPN: m.UserPrincipalName ?? string.Empty,
+                MailboxGuid: null,
+                SizeMB: m.TotalSizeBytes / (1024 * 1024),
+                Type: m.MailboxType ?? "UserMailbox",
+                DiscoveryTimestamp: DateTime.UtcNow,
+                DiscoveryModule: "Test",
+                SessionId: "TestSession"
+            ))));
+            _mockLogicEngine.Setup(x => x.GetAllFileSharesAsync()).Returns(Task.FromResult(new List<MandADiscoverySuite.Models.FileShareDto>()));
+            _mockLogicEngine.Setup(x => x.GetAllSqlDatabasesAsync()).Returns(Task.FromResult(new List<MandADiscoverySuite.Models.SqlDbDto>()));
             _mockLogicEngine.Setup(x => x.GetMailboxByUpnAsync(It.IsAny<string>()))
-                .ReturnsAsync((MailboxDto)null);
+                .Returns(Task.FromResult((MandADiscoverySuite.Models.MailboxDto)null));
 
             // Act - Should not throw exceptions
             var report = await _service.GetEligibilityReportAsync();
@@ -387,7 +453,7 @@ namespace MigrationTestSuite.Functional
 
             // Verify logging of errors
             _mockLogger.Verify(x => x.Log(
-                It.IsAny<LogLevel>(),
+                Microsoft.Extensions.Logging.LogLevel.Information,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => true),
                 It.IsAny<Exception>(),
@@ -397,59 +463,59 @@ namespace MigrationTestSuite.Functional
 
         #region Helper Methods
 
-        private List<UserDto> GenerateLargeUserDataset(int count)
+        private List<MigrationUserDto> GenerateLargeUserDataset(int count)
         {
-            var users = new List<UserDto>();
+            var users = new List<MigrationUserDto>();
             var random = new Random(42); // Fixed seed for reproducible tests
-            
+
             for (int i = 1; i <= count; i++)
             {
-                users.Add(new UserDto
+                users.Add(new MigrationUserDto
                 {
-                    Sid = $"S-1-5-21-{i}",
+                    UserPrincipalName = $"testuser{i:D6}@contoso.com",
                     DisplayName = $"TestUser{i:D6}",
-                    UPN = $"testuser{i:D6}@contoso.com",
-                    Enabled = random.Next(0, 100) < 85, // 85% enabled (realistic ratio)
-                    Sam = $"testuser{i:D6}"
+                    IsEnabled = random.Next(0, 100) < 85, // 85% enabled (realistic ratio)
                 });
             }
             
             return users;
         }
 
-        private List<MailboxDto> GenerateLargeMailboxDataset(int count)
+        private List<MigrationMailboxDto> GenerateLargeMailboxDataset(int count)
         {
-            var mailboxes = new List<MailboxDto>();
+            var mailboxes = new List<MigrationMailboxDto>();
             var random = new Random(42);
             var types = new[] { "UserMailbox", "SharedMailbox", "RoomMailbox", "EquipmentMailbox", "DiscoveryMailbox" };
-            
+
             for (int i = 1; i <= count; i++)
             {
-                mailboxes.Add(new MailboxDto
+                mailboxes.Add(new MigrationMailboxDto
                 {
-                    UPN = $"testmailbox{i:D6}@contoso.com",
-                    SizeMB = random.Next(1000, 120000), // 1GB to 120GB range
-                    Type = types[random.Next(0, types.Length)]
+                    UserPrincipalName = $"testmailbox{i:D6}@contoso.com",
+                    TotalSizeBytes = random.Next(1000, 120000) * 1024L * 1024L, // 1GB to 120GB range
+                    MailboxType = types[random.Next(0, types.Length)]
                 });
             }
             
             return mailboxes;
         }
 
-        private List<FileShareDto> GenerateLargeFileShareDataset(int count)
+        private List<MigrationFileShareDto> GenerateLargeFileShareDataset(int count)
         {
-            var shares = new List<FileShareDto>();
+            var shares = new List<MigrationFileShareDto>();
             var random = new Random(42);
-            
+
             for (int i = 1; i <= count; i++)
             {
                 var pathLength = random.Next(50, 280); // Mix of normal and long paths
                 var path = $@"C:\Share{i:D6}\" + new string('x', Math.Max(0, pathLength - 20));
-                
-                shares.Add(new FileShareDto
+
+                shares.Add(new MigrationFileShareDto
                 {
                     Path = path,
-                    Name = $"TestShare{i:D6}"
+                    Name = $"TestShare{i:D6}",
+                    Server = "TestServer",
+                    ShareType = "SMB"
                 });
             }
             
@@ -474,46 +540,69 @@ namespace MigrationTestSuite.Functional
             return databases;
         }
 
-        private UserDto CreateUser(string sid, string displayName, string upn, bool enabled, string sam) =>
-            new UserDto
+        private MigrationUserDto CreateUser(string sid, string displayName, string upn, bool enabled, string sam) =>
+            new MigrationUserDto
             {
-                Sid = sid,
+                UserPrincipalName = upn,
                 DisplayName = displayName,
-                UPN = upn,
-                Enabled = enabled,
-                Sam = sam
+                IsEnabled = enabled
             };
 
-        private MailboxDto CreateMailbox(string upn, int sizeMB, string type) =>
-            new MailboxDto
+        private MigrationMailboxDto CreateMailbox(string upn, int sizeMB, string type) =>
+            new MigrationMailboxDto
             {
-                UPN = upn,
-                SizeMB = sizeMB,
-                Type = type
+                UserPrincipalName = upn,
+                TotalSizeBytes = sizeMB * 1024L * 1024L,
+                MailboxType = type
             };
 
-        private FileShareDto CreateFileShare(string path, string name) =>
-            new FileShareDto
+        private MigrationFileShareDto CreateFileShare(string path, string name) =>
+            new MigrationFileShareDto
             {
                 Path = path,
-                Name = name
+                Name = name,
+                Server = "TestServer",
+                ShareType = "SMB"
             };
 
-        private SqlDatabaseDto CreateDatabase(string server, string instance, string database) =>
-            new SqlDatabaseDto
+        private MigrationSqlDatabaseDto CreateDatabase(string server, string instance, string database) =>
+            new MigrationSqlDatabaseDto
             {
                 Server = server,
                 Instance = instance,
                 Database = database
             };
 
-        private void SetupMockData(List<UserDto> users, List<MailboxDto> mailboxes, 
-                                  List<FileShareDto> fileShares, List<SqlDatabaseDto> databases)
+        private void SetupMockData(List<MigrationUserDto> users, List<MigrationMailboxDto> mailboxes,
+                                  List<MigrationFileShareDto> fileShares, List<MigrationSqlDatabaseDto> databases)
         {
-            _mockLogicEngine.Setup(x => x.GetAllUsersAsync()).ReturnsAsync(users);
-            _mockLogicEngine.Setup(x => x.GetAllMailboxesAsync()).ReturnsAsync(mailboxes);
-            _mockLogicEngine.Setup(x => x.GetAllFileSharesAsync()).ReturnsAsync(fileShares);
-            _mockLogicEngine.Setup(x => x.GetAllSqlDatabasesAsync()).ReturnsAsync(databases);
+            _mockLogicEngine.Setup(x => x.GetAllUsersAsync()).Returns(Task.FromResult(users.ConvertAll(u => new MandADiscoverySuite.Models.UserDto(
+                UPN: u.UserPrincipalName ?? string.Empty,
+                Sam: u.UserPrincipalName ?? string.Empty,
+                Sid: $"S-1-5-21-{Guid.NewGuid().ToString().Replace("-", "")}",
+                Mail: null,
+                DisplayName: u.DisplayName ?? string.Empty,
+                Enabled: u.IsEnabled,
+                OU: null,
+                ManagerSid: null,
+                Dept: null,
+                AzureObjectId: null,
+                Groups: new List<string>(),
+                DiscoveryTimestamp: DateTime.UtcNow,
+                DiscoveryModule: "Test",
+                SessionId: "TestSession"
+            ))));
+            _mockLogicEngine.Setup(x => x.GetAllMailboxesAsync()).Returns(Task.FromResult(mailboxes.ConvertAll(m => new MandADiscoverySuite.Models.MailboxDto(
+                UPN: m.UserPrincipalName ?? string.Empty,
+                MailboxGuid: null,
+                SizeMB: m.TotalSizeBytes / (1024 * 1024),
+                Type: m.MailboxType ?? "UserMailbox",
+                DiscoveryTimestamp: DateTime.UtcNow,
+                DiscoveryModule: "Test",
+                SessionId: "TestSession"
+            ))));
+            _mockLogicEngine.Setup(x => x.GetAllFileSharesAsync()).Returns(Task.FromResult(new List<MandADiscoverySuite.Models.FileShareDto>()));
+            _mockLogicEngine.Setup(x => x.GetAllSqlDatabasesAsync()).Returns(Task.FromResult(new List<MandADiscoverySuite.Models.SqlDbDto>()));
             _mockLogicEngine.Setup(x => x.GetMailboxByUpnAsync(It.IsAny<string>()))
                 .ReturnsAsync((MailboxDto)null);
         }

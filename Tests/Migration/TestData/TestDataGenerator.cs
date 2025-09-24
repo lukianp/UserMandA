@@ -18,7 +18,7 @@ namespace MigrationTestSuite.TestData
         private readonly string[] _locations = { "New York", "London", "Tokyo", "Sydney", "Toronto", "Berlin", "Paris", "Singapore" };
         private readonly string[] _jobTitles = { "Manager", "Director", "Analyst", "Specialist", "Coordinator", "Assistant", "Senior", "Junior" };
         private readonly string[] _domains = { "contoso.com", "fabrikam.com", "northwind.com", "adventure-works.com" };
-        
+
         public TestDataGenerator(int? seed = null)
         {
             _random = seed.HasValue ? new Random(seed.Value) : new Random();
@@ -26,9 +26,9 @@ namespace MigrationTestSuite.TestData
 
         #region User Data Generation
 
-        public List<UserData> GenerateUsers(int count, string domain = "contoso.com")
+        public List<TestUserDto> GenerateUsers(int count, string domain = "contoso.com")
         {
-            var users = new List<UserData>();
+            var users = new List<TestUserDto>();
             var usedEmails = new HashSet<string>();
 
             for (int i = 0; i < count; i++)
@@ -43,45 +43,41 @@ namespace MigrationTestSuite.TestData
             return users;
         }
 
-        private UserData GenerateUser(string domain, int index, HashSet<string> usedEmails)
+        private TestUserDto GenerateUser(string domain, int index, HashSet<string> usedEmails)
         {
             var firstName = GenerateFirstName();
             var lastName = GenerateLastName();
             var email = GenerateUniqueEmail(firstName, lastName, domain, usedEmails);
-            
-            return new UserData
+
+            return new TestUserDto
             {
                 UserPrincipalName = email,
                 DisplayName = $"{firstName} {lastName}",
-                GivenName = firstName,
-                Surname = lastName,
+                FirstName = firstName,
+                LastName = lastName,
                 Department = _departments[_random.Next(_departments.Length)],
-                Title = GenerateJobTitle(),
-                Office = _locations[_random.Next(_locations.Length)],
+                JobTitle = GenerateJobTitle(),
+                OfficeLocation = _locations[_random.Next(_locations.Length)],
                 PhoneNumber = GeneratePhoneNumber(),
                 MobilePhone = GeneratePhoneNumber(),
                 EmployeeId = $"EMP{(index + 1):D6}",
-                CompanyName = "Contoso Corporation",
-                Country = "United States",
-                UsageLocation = "US",
-                LastLogonDate = GenerateLastLogonDate(),
-                AccountEnabled = _random.NextDouble() > 0.05, // 95% enabled
-                CreatedDate = DateTime.Now.AddDays(-_random.Next(1, 1825)), // Created within last 5 years
-                LicenseAssigned = GenerateLicenseAssignment()
+                IsEnabled = _random.NextDouble() > 0.05, // 95% enabled
+                LastLogonDate = DateTime.Now.AddDays(-_random.Next(0, 90)),
+                CreatedDate = DateTime.Now.AddDays(-_random.Next(1, 1825)) // Created within last 5 years
             };
         }
 
-        private void AssignManagers(List<UserData> users)
+        private void AssignManagers(List<TestUserDto> users)
         {
-            var managers = users.Where(u => u.Title.Contains("Manager") || u.Title.Contains("Director")).ToList();
-            
+            var managers = users.Where(u => u.JobTitle.Contains("Manager") || u.JobTitle.Contains("Director")).ToList();
+
             foreach (var user in users)
             {
-                if (!user.Title.Contains("Manager") && !user.Title.Contains("Director") && _random.NextDouble() > 0.3)
+                if (!user.JobTitle.Contains("Manager") && !user.JobTitle.Contains("Director") && _random.NextDouble() > 0.3)
                 {
-                    var manager = managers.Where(m => m.Department == user.Department).FirstOrDefault() 
-                                 ?? managers.FirstOrDefault();
-                    
+                    var manager = managers.Where(m => m.Department == user.Department).FirstOrDefault()
+                                  ?? managers.FirstOrDefault();
+
                     if (manager != null)
                     {
                         user.ManagerDisplayName = manager.DisplayName;
@@ -95,14 +91,14 @@ namespace MigrationTestSuite.TestData
 
         #region Group Data Generation
 
-        public List<GroupData> GenerateGroups(int count, List<UserData> users = null)
+        public List<TestGroupDto> GenerateGroups(int count, List<TestUserDto> users = null)
         {
-            var groups = new List<GroupData>();
-            
+            var groups = new List<TestGroupDto>();
+
             // Generate department groups
             foreach (var dept in _departments)
             {
-                groups.Add(new GroupData
+                groups.Add(new TestGroupDto
                 {
                     DisplayName = $"{dept} Department",
                     Description = $"All users in the {dept} department",
@@ -124,7 +120,7 @@ namespace MigrationTestSuite.TestData
 
             foreach (var groupName in functionalGroups.Take(count - groups.Count))
             {
-                groups.Add(new GroupData
+                groups.Add(new TestGroupDto
                 {
                     DisplayName = groupName,
                     Description = $"Functional group for {groupName}",
@@ -144,14 +140,14 @@ namespace MigrationTestSuite.TestData
 
         #region Migration Data Generation
 
-        public MigrationOrchestratorProject GenerateMigrationProject(string name = "Test Migration Project")
+        public TestMigrationProject GenerateMigrationProject(string name = "Test Migration Project")
         {
-            var project = new MigrationOrchestratorProject
+            var project = new TestMigrationProject
             {
                 Name = name,
                 Description = $"Generated test migration project for {name}",
                 CreatedDate = DateTime.Now.AddDays(-_random.Next(1, 30)),
-                Status = (MigrationStatus)_random.Next(0, 5),
+                Status = (TestMigrationStatus)_random.Next(0, 5),
                 SourceEnvironment = GenerateSourceEnvironment(),
                 TargetEnvironment = GenerateTargetEnvironment(),
                 Settings = GenerateMigrationSettings()
@@ -167,21 +163,21 @@ namespace MigrationTestSuite.TestData
             return project;
         }
 
-        public MigrationOrchestratorWave GenerateMigrationWave(int order)
+        public TestMigrationWave GenerateMigrationWave(int order)
         {
-            var wave = new MigrationOrchestratorWave
+            var wave = new TestMigrationWave
             {
                 Name = $"Wave {order}",
                 Order = order,
                 PlannedStartDate = DateTime.Now.AddDays(order * 7),
-                Status = order == 1 ? MigrationStatus.InProgress : MigrationStatus.NotStarted,
+                Status = order == 1 ? TestMigrationStatus.InProgress : TestMigrationStatus.NotStarted,
                 Notes = $"Migration wave {order} containing various migration types"
             };
 
             // Generate batches for the wave
             var batchCount = _random.Next(2, 5);
-            var migrationTypes = Enum.GetValues<MigrationType>();
-            
+            var migrationTypes = Enum.GetValues<TestMigrationType>();
+
             for (int i = 0; i < batchCount; i++)
             {
                 var migrationType = migrationTypes[_random.Next(migrationTypes.Length)];
@@ -191,13 +187,13 @@ namespace MigrationTestSuite.TestData
             return wave;
         }
 
-        public MigrationBatch GenerateMigrationBatch(string name, MigrationType type)
+        public TestMigrationBatch GenerateMigrationBatch(string name, TestMigrationType type)
         {
-            var batch = new MigrationBatch
+            var batch = new TestMigrationBatch
             {
                 Name = name,
                 Type = type,
-                Status = MigrationStatus.NotStarted
+                Status = TestMigrationStatus.NotStarted
             };
 
             // Generate migration items based on type
@@ -210,44 +206,44 @@ namespace MigrationTestSuite.TestData
             return batch;
         }
 
-        public MigrationItem GenerateMigrationItem(MigrationType type, int index)
+        public TestMigrationItem GenerateMigrationItem(TestMigrationType type, int index)
         {
-            var item = new MigrationItem
+            var item = new TestMigrationItem
             {
                 Type = type,
-                Status = MigrationStatus.NotStarted,
+                Status = TestMigrationStatus.NotStarted,
                 ProgressPercentage = 0,
                 RetryCount = 0
             };
 
             switch (type)
             {
-                case MigrationType.User:
+                case TestMigrationType.User:
                     item.SourceIdentity = $"user{index}@source.contoso.com";
                     item.TargetIdentity = $"user{index}@target.contoso.com";
                     item.DisplayName = $"User {index}";
-                    item.SizeBytes = _random.Next(100_000_000, 5_000_000_000); // 100MB to 5GB
+                    item.SizeBytes = _random.Next(100_000_000, int.MaxValue); // 100MB to 2GB
                     break;
 
-                case MigrationType.Mailbox:
+                case TestMigrationType.Mailbox:
                     item.SourceIdentity = $"mailbox{index}@source.contoso.com";
                     item.TargetIdentity = $"mailbox{index}@target.contoso.com";
                     item.DisplayName = $"Mailbox {index}";
-                    item.SizeBytes = _random.Next(500_000_000, 50_000_000_000); // 500MB to 50GB
+                    item.SizeBytes = _random.Next(500_000_000, int.MaxValue); // 500MB to 2GB
                     break;
 
-                case MigrationType.SharePoint:
+                case TestMigrationType.SharePoint:
                     item.SourceIdentity = $"https://source.contoso.com/sites/site{index}";
                     item.TargetIdentity = $"https://target.sharepoint.com/sites/site{index}";
                     item.DisplayName = $"SharePoint Site {index}";
-                    item.SizeBytes = _random.Next(1_000_000_000, 100_000_000_000); // 1GB to 100GB
+                    item.SizeBytes = _random.Next(1_000_000_000, int.MaxValue); // 1GB to 2GB
                     break;
 
-                case MigrationType.FileShare:
+                case TestMigrationType.FileShare:
                     item.SourceIdentity = $"\\\\sourceserver\\share{index}";
                     item.TargetIdentity = $"https://target.sharepoint.com/sites/migrated-shares/share{index}";
                     item.DisplayName = $"File Share {index}";
-                    item.SizeBytes = _random.Next(500_000_000, 10_000_000_000); // 500MB to 10GB
+                    item.SizeBytes = _random.Next(500_000_000, int.MaxValue); // 500MB to 2GB
                     break;
 
                 default:
@@ -265,20 +261,20 @@ namespace MigrationTestSuite.TestData
 
         #region CSV Export Methods
 
-        public void ExportUsersToCsv(List<UserData> users, string filePath)
+        public void ExportUsersToCsv(List<TestUserDto> users, string filePath)
         {
             var csvContent = new StringBuilder();
-            csvContent.AppendLine("UserPrincipalName,DisplayName,GivenName,Surname,Department,Title,Office,PhoneNumber,MobilePhone,EmployeeId,Manager,LastLogonDate,AccountEnabled");
+            csvContent.AppendLine("UserPrincipalName,DisplayName,FirstName,LastName,Department,JobTitle,OfficeLocation,PhoneNumber,MobilePhone,EmployeeId,Manager,LastLogonDate,IsEnabled");
 
             foreach (var user in users)
             {
-                csvContent.AppendLine($"{user.UserPrincipalName},{user.DisplayName},{user.GivenName},{user.Surname},{user.Department},{user.Title},{user.Office},{user.PhoneNumber},{user.MobilePhone},{user.EmployeeId},{user.Manager},{user.LastLogonDate:yyyy-MM-dd},{user.AccountEnabled}");
+                csvContent.AppendLine($"{user.UserPrincipalName},{user.DisplayName},{user.FirstName},{user.LastName},{user.Department},{user.JobTitle},{user.OfficeLocation},{user.PhoneNumber},{user.MobilePhone},{user.EmployeeId},{user.Manager},{user.LastLogonDate:yyyy-MM-dd},{user.IsEnabled}");
             }
 
             File.WriteAllText(filePath, csvContent.ToString());
         }
 
-        public void ExportGroupsToCsv(List<GroupData> groups, string filePath)
+        public void ExportGroupsToCsv(List<TestGroupDto> groups, string filePath)
         {
             var csvContent = new StringBuilder();
             csvContent.AppendLine("DisplayName,Description,GroupType,MemberCount,OwnerCount,CreatedDate,MailEnabled,SecurityEnabled");
@@ -291,10 +287,10 @@ namespace MigrationTestSuite.TestData
             File.WriteAllText(filePath, csvContent.ToString());
         }
 
-        public void ExportMigrationProjectToJson(MigrationOrchestratorProject project, string filePath)
+        public void ExportMigrationProjectToJson(TestMigrationProject project, string filePath)
         {
-            var json = JsonSerializer.Serialize(project, new JsonSerializerOptions 
-            { 
+            var json = JsonSerializer.Serialize(project, new JsonSerializerOptions
+            {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
@@ -320,7 +316,7 @@ namespace MigrationTestSuite.TestData
         private string GenerateUniqueEmail(string firstName, string lastName, string domain, HashSet<string> usedEmails)
         {
             var baseEmail = $"{firstName.ToLower()}.{lastName.ToLower()}@{domain}";
-            
+
             if (!usedEmails.Contains(baseEmail))
             {
                 usedEmails.Add(baseEmail);
@@ -357,24 +353,9 @@ namespace MigrationTestSuite.TestData
             return $"+1-{_random.Next(200, 999)}-{_random.Next(200, 999)}-{_random.Next(1000, 9999)}";
         }
 
-        private DateTime? GenerateLastLogonDate()
+        private TestMigrationEnvironment GenerateSourceEnvironment()
         {
-            if (_random.NextDouble() > 0.1) // 90% have recent logon
-            {
-                return DateTime.Now.AddDays(-_random.Next(0, 90));
-            }
-            return null; // 10% never logged on or very old
-        }
-
-        private string GenerateLicenseAssignment()
-        {
-            var licenses = new[] { "Microsoft 365 E3", "Microsoft 365 E5", "Microsoft 365 Business Premium", "Office 365 E1", "Office 365 E3" };
-            return licenses[_random.Next(licenses.Length)];
-        }
-
-        private MigrationEnvironment GenerateSourceEnvironment()
-        {
-            return new MigrationEnvironment
+            return new TestMigrationEnvironment
             {
                 Name = "Source Environment",
                 Type = "OnPremises",
@@ -385,9 +366,9 @@ namespace MigrationTestSuite.TestData
             };
         }
 
-        private MigrationEnvironment GenerateTargetEnvironment()
+        private TestMigrationEnvironment GenerateTargetEnvironment()
         {
-            return new MigrationEnvironment
+            return new TestMigrationEnvironment
             {
                 Name = "Target Environment",
                 Type = "Azure",
@@ -398,9 +379,9 @@ namespace MigrationTestSuite.TestData
             };
         }
 
-        private MigrationSettings GenerateMigrationSettings()
+        private TestMigrationSettings GenerateMigrationSettings()
         {
-            return new MigrationSettings
+            return new TestMigrationSettings
             {
                 EnableRollback = true,
                 ValidateBeforeMigration = true,
@@ -424,7 +405,7 @@ namespace MigrationTestSuite.TestData
             var users = GenerateUsers(userCount);
             var groups = GenerateGroups(groupCount, users);
             var project = GenerateMigrationProject("Complete Test Migration");
-            
+
             return new TestDataSet
             {
                 Users = users,
@@ -446,10 +427,125 @@ namespace MigrationTestSuite.TestData
 
     public class TestDataSet
     {
-        public List<UserData> Users { get; set; } = new List<UserData>();
-        public List<GroupData> Groups { get; set; } = new List<GroupData>();
-        public MigrationOrchestratorProject MigrationProject { get; set; }
+        public List<TestUserDto> Users { get; set; } = new List<TestUserDto>();
+        public List<TestGroupDto> Groups { get; set; } = new List<TestGroupDto>();
+        public TestMigrationProject MigrationProject { get; set; }
         public DateTime GeneratedDate { get; set; }
         public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
+    }
+
+    // Test DTOs that match the test project structure
+    public class TestUserDto
+    {
+        public string UserPrincipalName { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Department { get; set; } = string.Empty;
+        public string JobTitle { get; set; } = string.Empty;
+        public string OfficeLocation { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+        public string MobilePhone { get; set; } = string.Empty;
+        public string EmployeeId { get; set; } = string.Empty;
+        public string? Manager { get; set; }
+        public string? ManagerDisplayName { get; set; }
+        public DateTime? LastLogonDate { get; set; }
+        public bool IsEnabled { get; set; }
+        public DateTime? CreatedDate { get; set; }
+    }
+
+    public class TestGroupDto
+    {
+        public string DisplayName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string GroupType { get; set; } = string.Empty;
+        public int MemberCount { get; set; }
+        public int OwnerCount { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public bool MailEnabled { get; set; }
+        public bool SecurityEnabled { get; set; }
+    }
+
+    public class TestMigrationProject
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime? CreatedDate { get; set; }
+        public TestMigrationStatus Status { get; set; }
+        public TestMigrationEnvironment SourceEnvironment { get; set; } = new();
+        public TestMigrationEnvironment TargetEnvironment { get; set; } = new();
+        public TestMigrationSettings Settings { get; set; } = new();
+        public List<TestMigrationWave> Waves { get; set; } = new();
+    }
+
+    public class TestMigrationWave
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Order { get; set; }
+        public DateTime? PlannedStartDate { get; set; }
+        public TestMigrationStatus Status { get; set; }
+        public string Notes { get; set; } = string.Empty;
+        public List<TestMigrationBatch> Batches { get; set; } = new();
+    }
+
+    public class TestMigrationBatch
+    {
+        public string Name { get; set; } = string.Empty;
+        public TestMigrationType Type { get; set; }
+        public TestMigrationStatus Status { get; set; }
+        public List<TestMigrationItem> Items { get; set; } = new();
+    }
+
+    public class TestMigrationItem
+    {
+        public TestMigrationType Type { get; set; }
+        public TestMigrationStatus Status { get; set; }
+        public string SourceIdentity { get; set; } = string.Empty;
+        public string TargetIdentity { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public long SizeBytes { get; set; }
+        public int ProgressPercentage { get; set; }
+        public int RetryCount { get; set; }
+    }
+
+    public class TestMigrationEnvironment
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public bool IsConnected { get; set; }
+        public string HealthStatus { get; set; } = string.Empty;
+        public DateTime? LastHealthCheck { get; set; }
+        public List<string> Capabilities { get; set; } = new();
+    }
+
+    public class TestMigrationSettings
+    {
+        public bool EnableRollback { get; set; }
+        public bool ValidateBeforeMigration { get; set; }
+        public int MaxConcurrentMigrations { get; set; }
+        public int RetryAttempts { get; set; }
+        public TimeSpan RetryDelay { get; set; }
+        public bool PreservePermissions { get; set; }
+        public bool CreateMissingTargetContainers { get; set; }
+        public string NotificationEmail { get; set; } = string.Empty;
+        public bool PauseOnError { get; set; }
+        public bool GenerateDetailedLogs { get; set; }
+    }
+
+    public enum TestMigrationStatus
+    {
+        NotStarted,
+        InProgress,
+        Completed,
+        Failed,
+        Cancelled
+    }
+
+    public enum TestMigrationType
+    {
+        User,
+        Mailbox,
+        SharePoint,
+        FileShare
     }
 }

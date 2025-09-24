@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Models.Migration;
@@ -25,19 +24,19 @@ namespace GUI.Tests.Services
             _service = new LogicEngineService(_logger.Object, _dataPath);
         }
 
-        [Fact]
+        [TestMethod]
         public async Task LoadAllAsync_LoadsSampleData()
         {
             var success = await _service.LoadAllAsync();
-            Assert.True(success);
+            Assert.IsTrue(success);
             var user = await _service.GetUserDetailAsync("S-1-5-21-1-1-1-1001");
-            Assert.NotNull(user);
-            Assert.Equal("user1@contoso.com", user!.User.UPN);
-            Assert.Single(user.Groups);
-            Assert.Single(user.Devices);
+            Assert.IsNotNull(user);
+            Assert.AreEqual("user1@contoso.com", user!.User.UPN);
+            Assert.AreEqual(1, user.Groups.Count);
+            Assert.AreEqual(1, user.Devices.Count);
         }
 
-        [Fact]
+        [TestMethod]
         public async Task LoadAllAsync_HandlesDuplicateUsers()
         {
             var tempDir = CopyDataDirectory();
@@ -45,13 +44,13 @@ namespace GUI.Tests.Services
             File.AppendAllText(usersFile, "\nuser1@contoso.com,user1,S-1-5-21-1-1-1-1001,user1@contoso.com,User One,True,OU=Users,,IT,11111111-1111-1111-1111-111111111111,GroupA,2024-01-01T00:00:00Z,ActiveDirectoryDiscovery,session-001");
             var svc = new LogicEngineService(_logger.Object, tempDir);
             var success = await svc.LoadAllAsync();
-            Assert.True(success);
+            Assert.IsTrue(success);
             var stats = svc.GetLoadStatistics();
-            Assert.Equal(1, stats.UserCount);
+            Assert.AreEqual(1, stats.UserCount);
             Directory.Delete(tempDir, true);
         }
 
-        [Fact]
+        [TestMethod]
         public async Task LoadAllAsync_IgnoresInvalidTimestamp()
         {
             var tempDir = CopyDataDirectory();
@@ -61,13 +60,13 @@ namespace GUI.Tests.Services
             File.WriteAllLines(usersFile, lines);
             var svc = new LogicEngineService(_logger.Object, tempDir);
             var success = await svc.LoadAllAsync();
-            Assert.True(success);
+            Assert.IsTrue(success);
             var user = await svc.GetUserDetailAsync("S-1-5-21-1-1-1-1001");
-            Assert.NotNull(user);
+            Assert.IsNotNull(user);
             Directory.Delete(tempDir, true);
         }
 
-        [Fact]
+        [TestMethod]
         public async Task LoadAllAsync_HandlesMissingHeaders()
         {
             var tempDir = CopyDataDirectory();
@@ -76,21 +75,21 @@ namespace GUI.Tests.Services
             File.WriteAllText(usersFile, text.Replace("Sid,", string.Empty));
             var svc = new LogicEngineService(_logger.Object, tempDir);
             var success = await svc.LoadAllAsync();
-            Assert.True(success);
+            Assert.IsTrue(success);
             Directory.Delete(tempDir, true);
         }
 
-        [Fact]
+        [TestMethod]
         public async Task AclGroupUserInference_MapsGroupAclToUser()
         {
             var success = await _service.LoadAllAsync();
-            Assert.True(success);
+            Assert.IsTrue(success);
             var detail = await _service.GetUserDetailAsync("S-1-5-21-1-1-1-1001");
-            Assert.NotNull(detail);
-            Assert.Contains(detail!.Shares, s => s.Path == "C:\\Share");
+            Assert.IsNotNull(detail);
+            Assert.IsTrue(detail!.Shares.Any(s => s.Path == "C:\\Share"));
         }
 
-        [Fact]
+        [TestMethod]
         public async Task LoadAllAsync_EmptyFiles_DoesNotThrowAndReportsZero()
         {
             var tempDir = CopyDataDirectory();
@@ -99,15 +98,15 @@ namespace GUI.Tests.Services
                 File.WriteAllText(file, string.Empty);
             var svc = new LogicEngineService(_logger.Object, tempDir);
             var success = await svc.LoadAllAsync();
-            Assert.True(success);
+            Assert.IsTrue(success);
             var stats = svc.GetLoadStatistics();
-            Assert.Equal(0, stats.UserCount);
-            Assert.Equal(0, stats.DeviceCount);
-            Assert.Equal(0, stats.GroupCount);
+            Assert.AreEqual(0, stats.UserCount);
+            Assert.AreEqual(0, stats.DeviceCount);
+            Assert.AreEqual(0, stats.GroupCount);
             Directory.Delete(tempDir, true);
         }
 
-        [Fact]
+        [TestMethod]
         public async Task LoadAllAsync_MalformedCsvRows_GracefullySkips()
         {
             var tempDir = CopyDataDirectory();
@@ -116,13 +115,13 @@ namespace GUI.Tests.Services
             File.AppendAllText(usersFile, "\nthis,is,not,valid,row");
             var svc = new LogicEngineService(_logger.Object, tempDir);
             var success = await svc.LoadAllAsync();
-            Assert.True(success);
+            Assert.IsTrue(success);
             var stats = svc.GetLoadStatistics();
-            Assert.True(stats.UserCount >= 0);
+            Assert.IsTrue(stats.UserCount >= 0);
             Directory.Delete(tempDir, true);
         }
 
-        [Fact]
+        [TestMethod]
         public async Task LoadAllAsync_NoRelationships_DoesNotBreakLookups()
         {
             var tempDir = CopyDataDirectory();
@@ -134,11 +133,11 @@ namespace GUI.Tests.Services
             }
             var svc = new LogicEngineService(_logger.Object, tempDir);
             var success = await svc.LoadAllAsync();
-            Assert.True(success);
+            Assert.IsTrue(success);
             // Query a known user; relationships should be empty but not throw
             var detail = await svc.GetUserDetailAsync("S-1-5-21-1-1-1-1001");
             // If user file exists in basic set, detail may be returned or null; we only assert no exception and service success
-            Assert.True(success);
+            Assert.IsTrue(success);
             Directory.Delete(tempDir, true);
         }
 

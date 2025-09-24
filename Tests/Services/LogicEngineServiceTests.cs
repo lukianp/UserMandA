@@ -230,7 +230,7 @@ test6@test.com,test6,S-1-5-21-1-1006,test6@test.com,Test User 6,0,OU=Test,,Test,
             var boolTestPath = Path.Combine(_testDataPath, "BoolTest_Users.csv");
             File.WriteAllText(boolTestPath, boolTestData);
             
-            var boolTestEngine = new LogicEngineService(_mockLogger.Object, _testDataPath);
+            var boolTestEngine = new LogicEngineService(_mockLogger.Object, _mockCache.Object, _testDataPath);
             File.Move(Path.Combine(_testDataPath, "Users.csv"), Path.Combine(_testDataPath, "Users_backup.csv"));
             File.Move(boolTestPath, Path.Combine(_testDataPath, "Users.csv"));
 
@@ -272,7 +272,7 @@ test6@test.com,test6,S-1-5-21-1-1006,test6@test.com,Test User 6,0,OU=Test,,Test,
         public async Task LoadAllAsync_ShouldHandleMissingFiles()
         {
             // Arrange - Create engine with non-existent path
-            var missingDataEngine = new LogicEngineService(_mockLogger.Object, Path.Combine(_testDataPath, "NonExistent"));
+            var missingDataEngine = new LogicEngineService(_mockLogger.Object, _mockCache.Object, Path.Combine(_testDataPath, "NonExistent"));
 
             // Act & Assert - Should not throw, should handle gracefully
             var result = await missingDataEngine.LoadAllAsync();
@@ -305,7 +305,7 @@ test@test.com,test,INVALID-SID,test@test.com,Test User,INVALID-BOOL,OU=Test,,Tes
             File.Move(Path.Combine(_testDataPath, "Users.csv"), Path.Combine(_testDataPath, "Users_backup.csv"));
             File.Move(Path.Combine(_testDataPath, "Malformed_Users.csv"), Path.Combine(_testDataPath, "Users.csv"));
 
-            var malformedEngine = new LogicEngineService(_mockLogger.Object, _testDataPath);
+            var malformedEngine = new LogicEngineService(_mockLogger.Object, _mockCache.Object, _testDataPath);
 
             // Act & Assert - Should handle malformed data gracefully
             var result = await malformedEngine.LoadAllAsync();

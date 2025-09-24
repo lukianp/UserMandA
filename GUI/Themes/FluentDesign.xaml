@@ -189,7 +189,7 @@
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FluentAccentDarkBrush}"/>
         <Setter Property="FontWeight" Value="Medium"/>
-        
+
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{DynamicResource FluentAccentLightBrush}"/>
@@ -198,6 +198,84 @@
                 <Setter Property="Background" Value="{DynamicResource FluentAccentDarkBrush}"/>
             </Trigger>
         </Style.Triggers>
+    </Style>
+
+    <!-- Fluent Icon Button Style -->
+    <Style x:Key="FluentIconButtonStyle" TargetType="Button" BasedOn="{StaticResource FluentButtonStyle}">
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="BackgroundBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4">
+
+                        <!-- Reveal Effect Layer -->
+                        <Border x:Name="RevealBorder"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Opacity="0">
+                            <ContentPresenter x:Name="ContentPresenter"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            RecognizesAccessKey="True"/>
+                        </Border>
+                    </Border>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="BackgroundBorder" Property="Background"
+                                    Value="{DynamicResource FluentSystemChromeMediumLowBrush}"/>
+                            <Setter TargetName="RevealBorder" Property="Background"
+                                    Value="{StaticResource RevealBackgroundBrush}"/>
+                            <Setter TargetName="RevealBorder" Property="BorderBrush"
+                                    Value="{StaticResource RevealBorderBrush}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="RevealBorder"
+                                                       Storyboard.TargetProperty="Opacity"
+                                                       To="1" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="RevealBorder"
+                                                       Storyboard.TargetProperty="Opacity"
+                                                       To="0" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="BackgroundBorder" Property="Background"
+                                    Value="{DynamicResource FluentSystemChromeMediumBrush}"/>
+                            <Setter TargetName="ContentPresenter" Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="ContentPresenter" Property="RenderTransformOrigin" Value="0.5,0.5"/>
+                        </Trigger>
+
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- Fluent TextBox Style -->

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Timers;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -1208,11 +1209,11 @@ namespace MandADiscoverySuite.Tests.Migration.Scheduling
     {
         private bool _monitoring;
         private readonly List<ResourceSample> _samples = new List<ResourceSample>();
-        private readonly Timer _sampleTimer;
+        private readonly System.Timers.Timer _sampleTimer;
 
         public SystemResourceMonitor()
         {
-            _sampleTimer = new Timer(1000); // Sample every second
+            _sampleTimer = new System.Timers.Timer(1000); // Sample every second
             _sampleTimer.Elapsed += OnSampleTimer;
         }
 

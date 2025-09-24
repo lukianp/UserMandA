@@ -10,6 +10,7 @@ using Azure.Identity;
 using MandADiscoverySuite.Models;
 using System.Text.Json;
 using System.Net.Http;
+using System.Net.Mail;
 
 // Aliases to resolve ambiguities with custom models
 using GraphUser = Microsoft.Graph.Models.User;
@@ -812,6 +813,166 @@ namespace MandADiscoverySuite.Services
             }
         }
 
+        /// <summary>
+        /// Creates a test notification for validation purposes
+        /// </summary>
+        public async Task<NotificationResult> SendTestNotificationAsync(
+            string waveName,
+            string templateId,
+            List<string> testRecipients)
+        {
+            var result = new NotificationResult { TemplateId = templateId };
+
+            try
+            {
+                if (!IsAuthenticated)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = "Graph API client is not configured or authenticated";
+                    return result;
+                }
+
+                // Get the template
+                var template = await _templateService.GetTemplateAsync(templateId);
+                if (template == null)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = $"Template {templateId} not found";
+                    return result;
+                }
+
+                // Create sample token data for testing
+                var sampleData = new
+                {
+                    UserDisplayName = "Test User",
+                    UserEmail = "test.user@company.com",
+                    UserPrincipalName = "test.user@company.com",
+                    CompanyName = _configuration.DefaultCompanyName ?? "Test Company",
+                    CurrentDate = DateTime.Now.ToString("yyyy-MM-dd"),
+                    CurrentTime = DateTime.Now.ToString("HH:mm"),
+                    MigrationDate = DateTime.Now.AddDays(7).ToString("yyyy-MM-dd"),
+                    MigrationTime = "09:00 AM",
+                    WaveName = waveName,
+                    EstimatedDuration = "4 hours",
+                    ItemsToMigrate = "150"
+                };
+
+                // Create the preview
+                var preview = _templateService.CreatePreview(template, sampleData);
+                if (preview.HasError)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = preview.ErrorMessage;
+                    return result;
+                }
+
+                // Add test prefix to subject
+                var testSubject = $"[TEST - {waveName}] {preview.Subject}";
+                var testBody = $"<div style='background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin-bottom: 20px;'>" +
+                              $"<strong>⚠️ This is a TEST notification for wave: {waveName}</strong><br/>" +
+                              $"Template ID: {templateId}<br/>" +
+                              $"Generated at: {DateTime.Now}<br/>" +
+                              $"Test Recipients: {string.Join(", ", testRecipients)}<br/>" +
+                              $"</div>" +
+                              preview.Body;
+
+                // Send the test notification
+                var sendResult = await SendEmailAsync(
+                    testRecipients,
+                    testSubject,
+                    testBody,
+                    _configuration.SenderEmail);
+
+                if (sendResult.Success)
+                {
+                    result.Success = true;
+                    result.SentAt = DateTime.Now;
+                    result.Recipients = testRecipients;
+                    result.MessageId = sendResult.MessageId;
+
+                    _logger?.LogInformation("Test notification sent successfully: Template={TemplateId}, Wave={WaveName}, Recipients={Recipients}",
+                        templateId, waveName, string.Join(",", testRecipients));
+                }
+                else
+                {
+                    result.Success = false;
+                    result.ErrorMessage = sendResult.ErrorMessage;
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+                _logger?.LogError(ex, "Error sending test notification: Template={TemplateId}, Wave={WaveName}",
+                    templateId, waveName);
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Validates the notification configuration and tests Graph API connectivity
+        /// </summary>
+        public async Task<NotificationValidationResult> ValidateConfigurationAsync()
+        {
+            var result = new NotificationValidationResult();
+
+            try
+            {
+                // Test 1: Configuration validity
+                result.ConfigurationValid = _configuration.IsValid;
+                if (!result.ConfigurationValid)
+                {
+                    result.Errors.Add("Invalid notification configuration");
+                    return result;
+                }
+
+                // Test 2: Graph API connectivity
+                var connectionTest = await TestConnectionAsync();
+                result.GraphApiConnected = connectionTest.Success;
+                result.ConnectionDetails = connectionTest.Details;
+
+                if (!result.GraphApiConnected)
+                {
+                    result.Errors.Add($"Graph API connection failed: {connectionTest.Message}");
+                }
+
+                // Test 3: Template service availability
+                try
+                {
+                    var templates = await _templateService.LoadTemplatesAsync();
+                    result.TemplateServiceAvailable = templates.Any();
+                }
+                catch (Exception ex)
+                {
+                    result.TemplateServiceAvailable = false;
+                    result.Errors.Add($"Template service error: {ex.Message}");
+                }
+
+                result.IsValid = result.ConfigurationValid && result.GraphApiConnected && result.TemplateServiceAvailable;
+                result.ValidationTime = DateTime.Now;
+
+                if (result.IsValid)
+                {
+                    _logger?.LogInformation("Notification configuration validation passed");
+                }
+                else
+                {
+                    _logger?.LogWarning("Notification configuration validation failed: {Errors}", string.Join(", ", result.Errors));
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                result.IsValid = false;
+                result.Errors.Add($"Validation error: {ex.Message}");
+                _logger?.LogError(ex, "Error validating notification configuration");
+                return result;
+            }
+        }
+
         #endregion
     }
 
@@ -897,6 +1058,17 @@ namespace MandADiscoverySuite.Services
         public string ErrorMessage { get; set; }
         public string MessageId { get; set; }
         public DateTime SentAt { get; set; }
+    }
+
+    public class NotificationValidationResult
+    {
+        public bool IsValid { get; set; }
+        public bool ConfigurationValid { get; set; }
+        public bool GraphApiConnected { get; set; }
+        public bool TemplateServiceAvailable { get; set; }
+        public DateTime ValidationTime { get; set; } = DateTime.Now;
+        public Dictionary<string, object> ConnectionDetails { get; set; } = new Dictionary<string, object>();
+        public List<string> Errors { get; set; } = new List<string>();
     }
 
     #endregion
