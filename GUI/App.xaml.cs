@@ -29,6 +29,9 @@ namespace MandADiscoverySuite
         // IServiceProvider for dependency injection
         public static IServiceProvider ServiceProvider { get; private set; }
 
+        // Static logging action that can be used throughout the class
+        private static Action<string> _staticLogAction;
+
         // Disabled for unified pipeline build
         // private StartupOptimizationService _startupService;
         // private KeyboardShortcutManager _shortcutManager;
@@ -40,207 +43,102 @@ namespace MandADiscoverySuite
         {
             var services = new ServiceCollection();
 
-            // Add logging
-            services.AddLogging(builder => builder.AddConsole());
-
-            // Add messenger for MVVM
-            services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
-
-            // Register core services
-            services.AddSingleton<ConfigurationService>();
-            services.AddSingleton<MandADiscoverySuite.Services.AuditService>();
-            services.AddSingleton<MandADiscoverySuite.Services.Audit.IAuditService, MandADiscoverySuite.Services.Audit.AuditService>();
-
-            // Register data services
-            services.AddSingleton<IDataService, DataService>();
-            services.AddSingleton<DataService>();
-            services.AddSingleton<TargetProfileService>();
-
-            // Register logic engine service
-            services.AddSingleton<ILogicEngineService>(sp =>
+            try
             {
-                var logger = sp.GetRequiredService<ILogger<LogicEngineService>>();
-                var configService = sp.GetRequiredService<ConfigurationService>();
-                var dataRoot = Path.Combine(configService.DiscoveryDataRootPath, "ljpops", "RawData");
-                return new LogicEngineService(logger, null, dataRoot);
-            });
-            services.AddSingleton<LogicEngineService>(sp => (LogicEngineService)sp.GetRequiredService<ILogicEngineService>());
+                // Add basic logging for diagnostic version
+                services.AddLogging(builder =>
+                {
+                    builder.AddConsole();
+                    builder.AddDebug();
+                    builder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Information);
+                });
 
-            // Register sample data service for LogicEngine
-            services.AddSingleton<LogicEngineSampleDataService>(sp =>
+                // Add messenger for MVVM
+                services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
+
+                // Register only essential services for diagnostic version
+                services.AddSingleton<ConfigurationService>();
+                services.AddSingleton<MandADiscoverySuite.Services.AuditService>();
+
+                // Build the service provider
+                ServiceProvider = services.BuildServiceProvider();
+
+                // Test basic service resolution
+                var configService = ServiceProvider.GetService<ConfigurationService>();
+                if (configService != null)
+                {
+                    _staticLogAction?.Invoke("✓ ConfigurationService resolved successfully");
+                }
+                else
+                {
+                    _staticLogAction?.Invoke("⚠ ConfigurationService could not be resolved");
+                }
+            }
+            catch (Exception ex)
             {
-                var logger = sp.GetRequiredService<ILogger<LogicEngineSampleDataService>>();
-                return new LogicEngineSampleDataService(logger);
-            });
-
-            // Register CSV data validation service
-            services.AddSingleton<CsvDataValidationService>(sp =>
-            {
-                var logger = sp.GetRequiredService<ILogger<CsvDataValidationService>>();
-                return new CsvDataValidationService(logger);
-            });
-
-            // Register log management service
-            services.AddSingleton<ILogManagementService, LogManagementService>();
-            services.AddSingleton<LogManagementService>();
-
-            // Register theme service
-            services.AddSingleton<ThemeService>();
-
-            // Register UI logging service
-            services.AddSingleton<UIInteractionLoggingService>();
-
-            // Register CSV file watcher service
-            services.AddSingleton<CsvFileWatcherService>();
-
-            // Register CSV data service
-            services.AddSingleton<ICsvDataLoader>(sp =>
-            {
-                var logger = sp.GetRequiredService<ILogger<CsvDataServiceNew>>();
-                return (ICsvDataLoader)new CsvDataServiceNew(logger, "ljpops"); // Use default profile
-            });
-            services.AddSingleton<CsvDataServiceNew>(sp =>
-            {
-                var logger = sp.GetRequiredService<ILogger<CsvDataServiceNew>>();
-                return new CsvDataServiceNew(logger, "ljpops");
-            });
-
-            // Register navigation service
-            services.AddSingleton<NavigationService>();
-
-            // Register Discovery Services
-            services.AddSingleton<DiscoveryService>();
-            services.AddSingleton<IDiscoveryService>(provider => provider.GetRequiredService<DiscoveryService>());
-            services.AddSingleton<ModuleRegistryService>(provider => ModuleRegistryService.Instance);
-
-            // Register ViewModels that require DI
-            services.AddTransient<DiscoveryViewModel>();
-            services.AddSingleton<MainViewModel>();
-
-            // Register additional services that may be needed
-            services.AddSingleton<ProfileService>();
-            services.AddSingleton<IKeyboardShortcutService, KeyboardShortcutService>();
-            services.AddSingleton<AnimationOptimizationService>();
-
-            // Build the service provider
-            ServiceProvider = services.BuildServiceProvider();
+                _staticLogAction?.Invoke($"ERROR in ConfigureServices: {ex.Message}");
+                throw; // Re-throw to ensure the error is handled by the global handler
+            }
         }
 
         protected override void OnStartup(StartupEventArgs e)
         {
             var startTime = DateTime.Now;
             Action<string> logAction = null;
-            
+
             try
             {
-                // Set up global exception handling first
-                SetupGlobalExceptionHandling();
+                // Simplified exception handling for diagnostic version
+                SetupBasicExceptionHandling();
                 logAction = Current.Properties["LogAction"] as Action<string>;
-                
-                logAction?.Invoke("=== OnStartup BEGIN ===");
-                logAction?.Invoke("Global exception handling setup completed");
 
-                // Initialize enhanced logging and audit services early
-                logAction?.Invoke("Initializing logging and audit services...");
-                var loggingService = EnhancedLoggingService.Instance;
-                var auditService = MandADiscoverySuite.Services.AuditService.Instance;
-                _ = Task.Run(async () => await loggingService.LogAsync(Services.LogLevel.Debug, "Debug logging enabled"));
-                logAction?.Invoke("Logging and audit services initialized");
+                logAction?.Invoke("=== OnStartup BEGIN (Diagnostic Mode) ===");
+                logAction?.Invoke("Basic exception handling setup completed");
 
-                // Initialize SimpleServiceLocator early (moved before UI logging service)
-                logAction?.Invoke("Initializing SimpleServiceLocator...");
-                SimpleServiceLocator.Initialize();
-                logAction?.Invoke("SimpleServiceLocator initialized successfully");
+                // Simplified initialization for diagnostic version
+                logAction?.Invoke("Initializing basic services...");
 
                 // Configure dependency injection services
                 logAction?.Invoke("Configuring dependency injection services...");
                 ConfigureServices();
                 logAction?.Invoke("Dependency injection services configured successfully");
 
-                // Initialize discovery data root path (will use MANDA_DISCOVERY_PATH if set)
-                var discoveryPath = ConfigurationService.Instance.DiscoveryDataRootPath;
-                logAction?.Invoke($"DiscoveryDataRootPath initialized: {discoveryPath}");
-
-                // Initialize UI interaction logging service for comprehensive click tracking
-                logAction?.Invoke("Initializing UI interaction logging service...");
-                var uiLoggingService = ServiceProvider.GetService<UIInteractionLoggingService>();
-                uiLoggingService?.Initialize();
-                logAction?.Invoke("UI interaction logging service initialized successfully");
-
                 // Store start time for uptime calculation
                 Current.Properties["StartTime"] = startTime;
-                
-                // Log application startup
+
+                // Log basic application startup
                 var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
-                _ = Task.Run(async () => await loggingService.LogApplicationEventAsync("Application Starting", 
-                    $"M&A Discovery Suite v{version} is starting up", 
-                    new { Version = version, CommandLineArgs = e.Args, StartTime = startTime }));
-                
-                // SimpleServiceLocator already initialized above
-                
-                logAction?.Invoke("Getting ThemeService...");
-                var themeService = ServiceProvider.GetService<ThemeService>();
-                logAction?.Invoke($"ThemeService retrieved: {(themeService != null ? "Success" : "NULL")}");
+                logAction?.Invoke($"Application v{version} starting up in diagnostic mode");
 
-                if (themeService != null)
-                {
-                    logAction?.Invoke("Initializing ThemeService...");
-                    themeService.Initialize();
-                    logAction?.Invoke("ThemeService initialized successfully");
-
-                    // Register for theme change messages to reload theme resources
-                    var messenger = ServiceProvider.GetService<IMessenger>();
-                    messenger?.Register<App, ThemeChangedMessage>(this, (r, m) =>
-                    {
-                        r.ApplyThemeDictionary(m.IsDarkTheme);
-                    });
+                // Add resource loading diagnostics
+                logAction?.Invoke("Checking resource dictionaries...");
+                try {
+                    var appResources = this.Resources;
+                    logAction?.Invoke($"Application resources loaded: {appResources.Count} items");
+                    foreach (var key in appResources.Keys) {
+                        logAction?.Invoke($"  Resource key: {key}");
+                    }
+                } catch (Exception resEx) {
+                    logAction?.Invoke($"ERROR loading application resources: {resEx.Message}");
                 }
-                
-                // Freeze static gradient brushes for performance
-                logAction?.Invoke("Freezing static gradient brushes...");
-                FreezeStaticBrushes();
-                logAction?.Invoke("Static brushes frozen successfully");
-                
-                // Initialize startup optimization service - DISABLED for unified pipeline
-                logAction?.Invoke("Skipping startup optimization service (disabled for unified pipeline)...");
-                // _startupService = SimpleServiceLocator.Instance.GetService<StartupOptimizationService>();
-                logAction?.Invoke("Startup optimization service skipped");
-                
-                // Initialize keyboard shortcuts - DISABLED for unified pipeline
-                logAction?.Invoke("Skipping keyboard shortcuts (disabled for unified pipeline)...");
-                // InitializeKeyboardShortcuts();
-                logAction?.Invoke("Keyboard shortcuts skipped");
-                
-                // Initialize ViewRegistry for navigation
-                logAction?.Invoke("Initializing ViewRegistry...");
-                InitializeViewRegistry();
-                logAction?.Invoke("ViewRegistry initialized successfully");
-                
-                // Initialize CSV file watcher for real-time data ingestion
-                logAction?.Invoke("Initializing CSV file watcher...");
-                InitializeCsvFileWatcher();
-                logAction?.Invoke("CSV file watcher initialized successfully");
-                
-                // Initialize LogicEngineService for data fabric and inference
-                logAction?.Invoke("Initializing LogicEngineService...");
-                InitializeLogicEngineService();
-                logAction?.Invoke("LogicEngineService initialized successfully");
-                
-                // Enable WPF binding tracing for debugging
-                logAction?.Invoke("Enabling WPF binding tracing...");
-                EnableBindingTracing();
-                logAction?.Invoke("WPF binding tracing enabled");
-                
+
+                // Check current working directory and expected paths
+                var cwd = Environment.CurrentDirectory;
+                logAction?.Invoke($"Current working directory: {cwd}");
+                var expectedPath = @"C:\enterprisediscovery";
+                var altPath = @"C:\EnterpriseDiscovery";
+                logAction?.Invoke($"Expected path exists ({expectedPath}): {System.IO.Directory.Exists(expectedPath)}");
+                logAction?.Invoke($"Alternative path exists ({altPath}): {System.IO.Directory.Exists(altPath)}");
+
                 logAction?.Invoke("Calling base.OnStartup...");
                 base.OnStartup(e);
                 logAction?.Invoke("base.OnStartup completed successfully");
 
                 // Log startup completion
                 var startupDuration = DateTime.Now - startTime;
-                _ = Task.Run(async () => await loggingService.LogStartupAsync(version, startupDuration));
-                _ = Task.Run(async () => await auditService.LogSystemStartupAsync(version, startupDuration));
-                
-                logAction?.Invoke("=== OnStartup COMPLETED SUCCESSFULLY ===");
+                logAction?.Invoke($"Startup completed in {startupDuration.TotalSeconds:F1} seconds");
+
+                logAction?.Invoke("=== OnStartup COMPLETED SUCCESSFULLY (Diagnostic Mode) ===");
             }
             catch (Exception ex)
             {
@@ -267,78 +165,8 @@ namespace MandADiscoverySuite
         }
 
 
-        private async Task CompleteStartupOptimizationAsync()
-        {
-            try
-            {
-                // Wait a moment for the main window to finish loading
-                await Task.Delay(1000);
 
-                // Try to complete startup optimization if service is available
-                // Startup optimization service disabled for unified pipeline build
-                // var startupService = ServiceProvider.GetService<StartupOptimizationService>();
-                // if (startupService != null)
-                // {
-                //     await startupService.CompleteStartupAsync();
-                // }
-                // else: service not available in unified pipeline build; no-op
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Startup completion error: {ex.Message}");
-            }
-        }
 
-        private void InitializeAnimationOptimization()
-        {
-            try
-            {
-                var animationService = ServiceProvider.GetService<AnimationOptimizationService>();
-                if (animationService != null)
-                {
-                    // Set performance level based on system capabilities
-                    var performanceLevel = DetermineOptimalPerformanceLevel();
-                    animationService.SetPerformanceLevel(performanceLevel);
-                    
-                    // Disable performance-heavy animations by default
-                    animationService.DisableAnimationType(AnimationType.LoadingAnimations);
-                    animationService.DisableAnimationType(AnimationType.SelectionAnimations);
-                    animationService.DisableAnimationType(AnimationType.ScrollingAnimations);
-                    animationService.DisableAnimationType(AnimationType.ResizeAnimations);
-                    animationService.DisableAnimationType(AnimationType.SortAnimations);
-                    
-                    System.Diagnostics.Debug.WriteLine($"Animation optimization initialized with {performanceLevel} performance level");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to initialize animation optimization: {ex.Message}");
-            }
-        }
-
-        private void InitializeKeyboardShortcuts()
-        {
-            try
-            {
-                var shortcutService = ServiceProvider.GetService<IKeyboardShortcutService>();
-                if (shortcutService != null)
-                {
-                    // _shortcutManager = new KeyboardShortcutManager(shortcutService);
-                    
-                    // Register application-wide shortcuts
-                    // _shortcutManager.RegisterApplicationShortcuts();
-                    
-                    // Register common application shortcuts
-                    RegisterApplicationShortcuts(shortcutService);
-                    
-                    System.Diagnostics.Debug.WriteLine("Keyboard shortcuts initialized successfully");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to initialize keyboard shortcuts: {ex.Message}");
-            }
-        }
 
         private void RegisterApplicationShortcuts(IKeyboardShortcutService shortcutService)
         {
@@ -459,12 +287,12 @@ namespace MandADiscoverySuite
             }
         }
 
-        private void SetupGlobalExceptionHandling()
+        private void SetupBasicExceptionHandling()
         {
-            // Create detailed log file using ConfigurationService for path
-            var logPath = Path.Combine(ConfigurationService.Instance.DiscoveryDataRootPath, "ljpops", "Logs");
+            // Simplified logging for diagnostic version
+            var logPath = @"C:\discoverydata\ljpops\Logs";
             Directory.CreateDirectory(logPath);
-            var logFile = Path.Combine(logPath, $"MandADiscovery_{DateTime.Now:yyyyMMdd_HHmmss}.log");
+            var logFile = Path.Combine(logPath, $"Diagnostic_{DateTime.Now:yyyyMMdd_HHmmss}.log");
             
             var logAction = new Action<string>(message =>
             {
@@ -553,199 +381,33 @@ namespace MandADiscoverySuite
             // Store log action and path for later use
             Current.Properties["LogAction"] = logAction;
             Current.Properties["LogFilePath"] = logFile;
+
+            // Set static log action for use in other methods
+            _staticLogAction = logAction;
         }
 
-        private void FreezeStaticBrushes()
-        {
-            try
-            {
-                // Get static gradient brushes from resources and freeze them for performance
-                var staticBrushKeys = new[]
-                {
-                    "PrimaryGradient", "AccentGradient", "SuccessGradient", "DangerGradient",
-                    "GlassmorphismBrush", "NeonCyanGradient", "NeonPinkGradient", "HolographicGradient"
-                };
-
-                foreach (var key in staticBrushKeys)
-                {
-                    if (Resources[key] is Freezable freezable && !freezable.IsFrozen)
-                    {
-                        freezable.Freeze();
-                        System.Diagnostics.Debug.WriteLine($"Frozen brush: {key}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error freezing brushes: {ex.Message}");
-            }
-        }
 
         protected override void OnExit(ExitEventArgs e)
         {
             try
             {
-                // Clean up keyboard shortcuts
-                // KeyboardShortcutIntegration.CleanupAll();
-                // _shortcutManager?.Dispose();
-                
-                // Clean up startup optimization service
-                // _startupService?.Dispose();
-                
-                // Clean up service container
-                // SimpleServiceLocator.Clear();
+                // Simplified cleanup for diagnostic version
+                _staticLogAction?.Invoke("Application shutting down...");
             }
             catch
             {
                 // Ignore cleanup errors during shutdown
             }
-            
+
             base.OnExit(e);
         }
 
-        /// <summary>
-        /// Initialize the ViewRegistry with all navigation mappings
-        /// </summary>
-        private void InitializeViewRegistry()
-        {
-            try
-            {
-                // ViewRegistry is now self-contained with all mappings in its constructor
-                // No need to register additional views here - all are handled in ViewRegistry.cs
-                // This prevents conflicts and double-registration issues
-                
-                var registeredKeys = ViewRegistry.Instance.GetRegisteredKeys().ToList();
-                System.Diagnostics.Debug.WriteLine($"ViewRegistry initialized with {registeredKeys.Count} view registrations: {string.Join(", ", registeredKeys.Take(10))}");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to initialize ViewRegistry: {ex.Message}");
-            }
-        }
 
-        /// <summary>
-        /// Initialize CSV file watcher for real-time data ingestion
-        /// </summary>
-        private void InitializeCsvFileWatcher()
-        {
-            try
-            {
-                var csvWatcher = ServiceProvider.GetService<CsvFileWatcherService>();
-                if (csvWatcher != null)
-                {
-                    csvWatcher.StartWatching();
-                    System.Diagnostics.Debug.WriteLine("CSV file watcher started successfully");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("Failed to get CsvFileWatcherService from SimpleServiceLocator");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to initialize CSV file watcher: {ex.Message}");
-            }
-        }
 
-        /// <summary>
-        /// Initialize LogicEngineService for unified data access and inference
-        /// </summary>
-        private void InitializeLogicEngineService()
-        {
-            try
-            {
-                var logicEngine = ServiceProvider.GetService<ILogicEngineService>();
-                if (logicEngine != null)
-                {
-                    // Set up event handlers for data loading
-                    logicEngine.DataLoaded += (sender, e) =>
-                    {
-                        System.Diagnostics.Debug.WriteLine($"LogicEngine data loaded successfully: {e.Statistics.UserCount} users, {e.Statistics.DeviceCount} devices in {e.Statistics.LoadDuration.TotalSeconds:F1}s");
-                    };
-                    
-                    logicEngine.DataLoadError += (sender, e) =>
-                    {
-                        System.Diagnostics.Debug.WriteLine($"LogicEngine data load error: {e.ErrorMessage}");
-                    };
-                    
-                    // Start initial data load in background
-                    Task.Run(async () =>
-                    {
-                        try
-                        {
-                            var success = await logicEngine.LoadAllAsync();
-                            System.Diagnostics.Debug.WriteLine($"LogicEngine initial load result: {success}");
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"LogicEngine initial load failed: {ex.Message}");
-                        }
-                    });
-                    
-                    System.Diagnostics.Debug.WriteLine("LogicEngineService initialized successfully");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("Failed to get LogicEngineService from SimpleServiceLocator");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to initialize LogicEngineService: {ex.Message}");
-            }
-        }
 
-        private void ApplyThemeDictionary(bool isDarkTheme)
-        {
-            try
-            {
-                var themeName = isDarkTheme ? "DarkTheme" : "LightTheme";
-                var app = Application.Current;
-                if (app == null) return;
-
-                for (int i = app.Resources.MergedDictionaries.Count - 1; i >= 0; i--)
-                {
-                    var dict = app.Resources.MergedDictionaries[i];
-                    if (dict.Source?.OriginalString?.Contains("Theme") == true)
-                    {
-                        app.Resources.MergedDictionaries.RemoveAt(i);
-                    }
-                }
-
-                var themeUri = new Uri($"pack://application:,,,/MandADiscoverySuite;component/Themes/{themeName}.xaml");
-                var themeDict = new ResourceDictionary { Source = themeUri };
-                app.Resources.MergedDictionaries.Add(themeDict);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to apply theme dictionary: {ex.Message}");
-            }
-        }
 
         /// <summary>
         /// Enable WPF binding error tracing for debugging
         /// </summary>
-        private void EnableBindingTracing()
-        {
-            try
-            {
-                // Ensure logs directory exists using ConfigurationService
-                var logsDirectory = Path.Combine(ConfigurationService.Instance.DiscoveryDataRootPath, "ljpops", "Logs");
-                Directory.CreateDirectory(logsDirectory);
-                
-                // Set up WPF binding trace listener
-                PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning | SourceLevels.Error;
-                PresentationTraceSources.DataBindingSource.Listeners.Add(
-                    new TextWriterTraceListener(Path.Combine(logsDirectory, "gui-binding.log"))
-                );
-                Trace.AutoFlush = true;
-
-                System.Diagnostics.Debug.WriteLine("WPF binding tracing enabled");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to enable binding tracing: {ex.Message}");
-            }
-        }
     }
 }

@@ -26,6 +26,7 @@ namespace MandADiscoverySuite
             try
             {
                 logAction?.Invoke("=== MainWindow Constructor BEGIN ===");
+                Console.WriteLine("=== MainWindow Constructor BEGIN ===");
 
                 // Initialize keyboard shortcut manager (optional - may be disabled in unified pipeline)
                 try
@@ -35,16 +36,19 @@ namespace MandADiscoverySuite
                     {
                         _shortcutManager = new KeyboardShortcutManager(shortcutService);
                         logAction?.Invoke("Keyboard shortcut manager initialized successfully");
+                        Console.WriteLine("Keyboard shortcut manager initialized successfully");
                     }
                     else
                     {
                         logAction?.Invoke("Keyboard shortcut service not available (disabled in unified pipeline)");
+                        Console.WriteLine("Keyboard shortcut service not available (disabled in unified pipeline)");
                     }
                 }
                 catch (Exception shortcutEx)
                 {
                     // Keyboard shortcuts are optional - continue without them
                     logAction?.Invoke($"Keyboard shortcut service not available: {shortcutEx.Message}");
+                    Console.WriteLine($"Keyboard shortcut service not available: {shortcutEx.Message}");
                 }
 
                 logAction?.Invoke("Calling InitializeComponent...");
@@ -65,7 +69,23 @@ namespace MandADiscoverySuite
                 // Set up lazy loading for views after components are initialized
                 this.Loaded += MainWindow_Loaded;
                 logAction?.Invoke("Loaded event handler added successfully");
-                
+
+                // Explicitly show the window to ensure it's visible
+                logAction?.Invoke("Explicitly showing main window...");
+                this.Show();
+                logAction?.Invoke("Main window shown successfully");
+
+                // Check window state
+                logAction?.Invoke($"Window Visibility: {this.Visibility}");
+                logAction?.Invoke($"Window IsVisible: {this.IsVisible}");
+                logAction?.Invoke($"Window IsLoaded: {this.IsLoaded}");
+                logAction?.Invoke($"Window WindowState: {this.WindowState}");
+
+                // Keep application running for testing
+                logAction?.Invoke("Starting test delay to keep application alive...");
+                System.Threading.Thread.Sleep(5000); // 5 second delay
+                logAction?.Invoke("Test delay completed");
+
                 logAction?.Invoke("=== MainWindow Constructor COMPLETED SUCCESSFULLY ===");
             }
             catch (Exception ex)

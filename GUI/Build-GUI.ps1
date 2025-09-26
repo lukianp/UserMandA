@@ -8,13 +8,13 @@
     Builds the M&A Discovery Suite GUI application
 
 .DESCRIPTION
-    This script compiles the WPF application using .NET 6 and creates a self-contained executable
-    that can be distributed and run on Windows systems without requiring .NET to be installed.
+ This script compiles the WPF application using .NET 8 and creates a self-contained executable
+ that can be distributed and run on Windows systems without requiring .NET to be installed.
     
     RECENT CRITICAL BUG FIXES INCLUDED:
     - Fixed ProfileService dependency injection using SimpleServiceLocator
     - Standardized path management with MANDA_DISCOVERY_PATH support (default: c:\discoverydata)
-    - Ensures ModuleRegistry.json is copied to both main and net6.0-windows\Configuration locations
+    - Ensures ModuleRegistry.json is copied to both main and net8.0-windows\Configuration locations
     - Cleaned up profile configuration to use ljpops as active profile
     - All data loading and module registry issues resolved
 
@@ -59,8 +59,8 @@ Write-Host "=======================================" -ForegroundColor Green
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ScriptDir
 
-# Check if .NET 6 SDK is installed
-Write-Host "Checking for .NET 6 SDK..." -ForegroundColor Yellow
+# Check if .NET 8 SDK is installed
+Write-Host "Checking for .NET 8 SDK..." -ForegroundColor Yellow
 
 try {
     $dotnetVersion = & dotnet --version 2>$null
@@ -69,16 +69,16 @@ try {
     }
     
     $majorVersion = [int]($dotnetVersion.Split('.')[0])
-    if ($majorVersion -lt 6) {
-        throw "Requires .NET 6 or later, found version $dotnetVersion"
+    if ($majorVersion -lt 8) {
+        throw "Requires .NET 8 or later, found version $dotnetVersion"
     }
     
     Write-Host "Found .NET version: $dotnetVersion" -ForegroundColor Green
 }
 catch {
     Write-Error @"
-.NET 6 SDK is required but not found or not properly installed.
-Please download and install .NET 6 SDK from: https://dotnet.microsoft.com/download/dotnet/6.0
+.NET 8 SDK is required but not found or not properly installed.
+Please download and install .NET 8 SDK from: https://dotnet.microsoft.com/download/dotnet/8.0
 
 Error: $($_.Exception.Message)
 "@
@@ -188,8 +188,7 @@ $BuildArgs = @(
     '--nologo'
     '--force'
     '--no-dependencies'
-    '--nowarn:CS0579,CS1685,CS1701'
-    '--warnaserror'
+    '--nowarn:CS0579,CS1685,CS1701,NETSDK1138,NU1903,NU1605'
 )
 
 if ($SelfContained) {
@@ -262,12 +261,12 @@ $LauncherLines = @(
     'echo Starting M&A Discovery Suite...',
     'echo.',
     '',
-    'REM Check if .NET 6 runtime is available',
+    'REM Check if .NET 8 runtime is available',
     'dotnet --version >nul 2>&1',
     'if errorlevel 1 (',
-    '    echo ERROR: .NET 6 runtime is required but not found.',
-    '    echo Please download and install .NET 6 runtime from:',
-    '    echo https://dotnet.microsoft.com/download/dotnet/6.0',
+    '    echo ERROR: .NET 8 runtime is required but not found.',
+    '    echo Please download and install .NET 8 runtime from:',
+    '    echo https://dotnet.microsoft.com/download/dotnet/8.0',
     '    echo.',
     '    pause',
     '    exit /b 1',

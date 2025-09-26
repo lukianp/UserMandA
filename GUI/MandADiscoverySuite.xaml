@@ -27,24 +27,23 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- REFACTORED: Extracted modular resources -->
-                <ResourceDictionary Source="Resources/Converters/Converters.xaml"/>
-                <ResourceDictionary Source="Resources/Templates/DataTemplates.xaml"/>
-                <ResourceDictionary Source="Resources/Styles/MainStyles.xaml"/>
+                <!-- Temporarily comment out complex resource dictionaries to isolate XAML loading issues -->
+                <!-- <ResourceDictionary Source="Resources/Converters/Converters.xaml"/> -->
+                <!-- <ResourceDictionary Source="Resources/Templates/DataTemplates.xaml"/> -->
+                <!-- <ResourceDictionary Source="Resources/Styles/MainStyles.xaml"/> -->
 
                 <!-- Existing theme resources -->
-                <ResourceDictionary Source="Themes/DashboardWidgets.xaml"/>
-                <ResourceDictionary Source="Styles/AccessibilityStyles.xaml"/>
-                <ResourceDictionary Source="Themes/ThemeStyles.xaml"/>
-                <ResourceDictionary Source="Themes/SpacingSystem.xaml"/>
-                <ResourceDictionary Source="Themes/CustomTooltips.xaml"/>
-                <ResourceDictionary Source="Controls/ChartControls.xaml"/>
+                <!-- <ResourceDictionary Source="Themes/DashboardWidgets.xaml"/> -->
+                <!-- <ResourceDictionary Source="Styles/AccessibilityStyles.xaml"/> -->
+                <!-- <ResourceDictionary Source="Themes/ThemeStyles.xaml"/> -->
+                <!-- <ResourceDictionary Source="Themes/SpacingSystem.xaml"/> -->
+                <!-- <ResourceDictionary Source="Themes/CustomTooltips.xaml"/> -->
+                <!-- <ResourceDictionary Source="Controls/ChartControls.xaml"/> -->
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- All resources extracted to modular files -->
-            <!-- Converters: Resources/Converters/Converters.xaml -->
-            <!-- Templates: Resources/Templates/DataTemplates.xaml -->
-            <!-- Styles: Resources/Styles/MainStyles.xaml -->
+            <!-- Basic converters for minimal functionality -->
+            <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" xmlns:converters="clr-namespace:MandADiscoverySuite.Converters"/>
         </ResourceDictionary>
     </Window.Resources>
 
@@ -588,10 +587,10 @@
                     </DataTemplate>
                 </TabControl.ItemTemplate>
 
-                <!-- Tab Content Template - ViewRegistry Lazy Loading -->
+                <!-- Tab Content Template - Simplified for testing -->
                 <TabControl.ContentTemplate>
                     <DataTemplate>
-                        <ContentPresenter Content="{Binding Content}"/>
+                        <TextBlock Text="{Binding Header, StringFormat='Content for: {0}'}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24"/>
                     </DataTemplate>
                 </TabControl.ContentTemplate>
 
