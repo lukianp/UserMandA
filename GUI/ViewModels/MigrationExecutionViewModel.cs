@@ -1663,7 +1663,7 @@ namespace MandADiscoverySuite.ViewModels
             };
 
             // Add audit service injection
-            var auditService = SimpleServiceLocator.Instance.GetService<IAuditService>();
+            var auditService = SimpleServiceLocator.Instance.GetService<MandADiscoverySuite.Services.Audit.IAuditService>();
             if (auditService != null)
             {
                 // Add audit logging to properties or use appropriately

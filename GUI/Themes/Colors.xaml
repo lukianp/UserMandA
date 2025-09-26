@@ -254,6 +254,6 @@
 
     <!-- Missing brushes for OneDriveBusinessDiscoveryView compatibility -->
     <SolidColorBrush x:Key="WhiteBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource DarkMutedForegroundBrush}" />
+    <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource DarkMutedForegroundColor}" />
 
 </ResourceDictionary>

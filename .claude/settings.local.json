@@ -2,27 +2,10 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(Sort-Object LastWriteTime -Descending)",
-      "Bash(Select-Object -First 5)",
-      "Bash(Select-Object Name, LastWriteTime, Length)",
-      "Bash(dotnet build:*)",
-      "Bash(dotnet publish:*)",
-      "Bash(dotnet run:*)",
-      "Bash(cat:*)",
-      "Bash(dotnet clean:*)",
-      "Bash(Select-Object Id, ProcessName, StartTime, WorkingSet64)",
-      "Bash(powershell.exe:*)",
-      "Bash(powershell:*)",
-      "Bash(tasklist:*)",
-      "Bash(pwsh \"./Build-GUI.ps1\" -Configuration Release)",
-      "Bash(start MandADiscoverySuite.exe)",
-      "Bash(taskkill:*)",
-      "Bash(findstr:*)",
-      "Bash(dotnet restore:*)",
-      "Bash(tee:*)",
-      "mcp__ide__getDiagnostics"
+      "Bash(Format-Table -AutoSize)"
     ],
     "deny": [],
+    "ask": [],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [
       "C:\\enterprisediscovery",

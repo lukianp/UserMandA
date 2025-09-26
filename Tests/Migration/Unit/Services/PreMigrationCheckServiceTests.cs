@@ -11,6 +11,7 @@ using MandADiscoverySuite.Services.Migration;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using SqlDatabaseDto = MandADiscoverySuite.Models.Migration.SqlDatabaseDto;
 
 namespace MigrationTestSuite.Unit.Services
 {
