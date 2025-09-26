@@ -727,8 +727,6 @@ namespace MandADiscoverySuite.Services
         /// </summary>
         private async Task<List<MandADiscoverySuite.Migration.ValidationIssue>> ValidateUserDataIntegrityAsync(UserDto user, TargetContext target, CancellationToken cancellationToken)
         {
-            _logger.LogDebug("DEBUG_DIAGNOSIS: Starting ValidateUserDataIntegrityAsync - using MandADiscoverySuite.Migration namespace");
-            _logger.LogDebug("DEBUG_DIAGNOSIS: This method should work correctly with MandADiscoverySuite.Migration.ValidationIssue");
             var issues = new List<MandADiscoverySuite.Migration.ValidationIssue>();
 
             try
@@ -785,9 +783,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates user attributes
         /// </summary>
-        private async Task<List<ValidationIssue>> ValidateUserAttributesAsync(UserDto user, TargetContext target, CancellationToken cancellationToken)
+        private async Task<List<MandADiscoverySuite.Migration.ValidationIssue>> ValidateUserAttributesAsync(UserDto user, TargetContext target, CancellationToken cancellationToken)
         {
-            var issues = new List<ValidationIssue>();
+            var issues = new List<MandADiscoverySuite.Migration.ValidationIssue>();
 
             try
             {
@@ -832,9 +830,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates user permissions and roles
         /// </summary>
-        private async Task<List<ValidationIssue>> ValidateUserPermissionsAsync(UserDto user, TargetContext target, CancellationToken cancellationToken)
+        private async Task<List<MandADiscoverySuite.Migration.ValidationIssue>> ValidateUserPermissionsAsync(UserDto user, TargetContext target, CancellationToken cancellationToken)
         {
-            var issues = new List<ValidationIssue>();
+            var issues = new List<MandADiscoverySuite.Migration.ValidationIssue>();
 
             try
             {
@@ -859,9 +857,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates mailbox data integrity
         /// </summary>
-        private async Task<List<ValidationIssue>> ValidateMailboxDataIntegrityAsync(MailboxDto mailbox, TargetContext target, CancellationToken cancellationToken)
+        private async Task<List<MandADiscoverySuite.Migration.ValidationIssue>> ValidateMailboxDataIntegrityAsync(MailboxDto mailbox, TargetContext target, CancellationToken cancellationToken)
         {
-            var issues = new List<ValidationIssue>();
+            var issues = new List<MandADiscoverySuite.Migration.ValidationIssue>();
 
             try
             {
@@ -904,9 +902,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates mailbox attributes
         /// </summary>
-        private async Task<List<ValidationIssue>> ValidateMailboxAttributesAsync(MailboxDto mailbox, TargetContext target, CancellationToken cancellationToken)
+        private async Task<List<MandADiscoverySuite.Migration.ValidationIssue>> ValidateMailboxAttributesAsync(MailboxDto mailbox, TargetContext target, CancellationToken cancellationToken)
         {
-            var issues = new List<ValidationIssue>();
+            var issues = new List<MandADiscoverySuite.Migration.ValidationIssue>();
 
             try
             {
@@ -939,9 +937,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates file data integrity
         /// </summary>
-        private async Task<List<ValidationIssue>> ValidateFileDataIntegrityAsync(FileItemDto fileItem, TargetContext target, CancellationToken cancellationToken)
+        private async Task<List<MandADiscoverySuite.Migration.ValidationIssue>> ValidateFileDataIntegrityAsync(FileItemDto fileItem, TargetContext target, CancellationToken cancellationToken)
         {
-            var issues = new List<ValidationIssue>();
+            var issues = new List<MandADiscoverySuite.Migration.ValidationIssue>();
 
             try
             {
@@ -996,9 +994,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates file attributes
         /// </summary>
-        private async Task<List<ValidationIssue>> ValidateFileAttributesAsync(FileItemDto fileItem, TargetContext target, CancellationToken cancellationToken)
+        private async Task<List<MandADiscoverySuite.Migration.ValidationIssue>> ValidateFileAttributesAsync(FileItemDto fileItem, TargetContext target, CancellationToken cancellationToken)
         {
-            var issues = new List<ValidationIssue>();
+            var issues = new List<MandADiscoverySuite.Migration.ValidationIssue>();
 
             try
             {
@@ -1032,9 +1030,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates database data integrity
         /// </summary>
-        private async Task<List<ValidationIssue>> ValidateDatabaseDataIntegrityAsync(DatabaseDto database, TargetContext target, CancellationToken cancellationToken)
+        private async Task<List<MandADiscoverySuite.Migration.ValidationIssue>> ValidateDatabaseDataIntegrityAsync(DatabaseDto database, TargetContext target, CancellationToken cancellationToken)
         {
-            var issues = new List<ValidationIssue>();
+            var issues = new List<MandADiscoverySuite.Migration.ValidationIssue>();
 
             try
             {
@@ -1078,9 +1076,9 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates database attributes
         /// </summary>
-        private async Task<List<ValidationIssue>> ValidateDatabaseAttributesAsync(DatabaseDto database, TargetContext target, CancellationToken cancellationToken)
+        private async Task<List<MandADiscoverySuite.Migration.ValidationIssue>> ValidateDatabaseAttributesAsync(DatabaseDto database, TargetContext target, CancellationToken cancellationToken)
         {
-            var issues = new List<ValidationIssue>();
+            var issues = new List<MandADiscoverySuite.Migration.ValidationIssue>();
 
             try
             {

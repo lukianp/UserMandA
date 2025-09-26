@@ -28,7 +28,7 @@ namespace MandADiscoverySuite.ViewModels
             InitializeCommands();
         }
 
-        private void InitializeCommands()
+        private new void InitializeCommands()
         {
             RunValidationCommand = new AsyncRelayCommand(RunValidationAsync);
             ClearResultsCommand = new RelayCommand(ClearResults);

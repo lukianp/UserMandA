@@ -163,7 +163,12 @@ namespace MandADiscoverySuite.Services.Migration
                     StatusMessage = $"GPO migrated with {settingsResult.MigratedSettings.Count} settings",
                     ItemsProcessed = settingsResult.MigratedSettings?.Count
                 };
-                await _auditService.LogAuditEventAsync(gpoCompleteEvent);
+                // Cast to the correct interface that has LogAuditEventAsync method
+                var correctAuditService = _auditService as MandADiscoverySuite.Services.Audit.IAuditService;
+                if (correctAuditService != null)
+                {
+                    await correctAuditService.LogAuditEventAsync(gpoCompleteEvent);
+                }
 
                 return result;
             }
@@ -189,7 +194,12 @@ namespace MandADiscoverySuite.Services.Migration
                     Status = AuditStatus.Failed,
                     ErrorMessage = ex.Message
                 };
-                await _auditService.LogAuditEventAsync(gpoFailEvent);
+                // Cast to the correct interface that has LogAuditEventAsync method
+                var correctAuditService = _auditService as MandADiscoverySuite.Services.Audit.IAuditService;
+                if (correctAuditService != null)
+                {
+                    await correctAuditService.LogAuditEventAsync(gpoFailEvent);
+                }
                 return result;
             }
         }
@@ -303,7 +313,12 @@ namespace MandADiscoverySuite.Services.Migration
                     Status = rollbackResult.IsSuccess ? AuditStatus.Success : AuditStatus.Failed,
                     StatusMessage = "GPO migration rollback"
                 };
-                await _auditService.LogAuditEventAsync(gpoRollbackEvent);
+                // Cast to the correct interface that has LogAuditEventAsync method
+                var correctAuditService = _auditService as MandADiscoverySuite.Services.Audit.IAuditService;
+                if (correctAuditService != null)
+                {
+                    await correctAuditService.LogAuditEventAsync(gpoRollbackEvent);
+                }
 
                 return rollbackResult;
             }

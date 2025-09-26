@@ -618,25 +618,30 @@ namespace MandADiscoverySuite.Services
         {
             try
             {
-                await _auditService.LogAsync(new AuditEvent
+                // Cast to the correct interface that has LogAsync method
+                var auditService = _auditService as MandADiscoverySuite.Services.Audit.IAuditService;
+                if (auditService != null)
                 {
-                    Action = AuditAction.UserSync,
-                    ObjectType = ObjectType.User,
-                    SourceObjectId = syncJob.JobId,
-                    Status = syncJob.LastSyncResults?.IsSuccess == true ? AuditStatus.Success : AuditStatus.Failed,
-                    StatusMessage = $"User sync job completed: {syncJob.LastSyncResults?.SuccessfulUsers} successful, {syncJob.LastSyncResults?.FailedUsers} failed",
-                    SessionId = syncJob.JobId,
-                    UserPrincipalName = Environment.UserName,
-                    Timestamp = DateTime.UtcNow,
-                    ItemsProcessed = syncJob.LastSyncResults?.TotalUsers ?? 0,
-                    Metadata = new Dictionary<string, string>
+                    await auditService.LogAsync(new AuditEvent
                     {
-                        ["SyncInterval"] = syncJob.Settings.SyncInterval.ToString(),
-                        ["UserCount"] = syncJob.Users.Count.ToString(),
-                        ["SyncType"] = syncJob.Settings.SyncSettings.EnableDeltaSync ? "Delta" : "Full",
-                        ["Duration"] = syncJob.LastSyncResults?.TotalSyncTime.ToString() ?? "Unknown"
-                    }
-                });
+                        Action = AuditAction.UserSync,
+                        ObjectType = ObjectType.User,
+                        SourceObjectId = syncJob.JobId,
+                        Status = syncJob.LastSyncResults?.IsSuccess == true ? AuditStatus.Success : AuditStatus.Failed,
+                        StatusMessage = $"User sync job completed: {syncJob.LastSyncResults?.SuccessfulUsers} successful, {syncJob.LastSyncResults?.FailedUsers} failed",
+                        SessionId = syncJob.JobId,
+                        UserPrincipalName = Environment.UserName,
+                        Timestamp = DateTime.UtcNow,
+                        ItemsProcessed = syncJob.LastSyncResults?.TotalUsers ?? 0,
+                        Metadata = new Dictionary<string, string>
+                        {
+                            ["SyncInterval"] = syncJob.Settings.SyncInterval.ToString(),
+                            ["UserCount"] = syncJob.Users.Count.ToString(),
+                            ["SyncType"] = syncJob.Settings.SyncSettings.EnableDeltaSync ? "Delta" : "Full",
+                            ["Duration"] = syncJob.LastSyncResults?.TotalSyncTime.ToString() ?? "Unknown"
+                        }
+                    });
+                }
             }
             catch (Exception ex)
             {

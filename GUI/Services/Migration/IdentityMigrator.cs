@@ -71,7 +71,12 @@ namespace MandADiscoverySuite.Services.Migration
                     TargetEnvironment = context.Target.Environment,
                     Status = AuditStatus.InProgress
                 };
-                await _auditService.LogAuditEventAsync(auditEvent);
+                // Cast to the correct interface that has LogAuditEventAsync method
+                var auditService = _auditService as MandADiscoverySuite.Services.Audit.IAuditService;
+                if (auditService != null)
+                {
+                    await auditService.LogAuditEventAsync(auditEvent);
+                }
 
                 // Step 1: Validate user readiness
                 context.ReportProgressUpdate("Identity Migration", 10, "Validating user prerequisites");
@@ -189,7 +194,12 @@ namespace MandADiscoverySuite.Services.Migration
                     TargetEnvironment = context.Target.Environment,
                     Status = AuditStatus.Success
                 };
-                await _auditService.LogAuditEventAsync(completeAuditEvent);
+                // Cast to the correct interface that has LogAuditEventAsync method
+                auditService = _auditService as MandADiscoverySuite.Services.Audit.IAuditService;
+                if (auditService != null)
+                {
+                    await auditService.LogAuditEventAsync(completeAuditEvent);
+                }
 
                 _logger.LogInformation($"Identity migration completed successfully for user: {item.UserPrincipalName}");
 
@@ -221,7 +231,12 @@ namespace MandADiscoverySuite.Services.Migration
                     Status = AuditStatus.Failed,
                     ErrorMessage = ex.Message
                 };
-                await _auditService.LogAuditEventAsync(failedAuditEvent);
+                // Cast to the correct interface that has LogAuditEventAsync method
+                var correctAuditService = _auditService as MandADiscoverySuite.Services.Audit.IAuditService;
+                if (correctAuditService != null)
+                {
+                    await correctAuditService.LogAuditEventAsync(failedAuditEvent);
+                }
                 _logger.LogError(ex, $"Identity migration failed for user: {item.UserPrincipalName}");
             }
 
@@ -312,6 +327,9 @@ namespace MandADiscoverySuite.Services.Migration
                 SessionId = context.SessionId
             };
 
+            // Cast to the correct interface that has LogAuditEventAsync method
+            var correctAuditService = _auditService as MandADiscoverySuite.Services.Audit.IAuditService;
+
             try
             {
                 _logger.LogInformation($"Starting rollback for user: {result.TargetUserUpn}");
@@ -332,7 +350,11 @@ namespace MandADiscoverySuite.Services.Migration
                     Status = AuditStatus.InProgress,
                     StatusMessage = "Manual rollback requested"
                 };
-                await _auditService.LogAuditEventAsync(rollbackStartEvent);
+                // Cast to the correct interface that has LogAuditEventAsync method
+                if (correctAuditService != null)
+                {
+                    await correctAuditService.LogAuditEventAsync(rollbackStartEvent);
+                }
 
                 // Remove target user account if created
                 if (!string.IsNullOrEmpty(result.TargetUserUpn))
@@ -375,7 +397,11 @@ namespace MandADiscoverySuite.Services.Migration
                     Status = rollbackResult.IsSuccess ? AuditStatus.Success : AuditStatus.Failed,
                     StatusMessage = "Rollback completed"
                 };
-                await _auditService.LogAuditEventAsync(rollbackCompleteEvent);
+                // Cast to the correct interface that has LogAuditEventAsync method
+                if (correctAuditService != null)
+                {
+                    await correctAuditService.LogAuditEventAsync(rollbackCompleteEvent);
+                }
 
             }
             catch (Exception ex)
