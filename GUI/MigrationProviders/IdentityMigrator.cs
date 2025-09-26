@@ -15,8 +15,12 @@ using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Models.Migration;
 using MandADiscoverySuite.Models.Identity;
 using MandADiscoverySuite.Services.Migration;
-using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Services.Audit;
+// Add specific imports for credential services
+using ICredentialStorageService = MandADiscoverySuite.Services.ICredentialStorageService;
+using CredentialStorageService = MandADiscoverySuite.Services.CredentialStorageService;
+// Use alias to resolve ambiguous IAuditService reference - use the Audit namespace version for migration logging
+using IAuditService = MandADiscoverySuite.Services.Audit.IAuditService;
 // Resolve ambiguity between custom AuditEvent and Microsoft.Graph.Models.AuditEvent
 using AuditEvent = MandADiscoverySuite.Services.Audit.AuditEvent;
 using GraphAuditEvent = Microsoft.Graph.Models.AuditEvent;
@@ -33,7 +37,7 @@ namespace MandADiscoverySuite.MigrationProviders
         #region Fields and Properties
 
         private readonly ILogger<IdentityMigrator> _logger;
-        private readonly Services.ILicenseAssignmentService _licenseService;
+        private readonly MandADiscoverySuite.Services.ILicenseAssignmentService _licenseService;
         private readonly IAuditService _auditService;
         private readonly ICredentialStorageService _credentialService;
         private readonly ConcurrentDictionary<string, GraphServiceClient> _graphClients;
@@ -58,7 +62,7 @@ namespace MandADiscoverySuite.MigrationProviders
 
         public IdentityMigrator(
             ILogger<IdentityMigrator> logger = null,
-            Services.ILicenseAssignmentService licenseService = null,
+            MandADiscoverySuite.Services.ILicenseAssignmentService licenseService = null,
             IAuditService auditService = null,
             ICredentialStorageService credentialService = null)
         {
@@ -1054,7 +1058,7 @@ namespace MandADiscoverySuite.MigrationProviders
                     targetUserId,
                     defaultSkus);
 
-                return new Services.Migration.LicenseAssignmentResult
+                return new MandADiscoverySuite.Services.Migration.LicenseAssignmentResult
                 {
                     UserId = targetUserId,
                     AssignedLicenses = result.AssignedSkus,
@@ -1065,7 +1069,7 @@ namespace MandADiscoverySuite.MigrationProviders
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Failed to assign licenses to user {targetUserId}");
-                return new Services.Migration.LicenseAssignmentResult
+                return new MandADiscoverySuite.Services.Migration.LicenseAssignmentResult
                 {
                     UserId = targetUserId,
                     IsSuccess = false,

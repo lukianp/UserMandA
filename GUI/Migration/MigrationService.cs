@@ -21,8 +21,8 @@ using AclDto = MandADiscoverySuite.Models.Migration.AclDto;
 using AclEntry = MandADiscoverySuite.Models.Migration.AclEntry;
 // Correct license service interface
 using ILicenseAssignmentService = MandADiscoverySuite.Services.ILicenseAssignmentService;
-// Add Services namespace for WaveLicenseProcessingResult
-using MandADiscoverySuite.Services;
+// Use alias to resolve ambiguous IAuditService reference - use the Audit namespace version for migration logging
+using IAuditService = MandADiscoverySuite.Services.Audit.IAuditService;
 
 namespace MandADiscoverySuite.Migration
 {
@@ -120,7 +120,7 @@ namespace MandADiscoverySuite.Migration
             try
             {
                 // Process license assignments before migration if specified
-                WaveLicenseProcessingResult? licenseProcessingResult = null;
+                MandADiscoverySuite.Services.WaveLicenseProcessingResult? licenseProcessingResult = null;
                 if (licenseSettings != null && licenseSettings.AutoAssignLicenses && wave.Users.Any())
                 {
                     progress?.Report(new MigrationProgress { Message = "Processing license assignments...", Percentage = 5 });
@@ -145,8 +145,8 @@ namespace MandADiscoverySuite.Migration
                         licenseProcessingResult = await _licenseService.ProcessWaveLicenseAssignmentsAsync(
                             target.TenantId, waveId, userData, licenseSettings);
                         
-                        _logger.LogInformation("License processing completed for wave {WaveId}: {SuccessfulAssignments} successful, {FailedAssignments} failed", 
-                            waveId, licenseProcessingResult.SuccessfulAssignments, licenseProcessingResult.FailedAssignments);
+                        _logger.LogInformation("License processing completed for wave {WaveId}: {SuccessfulAssignments} successful, {FailedAssignments} failed",
+                            waveId, ((MandADiscoverySuite.Services.WaveLicenseProcessingResult)licenseProcessingResult).SuccessfulAssignments, ((MandADiscoverySuite.Services.WaveLicenseProcessingResult)licenseProcessingResult).FailedAssignments);
                     }
                     catch (Exception ex)
                     {
@@ -306,9 +306,9 @@ namespace MandADiscoverySuite.Migration
                 // Add license processing metadata if applicable
                 if (licenseProcessingResult != null)
                 {
-                    metadata["LicenseAssignments_Successful"] = licenseProcessingResult.SuccessfulAssignments.ToString();
-                    metadata["LicenseAssignments_Failed"] = licenseProcessingResult.FailedAssignments.ToString();
-                    metadata["LicenseAssignments_TotalCost"] = licenseProcessingResult.TotalCost.ToString("F2");
+                    metadata["LicenseAssignments_Successful"] = ((MandADiscoverySuite.Services.WaveLicenseProcessingResult)licenseProcessingResult).SuccessfulAssignments.ToString();
+                    metadata["LicenseAssignments_Failed"] = ((MandADiscoverySuite.Services.WaveLicenseProcessingResult)licenseProcessingResult).FailedAssignments.ToString();
+                    metadata["LicenseAssignments_TotalCost"] = ((MandADiscoverySuite.Services.WaveLicenseProcessingResult)licenseProcessingResult).TotalCost.ToString("F2");
                 }
 
                 await LogAuditEventAsync(new AuditEvent
