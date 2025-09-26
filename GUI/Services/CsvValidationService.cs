@@ -374,14 +374,4 @@ namespace MandADiscoverySuite.Services
         public List<string> Warnings { get; set; } = new();
     }
 
-    /// <summary>
-    /// Progress event arguments for validation operations
-    /// </summary>
-    public class ValidationProgressEventArgs : EventArgs
-    {
-        public string CurrentFile { get; set; } = string.Empty;
-        public int FileIndex { get; set; }
-        public int TotalFiles { get; set; }
-        public double ProgressPercentage { get; set; }
-    }
 }

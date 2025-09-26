@@ -16,47 +16,47 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates user migration and creates comprehensive audit records
         /// </summary>
-        Task<AuditValidationResult> ValidateUserAsync(UserDto user, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default);
+        Task<AuditValidationResult> ValidateUserAsync(UserDto user, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Validates mailbox migration and creates comprehensive audit records
         /// </summary>
-        Task<AuditValidationResult> ValidateMailboxAsync(MailboxDto mailbox, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default);
+        Task<AuditValidationResult> ValidateMailboxAsync(MailboxDto mailbox, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Validates file migration and creates comprehensive audit records
         /// </summary>
-        Task<AuditValidationResult> ValidateFilesAsync(FileItemDto fileItem, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default);
+        Task<AuditValidationResult> ValidateFilesAsync(FileItemDto fileItem, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Validates database migration and creates comprehensive audit records
         /// </summary>
-        Task<AuditValidationResult> ValidateDatabaseAsync(DatabaseDto database, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default);
+        Task<AuditValidationResult> ValidateDatabaseAsync(DatabaseDto database, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Validates entire migration wave and creates consolidated audit records
         /// </summary>
-        Task<WaveAuditValidationResult> ValidateWaveAsync(MigrationWave wave, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default);
+        Task<WaveAuditValidationResult> ValidateWaveAsync(MigrationWave wave, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Rolls back user migration with comprehensive audit tracking
         /// </summary>
-        Task<RollbackResult> RollbackUserAsync(UserDto user, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default);
+        Task<RollbackResult> RollbackUserAsync(UserDto user, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Rolls back mailbox migration with comprehensive audit tracking
         /// </summary>
-        Task<RollbackResult> RollbackMailboxAsync(MailboxDto mailbox, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default);
+        Task<RollbackResult> RollbackMailboxAsync(MailboxDto mailbox, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Rolls back file migration with comprehensive audit tracking
         /// </summary>
-        Task<RollbackResult> RollbackFilesAsync(FileItemDto fileItem, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default);
+        Task<RollbackResult> RollbackFilesAsync(FileItemDto fileItem, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Rolls back database migration with comprehensive audit tracking
         /// </summary>
-        Task<RollbackResult> RollbackDatabaseAsync(DatabaseDto database, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default);
+        Task<RollbackResult> RollbackDatabaseAsync(DatabaseDto database, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Retrieves audit records with filtering and sorting capabilities
@@ -82,10 +82,10 @@ namespace MandADiscoverySuite.Services
         public bool IsValid { get; set; }
         public string ObjectType { get; set; } = string.Empty;
         public string ObjectIdentifier { get; set; } = string.Empty;
-        public List<ValidationIssue> Issues { get; set; } = new List<ValidationIssue>();
+        public List<AuditValidationIssue> Issues { get; set; } = new List<AuditValidationIssue>();
         public int IssueCount => Issues.Count;
-        public int ErrorCount => Issues.Count(i => i.Severity == ValidationSeverity.Error);
-        public int WarningCount => Issues.Count(i => i.Severity == ValidationSeverity.Warning);
+        public int ErrorCount => Issues.Count(i => i.Severity == AuditValidationSeverity.Error);
+        public int WarningCount => Issues.Count(i => i.Severity == AuditValidationSeverity.Warning);
         public AuditRecord AuditRecord { get; set; } = new();
         public TimeSpan Duration { get; set; }
         public DateTime StartedAt { get; set; }
@@ -98,18 +98,18 @@ namespace MandADiscoverySuite.Services
                 IsValid = true,
                 ObjectType = objectType,
                 ObjectIdentifier = objectIdentifier,
-                Issues = new List<ValidationIssue>()
+                Issues = new List<AuditValidationIssue>()
             };
         }
 
-        public static AuditValidationResult Failed(string objectType, string objectIdentifier, string message, List<ValidationIssue> issues)
+        public static AuditValidationResult Failed(string objectType, string objectIdentifier, string message, List<AuditValidationIssue> issues)
         {
             return new AuditValidationResult
             {
                 IsValid = false,
                 ObjectType = objectType,
                 ObjectIdentifier = objectIdentifier,
-                Issues = issues ?? new List<ValidationIssue>()
+                Issues = issues ?? new List<AuditValidationIssue>()
             };
         }
     }
@@ -133,9 +133,9 @@ namespace MandADiscoverySuite.Services
     /// <summary>
     /// Represents an individual validation issue
     /// </summary>
-    public class ValidationIssue
+    public class AuditValidationIssue
     {
-        public ValidationSeverity Severity { get; set; }
+        public AuditValidationSeverity Severity { get; set; }
         public string Category { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string RecommendedAction { get; set; } = string.Empty;
@@ -145,7 +145,7 @@ namespace MandADiscoverySuite.Services
     /// <summary>
     /// Severity levels for validation issues
     /// </summary>
-    public enum ValidationSeverity
+    public enum AuditValidationSeverity
     {
         Information,
         Warning,
@@ -155,7 +155,7 @@ namespace MandADiscoverySuite.Services
     /// <summary>
     /// Progress reporting for validation operations
     /// </summary>
-    public class ValidationProgress
+    public class AuditValidationProgress
     {
         public int Percentage { get; set; }
         public string Message { get; set; } = string.Empty;
@@ -227,7 +227,7 @@ namespace MandADiscoverySuite.Services
     /// <summary>
     /// Event arguments for validation progress
     /// </summary>
-    public class ValidationProgressEventArgs : EventArgs
+    public class AuditValidationProgressEventArgs : EventArgs
     {
         public int Percentage { get; set; }
         public string Message { get; set; } = string.Empty;

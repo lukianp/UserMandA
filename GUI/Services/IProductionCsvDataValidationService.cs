@@ -44,30 +44,6 @@ namespace MandADiscoverySuite.Services
         IReadOnlyDictionary<string, CsvSchema> GetAllSchemas();
     }
 
-    /// <summary>
-    /// Schema definition for CSV validation
-    /// </summary>
-    public class CsvSchema
-    {
-        public string Name { get; set; }
-        public string[] MandatoryColumns { get; set; }
-        public string[] OptionalColumns { get; set; }
-        public Dictionary<string, DataType> DataTypes { get; set; }
-        public Dictionary<string, string[]> ValidValues { get; set; }
-    }
-
-    /// <summary>
-    /// Supported data types for validation
-    /// </summary>
-    public enum DataType
-    {
-        String,
-        Integer,
-        Decimal,
-        Boolean,
-        DateTime,
-        Email
-    }
 
     /// <summary>
     /// Result of CSV validation operation
@@ -118,14 +94,4 @@ namespace MandADiscoverySuite.Services
         public List<ProductionFileValidationResult> FileResults { get; set; } = new();
     }
 
-    /// <summary>
-    /// Progress event arguments for validation operations
-    /// </summary>
-    public class CsvValidationProgressEventArgs : EventArgs
-    {
-        public string CurrentFile { get; set; } = string.Empty;
-        public int FileIndex { get; set; }
-        public int TotalFiles { get; set; }
-        public double ProgressPercentage { get; set; }
-    }
 }

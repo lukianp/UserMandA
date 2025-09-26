@@ -20,7 +20,7 @@ namespace MandADiscoverySuite.Services
         private readonly ILogger<AuditRecordValidationService> _logger;
         private readonly IAuditService _auditService;
 
-        public event EventHandler<ValidationProgressEventArgs>? ValidationProgress;
+        public event EventHandler<AuditValidationProgressEventArgs>? ValidationProgress;
 
         public AuditRecordValidationService(
             ILogger<AuditRecordValidationService> logger,
@@ -31,9 +31,38 @@ namespace MandADiscoverySuite.Services
         }
 
         /// <summary>
+        /// Converts Migration validation issues to Audit validation issues
+        /// </summary>
+        private List<AuditValidationIssue> ConvertValidationIssues(List<MandADiscoverySuite.Migration.ValidationIssue> migrationIssues)
+        {
+            return migrationIssues.Select(issue => new AuditValidationIssue
+            {
+                Severity = ConvertSeverity(issue.Severity),
+                Category = issue.Category,
+                Description = issue.Description,
+                RecommendedAction = issue.RecommendedAction
+            }).ToList();
+        }
+
+        /// <summary>
+        /// Converts Migration validation severity to Audit validation severity
+        /// </summary>
+        private AuditValidationSeverity ConvertSeverity(MandADiscoverySuite.Migration.ValidationSeverity severity)
+        {
+            return severity switch
+            {
+                MandADiscoverySuite.Migration.ValidationSeverity.Error => AuditValidationSeverity.Error,
+                MandADiscoverySuite.Migration.ValidationSeverity.Critical => AuditValidationSeverity.Error,
+                MandADiscoverySuite.Migration.ValidationSeverity.Warning => AuditValidationSeverity.Warning,
+                MandADiscoverySuite.Migration.ValidationSeverity.Success => AuditValidationSeverity.Information,
+                _ => AuditValidationSeverity.Information
+            };
+        }
+
+        /// <summary>
         /// Validates user migration and creates comprehensive audit records
         /// </summary>
-        public async Task<AuditValidationResult> ValidateUserAsync(UserDto user, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<AuditValidationResult> ValidateUserAsync(UserDto user, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             var startTime = DateTime.UtcNow;
             var result = new AuditValidationResult
@@ -51,17 +80,17 @@ namespace MandADiscoverySuite.Services
 
                 // Validate user data integrity
                 var validationIssues = await ValidateUserDataIntegrityAsync(user, target, cancellationToken);
-                result.Issues.AddRange(validationIssues);
+                result.Issues.AddRange(ConvertValidationIssues(validationIssues));
 
                 // Validate user attributes
                 var attributeIssues = await ValidateUserAttributesAsync(user, target, cancellationToken);
-                result.Issues.AddRange(attributeIssues);
+                result.Issues.AddRange(ConvertValidationIssues(attributeIssues));
 
                 // Validate user permissions and roles
                 var permissionIssues = await ValidateUserPermissionsAsync(user, target, cancellationToken);
-                result.Issues.AddRange(permissionIssues);
+                result.Issues.AddRange(ConvertValidationIssues(permissionIssues));
 
-                result.IsValid = !result.Issues.Any(i => i.Severity == MandADiscoverySuite.Services.ValidationSeverity.Error);
+                result.IsValid = !result.Issues.Any(i => i.Severity == AuditValidationSeverity.Error);
                 result.CompletedAt = DateTime.UtcNow;
                 result.Duration = result.CompletedAt - startTime;
 
@@ -99,9 +128,9 @@ namespace MandADiscoverySuite.Services
                 _logger.LogError(ex, "Error during audit validation for user {UserPrincipalName}", user.UserPrincipalName);
 
                 result.IsValid = false;
-                result.Issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                result.Issues.Add(new AuditValidationIssue
                 {
-                    Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                    Severity = AuditValidationSeverity.Error,
                     Category = "Exception",
                     Description = $"Audit validation failed due to exception: {ex.Message}",
                     RecommendedAction = "Check logs for detailed error information"
@@ -116,7 +145,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates mailbox migration and creates comprehensive audit records
         /// </summary>
-        public async Task<AuditValidationResult> ValidateMailboxAsync(MailboxDto mailbox, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<AuditValidationResult> ValidateMailboxAsync(MailboxDto mailbox, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             var startTime = DateTime.UtcNow;
             var result = new AuditValidationResult
@@ -134,13 +163,13 @@ namespace MandADiscoverySuite.Services
 
                 // Validate mailbox data integrity
                 var validationIssues = await ValidateMailboxDataIntegrityAsync(mailbox, target, cancellationToken);
-                result.Issues.AddRange(validationIssues);
+                result.Issues.AddRange(ConvertValidationIssues(validationIssues));
 
                 // Validate mailbox attributes
                 var attributeIssues = await ValidateMailboxAttributesAsync(mailbox, target, cancellationToken);
-                result.Issues.AddRange(attributeIssues);
+                result.Issues.AddRange(ConvertValidationIssues(attributeIssues));
 
-                result.IsValid = !result.Issues.Any(i => i.Severity == MandADiscoverySuite.Services.ValidationSeverity.Error);
+                result.IsValid = !result.Issues.Any(i => i.Severity == AuditValidationSeverity.Error);
                 result.CompletedAt = DateTime.UtcNow;
                 result.Duration = result.CompletedAt - startTime;
 
@@ -178,9 +207,9 @@ namespace MandADiscoverySuite.Services
                 _logger.LogError(ex, "Error during audit validation for mailbox {PrimarySmtpAddress}", mailbox.PrimarySmtpAddress);
 
                 result.IsValid = false;
-                result.Issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                result.Issues.Add(new AuditValidationIssue
                 {
-                    Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                    Severity = AuditValidationSeverity.Error,
                     Category = "Exception",
                     Description = $"Audit validation failed due to exception: {ex.Message}",
                     RecommendedAction = "Check logs for detailed error information"
@@ -195,7 +224,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates file migration and creates comprehensive audit records
         /// </summary>
-        public async Task<AuditValidationResult> ValidateFilesAsync(FileItemDto fileItem, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<AuditValidationResult> ValidateFilesAsync(FileItemDto fileItem, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             var startTime = DateTime.UtcNow;
             var result = new AuditValidationResult
@@ -213,13 +242,13 @@ namespace MandADiscoverySuite.Services
 
                 // Validate file data integrity
                 var validationIssues = await ValidateFileDataIntegrityAsync(fileItem, target, cancellationToken);
-                result.Issues.AddRange(validationIssues);
+                result.Issues.AddRange(ConvertValidationIssues(validationIssues));
 
                 // Validate file attributes
                 var attributeIssues = await ValidateFileAttributesAsync(fileItem, target, cancellationToken);
-                result.Issues.AddRange(attributeIssues);
+                result.Issues.AddRange(ConvertValidationIssues(attributeIssues));
 
-                result.IsValid = !result.Issues.Any(i => i.Severity == MandADiscoverySuite.Services.ValidationSeverity.Error);
+                result.IsValid = !result.Issues.Any(i => i.Severity == AuditValidationSeverity.Error);
                 result.CompletedAt = DateTime.UtcNow;
                 result.Duration = result.CompletedAt - startTime;
 
@@ -257,9 +286,9 @@ namespace MandADiscoverySuite.Services
                 _logger.LogError(ex, "Error during audit validation for file {SourcePath}", fileItem.SourcePath);
 
                 result.IsValid = false;
-                result.Issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                result.Issues.Add(new AuditValidationIssue
                 {
-                    Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                    Severity = AuditValidationSeverity.Error,
                     Category = "Exception",
                     Description = $"Audit validation failed due to exception: {ex.Message}",
                     RecommendedAction = "Check logs for detailed error information"
@@ -274,7 +303,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates database migration and creates comprehensive audit records
         /// </summary>
-        public async Task<AuditValidationResult> ValidateDatabaseAsync(DatabaseDto database, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<AuditValidationResult> ValidateDatabaseAsync(DatabaseDto database, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             var startTime = DateTime.UtcNow;
             var result = new AuditValidationResult
@@ -292,13 +321,13 @@ namespace MandADiscoverySuite.Services
 
                 // Validate database data integrity
                 var validationIssues = await ValidateDatabaseDataIntegrityAsync(database, target, cancellationToken);
-                result.Issues.AddRange(validationIssues);
+                result.Issues.AddRange(ConvertValidationIssues(validationIssues));
 
                 // Validate database attributes
                 var attributeIssues = await ValidateDatabaseAttributesAsync(database, target, cancellationToken);
-                result.Issues.AddRange(attributeIssues);
+                result.Issues.AddRange(ConvertValidationIssues(attributeIssues));
 
-                result.IsValid = !result.Issues.Any(i => i.Severity == MandADiscoverySuite.Services.ValidationSeverity.Error);
+                result.IsValid = !result.Issues.Any(i => i.Severity == AuditValidationSeverity.Error);
                 result.CompletedAt = DateTime.UtcNow;
                 result.Duration = result.CompletedAt - startTime;
 
@@ -336,9 +365,9 @@ namespace MandADiscoverySuite.Services
                 _logger.LogError(ex, "Error during audit validation for database {Name}", database.Name);
 
                 result.IsValid = false;
-                result.Issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                result.Issues.Add(new AuditValidationIssue
                 {
-                    Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                    Severity = AuditValidationSeverity.Error,
                     Category = "Exception",
                     Description = $"Audit validation failed due to exception: {ex.Message}",
                     RecommendedAction = "Check logs for detailed error information"
@@ -353,7 +382,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates entire migration wave and creates consolidated audit records
         /// </summary>
-        public async Task<WaveAuditValidationResult> ValidateWaveAsync(MigrationWave wave, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<WaveAuditValidationResult> ValidateWaveAsync(MigrationWave wave, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             var startTime = DateTime.UtcNow;
             var result = new WaveAuditValidationResult
@@ -502,7 +531,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Rolls back user migration with comprehensive audit tracking
         /// </summary>
-        public async Task<RollbackResult> RollbackUserAsync(UserDto user, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<RollbackResult> RollbackUserAsync(UserDto user, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -537,7 +566,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Rolls back mailbox migration with comprehensive audit tracking
         /// </summary>
-        public async Task<RollbackResult> RollbackMailboxAsync(MailboxDto mailbox, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<RollbackResult> RollbackMailboxAsync(MailboxDto mailbox, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -572,7 +601,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Rolls back file migration with comprehensive audit tracking
         /// </summary>
-        public async Task<RollbackResult> RollbackFilesAsync(FileItemDto fileItem, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<RollbackResult> RollbackFilesAsync(FileItemDto fileItem, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -607,7 +636,7 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Rolls back database migration with comprehensive audit tracking
         /// </summary>
-        public async Task<RollbackResult> RollbackDatabaseAsync(DatabaseDto database, TargetContext target, IProgress<ValidationProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<RollbackResult> RollbackDatabaseAsync(DatabaseDto database, TargetContext target, IProgress<AuditValidationProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -696,18 +725,20 @@ namespace MandADiscoverySuite.Services
         /// <summary>
         /// Validates user data integrity
         /// </summary>
-        private async Task<List<ValidationIssue>> ValidateUserDataIntegrityAsync(UserDto user, TargetContext target, CancellationToken cancellationToken)
+        private async Task<List<MandADiscoverySuite.Migration.ValidationIssue>> ValidateUserDataIntegrityAsync(UserDto user, TargetContext target, CancellationToken cancellationToken)
         {
-            var issues = new List<ValidationIssue>();
+            _logger.LogDebug("DEBUG_DIAGNOSIS: Starting ValidateUserDataIntegrityAsync - using MandADiscoverySuite.Migration namespace");
+            _logger.LogDebug("DEBUG_DIAGNOSIS: This method should work correctly with MandADiscoverySuite.Migration.ValidationIssue");
+            var issues = new List<MandADiscoverySuite.Migration.ValidationIssue>();
 
             try
             {
                 // Check required fields
                 if (string.IsNullOrEmpty(user.UserPrincipalName))
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                         Category = "Data Integrity",
                         Description = "UserPrincipalName is required but missing",
                         RecommendedAction = "Provide a valid UserPrincipalName for the user"
@@ -716,9 +747,9 @@ namespace MandADiscoverySuite.Services
 
                 if (string.IsNullOrEmpty(user.DisplayName))
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Warning,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Warning,
                         Category = "Data Integrity",
                         Description = "DisplayName is empty",
                         RecommendedAction = "Consider providing a display name for better user experience"
@@ -728,9 +759,9 @@ namespace MandADiscoverySuite.Services
                 // Basic validation
                 if (!string.IsNullOrEmpty(user.UserPrincipalName) && !user.UserPrincipalName.Contains("@"))
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Warning,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Warning,
                         Category = "Data Integrity",
                         Description = "UserPrincipalName should contain @ symbol",
                         RecommendedAction = "Verify the UserPrincipalName format"
@@ -739,9 +770,9 @@ namespace MandADiscoverySuite.Services
             }
             catch (Exception ex)
             {
-                issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                 {
-                    Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                    Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                     Category = "Validation Error",
                     Description = $"Error during data integrity validation: {ex.Message}",
                     RecommendedAction = "Check system logs for detailed error information"
@@ -763,9 +794,9 @@ namespace MandADiscoverySuite.Services
                 // Validate department if provided
                 if (!string.IsNullOrEmpty(user.Department) && user.Department.Length > 100)
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Warning,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Warning,
                         Category = "Attribute Validation",
                         Description = $"Department name is unusually long: {user.Department.Length} characters",
                         RecommendedAction = "Consider shortening the department name"
@@ -775,9 +806,9 @@ namespace MandADiscoverySuite.Services
                 // Validate job title if provided
                 if (!string.IsNullOrEmpty(user.JobTitle) && user.JobTitle.Length > 100)
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Warning,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Warning,
                         Category = "Attribute Validation",
                         Description = $"Job title is unusually long: {user.JobTitle.Length} characters",
                         RecommendedAction = "Consider shortening the job title"
@@ -786,9 +817,9 @@ namespace MandADiscoverySuite.Services
             }
             catch (Exception ex)
             {
-                issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                 {
-                    Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                    Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                     Category = "Validation Error",
                     Description = $"Error during attribute validation: {ex.Message}",
                     RecommendedAction = "Check system logs for detailed error information"
@@ -813,9 +844,9 @@ namespace MandADiscoverySuite.Services
             }
             catch (Exception ex)
             {
-                issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                 {
-                    Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                    Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                     Category = "Validation Error",
                     Description = $"Error during permission validation: {ex.Message}",
                     RecommendedAction = "Check system logs for detailed error information"
@@ -836,9 +867,9 @@ namespace MandADiscoverySuite.Services
             {
                 if (string.IsNullOrEmpty(mailbox.PrimarySmtpAddress))
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                         Category = "Data Integrity",
                         Description = "PrimarySmtpAddress is required but missing",
                         RecommendedAction = "Provide a valid primary SMTP address for the mailbox"
@@ -847,9 +878,9 @@ namespace MandADiscoverySuite.Services
 
                 if (string.IsNullOrEmpty(mailbox.UserPrincipalName))
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Warning,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Warning,
                         Category = "Data Integrity",
                         Description = "UserPrincipalName is empty",
                         RecommendedAction = "Consider providing the user principal name for the mailbox"
@@ -858,9 +889,9 @@ namespace MandADiscoverySuite.Services
             }
             catch (Exception ex)
             {
-                issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                 {
-                    Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                    Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                     Category = "Validation Error",
                     Description = $"Error during mailbox data integrity validation: {ex.Message}",
                     RecommendedAction = "Check system logs for detailed error information"
@@ -882,9 +913,9 @@ namespace MandADiscoverySuite.Services
                 // Check mailbox size if provided
                 if (mailbox.TotalSizeBytes > 100L * 1024 * 1024 * 1024) // 100GB
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Warning,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Warning,
                         Category = "Attribute Validation",
                         Description = $"Mailbox size is very large: {mailbox.TotalSizeBytes / (1024 * 1024 * 1024):F2} GB",
                         RecommendedAction = "Consider archiving old emails to reduce mailbox size"
@@ -893,9 +924,9 @@ namespace MandADiscoverySuite.Services
             }
             catch (Exception ex)
             {
-                issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                 {
-                    Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                    Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                     Category = "Validation Error",
                     Description = $"Error during mailbox attribute validation: {ex.Message}",
                     RecommendedAction = "Check system logs for detailed error information"
@@ -916,9 +947,9 @@ namespace MandADiscoverySuite.Services
             {
                 if (string.IsNullOrEmpty(fileItem.SourcePath))
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                         Category = "Data Integrity",
                         Description = "SourcePath is required but missing",
                         RecommendedAction = "Provide a valid source path for the file"
@@ -927,9 +958,9 @@ namespace MandADiscoverySuite.Services
 
                 if (string.IsNullOrEmpty(fileItem.TargetPath))
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                         Category = "Data Integrity",
                         Description = "TargetPath is required but missing",
                         RecommendedAction = "Provide a valid target path for the file"
@@ -939,9 +970,9 @@ namespace MandADiscoverySuite.Services
                 // Check file size if provided
                 if (fileItem.FileSize > 10L * 1024 * 1024 * 1024) // 10GB
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Warning,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Warning,
                         Category = "Data Integrity",
                         Description = $"File size is very large: {fileItem.FileSize / (1024 * 1024 * 1024):F2} GB",
                         RecommendedAction = "Consider if this large file really needs to be migrated"
@@ -950,9 +981,9 @@ namespace MandADiscoverySuite.Services
             }
             catch (Exception ex)
             {
-                issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                 {
-                    Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                    Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                     Category = "Validation Error",
                     Description = $"Error during file data integrity validation: {ex.Message}",
                     RecommendedAction = "Check system logs for detailed error information"
@@ -975,9 +1006,9 @@ namespace MandADiscoverySuite.Services
                 var extension = Path.GetExtension(fileItem.SourcePath)?.ToLower();
                 if (extension == ".exe" || extension == ".bat" || extension == ".cmd")
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Warning,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Warning,
                         Category = "Security Validation",
                         Description = $"File is an executable: {extension}",
                         RecommendedAction = "Verify that executable files should be migrated"
@@ -986,9 +1017,9 @@ namespace MandADiscoverySuite.Services
             }
             catch (Exception ex)
             {
-                issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                 {
-                    Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                    Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                     Category = "Validation Error",
                     Description = $"Error during file attribute validation: {ex.Message}",
                     RecommendedAction = "Check system logs for detailed error information"
@@ -1009,9 +1040,9 @@ namespace MandADiscoverySuite.Services
             {
                 if (string.IsNullOrEmpty(database.Name))
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                         Category = "Data Integrity",
                         Description = "Database name is required but missing",
                         RecommendedAction = "Provide a valid database name"
@@ -1021,9 +1052,9 @@ namespace MandADiscoverySuite.Services
                 // Check database size if provided
                 if (database.SizeMB > 100 * 1024) // 100GB
                 {
-                    issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                    issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                     {
-                        Severity = MandADiscoverySuite.Services.ValidationSeverity.Warning,
+                        Severity = MandADiscoverySuite.Migration.ValidationSeverity.Warning,
                         Category = "Data Integrity",
                         Description = $"Database size is very large: {database.SizeMB / 1024:F2} GB",
                         RecommendedAction = "Consider database archiving or cleanup before migration"
@@ -1032,9 +1063,9 @@ namespace MandADiscoverySuite.Services
             }
             catch (Exception ex)
             {
-                issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                 {
-                    Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                    Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                     Category = "Validation Error",
                     Description = $"Error during database data integrity validation: {ex.Message}",
                     RecommendedAction = "Check system logs for detailed error information"
@@ -1058,9 +1089,9 @@ namespace MandADiscoverySuite.Services
                 {
                     if (!int.TryParse(database.CompatibilityLevel, out int level))
                     {
-                        issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                        issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                         {
-                            Severity = MandADiscoverySuite.Services.ValidationSeverity.Warning,
+                            Severity = MandADiscoverySuite.Migration.ValidationSeverity.Warning,
                             Category = "Attribute Validation",
                             Description = $"Invalid compatibility level format: {database.CompatibilityLevel}",
                             RecommendedAction = "Verify the compatibility level format"
@@ -1070,9 +1101,9 @@ namespace MandADiscoverySuite.Services
             }
             catch (Exception ex)
             {
-                issues.Add(new MandADiscoverySuite.Services.ValidationIssue
+                issues.Add(new MandADiscoverySuite.Migration.ValidationIssue
                 {
-                    Severity = MandADiscoverySuite.Services.ValidationSeverity.Error,
+                    Severity = MandADiscoverySuite.Migration.ValidationSeverity.Error,
                     Category = "Validation Error",
                     Description = $"Error during database attribute validation: {ex.Message}",
                     RecommendedAction = "Check system logs for detailed error information"
@@ -1082,11 +1113,11 @@ namespace MandADiscoverySuite.Services
             return issues;
         }
 
-        private void ReportProgress(IProgress<ValidationProgress>? progress, int percentage, string message, string currentObject)
+        private void ReportProgress(IProgress<AuditValidationProgress>? progress, int percentage, string message, string currentObject)
         {
             if (progress != null)
             {
-                var progressEventArgs = new ValidationProgress
+                var progressEventArgs = new AuditValidationProgress
                 {
                     Percentage = percentage,
                     Message = message,
@@ -1097,7 +1128,7 @@ namespace MandADiscoverySuite.Services
             }
 
             // Also fire the event for any subscribers
-            ValidationProgress?.Invoke(this, new ValidationProgressEventArgs
+            ValidationProgress?.Invoke(this, new AuditValidationProgressEventArgs
             {
                 Percentage = percentage,
                 Message = message,

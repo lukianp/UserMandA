@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite.Services
 {
@@ -487,31 +488,6 @@ namespace MandADiscoverySuite.Services
     }
 
     #region Supporting Classes
-
-    /// <summary>
-    /// Defines the schema for CSV validation
-    /// </summary>
-    public class CsvSchema
-    {
-        public string Name { get; set; }
-        public string[] MandatoryColumns { get; set; }
-        public string[] OptionalColumns { get; set; }
-        public Dictionary<string, DataType> DataTypes { get; set; }
-        public Dictionary<string, string[]> ValidValues { get; set; }
-    }
-
-    /// <summary>
-    /// Supported data types for validation
-    /// </summary>
-    public enum DataType
-    {
-        String,
-        Integer,
-        Decimal,
-        Boolean,
-        DateTime,
-        Email
-    }
 
     /// <summary>
     /// Result of CSV validation operation

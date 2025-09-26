@@ -8,18 +8,20 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using MandADiscoverySuite.Migration;
+using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite.Services
 {
     /// <summary>
     /// Production service for validating CSV data files with comprehensive schema validation
     /// </summary>
-    public class ProductionCsvDataValidationService : IProductionCsvDataValidationService
+    public partial class ProductionCsvDataValidationService : IProductionCsvDataValidationService
     {
         private readonly ILogger<ProductionCsvDataValidationService> _logger;
         private readonly Dictionary<string, CsvSchema> _schemas;
 
-        public event EventHandler<CsvValidationProgressEventArgs>? ValidationProgress;
+        public event EventHandler<ValidationProgressEventArgs>? ValidationProgress;
 
         public ProductionCsvDataValidationService(ILogger<ProductionCsvDataValidationService> logger = null)
         {
@@ -50,7 +52,7 @@ namespace MandADiscoverySuite.Services
                 cancellationToken.ThrowIfCancellationRequested();
                 var filePath = files[i];
 
-                OnValidationProgress(new CsvValidationProgressEventArgs
+                OnValidationProgress(new ValidationProgressEventArgs
                 {
                     CurrentFile = Path.GetFileName(filePath),
                     FileIndex = i + 1,
@@ -162,7 +164,7 @@ namespace MandADiscoverySuite.Services
                 cancellationToken.ThrowIfCancellationRequested();
                 var filePath = files[i];
 
-                OnValidationProgress(new CsvValidationProgressEventArgs
+                OnValidationProgress(new ValidationProgressEventArgs
                 {
                     CurrentFile = Path.GetFileName(filePath),
                     FileIndex = i + 1,
@@ -486,9 +488,40 @@ namespace MandADiscoverySuite.Services
             };
         }
 
-        protected virtual void OnValidationProgress(CsvValidationProgressEventArgs e)
+        protected virtual void OnValidationProgress(ValidationProgressEventArgs e)
         {
             ValidationProgress?.Invoke(this, e);
+        }
+    }
+
+}
+
+namespace MandADiscoverySuite.Services
+{
+    /// <summary>
+    /// Production service for validating CSV data files with comprehensive schema validation
+    /// </summary>
+    public partial class ProductionCsvDataValidationService : IProductionCsvDataValidationService
+    {
+        /// <summary>
+        /// Local ValidationResult class for CSV validation operations
+        /// </summary>
+        private class ValidationResult
+        {
+            public string FileName { get; set; }
+            public string FilePath { get; set; }
+            public CsvSchema Schema { get; set; }
+            public DateTime ValidationTime { get; set; }
+            public bool IsValid { get; set; } = true;
+            public List<string> Errors { get; set; } = new();
+            public List<string> Warnings { get; set; } = new();
+            public List<string> MissingColumns { get; set; } = new();
+            public List<string> FoundColumns { get; set; } = new();
+            public List<string> DataTypeErrors { get; set; } = new();
+            public int RecordCount { get; set; }
+            public int ValidRecordCount { get; set; }
+            public int InvalidRecordCount { get; set; }
+            public int MissingValueCount { get; set; }
         }
     }
 
