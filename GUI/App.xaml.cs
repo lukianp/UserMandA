@@ -242,12 +242,7 @@ namespace MandADiscoverySuite
                 logAction?.Invoke("Calling base.OnStartup...");
                 base.OnStartup(e);
                 logAction?.Invoke("base.OnStartup completed successfully");
-
-                // Create and show the main window since we removed StartupUri
-                logAction?.Invoke("Creating and showing main window...");
-                var mainWindow = new MainWindow();
-                mainWindow.Show();
-                logAction?.Invoke("Main window created and shown successfully");
+                logAction?.Invoke("StartupUri will handle main window creation automatically");
 
                 // Log startup completion
                 var startupDuration = DateTime.Now - startTime;

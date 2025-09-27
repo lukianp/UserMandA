@@ -6,7 +6,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="clr-namespace:MandADiscoverySuite.Converters"
              xmlns:views="clr-namespace:MandADiscoverySuite.Views"
-             xmlns:vm="clr-namespace:MandADiscoverySuite.ViewModels">
+             xmlns:vm="clr-namespace:MandADiscoverySuite.ViewModels"
+             StartupUri="MandADiscoverySuite.xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

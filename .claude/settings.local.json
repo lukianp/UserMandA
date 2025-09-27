@@ -2,7 +2,26 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(Format-Table -AutoSize)"
+      "Bash(Format-Table -AutoSize)",
+      "Bash(test:*)",
+      "Bash(dotnet build:*)",
+      "Bash(pwsh:*)",
+      "Bash(powershell:*)",
+      "Bash(.Build-GUI.ps1)",
+      "Bash(.MandADiscoverySuite.exe)",
+      "Bash(start MandADiscoverySuite.exe)",
+      "Bash(timeout:*)",
+      "Bash(tasklist)",
+      "Bash(findstr:*)",
+      "Bash(dir:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(find:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(start /wait /b MandADiscoverySuite.exe)",
+      "Bash(echo:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": [],
