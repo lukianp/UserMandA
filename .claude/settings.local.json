@@ -21,7 +21,12 @@
       "Bash(dotnet clean:*)",
       "Bash(start /wait /b MandADiscoverySuite.exe)",
       "Bash(echo:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(MandADiscoverySuite.exe)",
+      "Bash(./MandADiscoverySuite.exe)",
+      "Bash(dotnet --version)",
+      "Bash(dotnet:*)",
+      "Bash(robocopy:*)"
     ],
     "deny": [],
     "ask": [],
