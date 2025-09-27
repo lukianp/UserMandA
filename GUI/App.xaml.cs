@@ -113,6 +113,14 @@ namespace MandADiscoverySuite
             services.AddSingleton<IDiscoveryService>(provider => provider.GetRequiredService<DiscoveryService>());
             services.AddSingleton<ModuleRegistryService>(provider => ModuleRegistryService.Instance);
 
+            // Register TabsService and NavigationService
+            services.AddSingleton<MandADiscoverySuite.Services.TabsService>();
+            services.AddSingleton<MandADiscoverySuite.Services.NavigationService>();
+
+            // Register T-000 services for environment detection and connection testing
+            services.AddSingleton<IEnvironmentDetectionService, EnvironmentDetectionService>();
+            services.AddSingleton<IConnectionTestService, ConnectionTestService>();
+
             // Register ViewModels that require DI
             services.AddTransient<DiscoveryViewModel>();
             services.AddSingleton<MainViewModel>();
@@ -235,11 +243,17 @@ namespace MandADiscoverySuite
                 base.OnStartup(e);
                 logAction?.Invoke("base.OnStartup completed successfully");
 
+                // Create and show the main window since we removed StartupUri
+                logAction?.Invoke("Creating and showing main window...");
+                var mainWindow = new MainWindow();
+                mainWindow.Show();
+                logAction?.Invoke("Main window created and shown successfully");
+
                 // Log startup completion
                 var startupDuration = DateTime.Now - startTime;
                 _ = Task.Run(async () => await loggingService.LogStartupAsync(version, startupDuration));
                 _ = Task.Run(async () => await auditService.LogSystemStartupAsync(version, startupDuration));
-                
+
                 logAction?.Invoke("=== OnStartup COMPLETED SUCCESSFULLY ===");
             }
             catch (Exception ex)

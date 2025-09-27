@@ -6,8 +6,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="clr-namespace:MandADiscoverySuite.Converters"
              xmlns:views="clr-namespace:MandADiscoverySuite.Views"
-             xmlns:vm="clr-namespace:MandADiscoverySuite.ViewModels"
-             StartupUri="MandADiscoverySuite.xaml">
+             xmlns:vm="clr-namespace:MandADiscoverySuite.ViewModels">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -20,6 +19,7 @@
                 <ResourceDictionary Source="Resources/Styles/MainStyles.xaml"/>
 
                 <!-- Theme and styling dictionaries -->
+                <ResourceDictionary Source="Themes/Colors.xaml"/>
                 <ResourceDictionary Source="Themes/OptimizedResources.xaml"/>
                 <ResourceDictionary Source="Themes/OptimizedAnimations.xaml"/>
                 <ResourceDictionary Source="Themes/OptimizedGridLayouts.xaml"/>

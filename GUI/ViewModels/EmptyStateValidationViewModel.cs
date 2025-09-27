@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -28,8 +28,9 @@ namespace MandADiscoverySuite.ViewModels
             InitializeCommands();
         }
 
-        private void InitializeCommands()
+        protected override void InitializeCommands()
         {
+                        base.InitializeCommands();
             RunValidationCommand = new AsyncRelayCommand(RunValidationAsync);
             ClearResultsCommand = new RelayCommand(ClearResults);
         }
@@ -119,11 +120,11 @@ namespace MandADiscoverySuite.ViewModels
                 // Update status
                 if (result.OverallSuccess)
                 {
-                    ValidationStatus = $"✅ Validation completed successfully in {result.TotalValidationTime.TotalSeconds:F2}s";
+                    ValidationStatus = $"âœ… Validation completed successfully in {result.TotalValidationTime.TotalSeconds:F2}s";
                 }
                 else
                 {
-                    ValidationStatus = $"❌ Validation completed with {result.FailedValidations} failures in {result.TotalValidationTime.TotalSeconds:F2}s";
+                    ValidationStatus = $"âŒ Validation completed with {result.FailedValidations} failures in {result.TotalValidationTime.TotalSeconds:F2}s";
                 }
 
                 // Add results to collection
@@ -152,7 +153,7 @@ namespace MandADiscoverySuite.ViewModels
             }
             catch (Exception ex)
             {
-                ValidationStatus = $"❌ Validation failed: {ex.Message}";
+                ValidationStatus = $"âŒ Validation failed: {ex.Message}";
                 _logger.LogError(ex, "Empty state validation failed");
             }
             finally
@@ -185,7 +186,7 @@ namespace MandADiscoverySuite.ViewModels
         public TimeSpan ValidationTime { get; set; }
         public string Issues { get; set; } = string.Empty;
         public int IssuesCount { get; set; }
-        public string StatusIcon => IsSuccessful ? "✅" : "❌";
+        public string StatusIcon => IsSuccessful ? "âœ…" : "âŒ";
         public string StatusText => IsSuccessful ? "PASS" : "FAIL";
     }
 
