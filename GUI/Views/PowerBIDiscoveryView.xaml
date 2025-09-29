@@ -118,7 +118,7 @@
                       Margin="0,0,0,20"
                       SelectedItem="{Binding SelectedItem}"
                       Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}"
-                      Style="{StaticResource StandardDataGridStyle}">
+                      Style="{StaticResource StandardDataGridStyle}" VirtualizingStackPanel.IsVirtualizing="True">
 
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Workspace Name" Binding="{Binding workspace}" Width="200"/>

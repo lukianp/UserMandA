@@ -83,7 +83,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- Main DataGrid -->
-            <DataGrid Grid.Column="0" ItemsSource="{Binding SelectedResults}" AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="Horizontal" HeadersVisibility="Column" Margin="20,0,20,20" SelectedItem="{Binding SelectedItem}">
+            <DataGrid Grid.Column="0" ItemsSource="{Binding SelectedResults}" AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="Horizontal" HeadersVisibility="Column" Margin="20,0,20,20" SelectedItem="{Binding SelectedItem}" VirtualizingStackPanel.IsVirtualizing="True">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Display Name" Binding="{Binding displayname}" Width="200"/>
                     <DataGridTextColumn Header="User Principal Name" Binding="{Binding userprincipalname}" Width="250"/>

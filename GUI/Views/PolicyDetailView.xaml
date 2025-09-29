@@ -5,7 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
     <ScrollViewer>
-        <StackPanel Margin="10" Orientation="Vertical" >
+        <StackPanel Margin="10" Orientation="Vertical">
             <TextBlock Text="Group Policy" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
             <Grid Margin="0,0,0,10">
                 <Grid.ColumnDefinitions>
@@ -29,16 +29,20 @@
             </Grid>
             <TabControl>
                 <TabItem Header="Users">
-                    <DataGrid ItemsSource="{Binding AffectedUsers}" AutoGenerateColumns="True"/>
+                    <DataGrid ItemsSource="{Binding AffectedUsers}" AutoGenerateColumns="True"
+                              VirtualizingStackPanel.IsVirtualizing="True"/>
                 </TabItem>
                 <TabItem Header="Computers">
-                    <DataGrid ItemsSource="{Binding AffectedComputers}" AutoGenerateColumns="True"/>
+                    <DataGrid ItemsSource="{Binding AffectedComputers}" AutoGenerateColumns="True"
+                              VirtualizingStackPanel.IsVirtualizing="True"/>
                 </TabItem>
                 <TabItem Header="Groups">
-                    <DataGrid ItemsSource="{Binding AffectedGroups}" AutoGenerateColumns="True"/>
+                    <DataGrid ItemsSource="{Binding AffectedGroups}" AutoGenerateColumns="True"
+                              VirtualizingStackPanel.IsVirtualizing="True"/>
                 </TabItem>
                 <TabItem Header="Applications">
-                    <DataGrid ItemsSource="{Binding AffectedApplications}" AutoGenerateColumns="True"/>
+                    <DataGrid ItemsSource="{Binding AffectedApplications}" AutoGenerateColumns="True"
+                              VirtualizingStackPanel.IsVirtualizing="True"/>
                 </TabItem>
             </TabControl>
         </StackPanel>

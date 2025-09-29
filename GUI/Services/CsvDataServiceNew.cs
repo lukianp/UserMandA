@@ -67,10 +67,21 @@ namespace MandADiscoverySuite.Services
 
                 // Read headers
                 var headerLine = await reader.ReadLineAsync();
-                if (string.IsNullOrEmpty(headerLine)) return results;
+                if (string.IsNullOrEmpty(headerLine))
+                {
+                    _logger?.LogWarning($"CSV file has empty header line: {csvFilePath}");
+                    return results;
+                }
 
                 var headers = ParseCsvLine(headerLine);
                 var headerCount = headers.Length;
+
+                // Validate that we have headers
+                if (headerCount == 0)
+                {
+                    _logger?.LogWarning($"CSV file has no headers: {csvFilePath}");
+                    return results;
+                }
 
                 // Read data rows
                 while (!reader.EndOfStream)
@@ -95,9 +106,25 @@ namespace MandADiscoverySuite.Services
 
                 _logger?.LogDebug($"Loaded {results.Count} rows from CSV file: {Path.GetFileName(csvFilePath)}");
             }
+            catch (FileNotFoundException)
+            {
+                _logger?.LogWarning($"CSV file not found: {csvFilePath}");
+                return results;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger?.LogError(ex, $"Access denied to CSV file: {csvFilePath}");
+                return results;
+            }
+            catch (IOException ex)
+            {
+                _logger?.LogError(ex, $"IO error reading CSV file: {csvFilePath}");
+                return results;
+            }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, $"Error loading CSV data from {csvFilePath}");
+                _logger?.LogError(ex, $"Unexpected error loading CSV data from {csvFilePath}");
+                return results;
             }
 
             return results;

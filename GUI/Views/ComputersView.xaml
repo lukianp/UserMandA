@@ -83,7 +83,7 @@
                           CanUserAddRows="False"
                           CanUserDeleteRows="False"
                           IsReadOnly="True"
-                          SelectionMode="Single">
+                          SelectionMode="Single" VirtualizingStackPanel.IsVirtualizing="True">
                     <DataGrid.Style>
                         <Style TargetType="DataGrid">
                             <Setter Property="Visibility" Value="Visible"/>

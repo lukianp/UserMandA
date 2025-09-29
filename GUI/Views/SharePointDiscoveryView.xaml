@@ -127,7 +127,7 @@
                               Margin="8"
                               SelectedItem="{Binding SelectedItem}"
                               SelectionMode="Extended"
-                              Visibility="{Binding SelectedResults.Count, Converter={StaticResource CountToVisibility}}">
+                              Visibility="{Binding SelectedResults.Count, Converter={StaticResource CountToVisibility}}" VirtualizingStackPanel.IsVirtualizing="True">
 
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Site Name"

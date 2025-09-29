@@ -130,7 +130,7 @@
                                         <ControlTemplate TargetType="ComboBox">
                                             <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="4">
                                                 <Grid>
-                                                    <ToggleButton Grid.Column="2" Focusable="false" IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" >
+                                                    <ToggleButton Grid.Column="2" Focusable="false" IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
                                                         <ToggleButton.Template>
                                                             <ControlTemplate>
                                                                 <Grid>
@@ -406,7 +406,7 @@
                         <!-- Groups Results -->
                         <TabItem Header="Groups" Visibility="{Binding IsGroupsSelected, Converter={StaticResource BoolToVisConverter}}">
                             <DataGrid ItemsSource="{Binding GroupMigrationResults}" AutoGenerateColumns="False" IsReadOnly="True"
-                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#F7FAFC">
+                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#F7FAFC" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Group Name" Binding="{Binding GroupName}" Width="200"/>
                                     <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
@@ -427,7 +427,7 @@
                         <!-- GPO Results -->
                         <TabItem Header="Group Policies" Visibility="{Binding IsGposSelected, Converter={StaticResource BoolToVisConverter}}">
                             <DataGrid ItemsSource="{Binding GpoMigrationResults}" AutoGenerateColumns="False" IsReadOnly="True"
-                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#F7FAFC">
+                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#F7FAFC" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="GPO Name" Binding="{Binding GpoName}" Width="200"/>
                                     <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
@@ -449,7 +449,7 @@
                         <!-- ACL Results -->
                         <TabItem Header="Access Control Lists" Visibility="{Binding IsAclsSelected, Converter={StaticResource BoolToVisConverter}}">
                             <DataGrid ItemsSource="{Binding AclMigrationResults}" AutoGenerateColumns="False" IsReadOnly="True"
-                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#F7FAFC">
+                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#F7FAFC" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Source Path" Binding="{Binding SourcePath}" Width="300"/>
                                     <DataGridTextColumn Header="Target Path" Binding="{Binding TargetPath}" Width="300"/>

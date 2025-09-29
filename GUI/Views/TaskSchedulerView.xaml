@@ -95,7 +95,7 @@
                     <DataGrid ItemsSource="{Binding TasksView}" 
                               SelectedItem="{Binding SelectedTask}"
                               Style="{StaticResource ModernDataGridStyle}"
-                              AutoGenerateColumns="False" CanUserAddRows="False">
+                              AutoGenerateColumns="False" CanUserAddRows="False" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
                             <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>

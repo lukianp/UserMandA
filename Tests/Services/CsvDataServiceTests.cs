@@ -1,89 +1,80 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Moq;
 using Xunit;
+using FluentAssertions;
+using Moq;
 using MandADiscoverySuite.Services;
-using MandADiscoverySuite.Models;
+using Microsoft.Extensions.Logging;
 
 namespace MandADiscoverySuite.Tests.Services
 {
-    /// <summary>
-    /// Unit tests for CsvDataService
-    /// </summary>
-    public class CsvDataServiceTests
+    public class CsvDataServiceTests : IDisposable
     {
-        private readonly Mock<ILogger<CsvDataService>> _mockLogger;
-        private readonly Mock<IntelligentCacheService> _mockCacheService;
-        private readonly CsvDataService _service;
+        private readonly string _testDataPath;
+        private readonly string _testProfileName = "testprofile";
+        private readonly Mock<ILogger<CsvDataServiceNew>> _mockLogger;
 
         public CsvDataServiceTests()
         {
-            _mockLogger = new Mock<ILogger<CsvDataService>>();
-            _mockCacheService = new Mock<IntelligentCacheService>();
-            _service = new CsvDataService(_mockLogger.Object, _mockCacheService.Object);
+            _mockLogger = new Mock<ILogger<CsvDataServiceNew>>();
+            _testDataPath = Path.Combine(Path.GetTempPath(), "MandATestData", Guid.NewGuid().ToString());
+            Directory.CreateDirectory(_testDataPath);
+            Directory.CreateDirectory(Path.Combine(_testDataPath, _testProfileName, "Raw"));
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                if (Directory.Exists(_testDataPath))
+                {
+                    Directory.Delete(_testDataPath, true);
+                }
+            }
+            catch { }
         }
 
         [Fact]
-        public async Task GetDataSummaryAsync_ValidProfile_ReturnsSummary()
+        public async Task LoadCsvDataAsync_WithValidFile_ReturnsData()
         {
-            // Arrange
-            var profileName = "TestProfile";
+            var testFilePath = CreateTestCsvFile("users.csv", "Name,Email\nJohn,john@test.com\nJane,jane@test.com");
+            var service = new CsvDataServiceNew(_mockLogger.Object, _testProfileName);
 
-            // Act
-            var result = await _service.GetDataSummaryAsync(profileName);
+            var result = await service.LoadCsvDataAsync(testFilePath);
 
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(profileName, result.ProfileName);
-            Assert.True(result.LastUpdated <= DateTime.UtcNow);
+            result.Should().NotBeNull();
+            result.Count.Should().Be(2);
         }
 
         [Fact]
-        public async Task SearchAsync_EmptySearchTerm_ReturnsEmptyResults()
+        public async Task LoadCsvDataAsync_WithMissingFile_ThrowsFileNotFoundException()
         {
-            // Arrange
-            var profileName = "TestProfile";
-            var searchTerm = "";
+            var nonExistentFile = Path.Combine(_testDataPath, "nonexistent.csv");
+            var service = new CsvDataServiceNew(_mockLogger.Object, _testProfileName);
 
-            // Act
-            var result = await _service.SearchAsync(profileName, searchTerm);
+            Func<Task> act = async () => await service.LoadCsvDataAsync(nonExistentFile);
 
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(searchTerm, result.SearchTerm);
-            Assert.Equal(0, result.TotalResults);
+            await act.Should().ThrowAsync<FileNotFoundException>();
         }
 
         [Fact]
-        public async Task ClearCacheAsync_ValidProfile_ClearsCache()
+        public async Task LoadCsvDataAsync_WithEmptyFile_ReturnsEmptyCollection()
         {
-            // Arrange
-            var profileName = "TestProfile";
-            _mockCacheService.Setup(x => x.RemoveAsync(It.IsAny<string>()))
-                .Returns(Task.CompletedTask);
+            var testFilePath = CreateTestCsvFile("empty.csv", string.Empty);
+            var service = new CsvDataServiceNew(_mockLogger.Object, _testProfileName);
 
-            // Act
-            await _service.ClearCacheAsync(profileName);
+            var result = await service.LoadCsvDataAsync(testFilePath);
 
-            // Assert
-            _mockCacheService.Verify(x => x.RemoveAsync($"Users_{profileName}"), Times.Once);
-            _mockCacheService.Verify(x => x.RemoveAsync($"Infrastructure_{profileName}"), Times.Once);
-            _mockCacheService.Verify(x => x.RemoveAsync($"Groups_{profileName}"), Times.Once);
-            _mockCacheService.Verify(x => x.RemoveAsync($"Applications_{profileName}"), Times.Once);
+            result.Should().NotBeNull();
+            result.Count.Should().Be(0);
         }
 
-        [Fact]
-        public async Task GetCacheStatisticsAsync_ReturnsValidStatistics()
+        private string CreateTestCsvFile(string fileName, string content)
         {
-            // Act
-            var result = await _service.GetCacheStatisticsAsync();
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.True(result.HitRatio >= 0 && result.HitRatio <= 1);
+            var filePath = Path.Combine(_testDataPath, _testProfileName, "Raw", fileName);
+            File.WriteAllText(filePath, content);
+            return filePath;
         }
     }
 }

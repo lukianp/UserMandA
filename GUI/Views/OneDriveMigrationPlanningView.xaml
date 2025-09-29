@@ -440,7 +440,7 @@
                                       HorizontalGridLinesBrush="#374151" 
                                       BorderThickness="0" 
                                       CanUserAddRows="False"
-                                      SelectionChanged="UsersDataGrid_SelectionChanged">
+                                      SelectionChanged="UsersDataGrid_SelectionChanged" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="140"/>
                                     <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="160"/>
@@ -499,7 +499,7 @@
                                       HorizontalGridLinesBrush="#374151" 
                                       BorderThickness="0" 
                                       CanUserAddRows="False"
-                                      SelectionChanged="FileSharesDataGrid_SelectionChanged">
+                                      SelectionChanged="FileSharesDataGrid_SelectionChanged" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Share Name" Binding="{Binding ShareName}" Width="120"/>
                                     <DataGridTextColumn Header="Server" Binding="{Binding ServerName}" Width="80"/>
@@ -547,7 +547,7 @@
                                   HorizontalGridLinesBrush="#374151" 
                                   BorderThickness="0" 
                                   CanUserAddRows="False"
-                                  SelectionChanged="BatchesDataGrid_SelectionChanged">
+                                  SelectionChanged="BatchesDataGrid_SelectionChanged" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Batch Name" Binding="{Binding Name}" Width="200"/>
                                 <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="250"/>
@@ -594,7 +594,7 @@
                                   GridLinesVisibility="Horizontal" 
                                   HorizontalGridLinesBrush="#374151" 
                                   BorderThickness="0" 
-                                  CanUserAddRows="False">
+                                  CanUserAddRows="False" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Issue Type" Binding="{Binding IssueType}" Width="150"/>
                                 <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="80"/>

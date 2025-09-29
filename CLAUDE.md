@@ -1,10 +1,4 @@
-Project: M&A Discovery Suite – Graphical User Interface (GUI)
-Technology: WPF (.NET 6.0) using MVVM architecture
-Last Updated: September 2025
-
-Overview
-
-The M&A Discovery Suite GUI is a WPF application designed to present data collected from various discovery modules (Active Directory, Azure AD, Exchange, File Servers, etc.) in a unified interface. It follows a classic MVVM (Model-View-ViewModel) pattern with a strong emphasis on modularity, performance, and user experience. The application is structured into multiple sections (Users, Groups, Infrastructure, Applications, Databases, Policies, Security, Migrations, etc.), each backed by its own data model and viewmodel, but all following a consistent design philosophy.
+- The M&A Discovery Suite GUI is a WPF application designed to present data collected from various discovery modules (Active Directory, Azure AD, Exchange, File Servers, etc.) in a unified interface. It follows a classic MVVM (Model-View-ViewModel) pattern with a strong emphasis on modularity, performance, and user experience. The application is structured into multiple sections (Users, Groups, Infrastructure, Applications, Databases, Policies, Security, Migrations, etc.), each backed by its own data model and viewmodel, but all following a consistent design philosophy.
 
 Key features of the design include:
 

@@ -147,7 +147,7 @@
                           HeadersVisibility="Column"
                           Margin="20,0,20,20"
                           SelectedItem="{Binding SelectedItem}"
-                          Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}">
+                          Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}" VirtualizingStackPanel.IsVirtualizing="True">
 
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Name"

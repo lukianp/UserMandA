@@ -108,7 +108,7 @@
                               AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                               GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                               Background="{DynamicResource BackgroundBrush}"
-                              BorderBrush="{DynamicResource MutedForegroundBrush}">
+                              BorderBrush="{DynamicResource MutedForegroundBrush}" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="*"/>
                             <DataGridTextColumn Header="Group Type" Binding="{Binding GroupType}" Width="100"/>
@@ -155,7 +155,7 @@
                               AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                               GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                               Background="{DynamicResource BackgroundBrush}"
-                              BorderBrush="{DynamicResource MutedForegroundBrush}">
+                              BorderBrush="{DynamicResource MutedForegroundBrush}" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
                             <DataGridTextColumn Header="Scope" Binding="{Binding Scope}" Width="100"/>

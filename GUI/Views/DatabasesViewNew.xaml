@@ -81,7 +81,7 @@
                   AutoGenerateColumns="False" Margin="10"
                   Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}"
                   CanUserAddRows="False" CanUserDeleteRows="False" 
-                  SelectionMode="Extended" GridLinesVisibility="Horizontal">
+                  SelectionMode="Extended" GridLinesVisibility="Horizontal" VirtualizingStackPanel.IsVirtualizing="True">
             
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Server" Binding="{Binding Server}" Width="*"/>

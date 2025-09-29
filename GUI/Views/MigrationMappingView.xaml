@@ -276,7 +276,7 @@
                                   CanUserDeleteRows="False"
                                   GridLinesVisibility="Horizontal"
                                   HeadersVisibility="Column"
-                                  BorderThickness="0">
+                                  BorderThickness="0" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="Status" Width="60">
                                     <DataGridTemplateColumn.CellTemplate>
@@ -384,7 +384,7 @@
                                       CanUserDeleteRows="False"
                                       GridLinesVisibility="Horizontal"
                                       HeadersVisibility="Column"
-                                      BorderThickness="0">
+                                      BorderThickness="0" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTemplateColumn Header="Status" Width="60">
                                         <DataGridTemplateColumn.CellTemplate>
@@ -447,7 +447,7 @@
                             <DataGrid ItemsSource="{Binding NamingConventionRules}"
                                       AutoGenerateColumns="False"
                                       CanUserAddRows="False"
-                                      CanUserDeleteRows="False">
+                                      CanUserDeleteRows="False" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="Auto"/>
                                     <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
@@ -532,7 +532,7 @@
                                   CanUserDeleteRows="False"
                                   GridLinesVisibility="Horizontal"
                                   HeadersVisibility="Column"
-                                  BorderThickness="0">
+                                  BorderThickness="0" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="Status" Width="60">
                                     <DataGridTemplateColumn.CellTemplate>
@@ -596,7 +596,7 @@
                                   CanUserDeleteRows="False"
                                   GridLinesVisibility="Horizontal"
                                   HeadersVisibility="Column"
-                                  BorderThickness="0">
+                                  BorderThickness="0" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Type" Binding="{Binding MappingType}" Width="80"/>
                                 <DataGridTextColumn Header="Conflict Type" Binding="{Binding ConflictType}" Width="150"/>

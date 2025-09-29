@@ -312,7 +312,7 @@
                                           CanUserAddRows="False"
                                           CanUserDeleteRows="False"
                                           IsReadOnly="True"
-                                          Visibility="{Binding HasAssignedUsers, Converter={StaticResource BoolToVisibilityConverter}}">
+                                          Visibility="{Binding HasAssignedUsers, Converter={StaticResource BoolToVisibilityConverter}}" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Resources>
                                         <Style TargetType="DataGridColumnHeader">
                                             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
@@ -399,7 +399,7 @@
                                           CanUserAddRows="False"
                                           CanUserDeleteRows="False"
                                           IsReadOnly="True"
-                                          Visibility="{Binding HasInstalledApplications, Converter={StaticResource BoolToVisibilityConverter}}">
+                                          Visibility="{Binding HasInstalledApplications, Converter={StaticResource BoolToVisibilityConverter}}" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Resources>
                                         <Style TargetType="DataGridColumnHeader">
                                             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
@@ -486,7 +486,7 @@
                                           CanUserAddRows="False"
                                           CanUserDeleteRows="False"
                                           IsReadOnly="True"
-                                          Visibility="{Binding HasDeviceGroups, Converter={StaticResource BoolToVisibilityConverter}}">
+                                          Visibility="{Binding HasDeviceGroups, Converter={StaticResource BoolToVisibilityConverter}}" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Resources>
                                         <Style TargetType="DataGridColumnHeader">
                                             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
@@ -572,7 +572,7 @@
                                           CanUserAddRows="False"
                                           CanUserDeleteRows="False"
                                           IsReadOnly="True"
-                                          Visibility="{Binding HasAppliedGpos, Converter={StaticResource BoolToVisibilityConverter}}">
+                                          Visibility="{Binding HasAppliedGpos, Converter={StaticResource BoolToVisibilityConverter}}" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Resources>
                                         <Style TargetType="DataGridColumnHeader">
                                             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
@@ -658,7 +658,7 @@
                                           CanUserAddRows="False"
                                           CanUserDeleteRows="False"
                                           IsReadOnly="True"
-                                          Visibility="{Binding HasChildAssets, Converter={StaticResource BoolToVisibilityConverter}}">
+                                          Visibility="{Binding HasChildAssets, Converter={StaticResource BoolToVisibilityConverter}}" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Resources>
                                         <Style TargetType="DataGridColumnHeader">
                                             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>

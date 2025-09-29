@@ -177,7 +177,8 @@
                         <DataGrid ItemsSource="{Binding Results}" Style="{StaticResource ModernDataGridStyle}"
                                 AutoGenerateColumns="True" CanUserSortColumns="True"
                                 Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibilityConverter}}"
-                                HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"/>
+                                HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                VirtualizingStackPanel.IsVirtualizing="True"/>
                     </Grid>
                 </Border>
             </Grid>

@@ -169,7 +169,7 @@
                   Background="#1E1E1E"
                   BorderBrush="#E2E8F0"
                   BorderThickness="1"
-                  RowHeight="40">
+                  RowHeight="40" VirtualizingStackPanel.IsVirtualizing="True">
 
             <DataGrid.Columns>
                 <!-- Group Name -->

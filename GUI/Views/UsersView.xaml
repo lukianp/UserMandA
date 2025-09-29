@@ -132,7 +132,7 @@
                           SelectionMode="Single"
                           SelectedItem="{Binding SelectedUser}"
                           Margin="1"
-                          TabIndex="3">
+                          TabIndex="3" VirtualizingStackPanel.IsVirtualizing="True">
                     <DataGrid.Style>
                         <Style TargetType="DataGrid">
                             <Setter Property="Visibility" Value="Visible"/>

@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="MandADiscoverySuite.Views.DataLossPreventionDiscoveryView"
+<UserControl x:Class="MandADiscoverySuite.Views.DataLossPreventionDiscoveryView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Name="DLPDiscoveryControl"
@@ -25,7 +25,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header Section -->
-        <TextBlock Grid.Row="0" Text="🔒 Data Loss Prevention Discovery" FontSize="24" FontWeight="Bold"
+        <TextBlock Grid.Row="0" Text="?? Data Loss Prevention Discovery" FontSize="24" FontWeight="Bold"
                    VerticalAlignment="Center" Foreground="{DynamicResource DarkForegroundBrush}" Margin="0,0,0,16"/>
         <TextBlock Text="{Binding SelectedResults.Count, StringFormat='({0} items)'}"
                    FontSize="16" Margin="10,0,0,0" VerticalAlignment="Center"
@@ -38,7 +38,7 @@
             <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
                     CornerRadius="8" Margin="4" Padding="15">
                 <StackPanel>
-                    <TextBlock Text="📋 Policies" FontSize="14" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                    <TextBlock Text="?? Policies" FontSize="14" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
                     <TextBlock Text="{Binding TotalPolicies}" FontSize="24" FontWeight="Bold"
                                Foreground="{DynamicResource DarkForegroundBrush}"/>
                 </StackPanel>
@@ -47,7 +47,7 @@
             <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
                     CornerRadius="8" Margin="4" Padding="15">
                 <StackPanel>
-                    <TextBlock Text="✅ Active Policies" FontSize="14" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                    <TextBlock Text="? Active Policies" FontSize="14" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
                     <TextBlock Text="{Binding ActivePolicies}" FontSize="24" FontWeight="Bold"
                                Foreground="{DynamicResource SuccessColor}"/>
                 </StackPanel>
@@ -56,7 +56,7 @@
             <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
                     CornerRadius="8" Margin="4" Padding="15">
                 <StackPanel>
-                    <TextBlock Text="🚨 High-Severity Alerts" FontSize="14" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                    <TextBlock Text="?? High-Severity Alerts" FontSize="14" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
                     <TextBlock Text="{Binding HighSeverityAlerts}" FontSize="24" FontWeight="Bold"
                                Foreground="{DynamicResource ErrorColor}"/>
                 </StackPanel>
@@ -65,7 +65,7 @@
             <Border Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1"
                     CornerRadius="8" Margin="4" Padding="15">
                 <StackPanel>
-                    <TextBlock Text="🔍 Matched Items" FontSize="14" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
+                    <TextBlock Text="?? Matched Items" FontSize="14" Foreground="{DynamicResource DarkMutedForegroundBrush}"/>
                     <TextBlock Text="{Binding MatchedItems}" FontSize="24" FontWeight="Bold"
                                Foreground="{DynamicResource InfoColor}"/>
                 </StackPanel>
@@ -76,11 +76,11 @@
         <Border Grid.Row="2" Background="{DynamicResource DarkCardBrush}" CornerRadius="8" Margin="0,0,0,16"
                 BorderBrush="{DynamicResource DarkBorderBrush}" BorderThickness="1">
             <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <Button Content="🔍 Run Discovery" Command="{Binding RunDiscoveryCommand}" Margin="10"
+                <Button Content="?? Run Discovery" Command="{Binding RunDiscoveryCommand}" Margin="10"
                         Background="{DynamicResource BrandPrimaryBrush}" Foreground="{DynamicResource WhiteBrush}"/>
-                <Button Content="🔄 Refresh" Command="{Binding RefreshDataCommand}" Margin="0,10,10,10"
+                <Button Content="?? Refresh" Command="{Binding RefreshDataCommand}" Margin="0,10,10,10"
                         Background="{DynamicResource DarkSurfaceBrush}" Foreground="{DynamicResource DarkForegroundBrush}"/>
-                <Button Content="📤 Export" Command="{Binding ExportCommand}" Margin="0,10,10,10"
+                <Button Content="?? Export" Command="{Binding ExportCommand}" Margin="0,10,10,10"
                         Background="{DynamicResource DarkSurfaceBrush}" Foreground="{DynamicResource DarkForegroundBrush}"/>
             </WrapPanel>
         </Border>
@@ -99,14 +99,14 @@
                       Visibility="{Binding SelectedResults.Count, Converter={StaticResource CountToVisibility}}"
                       CanUserAddRows="False" CanUserDeleteRows="False"
                       SelectionMode="Single" GridLinesVisibility="Horizontal"
-                      Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}">
+                      Background="{DynamicResource DarkCardBrush}" BorderBrush="{DynamicResource DarkBorderBrush}" VirtualizingStackPanel.IsVirtualizing="True">
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="📋 Policy Name" Binding="{Binding policyname}" Width="200" />
-                    <DataGridTextColumn Header="📊 Status" Binding="{Binding status}" Width="100" />
-                    <DataGridTextColumn Header="🚨 Severity" Binding="{Binding severity}" Width="100" />
-                    <DataGridTextColumn Header="🌐 Location" Binding="{Binding location}" Width="150" />
-                    <DataGridTextColumn Header="🕒 Detected On" Binding="{Binding detectedon}" Width="150" />
+                    <DataGridTextColumn Header="?? Policy Name" Binding="{Binding policyname}" Width="200" />
+                    <DataGridTextColumn Header="?? Status" Binding="{Binding status}" Width="100" />
+                    <DataGridTextColumn Header="?? Severity" Binding="{Binding severity}" Width="100" />
+                    <DataGridTextColumn Header="?? Location" Binding="{Binding location}" Width="150" />
+                    <DataGridTextColumn Header="?? Detected On" Binding="{Binding detectedon}" Width="150" />
                 </DataGrid.Columns>
 
             </DataGrid>
@@ -115,7 +115,7 @@
             <Border Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center"
                     Visibility="{Binding SelectedResults.Count, Converter={StaticResource InverseCountToVisibility}}">
                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-                    <TextBlock Text="🔒" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
+                    <TextBlock Text="??" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
                     <TextBlock Text="No DLP data found" FontSize="16" HorizontalAlignment="Center"
                                Margin="0,10,0,0" Opacity="0.7"/>
                     <TextBlock Text="Check CSV files in data directory" FontSize="12" HorizontalAlignment="Center"
@@ -132,12 +132,12 @@
                     Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisibility}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="15">
                     <StackPanel>
-                        <TextBlock Text="🔍 Policy Details" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"
+                        <TextBlock Text="?? Policy Details" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"
                                    Foreground="{DynamicResource DarkForegroundBrush}"/>
 
                         <!-- Policy Information Section -->
                         <StackPanel Margin="0,0,0,15">
-                            <TextBlock Text="📋 Policy Information" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"
+                            <TextBlock Text="?? Policy Information" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"
                                        Foreground="{DynamicResource DarkForegroundBrush}"/>
                             <Separator Background="{DynamicResource DarkBorderBrush}" Margin="0,0,0,8"/>
                             <StackPanel Margin="0,0,0,8">
@@ -169,7 +169,7 @@
 
                         <!-- Alert Information Section -->
                         <StackPanel Margin="0,0,0,15">
-                            <TextBlock Text="🚨 Alert Information" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"
+                            <TextBlock Text="?? Alert Information" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"
                                        Foreground="{DynamicResource DarkForegroundBrush}"/>
                             <Separator Background="{DynamicResource DarkBorderBrush}" Margin="0,0,0,8"/>
                             <StackPanel Margin="0,0,0,8">
@@ -187,7 +187,7 @@
                         <!-- Actions Taken Section -->
                         <StackPanel Margin="0,0,0,15"
                                    Visibility="{Binding SelectedItem.actionstaken, Converter={StaticResource NullToVisibility}}">
-                            <TextBlock Text="🛠️ Actions Taken" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"
+                            <TextBlock Text="??? Actions Taken" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"
                                        Foreground="{DynamicResource DarkForegroundBrush}"/>
                             <Separator Background="{DynamicResource DarkBorderBrush}" Margin="0,0,0,8"/>
                             <TextBlock Text="{Binding SelectedItem.actionstaken, FallbackValue='No actions recorded'}"
@@ -196,7 +196,7 @@
                         </StackPanel>
 
                         <!-- All Properties -->
-                        <TextBlock Text="📊 All Properties" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"
+                        <TextBlock Text="?? All Properties" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"
                                    Foreground="{DynamicResource DarkForegroundBrush}"/>
                         <Separator Background="{DynamicResource DarkBorderBrush}" Margin="0,0,0,8"/>
                         <ItemsControl ItemsSource="{Binding SelectedItemDetails}">
@@ -236,7 +236,7 @@
                 CornerRadius="4" Margin="0,16,0,0" Padding="8" Opacity="0.8"
                 Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisibility}}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <TextBlock Text="❌" FontSize="16" Foreground="{DynamicResource ErrorColor}"
+                <TextBlock Text="?" FontSize="16" Foreground="{DynamicResource ErrorColor}"
                            VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource DarkForegroundBrush}"
                            VerticalAlignment="Center" FontWeight="SemiBold"/>

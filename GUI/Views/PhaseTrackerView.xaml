@@ -132,7 +132,7 @@
                                   Background="#2D3748"
                                   BorderBrush="#374151"
                                   RowBackground="#374151"
-                                  AlternatingRowBackground="#2D3748">
+                                  AlternatingRowBackground="#2D3748" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Phase" Binding="{Binding Name}" Width="200">
                                     <DataGridTextColumn.ElementStyle>

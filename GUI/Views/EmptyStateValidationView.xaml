@@ -72,7 +72,7 @@
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
                       SelectionMode="Single"
-                      Height="400">
+                      Height="400" VirtualizingStackPanel.IsVirtualizing="True">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="ViewModel" Binding="{Binding ViewModelName}" Width="150"/>
                     <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="60">

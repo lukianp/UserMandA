@@ -132,7 +132,7 @@
                                   AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                                   GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                                   Background="{DynamicResource BackgroundBrush}"
-                                  BorderBrush="{DynamicResource MutedForegroundBrush}">
+                                  BorderBrush="{DynamicResource MutedForegroundBrush}" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Application" Binding="{Binding Name}" Width="*"/>
                                 <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="100"/>

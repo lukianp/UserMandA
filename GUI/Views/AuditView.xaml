@@ -203,7 +203,7 @@
                   Margin="10"
                   GridLinesVisibility="Horizontal"
                   HeadersVisibility="Column"
-                  AlternatingRowBackground="#F8F9FA">
+                  AlternatingRowBackground="#F8F9FA" VirtualizingStackPanel.IsVirtualizing="True">
 
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Timestamp" 

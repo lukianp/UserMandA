@@ -189,7 +189,7 @@
                 <!-- Syntax Errors Panel -->
                 <Expander Grid.Row="1" Header="Syntax Errors" IsExpanded="False" Margin="0,4,0,0">
                     <DataGrid ItemsSource="{Binding SyntaxErrors}" AutoGenerateColumns="False" 
-                              IsReadOnly="True" HeadersVisibility="Column" MaxHeight="150">
+                              IsReadOnly="True" HeadersVisibility="Column" MaxHeight="150" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Line" Binding="{Binding Line}" Width="60"/>
                             <DataGridTextColumn Header="Column" Binding="{Binding Column}" Width="60"/>
@@ -241,7 +241,7 @@
                 
                 <TabItem Header="History">
                     <DataGrid ItemsSource="{Binding ExecutionResults}" AutoGenerateColumns="False" 
-                              IsReadOnly="True" HeadersVisibility="Column">
+                              IsReadOnly="True" HeadersVisibility="Column" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Time" Binding="{Binding Timestamp, StringFormat=HH:mm:ss}" Width="70"/>
                             <DataGridTextColumn Header="Status" Binding="{Binding State}" Width="80"/>

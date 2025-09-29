@@ -312,7 +312,7 @@
                               Foreground="#E2E8F0"
                               HeadersVisibility="Column"
                               RowBackground="Transparent"
-                              AlternatingRowBackground="#2A3441">
+                              AlternatingRowBackground="#2A3441" VirtualizingStackPanel.IsVirtualizing="True">
                         
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Project" Binding="{Binding ProjectName}" Width="200"/>
@@ -534,7 +534,7 @@
                                   HeadersVisibility="Column"
                                   RowBackground="Transparent"
                                   AlternatingRowBackground="#2A3441"
-                                  MaxHeight="300">
+                                  MaxHeight="300" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="200"/>
                                 <DataGridTextColumn Header="Target" Binding="{Binding Target}" Width="200"/>
@@ -916,7 +916,7 @@
                                   HeadersVisibility="Column"
                                   RowBackground="Transparent"
                                   AlternatingRowBackground="#2A3441"
-                                  MaxHeight="300">
+                                  MaxHeight="300" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Wave" Binding="{Binding Name}" Width="150"/>
                                 <DataGridTextColumn Header="Order" Binding="{Binding Order}" Width="60"/>
@@ -1051,7 +1051,7 @@
                                   HeadersVisibility="Column"
                                   RowBackground="Transparent"
                                   AlternatingRowBackground="#2A3441"
-                                  MaxHeight="200">
+                                  MaxHeight="200" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Batch" Binding="{Binding Name}" Width="150"/>
                                 <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="120"/>
@@ -1212,7 +1212,7 @@
                                   HeadersVisibility="Column"
                                   RowBackground="Transparent"
                                   AlternatingRowBackground="#2A3441"
-                                  MaxHeight="300">
+                                  MaxHeight="300" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Stream" Binding="{Binding StreamId}" Width="80"/>
                                 <DataGridTextColumn Header="Wave" Binding="{Binding WaveName}" Width="100"/>
@@ -1462,7 +1462,7 @@
                                   HeadersVisibility="Column"
                                   RowBackground="Transparent"
                                   AlternatingRowBackground="#2A3441"
-                                  MaxHeight="300">
+                                  MaxHeight="300" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Test Category" Binding="{Binding Category}" Width="150"/>
                                 <DataGridTextColumn Header="Test Name" Binding="{Binding Name}" Width="250"/>
@@ -1523,7 +1523,7 @@
                                   HeadersVisibility="Column"
                                   RowBackground="Transparent"
                                   AlternatingRowBackground="#2A3441"
-                                  MaxHeight="250">
+                                  MaxHeight="250" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="Severity" Width="80">
                                     <DataGridTemplateColumn.CellTemplate>

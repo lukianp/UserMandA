@@ -82,7 +82,7 @@
 
             <!-- Main DataGrid -->
             <DataGrid Grid.Column="0" ItemsSource="{Binding SelectedResults}" AutoGenerateColumns="False" CanUserAddRows="False"
-                      Margin="0,0,0,20" SelectedItem="{Binding SelectedItem}" Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}">
+                      Margin="0,0,0,20" SelectedItem="{Binding SelectedItem}" Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}" VirtualizingStackPanel.IsVirtualizing="True">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Application Name" Binding="{Binding name}" Width="200"/>
                     <DataGridTextColumn Header="Version" Binding="{Binding version}" Width="100"/>

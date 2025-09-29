@@ -450,7 +450,8 @@
                         <TabItem Header="Data Preview">
                             <DataGrid Style="{StaticResource DataGridStyle}"
                                      ItemsSource="{Binding PreviewData}"
-                                     Margin="0,8,0,0"/>
+                                     Margin="0,8,0,0"
+                                     VirtualizingStackPanel.IsVirtualizing="True"/>
                         </TabItem>
                         
                         <!-- Generated Reports Tab -->

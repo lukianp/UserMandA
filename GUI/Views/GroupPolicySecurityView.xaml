@@ -264,7 +264,7 @@
                                       GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                                       Background="{DynamicResource BackgroundBrush}"
                                       BorderBrush="{DynamicResource MutedForegroundBrush}"
-                                      IsReadOnly="True" SelectionMode="Single">
+                                      IsReadOnly="True" SelectionMode="Single" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="200"/>
                                     <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="250"/>
@@ -309,7 +309,7 @@
                                       GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                                       Background="{DynamicResource BackgroundBrush}"
                                       BorderBrush="{DynamicResource MutedForegroundBrush}"
-                                      IsReadOnly="True" SelectionMode="Single">
+                                      IsReadOnly="True" SelectionMode="Single" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="200"/>
                                     <DataGridTextColumn Header="Group Type" Binding="{Binding GroupType}" Width="120"/>
@@ -354,7 +354,7 @@
                                       GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                                       Background="{DynamicResource BackgroundBrush}"
                                       BorderBrush="{DynamicResource MutedForegroundBrush}"
-                                      IsReadOnly="True" SelectionMode="Single">
+                                      IsReadOnly="True" SelectionMode="Single" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Component" Binding="{Binding Component}" Width="150"/>
                                     <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="120"/>
@@ -397,7 +397,7 @@
                                       GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                                       Background="{DynamicResource BackgroundBrush}"
                                       BorderBrush="{DynamicResource MutedForegroundBrush}"
-                                      IsReadOnly="True" SelectionMode="Single">
+                                      IsReadOnly="True" SelectionMode="Single" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Threat Type" Binding="{Binding ThreatType}" Width="150"/>
                                     <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="100"/>
@@ -474,7 +474,7 @@
                                       GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                                       Background="{DynamicResource BackgroundBrush}"
                                       BorderBrush="{DynamicResource MutedForegroundBrush}"
-                                      IsReadOnly="True" SelectionMode="Single">
+                                      IsReadOnly="True" SelectionMode="Single" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Control" Binding="{Binding ControlId}" Width="120"/>
                                     <DataGridTextColumn Header="Framework" Binding="{Binding Framework}" Width="100"/>

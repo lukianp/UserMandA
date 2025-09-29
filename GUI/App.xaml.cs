@@ -21,6 +21,8 @@ using MandADiscoverySuite.Navigation;
 using MandADiscoverySuite.Views;
 using CommunityToolkit.Mvvm.Messaging;
 using MandADiscoverySuite.Messages;
+using Serilog;
+using Serilog.Events;
 
 namespace MandADiscoverySuite
 {
@@ -60,91 +62,43 @@ namespace MandADiscoverySuite
                 services.AddSingleton<ConfigurationService>();
                 services.AddSingleton<MandADiscoverySuite.Services.AuditService>();
 
+                // Register other services from the merged section
+                services.AddSingleton<CsvDataValidationService>(sp =>
+                {
+                    var logger = sp.GetRequiredService<ILogger<CsvDataValidationService>>();
+                    return new CsvDataValidationService(logger);
+                });
+                services.AddSingleton<ILogManagementService, LogManagementService>();
+                services.AddSingleton<ThemeService>();
+                services.AddSingleton<UIInteractionLoggingService>();
+                services.AddSingleton<CsvFileWatcherService>();
+                services.AddSingleton<ICsvDataLoader>(sp =>
+                {
+                    var logger = sp.GetRequiredService<ILogger<CsvDataServiceNew>>();
+                    return (ICsvDataLoader)new CsvDataServiceNew(logger, "ljpops"); // Use default profile
+                });
+                services.AddSingleton<NavigationService>();
+                services.AddSingleton<DiscoveryService>();
+                services.AddSingleton<IDiscoveryService>(provider => provider.GetRequiredService<DiscoveryService>());
+                services.AddSingleton<ModuleRegistryService>(provider => ModuleRegistryService.Instance);
+                services.AddSingleton<MandADiscoverySuite.Services.TabsService>();
+                services.AddSingleton<IEnvironmentDetectionService, EnvironmentDetectionService>();
+                services.AddSingleton<IConnectionTestService, ConnectionTestService>();
+                services.AddTransient<DiscoveryViewModel>();
+                services.AddSingleton<MainViewModel>();
+                services.AddSingleton<ProfileService>();
+                services.AddSingleton<IKeyboardShortcutService, KeyboardShortcutService>();
+                services.AddSingleton<AnimationOptimizationService>();
+
+
                 // Build the service provider
                 ServiceProvider = services.BuildServiceProvider();
-
-                // Test basic service resolution
-                var configService = ServiceProvider.GetService<ConfigurationService>();
-                if (configService != null)
-                {
-                    _staticLogAction?.Invoke("✓ ConfigurationService resolved successfully");
-                }
-                else
-                {
-                    _staticLogAction?.Invoke("⚠ ConfigurationService could not be resolved");
-                }
             }
             catch (Exception ex)
             {
-<<<<<<< HEAD
                 _staticLogAction?.Invoke($"ERROR in ConfigureServices: {ex.Message}");
                 throw; // Re-throw to ensure the error is handled by the global handler
             }
-=======
-                var logger = sp.GetRequiredService<ILogger<LogicEngineSampleDataService>>();
-                return new LogicEngineSampleDataService(logger);
-            });
-
-            // Register CSV data validation service
-            services.AddSingleton<CsvDataValidationService>(sp =>
-            {
-                var logger = sp.GetRequiredService<ILogger<CsvDataValidationService>>();
-                return new CsvDataValidationService(logger);
-            });
-
-            // Register log management service
-            services.AddSingleton<ILogManagementService, LogManagementService>();
-            services.AddSingleton<LogManagementService>();
-
-            // Register theme service
-            services.AddSingleton<ThemeService>();
-
-            // Register UI logging service
-            services.AddSingleton<UIInteractionLoggingService>();
-
-            // Register CSV file watcher service
-            services.AddSingleton<CsvFileWatcherService>();
-
-            // Register CSV data service
-            services.AddSingleton<ICsvDataLoader>(sp =>
-            {
-                var logger = sp.GetRequiredService<ILogger<CsvDataServiceNew>>();
-                return (ICsvDataLoader)new CsvDataServiceNew(logger, "ljpops"); // Use default profile
-            });
-            services.AddSingleton<CsvDataServiceNew>(sp =>
-            {
-                var logger = sp.GetRequiredService<ILogger<CsvDataServiceNew>>();
-                return new CsvDataServiceNew(logger, "ljpops");
-            });
-
-            // Register navigation service
-            services.AddSingleton<NavigationService>();
-
-            // Register Discovery Services
-            services.AddSingleton<DiscoveryService>();
-            services.AddSingleton<IDiscoveryService>(provider => provider.GetRequiredService<DiscoveryService>());
-            services.AddSingleton<ModuleRegistryService>(provider => ModuleRegistryService.Instance);
-
-            // Register TabsService and NavigationService
-            services.AddSingleton<MandADiscoverySuite.Services.TabsService>();
-            services.AddSingleton<MandADiscoverySuite.Services.NavigationService>();
-
-            // Register T-000 services for environment detection and connection testing
-            services.AddSingleton<IEnvironmentDetectionService, EnvironmentDetectionService>();
-            services.AddSingleton<IConnectionTestService, ConnectionTestService>();
-
-            // Register ViewModels that require DI
-            services.AddTransient<DiscoveryViewModel>();
-            services.AddSingleton<MainViewModel>();
-
-            // Register additional services that may be needed
-            services.AddSingleton<ProfileService>();
-            services.AddSingleton<IKeyboardShortcutService, KeyboardShortcutService>();
-            services.AddSingleton<AnimationOptimizationService>();
-
-            // Build the service provider
-            ServiceProvider = services.BuildServiceProvider();
->>>>>>> 9860a05e2d6e2eb42b75de9fbb1cb458185f2795
         }
 
         protected override void OnStartup(StartupEventArgs e)
@@ -203,16 +157,9 @@ namespace MandADiscoverySuite
 
                 // Log startup completion
                 var startupDuration = DateTime.Now - startTime;
-<<<<<<< HEAD
                 logAction?.Invoke($"Startup completed in {startupDuration.TotalSeconds:F1} seconds");
 
                 logAction?.Invoke("=== OnStartup COMPLETED SUCCESSFULLY (Diagnostic Mode) ===");
-=======
-                _ = Task.Run(async () => await loggingService.LogStartupAsync(version, startupDuration));
-                _ = Task.Run(async () => await auditService.LogSystemStartupAsync(version, startupDuration));
-
-                logAction?.Invoke("=== OnStartup COMPLETED SUCCESSFULLY ===");
->>>>>>> 9860a05e2d6e2eb42b75de9fbb1cb458185f2795
             }
             catch (Exception ex)
             {
@@ -363,25 +310,38 @@ namespace MandADiscoverySuite
 
         private void SetupBasicExceptionHandling()
         {
-            // Simplified logging for diagnostic version
+            // Setup Serilog structured logging
             var logPath = @"C:\discoverydata\ljpops\Logs";
             Directory.CreateDirectory(logPath);
-            var logFile = Path.Combine(logPath, $"Diagnostic_{DateTime.Now:yyyyMMdd_HHmmss}.log");
-            
+            var logFile = Path.Combine(logPath, $"MandADiscoverySuite_{DateTime.Now:yyyyMMdd}.log");
+
+            // Configure Serilog with file and console sinks
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Information()
+                .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+                .Enrich.FromLogContext()
+                .Enrich.WithProperty("Application", "M&A Discovery Suite")
+                .WriteTo.File(
+                    logFile,
+                    rollingInterval: RollingInterval.Day,
+                    outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}",
+                    shared: true,
+                    flushToDiskInterval: TimeSpan.FromSeconds(1))
+                .WriteTo.Console(
+                    outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+                .CreateLogger();
+
+            // Create async-safe logging action that uses Serilog
             var logAction = new Action<string>(message =>
             {
                 try
                 {
-                    var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                    var logEntry = $"[{timestamp}] {message}{Environment.NewLine}";
-                    File.AppendAllText(logFile, logEntry);
-                    System.Diagnostics.Debug.WriteLine(logEntry);
-                    Console.WriteLine(logEntry);
+                    Log.Information(message);
                 }
                 catch { /* Ignore logging errors */ }
             });
 
-            logAction("=== APPLICATION STARTUP LOGGING INITIALIZED ===");
+            logAction("=== APPLICATION STARTUP LOGGING INITIALIZED (Serilog) ===");
             logAction($"Application Starting at {DateTime.Now}");
             logAction($"Log file: {logFile}");
             logAction($"Working directory: {Environment.CurrentDirectory}");
@@ -390,20 +350,11 @@ namespace MandADiscoverySuite
             // Catch all unhandled exceptions in the UI thread
             DispatcherUnhandledException += (sender, e) =>
             {
-                var errorMessage = $"CRITICAL UI EXCEPTION: {e.Exception.GetType().Name}: {e.Exception.Message}";
-                var stackTrace = $"Stack Trace:\n{e.Exception.StackTrace}";
-                var innerException = e.Exception.InnerException != null ? $"Inner Exception: {e.Exception.InnerException.Message}\nInner Stack: {e.Exception.InnerException.StackTrace}" : "No inner exception";
-                
-                var fullError = $"{errorMessage}\n{stackTrace}\n{innerException}";
-                
-                logAction("=== CRITICAL UI EXCEPTION ===");
-                logAction(fullError);
-                logAction("=== END CRITICAL UI EXCEPTION ===");
-                
-                System.Diagnostics.Debug.WriteLine(fullError);
-                
-                MessageBox.Show($"{errorMessage}\n\nFull details logged to:\n{logFile}\n\nStack trace:\n{e.Exception.StackTrace}", "Critical UI Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                
+                Log.Fatal(e.Exception, "CRITICAL UI EXCEPTION: {ExceptionType}", e.Exception.GetType().Name);
+
+                MessageBox.Show($"A critical error occurred: {e.Exception.Message}\n\nDetails have been logged.",
+                    "Critical UI Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
                 // Mark as handled to prevent the application from crashing
                 e.Handled = true;
             };
@@ -412,17 +363,11 @@ namespace MandADiscoverySuite
             AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
             {
                 var exception = e.ExceptionObject as Exception;
-                var errorMessage = $"CRITICAL BACKGROUND EXCEPTION: {exception?.GetType().Name}: {exception?.Message}";
-                var stackTrace = $"Stack Trace:\n{exception?.StackTrace}";
-                var fullError = $"{errorMessage}\n{stackTrace}";
-                
-                logAction("=== CRITICAL BACKGROUND EXCEPTION ===");
-                logAction(fullError);
-                logAction("=== END CRITICAL BACKGROUND EXCEPTION ===");
-                
-                System.Diagnostics.Debug.WriteLine(fullError);
-                
-                MessageBox.Show($"{errorMessage}\n\nFull details logged to:\n{logFile}", "Critical Background Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Log.Fatal(exception, "CRITICAL BACKGROUND EXCEPTION: {ExceptionType}, IsTerminating: {IsTerminating}",
+                    exception?.GetType().Name ?? "Unknown", e.IsTerminating);
+
+                MessageBox.Show($"A critical background error occurred: {exception?.Message}\n\nDetails have been logged.",
+                    "Critical Background Error", MessageBoxButton.OK, MessageBoxImage.Error);
             };
 
             // Catch unhandled Task exceptions
@@ -431,23 +376,14 @@ namespace MandADiscoverySuite
                 try
                 {
                     var exception = e.Exception?.GetBaseException() ?? e.Exception;
-                    var errorMessage = $"UNHANDLED TASK EXCEPTION: {exception?.GetType().Name ?? "Unknown"}: {exception?.Message ?? "No message available"}";
-                    var stackTrace = exception?.StackTrace ?? "No stack trace available";
-                    var fullError = $"{errorMessage}\nStack Trace:\n{stackTrace}";
-                    
-                    logAction("=== UNHANDLED TASK EXCEPTION ===");
-                    logAction(fullError);
-                    logAction("=== END UNHANDLED TASK EXCEPTION ===");
-                    
-                    System.Diagnostics.Debug.WriteLine(fullError);
-                    
+                    Log.Error(exception, "UNHANDLED TASK EXCEPTION: {ExceptionType}", exception?.GetType().Name ?? "Unknown");
+
                     // Mark as observed to prevent application crash - don't show MessageBox for background tasks
                     e.SetObserved();
                 }
                 catch (Exception handlerEx)
                 {
-                    // Fallback if exception handler itself fails
-                    logAction($"=== EXCEPTION HANDLER ERROR: {handlerEx.Message} ===");
+                    Log.Error(handlerEx, "Exception handler itself failed");
                     e.SetObserved();
                 }
             };
@@ -465,8 +401,9 @@ namespace MandADiscoverySuite
         {
             try
             {
-                // Simplified cleanup for diagnostic version
-                _staticLogAction?.Invoke("Application shutting down...");
+                // Log shutdown and flush Serilog
+                Log.Information("Application shutting down...");
+                Log.CloseAndFlush();
             }
             catch
             {

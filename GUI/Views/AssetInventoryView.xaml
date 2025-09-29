@@ -6,7 +6,7 @@
              mc:Ignorable="d">
     <Grid>
         <DataGrid x:Name="AssetGrid" ItemsSource="{Binding Assets}" AutoGenerateColumns="False" IsReadOnly="True"
-                  MouseDoubleClick="AssetGrid_MouseDoubleClick">
+                  MouseDoubleClick="AssetGrid_MouseDoubleClick" VirtualizingStackPanel.IsVirtualizing="True">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="200"/>
                 <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150"/>

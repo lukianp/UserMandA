@@ -137,7 +137,7 @@
                               CanUserDeleteRows="False"
                               GridLinesVisibility="Horizontal"
                               HeadersVisibility="Column"
-                              Margin="10">
+                              Margin="10" VirtualizingStackPanel.IsVirtualizing="True">
                         
                         <DataGrid.GroupStyle>
                             <GroupStyle>

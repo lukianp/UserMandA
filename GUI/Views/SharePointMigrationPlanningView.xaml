@@ -192,7 +192,7 @@
                         <DataGrid Grid.Row="1" ItemsSource="{Binding SitesView}" 
                                 SelectedItem="{Binding SelectedSite}"
                                 AutoGenerateColumns="False" CanUserAddRows="False" 
-                                GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E9ECEF">
+                                GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E9ECEF" VirtualizingStackPanel.IsVirtualizing="True">
                             
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
@@ -246,7 +246,7 @@
                         <DataGrid Grid.Row="1" ItemsSource="{Binding LibrariesView}" 
                                 SelectedItem="{Binding SelectedLibrary}"
                                 AutoGenerateColumns="False" CanUserAddRows="False" 
-                                GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E9ECEF">
+                                GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E9ECEF" VirtualizingStackPanel.IsVirtualizing="True">
                             
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
@@ -365,7 +365,7 @@
                     <DataGrid Grid.Row="1" ItemsSource="{Binding BatchesView}" 
                             SelectedItem="{Binding SelectedBatch}"
                             AutoGenerateColumns="False" CanUserAddRows="False" 
-                            GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E9ECEF">
+                            GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E9ECEF" VirtualizingStackPanel.IsVirtualizing="True">
                         
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Batch Name" Binding="{Binding Name}" 
@@ -391,7 +391,7 @@
             <TabItem Header="Content Issues" FontSize="14" FontWeight="Medium">
                 <DataGrid ItemsSource="{Binding ContentIssues}" 
                         AutoGenerateColumns="False" CanUserAddRows="False" 
-                        GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E9ECEF">
+                        GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E9ECEF" VirtualizingStackPanel.IsVirtualizing="True">
                     
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" 

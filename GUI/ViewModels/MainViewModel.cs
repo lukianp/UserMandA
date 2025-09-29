@@ -14,6 +14,7 @@ using System.Windows.Media;
 using CommunityToolkit.Mvvm.Input;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
+using MandADiscoverySuite.Constants;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -50,8 +51,10 @@ namespace MandADiscoverySuite.ViewModels
         private TargetProfile? _selectedTargetProfile;
         private string _currentProfileName = "ljpops";
         private bool _isDarkTheme = false;
-        private string _currentView = "Dashboard";
-        
+        private string _currentView = ViewNames.Dashboard;
+        private bool _isBusy = false;
+        private string _busyMessage = string.Empty;
+
         // Environment and connection status
         private string _sourceEnvironmentStatus = "Unknown";
         private string _targetEnvironmentStatus = "Unknown";
@@ -246,6 +249,26 @@ namespace MandADiscoverySuite.ViewModels
             set
             {
                 _currentView = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set
+            {
+                _isBusy = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string BusyMessage
+        {
+            get => _busyMessage;
+            set
+            {
+                _busyMessage = value;
                 OnPropertyChanged();
             }
         }
@@ -619,7 +642,7 @@ namespace MandADiscoverySuite.ViewModels
                 await OpenTabAsync(param);
             });
             Console.WriteLine("[DEBUG] OpenTabCommand created successfully");
-            NewTabCommand = new RelayCommand<object>(async _ => await OpenTabAsync("Dashboard", "Dashboard"));
+            NewTabCommand = new RelayCommand<object>(async _ => await OpenTabAsync(ViewNames.Dashboard, ViewNames.Dashboard));
             CloseTabCommand = new RelayCommand<object>(async (param) => await CloseTabAsync(param));
             ShowAllTabsCommand = new RelayCommand<object>(_ => ShowAllTabs());
             
@@ -840,15 +863,10 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
         
-        /// <summary>
-        /// Initialize with TabControl reference
-        /// </summary>
-        public void InitializeTabControl(TabControl tabControl)
-        {
-            _tabsService.Initialize(tabControl);
-            _logger?.LogInformation("TabControl initialized");
-        }
-        
+        // MVVM Pattern: Removed InitializeTabControl method to eliminate code-behind dependency
+        // TabControl management now handled via XAML binding and ObservableCollection<TabViewModel>
+        // This maintains proper separation of concerns and follows MVVM best practices
+
         /// <summary>
         /// Load company profiles from the discovery data directory
         /// </summary>
@@ -1856,28 +1874,8 @@ namespace MandADiscoverySuite.ViewModels
         
         private string GetTabTitle(string tabKey)
         {
-            return tabKey.ToLowerInvariant() switch
-            {
-                "users" => "Users",
-                "groups" => "Groups", 
-                "applications" => "Applications",
-                "fileservers" => "File Servers",
-                "databases" => "Databases",
-                "grouppolicies" => "Group Policies",
-                "computers" => "Computers",
-                "infrastructure" => "Infrastructure",
-                "domaindiscovery" => "Domain Discovery",
-                "security" => "Security",
-                "waves" => "Migration Waves",
-                "migrate" => "Migration",
-                "management" => "Management",
-                "reports" => "Reports",
-                "analytics" => "Analytics",
-                "settings" => "Settings",
-                "dashboard" => "Dashboard",
-                "discovery" => "Discovery",
-                _ => tabKey
-            };
+            // Use ViewNames constants for consistent naming
+            return ViewNames.NormalizeViewName(tabKey);
         }
         
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
@@ -2487,24 +2485,39 @@ namespace MandADiscoverySuite.ViewModels
         /// </summary>
         private async Task StartDiscoveryAsync()
         {
+            // Prevent concurrent discovery operations
+            if (IsBusy)
+            {
+                MessageBox.Show("Discovery is already in progress. Please wait for the current operation to complete.",
+                    "Discovery In Progress", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            System.Windows.Window? progressWindow = null;
+            System.Windows.Controls.TextBlock? progressText = null;
+
             try
             {
+                IsBusy = true;
+                BusyMessage = "Initializing discovery...";
                 _logger?.LogInformation("[MainViewModel] StartDiscovery started");
-                
+
                 // Get enabled modules from registry
                 var enabledModules = await _moduleRegistryService.GetEnabledModulesAsync();
                 if (!enabledModules.Any())
                 {
-                    MessageBox.Show("No discovery modules are enabled. Please enable modules in Settings first.", 
+                    MessageBox.Show("No discovery modules are enabled. Please enable modules in Settings first.",
                         "No Modules", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-                
+
                 var moduleNames = enabledModules.Select(m => m.DisplayName).ToArray();
                 _logger?.LogInformation($"[MainViewModel] Starting discovery for profile '{CurrentProfileName}' with modules: {string.Join(", ", moduleNames)}");
-                
+
+                BusyMessage = $"Running {moduleNames.Length} discovery modules...";
+
                 // Show progress dialog
-                var progressWindow = new System.Windows.Window
+                progressWindow = new System.Windows.Window
                 {
                     Title = "Discovery In Progress",
                     Width = 400,
@@ -2513,8 +2526,8 @@ namespace MandADiscoverySuite.ViewModels
                     Owner = Application.Current.MainWindow,
                     ResizeMode = ResizeMode.NoResize
                 };
-                
-                var progressText = new System.Windows.Controls.TextBlock
+
+                progressText = new System.Windows.Controls.TextBlock
                 {
                     Text = "Starting discovery modules...",
                     HorizontalAlignment = HorizontalAlignment.Center,
@@ -2522,44 +2535,83 @@ namespace MandADiscoverySuite.ViewModels
                     FontSize = 14
                 };
                 progressWindow.Content = progressText;
-                
+
                 progressWindow.Show();
-                
+
                 try
                 {
-                    // Start discovery
-                    var success = await _discoveryService.StartDiscoveryAsync(CurrentProfileName, moduleNames);
-                    
+                    // Start discovery with timeout protection
+                    var discoveryTask = _discoveryService.StartDiscoveryAsync(CurrentProfileName, moduleNames);
+                    var timeoutTask = Task.Delay(TimeSpan.FromMinutes(30)); // 30 minute timeout
+
+                    var completedTask = await Task.WhenAny(discoveryTask, timeoutTask);
+
+                    if (completedTask == timeoutTask)
+                    {
+                        _logger?.LogWarning("[MainViewModel] Discovery operation timed out after 30 minutes");
+                        MessageBox.Show("Discovery operation timed out. Some modules may still be running in the background.",
+                            "Discovery Timeout", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    var success = await discoveryTask;
+
                     if (success)
                     {
+                        BusyMessage = "Discovery completed! Refreshing data...";
                         progressText.Text = "Discovery completed! Refreshing data...";
-                        
+
                         // Wait a moment for CSV files to be written
                         await Task.Delay(2000);
-                        
+
                         // Refresh data
                         await RefreshDashboardAsync();
-                        
+
                         _logger?.LogInformation("[MainViewModel] StartDiscovery completed successfully");
-                        MessageBox.Show($"Discovery completed successfully for {moduleNames.Length} modules.", 
+                        MessageBox.Show($"Discovery completed successfully for {moduleNames.Length} modules.",
                             "Discovery Complete", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                     else
                     {
                         _logger?.LogWarning("[MainViewModel] StartDiscovery failed");
-                        MessageBox.Show("Discovery failed. Please check the logs for details.", 
+                        MessageBox.Show("Discovery failed. Please check the logs for details.",
                             "Discovery Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
                 finally
                 {
-                    progressWindow.Close();
+                    progressWindow?.Close();
                 }
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger?.LogWarning(ex, "[MainViewModel] Discovery operation was cancelled");
+                MessageBox.Show("Discovery operation was cancelled.", "Discovery Cancelled",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] Access denied during discovery");
+                MessageBox.Show($"Access denied: {ex.Message}\n\nPlease ensure you have the necessary permissions.",
+                    "Access Denied", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (IOException ex)
+            {
+                _logger?.LogError(ex, "[MainViewModel] I/O error during discovery");
+                MessageBox.Show($"I/O error occurred: {ex.Message}\n\nPlease check disk space and file permissions.",
+                    "I/O Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "[MainViewModel] Error starting discovery");
-                MessageBox.Show($"Error starting discovery: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger?.LogError(ex, "[MainViewModel] Unexpected error starting discovery");
+                MessageBox.Show($"Unexpected error starting discovery: {ex.Message}\n\nPlease check the logs for details.",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+                BusyMessage = string.Empty;
+                progressWindow?.Close();
             }
         }
         

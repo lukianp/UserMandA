@@ -162,7 +162,7 @@
                       Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}"
                       Background="{DynamicResource CardBrush}"
                       BorderBrush="{DynamicResource BorderBrush}"
-                      BorderThickness="1">
+                      BorderThickness="1" VirtualizingStackPanel.IsVirtualizing="True">
 
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Name" Binding="{Binding name}" Width="200"/>

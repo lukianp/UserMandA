@@ -186,7 +186,7 @@
                       CanUserAddRows="False" CanUserDeleteRows="False"
                       SelectionMode="Extended" GridLinesVisibility="Horizontal"
                       AutoGenerateColumns="False"
-                      Background="Transparent">
+                      Background="Transparent" VirtualizingStackPanel.IsVirtualizing="True">
 
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Server Name" Binding="{Binding Name}" Width="*" />

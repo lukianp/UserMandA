@@ -149,7 +149,7 @@
                               BorderThickness="0"
                               Background="Transparent"
                               AlternationCount="2"
-                              Margin="24,0,24,24">
+                              Margin="24,0,24,24" VirtualizingStackPanel.IsVirtualizing="True">
 
                         <DataGrid.Columns>
                             <!-- Cluster Name Column -->

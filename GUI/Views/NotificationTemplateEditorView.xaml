@@ -216,7 +216,7 @@
                              SelectedItem="{Binding SelectedTemplate}"
                              Background="Transparent"
                              BorderThickness="0"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingStackPanel.IsVirtualizing="True">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="#475569" 

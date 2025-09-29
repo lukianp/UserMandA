@@ -138,7 +138,7 @@
                               Margin="8"
                               SelectedItem="{Binding SelectedItem}"
                               Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}"
-                              Background="Transparent" BorderThickness="0">
+                              Background="Transparent" BorderThickness="0" VirtualizingStackPanel.IsVirtualizing="True">
 
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Device Name" Binding="{Binding device_name}" Width="180"/>

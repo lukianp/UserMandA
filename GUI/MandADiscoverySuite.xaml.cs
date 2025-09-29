@@ -10,6 +10,7 @@ using MandADiscoverySuite.ViewModels;
 using MandADiscoverySuite.Themes;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Dialogs;
+using MandADiscoverySuite.Helpers;
 
 namespace MandADiscoverySuite
 {
@@ -20,6 +21,7 @@ namespace MandADiscoverySuite
     {
         public MainViewModel ViewModel { get; private set; }
         private KeyboardShortcutManager? _shortcutManager;
+        private WindowKeyboardShortcutRegistry? _shortcutRegistry;
 
         public MainWindow()
         {
@@ -32,7 +34,7 @@ namespace MandADiscoverySuite
                 // Initialize keyboard shortcut manager (optional - may be disabled in unified pipeline)
                 try
                 {
-                    var shortcutService = SimpleServiceLocator.Instance.GetService<IKeyboardShortcutService>();
+                    var shortcutService = App.ServiceProvider.GetService<IKeyboardShortcutService>();
                     if (shortcutService != null)
                     {
                         _shortcutManager = new KeyboardShortcutManager(shortcutService);
@@ -80,11 +82,6 @@ namespace MandADiscoverySuite
                 logAction?.Invoke($"Window IsVisible: {this.IsVisible}");
                 logAction?.Invoke($"Window IsLoaded: {this.IsLoaded}");
                 logAction?.Invoke($"Window WindowState: {this.WindowState}");
-
-                // Keep application running for testing
-                logAction?.Invoke("Starting test delay to keep application alive...");
-                System.Threading.Thread.Sleep(5000); // 5 second delay
-                logAction?.Invoke("Test delay completed");
 
                 logAction?.Invoke("=== MainWindow Constructor COMPLETED SUCCESSFULLY ===");
             }
@@ -145,18 +142,14 @@ namespace MandADiscoverySuite
 
             try
             {
-                logAction?.Invoke("Initializing TabControl reference...");
-                // Initialize TabControl reference so TabsService can properly manage tab selection
-                if (localMainTabControl != null)
-                {
-                    ViewModel.InitializeTabControl(localMainTabControl);
-                    logAction?.Invoke("TabControl initialized for tab selection management");
-                }
-                else
+                logAction?.Invoke("TabControl initialization now handled via MVVM binding");
+                // MVVM Pattern: TabControl is bound via XAML to ViewModel properties
+                // No direct UI control references passed to ViewModel (MVVM best practice)
+                if (localMainTabControl == null)
                 {
                     logAction?.Invoke("Warning: MainTabControlInstance not found - tab selection may not work properly");
                 }
-                System.Diagnostics.Debug.WriteLine("TabControl initialized for tab selection management");
+                System.Diagnostics.Debug.WriteLine("TabControl managed via MVVM data binding");
                 
                 // Set up lazy loading for each view
                 var dashboardView = FindName("DashboardView") as FrameworkElement;
@@ -294,6 +287,11 @@ namespace MandADiscoverySuite
 
                 // Initialize keyboard shortcuts for this window
                 InitializeWindowShortcuts();
+
+                // Initialize dictionary-based shortcut registry for improved maintainability
+                _shortcutRegistry = new WindowKeyboardShortcutRegistry(ViewModel);
+                logAction?.Invoke("Keyboard shortcut registry initialized");
+
                 logAction?.Invoke("=== MainWindow_Loaded COMPLETED SUCCESSFULLY ===");
             }
             catch (Exception ex)
@@ -312,14 +310,14 @@ namespace MandADiscoverySuite
         {
             try
             {
-                var shortcutService = SimpleServiceLocator.Instance.GetService<IKeyboardShortcutService>();
+                var shortcutService = App.ServiceProvider.GetService<IKeyboardShortcutService>();
                 if (shortcutService != null)
                 {
                     _shortcutManager = new KeyboardShortcutManager(shortcutService);
-                    
+
                     // Register window shortcuts for main window context
                     _shortcutManager.RegisterWindowShortcuts(this, "MainWindow");
-                    
+
                     System.Diagnostics.Debug.WriteLine("MainWindow keyboard shortcuts initialized");
                 }
             }
@@ -331,312 +329,29 @@ namespace MandADiscoverySuite
 
         private void MainWindow_KeyDown(object sender, KeyEventArgs e)
         {
-            // Handle global keyboard shortcuts
-            var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
-            var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
-            var alt = Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
-
-            switch (e.Key)
+            // Dictionary-based keyboard shortcut handling - cleaner and more maintainable
+            if (_shortcutRegistry != null && _shortcutRegistry.TryExecute(e))
             {
-                // Discovery Operations
-                case Key.F5:
-                    if (ViewModel.StartDiscoveryCommand.CanExecute(null))
-                        ViewModel.StartDiscoveryCommand.Execute(null);
-                    e.Handled = true;
-                    break;
-                    
-                case Key.Escape:
-                    if (ViewModel.StopDiscoveryCommand.CanExecute(null))
-                        ViewModel.StopDiscoveryCommand.Execute(null);
-                    e.Handled = true;
-                    break;
+                return; // Shortcut was handled
+            }
 
-                // Navigation Shortcuts
-                case Key.D1:
-                    if (ctrl)
-                    {
-                        ViewModel.NavigateCommand.Execute("Dashboard");
-                        e.Handled = true;
-                    }
-                    break;
-                    
-                case Key.D2:
-                    if (ctrl)
-                    {
-                        ViewModel.NavigateCommand.Execute("Discovery");
-                        e.Handled = true;
-                    }
-                    break;
-                    
-                case Key.D3:
-                    if (ctrl)
-                    {
-                        ViewModel.NavigateCommand.Execute("Users");
-                        e.Handled = true;
-                    }
-                    break;
-                    
-                case Key.D4:
-                    if (ctrl)
-                    {
-                        ViewModel.NavigateCommand.Execute("Infrastructure");
-                        e.Handled = true;
-                    }
-                    break;
-                    
-                case Key.D5:
-                    if (ctrl)
-                    {
-                        ViewModel.NavigateCommand.Execute("Groups");
-                        e.Handled = true;
-                    }
-                    break;
-                    
-                case Key.D6:
-                    if (ctrl)
-                    {
-                        ViewModel.NavigateCommand.Execute("Analytics");
-                        e.Handled = true;
-                    }
-                    break;
-
-                // Data Operations
-                case Key.R:
-                    if (ctrl && !shift)
-                    {
-                        // Refresh current view
-                        ViewModel.RefreshCurrentViewCommand?.Execute(null);
-                        e.Handled = true;
-                    }
-                    else if (ctrl && shift)
-                    {
-                        // Show refresh settings
-                        ViewModel.ShowRefreshSettingsCommand?.Execute(null);
-                        e.Handled = true;
-                    }
-                    break;
-                
-                case Key.E:
-                    if (ctrl)
-                    {
-                        // Export current view data
-                        switch (ViewModel.CurrentView)
-                        {
-                            case "Users":
-                                ViewModel.ExportUsersCommand?.Execute(null);
-                                break;
-                            case "Infrastructure":
-                                ViewModel.ExportInfrastructureCommand?.Execute(null);
-                                break;
-                            case "Groups":
-                                ViewModel.ExportGroupsCommand?.Execute(null);
-                                break;
-                            default:
-                                ViewModel.ExportResultsCommand?.Execute(null);
-                                break;
-                        }
-                        e.Handled = true;
-                    }
-                    break;
-
-                case Key.A:
-                    if (ctrl)
-                    {
-                        // Select All in current view
-                        switch (ViewModel.CurrentView)
-                        {
-                            case "Users":
-                                ViewModel.SelectAllUsersCommand?.Execute(null);
-                                break;
-                            case "Infrastructure":
-                                ViewModel.SelectAllInfrastructureCommand?.Execute(null);
-                                break;
-                            case "Groups":
-                                ViewModel.SelectAllGroupsCommand?.Execute(null);
-                                break;
-                        }
-                        e.Handled = true;
-                    }
-                    break;
-
-                case Key.C:
-                    if (ctrl)
-                    {
-                        // Copy selected items
-                        switch (ViewModel.CurrentView)
-                        {
-                            case "Users":
-                                ViewModel.CopySelectedUsersCommand?.Execute(null);
-                                break;
-                            case "Infrastructure":
-                                ViewModel.CopySelectedInfrastructureCommand?.Execute(null);
-                                break;
-                            case "Groups":
-                                ViewModel.CopySelectedGroupsCommand?.Execute(null);
-                                break;
-                        }
-                        e.Handled = true;
-                    }
-                    break;
-
-                // Search Operations
-                case Key.F:
-                    if (ctrl)
-                    {
-                        // Focus search box in current view
-                        FocusSearchBox();
-                        e.Handled = true;
-                    }
-                    else if (ctrl && shift)
-                    {
-                        // Advanced search
-                        switch (ViewModel.CurrentView)
-                        {
-                            case "Users":
-                                ViewModel.ShowUsersAdvancedSearchCommand?.Execute(null);
-                                break;
-                            case "Infrastructure":
-                                ViewModel.ShowInfrastructureAdvancedSearchCommand?.Execute(null);
-                                break;
-                            case "Groups":
-                                ViewModel.ShowGroupsAdvancedSearchCommand?.Execute(null);
-                                break;
-                        }
-                        e.Handled = true;
-                    }
-                    break;
-
-                // Theme Toggle
-                case Key.T:
-                    if (ctrl)
-                    {
-                        ViewModel.ToggleThemeCommand.Execute(null);
-                        ApplyTheme();
-                        e.Handled = true;
-                    }
-                    break;
-
-                // Column Visibility
-                case Key.H:
-                    if (ctrl)
-                    {
-                        ViewModel.ShowColumnVisibilityCommand?.Execute(ViewModel.CurrentView);
-                        e.Handled = true;
-                    }
-                    break;
-
-                // Pagination
-                case Key.PageUp:
-                    if (ctrl)
-                    {
-                        // Previous page
-                        switch (ViewModel.CurrentView)
-                        {
-                            case "Users":
-                                ViewModel.PreviousPageCommand?.Execute(null);
-                                break;
-                            case "Infrastructure":
-                                ViewModel.PreviousInfrastructurePageCommand?.Execute(null);
-                                break;
-                            case "Groups":
-                                ViewModel.PreviousGroupPageCommand?.Execute(null);
-                                break;
-                        }
-                        e.Handled = true;
-                    }
-                    break;
-
-                case Key.PageDown:
-                    if (ctrl)
-                    {
-                        // Next page
-                        switch (ViewModel.CurrentView)
-                        {
-                            case "Users":
-                                ViewModel.NextPageCommand?.Execute(null);
-                                break;
-                            case "Infrastructure":
-                                ViewModel.NextInfrastructurePageCommand?.Execute(null);
-                                break;
-                            case "Groups":
-                                ViewModel.NextGroupPageCommand?.Execute(null);
-                                break;
-                        }
-                        e.Handled = true;
-                    }
-                    break;
-
-                case Key.Home:
-                    if (ctrl)
-                    {
-                        // First page
-                        switch (ViewModel.CurrentView)
-                        {
-                            case "Users":
-                                ViewModel.FirstPageCommand?.Execute(null);
-                                break;
-                            case "Infrastructure":
-                                ViewModel.FirstInfrastructurePageCommand?.Execute(null);
-                                break;
-                            case "Groups":
-                                ViewModel.FirstGroupPageCommand?.Execute(null);
-                                break;
-                        }
-                        e.Handled = true;
-                    }
-                    break;
-
-                case Key.End:
-                    if (ctrl)
-                    {
-                        // Last page
-                        switch (ViewModel.CurrentView)
-                        {
-                            case "Users":
-                                ViewModel.LastPageCommand?.Execute(null);
-                                break;
-                            case "Infrastructure":
-                                ViewModel.LastInfrastructurePageCommand?.Execute(null);
-                                break;
-                            case "Groups":
-                                ViewModel.LastGroupPageCommand?.Execute(null);
-                                break;
-                        }
-                        e.Handled = true;
-                    }
-                    break;
-
-                // Help
-                case Key.F1:
-                    ShowKeyboardShortcutsHelp();
-                    e.Handled = true;
-                    break;
-
-                // Quick Actions
-                case Key.N:
-                    if (ctrl)
-                    {
-                        ViewModel.CreateProfileCommand?.Execute(null);
-                        e.Handled = true;
-                    }
-                    break;
-
-                case Key.Delete:
-                    if (shift)
-                    {
-                        // Delete selected items
-                        switch (ViewModel.CurrentView)
-                        {
-                            case "Users":
-                                ViewModel.DeleteSelectedUsersCommand?.Execute(null);
-                                break;
-                            case "Groups":
-                                ViewModel.DeleteSelectedGroupsCommand?.Execute(null);
-                                break;
-                        }
-                        e.Handled = true;
-                    }
-                    break;
+            // Handle special cases that require UI-level access
+            if (e.Key == Key.F && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                FocusSearchBox();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.F1)
+            {
+                ShowKeyboardShortcutsHelp();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.T && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                // Apply theme after toggle command
+                ViewModel.ToggleThemeCommand?.Execute(null);
+                ApplyTheme();
+                e.Handled = true;
             }
         }
 

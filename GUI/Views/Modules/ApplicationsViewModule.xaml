@@ -169,7 +169,7 @@
                                   AutoGenerateColumns="False"
                                   behaviors:VirtualizationBehavior.EnableVirtualization="True"
                                   behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
-                                  behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
+                                  behaviors:VirtualizationBehavior.EnableRowVirtualization="True" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="200"/>
                                 <DataGridTextColumn Header="App ID" Binding="{Binding AppId}" Width="160"/>

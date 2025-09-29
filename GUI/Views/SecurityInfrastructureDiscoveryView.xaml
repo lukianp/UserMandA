@@ -92,7 +92,7 @@
 
             <!-- Main DataGrid -->
             <Border Grid.Column="0" Background="#1A202C" BorderBrush="#E2E8F0" BorderThickness="1">
-                <DataGrid ItemsSource="{Binding SelectedResults}" AutoGenerateColumns="False" Margin="8">
+                <DataGrid ItemsSource="{Binding SelectedResults}" AutoGenerateColumns="False" Margin="8" VirtualizingStackPanel.IsVirtualizing="True">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Device Name" Binding="{Binding DeviceName}" Width="150"/>
                         <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="120"/>

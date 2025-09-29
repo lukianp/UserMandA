@@ -335,7 +335,7 @@
                        BorderBrush="{DynamicResource BorderBrush}" 
                        BorderThickness="1" 
                        CornerRadius="0,8,8,8">
-                    <DataGrid ItemsSource="{Binding Devices}" Style="{StaticResource DetailDataGridStyle}" Margin="1">
+                    <DataGrid ItemsSource="{Binding Devices}" Style="{StaticResource DetailDataGridStyle}" Margin="1" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Device Name" Binding="{Binding Name}" Width="200"/>
                             <DataGridTextColumn Header="DNS Name" Binding="{Binding DNS}" Width="200"/>
@@ -353,7 +353,7 @@
                        BorderBrush="{DynamicResource BorderBrush}" 
                        BorderThickness="1" 
                        CornerRadius="0,8,8,8">
-                    <DataGrid ItemsSource="{Binding Apps}" Style="{StaticResource DetailDataGridStyle}" Margin="1">
+                    <DataGrid ItemsSource="{Binding Apps}" Style="{StaticResource DetailDataGridStyle}" Margin="1" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Application Name" Binding="{Binding Name}" Width="250"/>
                             <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="150"/>
@@ -370,7 +370,7 @@
                        BorderBrush="{DynamicResource BorderBrush}" 
                        BorderThickness="1" 
                        CornerRadius="0,8,8,8">
-                    <DataGrid ItemsSource="{Binding Groups}" Style="{StaticResource DetailDataGridStyle}" Margin="1">
+                    <DataGrid ItemsSource="{Binding Groups}" Style="{StaticResource DetailDataGridStyle}" Margin="1" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Group Name" Binding="{Binding Name}" Width="250"/>
                             <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150"/>
@@ -394,7 +394,7 @@
                         </Grid.RowDefinitions>
                         
                         <GroupBox Grid.Row="0" Header="GPO Links" Margin="8">
-                            <DataGrid ItemsSource="{Binding GpoLinks}" Style="{StaticResource DetailDataGridStyle}">
+                            <DataGrid ItemsSource="{Binding GpoLinks}" Style="{StaticResource DetailDataGridStyle}" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="GPO Name" Binding="{Binding Name}" Width="200"/>
                                     <DataGridTextColumn Header="GUID" Binding="{Binding Guid}" Width="250"/>
@@ -404,7 +404,7 @@
                         </GroupBox>
                         
                         <GroupBox Grid.Row="1" Header="GPO Security Filters" Margin="8">
-                            <DataGrid ItemsSource="{Binding GpoFilters}" Style="{StaticResource DetailDataGridStyle}">
+                            <DataGrid ItemsSource="{Binding GpoFilters}" Style="{StaticResource DetailDataGridStyle}" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="GPO Name" Binding="{Binding Name}" Width="200"/>
                                     <DataGridTextColumn Header="GUID" Binding="{Binding Guid}" Width="250"/>
@@ -422,7 +422,7 @@
                        BorderBrush="{DynamicResource BorderBrush}" 
                        BorderThickness="1" 
                        CornerRadius="0,8,8,8">
-                    <DataGrid ItemsSource="{Binding FileAccess}" Style="{StaticResource DetailDataGridStyle}" Margin="1">
+                    <DataGrid ItemsSource="{Binding FileAccess}" Style="{StaticResource DetailDataGridStyle}" Margin="1" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="300"/>
                             <DataGridTextColumn Header="Rights" Binding="{Binding Rights}" Width="150"/>
@@ -475,7 +475,7 @@
                        BorderBrush="{DynamicResource BorderBrush}" 
                        BorderThickness="1" 
                        CornerRadius="0,8,8,8">
-                    <DataGrid ItemsSource="{Binding AzureRoles}" Style="{StaticResource DetailDataGridStyle}" Margin="1">
+                    <DataGrid ItemsSource="{Binding AzureRoles}" Style="{StaticResource DetailDataGridStyle}" Margin="1" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Role Name" Binding="{Binding RoleName}" Width="200"/>
                             <DataGridTextColumn Header="Scope" Binding="{Binding Scope}" Width="250"/>
@@ -498,7 +498,7 @@
                         </Grid.RowDefinitions>
                         
                         <GroupBox Grid.Row="0" Header="SQL Databases" Margin="8">
-                            <DataGrid ItemsSource="{Binding SqlDatabases}" Style="{StaticResource DetailDataGridStyle}">
+                            <DataGrid ItemsSource="{Binding SqlDatabases}" Style="{StaticResource DetailDataGridStyle}" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Server" Binding="{Binding Server}" Width="150"/>
                                     <DataGridTextColumn Header="Instance" Binding="{Binding Instance}" Width="150"/>
@@ -509,7 +509,7 @@
                         </GroupBox>
                         
                         <GroupBox Grid.Row="1" Header="Risk Assessment" Margin="8">
-                            <DataGrid ItemsSource="{Binding Risks}" Style="{StaticResource DetailDataGridStyle}">
+                            <DataGrid ItemsSource="{Binding Risks}" Style="{StaticResource DetailDataGridStyle}" VirtualizingStackPanel.IsVirtualizing="True">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Risk Type" Binding="{Binding Type}" Width="150"/>
                                     <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="100"/>

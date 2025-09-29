@@ -242,7 +242,7 @@
                                   CanUserAddRows="False"
                                   CanUserDeleteRows="False"
                                   IsReadOnly="True"
-                                  MaxHeight="300">
+                                  MaxHeight="300" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Task" Binding="{Binding Name}" Width="*">
                                     <DataGridTextColumn.ElementStyle>

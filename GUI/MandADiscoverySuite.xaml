@@ -27,18 +27,18 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- Temporarily comment out complex resource dictionaries to isolate XAML loading issues -->
-                <!-- <ResourceDictionary Source="Resources/Converters/Converters.xaml"/> -->
-                <!-- <ResourceDictionary Source="Resources/Templates/DataTemplates.xaml"/> -->
-                <!-- <ResourceDictionary Source="Resources/Styles/MainStyles.xaml"/> -->
+                <!-- Core resource dictionaries -->
+                <ResourceDictionary Source="Resources/Converters/Converters.xaml"/>
+                <ResourceDictionary Source="Resources/Templates/DataTemplates.xaml"/>
+                <ResourceDictionary Source="Resources/Styles/MainStyles.xaml"/>
 
-                <!-- Existing theme resources -->
-                <!-- <ResourceDictionary Source="Themes/DashboardWidgets.xaml"/> -->
-                <!-- <ResourceDictionary Source="Styles/AccessibilityStyles.xaml"/> -->
-                <!-- <ResourceDictionary Source="Themes/ThemeStyles.xaml"/> -->
-                <!-- <ResourceDictionary Source="Themes/SpacingSystem.xaml"/> -->
-                <!-- <ResourceDictionary Source="Themes/CustomTooltips.xaml"/> -->
-                <!-- <ResourceDictionary Source="Controls/ChartControls.xaml"/> -->
+                <!-- Theme resources -->
+                <ResourceDictionary Source="Themes/DashboardWidgets.xaml"/>
+                <ResourceDictionary Source="Styles/AccessibilityStyles.xaml"/>
+                <ResourceDictionary Source="Themes/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="Themes/SpacingSystem.xaml"/>
+                <ResourceDictionary Source="Themes/CustomTooltips.xaml"/>
+                <ResourceDictionary Source="Controls/ChartControls.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
             <!-- Basic converters for minimal functionality -->

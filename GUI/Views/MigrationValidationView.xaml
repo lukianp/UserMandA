@@ -149,7 +149,7 @@
                               IsReadOnly="True"
                               GridLinesVisibility="Horizontal"
                               AlternatingRowBackground="{DynamicResource AlternatingRowBrush}"
-                              SelectionMode="Extended">
+                              SelectionMode="Extended" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTemplateColumn Header="Status" Width="60">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -220,7 +220,7 @@
                               IsReadOnly="True"
                               GridLinesVisibility="Horizontal"
                               Margin="5"
-                              Visibility="{Binding SelectedValidationResult, Converter={StaticResource NullToVisibilityConverter}}">
+                              Visibility="{Binding SelectedValidationResult, Converter={StaticResource NullToVisibilityConverter}}" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTemplateColumn Header="Severity" Width="80">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -263,7 +263,7 @@
                           CanUserAddRows="False" 
                           IsReadOnly="True"
                           GridLinesVisibility="Horizontal"
-                          AlternatingRowBackground="{DynamicResource AlternatingRowBrush}">
+                          AlternatingRowBackground="{DynamicResource AlternatingRowBrush}" VirtualizingStackPanel.IsVirtualizing="True">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Object Type" Binding="{Binding ObjectType}" Width="100"/>
                         <DataGridTextColumn Header="Object Name" Binding="{Binding ObjectName}" Width="200"/>

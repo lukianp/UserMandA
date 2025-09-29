@@ -158,7 +158,7 @@
                               CanUserDeleteRows="False"
                               IsReadOnly="True"
                               GridLinesVisibility="Horizontal"
-                              AlternatingRowBackground="#F8FAFC">
+                              AlternatingRowBackground="#F8FAFC" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="*"/>
                             <DataGridTextColumn Header="UPN" Binding="{Binding UserPrincipalName}" Width="200"/>
@@ -190,7 +190,7 @@
                               CanUserDeleteRows="False"
                               IsReadOnly="True"
                               GridLinesVisibility="Horizontal"
-                              AlternatingRowBackground="#F8FAFC">
+                              AlternatingRowBackground="#F8FAFC" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="*"/>
                             <DataGridTextColumn Header="UPN" Binding="{Binding UserPrincipalName}" Width="200"/>
@@ -222,7 +222,7 @@
                               CanUserDeleteRows="False"
                               IsReadOnly="True"
                               GridLinesVisibility="Horizontal"
-                              AlternatingRowBackground="#F8FAFC">
+                              AlternatingRowBackground="#F8FAFC" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Application Name" Binding="{Binding Name}" Width="*"/>
                             <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="100"/>
@@ -254,7 +254,7 @@
                               CanUserDeleteRows="False"
                               IsReadOnly="True"
                               GridLinesVisibility="Horizontal"
-                              AlternatingRowBackground="#F8FAFC">
+                              AlternatingRowBackground="#F8FAFC" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Asset Name" Binding="{Binding Name}" Width="*"/>
                             <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150"/>
@@ -287,7 +287,7 @@
                               CanUserDeleteRows="False"
                               IsReadOnly="True"
                               GridLinesVisibility="Horizontal"
-                              AlternatingRowBackground="#F8FAFC">
+                              AlternatingRowBackground="#F8FAFC" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Group Name" Binding="{Binding DisplayName}" Width="*"/>
                             <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150"/>
@@ -319,7 +319,7 @@
                               CanUserDeleteRows="False"
                               IsReadOnly="True"
                               GridLinesVisibility="Horizontal"
-                              AlternatingRowBackground="#F8FAFC">
+                              AlternatingRowBackground="#F8FAFC" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Policy Name" Binding="{Binding Name}" Width="*"/>
                             <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150"/>

@@ -141,7 +141,7 @@
                                               Height="300"
                                               behaviors:VirtualizationBehavior.EnableVirtualization="True"
                                               behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
-                                              behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
+                                              behaviors:VirtualizationBehavior.EnableRowVirtualization="True" VirtualizingStackPanel.IsVirtualizing="True">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="GPO Name" Binding="{Binding Name}" Width="200"/>
                                             <DataGridTextColumn Header="Domain" Binding="{Binding Domain}" Width="150"/>
@@ -160,7 +160,7 @@
                                               Height="300"
                                               behaviors:VirtualizationBehavior.EnableVirtualization="True"
                                               behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
-                                              behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
+                                              behaviors:VirtualizationBehavior.EnableRowVirtualization="True" VirtualizingStackPanel.IsVirtualizing="True">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="Issue Type" Binding="{Binding IssueType}" Width="150"/>
                                             <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="100"/>
@@ -178,7 +178,7 @@
                                               Height="300"
                                               behaviors:VirtualizationBehavior.EnableVirtualization="True"
                                               behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
-                                              behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
+                                              behaviors:VirtualizationBehavior.EnableRowVirtualization="True" VirtualizingStackPanel.IsVirtualizing="True">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="Control ID" Binding="{Binding ControlId}" Width="100"/>
                                             <DataGridTextColumn Header="Control Name" Binding="{Binding ControlName}" Width="200"/>
@@ -213,7 +213,7 @@
                                               Height="300"
                                               behaviors:VirtualizationBehavior.EnableVirtualization="True"
                                               behaviors:VirtualizationBehavior.EnableColumnVirtualization="True"
-                                              behaviors:VirtualizationBehavior.EnableRowVirtualization="True">
+                                              behaviors:VirtualizationBehavior.EnableRowVirtualization="True" VirtualizingStackPanel.IsVirtualizing="True">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="CVE ID" Binding="{Binding CveId}" Width="120"/>
                                             <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="250"/>

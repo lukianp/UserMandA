@@ -53,7 +53,7 @@
                 <ListBox x:Name="AvailableColumnsListBox"
                          ItemsSource="{Binding AvailableColumns}"
                          SelectedItem="{Binding SelectedAvailableColumn}"
-                         ItemContainerStyle="{StaticResource ListBoxItemStyle}">
+                         ItemContainerStyle="{StaticResource ListBoxItemStyle}" VirtualizingStackPanel.IsVirtualizing="True">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Header}" 
@@ -91,7 +91,7 @@
                 <ListBox x:Name="VisibleColumnsListBox"
                          ItemsSource="{Binding VisibleColumns}"
                          SelectedItem="{Binding SelectedVisibleColumn}"
-                         ItemContainerStyle="{StaticResource ListBoxItemStyle}">
+                         ItemContainerStyle="{StaticResource ListBoxItemStyle}" VirtualizingStackPanel.IsVirtualizing="True">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid>

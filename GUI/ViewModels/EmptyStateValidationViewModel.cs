@@ -28,13 +28,9 @@ namespace MandADiscoverySuite.ViewModels
             InitializeCommands();
         }
 
-<<<<<<< HEAD
-        private new void InitializeCommands()
-=======
         protected override void InitializeCommands()
->>>>>>> 9860a05e2d6e2eb42b75de9fbb1cb458185f2795
         {
-                        base.InitializeCommands();
+            base.InitializeCommands();
             RunValidationCommand = new AsyncRelayCommand(RunValidationAsync);
             ClearResultsCommand = new RelayCommand(ClearResults);
         }

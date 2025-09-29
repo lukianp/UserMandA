@@ -199,7 +199,7 @@
                                 </Grid>
 
                                 <DataGrid ItemsSource="{Binding SourceGroups}" AutoGenerateColumns="False" 
-                                          CanUserAddRows="False" SelectionMode="Extended" MaxHeight="400">
+                                          CanUserAddRows="False" SelectionMode="Extended" MaxHeight="400" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Columns>
                                         <DataGridCheckBoxColumn Header="Select" Binding="{Binding IsSelected}" Width="50"/>
                                         <DataGridTemplateColumn Header="Status" Width="60">
@@ -228,7 +228,7 @@
                                 </Grid>
 
                                 <DataGrid ItemsSource="{Binding TargetGroups}" AutoGenerateColumns="False" 
-                                          CanUserAddRows="False" SelectionMode="Extended" MaxHeight="400">
+                                          CanUserAddRows="False" SelectionMode="Extended" MaxHeight="400" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Columns>
                                         <DataGridTemplateColumn Header="Status" Width="60">
                                             <DataGridTemplateColumn.CellTemplate>
@@ -352,7 +352,7 @@
                                 </Grid>
 
                                 <DataGrid ItemsSource="{Binding GroupMappings}" AutoGenerateColumns="False" 
-                                          CanUserAddRows="False" SelectionMode="Extended" SelectedItem="{Binding SelectedMapping}">
+                                          CanUserAddRows="False" SelectionMode="Extended" SelectedItem="{Binding SelectedMapping}" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Columns>
                                         <DataGridTemplateColumn Header="Status" Width="50">
                                             <DataGridTemplateColumn.CellTemplate>
@@ -531,7 +531,7 @@
                                     </Grid>
 
                                     <DataGrid ItemsSource="{Binding ValidationResults}" AutoGenerateColumns="False" 
-                                              CanUserAddRows="False" MaxHeight="300">
+                                              CanUserAddRows="False" MaxHeight="300" VirtualizingStackPanel.IsVirtualizing="True">
                                         <DataGrid.Columns>
                                             <DataGridTemplateColumn Header="Severity" Width="80">
                                                 <DataGridTemplateColumn.CellTemplate>

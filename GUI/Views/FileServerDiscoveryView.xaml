@@ -88,7 +88,7 @@
                           CanUserAddRows="False"
                           SelectedItem="{Binding SelectedItem}"
                           GridLinesVisibility="Horizontal"
-                          HeadersVisibility="Column">
+                          HeadersVisibility="Column" VirtualizingStackPanel.IsVirtualizing="True">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Server Name" Binding="{Binding ServerName}" Width="150"/>
                         <DataGridTextColumn Header="IP" Binding="{Binding IP}" Width="120"/>
@@ -118,7 +118,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <TextBlock Text="Shares" FontSize="16" FontWeight="SemiBold" Margin="0,16,0,8"/>
-                        <DataGrid ItemsSource="{Binding SelectedServerShares}" AutoGenerateColumns="False" CanUserAddRows="False" Height="200">
+                        <DataGrid ItemsSource="{Binding SelectedServerShares}" AutoGenerateColumns="False" CanUserAddRows="False" Height="200" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Share Name" Binding="{Binding ShareName}" Width="120"/>
                                 <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="150"/>

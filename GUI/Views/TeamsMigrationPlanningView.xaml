@@ -669,7 +669,7 @@
                                           SelectedItem="{Binding SelectedTeam}"
                                           SelectionChanged="TeamsDataGrid_SelectionChanged"
                                           Style="{StaticResource TeamsDataGrid}" 
-                                          Margin="16,0,16,16">
+                                          Margin="16,0,16,16" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Team Name" 
                                                             Binding="{Binding DisplayName}" 
@@ -779,7 +779,7 @@
                                           SelectedItem="{Binding SelectedChannel}"
                                           SelectionChanged="ChannelsDataGrid_SelectionChanged"
                                           Style="{StaticResource TeamsDataGrid}" 
-                                          Margin="16,0,16,16">
+                                          Margin="16,0,16,16" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Channel Name" 
                                                             Binding="{Binding DisplayName}" 
@@ -833,7 +833,7 @@
                               ItemsSource="{Binding BatchesView}" 
                               SelectedItem="{Binding SelectedBatch}"
                               SelectionChanged="BatchesDataGrid_SelectionChanged"
-                              Style="{StaticResource TeamsDataGrid}">
+                              Style="{StaticResource TeamsDataGrid}" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Batch Name" 
                                                 Binding="{Binding Name}" 
@@ -878,7 +878,7 @@
                     
                     <DataGrid Grid.Row="1" 
                               ItemsSource="{Binding IssuesView}" 
-                              Style="{StaticResource TeamsDataGrid}">
+                              Style="{StaticResource TeamsDataGrid}" VirtualizingStackPanel.IsVirtualizing="True">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Severity" 
                                                 Binding="{Binding Severity}" 

@@ -11,7 +11,15 @@
       "Bash(dir \"C:\\discoverydata\\ljpops\\Logs\" /b /o:d)",
       "Bash(dir:*)",
       "Bash(./MandADiscoverySuite.exe --version)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(dotnet build:*)",
+      "Bash(robocopy:*)",
+      "Bash(xcopy:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(findstr:*)",
+      "WebSearch",
+      "Bash(tee:*)",
+      "Bash(dotnet restore:*)"
     ],
     "deny": [],
     "ask": [],

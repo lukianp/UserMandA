@@ -192,7 +192,7 @@
                           HeadersVisibility="Column"
                           GridLinesVisibility="None"
                           SelectionMode="Extended"
-                          SelectionUnit="FullRow">
+                          SelectionUnit="FullRow" VirtualizingStackPanel.IsVirtualizing="True">
                     
                     <DataGrid.ColumnHeaderStyle>
                         <Style TargetType="DataGridColumnHeader">

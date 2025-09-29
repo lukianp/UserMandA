@@ -251,7 +251,7 @@
                                     </StackPanel>
 
                                     <DataGrid ItemsSource="{Binding SelectedColumns}" SelectedItem="{Binding SelectedColumn}"
-                                             Height="200" Style="{StaticResource DataGridStyle}">
+                                             Height="200" Style="{StaticResource DataGridStyle}" VirtualizingStackPanel.IsVirtualizing="True">
                                         <DataGrid.Columns>
                                             <DataGridCheckBoxColumn Header="Visible" Binding="{Binding IsVisible}" Width="60"/>
                                             <DataGridTextColumn Header="Field Name" Binding="{Binding FieldName}" Width="150" IsReadOnly="True"/>
@@ -283,7 +283,7 @@
                                     </StackPanel>
 
                                     <DataGrid ItemsSource="{Binding ReportFilters}" Height="120" Style="{StaticResource DataGridStyle}"
-                                             Visibility="{Binding HasFilters, Converter={StaticResource BoolToVisibilityConverter}}">
+                                             Visibility="{Binding HasFilters, Converter={StaticResource BoolToVisibilityConverter}}" VirtualizingStackPanel.IsVirtualizing="True">
                                         <DataGrid.Columns>
                                             <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding IsEnabled}" Width="60"/>
                                             <DataGridTextColumn Header="Field" Binding="{Binding DisplayName}" Width="150"/>

@@ -234,7 +234,7 @@
                             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <DataGrid ItemsSource="{Binding FilteredCriticalIssues}" 
                                           Style="{StaticResource SecurityDataGrid}"
-                                          MaxHeight="300">
+                                          MaxHeight="300" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Severity" Binding="{Binding SeverityIcon}" Width="60"/>
                                         <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*"/>
@@ -324,7 +324,7 @@
                     <!-- GPO Data Grid -->
                     <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <DataGrid ItemsSource="{Binding FilteredGPOs}" 
-                                  Style="{StaticResource SecurityDataGrid}">
+                                  Style="{StaticResource SecurityDataGrid}" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Risk" Binding="{Binding RiskIcon}" Width="60"/>
                                 <DataGridTextColumn Header="Status" Binding="{Binding StatusIcon}" Width="60"/>
@@ -398,7 +398,7 @@
                     <!-- Security Groups Data Grid -->
                     <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <DataGrid ItemsSource="{Binding FilteredSecurityGroups}" 
-                                  Style="{StaticResource SecurityDataGrid}">
+                                  Style="{StaticResource SecurityDataGrid}" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Risk" Binding="{Binding RiskIcon}" Width="60"/>
                                 <DataGridTextColumn Header="Type" Binding="{Binding GroupTypeIcon}" Width="60"/>
@@ -421,7 +421,7 @@
                         <TabItem Header="🛡️ Antivirus" Foreground="White">
                             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="0" Margin="0,10,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <DataGrid ItemsSource="{Binding AntivirusProducts}" 
-                                          Style="{StaticResource SecurityDataGrid}">
+                                          Style="{StaticResource SecurityDataGrid}" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Status" Binding="{Binding StatusIcon}" Width="60"/>
                                         <DataGridTextColumn Header="Computer" Binding="{Binding ComputerName}" Width="100"/>
@@ -439,7 +439,7 @@
                         <TabItem Header="🔥 Firewall" Foreground="White">
                             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="0" Margin="0,10,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <DataGrid ItemsSource="{Binding FirewallProfiles}" 
-                                          Style="{StaticResource SecurityDataGrid}">
+                                          Style="{StaticResource SecurityDataGrid}" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Profile" Binding="{Binding ProfileIcon}" Width="60"/>
                                         <DataGridTextColumn Header="Computer" Binding="{Binding ComputerName}" Width="100"/>
@@ -457,7 +457,7 @@
                         <TabItem Header="⚙️ Appliances" Foreground="White">
                             <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="0" Margin="0,10,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                 <DataGrid ItemsSource="{Binding SecurityAppliances}" 
-                                          Style="{StaticResource SecurityDataGrid}">
+                                          Style="{StaticResource SecurityDataGrid}" VirtualizingStackPanel.IsVirtualizing="True">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Type" Binding="{Binding TypeIcon}" Width="60"/>
                                         <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
@@ -543,7 +543,7 @@
                     <!-- Threats Data Grid -->
                     <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <DataGrid ItemsSource="{Binding FilteredThreats}" 
-                                  Style="{StaticResource SecurityDataGrid}">
+                                  Style="{StaticResource SecurityDataGrid}" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Severity" Binding="{Binding SeverityIcon}" Width="70"/>
                                 <DataGridTextColumn Header="Type" Binding="{Binding TypeIcon}" Width="60"/>
@@ -615,7 +615,7 @@
                     <!-- Compliance Controls Data Grid -->
                     <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <DataGrid ItemsSource="{Binding FilteredComplianceControls}" 
-                                  Style="{StaticResource SecurityDataGrid}">
+                                  Style="{StaticResource SecurityDataGrid}" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Status" Binding="{Binding StatusIcon}" Width="60"/>
                                 <DataGridTextColumn Header="Framework" Binding="{Binding FrameworkIcon}" Width="80"/>

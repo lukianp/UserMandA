@@ -343,7 +343,7 @@
                                   CanUserDeleteRows="False"
                                   GridLinesVisibility="Horizontal"
                                   HeadersVisibility="Column"
-                                  BorderThickness="0">
+                                  BorderThickness="0" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="Status" Width="60">
                                     <DataGridTemplateColumn.CellTemplate>
@@ -452,7 +452,7 @@
                                   CanUserDeleteRows="False"
                                   GridLinesVisibility="Horizontal"
                                   HeadersVisibility="Column"
-                                  BorderThickness="0">
+                                  BorderThickness="0" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="Status" Width="60">
                                     <DataGridTemplateColumn.CellTemplate>
@@ -726,7 +726,7 @@
                                   CanUserDeleteRows="False"
                                   GridLinesVisibility="Horizontal"
                                   HeadersVisibility="Column"
-                                  BorderThickness="0">
+                                  BorderThickness="0" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
                                 <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt}" Width="150"/>
@@ -787,7 +787,7 @@
                                   CanUserDeleteRows="False"
                                   GridLinesVisibility="Horizontal"
                                   HeadersVisibility="Column"
-                                  BorderThickness="0">
+                                  BorderThickness="0" VirtualizingStackPanel.IsVirtualizing="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp}" Width="150"/>
                                 <DataGridTemplateColumn Header="Level" Width="80">

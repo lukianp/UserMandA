@@ -14,7 +14,7 @@
     <SelfContained>false</SelfContained>
     <PublishReadyToRun>false</PublishReadyToRun>
     <ImplicitUsings>enable</ImplicitUsings>
-    <EnableDefaultMainMethod>false</EnableDefaultMainMethod>
+    <EnableDefaultMainMethod>true</EnableDefaultMainMethod>
     <ApplicationDefinition>App.xaml</ApplicationDefinition>
     <Deterministic>true</Deterministic>
     <LangVersion>latest</LangVersion>
@@ -41,25 +41,30 @@
     <PackageReference Include="AWSSDK.Core" Version="4.0.0.27" />
     <PackageReference Include="AWSSDK.EC2" Version="4.0.37" />
     <PackageReference Include="AWSSDK.S3" Version="4.0.7.1" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="7.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
     <PackageReference Include="Microsoft.Graph.Auth" Version="1.0.0-preview.7" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.118" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="System.Text.Json" Version="6.0.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.0" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.77" />
     <PackageReference Include="Microsoft.Graph" Version="5.56.0" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.61.3" />
     <PackageReference Include="AvalonEdit" Version="6.2.0.78" />
-    <PackageReference Include="System.Management.Automation" Version="7.2.0" />
+    <PackageReference Include="System.Management.Automation" Version="7.2.19" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.0" />
     <PackageReference Include="EPPlus" Version="6.2.10" />
     <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="System.DirectoryServices.AccountManagement" Version="8.0.0" />
+    <!-- Structured logging with Serilog -->
+    <PackageReference Include="Serilog" Version="3.1.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
     <!-- Test framework dependencies -->
                   </ItemGroup>
 

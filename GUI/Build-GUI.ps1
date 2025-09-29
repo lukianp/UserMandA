@@ -59,26 +59,26 @@ Write-Host "=======================================" -ForegroundColor Green
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ScriptDir
 
-# Check if .NET 8 SDK is installed
-Write-Host "Checking for .NET 8 SDK..." -ForegroundColor Yellow
+# Check if .NET 6 SDK is installed
+Write-Host "Checking for .NET 6 SDK..." -ForegroundColor Yellow
 
 try {
     $dotnetVersion = & dotnet --version 2>$null
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet command not found"
     }
-    
+
     $majorVersion = [int]($dotnetVersion.Split('.')[0])
-    if ($majorVersion -lt 8) {
-        throw "Requires .NET 8 or later, found version $dotnetVersion"
+    if ($majorVersion -lt 6) {
+        throw "Requires .NET 6 or later, found version $dotnetVersion"
     }
-    
+
     Write-Host "Found .NET version: $dotnetVersion" -ForegroundColor Green
 }
 catch {
     Write-Error @"
-.NET 8 SDK is required but not found or not properly installed.
-Please download and install .NET 8 SDK from: https://dotnet.microsoft.com/download/dotnet/8.0
+.NET 6 SDK is required but not found or not properly installed.
+Please download and install .NET 6 SDK from: https://dotnet.microsoft.com/download/dotnet/6.0
 
 Error: $($_.Exception.Message)
 "@
