@@ -1489,10 +1489,10 @@ namespace MandADiscoverySuite.Models
             
             var colors = new Dictionary<string, string>
             {
-                { "Info", "#FF3B82F6" },
-                { "Warning", "#FFF59E0B" },
-                { "Success", "#FF10B981" },
-                { "Error", "#FFEF4444" }
+                { "Info", "#3B82F6" },
+                { "Warning", "#F59E0B" },
+                { "Success", "#10B981" },
+                { "Error", "#EF4444" }
             };
             
             for (int i = 0; i < count; i++)

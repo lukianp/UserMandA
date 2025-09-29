@@ -265,11 +265,11 @@ namespace MandADiscoverySuite.Dialogs
             string strengthLabel;
             string strengthColor;
             
-            if (score >= 80) { strengthLabel = "Very Strong"; strengthColor = "#FF48BB78"; }
-            else if (score >= 60) { strengthLabel = "Strong"; strengthColor = "#FF48BB78"; }
-            else if (score >= 40) { strengthLabel = "Medium"; strengthColor = "#FFED8936"; }
-            else if (score >= 20) { strengthLabel = "Weak"; strengthColor = "#FFFF6B6B"; }
-            else { strengthLabel = "Very Weak"; strengthColor = "#FFE53E3E"; }
+            if (score >= 80) { strengthLabel = "Very Strong"; strengthColor = "#48BB78"; }
+            else if (score >= 60) { strengthLabel = "Strong"; strengthColor = "#48BB78"; }
+            else if (score >= 40) { strengthLabel = "Medium"; strengthColor = "#ED8936"; }
+            else if (score >= 20) { strengthLabel = "Weak"; strengthColor = "#FF6B6B"; }
+            else { strengthLabel = "Very Weak"; strengthColor = "#E53E3E"; }
 
             StrengthLabel.Text = strengthLabel;
             StrengthLabel.Foreground = new System.Windows.Media.SolidColorBrush(

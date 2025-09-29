@@ -14,7 +14,8 @@
     <SelfContained>false</SelfContained>
     <PublishReadyToRun>false</PublishReadyToRun>
     <ImplicitUsings>enable</ImplicitUsings>
-    <EnableDefaultMainMethod>true</EnableDefaultMainMethod>
+    <EnableDefaultMainMethod>false</EnableDefaultMainMethod>
+    <ApplicationDefinition>App.xaml</ApplicationDefinition>
     <Deterministic>true</Deterministic>
     <LangVersion>latest</LangVersion>
     <NeutralLanguage>en-US</NeutralLanguage>
