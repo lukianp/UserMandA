@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj": {}
+    "d:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj": {}
   },
   "projects": {
-    "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj": {
+    "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj": {
       "version": "1.0.1",
       "restore": {
-        "projectUniqueName": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
+        "projectUniqueName": "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
         "projectName": "MandADiscoverySuite",
-        "projectPath": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
+        "projectPath": "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj",
         "packagesPath": "C:\\Users\\lukia\\.nuget\\packages\\",
-        "outputPath": "D:\\Scripts\\UserMandA\\GUI\\obj\\",
+        "outputPath": "d:\\Scripts\\UserMandA\\GUI\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\lukia\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -72,23 +72,23 @@
             },
             "Microsoft.Extensions.Configuration": {
               "target": "Package",
-              "version": "[6.0.1, )"
+              "version": "[8.0.0, )"
             },
             "Microsoft.Extensions.Configuration.Json": {
               "target": "Package",
-              "version": "[6.0.0, )"
+              "version": "[8.0.0, )"
             },
             "Microsoft.Extensions.DependencyInjection": {
               "target": "Package",
-              "version": "[6.0.1, )"
+              "version": "[8.0.0, )"
             },
             "Microsoft.Extensions.Hosting": {
               "target": "Package",
-              "version": "[6.0.1, )"
+              "version": "[8.0.0, )"
             },
             "Microsoft.Extensions.Logging": {
               "target": "Package",
-              "version": "[6.0.0, )"
+              "version": "[8.0.0, )"
             },
             "Microsoft.Graph": {
               "target": "Package",
@@ -110,6 +110,22 @@
               "target": "Package",
               "version": "[13.0.3, )"
             },
+            "Serilog": {
+              "target": "Package",
+              "version": "[3.1.1, )"
+            },
+            "Serilog.Extensions.Logging": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Serilog.Sinks.Console": {
+              "target": "Package",
+              "version": "[5.0.1, )"
+            },
+            "Serilog.Sinks.File": {
+              "target": "Package",
+              "version": "[5.0.0, )"
+            },
             "System.Data.SQLite": {
               "target": "Package",
               "version": "[1.0.118, )"
@@ -120,11 +136,11 @@
             },
             "System.Management.Automation": {
               "target": "Package",
-              "version": "[7.2.0, )"
+              "version": "[7.2.19, )"
             },
             "System.Text.Json": {
               "target": "Package",
-              "version": "[6.0.0, )"
+              "version": "[8.0.0, )"
             }
           },
           "imports": [
@@ -150,14 +166,14 @@
         }
       }
     },
-    "D:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj": {
+    "d:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj",
+        "projectUniqueName": "d:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj",
         "projectName": "MandADiscoverySuite.Tests",
-        "projectPath": "D:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj",
+        "projectPath": "d:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj",
         "packagesPath": "C:\\Users\\lukia\\.nuget\\packages\\",
-        "outputPath": "D:\\Scripts\\UserMandA\\Tests\\obj\\",
+        "outputPath": "d:\\Scripts\\UserMandA\\Tests\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\lukia\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -172,8 +188,8 @@
           "net6.0-windows7.0": {
             "targetAlias": "net6.0-windows7.0",
             "projectReferences": {
-              "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj": {
-                "projectPath": "D:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj"
+              "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj": {
+                "projectPath": "d:\\Scripts\\UserMandA\\GUI\\MandADiscoverySuite.csproj"
               }
             }
           }

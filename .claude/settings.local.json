@@ -19,7 +19,12 @@
       "Bash(findstr:*)",
       "WebSearch",
       "Bash(tee:*)",
-      "Bash(dotnet restore:*)"
+      "Bash(dotnet restore:*)",
+      "Bash(Test-Path \"C:\\discoverydata\\ljpops\\Logs\" -PathType Container)",
+      "Bash(Select-String -Pattern \"error|warning|Build succeeded|Build FAILED\")",
+      "Bash(Select-Object -Last 30)",
+      "Bash(csc:*)",
+      "Bash(dotnet clean:*)"
     ],
     "deny": [],
     "ask": [],

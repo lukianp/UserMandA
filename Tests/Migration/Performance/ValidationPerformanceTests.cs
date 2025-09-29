@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MandADiscoverySuite.Migration;
+using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.Tests.Migration.Performance
 {
@@ -23,7 +25,7 @@ namespace MandADiscoverySuite.Tests.Migration.Performance
         private Mock<IFileValidationProvider> _mockFileValidator;
         private Mock<ISqlValidationProvider> _mockSqlValidator;
         private Mock<IPerformanceMonitor> _mockPerformanceMonitor;
-        private TargetContext _testTargetContext;
+        private MandADiscoverySuite.Migration.TargetContext _testTargetContext;
         private PerformanceMetrics _performanceMetrics;
 
         [TestInitialize]
@@ -42,7 +44,7 @@ namespace MandADiscoverySuite.Tests.Migration.Performance
                 _mockFileValidator.Object,
                 _mockSqlValidator.Object);
 
-            _testTargetContext = new TargetContext
+            _testTargetContext = new MandADiscoverySuite.Migration.TargetContext
             {
                 TenantId = "test-tenant-123",
                 Environment = "Performance Test"
@@ -244,7 +246,7 @@ namespace MandADiscoverySuite.Tests.Migration.Performance
         {
             // Arrange
             var numberOfWaves = 5;
-            var waves = new List<MigrationWave>();
+            var waves = new List<MandADiscoverySuite.Models.Migration.MigrationWave>();
             
             for (int i = 0; i < numberOfWaves; i++)
             {
@@ -301,12 +303,13 @@ namespace MandADiscoverySuite.Tests.Migration.Performance
             // Assert
             stopwatch.Stop();
             Assert.AreEqual(numberOfConcurrentTasks, results.Length, "Should complete all concurrent validations");
-            
+            Assert.IsTrue(results.All(r => r.Severity == ValidationSeverity.Success), "All validations should succeed");
+
             var maxTimePerValidation = TimeSpan.FromSeconds(30); // Each validation should complete within 30 seconds on average
             var averageTime = TimeSpan.FromMilliseconds(stopwatch.Elapsed.TotalMilliseconds / numberOfConcurrentTasks);
-            Assert.IsTrue(averageTime < maxTimePerValidation, 
+            Assert.IsTrue(averageTime < maxTimePerValidation,
                 $"Average validation time was {averageTime.TotalSeconds:F2} seconds, exceeding limit of {maxTimePerValidation.TotalSeconds}");
-            
+
             RecordPerformanceMetric("High_Concurrency_Validation", stopwatch.Elapsed, numberOfConcurrentTasks, GetMemoryUsage());
         }
 
@@ -475,7 +478,7 @@ namespace MandADiscoverySuite.Tests.Migration.Performance
             finally
             {
                 // Cleanup background load
-                await Task.WhenAll(loadTasks.Select(t => t.Item2.CancelAsync()).ToArray());
+                loadTasks.ForEach(t => t.Item2.Cancel());
             }
         }
 
@@ -498,8 +501,8 @@ namespace MandADiscoverySuite.Tests.Migration.Performance
         {
             // Setup user validator with realistic delay
             _mockUserValidator
-                .Setup(u => u.ValidateUserAsync(It.IsAny<UserDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .Returns(async (UserDto user, TargetContext ctx, IProgress<ValidationProgress> progress) =>
+                .Setup(u => u.ValidateUserAsync(It.IsAny<MandADiscoverySuite.Models.Migration.UserDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Returns(async (MandADiscoverySuite.Models.Migration.UserDto user, MandADiscoverySuite.Migration.TargetContext ctx, IProgress<ValidationProgress> progress) =>
                 {
                     await Task.Delay(Random.Shared.Next(50, 200)); // 50-200ms per user validation
                     return ValidationResult.Success(user, "User", user.DisplayName);
@@ -507,8 +510,8 @@ namespace MandADiscoverySuite.Tests.Migration.Performance
 
             // Setup mailbox validator with longer delay (mailbox operations are slower)
             _mockMailboxValidator
-                .Setup(m => m.ValidateMailboxAsync(It.IsAny<MailboxDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .Returns(async (MailboxDto mailbox, TargetContext ctx, IProgress<ValidationProgress> progress) =>
+                .Setup(m => m.ValidateMailboxAsync(It.IsAny<MandADiscoverySuite.Models.Migration.MailboxDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Returns(async (MandADiscoverySuite.Models.Migration.MailboxDto mailbox, MandADiscoverySuite.Migration.TargetContext ctx, IProgress<ValidationProgress> progress) =>
                 {
                     await Task.Delay(Random.Shared.Next(200, 800)); // 200-800ms per mailbox validation
                     return ValidationResult.Success(mailbox, "Mailbox", mailbox.PrimarySmtpAddress);
@@ -516,8 +519,8 @@ namespace MandADiscoverySuite.Tests.Migration.Performance
 
             // Setup file validator with variable delay based on file size
             _mockFileValidator
-                .Setup(f => f.ValidateFilesAsync(It.IsAny<FileItemDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .Returns(async (FileItemDto fileItem, TargetContext ctx, IProgress<ValidationProgress> progress) =>
+                .Setup(f => f.ValidateFilesAsync(It.IsAny<MandADiscoverySuite.Models.Migration.FileItemDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Returns(async (MandADiscoverySuite.Models.Migration.FileItemDto fileItem, MandADiscoverySuite.Migration.TargetContext ctx, IProgress<ValidationProgress> progress) =>
                 {
                     await Task.Delay(Random.Shared.Next(500, 2000)); // 500-2000ms per file set validation
                     return ValidationResult.Success(fileItem, "File", fileItem.SourcePath);
@@ -525,8 +528,8 @@ namespace MandADiscoverySuite.Tests.Migration.Performance
 
             // Setup SQL validator with long delay (DBCC operations are slow)
             _mockSqlValidator
-                .Setup(s => s.ValidateSqlAsync(It.IsAny<DatabaseDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .Returns(async (DatabaseDto database, TargetContext ctx, IProgress<ValidationProgress> progress) =>
+                .Setup(s => s.ValidateSqlAsync(It.IsAny<MandADiscoverySuite.Models.Migration.DatabaseDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Returns(async (MandADiscoverySuite.Models.Migration.DatabaseDto database, MandADiscoverySuite.Migration.TargetContext ctx, IProgress<ValidationProgress> progress) =>
                 {
                     await Task.Delay(Random.Shared.Next(1000, 5000)); // 1-5 seconds per database validation
                     return ValidationResult.Success(database, "Database", database.Name);
@@ -536,60 +539,60 @@ namespace MandADiscoverySuite.Tests.Migration.Performance
         private void SetupMockRollbackProvidersForPerformance()
         {
             _mockUserValidator
-                .Setup(u => u.RollbackUserAsync(It.IsAny<UserDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .Returns(async (UserDto user, TargetContext ctx, IProgress<ValidationProgress> progress) =>
+                .Setup(u => u.RollbackUserAsync(It.IsAny<MandADiscoverySuite.Models.Migration.UserDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Returns(async (MandADiscoverySuite.Models.Migration.UserDto user, MandADiscoverySuite.Migration.TargetContext ctx, IProgress<ValidationProgress> progress) =>
                 {
                     await Task.Delay(Random.Shared.Next(100, 300)); // 100-300ms per user rollback
                     return RollbackResult.Succeeded("User rollback completed");
                 });
 
             _mockMailboxValidator
-                .Setup(m => m.RollbackMailboxAsync(It.IsAny<MailboxDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .Returns(async (MailboxDto mailbox, TargetContext ctx, IProgress<ValidationProgress> progress) =>
+                .Setup(m => m.RollbackMailboxAsync(It.IsAny<MandADiscoverySuite.Models.Migration.MailboxDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Returns(async (MandADiscoverySuite.Models.Migration.MailboxDto mailbox, MandADiscoverySuite.Migration.TargetContext ctx, IProgress<ValidationProgress> progress) =>
                 {
                     await Task.Delay(Random.Shared.Next(300, 1000)); // 300-1000ms per mailbox rollback
                     return RollbackResult.Succeeded("Mailbox rollback completed");
                 });
 
             _mockFileValidator
-                .Setup(f => f.RollbackFilesAsync(It.IsAny<FileItemDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .Returns(async (FileItemDto fileItem, TargetContext ctx, IProgress<ValidationProgress> progress) =>
+                .Setup(f => f.RollbackFilesAsync(It.IsAny<MandADiscoverySuite.Models.Migration.FileItemDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Returns(async (MandADiscoverySuite.Models.Migration.FileItemDto fileItem, MandADiscoverySuite.Migration.TargetContext ctx, IProgress<ValidationProgress> progress) =>
                 {
                     await Task.Delay(Random.Shared.Next(500, 1500)); // 500-1500ms per file rollback
                     return RollbackResult.Succeeded("File rollback completed");
                 });
 
             _mockSqlValidator
-                .Setup(s => s.RollbackSqlAsync(It.IsAny<DatabaseDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .Returns(async (DatabaseDto database, TargetContext ctx, IProgress<ValidationProgress> progress) =>
+                .Setup(s => s.RollbackSqlAsync(It.IsAny<MandADiscoverySuite.Models.Migration.DatabaseDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Returns(async (MandADiscoverySuite.Models.Migration.DatabaseDto database, MandADiscoverySuite.Migration.TargetContext ctx, IProgress<ValidationProgress> progress) =>
                 {
                     await Task.Delay(Random.Shared.Next(1000, 3000)); // 1-3 seconds per database rollback
                     return RollbackResult.Succeeded("Database rollback completed");
                 });
         }
 
-        private MigrationWave CreateLargeWave(int userCount, int mailboxCount, int fileCount, int databaseCount)
+        private MandADiscoverySuite.Models.Migration.MigrationWave CreateLargeWave(int userCount, int mailboxCount, int fileCount, int databaseCount)
         {
-            var wave = new MigrationWave();
+            var wave = new MandADiscoverySuite.Models.Migration.MigrationWave();
 
             for (int i = 0; i < userCount; i++)
             {
-                wave.Users.Add(CreateTestUser($"testuser{i:D6}"));
+                wave.Users.Add(CreateTestUserItem($"testuser{i:D6}"));
             }
 
             for (int i = 0; i < mailboxCount; i++)
             {
-                wave.Mailboxes.Add(CreateTestMailbox($"testmailbox{i:D6}"));
+                wave.Mailboxes.Add(CreateTestMailboxItem($"testmailbox{i:D6}"));
             }
 
             for (int i = 0; i < fileCount; i++)
             {
-                wave.Files.Add(CreateTestFileItem($"testfiles{i:D6}"));
+                wave.Files.Add(CreateTestFileShareItem($"testfiles{i:D6}"));
             }
 
             for (int i = 0; i < databaseCount; i++)
             {
-                wave.Databases.Add(CreateTestDatabase($"testdb{i:D6}"));
+                wave.Databases.Add(CreateTestDatabaseItem($"testdb{i:D6}"));
             }
 
             return wave;
@@ -614,19 +617,19 @@ namespace MandADiscoverySuite.Tests.Migration.Performance
             return results;
         }
 
-        private UserDto CreateTestUser(string identifier)
+        private MandADiscoverySuite.Models.Migration.UserDto CreateTestUser(string identifier)
         {
-            return new UserDto
+            return new MandADiscoverySuite.Models.Migration.UserDto
             {
                 DisplayName = $"Test User {identifier}",
                 UserPrincipalName = $"{identifier}@contoso.com",
-                SamAccountName = identifier
+                CustomAttributes = new Dictionary<string, object> { { "SamAccountName", identifier } }
             };
         }
 
-        private MailboxDto CreateTestMailbox(string identifier)
+        private MandADiscoverySuite.Models.Migration.MailboxDto CreateTestMailbox(string identifier)
         {
-            return new MailboxDto
+            return new MandADiscoverySuite.Models.Migration.MailboxDto
             {
                 PrimarySmtpAddress = $"{identifier}@contoso.com",
                 DisplayName = $"Test Mailbox {identifier}",
@@ -634,24 +637,68 @@ namespace MandADiscoverySuite.Tests.Migration.Performance
             };
         }
 
-        private FileItemDto CreateTestFileItem(string identifier)
+        private MandADiscoverySuite.Models.Migration.FileItemDto CreateTestFileItem(string identifier)
         {
-            return new FileItemDto
+            return new MandADiscoverySuite.Models.Migration.FileItemDto
             {
                 SourcePath = $@"\\source\share\{identifier}",
                 TargetPath = $@"\\target\share\{identifier}",
-                FileCount = Random.Shared.Next(10, 1000),
-                TotalSize = Random.Shared.Next(1024 * 1024, 1024 * 1024 * 100) // 1MB to 100MB
+                FileSize = Random.Shared.Next(1024 * 1024, 1024 * 1024 * 100), // 1MB to 100MB
+                Metadata = new Dictionary<string, object> { { "FileCount", Random.Shared.Next(10, 1000) } }
             };
         }
 
-        private DatabaseDto CreateTestDatabase(string identifier)
+        private MandADiscoverySuite.Models.Migration.DatabaseDto CreateTestDatabase(string identifier)
         {
-            return new DatabaseDto
+            return new MandADiscoverySuite.Models.Migration.DatabaseDto
             {
                 Name = identifier,
-                Server = "sql-server",
-                Size = Random.Shared.Next(1024 * 1024 * 100, 1024 * 1024 * 1024) // 100MB to 1GB
+                ServerName = "sql-server",
+                SizeMB = Random.Shared.Next(100, 1024) // 100MB to 1GB
+            };
+        }
+
+        private UserItem CreateTestUserItem(string identifier)
+        {
+            return new UserItem
+            {
+                UserPrincipalName = $"{identifier}@contoso.com",
+                DisplayName = $"Test User {identifier}",
+                Properties = new Dictionary<string, object> { { "SamAccountName", identifier } }
+            };
+        }
+
+        private MailboxItem CreateTestMailboxItem(string identifier)
+        {
+            return new MailboxItem
+            {
+                UserPrincipalName = $"{identifier}@contoso.com",
+                PrimarySmtpAddress = $"{identifier}@contoso.com",
+                SizeBytes = Random.Shared.Next(1024 * 1024, 1024 * 1024 * 100), // 1MB to 100MB
+                Properties = new Dictionary<string, object> { { "ItemCount", Random.Shared.Next(100, 10000) } }
+            };
+        }
+
+        private FileShareItem CreateTestFileShareItem(string identifier)
+        {
+            return new FileShareItem
+            {
+                SourcePath = $@"\\source\share\{identifier}",
+                TargetPath = $@"\\target\share\{identifier}",
+                SizeBytes = Random.Shared.Next(1024 * 1024, 1024 * 1024 * 100), // 1MB to 100MB
+                Properties = new Dictionary<string, object> { { "FileCount", Random.Shared.Next(10, 1000) } }
+            };
+        }
+
+        private DatabaseItem CreateTestDatabaseItem(string identifier)
+        {
+            return new DatabaseItem
+            {
+                Name = identifier,
+                SourceServer = "source-sql-server",
+                TargetServer = "target-sql-server",
+                SizeMB = Random.Shared.Next(100, 1024), // 100MB to 1GB
+                Properties = new Dictionary<string, object> { { "CompatibilityLevel", 150 } }
             };
         }
 

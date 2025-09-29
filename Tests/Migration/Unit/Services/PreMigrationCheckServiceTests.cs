@@ -35,7 +35,7 @@ namespace MigrationTestSuite.Unit.Services
             _mockLogicEngine = new Mock<ILogicEngineService>();
             _testProfilePath = Path.Combine(Path.GetTempPath(), $"TestProfile_{Guid.NewGuid()}");
             _testMappingsPath = Path.Combine(_testProfilePath, "Mappings");
-            
+
             _service = new PreMigrationCheckService(
                 _mockLogger.Object,
                 _mockLogicEngine.Object,
@@ -57,14 +57,22 @@ namespace MigrationTestSuite.Unit.Services
         public async Task CheckUserEligibility_DisabledAccount_ShouldBeBlocked()
         {
             // Arrange
-            var disabledUser = new UserDto
-            {
-                Sid = "S-1-5-21-12345-1",
-                DisplayName = "John Doe",
-                UPN = "john.doe@contoso.com",
-                Enabled = false,
-                Sam = "johndoe"
-            };
+            var disabledUser = new UserDto(
+                "john.doe@contoso.com", // UPN
+                "S-1-5-21-12345-1", // Sid
+                "John Doe", // DisplayName
+                "johndoe", // Sam
+                null, // Department
+                null, // Title
+                false, // Enabled
+                null, // Manager
+                null, // Office
+                null, // Phone
+                new List<string>(), // Groups
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                "User" // Type
+            );
 
             _mockLogicEngine.Setup(x => x.GetAllUsersAsync())
                 .ReturnsAsync(new List<UserDto> { disabledUser });
@@ -86,14 +94,22 @@ namespace MigrationTestSuite.Unit.Services
         public async Task CheckUserEligibility_MissingUPN_ShouldBeBlocked()
         {
             // Arrange
-            var userWithoutUPN = new UserDto
-            {
-                Sid = "S-1-5-21-12345-2",
-                DisplayName = "Jane Doe",
-                UPN = null,
-                Enabled = true,
-                Sam = "janedoe"
-            };
+            var userWithoutUPN = new UserDto(
+                null, // UPN - missing
+                "S-1-5-21-12345-2", // Sid
+                "Jane Doe", // DisplayName
+                "janedoe", // Sam
+                null, // Department
+                null, // Title
+                true, // Enabled
+                null, // Manager
+                null, // Office
+                null, // Phone
+                new List<string>(), // Groups
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                "User" // Type
+            );
 
             _mockLogicEngine.Setup(x => x.GetAllUsersAsync())
                 .ReturnsAsync(new List<UserDto> { userWithoutUPN });
@@ -123,14 +139,22 @@ namespace MigrationTestSuite.Unit.Services
 
             foreach (var invalidUPN in invalidCharTests)
             {
-                var user = new UserDto
-                {
-                    Sid = $"S-1-5-21-12345-{Guid.NewGuid()}",
-                    DisplayName = "Test User",
-                    UPN = invalidUPN,
-                    Enabled = true,
-                    Sam = "testuser"
-                };
+                var user = new UserDto(
+                    invalidUPN, // UPN
+                    $"S-1-5-21-12345-{Guid.NewGuid()}", // Sid
+                    "Test User", // DisplayName
+                    "testuser", // Sam
+                    null, // Department
+                    null, // Title
+                    true, // Enabled
+                    null, // Manager
+                    null, // Office
+                    null, // Phone
+                    new List<string>(), // Groups
+                    DateTime.UtcNow, // Created
+                    "contoso.com", // Domain
+                    "User" // Type
+                );
 
                 _mockLogicEngine.Setup(x => x.GetAllUsersAsync())
                     .ReturnsAsync(new List<UserDto> { user });
@@ -152,21 +176,34 @@ namespace MigrationTestSuite.Unit.Services
         public async Task CheckUserEligibility_LargeMailbox_ShouldBeBlocked()
         {
             // Arrange
-            var user = new UserDto
-            {
-                Sid = "S-1-5-21-12345-3",
-                DisplayName = "Large Mailbox User",
-                UPN = "large.user@contoso.com",
-                Enabled = true,
-                Sam = "largeuser"
-            };
+            var user = new UserDto(
+                "large.user@contoso.com", // UPN
+                "S-1-5-21-12345-3", // Sid
+                "Large Mailbox User", // DisplayName
+                "largeuser", // Sam
+                null, // Department
+                null, // Title
+                true, // Enabled
+                null, // Manager
+                null, // Office
+                null, // Phone
+                new List<string>(), // Groups
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                "User" // Type
+            );
 
-            var largeMailbox = new MailboxDto
-            {
-                UPN = "large.user@contoso.com",
-                SizeMB = 150000, // 150GB
-                Type = "UserMailbox"
-            };
+            var largeMailbox = new MailboxDto(
+                "large.user@contoso.com", // UPN
+                "Large User", // DisplayName
+                150000.0m, // SizeMB - 150GB
+                "UserMailbox", // Type
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                "LargeUser", // Alias
+                new List<string>(), // Permissions
+                null // ArchiveStatus
+            );
 
             _mockLogicEngine.Setup(x => x.GetAllUsersAsync())
                 .ReturnsAsync(new List<UserDto> { user });
@@ -192,14 +229,22 @@ namespace MigrationTestSuite.Unit.Services
 
             foreach (var blockedChar in blockedChars)
             {
-                users.Add(new UserDto
-                {
-                    Sid = $"S-1-5-21-12345-{Guid.NewGuid()}",
-                    DisplayName = $"User{blockedChar}Name",
-                    UPN = $"user{Guid.NewGuid()}@contoso.com",
-                    Enabled = true,
-                    Sam = $"user{Guid.NewGuid()}"
-                });
+                users.Add(new UserDto(
+                    $"user{Guid.NewGuid()}@contoso.com", // UPN
+                    $"S-1-5-21-12345-{Guid.NewGuid()}", // Sid
+                    $"User{blockedChar}Name", // DisplayName
+                    $"user{Guid.NewGuid()}", // Sam
+                    null, // Department
+                    null, // Title
+                    true, // Enabled
+                    null, // Manager
+                    null, // Office
+                    null, // Phone
+                    new List<string>(), // Groups
+                    DateTime.UtcNow, // Created
+                    "contoso.com", // Domain
+                    "User" // Type
+                ));
             }
 
             _mockLogicEngine.Setup(x => x.GetAllUsersAsync())
@@ -221,21 +266,34 @@ namespace MigrationTestSuite.Unit.Services
         public async Task CheckUserEligibility_ValidUser_ShouldBeEligible()
         {
             // Arrange
-            var validUser = new UserDto
-            {
-                Sid = "S-1-5-21-12345-4",
-                DisplayName = "Valid User",
-                UPN = "valid.user@contoso.com",
-                Enabled = true,
-                Sam = "validuser"
-            };
+            var validUser = new UserDto(
+                "valid.user@contoso.com", // UPN
+                "S-1-5-21-12345-4", // Sid
+                "Valid User", // DisplayName
+                "validuser", // Sam
+                null, // Department
+                null, // Title
+                true, // Enabled
+                null, // Manager
+                null, // Office
+                null, // Phone
+                new List<string>(), // Groups
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                "User" // Type
+            );
 
-            var normalMailbox = new MailboxDto
-            {
-                UPN = "valid.user@contoso.com",
-                SizeMB = 50000, // 50GB
-                Type = "UserMailbox"
-            };
+            var normalMailbox = new MailboxDto(
+                "valid.user@contoso.com", // UPN
+                "Valid User", // DisplayName
+                50000.0m, // SizeMB - 50GB
+                "UserMailbox", // Type
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                "ValidUser", // Alias
+                new List<string>(), // Permissions
+                null // ArchiveStatus
+            );
 
             _mockLogicEngine.Setup(x => x.GetAllUsersAsync())
                 .ReturnsAsync(new List<UserDto> { validUser });
@@ -261,12 +319,17 @@ namespace MigrationTestSuite.Unit.Services
         public async Task CheckMailboxEligibility_ExceedsSizeLimit_ShouldBeBlocked()
         {
             // Arrange
-            var oversizedMailbox = new MailboxDto
-            {
-                UPN = "oversized@contoso.com",
-                SizeMB = 120000, // 120GB
-                Type = "UserMailbox"
-            };
+            var oversizedMailbox = new MailboxDto(
+                "oversized@contoso.com", // UPN
+                "Oversized User", // DisplayName
+                120000.0m, // SizeMB - 120GB
+                "UserMailbox", // Type
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                "Oversized", // Alias
+                new List<string>(), // Permissions
+                null // ArchiveStatus
+            );
 
             _mockLogicEngine.Setup(x => x.GetAllMailboxesAsync())
                 .ReturnsAsync(new List<MailboxDto> { oversizedMailbox });
@@ -286,12 +349,17 @@ namespace MigrationTestSuite.Unit.Services
         {
             // Arrange
             var unsupportedTypes = new[] { "DiscoveryMailbox", "ArbitrationMailbox", "SystemMailbox" };
-            var mailboxes = unsupportedTypes.Select(type => new MailboxDto
-            {
-                UPN = $"{type.ToLower()}@contoso.com",
-                SizeMB = 5000,
-                Type = type
-            }).ToList();
+            var mailboxes = unsupportedTypes.Select(type => new MailboxDto(
+                $"{type.ToLower()}@contoso.com", // UPN
+                $"{type} User", // DisplayName
+                5000.0m, // SizeMB
+                type, // Type
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                type.ToLower(), // Alias
+                new List<string>(), // Permissions
+                null // ArchiveStatus
+            )).ToList();
 
             _mockLogicEngine.Setup(x => x.GetAllMailboxesAsync())
                 .ReturnsAsync(mailboxes);
@@ -312,9 +380,9 @@ namespace MigrationTestSuite.Unit.Services
             // Arrange
             var invalidMailboxes = new List<MailboxDto>
             {
-                new MailboxDto { UPN = null, SizeMB = 5000, Type = "UserMailbox" },
-                new MailboxDto { UPN = "", SizeMB = 5000, Type = "UserMailbox" },
-                new MailboxDto { UPN = "noatsign", SizeMB = 5000, Type = "UserMailbox" }
+                new MailboxDto(null, "User1", 5000.0m, "UserMailbox", DateTime.UtcNow, "contoso.com", "user1", new List<string>(), null),
+                new MailboxDto("", "User2", 5000.0m, "UserMailbox", DateTime.UtcNow, "contoso.com", "user2", new List<string>(), null),
+                new MailboxDto("noatsign", "User3", 5000.0m, "UserMailbox", DateTime.UtcNow, "contoso.com", "user3", new List<string>(), null)
             };
 
             _mockLogicEngine.Setup(x => x.GetAllMailboxesAsync())
@@ -335,12 +403,17 @@ namespace MigrationTestSuite.Unit.Services
         {
             // Arrange
             var supportedTypes = new[] { "UserMailbox", "SharedMailbox", "RoomMailbox", "EquipmentMailbox" };
-            var mailboxes = supportedTypes.Select(type => new MailboxDto
-            {
-                UPN = $"{type.ToLower()}@contoso.com",
-                SizeMB = 5000,
-                Type = type
-            }).ToList();
+            var mailboxes = supportedTypes.Select(type => new MailboxDto(
+                $"{type.ToLower()}@contoso.com", // UPN
+                $"{type} User", // DisplayName
+                5000.0m, // SizeMB
+                type, // Type
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                type.ToLower(), // Alias
+                new List<string>(), // Permissions
+                null // ArchiveStatus
+            )).ToList();
 
             _mockLogicEngine.Setup(x => x.GetAllMailboxesAsync())
                 .ReturnsAsync(mailboxes);
@@ -362,13 +435,19 @@ namespace MigrationTestSuite.Unit.Services
         public async Task CheckFileEligibility_PathTooLong_ShouldBeBlocked()
         {
             // Arrange
-            var longPath = @"C:\Very\Long\Path\That\Exceeds\The\Maximum\Allowed\Length\" + 
-                          new string('a', 250);
-            var fileShare = new FileShareDto
-            {
-                Path = longPath,
-                Name = "LongPathShare"
-            };
+            var longPath = @"C:\Very\Long\Path\That\Exceeds\The\Maximum\Allowed\Length\" +
+                           new string('a', 250);
+            var fileShare = new FileShareDto(
+                "LongPathShare", // Name
+                longPath, // Path
+                null, // Description
+                null, // Owner
+                new List<string>(), // Permissions
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                "FileShare", // Type
+                null // AclEntries
+            );
 
             _mockLogicEngine.Setup(x => x.GetAllFileSharesAsync())
                 .ReturnsAsync(new List<FileShareDto> { fileShare });
@@ -389,14 +468,20 @@ namespace MigrationTestSuite.Unit.Services
             // Arrange
             var invalidChars = Path.GetInvalidPathChars().Where(c => c != ':' && c != '\\').Take(5);
             var fileShares = new List<FileShareDto>();
-            
+
             foreach (var invalidChar in invalidChars)
             {
-                fileShares.Add(new FileShareDto
-                {
-                    Path = $@"C:\Share{invalidChar}Path",
-                    Name = $"InvalidShare{(int)invalidChar}"
-                });
+                fileShares.Add(new FileShareDto(
+                    $"InvalidShare{(int)invalidChar}", // Name
+                    $@"C:\Share{invalidChar}Path", // Path
+                    null, // Description
+                    null, // Owner
+                    new List<string>(), // Permissions
+                    DateTime.UtcNow, // Created
+                    "contoso.com", // Domain
+                    "FileShare", // Type
+                    null // AclEntries
+                ));
             }
 
             _mockLogicEngine.Setup(x => x.GetAllFileSharesAsync())
@@ -416,11 +501,17 @@ namespace MigrationTestSuite.Unit.Services
         public async Task CheckFileEligibility_InaccessiblePath_ShouldBeBlocked()
         {
             // Arrange
-            var inaccessibleShare = new FileShareDto
-            {
-                Path = @"Z:\NonExistent\Share\Path",
-                Name = "InaccessibleShare"
-            };
+            var inaccessibleShare = new FileShareDto(
+                "InaccessibleShare", // Name
+                @"Z:\NonExistent\Share\Path", // Path
+                null, // Description
+                null, // Owner
+                new List<string>(), // Permissions
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                "FileShare", // Type
+                null // AclEntries
+            );
 
             _mockLogicEngine.Setup(x => x.GetAllFileSharesAsync())
                 .ReturnsAsync(new List<FileShareDto> { inaccessibleShare });
@@ -440,11 +531,17 @@ namespace MigrationTestSuite.Unit.Services
         {
             // Arrange
             var tempPath = Path.GetTempPath();
-            var validShare = new FileShareDto
-            {
-                Path = tempPath,
-                Name = "ValidShare"
-            };
+            var validShare = new FileShareDto(
+                "ValidShare", // Name
+                tempPath, // Path
+                null, // Description
+                null, // Owner
+                new List<string>(), // Permissions
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                "FileShare", // Type
+                null // AclEntries
+            );
 
             _mockLogicEngine.Setup(x => x.GetAllFileSharesAsync())
                 .ReturnsAsync(new List<FileShareDto> { validShare });
@@ -544,10 +641,10 @@ namespace MigrationTestSuite.Unit.Services
         {
             // Arrange
             var fuzzyMatcher = new FuzzyMatchingAlgorithm();
-            
+
             // Act
             var similarity = fuzzyMatcher.CalculateJaroWinklerSimilarity("John Smith", "John Smith");
-            
+
             // Assert
             similarity.Should().Be(1.0);
         }
@@ -557,10 +654,10 @@ namespace MigrationTestSuite.Unit.Services
         {
             // Arrange
             var fuzzyMatcher = new FuzzyMatchingAlgorithm();
-            
+
             // Act
             var similarity = fuzzyMatcher.CalculateJaroWinklerSimilarity("JOHN SMITH", "john smith");
-            
+
             // Assert
             similarity.Should().Be(1.0);
         }
@@ -582,10 +679,9 @@ namespace MigrationTestSuite.Unit.Services
             {
                 // Act
                 var similarity = fuzzyMatcher.CalculateJaroWinklerSimilarity(name1, name2);
-                
+
                 // Assert
-                similarity.Should().BeGreaterThan(minExpected, 
-                    $"'{name1}' and '{name2}' should have similarity > {minExpected}");
+                similarity.Should().BeGreaterThan(minExpected, $"'{name1}' and '{name2}' should have similarity > {minExpected}");
             }
         }
 
@@ -594,10 +690,10 @@ namespace MigrationTestSuite.Unit.Services
         {
             // Arrange
             var fuzzyMatcher = new FuzzyMatchingAlgorithm();
-            
+
             // Act
             var similarity = fuzzyMatcher.CalculateJaroWinklerSimilarity("John Smith", "Alice Cooper");
-            
+
             // Assert
             similarity.Should().BeLessThan(0.5);
         }
@@ -607,7 +703,7 @@ namespace MigrationTestSuite.Unit.Services
         {
             // Arrange
             var fuzzyMatcher = new FuzzyMatchingAlgorithm();
-            
+
             // Act & Assert
             fuzzyMatcher.CalculateJaroWinklerSimilarity("", "").Should().Be(1.0);
             fuzzyMatcher.CalculateJaroWinklerSimilarity("John", "").Should().Be(0.0);
@@ -621,11 +717,11 @@ namespace MigrationTestSuite.Unit.Services
         {
             // Arrange
             var fuzzyMatcher = new FuzzyMatchingAlgorithm();
-            
+
             // Act
             var similarityWithPrefix = fuzzyMatcher.CalculateJaroWinklerSimilarity("DWAYNE", "DUANE");
             var similarityWithoutPrefix = fuzzyMatcher.CalculateJaroWinklerSimilarity("WAYNE", "DUANE");
-            
+
             // Assert
             similarityWithPrefix.Should().BeGreaterThan(similarityWithoutPrefix,
                 "Strings with common prefix should have higher Jaro-Winkler similarity");
@@ -667,10 +763,10 @@ namespace MigrationTestSuite.Unit.Services
             // Assert
             var mappingsFile = Path.Combine(_testMappingsPath, "manual-mappings.json");
             File.Exists(mappingsFile).Should().BeTrue();
-            
+
             var json = await File.ReadAllTextAsync(mappingsFile);
             var savedMappings = JsonSerializer.Deserialize<Dictionary<string, ObjectMapping>>(json);
-            
+
             savedMappings.Should().NotBeNull();
             savedMappings.Should().HaveCount(2);
             savedMappings.Should().ContainKey("S-1-5-21-source-1");
@@ -696,7 +792,7 @@ namespace MigrationTestSuite.Unit.Services
                     CreatedBy = "admin@contoso.com"
                 }
             };
-            
+
             var mappingsFile = Path.Combine(_testMappingsPath, "manual-mappings.json");
             Directory.CreateDirectory(_testMappingsPath);
             var json = JsonSerializer.Serialize(originalMappings, new JsonSerializerOptions { WriteIndented = true });
@@ -709,14 +805,23 @@ namespace MigrationTestSuite.Unit.Services
                 _testProfilePath);
 
             // Setup mock data
-            var user = new UserDto
-            {
-                Sid = "S-1-5-21-source-1",
-                DisplayName = "Test User",
-                UPN = "test@contoso.com",
-                Enabled = true
-            };
-            
+            var user = new UserDto(
+                "test@contoso.com", // UPN
+                "S-1-5-21-source-1", // Sid
+                "Test User", // DisplayName
+                "testuser", // Sam
+                null, // Department
+                null, // Title
+                true, // Enabled
+                null, // Manager
+                null, // Office
+                null, // Phone
+                new List<string>(), // Groups
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                "User" // Type
+            );
+
             _mockLogicEngine.Setup(x => x.GetAllUsersAsync())
                 .ReturnsAsync(new List<UserDto> { user });
             _mockLogicEngine.Setup(x => x.GetMailboxByUpnAsync(It.IsAny<string>()))
@@ -791,7 +896,7 @@ namespace MigrationTestSuite.Unit.Services
             // Assert
             report.Should().NotBeNull();
             _mockLogger.Verify(x => x.Log(
-                LogLevel.Warning,
+                Microsoft.Extensions.Logging.LogLevel.Warning,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Error loading manual mappings")),
                 It.IsAny<Exception>(),
@@ -807,14 +912,22 @@ namespace MigrationTestSuite.Unit.Services
         public async Task ManualMapping_ShouldOverrideFuzzyMatch()
         {
             // Arrange
-            var sourceUser = new UserDto
-            {
-                Sid = "S-1-5-21-source-1",
-                DisplayName = "John Smith",
-                UPN = "john.smith@contoso.com",
-                Enabled = true,
-                Sam = "jsmith"
-            };
+            var sourceUser = new UserDto(
+                "john.smith@contoso.com", // UPN
+                "S-1-5-21-source-1", // Sid
+                "John Smith", // DisplayName
+                "jsmith", // Sam
+                null, // Department
+                null, // Title
+                true, // Enabled
+                null, // Manager
+                null, // Office
+                null, // Phone
+                new List<string>(), // Groups
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                "User" // Type
+            );
 
             // Create manual mapping that overrides fuzzy match
             var manualMapping = new Dictionary<string, ObjectMapping>
@@ -868,20 +981,20 @@ namespace MigrationTestSuite.Unit.Services
             // Arrange
             var users = new List<UserDto>
             {
-                new UserDto { Sid = "S-1", DisplayName = "User1", UPN = "user1@contoso.com", Enabled = true },
-                new UserDto { Sid = "S-2", DisplayName = "User2", UPN = "user2@contoso.com", Enabled = false }
+                new UserDto("user1@contoso.com", "S-1", "User1", "user1", null, null, true, null, null, null, new List<string>(), DateTime.UtcNow, "contoso.com", "User"),
+                new UserDto("user2@contoso.com", "S-2", "User2", "user2", null, null, false, null, null, null, new List<string>(), DateTime.UtcNow, "contoso.com", "User")
             };
 
             var mailboxes = new List<MailboxDto>
             {
-                new MailboxDto { UPN = "mailbox1@contoso.com", SizeMB = 50000, Type = "UserMailbox" },
-                new MailboxDto { UPN = "mailbox2@contoso.com", SizeMB = 150000, Type = "UserMailbox" }
+                new MailboxDto("mailbox1@contoso.com", "Mailbox1", 50000.0m, "UserMailbox", DateTime.UtcNow, "contoso.com", "mailbox1", new List<string>(), null),
+                new MailboxDto("mailbox2@contoso.com", "Mailbox2", 150000.0m, "UserMailbox", DateTime.UtcNow, "contoso.com", "mailbox2", new List<string>(), null)
             };
 
             var fileShares = new List<FileShareDto>
             {
-                new FileShareDto { Path = Path.GetTempPath(), Name = "Share1" },
-                new FileShareDto { Path = new string('x', 300), Name = "Share2" }
+                new FileShareDto("Share1", Path.GetTempPath(), null, null, new List<string>(), DateTime.UtcNow, "contoso.com", "FileShare", null),
+                new FileShareDto("Share2", new string('x', 300), null, null, new List<string>(), DateTime.UtcNow, "contoso.com", "FileShare", null)
             };
 
             var databases = new List<SqlDatabaseDto>
@@ -893,7 +1006,8 @@ namespace MigrationTestSuite.Unit.Services
             _mockLogicEngine.Setup(x => x.GetAllUsersAsync()).ReturnsAsync(users);
             _mockLogicEngine.Setup(x => x.GetAllMailboxesAsync()).ReturnsAsync(mailboxes);
             _mockLogicEngine.Setup(x => x.GetAllFileSharesAsync()).ReturnsAsync(fileShares);
-            _mockLogicEngine.Setup(x => x.GetAllSqlDatabasesAsync()).ReturnsAsync(databases);
+            _mockLogicEngine.Setup(x => x.GetAllSqlDatabasesAsync())
+                .ReturnsAsync(databases);
             _mockLogicEngine.Setup(x => x.GetMailboxByUpnAsync(It.IsAny<string>()))
                 .ReturnsAsync((MailboxDto)null);
 
@@ -905,7 +1019,7 @@ namespace MigrationTestSuite.Unit.Services
             report.Mailboxes.Should().HaveCount(2);
             report.Files.Should().HaveCount(2);
             report.Databases.Should().HaveCount(2);
-            
+
             report.TotalEligible.Should().Be(4); // 1 user + 1 mailbox + 1 file + 1 database
             report.TotalBlocked.Should().Be(4);  // 1 user + 1 mailbox + 1 file + 1 database
             report.GeneratedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(10));
@@ -919,26 +1033,35 @@ namespace MigrationTestSuite.Unit.Services
         public async Task ConcurrentEligibilityChecks_ShouldBeThreadSafe()
         {
             // Arrange
-            var users = Enumerable.Range(1, 100).Select(i => new UserDto
-            {
-                Sid = $"S-{i}",
-                DisplayName = $"User{i}",
-                UPN = $"user{i}@contoso.com",
-                Enabled = i % 2 == 0,
-                Sam = $"user{i}"
-            }).ToList();
+            var users = Enumerable.Range(1, 100).Select(i => new UserDto(
+                $"user{i}@contoso.com", // UPN
+                $"S-{i}", // Sid
+                $"User{i}", // DisplayName
+                $"user{i}", // Sam
+                null, // Department
+                null, // Title
+                i % 2 == 0, // Enabled - alternate true/false
+                null, // Manager
+                null, // Office
+                null, // Phone
+                new List<string>(), // Groups
+                DateTime.UtcNow, // Created
+                "contoso.com", // Domain
+                "User" // Type
+            )).ToList();
 
             _mockLogicEngine.Setup(x => x.GetAllUsersAsync()).ReturnsAsync(users);
             _mockLogicEngine.Setup(x => x.GetAllMailboxesAsync()).ReturnsAsync(new List<MailboxDto>());
             _mockLogicEngine.Setup(x => x.GetAllFileSharesAsync()).ReturnsAsync(new List<FileShareDto>());
-            _mockLogicEngine.Setup(x => x.GetAllSqlDatabasesAsync()).ReturnsAsync(new List<SqlDatabaseDto>());
+            _mockLogicEngine.Setup(x => x.GetAllSqlDatabasesAsync())
+                .ReturnsAsync(new List<SqlDatabaseDto>());
             _mockLogicEngine.Setup(x => x.GetMailboxByUpnAsync(It.IsAny<string>()))
                 .ReturnsAsync((MailboxDto)null);
 
             // Act
-            var tasks = Enumerable.Range(1, 10).Select(_ => 
+            var tasks = Enumerable.Range(1, 10).Select(_ =>
                 _service.GetEligibilityReportAsync()).ToList();
-            
+
             var reports = await Task.WhenAll(tasks);
 
             // Assert
@@ -953,7 +1076,7 @@ namespace MigrationTestSuite.Unit.Services
         {
             // Arrange
             var mappingTasks = new List<Task>();
-            
+
             for (int i = 0; i < 10; i++)
             {
                 var threadId = i;
@@ -968,7 +1091,7 @@ namespace MigrationTestSuite.Unit.Services
                         Confidence = 1.0
                     }
                 };
-                
+
                 mappingTasks.Add(_service.SaveManualmappingsAsync(mappings));
             }
 
@@ -978,7 +1101,7 @@ namespace MigrationTestSuite.Unit.Services
             // Assert
             var mappingsFile = Path.Combine(_testMappingsPath, "manual-mappings.json");
             File.Exists(mappingsFile).Should().BeTrue();
-            
+
             // The last write should win, but no corruption should occur
             var json = await File.ReadAllTextAsync(mappingsFile);
             var action = () => JsonSerializer.Deserialize<Dictionary<string, ObjectMapping>>(json);

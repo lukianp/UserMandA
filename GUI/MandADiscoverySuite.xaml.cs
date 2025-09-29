@@ -72,11 +72,7 @@ namespace MandADiscoverySuite
                 this.Loaded += MainWindow_Loaded;
                 logAction?.Invoke("Loaded event handler added successfully");
 
-                // Explicitly show the window to ensure it's visible
-                logAction?.Invoke("Explicitly showing main window...");
-                this.Show();
-                logAction?.Invoke("Main window shown successfully");
-
+                // Window will be shown by App.xaml.cs OnStartup
                 // Check window state
                 logAction?.Invoke($"Window Visibility: {this.Visibility}");
                 logAction?.Invoke($"Window IsVisible: {this.IsVisible}");

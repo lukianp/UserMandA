@@ -34,6 +34,35 @@ namespace MandADiscoverySuite
         // Static logging action that can be used throughout the class
         private static Action<string> _staticLogAction;
 
+        // EMERGENCY: Constructor to catch early failures
+        // NOTE: Do NOT call InitializeComponent() here - it's called by generated Main() method
+        public App()
+        {
+            try
+            {
+                // Write to file BEFORE any WPF initialization
+                var emergencyLog = @"C:\Temp\manda-emergency-startup.log";
+                System.IO.Directory.CreateDirectory(@"C:\Temp");
+                System.IO.File.AppendAllText(emergencyLog, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] App constructor called\n");
+            }
+            catch (Exception ex)
+            {
+                var emergencyLog = @"C:\Temp\manda-emergency-startup.log";
+                try
+                {
+                    System.IO.Directory.CreateDirectory(@"C:\Temp");
+                    System.IO.File.AppendAllText(emergencyLog, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] CRITICAL FAILURE in App constructor:\n");
+                    System.IO.File.AppendAllText(emergencyLog, $"Exception: {ex.GetType().Name}\n");
+                    System.IO.File.AppendAllText(emergencyLog, $"Message: {ex.Message}\n");
+                    System.IO.File.AppendAllText(emergencyLog, $"Stack Trace:\n{ex.StackTrace}\n");
+                }
+                catch { /* ignore logging failures */ }
+                MessageBox.Show($"CRITICAL App Constructor Failure:\n\n{ex.Message}\n\nSee C:\\Temp\\manda-emergency-startup.log for details",
+                    "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                throw;
+            }
+        }
+
         // Disabled for unified pipeline build
         // private StartupOptimizationService _startupService;
         // private KeyboardShortcutManager _shortcutManager;
@@ -90,6 +119,17 @@ namespace MandADiscoverySuite
                 services.AddSingleton<IKeyboardShortcutService, KeyboardShortcutService>();
                 services.AddSingleton<AnimationOptimizationService>();
 
+                // ========== CRITICAL MISSING SERVICES (Added 2025-09-30) ==========
+                // Data Export Service - uses Singleton pattern
+                services.AddSingleton<DataExportService>(sp => DataExportService.Instance);
+
+                // Logic Engine Service - requires ILogger, optional params use defaults
+                services.AddSingleton<LogicEngineService>(sp =>
+                {
+                    var logger = sp.GetRequiredService<ILogger<LogicEngineService>>();
+                    return new LogicEngineService(logger);
+                });
+                // ========== END CRITICAL MISSING SERVICES ==========
 
                 // Build the service provider
                 ServiceProvider = services.BuildServiceProvider();
@@ -153,7 +193,28 @@ namespace MandADiscoverySuite
                 logAction?.Invoke("Calling base.OnStartup...");
                 base.OnStartup(e);
                 logAction?.Invoke("base.OnStartup completed successfully");
-                logAction?.Invoke("StartupUri will handle main window creation automatically");
+
+                // EMERGENCY LOGGING
+                var emergencyLog = @"C:\Temp\manda-emergency-startup.log";
+                System.IO.File.AppendAllText(emergencyLog, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] OnStartup reached window creation\n");
+
+                // Create and show the main window explicitly (StartupUri removed)
+                logAction?.Invoke("Creating MainWindow instance...");
+                System.IO.File.AppendAllText(emergencyLog, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] About to create MainWindow\n");
+                var mainWindow = new MainWindow();
+                System.IO.File.AppendAllText(emergencyLog, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] MainWindow created successfully\n");
+                logAction?.Invoke("MainWindow instance created successfully");
+
+                // Set as application main window (required for ShutdownMode="OnMainWindowClose")
+                MainWindow = mainWindow;
+                System.IO.File.AppendAllText(emergencyLog, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] MainWindow set as Application.MainWindow\n");
+                logAction?.Invoke("MainWindow set as Application.MainWindow");
+
+                logAction?.Invoke("Showing MainWindow...");
+                System.IO.File.AppendAllText(emergencyLog, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] About to call Show()\n");
+                mainWindow.Show();
+                System.IO.File.AppendAllText(emergencyLog, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] MainWindow.Show() completed\n");
+                logAction?.Invoke("MainWindow.Show() completed successfully");
 
                 // Log startup completion
                 var startupDuration = DateTime.Now - startTime;
