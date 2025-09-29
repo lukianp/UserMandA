@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Tj1pqamWPR0SIIT6DKDyWuydApk5DOTYYRl0Zph5e7v9ATwKIkJQFmr5nbUx5rpuQzdbzxU9WuVAU9WU2UXK/g==",
+  "dgSpecHash": "SAO6H3UpDy+MxeLI26BXe3kRD1jJFBT+oJvUnj83lmdAOS1e749smhqpKR1TL50WjUwnsAEva+R0+UrExps7dA==",
   "success": true,
-  "projectFilePath": "d:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj",
+  "projectFilePath": "D:\\Scripts\\UserMandA\\Tests\\MandADiscoverySuite.Tests.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\lukia\\.nuget\\packages\\avalonedit\\6.2.0.78\\avalonedit.6.2.0.78.nupkg.sha512",
     "C:\\Users\\lukia\\.nuget\\packages\\awssdk.core\\4.0.0.27\\awssdk.core.4.0.0.27.nupkg.sha512",

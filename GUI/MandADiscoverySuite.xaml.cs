@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Microsoft.Extensions.DependencyInjection;
 using MandADiscoverySuite.ViewModels;
 using MandADiscoverySuite.Themes;
 using MandADiscoverySuite.Services;
@@ -55,11 +56,10 @@ namespace MandADiscoverySuite
                 InitializeComponent();
                 logAction?.Invoke("InitializeComponent completed successfully");
                 
-                logAction?.Invoke("Creating MainViewModel...");
-                // Create a minimal ViewModel to avoid binding errors
-                // We'll set the proper ViewModel later after services are initialized
-                ViewModel = new MainViewModel();
-                logAction?.Invoke("MainViewModel created successfully");
+                logAction?.Invoke("Creating MainViewModel from DI container...");
+                // Get the properly configured ViewModel from dependency injection container
+                ViewModel = App.ServiceProvider.GetRequiredService<MainViewModel>();
+                logAction?.Invoke("MainViewModel retrieved from DI container successfully");
                 
                 logAction?.Invoke("Setting DataContext...");
                 DataContext = ViewModel;

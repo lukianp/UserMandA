@@ -202,7 +202,7 @@ namespace MigrationTestSuite.Functional
         public async Task FuzzyMappingWorkflow_RealWorldNames_ShouldMatchAppropriately()
         {
             // Arrange - Real-world name variations
-            var sourceUsers = new List<UserDto>
+            var sourceUsers = new List<MigrationUserDto>
             {
                 CreateUser("S-1", "Michael Johnson", "mjohnson@source.com", true, "mjohnson"),
                 CreateUser("S-2", "Katherine Smith", "ksmith@source.com", true, "ksmith"),
@@ -522,21 +522,21 @@ namespace MigrationTestSuite.Functional
             return shares;
         }
 
-        private List<SqlDatabaseDto> GenerateLargeDatabaseDataset(int count)
+        private List<MigrationSqlDatabaseDto> GenerateLargeDatabaseDataset(int count)
         {
-            var databases = new List<SqlDatabaseDto>();
+            var databases = new List<MigrationSqlDatabaseDto>();
             var random = new Random(42);
-            
+
             for (int i = 1; i <= count; i++)
             {
-                databases.Add(new SqlDatabaseDto
+                databases.Add(new MigrationSqlDatabaseDto
                 {
                     Server = $"SQL{(i % 10) + 1:D2}",
                     Instance = random.Next(0, 3) == 0 ? "NAMED" : "DEFAULT",
                     Database = $"TestDB{i:D6}"
                 });
             }
-            
+
             return databases;
         }
 
@@ -604,7 +604,7 @@ namespace MigrationTestSuite.Functional
             _mockLogicEngine.Setup(x => x.GetAllFileSharesAsync()).Returns(Task.FromResult(new List<MandADiscoverySuite.Models.FileShareDto>()));
             _mockLogicEngine.Setup(x => x.GetAllSqlDatabasesAsync()).Returns(Task.FromResult(new List<MandADiscoverySuite.Models.SqlDbDto>()));
             _mockLogicEngine.Setup(x => x.GetMailboxByUpnAsync(It.IsAny<string>()))
-                .ReturnsAsync((MailboxDto)null);
+                .ReturnsAsync((MandADiscoverySuite.Models.MailboxDto)null);
         }
 
         #endregion

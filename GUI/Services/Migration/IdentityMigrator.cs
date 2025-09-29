@@ -9,6 +9,7 @@ using MandADiscoverySuite.Models.Migration;
 using MandADiscoverySuite.Migration;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.Services.Audit;
+// Use fully qualified type name to resolve ambiguous IAuditService reference
 
 namespace MandADiscoverySuite.Services.Migration
 {
@@ -21,14 +22,14 @@ namespace MandADiscoverySuite.Services.Migration
         private readonly PowerShellExecutionService _powerShellService;
         private readonly ILogicEngineService _logicEngineService;
         private readonly CredentialStorageService _credentialService;
-        private readonly IAuditService _auditService;
+        private readonly MandADiscoverySuite.Services.Audit.IAuditService _auditService;
 
         public IdentityMigrator(
             ILogger<IdentityMigrator> logger,
             PowerShellExecutionService powerShellService,
             ILogicEngineService logicEngineService,
             CredentialStorageService credentialService,
-            IAuditService auditService)
+            MandADiscoverySuite.Services.Audit.IAuditService auditService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _powerShellService = powerShellService ?? throw new ArgumentNullException(nameof(powerShellService));

@@ -1662,7 +1662,11 @@ namespace MandADiscoverySuite.ViewModels
                 WorkingDirectory = @"C:\enterprisediscovery"
             };
 
+<<<<<<< HEAD
             // Add audit service injection - use fully qualified namespace to avoid ambiguity
+=======
+            // Add audit service injection
+>>>>>>> 9860a05e2d6e2eb42b75de9fbb1cb458185f2795
             var auditService = SimpleServiceLocator.Instance.GetService<MandADiscoverySuite.Services.Audit.IAuditService>();
             if (auditService != null)
             {

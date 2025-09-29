@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Windows.Controls;
 using MandADiscoverySuite.ViewModels;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using MandADiscoverySuite.Services;
 
 namespace MandADiscoverySuite.Views
@@ -24,7 +25,7 @@ namespace MandADiscoverySuite.Views
                 // Create proper ModuleInfo for Application Discovery
                 var moduleInfo = new MandADiscoverySuite.Services.ModuleInfo
                 {
-                    Icon = "🔧",
+                    Icon = "ðŸ”§",
                     DisplayName = "Application Discovery",
                     Description = "Discovery and analysis of installed applications",
                     Category = "Applications",
@@ -34,8 +35,8 @@ namespace MandADiscoverySuite.Views
                     Enabled = true
                 };
 
-                // Create MainViewModel instance (basic implementation)
-                var mainViewModel = new MandADiscoverySuite.ViewModels.MainViewModel();
+                // Get MainViewModel instance from DI container
+                var mainViewModel = App.ServiceProvider.GetRequiredService<MandADiscoverySuite.ViewModels.MainViewModel>();
 
                 // Create ViewModel with proper arguments
                 var viewModel = new ApplicationDiscoveryViewModel(moduleInfo, mainViewModel, vmLogger);

@@ -15,6 +15,7 @@ using CommunityToolkit.Mvvm.Input;
 using MandADiscoverySuite.Models;
 using MandADiscoverySuite.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MandADiscoverySuite.ViewModels
 {
@@ -23,14 +24,14 @@ namespace MandADiscoverySuite.ViewModels
     /// </summary>
     public class MainViewModel : INotifyPropertyChanged
     {
-        private readonly TabsService _tabsService = null!;
-        
+        private readonly MandADiscoverySuite.Services.TabsService _tabsService = null!;
+
         /// <summary>
         /// Static reference to TabsService for access from other ViewModels
         /// TODO: Replace with proper DI when restructuring services
         /// </summary>
-        public static TabsService? CurrentTabsService { get; private set; }
-        private readonly NavigationService _navigationService = null!;
+        public static MandADiscoverySuite.Services.TabsService? CurrentTabsService { get; private set; }
+        private readonly MandADiscoverySuite.Services.NavigationService _navigationService = null!;
         private readonly ILogger<MainViewModel>? _logger;
         
         // Service instances for real functionality
@@ -572,21 +573,19 @@ namespace MandADiscoverySuite.ViewModels
             }
         }
         
-        public MainViewModel()
+        public MainViewModel(ILogger<MainViewModel> logger, MandADiscoverySuite.Services.TabsService tabsService, MandADiscoverySuite.Services.NavigationService navigationService,
+                            IDiscoveryService discoveryService, DataExportService dataExportService,
+                            ModuleRegistryService moduleRegistryService, LogicEngineService logicEngineService)
         {
             try
             {
-                // Create logger
-                var loggerFactory = LoggerFactory.Create(builder => builder.AddDebug());
-                _logger = loggerFactory.CreateLogger<MainViewModel>();
-                var tabsLogger = loggerFactory.CreateLogger<TabsService>();
-                
-                _logger?.LogInformation("[MainViewModel] Constructor started");
-            
-            // Initialize services
-            _tabsService = new TabsService(tabsLogger);
+                _logger = logger;
+                _logger?.LogInformation("[MainViewModel] Constructor started with DI services");
+
+            // Initialize services from DI container
+            _tabsService = tabsService ?? throw new ArgumentNullException(nameof(tabsService));
             CurrentTabsService = _tabsService; // Set static reference for other ViewModels
-            
+
             // Subscribe to tabs collection changes to notify HasTabs and OpenTabs properties
             _tabsService.Tabs.CollectionChanged += (s, e) =>
             {
@@ -594,22 +593,18 @@ namespace MandADiscoverySuite.ViewModels
                 OnPropertyChanged(nameof(OpenTabs));
                 Console.WriteLine($"[DEBUG] Tabs collection changed, count: {_tabsService.Tabs.Count}");
             };
-            
-            var navLogger = loggerFactory.CreateLogger<NavigationService>();
-            _navigationService = new NavigationService(_tabsService, navLogger);
-            
-            // Initialize service instances
-            _discoveryService = new DiscoveryService();
-            _dataExportService = DataExportService.Instance;
-            _moduleRegistryService = ModuleRegistryService.Instance;
-            var logicEngineLogger = loggerFactory.CreateLogger<LogicEngineService>();
-            _logicEngineService = new LogicEngineService(logicEngineLogger);
-            
-            // Initialize T-000 services  
-            var envDetectionLogger = loggerFactory.CreateLogger<EnvironmentDetectionService>();
-            _environmentDetectionService = new EnvironmentDetectionService(envDetectionLogger);
-            var connectionTestLogger = loggerFactory.CreateLogger<ConnectionTestService>();
-            _connectionTestService = new ConnectionTestService(connectionTestLogger);
+
+            _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+
+            // Initialize service instances from DI
+            _discoveryService = discoveryService ?? throw new ArgumentNullException(nameof(discoveryService));
+            _dataExportService = dataExportService ?? throw new ArgumentNullException(nameof(dataExportService));
+            _moduleRegistryService = moduleRegistryService ?? throw new ArgumentNullException(nameof(moduleRegistryService));
+            _logicEngineService = logicEngineService ?? throw new ArgumentNullException(nameof(logicEngineService));
+
+            // Initialize T-000 services using DI from App.ServiceProvider
+            _environmentDetectionService = App.ServiceProvider.GetRequiredService<IEnvironmentDetectionService>();
+            _connectionTestService = App.ServiceProvider.GetRequiredService<IConnectionTestService>();
             
             // Initialize collections
             _companyProfiles = new ObservableCollection<CompanyProfile>();
@@ -835,8 +830,8 @@ namespace MandADiscoverySuite.ViewModels
                     System.IO.File.WriteAllText(errorFile, $"[{DateTime.Now}] MainViewModel Constructor Exception:\n{ex}\n\nInner Exception: {ex.InnerException}\n\nStack Trace:\n{ex.StackTrace}");
                     
                     var loggerFactory = LoggerFactory.Create(builder => builder.AddDebug());
-                    var logger = loggerFactory.CreateLogger<MainViewModel>();
-                    logger.LogError(ex, "[MainViewModel] Constructor failed, continuing with minimal functionality");
+                    var fallbackLogger = loggerFactory.CreateLogger<MainViewModel>();
+                    fallbackLogger.LogError(ex, "[MainViewModel] Constructor failed, continuing with minimal functionality");
                 }
                 catch
                 {

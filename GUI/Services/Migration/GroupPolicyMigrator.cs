@@ -1,4 +1,4 @@
-using System;
+  using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,9 +24,9 @@ namespace MandADiscoverySuite.Services.Migration
         private readonly ILogger<GroupPolicyMigrator> _logger;
         private readonly Dictionary<string, string> _gpoSettingMap;
         private readonly Dictionary<string, object> _migrationSettings;
-        private readonly IAuditService _auditService;
+        private readonly MandADiscoverySuite.Services.Audit.IAuditService _auditService;
 
-        public GroupPolicyMigrator(ILogger<GroupPolicyMigrator> logger, IAuditService auditService)
+        public GroupPolicyMigrator(ILogger<GroupPolicyMigrator> logger, MandADiscoverySuite.Services.Audit.IAuditService auditService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));

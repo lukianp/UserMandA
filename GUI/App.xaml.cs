@@ -76,9 +76,75 @@ namespace MandADiscoverySuite
             }
             catch (Exception ex)
             {
+<<<<<<< HEAD
                 _staticLogAction?.Invoke($"ERROR in ConfigureServices: {ex.Message}");
                 throw; // Re-throw to ensure the error is handled by the global handler
             }
+=======
+                var logger = sp.GetRequiredService<ILogger<LogicEngineSampleDataService>>();
+                return new LogicEngineSampleDataService(logger);
+            });
+
+            // Register CSV data validation service
+            services.AddSingleton<CsvDataValidationService>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<CsvDataValidationService>>();
+                return new CsvDataValidationService(logger);
+            });
+
+            // Register log management service
+            services.AddSingleton<ILogManagementService, LogManagementService>();
+            services.AddSingleton<LogManagementService>();
+
+            // Register theme service
+            services.AddSingleton<ThemeService>();
+
+            // Register UI logging service
+            services.AddSingleton<UIInteractionLoggingService>();
+
+            // Register CSV file watcher service
+            services.AddSingleton<CsvFileWatcherService>();
+
+            // Register CSV data service
+            services.AddSingleton<ICsvDataLoader>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<CsvDataServiceNew>>();
+                return (ICsvDataLoader)new CsvDataServiceNew(logger, "ljpops"); // Use default profile
+            });
+            services.AddSingleton<CsvDataServiceNew>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<CsvDataServiceNew>>();
+                return new CsvDataServiceNew(logger, "ljpops");
+            });
+
+            // Register navigation service
+            services.AddSingleton<NavigationService>();
+
+            // Register Discovery Services
+            services.AddSingleton<DiscoveryService>();
+            services.AddSingleton<IDiscoveryService>(provider => provider.GetRequiredService<DiscoveryService>());
+            services.AddSingleton<ModuleRegistryService>(provider => ModuleRegistryService.Instance);
+
+            // Register TabsService and NavigationService
+            services.AddSingleton<MandADiscoverySuite.Services.TabsService>();
+            services.AddSingleton<MandADiscoverySuite.Services.NavigationService>();
+
+            // Register T-000 services for environment detection and connection testing
+            services.AddSingleton<IEnvironmentDetectionService, EnvironmentDetectionService>();
+            services.AddSingleton<IConnectionTestService, ConnectionTestService>();
+
+            // Register ViewModels that require DI
+            services.AddTransient<DiscoveryViewModel>();
+            services.AddSingleton<MainViewModel>();
+
+            // Register additional services that may be needed
+            services.AddSingleton<ProfileService>();
+            services.AddSingleton<IKeyboardShortcutService, KeyboardShortcutService>();
+            services.AddSingleton<AnimationOptimizationService>();
+
+            // Build the service provider
+            ServiceProvider = services.BuildServiceProvider();
+>>>>>>> 9860a05e2d6e2eb42b75de9fbb1cb458185f2795
         }
 
         protected override void OnStartup(StartupEventArgs e)
@@ -133,12 +199,20 @@ namespace MandADiscoverySuite
                 logAction?.Invoke("Calling base.OnStartup...");
                 base.OnStartup(e);
                 logAction?.Invoke("base.OnStartup completed successfully");
+                logAction?.Invoke("StartupUri will handle main window creation automatically");
 
                 // Log startup completion
                 var startupDuration = DateTime.Now - startTime;
+<<<<<<< HEAD
                 logAction?.Invoke($"Startup completed in {startupDuration.TotalSeconds:F1} seconds");
 
                 logAction?.Invoke("=== OnStartup COMPLETED SUCCESSFULLY (Diagnostic Mode) ===");
+=======
+                _ = Task.Run(async () => await loggingService.LogStartupAsync(version, startupDuration));
+                _ = Task.Run(async () => await auditService.LogSystemStartupAsync(version, startupDuration));
+
+                logAction?.Invoke("=== OnStartup COMPLETED SUCCESSFULLY ===");
+>>>>>>> 9860a05e2d6e2eb42b75de9fbb1cb458185f2795
             }
             catch (Exception ex)
             {

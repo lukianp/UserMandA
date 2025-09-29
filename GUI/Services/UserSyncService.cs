@@ -26,7 +26,7 @@ namespace MandADiscoverySuite.Services
 
         private readonly ILogger<UserSyncService> _logger;
         private readonly IIdentityMigrator _identityMigrator;
-        private readonly IAuditService _auditService;
+        private readonly MandADiscoverySuite.Services.Audit.IAuditService _auditService;
         private readonly ConcurrentDictionary<string, SyncJobInfo> _activeSyncJobs;
         private readonly ConcurrentDictionary<string, UserSyncStatus> _userSyncStatuses;
         private readonly ConcurrentDictionary<string, Timer> _syncTimers;
@@ -40,7 +40,7 @@ namespace MandADiscoverySuite.Services
         public UserSyncService(
             ILogger<UserSyncService> logger = null!,
             IIdentityMigrator identityMigrator = null!,
-            IAuditService auditService = null!)
+            MandADiscoverySuite.Services.Audit.IAuditService auditService = null!)
         {
             _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<UserSyncService>.Instance;
             _identityMigrator = identityMigrator ?? throw new ArgumentNullException(nameof(identityMigrator));

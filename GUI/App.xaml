@@ -20,6 +20,7 @@
                 <ResourceDictionary Source="Resources/Styles/MainStyles.xaml"/>
 
                 <!-- Theme and styling dictionaries -->
+                <ResourceDictionary Source="Themes/Colors.xaml"/>
                 <ResourceDictionary Source="Themes/OptimizedResources.xaml"/>
                 <ResourceDictionary Source="Themes/OptimizedAnimations.xaml"/>
                 <ResourceDictionary Source="Themes/OptimizedGridLayouts.xaml"/>
