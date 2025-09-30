@@ -14,10 +14,9 @@
     <SelfContained>false</SelfContained>
     <PublishReadyToRun>false</PublishReadyToRun>
     <ImplicitUsings>enable</ImplicitUsings>
-    <EnableDefaultMainMethod>true</EnableDefaultMainMethod>
     <ApplicationDefinition>App.xaml</ApplicationDefinition>
     <Deterministic>true</Deterministic>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>10.0</LangVersion>
     <NeutralLanguage>en-US</NeutralLanguage>
     <!-- Enable binding optimization for better performance -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
@@ -140,6 +139,17 @@
     <Page Remove="Views\SharePointMigrationPlanningView.xaml" />
     <Page Remove="Views\ExchangeMigrationPlanningViewSimple.xaml" />
     <Compile Remove="Views\ExchangeMigrationPlanningViewSimple.xaml.cs" />
+  </ItemGroup>
+
+  <!-- Exclude test and diagnostic files from production build -->
+  <ItemGroup>
+    <Compile Remove="simple-test.cs" />
+    <Compile Remove="check-*.ps1" />
+    <Compile Remove="test-*.ps1" />
+    <Compile Remove="emergency-log-check.ps1" />
+    <Compile Remove="ultra-diagnostic.ps1" />
+    <Compile Remove="visual-test.cs" />
+    <Compile Remove="dependency-check.ps1" />
   </ItemGroup>
 
 </Project>

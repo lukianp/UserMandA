@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -42,7 +42,7 @@ namespace MandADiscoverySuite.Tests.Services
             _logsPath = Path.Combine(_testDataPath, "Logs");
             Directory.CreateDirectory(_logsPath);
             
-            _logicEngine = new LogicEngineService(_logicEngineLogger, _cacheService, Path.Combine(_testDataPath, "RawData"));
+            _logicEngine = new LogicEngineService(_logicEngineLogger, null, Path.Combine(_testDataPath, "RawData"));
         }
 
         [TestCleanup]

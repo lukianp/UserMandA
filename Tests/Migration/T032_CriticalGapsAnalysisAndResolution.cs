@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -459,19 +459,11 @@ namespace MandADiscoverySuite.Tests.Migration
             var incompleteUser = new UserDto(); // Missing required fields
 
             _mockUserValidator
-                .Setup(u => u.ValidateUserAsync(incompleteUser, _testTargetContext, It.IsAny<IProgress<ValidationProgress>>()))
-                .ReturnsAsync((UserDto user, TargetContext context, IProgress<ValidationProgress> progress) =>
-                {
-                    var issues = new List<ValidationIssue>();
-                    
-                    if (string.IsNullOrEmpty(user.UserPrincipalName))
-                        issues.Add(new ValidationIssue { Severity = ValidationSeverity.Error, Category = "Required Field", Description = "UserPrincipalName is required" });
+                .Setup(u => u.ValidateUserAsync(incompleteUser, null, TargetContext context, null, _testTargetContext, Category = "Required Field", Description = "UserPrincipalName is required" });
                     
                     if (string.IsNullOrEmpty(user.DisplayName))
-                        issues.Add(new ValidationIssue { Severity = ValidationSeverity.Error, Category = "Required Field", Description = "DisplayName is required" });
-
-                    return issues.Any() 
-                        ? ValidationResult.Failed(user, "User", user.DisplayName ?? "Unknown", "Required fields missing", issues)
+                        issues.Add(new ValidationIssue { Severity = ValidationSeverity.Error, Category = "Required Field", It.IsAny<IProgress<ValidationProgress>>()))
+                .ReturnsAsync((UserDto user, null, user.DisplayName ?? "Unknown", "Required fields missing", issues)
                         : ValidationResult.Success(user, "User", user.DisplayName);
                 });
 

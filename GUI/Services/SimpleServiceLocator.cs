@@ -30,12 +30,13 @@ namespace MandADiscoverySuite.Services
             // Initialize basic services
             _loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
             _messenger = WeakReferenceMessenger.Default;
-            
+
             // Register basic services immediately
             RegisterService<IMessenger>(_messenger);
-            
-            // Pre-register critical services to prevent widget failures
-            PreRegisterCriticalServices();
+
+            // DISABLED: Pre-registration now handled by Microsoft.Extensions.DependencyInjection in App.xaml.cs
+            // This was causing static initialization failures before App.OnStartup could run
+            // PreRegisterCriticalServices();
         }
         
         /// <summary>

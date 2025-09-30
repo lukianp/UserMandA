@@ -11,7 +11,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- NEW: Extracted modular resources -->
+                <!-- Extracted modular resources -->
                 <ResourceDictionary Source="Resources/Converters/Converters.xaml"/>
                 <ResourceDictionary Source="Resources/Templates/DataTemplates.xaml"/>
                 <ResourceDictionary Source="Resources/Styles/MainStyles.xaml"/>
@@ -104,6 +104,9 @@
             <Thickness x:Key="VerticalSpacingMediumThickness">0,12,0,12</Thickness>
 
             <!-- View mappings -->
+            <!-- DISABLED: DataTemplates cause early type loading which triggers static initialization failures
+                 Views are now created via ViewRegistry on-demand instead of implicit DataTemplate resolution -->
+            <!--
             <DataTemplate DataType="{x:Type vm:ManagementViewModel}">
                 <views:ManagementView/>
             </DataTemplate>
@@ -116,6 +119,7 @@
             <DataTemplate DataType="{x:Type vm:NetworkInfrastructureDiscoveryViewModel}">
                 <views:NetworkInfrastructureDiscoveryView/>
             </DataTemplate>
+            -->
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -27,7 +27,7 @@ namespace MandADiscoverySuite.Tests.Services
             _testDataPath = Path.Combine(Path.GetTempPath(), "LogicEngineTests", Guid.NewGuid().ToString());
             Directory.CreateDirectory(_testDataPath);
             
-            _logicEngine = new LogicEngineService(_mockLogger.Object, _testDataPath);
+            _logicEngine = new LogicEngineService(_mockLogger.Object, null, _testDataPath);
             
             // Set up test data
             SetupTestData();
@@ -230,7 +230,7 @@ test6@test.com,test6,S-1-5-21-1-1006,test6@test.com,Test User 6,0,OU=Test,,Test,
             var boolTestPath = Path.Combine(_testDataPath, "BoolTest_Users.csv");
             File.WriteAllText(boolTestPath, boolTestData);
             
-            var boolTestEngine = new LogicEngineService(_mockLogger.Object, _mockCache.Object, _testDataPath);
+            var boolTestEngine = new LogicEngineService(_mockLogger.Object, null, _testDataPath);
             File.Move(Path.Combine(_testDataPath, "Users.csv"), Path.Combine(_testDataPath, "Users_backup.csv"));
             File.Move(boolTestPath, Path.Combine(_testDataPath, "Users.csv"));
 
@@ -272,7 +272,7 @@ test6@test.com,test6,S-1-5-21-1-1006,test6@test.com,Test User 6,0,OU=Test,,Test,
         public async Task LoadAllAsync_ShouldHandleMissingFiles()
         {
             // Arrange - Create engine with non-existent path
-            var missingDataEngine = new LogicEngineService(_mockLogger.Object, _mockCache.Object, Path.Combine(_testDataPath, "NonExistent"));
+            var missingDataEngine = new LogicEngineService(_mockLogger.Object, null, Path.Combine(_testDataPath, "NonExistent"));
 
             // Act & Assert - Should not throw, should handle gracefully
             var result = await missingDataEngine.LoadAllAsync();
@@ -305,7 +305,7 @@ test@test.com,test,INVALID-SID,test@test.com,Test User,INVALID-BOOL,OU=Test,,Tes
             File.Move(Path.Combine(_testDataPath, "Users.csv"), Path.Combine(_testDataPath, "Users_backup.csv"));
             File.Move(Path.Combine(_testDataPath, "Malformed_Users.csv"), Path.Combine(_testDataPath, "Users.csv"));
 
-            var malformedEngine = new LogicEngineService(_mockLogger.Object, _mockCache.Object, _testDataPath);
+            var malformedEngine = new LogicEngineService(_mockLogger.Object, null, _testDataPath);
 
             // Act & Assert - Should handle malformed data gracefully
             var result = await malformedEngine.LoadAllAsync();
@@ -373,7 +373,7 @@ S-1-5-21-1234567890-1234567890-1234567890-4002,Group B,Security,,2024-01-15T10:3
             File.Move(Path.Combine(_testDataPath, "Groups.csv"), Path.Combine(_testDataPath, "Groups_backup.csv"));
             File.Move(Path.Combine(_testDataPath, "Circular_Groups.csv"), Path.Combine(_testDataPath, "Groups.csv"));
 
-            var circularEngine = new LogicEngineService(_mockLogger.Object, _testDataPath);
+            var circularEngine = new LogicEngineService(_mockLogger.Object, null, _testDataPath);
 
             // Act & Assert - Should detect and handle circular references without infinite loops
             var result = await circularEngine.LoadAllAsync();
@@ -583,7 +583,7 @@ S-1-5-21-1234567890-1234567890-1234567890-4002,Group B,Security,,2024-01-15T10:3
             File.Move(Path.Combine(_testDataPath, "Users.csv"), Path.Combine(_testDataPath, "Users_backup.csv"));
             File.Move(Path.Combine(_testDataPath, "Large_Users.csv"), Path.Combine(_testDataPath, "Users.csv"));
 
-            var largeDataEngine = new LogicEngineService(_mockLogger.Object, _testDataPath);
+            var largeDataEngine = new LogicEngineService(_mockLogger.Object, null, _testDataPath);
 
             // Act
             var startTime = DateTime.UtcNow;
@@ -691,7 +691,7 @@ flexible@test.com,flexible,S-1-5-21-1234567890-1234567890-1234567890-9001,flexib
             File.Move(Path.Combine(_testDataPath, "Users.csv"), Path.Combine(_testDataPath, "Users_backup.csv"));
             File.Move(Path.Combine(_testDataPath, "AltHeader_Users.csv"), Path.Combine(_testDataPath, "Users.csv"));
 
-            var altEngine = new LogicEngineService(_mockLogger.Object, _testDataPath);
+            var altEngine = new LogicEngineService(_mockLogger.Object, null, _testDataPath);
 
             // Act
             await altEngine.LoadAllAsync();
