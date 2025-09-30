@@ -1,3 +1,4 @@
+using System;
 using System.Windows.Controls;
 using MandADiscoverySuite.Services;
 using MandADiscoverySuite.ViewModels;

@@ -2,11 +2,23 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(tasklist)",
-      "Bash(while read f)",
-      "Bash(do if grep -q \"^[A-Z].*(\" \"$f\")",
-      "Bash(then echo \"POTENTIAL: $f\")",
-      "Bash(fi)"
+      "Bash(Select-String -Pattern \"(error|warning|Build succeeded|Build FAILED)\" -Context 0,1)",
+      "Bash(pkill:*)",
+      "Bash(pwsh.exe:*)",
+      "Bash(./powershell.exe -Command \"Start-Process -FilePath ''D:\\Scripts\\UserMandA\\GUI\\bin\\Debug\\net6.0-windows\\MandADiscoverySuite.exe'' -PassThru | Select-Object Id, ProcessName, StartTime | Format-List\")",
+      "Bash(./powershell.exe:*)",
+      "Bash(curl:*)",
+      "Bash(dotnet --list-sdks)",
+      "Bash(dotnet --list-runtimes)",
+      "Bash(export COREHOST_TRACE=1 DOTNET_CLI_UI_LANGUAGE=en)",
+      "Bash(dotnet:*)",
+      "Bash(ls:*)",
+      "Bash(if exist \"C:\\Temp\\manda-emergency-startup.log\" del \"C:\\Temp\\manda-emergency-startup.log\")",
+      "Bash(if [ -f \"/c/Temp/manda-emergency-startup.log\" ])",
+      "Bash(then rm \"/c/Temp/manda-emergency-startup.log\")",
+      "Bash(else echo \"No log file found\")",
+      "Bash(then cat \"/c/Temp/manda-emergency-startup.log\")",
+      "Bash(else echo \"NO EMERGENCY LOG CREATED - App() constructor NOT called!\")"
     ],
     "deny": [],
     "ask": [],
