@@ -21,7 +21,7 @@
     <!-- Enable binding optimization for better performance -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <!-- Suppress warnings that clutter the build log -->
-    <NoWarn>CA1416;CS8618;CS8625;CS8604;CS1998;CS8767;CS8622;CS8612;CS8600;CS8603;CS8602;CS8601</NoWarn>
+    <NoWarn>CA1416;CS8618;CS8625;CS8604;CS1998;CS8767;CS8622;CS8612;CS8600;CS8603;CS8602;CS8601;CS7022</NoWarn>
     <!-- Enable default SDK inclusion of XAML files -->
     <EnableDefaultPageItems>true</EnableDefaultPageItems>
     <!-- Disable framework attributes to avoid duplicates -->
@@ -35,6 +35,7 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <!-- Temporarily remove warning suppressions to see actual count -->
   </PropertyGroup>
+
 
   <ItemGroup>
     <PackageReference Include="AWSSDK.Core" Version="4.0.0.27" />
