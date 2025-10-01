@@ -503,3 +503,4 @@ By adhering to the above, the codebase will remain consistent and robust. The ex
 Conclusion
 
 The M&A Discovery Suite GUI provides a unified, performant interface for complex IT discovery and migration tasks. Its low-level design balances flexibility (data-driven UI that adapts to available CSV schema) with reliability (extensive error handling and logging). Now that structural issues have been fixed and the UI is stable, the focus can shift to completing remaining features and improving the user experience even further. The architecture in place will support those future enhancements with minimal friction.
+- continue troubleshooting to get this running

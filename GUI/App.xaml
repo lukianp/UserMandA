@@ -11,12 +11,10 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- NEW: Extracted modular resources -->
-                <ResourceDictionary Source="Resources/Converters/Converters.xaml"/>
+                <!-- NEW: Extracted modular resources - TEMPORARILY DISABLED for minimal startup -->
+                <!--<ResourceDictionary Source="Resources/Converters/Converters.xaml"/>
                 <ResourceDictionary Source="Resources/Templates/DataTemplates.xaml"/>
                 <ResourceDictionary Source="Resources/Styles/MainStyles.xaml"/>
-
-                <!-- Theme and styling dictionaries -->
                 <ResourceDictionary Source="Themes/Colors.xaml"/>
                 <ResourceDictionary Source="Themes/OptimizedResources.xaml"/>
                 <ResourceDictionary Source="Themes/OptimizedAnimations.xaml"/>
@@ -27,18 +25,24 @@
                 <ResourceDictionary Source="Themes/SpacingSystem.xaml"/>
                 <ResourceDictionary Source="Themes/CustomTooltips.xaml"/>
                 <ResourceDictionary Source="Themes/DashboardWidgets.xaml"/>
-                <!-- High Contrast Theme (default) -->
                 <ResourceDictionary Source="Themes/HighContrastTheme.xaml"/>
-                
-                <!-- Data grid theming -->
                 <ResourceDictionary Source="Resources/DataGridTheme.xaml"/>
                 <ResourceDictionary Source="Resources/ButtonStyles.xaml"/>
-                <!-- Modern Styles -->
                 <ResourceDictionary Source="Styles/ModernButtonStyle.xaml"/>
-                <!-- Discovery view styles -->
-                <ResourceDictionary Source="Resources/DiscoveryViewStyles.xaml"/>
+                <ResourceDictionary Source="Resources/DiscoveryViewStyles.xaml"/>-->
             </ResourceDictionary.MergedDictionaries>
-            
+
+            <!-- CRITICAL STYLES - needed by MainWindow until resource dictionaries are fixed -->
+            <Style x:Key="ModernComboBoxStyle" TargetType="ComboBox">
+                <Setter Property="Background" Value="#2D3748"/>
+                <Setter Property="Foreground" Value="#E2E8F0"/>
+                <Setter Property="BorderBrush" Value="#4A5568"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="8,4"/>
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="14"/>
+            </Style>
+
             <!-- Standard Converters (Note: Basic converters moved to Resources/Converters/Converters.xaml) -->
             <converters:InvertedBoolToVisibilityConverter x:Key="InvertedBoolToVisibilityConverter"/>
             <converters:ViewModelTypeComparisonConverter x:Key="ViewModelTypeComparisonConverter"/>

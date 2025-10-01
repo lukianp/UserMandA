@@ -167,13 +167,12 @@ namespace MandADiscoverySuite.Tests.Services
                             await _cacheService.GetOrCreateAsync(key, async () =>
                             {
                                 await Task.Delay(Random.Shared.Next(10, 50));
-                                return new UserDto($"user{threadId}@test.com", null, // Sid
-                                    null, null, // UPN
-                                    $"user{threadId}", // DisplayName
+                                return new UserDto($"user{threadId}@test.com", null, null, null, // Sid
+                                    null, // DisplayName
                                     true, // Enabled
                                     null, // OU
-                                    null, // Sam
-                                    $"S-1-5-21-{threadId}", null, // AzureObjectId
+                                    null, // UPN
+                                    $"user{threadId}", null, // AzureObjectId
                                     new List<string>(), // Groups
                                     DateTime.UtcNow, // DiscoveryTimestamp
                                     "test.com", // DiscoveryModule
@@ -567,13 +566,12 @@ namespace MandADiscoverySuite.Tests.Services
                     await _cacheService.GetOrCreateAsync($"user_mod_{index}", async () =>
                     {
                         await Task.Delay(Random.Shared.Next(10, 50));
-                        return new UserDto($"moduser{index}@test.com", null, // Sid
-                            $"moduser{index}@test.com", null, // UPN
-                            $"moduser{index}", // DisplayName
+                        return new UserDto($"moduser{index}@test.com", null, null, null, // Sid
+                            $"moduser{index}@test.com", // DisplayName
                             true, // Enabled
                             null, // OU
-                            null, // Sam
-                            sid, null, // AzureObjectId
+                            null, // UPN
+                            $"moduser{index}", null, // AzureObjectId
                             new List<string>(), // Groups
                             DateTime.UtcNow, // DiscoveryTimestamp
                             "test.com", // DiscoveryModule
@@ -600,13 +598,12 @@ namespace MandADiscoverySuite.Tests.Services
         {
             // Arrange
             var testKey = "consistency_test";
-            var testData = new UserDto("consistent@test.com", null, // Sid
-                "consistent@test.com", null, // UPN
-                "consistent", // DisplayName
+            var testData = new UserDto("consistent@test.com", null, null, null, // Sid
+                "consistent@test.com", // DisplayName
                 true, // Enabled
                 null, // OU
-                null, // Sam
-                "S-1-5-21-CONSIST-1", null, // AzureObjectId
+                null, // UPN
+                "consistent", null, // AzureObjectId
                 new List<string>(), // Groups
                 DateTime.UtcNow, // DiscoveryTimestamp
                 "test.com", // DiscoveryModule

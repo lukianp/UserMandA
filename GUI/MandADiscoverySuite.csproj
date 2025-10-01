@@ -14,7 +14,6 @@
     <SelfContained>false</SelfContained>
     <PublishReadyToRun>false</PublishReadyToRun>
     <ImplicitUsings>disable</ImplicitUsings>
-    <ApplicationDefinition>App.xaml</ApplicationDefinition>
     <Deterministic>true</Deterministic>
     <LangVersion>10.0</LangVersion>
     <NeutralLanguage>en-US</NeutralLanguage>

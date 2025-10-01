@@ -459,11 +459,10 @@ namespace MandADiscoverySuite.Tests.Migration
             var incompleteUser = new UserDto(); // Missing required fields
 
             _mockUserValidator
-                .Setup(u => u.ValidateUserAsync(incompleteUser, null, TargetContext context, null, _testTargetContext, Category = "Required Field", Description = "UserPrincipalName is required" });
+                .Setup(u => u.ValidateUserAsync(incompleteUser, null, null, null, TargetContext context, Category = "Required Field", Description = "UserPrincipalName is required" });
                     
                     if (string.IsNullOrEmpty(user.DisplayName))
-                        issues.Add(new ValidationIssue { Severity = ValidationSeverity.Error, Category = "Required Field", It.IsAny<IProgress<ValidationProgress>>()))
-                .ReturnsAsync((UserDto user, null, user.DisplayName ?? "Unknown", "Required fields missing", issues)
+                        issues.Add(new ValidationIssue { Severity = ValidationSeverity.Error, Category = "Required Field", _testTargetContext, null, user.DisplayName ?? "Unknown", "Required fields missing", issues)
                         : ValidationResult.Success(user, "User", user.DisplayName);
                 });
 

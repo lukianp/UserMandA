@@ -57,7 +57,7 @@ namespace MigrationTestSuite.Unit.Services
         public async Task CheckUserEligibility_DisabledAccount_ShouldBeBlocked()
         {
             // Arrange
-            var disabledUser = new UserDto("john.doe@contoso.com", null, null, null, "johndoe", false, "Disabled", null, "S-1-5-21-12345-1", null, new List<string>(), DateTime.UtcNow, "contoso.com", "User");
+            var disabledUser = new UserDto("john.doe@contoso.com", null, null, null, null, false, "Disabled", null, "johndoe", null, new List<string>(), DateTime.UtcNow, "contoso.com", "User");
 
             _mockLogicEngine.Setup(x => x.GetAllUsersAsync())
                 .ReturnsAsync(new List<UserDto> { disabledUser });
@@ -79,13 +79,12 @@ namespace MigrationTestSuite.Unit.Services
         public async Task CheckUserEligibility_MissingUPN_ShouldBeBlocked()
         {
             // Arrange
-            var userWithoutUPN = new UserDto(null, null, // DisplayName
-                "janedoe", null, // UPN - missing
-                "S-1-5-21-12345-2", // Department
+            var userWithoutUPN = new UserDto(null, null, null, null, // DisplayName
+                "janedoe", // Department
                 null, // Title
                 true, // Enabled
-                null, // Sid
-                "Jane Doe", null, // Phone
+                null, // UPN - missing
+                "S-1-5-21-12345-2", null, // Phone
                 new List<string>(), // Groups
                 DateTime.UtcNow, // Created
                 "contoso.com", // Domain
@@ -120,13 +119,12 @@ namespace MigrationTestSuite.Unit.Services
 
             foreach (var invalidUPN in invalidCharTests)
             {
-                var user = new UserDto(invalidUPN, null, // DisplayName
-                    "testuser", null, // UPN
-                    $"S-1-5-21-12345-{Guid.NewGuid()}", // Department
+                var user = new UserDto(invalidUPN, null, null, null, // DisplayName
+                    "testuser", // Department
                     null, // Title
                     true, // Enabled
-                    null, // Sid
-                    "Test User", null, // Phone
+                    null, // UPN
+                    $"S-1-5-21-12345-{Guid.NewGuid()}", null, // Phone
                     new List<string>(), // Groups
                     DateTime.UtcNow, // Created
                     "contoso.com", // Domain
@@ -153,13 +151,12 @@ namespace MigrationTestSuite.Unit.Services
         public async Task CheckUserEligibility_LargeMailbox_ShouldBeBlocked()
         {
             // Arrange
-            var user = new UserDto("large.user@contoso.com", null, // DisplayName
-                "largeuser", null, // UPN
-                "S-1-5-21-12345-3", // Department
+            var user = new UserDto("large.user@contoso.com", null, null, null, // DisplayName
+                "largeuser", // Department
                 null, // Title
                 true, // Enabled
-                null, // Sid
-                "Large Mailbox User", null, // Phone
+                null, // UPN
+                "S-1-5-21-12345-3", null, // Phone
                 new List<string>(), // Groups
                 DateTime.UtcNow, // Created
                 "contoso.com", // Domain
@@ -202,13 +199,12 @@ namespace MigrationTestSuite.Unit.Services
 
             foreach (var blockedChar in blockedChars)
             {
-                users.Add(new UserDto($"user{Guid.NewGuid()}@contoso.com", null, // DisplayName
-                    $"user{Guid.NewGuid()}", null, // UPN
-                    $"S-1-5-21-12345-{Guid.NewGuid()}", // Department
+                users.Add(new UserDto($"user{Guid.NewGuid()}@contoso.com", null, null, null, // DisplayName
+                    $"user{Guid.NewGuid()}", // Department
                     null, // Title
                     true, // Enabled
-                    null, // Sid
-                    $"User{blockedChar}Name", null, // Phone
+                    null, // UPN
+                    $"S-1-5-21-12345-{Guid.NewGuid()}", null, // Phone
                     new List<string>(), // Groups
                     DateTime.UtcNow, // Created
                     "contoso.com", // Domain
@@ -235,13 +231,12 @@ namespace MigrationTestSuite.Unit.Services
         public async Task CheckUserEligibility_ValidUser_ShouldBeEligible()
         {
             // Arrange
-            var validUser = new UserDto("valid.user@contoso.com", null, // DisplayName
-                "validuser", null, // UPN
-                "S-1-5-21-12345-4", // Department
+            var validUser = new UserDto("valid.user@contoso.com", null, null, null, // DisplayName
+                "validuser", // Department
                 null, // Title
                 true, // Enabled
-                null, // Sid
-                "Valid User", null, // Phone
+                null, // UPN
+                "S-1-5-21-12345-4", null, // Phone
                 new List<string>(), // Groups
                 DateTime.UtcNow, // Created
                 "contoso.com", // Domain
@@ -770,13 +765,12 @@ namespace MigrationTestSuite.Unit.Services
                 _testProfilePath);
 
             // Setup mock data
-            var user = new UserDto("test@contoso.com", null, // DisplayName
-                "testuser", null, // UPN
-                "S-1-5-21-source-1", // Department
+            var user = new UserDto("test@contoso.com", null, null, null, // DisplayName
+                "testuser", // Department
                 null, // Title
                 true, // Enabled
-                null, // Sid
-                "Test User", null, // Phone
+                null, // UPN
+                "S-1-5-21-source-1", null, // Phone
                 new List<string>(), // Groups
                 DateTime.UtcNow, // Created
                 "contoso.com", // Domain
@@ -873,13 +867,12 @@ namespace MigrationTestSuite.Unit.Services
         public async Task ManualMapping_ShouldOverrideFuzzyMatch()
         {
             // Arrange
-            var sourceUser = new UserDto("john.smith@contoso.com", null, // DisplayName
-                "jsmith", null, // UPN
-                "S-1-5-21-source-1", // Department
+            var sourceUser = new UserDto("john.smith@contoso.com", null, null, null, // DisplayName
+                "jsmith", // Department
                 null, // Title
                 true, // Enabled
-                null, // Sid
-                "John Smith", null, // Phone
+                null, // UPN
+                "S-1-5-21-source-1", null, // Phone
                 new List<string>(), // Groups
                 DateTime.UtcNow, // Created
                 "contoso.com", // Domain
@@ -938,8 +931,8 @@ namespace MigrationTestSuite.Unit.Services
             // Arrange
             var users = new List<UserDto>
             {
-                new UserDto("user1@contoso.com", null, "user1", null, "S-1", null, true, null, "User1", null, new List<string>(), DateTime.UtcNow, "contoso.com", "User"),
-                new UserDto("user2@contoso.com", null, "user2", null, "S-2", null, false, null, "User2", null, new List<string>(), DateTime.UtcNow, "contoso.com", "User")
+                new UserDto("user1@contoso.com", null, null, null, "user1", null, true, null, "S-1", null, new List<string>(), DateTime.UtcNow, "contoso.com", "User"),
+                new UserDto("user2@contoso.com", null, null, null, "user2", null, false, null, "S-2", null, new List<string>(), DateTime.UtcNow, "contoso.com", "User")
             };
 
             var mailboxes = new List<MailboxDto>
@@ -990,13 +983,12 @@ namespace MigrationTestSuite.Unit.Services
         public async Task ConcurrentEligibilityChecks_ShouldBeThreadSafe()
         {
             // Arrange
-            var users = Enumerable.Range(1, 100).Select(i => new UserDto($"user{i}@contoso.com", null, // DisplayName
-                $"user{i}", null, // UPN
-                $"S-{i}", // Department
+            var users = Enumerable.Range(1, 100).Select(i => new UserDto($"user{i}@contoso.com", null, null, null, // DisplayName
+                $"user{i}", // Department
                 null, // Title
                 i % 2 == 0, // Enabled - alternate true/false
-                null, // Sid
-                $"User{i}", null, // Phone
+                null, // UPN
+                $"S-{i}", null, // Phone
                 new List<string>(), // Groups
                 DateTime.UtcNow, // Created
                 "contoso.com", // Domain
