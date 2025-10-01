@@ -47,7 +47,12 @@
       "Bash(start MandADiscoverySuite.exe)",
       "Bash(md5sum:*)",
       "Bash(xargs ls:*)",
-      "Bash(dotnet --info)"
+      "Bash(dotnet --info)",
+      "Bash(if [ -d \"guiv2\" ])",
+      "Bash(then echo \"guiv2 directory already exists\")",
+      "Bash(else mkdir guiv2)",
+      "Bash(fi)",
+      "Bash(npx create-electron-app:*)"
     ],
     "deny": [],
     "ask": [],

@@ -1,506 +1,1324 @@
-- The M&A Discovery Suite GUI is a WPF application designed to present data collected from various discovery modules (Active Directory, Azure AD, Exchange, File Servers, etc.) in a unified interface. It follows a classic MVVM (Model-View-ViewModel) pattern with a strong emphasis on modularity, performance, and user experience. The application is structured into multiple sections (Users, Groups, Infrastructure, Applications, Databases, Policies, Security, Migrations, etc.), each backed by its own data model and viewmodel, but all following a consistent design philosophy.
+# M&A Discovery Suite: GUI v2 - Agent-Orchestrated Refactor Specification
 
-Key features of the design include:
+**Project Mandate:** Full rewrite of `/GUI` (C#/WPF) to `/guiv2` (TypeScript/React/Electron) with 100% feature parity, orchestrated by ProjectLead agent delegating to specialist agents.
 
-Dynamic Data Loading from CSVs: The GUI does not use a direct database. Instead, it loads data from CSV files produced by external discovery scripts. A robust CSV loading service maps raw data into in-memory models, handling differences in columns and formats gracefully.
+## Target Architecture
 
-Tab-Based Navigation: The main interface uses a TabControl paradigm where each opened section (e.g., Users, Groups, Reports) appears as a tab. Users can open multiple tabs, and the system prevents duplicates (reusing an existing tab if the user reopens the same section).
+- **Directory:** `/guiv2`
+- **Framework:** Electron + React 18 + TypeScript
+- **State:** Zustand (persist, devtools, immer, subscribeWithSelector)
+- **Styling:** Tailwind CSS only (no traditional CSS)
+- **Data Grid:** AG Grid Enterprise
+- **Icons:** Lucide React
+- **Routing:** React Router v6
+- **Testing:** Jest + Playwright + React Testing Library
+- **Build:** Electron Forge + TypeScript + Webpack
 
-Unified Error and Status Handling: All views provide consistent feedback via on-screen banners for warnings (e.g., missing data columns) and errors (exceptions during load), and an interactive loading spinner during data fetch.
+## Global Performance Requirements (All Phases)
 
-Theming and Styles: A comprehensive theming system allows for Light/Dark/High-Contrast modes with centralized resource dictionaries for colors, styles, and control templates. This ensures a uniform look and accessibility compliance across the entire app.
+**Apply to ALL tasks:**
+- Memory: 500MB baseline, 1GB under load max
+- Rendering: 60 FPS, <100ms interaction, <16ms frame time
+- Bundle: <5MB initial, <15MB total
+- Data: Virtualize 100+ items, debounce 300ms, cache with TTL
+- Loading: Code split by route, lazy load heavy deps (AG Grid, Recharts)
 
-Extensibility: The design is highly modular – adding a new discovery module mostly involves creating a new data model, a viewmodel with the standard loading logic, and a view XAML following the established pattern, then registering it in one place (the ViewRegistry).
+---
 
-Project Structure
+## Phase 0: Project Scaffolding & Build Setup
 
-The GUI project is organized into folders by function:
+**Goal:** Initialize Electron project with TypeScript + Webpack + Tailwind + Testing
 
-Views/ – XAML UI layouts for each screen or component (e.g., UsersView.xaml, GroupsView.xaml, DashboardView.xaml, etc.). These are primarily UserControl files that represent the content of each tab or dialog.
+### Task 0.1: Build System Initialization
+**Delegate to:** Build_Webpack_Specialist
 
-ViewModels/ – C# classes implementing the presentation logic for each view (e.g., UsersViewModel.cs, SecurityPolicyViewModel.cs). They handle loading data, exposing observable properties/collections, and commanding (ICommand implementations for user actions).
+**Instructions:**
+1. Create `/guiv2` directory if not exists
+2. Initialize Electron app: `npx create-electron-app@latest . --template=typescript-webpack`
+3. Install ALL dependencies in one command:
 
-Models/ – Data model classes, often defined as immutable records, that represent a row or entity of data (for example, UserData, GroupData, ComputerData, etc.). These are populated from CSVs. Immutability ensures data integrity once loaded
-GitHub
-.
+```bash
+# Runtime dependencies
+npm install zustand ag-grid-react ag-grid-community ag-grid-enterprise lucide-react tailwind-merge clsx papaparse react-router-dom react-window recharts date-fns immer @headlessui/react
 
-Services/ – Singleton or utility classes that provide shared functionality:
+# Zustand middleware
+npm install zustand/middleware
 
-CsvDataServiceNew (and related interfaces) for reading CSV files and mapping columns.
+# Dev dependencies
+npm install -D tailwindcss postcss postcss-loader autoprefixer @types/react-router-dom @types/papaparse jest @testing-library/react @testing-library/jest-dom @testing-library/user-event @playwright/test eslint-plugin-jsx-a11y webpack-bundle-analyzer source-map-explorer @tailwindcss/forms @tailwindcss/typography
+```
 
-LogicEngineService for higher-level data aggregation and inference across modules (e.g., correlating users to groups, etc.).
+4. Configure Tailwind:
+   - Run `npx tailwindcss init -p`
+   - Update `tailwind.config.js`:
+     ```js
+     module.exports = {
+       content: ["./src/**/*.{js,jsx,ts,tsx}"],
+       darkMode: 'class',
+       theme: {
+         extend: {
+           colors: { /* Will be defined in Phase 2 by TypeScript_Typing_Guardian */ }
+         }
+       },
+       plugins: [require('@tailwindcss/forms'), require('@tailwindcss/typography')]
+     }
+     ```
+   - Ensure PostCSS loader is configured in webpack for Tailwind processing
 
-ConfigurationService for managing paths and application settings (e.g., where data files are located)
-GitHub
-GitHub
-.
+5. Create `guiv2/src/index.css`:
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-ProfileService for handling active profile selection (e.g., to support multi-tenant or multi-company data).
+:root {
+  --spacing-unit: 4px;
+}
+```
 
-NavigationService, TabsService for controlling the tabbed UI navigation logic.
+6. Add bundle analysis script to `package.json`:
+```json
+{
+  "scripts": {
+    "analyze": "webpack-bundle-analyzer dist/stats.json"
+  }
+}
+```
 
-AuditService, LogManagementService for structured logging and audit trail recording.
+**Acceptance Criteria:**
+- `npm start` launches Electron app
+- Tailwind classes work
+- TypeScript compiles without errors
+- Bundle analyzer works
 
-Others include ThemeService, KeyboardShortcutService, and various migration-related services (which handle business logic for moving data between systems in an M&A scenario).
+---
 
-Resources/ and Themes/ – XAML resource dictionaries for styling (colors, brushes, control styles, data templates, animations, etc.). For example, Themes/HighContrastTheme.xaml defines the high-contrast color palette, while Resources/DataGridTheme.xaml might adjust DataGrid styles globally.
+### Task 0.2: Testing Framework Setup
+**Delegate to:** E2E_Testing_Cypress_Expert
 
-Dialogs/ or Windows/ – XAML and code for secondary windows or dialog popups (e.g., a detailed view dialog, or a confirmation dialog). (If not present as a folder, these might be grouped under Views as well.)
+**Instructions:**
+1. Create `guiv2/jest.config.js`:
+```js
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+  moduleNameMapper: {
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+  },
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/main/**/*',
+  ],
+  coverageThreshold: {
+    global: { branches: 80, functions: 80, lines: 80, statements: 80 }
+  }
+};
+```
 
-.claude/ – (If present) configuration files for AI agents (this is meta and not part of runtime, but used in development automation).
+2. Create `guiv2/playwright.config.ts` for E2E testing
+3. Create `guiv2/src/setupTests.ts` with test utilities
 
-Additionally, outside the GUI folder:
+**Acceptance Criteria:**
+- `npm test` runs Jest
+- Coverage report generates
+- Playwright configured for Electron
 
-Scripts/ – PowerShell scripts that the GUI or backend might call (e.g., to launch discovery modules, or build/deploy the app).
+---
 
-Modules/ – PowerShell modules implementing the actual discovery logic (not directly part of the GUI, but the GUI’s data corresponds to output from these).
+### Task 0.3: Directory Structure Creation
+**Delegate to:** Build_Webpack_Specialist
 
-Application Startup
+**Instructions:**
+Create this EXACT directory structure in `guiv2/src/`:
 
-When the application launches, it goes through the following startup sequence:
+```
+src/
+├── main/
+│   ├── services/
+│   │   ├── powerShellService.ts
+│   │   ├── moduleRegistry.ts
+│   │   ├── configService.ts
+│   │   ├── credentialService.ts
+│   │   └── fileService.ts
+│   ├── ipcHandlers.ts
+│   └── main.ts
+├── preload.ts
+└── renderer/
+    ├── assets/
+    ├── components/
+    │   ├── atoms/
+    │   ├── molecules/
+    │   └── organisms/
+    ├── hooks/
+    ├── lib/
+    ├── services/
+    ├── store/
+    ├── styles/
+    ├── types/
+    │   └── models/
+    └── views/
+        ├── overview/
+        ├── discovery/
+        ├── users/
+        ├── groups/
+        ├── infrastructure/
+        ├── migration/
+        ├── reports/
+        └── settings/
+```
 
-App Initialization: App.xaml is the WPF application definition. It merges some base resource dictionaries (converters, basic styles, theme definitions) and specifies StartupUri="MandADiscoverySuite.xaml"
-GitHub
-, which means the main window is defined in MandADiscoverySuite.xaml (also referred to as MainWindow).
+Also create:
+- `guiv2/cypress/e2e/` for E2E tests
+- `.gitignore` entries for node_modules, dist, .env
 
-Dependency Injection Configuration: In App.xaml.cs (the code-behind for the App), the OnStartup override configures the DI container and global exception handling. The code uses Microsoft.Extensions.DependencyInjection to register services and viewmodels at startup
-GitHub
-GitHub
-. This provides a central IServiceProvider (App.ServiceProvider) for resolving dependencies. For example, it registers MainViewModel as a singleton, so that the main window can obtain its viewmodel from the container
-GitHub
-. Basic services like logging, configuration, and the WeakReferenceMessenger (for MVVM messaging) are also set up here
-GitHub
-GitHub
-.
+**Acceptance Criteria:**
+- All directories exist
+- No build errors
 
-Main Window Creation: WPF automatically instantiates the MandADiscoverySuite.xaml window after OnStartup. The window’s code-behind (MandADiscoverySuite.xaml.cs) acts as the MainWindow of the app. In the constructor, it initializes UI components (InitializeComponent()), sets up a global keyboard shortcut manager, and retrieves the MainViewModel from the DI container
-GitHub
-. It then assigns DataContext = ViewModel
-GitHub
-, so that all data-binding in XAML is wired to the MainViewModel. Any failure in this process is caught and logged – the app is designed to catch startup exceptions and show a “Critical error” message box rather than just crashing
-GitHub
-GitHub
-.
+---
 
-Showing the Window: The main window is explicitly shown via this.Show() in code (after initialization)
-GitHub
-. At this point, the UI is up and running, but the content of each section/tab might still be loading data asynchronously.
+## Phase 1: Type Definitions & Backend Services
 
-Main Window Layout and Navigation
+**Goal:** Define ALL types first, then implement backend services
 
-The main window (MandADiscoverySuite.xaml) is structured as a two-column layout:
+### Task 1.1: Core Type Definitions
+**Delegate to:** TypeScript_Typing_Guardian
 
-Left Sidebar: A fixed-width panel containing the navigation menu and context controls (such as profile selectors). In the current design, this sidebar shows:
+**Instructions:**
+1. Examine `GUI/Models/*.cs` files
+2. For EACH C# model, create corresponding TypeScript interface in `guiv2/src/renderer/types/models/`
 
-The application title and logo (top section)
-GitHub
-.
+**Mapping Rules:**
+- `List<T>` → `T[]`
+- `Dictionary<K,V>` → `Record<K, V>`
+- `ObservableCollection<T>` → `T[]` (Zustand manages reactivity)
+- `string?` → `string | null`
+- `DateTime` → `Date` or `string` (ISO format)
 
-Profile selection for “Source” and “Target” companies in an M&A scenario, with combo-boxes to select profiles and status indicators for environment/connection health
-GitHub
-GitHub
-. There are also buttons for testing connections (🔗), switching profiles (→), creating/deleting profiles (+ / ×), and performing tenant app registration (🔐)
-GitHub
-GitHub
-.
+**Critical Types to Define:**
+- `guiv2/src/renderer/types/models/user.ts` - UserData interface
+- `guiv2/src/renderer/types/models/group.ts` - GroupData interface
+- `guiv2/src/renderer/types/models/profile.ts` - Profile, ConnectionStatus
+- `guiv2/src/renderer/types/models/discovery.ts` - DiscoveryResult, DiscoveryConfig
+- `guiv2/src/renderer/types/models/migration.ts` - MigrationWave, ResourceMapping, ValidationResult
+- `guiv2/src/renderer/types/common.ts` - Shared utility types
 
-A series of navigation buttons (or sometimes menu items) for each major view. For example, buttons for Dashboard, Discovery, Users, Groups, Infrastructure, Applications, Security, Reports, Settings, etc., each bound to a command on the MainViewModel (like ShowUsersViewCommand, ShowReportsViewCommand, etc.). These commands ultimately invoke the navigation logic (see NavigateCommand in MainViewModel).
+**IPC Contract:**
+Create `guiv2/src/renderer/types/electron.d.ts`:
+```typescript
+export interface ElectronAPI {
+  // PowerShell execution
+  executeScript: (params: {
+    scriptPath: string;
+    args: string[];
+    options?: ExecutionOptions;
+  }) => Promise<ExecutionResult>;
 
-Optionally, below that, status info or shortcuts can be listed (the design supports adding more entries like shortcuts guide, etc.).
+  executeModule: (params: {
+    modulePath: string;
+    functionName: string;
+    parameters: Record<string, any>;
+    options?: ExecutionOptions;
+  }) => Promise<ExecutionResult>;
 
-Main Content Area (Tabs): The right side (the * column) contains a TabControl where each tab is a section opened by the user
-GitHub
-. The TabControl itself is part of the main window XAML, but it typically does not have hardcoded TabItems in XAML; instead, tabs are added dynamically via code. The MainViewModel (with help of TabsService) manages an observable collection of open tabs
-GitHub
-. Each tab’s content is a UserControl for the respective view, and its header is the title (e.g., “Users” or “File Servers”).
+  cancelExecution: (token: string) => Promise<boolean>;
 
-Initially, the TabControl may start empty or with a default Dashboard tab. The user triggers navigation (either by clicking a sidebar button or via a keyboard shortcut like Ctrl+1 for Dashboard). This executes a command bound to MainViewModel, which in turn calls NavigationService.NavigateTo(<ViewKey>). The navigation service uses the ViewRegistry to map a string key to a UserControl instance.
+  // File operations
+  readFile: (path: string) => Promise<string>;
+  writeFile: (path: string, content: string) => Promise<void>;
 
-ViewRegistry: This is essentially a factory registry that knows how to instantiate each view. It’s a singleton (ViewRegistry.Instance) containing a dictionary of keys to lambda constructors
-GitHub
-. For example, "users" maps to () => new UsersViewNew(), "groups" to new GroupsViewNew(), "securitypolicy" to new SecurityPolicyView(), etc.
-GitHub
-GitHub
-. It also includes some aliases and legacy keys for convenience. When NavigateTo("users") is called, the registry creates the UsersViewNew UserControl. Each UserControl on creation will typically also instantiate its corresponding ViewModel (usually via XAML DataContext or code-behind). In some cases, the ViewRegistry uses a static factory if the view requires parameters (e.g., ActiveDirectoryDiscoveryView.CreateView(null, null) is used to inject services)
-GitHub
-.
+  // Configuration
+  getConfig: (key: string) => Promise<any>;
+  setConfig: (key: string, value: any) => Promise<void>;
 
-TabsService: Once the view is created, it’s handed to TabsService.OpenTabAsync(key) to either show an existing tab or create a new tab item with that content
-GitHub
-GitHub
-. The TabsService ensures only one tab per view “key” exists – if you navigate to an already open section, it will just activate that tab instead of opening another
-GitHub
-. Opening a new tab involves:
-
-Initializing the view (setting its DataContext to a new ViewModel, if not already set).
-
-Optionally calling an async load method on the ViewModel to fetch data (done in the background after the tab is added, to keep UI responsive)
-GitHub
-.
-
-Wrapping the UserControl in a TabItem with appropriate header and adding it to the observable Tabs collection
-GitHub
-. The TabControl in XAML is data-bound to this collection (e.g., ItemsSource="{Binding OpenTabs}"), so it updates automatically.
-
-Selecting the new tab in the UI.
-
-Lazy Loading Pattern: To improve performance and UX, the application employs lazy loading for heavy views. In the MainWindow code-behind, after initial show, it hooks the window’s Loaded event (MainWindow_Loaded)
-GitHub
-. This event handler finds certain UI elements by name (DashboardView, UsersView, etc.) that are pre-defined in XAML and calls MainViewModel.SetupLazyView("ViewName", element, onFirstActivate) for each
-GitHub
-GitHub
-. The SetupLazyView method in MainViewModel likely records the mapping and maybe prepares the command such that the actual data loading for a view only happens the first time the tab is shown. For example, SetupLazyView("Users", usersViewElement, callback) will attach an action so that when the “Users” view is first activated, it triggers RefreshUsersCommand to load the data
-GitHub
-. Subsequent navigations to that tab won’t reload unless explicitly requested. This is a trade-off: some views might actually be pre-initialized but hidden, allowing instant display on click, while their data is still loaded on demand.
-
-(Note: The exact mechanism of SetupLazyView can be confirmed in MainViewModel; the concept is that heavy data queries run only when needed, not all at startup. Also, the code hints at a PreInitializeCriticalViewsAsync() that, after 2 seconds idle, will load certain key views in the background
-GitHub
- to make them ready
-GitHub
-.)
-
-Unified Data Loading Pipeline
-
-All data-oriented ViewModels in the application share a unified approach to loading their content, encapsulated in a base class (often a BaseViewModel or simply each ViewModel overriding a standard pattern). The LoadAsync() method is central to this. For example, a simplified version of a typical load routine (from the BaseViewModel) is:
-
-public override async Task LoadAsync() {
-    IsLoading = true;
-    HasData = false;
-    LastError = null;
-    HeaderWarnings.Clear();
-
-    try {
-        _log.Debug($"[{GetType().Name}] Load start");
-        var result = await _csvService.LoadDataAsync(_profile);
-        
-        foreach (var w in result.HeaderWarnings)
-            HeaderWarnings.Add(w);
-        
-        Items.Clear();
-        foreach (var item in result.Data)
-            Items.Add(item);
-        
-        HasData = Items.Count > 0;
-        _log.Info($"[{GetType().Name}] Load ok rows={Items.Count}");
-    }
-    catch (Exception ex) {
-        LastError = $"Unexpected error: {ex.Message}";
-        _log.Error($"[{GetType().Name}] Load fail ex={ex}");
-    }
-    finally {
-        IsLoading = false;
-    }
+  // Events (for progress streaming)
+  onProgress: (callback: (data: ProgressData) => void) => () => void;
+  onOutput: (callback: (data: OutputData) => void) => () => void;
 }
 
-
-(Actual code is in the BaseViewModel and CsvDataServiceNew implementations)
-GitHub
-GitHub
-GitHub
-.
-
-Key points in this pattern:
-
-Loading State: IsLoading is a bool property that ViewModels set true during data fetch, and false when done
-GitHub
-GitHub
-. The XAML uses this to display a loading animation (e.g., a spinner overlay) bound via a converter (visible when true)
-GitHub
-.
-
-Data and Error Indicators: HasData is set to true if any items were loaded, and is bound to the visibility of the main DataGrid (to auto-hide it when empty)
-GitHub
-. LastError is set if an exception occurs, and is bound to an error banner UI element to alert the user
-GitHub
-. HeaderWarnings is a collection of strings for non-fatal issues (like missing CSV columns). In XAML, an ItemsControl will display each warning in a red banner area if present
-GitHub
-.
-
-CSV Service: _csvService.LoadDataAsync(_profile) is invoked to get the data. Here _csvService is typically an instance of CsvDataServiceNew and _profile identifies the active profile or dataset (e.g., “ljpops” by default). This service abstracts reading different CSV files and combining them into strongly-typed records for the view. It returns a DataLoaderResult<T> containing a list of T (the data records) and a list of any header warnings
-GitHub
-GitHub
-.
-
-Header Mapping & Warnings: The CSV loader is intelligent about headers. It performs case-insensitive matching, ignores extra whitespace/underscores, tolerates different delimiters, etc. It also identifies required columns and if they are missing in the input, it adds a warning message but does not throw an error
-GitHub
-. For example, if the Users CSV is missing “Department” and “JobTitle” columns, a warning like “[Users] File 'AzureUsers.csv': Missing required columns: Department, JobTitle. Values defaulted.” is produced
-GitHub
-. The GUI will show this in the HeaderWarnings banner but still display whatever data is available. This makes the data loading resilient to slight schema differences across data sources.
-
-Immutable Models: The data records are defined as record types (immutable) for thread-safety and simplicity
-GitHub
-. E.g., UserData might have properties like DisplayName, Email, Department, etc. Because they are immutable, the viewmodels instead maintain observable collections of these records (ObservableCollection<UserData> Items) which they replace or refill on each load. There’s no in-place editing of these items in the current design (the suite is mostly read-only data presentation with separate tools for changes).
-
-Threading: The data loading is done asynchronously (await LoadDataAsync) to keep the UI responsive. WPF binding will update the UI when Items collection changes and when IsLoading/HasData flip states, because these properties are likely implemented with INotifyPropertyChanged (the BaseViewModel or use of CommunityToolkit.Mvvm ensures this). Also, TabsService runs the load in a background task and marshals updates back to the UI thread as needed
-GitHub
-GitHub
-.
-
-Logging: The snippet above references _log.Info and _log.Error. Each viewmodel and service uses a logger (from Microsoft.Extensions.Logging) to record structured messages. Logging is heavily used throughout the app for debugging and audit. For instance, when data is loaded successfully, it logs how many rows were loaded and from which source
-GitHub
-, and on failure, it logs the exception details
-GitHub
-. These logs go to both console and a file (gui-debug.log for debug/info, and gui-binding.log for WPF binding issues, as configured)
-GitHub
-. The log format includes timestamps and source context, for example:
-
-[2024-08-15 10:30:45.123] [INFO] [CsvDataServiceNew] loader=Users ... total=168 ms=830
-[2024-08-15 10:30:45.234] [WARN] [CsvDataServiceNew] [Users] File 'Users.csv': Missing required columns: Department, JobTitle. Values defaulted.
-[2024-08-15 10:30:45.345] [INFO] [UsersViewModel] Load ok rows=168 warnings=1 ms=950
-
-
-This shows how many rows were loaded, any warnings, and how long it took
-GitHub
-.
-
-View and ViewModel Examples
-
-To illustrate the MVVM structure, consider the Users section as an example:
-
-Model: UserData (immutable) with properties like Name, Email, Department, etc.
-
-ViewModel: UsersViewModel inherits from a BaseViewModel (perhaps providing the LoadAsync base implementation). It likely doesn’t even need its own properties beyond what the base provides (an Items collection of UserData, since all logic for loading is standardized). It may define additional commands, e.g., ExportCommand or filtering commands, if the UI supports exporting user lists or filtering them.
-
-View: UsersView.xaml is a UserControl defining the UI. Thanks to the consistent approach, we know it will contain:
-
-A header (maybe a title text “Users” and some action buttons like refresh, export).
-
-A banner area for HeaderWarnings bound to an ItemsControl with red highlight (visible only if HeaderWarnings.Count > 0)
-GitHub
-.
-
-A banner for errors bound to LastError (visible if LastError != null)
-GitHub
-.
-
-A loading overlay (perhaps a semi-transparent panel with a ProgressBar) bound to IsLoading
-GitHub
-.
-
-The main data grid, bound to Items (Users list) and only visible when HasData is true
-GitHub
-. The DataGrid’s columns are likely generated via data templates or auto-generated based on the model properties. Since the CSV columns can vary, the UI might define generic columns (like showing all properties of the record) or use a template selector for known fields.
-
-The XAML for a typical view (referencing snippet from the design) looks like:
-
-<Grid>
-    <!-- Header (simplified) -->
-    <StackPanel Orientation="Horizontal">
-        <TextBlock Text="Users" FontSize="16" FontWeight="Bold"/>
-        <Button Content="Refresh" Command="{Binding RefreshUsersCommand}" />
-        <!-- ... other header buttons ... -->
-    </StackPanel>
-
-    <!-- Warnings Banner -->
-    <ItemsControl ItemsSource="{Binding HeaderWarnings}" 
-                  Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibility}}">
-        <Border Background="#55FF0000">
-            <TextBlock Text="{Binding}" Foreground="White"/>
-        </Border>
-    </ItemsControl>
-
-    <!-- Error Banner -->
-    <Border Background="#FF0000" 
-            Visibility="{Binding LastError, Converter={StaticResource NullToVisibility}}">
-        <TextBlock Text="{Binding LastError}" Foreground="White"/>
-    </Border>
-
-    <!-- Loading Spinner -->
-    <Border Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}">
-        <ProgressBar IsIndeterminate="True" />
-    </Border>
-
-    <!-- Data Grid -->
-    <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="True"
-              Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}"/>
-</Grid>
-
-
-Every section’s view follows this general structure, ensuring a uniform user experience
-GitHub
-GitHub
-. Converters like CountToVisibility, NullToVisibility, BoolToVisibility are defined in the resource dictionaries (they turn a value into Visible/Collapsed for the UI).
-
-Services and Infrastructure
-
-Beyond the core MVVM, the application includes several supporting services:
-
-ViewRegistry and NavigationService: As mentioned, ViewRegistry maps string keys to views. NavigationService likely provides high-level functions like NavigateToTabAsync(string key, string title), which under the hood use TabsService and ViewRegistry to open the requested view. This abstraction means ViewModels can request navigation without needing to know UI details. For example, MainViewModel.NavigateCommand might call NavigationService.NavigateToTabAsync(targetViewKey).
-
-TabsService: Manages the open tabs collection and interacts with the TabControl UI element. It ensures only one tab per key, selects tabs, and handles closing tabs. When opening a tab, TabsService also kicks off the asynchronous data load for that tab’s ViewModel in a fire-and-forget manner (logging any errors)
-GitHub
-. It logs tab opens, activations, and closures to a separate log file for click telemetry (e.g., gui-clicks.log)
-GitHub
-GitHub
-.
-
-ProfileService: Manages which data profile is active. A “profile” corresponds to a dataset (often per company or per environment). Currently, it is hardcoded to "ljpops" in many places (meaning the app is pointing to a directory like C:\discoverydata\ljpops\Raw\ for input files by default
-GitHub
-). In the GUI, the profile selectors in the sidebar allow the user to switch the source/target profiles, which would update ProfileService and subsequently the paths from which CSVs are loaded. ProfileService is a singleton and likely provides the current profile name to other services (e.g., CsvDataServiceNew uses it to locate files).
-
-CsvDataServiceNew: This service encapsulates loading CSV files for each domain. It likely uses a configuration of expected file name patterns and required columns for each type of data. For example, it might know that “Users” data can come from files matching *Users*.csv (like AzureUsers.csv, ActiveDirectoryUsers.csv)
-GitHub
-. It will open these files, read them (possibly via CsvHelper library, as indicated by the package reference
-GitHub
-), and map columns to the properties of the data model. It outputs a combined list of objects and any warnings about missing columns or malformed data. This service ensures that even if, say, one source doesn’t provide “JobTitle” for a user, the app still loads the user and just notes the absence. The service is registered as a singleton implementing ICsvDataLoader, meaning the same instance (or at least same config) is used throughout the app, and it likely caches some results or uses the FileWatcher service (CsvFileWatcherService) to watch for CSV updates in real-time.
-
-LogicEngineService: A complex service that builds an in-memory representation of all the data for analysis. It reads from CsvDataService or directly from files and populates various dictionaries and graphs (as seen by the many ConcurrentDictionary fields in its code)
-GitHub
-GitHub
-. It correlates data across domains (e.g., linking users to groups, or building a graph of who has access to what). This service can answer queries like “how many GPOs were discovered” or provide summaries to the UI. In some ViewModels, an instance of LogicEngineService is used to compute aggregates or provide data that isn’t directly from a single CSV (for instance, summarizing risk or compliance data across sources). It’s a singleton in practice (often accessed via LogicEngineService.Instance or via the service locator). The logic engine is also used in migration planning to check prerequisites or to generate lists of objects to migrate.
-
-ModuleRegistryService: This likely holds a list of available discovery modules (scripts). Since the application mentions 60 PowerShell modules and 49 configured discovery operations
-GitHub
-, the GUI provides a way to execute them. The ModuleRegistry might provide metadata about each module (name, category, description, etc.), which is shown in a “Discovery” view where users can select modules to run. Indeed, there is a DiscoveryModulesUserControl.xaml mentioned
-GitHub
-. The Discovery view would list all modules from ModuleRegistry and allow the user to run them (perhaps via StartDiscoveryCommand). When a module runs, it outputs data to CSV which the GUI can then refresh and display.
-
-Audit and Logging Services:
-
-AuditService likely records user actions, system events to an audit log (maybe in combination with AuditService in Core).
-
-UIInteractionLoggingService might log every button click or navigation (the text mentions a separate gui-clicks.log for telemetry of UI interactions)
-GitHub
-.
-
-EnhancedLoggingService could be an extension that adds more context or writes logs to multiple targets.
-
-There’s mention of ProductionTelemetryService in the audit list with TODOs
-GitHub
- – this suggests future integration with Application Insights or similar, but currently it’s not implemented (and does not affect runtime).
-
-KeyboardShortcutService: Handles global hotkeys and possibly an in-app command palette. The MainWindow registers some application-level shortcuts (like Alt+F4 to exit, Ctrl+Comma for settings) via this service
-GitHub
-GitHub
-. It likely uses a low-level hook or simply WPF input gestures to route key presses to commands. The design allows for context-specific shortcuts as well (e.g., DataGrid shortcuts, search shortcuts as hinted by commented code
-GitHub
-).
-
-ThemeService and IconThemeService: These manage application theme switching (dark/light). For example, ThemeService.ApplyTheme(ThemeType.Dark) would merge the Dark theme resources, and the MainViewModel has an IsDarkTheme property bound to a toggle UI (possibly the Ctrl+Alt+T shortcut) which triggers theme change by calling ThemeService
-GitHub
-. IconThemeService might supply appropriate icons depending on theme (e.g., light vs dark mode icons).
-
-EnvironmentDetectionService & ConnectionTestService: These are used in the Security/Compliance area and migration planning. They test if the source/target environments are reachable and gather info. For instance, ConnectionTestService might verify credentials or network access to the systems that will be migrated or discovered (like test connecting to Azure AD, Exchange, etc.). In the UI, the results of these appear as “Environment: OK/Not OK” and “Connection: Tested/Not Tested” fields in the profile section of the sidebar
-GitHub
-GitHub
-. The MainViewModel binds properties like SourceEnvironmentStatus, SourceConnectionStatus to these services’ outputs.
-
-Migration Services: The application has an entire suite of migration planning and tracking (for IT migrations during M&A). Classes like MigrationPlanningViewModel, MigrationExecutionViewModel, WaveViewModel, BatchViewModel etc. handle orchestrating batches of items to migrate. They interact with services like MigratorFactory (which chooses the correct migrator for a given item, e.g., Exchange mailbox vs file share)
-GitHub
-. Some parts were incomplete or disabled (SharePoint migrator), but core migration for Exchange mail, File servers, SQL, OneDrive, Teams, etc., are present.
-
-The UI likely has views like WavesView (list of migration waves), MigrateView (overall migration dashboard), and specific planning dialogs (e.g., for mapping accounts, scheduling cutovers).
-
-The migration viewmodels rely on the data collected during discovery (e.g., the LogicEngineService’s data about users/groups) to ensure all prerequisites are in place.
-
-Many migration-related commands are stubbed (pause/resume migration, export logs, etc. are TODOs)
-GitHub
-, but the structure is in place.
-
-The migration components are integrated into the same TabsService navigation. For example, the “Migrate” button in the UI opens the MigrateView, which shows perhaps a multi-step interface for performing migrations.
-
-Logging and Error Handling
-
-As a recap, the application employs robust logging:
-
-Structured Logs: Each log entry includes timestamp, severity, and source. Many log entries also include key-value details (like how many records loaded, how long an operation took). This helps in troubleshooting performance and data issues
-GitHub
-.
-
-Log Files: By default, logs are written under the profile’s “Logs” directory (e.g., C:\discoverydata\ljpops\Logs\). The log file names are configured (e.g., gui-debug.log for debug/info, gui-binding.log for binding warnings)
-GitHub
-. There is likely a rolling mechanism or one log per run.
-
-Error Display: Instead of crashing, errors are caught and either logged as warnings (if non-critical) or displayed. For instance, if a data load fails due to file not found, that exception message is stored in LastError and shown in the UI (and the log will have the stack trace)
-GitHub
-. Critical startup failures (like DI misconfiguration) trigger a MessageBox in App.OnStartup informing the user that the app failed to start and that an error log was saved
-GitHub
-. This makes the system more user-friendly and maintainable in production.
-
-Accessibility & UX Considerations
-
-The GUI design took into account enterprise UX needs:
-
-Keyboard Navigation: Through the KeyboardShortcutService, common actions have shortcuts (e.g., F5 to refresh, Ctrl+Shift+L for log viewer, etc., as defined in XAML input bindings
-GitHub
-GitHub
-). Tab navigation is likely fully keyboard-accessible, and there’s even a mention of a “Command Palette” (bound to Ctrl+Shift+P perhaps
-GitHub
-) which could bring up a quick action dialog.
-
-Screen Reader / Automation: XAML uses AutomationProperties.Name and HelpText on UI elements where appropriate (e.g., the main window)
-GitHub
-. This suggests screen readers will announce those strings, making the app usable by visually impaired users.
-
-Responsive Layout: The XAML includes a ResponsiveLayoutBehavior (possibly attached property) that could adjust the UI based on window size
-GitHub
-. While currently set to false on the main window, the infrastructure exists to enable responsive resizing if needed in future.
-
-Performance Optimizations: Virtualization is used for large lists (WPF DataGrid by default virtualizes rows; also the design mentions "Virtualization behaviors for large datasets" as a performance feature). Objects like SolidColorBrushes are likely frozen (immutable) for efficiency (mentioned as “Resource Freezing”)
-GitHub
-. Also, the heavy use of async and background tasks ensures the UI thread remains free to respond.
-
-Current State and Future Work
-
-After recent refactoring:
-
-The codebase underwent a major XAML cleanup: The main window XAML was reduced from ~4400 lines of a monolithic window to ~745 lines by extracting components into separate UserControls
-GitHub
-GitHub
-. This has made the XAML structure more manageable and load faster (78% reduction in main XAML size). For example, sections for Dashboard metrics, Discovery module launcher, Migration controls, etc., were moved to DashboardSummaryUserControl, DiscoveryModulesUserControl, MigrationControlsUserControl, etc. These are composed in the main window or loaded on demand
-GitHub
-. The result is improved clarity and maintainability.
-
-All critical null-reference and similar build issues have been resolved. The project now builds with 0 errors (nullable warnings have been addressed or suppressed appropriately)
-GitHub
-GitHub
-. At runtime, tests confirmed successful launch and stable operation under typical usage.
-
-Some advanced features are still in progress (marked with TODO in code):
-
-Telemetry Integration: Hooking up ProductionTelemetryService to send app usage data to a monitoring service is planned
-GitHub
-.
-
-Full Module Execution UI: The foundation for running discovery modules from the GUI is in place, but the UI/UX might be expanded (like progress bars for running scripts, or scheduling recurring discovery).
-
-Migration Workflow Enhancements: Functions like pause/resume migrations, batch reordering, and detailed error viewers for migrations are stubbed
-GitHub
-GitHub
-. These will be implemented in future iterations, but their placeholders do not break the app’s current functionality. They are hidden behind UI elements that either do nothing or are disabled until implemented.
-
-Settings and Profiles: Multi-profile management (especially target profiles) is partially implemented. For now, the app assumes a default profile unless changed. Future improvements might include a profile manager dialog (accessible via the "Manage Target Profiles" button in UI) – currently that command exists (ShowTargetProfilesCommand) but its dialog might be minimal or not fully functional yet.
-
-Data Export/Reporting: Several viewmodels have Export...Command to export data to CSV/Excel and similar for reports
-GitHub
-. If invoked, they might currently do nothing (to be implemented). The architecture is in place to add these easily using the existing data in memory and EPPlus library (which is included as a reference
-GitHub
-).
-
-The application’s architecture quality is high. Internal reviews rate it as enterprise-grade (MVVM: A+, DI: A+, Performance: A+)
-GitHub
-GitHub
-. The separation of concerns is clear: viewmodels do not directly manipulate UI elements, and services abstract away external dependencies (files, network calls). This makes maintenance and extension relatively straightforward. New views can be added by creating a ViewModel, a UserControl, and adding an entry to ViewRegistry (and Navigation menu), following the established patterns.
-
-How to Extend or Modify
-
-For developers (or AI coding assistants like Claude) working on this codebase, here are some tips:
-
-Follow the Patterns: When adding a new data view, mimic an existing one such as Users or Applications. Create a <YourData>ViewModel with properties for the data collection and possibly commands for refresh/export. Use the BaseViewModel loading pattern to implement LoadAsync() (you can call into CsvDataService if it’s a CSV-based data, or another service if needed).
-
-Register Everything: After creating a new View and ViewModel, register the ViewModel in DI (if it needs constructor injection or to be a singleton) and add the view to ViewRegistry.Instance with a unique key. Also create a navigation command in MainViewModel and a button in the sidebar for it, bound to that command.
-
-Keep UI Responsive: If you perform any heavy computation (e.g., generating a large report), use async/await and do it off the UI thread (as is done for data loading). The UI should always remain snappy.
-
-Logging and Error Handling: Continue the practice of wrapping operations in try/catch and logging errors instead of letting exceptions crash the app. Provide user feedback when appropriate (setting LastError for view-level issues, or MessageBox for truly critical failures).
-
-Testing: Use sample CSV data in the expected directory (by default C:\discoverydata\ljpops\Raw\) to test the views. The app is designed to automatically pick up files in those locations. If you add new data columns or new files, update CsvDataServiceNew to recognize them and map to your model.
-
-Temporary Code Cleanup: As features get implemented (e.g., a TODO becomes done), remove or update the placeholder comments and any related conditional logic. For example, once PauseMigration() is implemented, the TODO in MigrationExecutionViewModel can be removed and the button enabled.
-
-By adhering to the above, the codebase will remain consistent and robust. The existing design already accounts for most requirements, so extending it is usually a matter of adding new classes and plugging them into the framework that’s in place, rather than modifying core logic.
-
-Conclusion
-
-The M&A Discovery Suite GUI provides a unified, performant interface for complex IT discovery and migration tasks. Its low-level design balances flexibility (data-driven UI that adapts to available CSV schema) with reliability (extensive error handling and logging). Now that structural issues have been fixed and the UI is stable, the focus can shift to completing remaining features and improving the user experience even further. The architecture in place will support those future enhancements with minimal friction.
-- continue troubleshooting to get this running
+declare global {
+  interface Window {
+    electronAPI: ElectronAPI;
+  }
+}
+```
+
+**Also Define:**
+- `ExecutionOptions` - timeout, cancellationToken, streamOutput, priority
+- `ExecutionResult` - success, data, error, duration, warnings
+- `PowerShellServiceConfig` - maxPoolSize, minPoolSize, sessionTimeout, queueSize
+- `ModuleDefinition` - for module registry
+- `BaseService` interface - for service registry pattern
+
+**Acceptance Criteria:**
+- Zero `any` types
+- All C# models have TS equivalents
+- Strict mode enabled in tsconfig.json
+- IPC contract fully typed
+
+---
+
+### Task 1.2: PowerShell Execution Service (CRITICAL)
+**Delegate to:** ElectronMain_Process_Specialist
+
+**Instructions:**
+Create `guiv2/src/main/services/powerShellService.ts` with **enterprise-grade** PowerShell execution:
+
+**Requirements:**
+1. **Session Pooling:**
+   - Min pool size: 2, Max: 10
+   - Reuse sessions for performance
+   - Timeout idle sessions after 5 minutes
+
+2. **Execution Methods:**
+```typescript
+class PowerShellExecutionService extends EventEmitter {
+  async executeScript(scriptPath: string, args: string[], options?: ExecutionOptions): Promise<ExecutionResult>
+  async executeModule(modulePath: string, functionName: string, params: Record<string, any>, options?: ExecutionOptions): Promise<ExecutionResult>
+  cancelExecution(token: string): boolean
+  getStatistics(): PoolStatistics
+}
+```
+
+3. **Features:**
+   - Use `spawn` (not exec) with `-NoProfile -ExecutionPolicy Bypass -File`
+   - Parse stdout as JSON, reject on non-zero exit or stderr
+   - Stream output via EventEmitter for real-time progress
+   - Cancellation token support
+   - Request queue when pool exhausted
+   - Module result caching (optional, configurable)
+
+4. **Error Handling:**
+   - Timeout with configurable duration (default 60s)
+   - Proper process cleanup
+   - Detailed error messages with stderr content
+
+**Dependencies:** Uses types from Task 1.1
+
+**Acceptance Criteria:**
+- Can execute PowerShell scripts and get JSON results
+- Cancellation works
+- Pool limits respected
+- Events emit for streaming output
+
+---
+
+### Task 1.3: Module Registry System
+**Delegate to:** ElectronMain_Process_Specialist
+
+**Instructions:**
+Create `guiv2/src/main/services/moduleRegistry.ts`:
+
+```typescript
+class ModuleRegistry {
+  private modules: Map<string, ModuleDefinition>;
+
+  async loadRegistry(registryPath: string): Promise<void>
+  async registerModule(module: ModuleDefinition): Promise<void>
+  async executeModule(moduleId: string, params: Record<string, any>, options?: ExecutionOptions): Promise<any>
+  getModulesByCategory(category: 'discovery' | 'migration' | 'reporting' | 'security' | 'compliance'): ModuleDefinition[]
+  validateModuleParameters(moduleId: string, params: Record<string, any>): ValidationResult
+  searchModules(query: string): ModuleDefinition[]
+}
+```
+
+**Purpose:** Centralized registry of all discovery/migration modules with metadata (name, description, category, parameters, permissions, timeout)
+
+**Dependencies:** Task 1.2 (PowerShellService)
+
+**Acceptance Criteria:**
+- Loads module definitions from JSON
+- Validates parameters before execution
+- Categorizes modules
+
+---
+
+### Task 1.4: IPC Handlers Registration
+**Delegate to:** ElectronMain_Process_Specialist
+
+**Instructions:**
+Create `guiv2/src/main/ipcHandlers.ts` and register ALL IPC handlers:
+
+```typescript
+import { ipcMain } from 'electron';
+import PowerShellExecutionService from './services/powerShellService';
+import ModuleRegistry from './services/moduleRegistry';
+import ConfigService from './services/configService';
+
+export function registerIpcHandlers() {
+  const psService = new PowerShellExecutionService({ maxPoolSize: 10 });
+  const moduleRegistry = new ModuleRegistry();
+  const configService = new ConfigService();
+
+  // PowerShell execution
+  ipcMain.handle('powershell:executeScript', async (_, params) => {
+    return psService.executeScript(params.scriptPath, params.args, params.options);
+  });
+
+  ipcMain.handle('powershell:executeModule', async (_, params) => {
+    return psService.executeModule(params.modulePath, params.functionName, params.parameters, params.options);
+  });
+
+  ipcMain.handle('powershell:cancel', async (_, token) => {
+    return psService.cancelExecution(token);
+  });
+
+  // Module registry
+  ipcMain.handle('modules:getByCategory', async (_, category) => {
+    return moduleRegistry.getModulesByCategory(category);
+  });
+
+  // Configuration
+  ipcMain.handle('config:get', async (_, key) => {
+    return configService.get(key);
+  });
+
+  ipcMain.handle('config:set', async (_, key, value) => {
+    return configService.set(key, value);
+  });
+
+  // File operations
+  ipcMain.handle('file:read', async (_, path) => {
+    // Sanitize path, prevent directory traversal
+    return fs.promises.readFile(path, 'utf-8');
+  });
+
+  ipcMain.handle('file:write', async (_, path, content) => {
+    return fs.promises.writeFile(path, content, 'utf-8');
+  });
+}
+```
+
+**Security:**
+- Sanitize ALL paths to prevent `../../` attacks
+- Never trust renderer input
+- All IPC via contextBridge in preload.ts
+
+**Acceptance Criteria:**
+- All handlers registered in main.ts
+- Preload.ts exposes safe API via contextBridge
+- No nodeIntegration: true
+
+---
+
+### Task 1.5: Preload Security Bridge
+**Delegate to:** ElectronMain_Process_Specialist
+
+**Instructions:**
+Create `guiv2/src/preload.ts` using contextBridge to expose ONLY safe APIs:
+
+```typescript
+import { contextBridge, ipcRenderer } from 'electron';
+
+contextBridge.exposeInMainWorld('electronAPI', {
+  executeScript: (params) => ipcRenderer.invoke('powershell:executeScript', params),
+  executeModule: (params) => ipcRenderer.invoke('powershell:executeModule', params),
+  cancelExecution: (token) => ipcRenderer.invoke('powershell:cancel', token),
+
+  readFile: (path) => ipcRenderer.invoke('file:read', path),
+  writeFile: (path, content) => ipcRenderer.invoke('file:write', path, content),
+
+  getConfig: (key) => ipcRenderer.invoke('config:get', key),
+  setConfig: (key, value) => ipcRenderer.invoke('config:set', key, value),
+
+  // Event listeners for streaming
+  onProgress: (callback) => {
+    const subscription = (_, data) => callback(data);
+    ipcRenderer.on('powershell:progress', subscription);
+    return () => ipcRenderer.removeListener('powershell:progress', subscription);
+  },
+
+  onOutput: (callback) => {
+    const subscription = (_, data) => callback(data);
+    ipcRenderer.on('powershell:output', subscription);
+    return () => ipcRenderer.removeListener('powershell:output', subscription);
+  }
+});
+```
+
+**Security Rules:**
+- NO direct access to ipcRenderer from renderer
+- NO nodeIntegration
+- ONLY explicitly exposed APIs
+
+**Acceptance Criteria:**
+- window.electronAPI available in renderer
+- Matches types from electron.d.ts (Task 1.1)
+
+---
+
+### Task 1.6: Global State Architecture
+**Delegate to:** State_Management_Specialist
+
+**Instructions:**
+Create Zustand stores with proper architecture:
+
+**1. Root Store** (`guiv2/src/renderer/store/rootStore.ts`):
+```typescript
+import create from 'zustand';
+import { devtools, persist, subscribeWithSelector } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+
+const useRootStore = create<RootState>()(
+  subscribeWithSelector(
+    devtools(
+      persist(
+        immer((set, get) => ({
+          // Slices
+          profile: createProfileSlice(set, get),
+          discovery: createDiscoverySlice(set, get),
+          migration: createMigrationSlice(set, get),
+          ui: createUISlice(set, get),
+
+          reset: () => set(initialState),
+          hydrate: (state) => set(state),
+        })),
+        {
+          name: 'manda-storage',
+          version: 1,
+          partialize: (state) => ({
+            profile: { selectedProfile: state.profile.selectedProfile },
+            ui: { theme: state.ui.theme, preferences: state.ui.preferences }
+          })
+        }
+      )
+    )
+  )
+);
+```
+
+**2. Profile Store** (`guiv2/src/renderer/store/useProfileStore.ts`):
+```typescript
+interface ProfileState {
+  profiles: Profile[];
+  selectedSourceProfile: Profile | null;
+  selectedTargetProfile: Profile | null;
+  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
+
+  loadProfiles: () => Promise<void>;
+  setSelectedProfile: (profile: Profile, type: 'source' | 'target') => void;
+  createProfile: (profile: Omit<Profile, 'id'>) => Promise<void>;
+  deleteProfile: (id: string) => Promise<void>;
+  testConnection: (profile: Profile) => Promise<ConnectionResult>;
+}
+```
+
+**3. Tab Store** (`guiv2/src/renderer/store/useTabStore.ts`):
+```typescript
+interface TabState {
+  tabs: Tab[];
+  selectedTabId: string | null;
+
+  openTab: (tab: Omit<Tab, 'id'>) => void;
+  closeTab: (id: string) => void;
+  setSelectedTab: (id: string) => void;
+  closeAllTabs: () => void;
+  closeOtherTabs: (id: string) => void;
+}
+```
+
+**4. Discovery Store** (`guiv2/src/renderer/store/useDiscoveryStore.ts`)
+**5. Migration Store** (`guiv2/src/renderer/store/useMigrationStore.ts`) - See Phase 6
+**6. Theme Store** (`guiv2/src/renderer/store/useThemeStore.ts`)
+**7. Modal Store** (`guiv2/src/renderer/store/useModalStore.ts`)
+
+**Key Principles:**
+- Each store handles async operations (isLoading, error states)
+- All window.electronAPI calls happen in stores or hooks, NOT in components
+- Use immer middleware for immutable updates
+
+**Dependencies:** Task 1.1 (types)
+
+**Acceptance Criteria:**
+- Stores compile with strict types
+- DevTools integration works
+- Persistence works (test by refreshing app)
+
+---
+
+## Phase 2: UI Component Library
+
+**Goal:** Build complete, accessible, reusable component library
+
+### Task 2.1: Theme System Definition
+**Delegate to:** TypeScript_Typing_Guardian
+
+**Instructions:**
+Create `guiv2/src/renderer/styles/themes.ts` with comprehensive theme system:
+
+```typescript
+interface Theme {
+  name: string;
+  colors: {
+    primary: ColorScale;      // 50-900
+    secondary: ColorScale;
+    success: ColorScale;
+    warning: ColorScale;
+    error: ColorScale;
+    neutral: ColorScale;
+    background: { primary: string; secondary: string; tertiary: string; };
+    text: { primary: string; secondary: string; tertiary: string; disabled: string; };
+    border: { light: string; medium: string; heavy: string; };
+  };
+  spacing: { xs: string; sm: string; md: string; lg: string; xl: string; xxl: string; };
+  typography: {
+    fontFamily: { primary: string; mono: string; };
+    fontSize: { xs: string; sm: string; base: string; lg: string; xl: string; '2xl': string; '3xl': string; };
+    fontWeight: { normal: number; medium: number; semibold: number; bold: number; };
+    lineHeight: { tight: number; normal: number; relaxed: number; };
+  };
+  shadows: { sm: string; md: string; lg: string; xl: string; };
+  borderRadius: { sm: string; md: string; lg: string; full: string; };
+  animation: {
+    duration: { fast: string; normal: string; slow: string; };
+    easing: { linear: string; easeIn: string; easeOut: string; easeInOut: string; };
+  };
+}
+
+export const lightTheme: Theme = { /* Detailed values */ };
+export const darkTheme: Theme = { /* Detailed values */ };
+export const highContrastTheme: Theme = { /* WCAG AAA */ };
+export const colorBlindTheme: Theme = { /* Accessibility */ };
+```
+
+**Acceptance Criteria:**
+- 4 complete themes defined
+- All color scales have 50-900 values
+- High contrast theme meets WCAG AAA
+
+---
+
+### Task 2.2: Atomic Components - Buttons & Inputs
+**Delegate to:** React_Component_Architect
+
+**Instructions:**
+Create these atom components with **full accessibility**:
+
+**1. Button** (`guiv2/src/components/atoms/Button.tsx`):
+```typescript
+interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'link';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  icon?: React.ReactNode;
+  iconPosition?: 'leading' | 'trailing';
+  loading?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+  children: React.ReactNode;
+  'data-cy'?: string;  // For Cypress
+}
+```
+
+**Accessibility Requirements:**
+- Full keyboard support (Enter, Space)
+- Visible focus ring
+- ARIA labels
+- Disabled state prevents clicks
+- Loading state shows spinner + "aria-busy"
+
+**Styling:** Tailwind CSS ONLY, use `clsx` for conditional classes
+
+**2. Input** (`guiv2/src/components/atoms/Input.tsx`):
+- Label association (htmlFor)
+- Error state with message
+- Help text support
+- Required indicator
+- Accessible error announcements (aria-describedby)
+
+**3. Select** (`guiv2/src/components/atoms/Select.tsx`)
+**4. Checkbox** (`guiv2/src/components/atoms/Checkbox.tsx`)
+**5. Badge** (`guiv2/src/components/atoms/Badge.tsx`)
+**6. Tooltip** (`guiv2/src/components/atoms/Tooltip.tsx`) - Use @headlessui/react
+**7. Spinner** (`guiv2/src/components/atoms/Spinner.tsx`)
+**8. StatusIndicator** (`guiv2/src/components/atoms/StatusIndicator.tsx`) - Colored dot + text
+
+**Acceptance Criteria:**
+- All components have `data-cy` attributes
+- Pass eslint-plugin-jsx-a11y checks
+- Work with keyboard only
+- Responsive to theme changes
+
+---
+
+### Task 2.3: Molecule Components
+**Delegate to:** React_Component_Architect
+
+**Instructions:**
+Create composed components:
+
+**1. SearchBar** (`guiv2/src/components/molecules/SearchBar.tsx`):
+- Input with search icon
+- Clear button when text present
+- Debounced onChange (300ms)
+
+**2. FilterPanel** (`guiv2/src/components/molecules/FilterPanel.tsx`):
+- Collapsible panel
+- Multiple filter inputs
+- Reset filters button
+
+**3. Pagination** (`guiv2/src/components/molecules/Pagination.tsx`):
+- Page number display
+- Previous/Next buttons
+- Jump to page input
+- Items per page selector
+
+**4. ProfileSelector** (`guiv2/src/components/molecules/ProfileSelector.tsx`):
+- Dropdown of profiles from useProfileStore
+- Test Connection button
+- Create/Delete profile actions
+
+**5. ProgressBar** (`guiv2/src/components/molecules/ProgressBar.tsx`)
+
+**Dependencies:** Atoms from Task 2.2, stores from Task 1.6
+
+**Acceptance Criteria:**
+- Use atom components
+- Stateless (props only)
+- data-cy attributes present
+
+---
+
+### Task 2.4: Virtualized Data Grid (CRITICAL)
+**Delegate to:** React_Component_Architect
+
+**Instructions:**
+Create `guiv2/src/components/organisms/VirtualizedDataGrid.tsx`:
+
+```typescript
+import { AgGridReact } from 'ag-grid-react';
+import 'ag-grid-enterprise';
+
+interface VirtualizedDataGridProps {
+  data: any[];
+  columns: ColDef[];
+  loading?: boolean;
+  virtualRowHeight?: number;
+  enableColumnReorder?: boolean;
+  enableColumnResize?: boolean;
+  enableExport?: boolean;
+  enablePrint?: boolean;
+  enableGrouping?: boolean;
+  enableFiltering?: boolean;
+  onRowClick?: (row: any) => void;
+  onSelectionChange?: (rows: any[]) => void;
+  'data-cy'?: string;
+}
+
+const VirtualizedDataGrid: React.FC<VirtualizedDataGridProps> = ({
+  data,
+  columns,
+  loading = false,
+  enableColumnReorder = true,
+  enableColumnResize = true,
+  enableExport = true,
+  enableGrouping = false,
+  enableFiltering = true,
+  onRowClick,
+  onSelectionChange,
+  'data-cy': dataCy,
+}) => {
+  const defaultColDef = useMemo(() => ({
+    sortable: true,
+    filter: enableFiltering,
+    resizable: enableColumnResize,
+    floatingFilter: enableFiltering,
+  }), [enableFiltering, enableColumnResize]);
+
+  return (
+    <div className="ag-theme-alpine h-full w-full" data-cy={dataCy}>
+      {loading && <div>Loading...</div>}
+      <AgGridReact
+        rowData={data}
+        columnDefs={columns}
+        defaultColDef={defaultColDef}
+        rowSelection="multiple"
+        enableRangeSelection
+        rowBuffer={20}
+        pagination
+        paginationPageSize={100}
+        onRowClicked={onRowClick}
+        onSelectionChanged={(e) => onSelectionChange?.(e.api.getSelectedRows())}
+      />
+    </div>
+  );
+};
+```
+
+**Features:**
+- Virtual scrolling for 100,000+ rows
+- Export to CSV/Excel
+- Print support
+- Column visibility controls
+- Custom cell renderers with React.memo
+
+**Dependencies:** AG Grid Enterprise installed in Phase 0
+
+**Acceptance Criteria:**
+- Handles 100,000 rows at 60 FPS
+- Export works
+- Keyboard navigation works
+
+---
+
+### Task 2.5: Organism Components - Application Shell
+**Delegate to:** React_Component_Architect
+
+**Instructions:**
+Create these complex components:
+
+**1. Sidebar** (`guiv2/src/components/organisms/Sidebar.tsx`):
+```typescript
+const Sidebar: React.FC = () => {
+  const { selectedProfile } = useProfileStore();
+  const { theme, setTheme } = useThemeStore();
+  const { systemStatus } = useSystemStatusStore();
+
+  return (
+    <aside className="w-64 bg-gray-900 text-white">
+      <ProfileSelector />
+      <nav>
+        <NavLink to="/">Overview</NavLink>
+        <NavLink to="/discovery">Discovery</NavLink>
+        <NavLink to="/users">Users</NavLink>
+        <NavLink to="/groups">Groups</NavLink>
+        <NavLink to="/migration">Migration</NavLink>
+        <NavLink to="/reports">Reports</NavLink>
+        <NavLink to="/settings">Settings</NavLink>
+      </nav>
+      <ThemeToggle />
+      <SystemStatusPanel status={systemStatus} />
+    </aside>
+  );
+};
+```
+
+**2. TabView** (`guiv2/src/components/organisms/TabView.tsx`):
+- Subscribe to useTabStore
+- Render active tab content dynamically
+- Tab close buttons
+- Drag-to-reorder tabs
+
+**3. CommandPalette** (`guiv2/src/components/organisms/CommandPalette.tsx`):
+- Modal triggered by Ctrl+K
+- Fuzzy search through command registry
+- Keyboard-only navigation
+- Recent commands tracking
+
+**4. ErrorBoundary** (`guiv2/src/components/organisms/ErrorBoundary.tsx`):
+- React error boundary
+- Graceful fallback UI
+- Error reporting to service
+
+**Dependencies:** Molecules, stores, hooks
+
+**Acceptance Criteria:**
+- Sidebar shows correct active route
+- Command palette keyboard shortcuts work
+- Error boundary catches errors
+
+---
+
+## Phase 3: Main Application Assembly
+
+**Goal:** Wire up routing, layout, lazy loading
+
+### Task 3.1: Main App Component with Routing
+**Delegate to:** React_Component_Architect
+
+**Instructions:**
+Create `guiv2/src/renderer/App.tsx`:
+
+```typescript
+import { HashRouter, Routes, Route } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import MainLayout from './components/layouts/MainLayout';
+import Spinner from './components/atoms/Spinner';
+
+// Lazy load ALL views
+const OverviewView = lazy(() => import('./views/overview/OverviewView'));
+const UsersView = lazy(() => import('./views/users/UsersView'));
+const GroupsView = lazy(() => import('./views/groups/GroupsView'));
+const MigrationView = lazy(() => import('./views/migration/MigrationView'));
+// ... 98 more views
+
+function App() {
+  useKeyboardShortcuts();  // Global shortcuts hook
+
+  return (
+    <HashRouter>
+      <MainLayout>
+        <Suspense fallback={<Spinner />}>
+          <Routes>
+            <Route path="/" element={<OverviewView />} />
+            <Route path="/users" element={<UsersView />} />
+            <Route path="/groups" element={<GroupsView />} />
+            <Route path="/migration/*" element={<MigrationView />} />
+            {/* ... more routes */}
+          </Routes>
+        </Suspense>
+      </MainLayout>
+    </HashRouter>
+  );
+}
+```
+
+**Acceptance Criteria:**
+- All views lazy loaded
+- Routes work
+- Loading spinner shows during code split loading
+
+---
+
+### Task 3.2: Keyboard Shortcuts Hook
+**Delegate to:** State_Management_Specialist
+
+**Instructions:**
+Create `guiv2/src/renderer/hooks/useKeyboardShortcuts.ts`:
+
+```typescript
+export const useKeyboardShortcuts = () => {
+  const { openModal } = useModalStore();
+  const { closeTab, openTab } = useTabStore();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault();
+        openModal('commandPalette');
+      }
+      if (e.ctrlKey && e.key === 'w') {
+        e.preventDefault();
+        closeTab();
+      }
+      // Ctrl+T, Ctrl+S, Ctrl+F, Ctrl+P, etc.
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+};
+```
+
+**Shortcuts to Implement:**
+- Ctrl+K: Command palette
+- Ctrl+W: Close tab
+- Ctrl+T: New tab
+- Ctrl+S: Save
+- Ctrl+F: Focus search
+- Ctrl+P: Print
+
+**Acceptance Criteria:**
+- All shortcuts work
+- No conflicts with browser shortcuts
+
+---
+
+## Phase 4: Views Implementation (Tier 1 - Critical)
+
+**Goal:** Implement 6 critical views with full functionality
+
+### Task 4.1: Users View - Types & Logic
+**Delegate to:** TypeScript_Typing_Guardian THEN State_Management_Specialist
+
+**Step 1 (TypeScript_Typing_Guardian):**
+Ensure `UserData` interface exists in `types/models/user.ts`
+
+**Step 2 (State_Management_Specialist):**
+Create `guiv2/src/renderer/hooks/useUsersViewLogic.ts`:
+
+```typescript
+export const useUsersViewLogic = () => {
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState<UserData[]>([]);
+
+  const debouncedSearch = useDebounce(searchText, 300);
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    setIsLoading(true);
+    try {
+      const result = await window.electronAPI.executeModule({
+        modulePath: 'Modules/Discovery/ActiveDirectoryDiscovery.psm1',
+        functionName: 'Get-ADUsers',
+        parameters: {},
+      });
+      setUsers(result.data.users);
+    } catch (error) {
+      // Error handling
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredUsers = useMemo(() => {
+    if (!debouncedSearch) return users;
+    return users.filter(u =>
+      u.displayName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      u.email.toLowerCase().includes(debouncedSearch.toLowerCase())
+    );
+  }, [users, debouncedSearch]);
+
+  const columnDefs = useMemo<ColDef[]>(() => [
+    { field: 'displayName', headerName: 'Name', sortable: true, filter: true },
+    { field: 'email', headerName: 'Email', sortable: true, filter: true },
+    { field: 'department', headerName: 'Department', sortable: true, filter: true },
+  ], []);
+
+  return {
+    users: filteredUsers,
+    isLoading,
+    searchText,
+    setSearchText,
+    selectedUsers,
+    setSelectedUsers,
+    columnDefs,
+    handleExport: () => { /* TODO */ },
+    handleDelete: () => { /* TODO */ },
+  };
+};
+```
+
+---
+
+### Task 4.2: Users View - UI Component
+**Delegate to:** React_Component_Architect
+
+**Instructions:**
+Create `guiv2/src/renderer/views/users/UsersView.tsx`:
+
+```typescript
+import { useUsersViewLogic } from '@/hooks/useUsersViewLogic';
+import VirtualizedDataGrid from '@/components/organisms/VirtualizedDataGrid';
+import SearchBar from '@/components/molecules/SearchBar';
+import Button from '@/components/atoms/Button';
+import { Download, Trash } from 'lucide-react';
+
+const UsersView: React.FC = () => {
+  const {
+    users,
+    isLoading,
+    searchText,
+    setSearchText,
+    selectedUsers,
+    setSelectedUsers,
+    columnDefs,
+    handleExport,
+    handleDelete,
+  } = useUsersViewLogic();
+
+  return (
+    <div className="h-full flex flex-col" data-cy="users-view">
+      <div className="flex items-center justify-between p-4">
+        <h1 className="text-2xl font-bold">Users</h1>
+        <div className="flex gap-2">
+          <Button onClick={handleExport} icon={<Download />} data-cy="export-btn">
+            Export
+          </Button>
+          <Button
+            onClick={handleDelete}
+            variant="danger"
+            disabled={selectedUsers.length === 0}
+            data-cy="delete-btn"
+          >
+            <Trash /> Delete Selected
+          </Button>
+        </div>
+      </div>
+
+      <div className="px-4">
+        <SearchBar
+          value={searchText}
+          onChange={setSearchText}
+          placeholder="Search users..."
+          data-cy="user-search"
+        />
+      </div>
+
+      <div className="flex-1 p-4">
+        <VirtualizedDataGrid
+          data={users}
+          columns={columnDefs}
+          loading={isLoading}
+          onSelectionChange={setSelectedUsers}
+          enableExport
+          data-cy="users-grid"
+        />
+      </div>
+    </div>
+  );
+};
+
+export default UsersView;
+```
+
+**Dependencies:** Task 4.1, Task 2.4 (grid), Task 2.3 (search)
+
+**Acceptance Criteria:**
+- Loads users from PowerShell
+- Search filters in real-time
+- Export button enabled
+- Delete button enabled when users selected
+
+---
+
+### Task 4.3: Repeat for Remaining Tier 1 Views
+**Delegate to:** State_Management_Specialist THEN React_Component_Architect
+
+**Instructions:**
+Using the SAME pattern as Task 4.1 and 4.2, create:
+
+1. **GroupsView** - Group management
+2. **OverviewView** - Dashboard with system metrics
+3. **DomainDiscoveryView** - AD discovery with form
+4. **AzureDiscoveryView** - Azure AD discovery
+5. **MigrationPlanningView** - Wave planning (see Phase 6 for details)
+
+**Each view needs:**
+- Types defined first
+- Logic hook (useXViewLogic.ts)
+- UI component
+- data-cy attributes
+- Error handling
+
+---
+
+## Phase 5: Dialogs & UX Features
+
+### Task 5.1: Modal System
+**Delegate to:** React_Component_Architect
+
+**Instructions:**
+Create modal components using @headlessui/react:
+
+**1. CreateProfileDialog** (`guiv2/src/renderer/components/dialogs/CreateProfileDialog.tsx`):
+- Form with validation
+- Connection type selection
+- Credential input
+- Test connection button
+
+**2. DeleteConfirmationDialog**
+**3. ExportDialog** - CSV/Excel/PDF options
+**4. ColumnVisibilityDialog** - For data grids
+**5. SettingsDialog**
+
+**Modal State:** Use `useModalStore` to manage open/close
+
+**Acceptance Criteria:**
+- Keyboard accessible (Esc to close)
+- Focus trap
+- ARIA labels
+
+---
+
+## Phase 6: Migration Module (CRITICAL - 30% of value)
+
+### Task 6.1: Migration Types
+**Delegate to:** TypeScript_Typing_Guardian
+
+**Instructions:**
+Define in `guiv2/src/renderer/types/models/migration.ts`:
+
+```typescript
+interface MigrationWave {
+  id: string;
+  name: string;
+  description: string;
+  scheduledStart: Date;
+  scheduledEnd: Date;
+  status: 'planned' | 'ready' | 'executing' | 'paused' | 'completed' | 'failed';
+  users: string[];
+  resources: ResourceMapping[];
+  priority: number;
+}
+
+interface ResourceMapping {
+  sourceId: string;
+  sourceName: string;
+  targetId: string;
+  targetName: string;
+  type: 'user' | 'group' | 'mailbox' | 'site' | 'license';
+  status: 'pending' | 'mapped' | 'validated' | 'migrated' | 'error';
+  conflicts: Conflict[];
+}
+
+interface ValidationResult {
+  passed: boolean;
+  errors: ValidationError[];
+  warnings: ValidationWarning[];
+}
+
+interface RollbackPoint {
+  id: string;
+  waveId: string;
+  timestamp: Date;
+  state: any; // Serialized state
+}
+```
+
+---
+
+### Task 6.2: Migration Store
+**Delegate to:** State_Management_Specialist
+
+**Instructions:**
+Create `guiv2/src/renderer/store/useMigrationStore.ts`:
+
+```typescript
+interface MigrationState {
+  waves: MigrationWave[];
+  mappings: ResourceMapping[];
+  validationResults: ValidationResult[];
+  executionStatus: ExecutionStatus;
+  rollbackPoints: RollbackPoint[];
+
+  // Actions
+  planWave: (wave: Omit<MigrationWave, 'id'>) => Promise<void>;
+  updateWave: (id: string, updates: Partial<MigrationWave>) => Promise<void>;
+  deleteWave: (id: string) => Promise<void>;
+
+  mapResource: (mapping: ResourceMapping) => void;
+  importMappings: (file: File) => Promise<void>;
+  exportMappings: () => Promise<void>;
+  validateMappings: () => Promise<ValidationResult[]>;
+
+  executeMigration: (waveId: string) => Promise<void>;
+  pauseMigration: (waveId: string) => Promise<void>;
+  rollbackMigration: (pointId: string) => Promise<void>;
+
+  subscribeToProgress: (waveId: string, callback: (progress: Progress) => void) => void;
+}
+```
+
+---
+
+### Task 6.3: Migration Views
+**Delegate to:** React_Component_Architect
+
+**Instructions:**
+Create these views in `guiv2/src/renderer/views/migration/`:
+
+**1. MigrationPlanningView.tsx:**
+- Wave configuration form
+- User assignment to waves
+- Schedule picker (dates, times)
+- Dependency mapping
+- Risk assessment display
+
+**2. MigrationMappingView.tsx:**
+- Source ↔ Target mapping grid
+- Bulk import/export
+- Conflict resolution UI
+
+**3. MigrationValidationView.tsx:**
+- Pre-flight checks list
+- Real-time validation status
+- Fix recommendations
+
+**4. MigrationExecutionView.tsx:**
+- Real-time progress bars per wave
+- Per-user status grid
+- Live log streaming
+- Pause/Resume/Rollback controls
+
+---
+
+## Phase 7: Analytics & Reporting
+
+### Task 7.1: Report Views
+**Delegate to:** React_Component_Architect
+
+**Instructions:**
+Install Recharts, create report views:
+
+**1. ExecutiveDashboardView** - KPIs, charts
+**2. UserReportView** - User analytics
+**3. MigrationReportView** - Migration stats
+**4. CustomReportBuilderView** - Drag-drop report builder
+
+---
+
+## Phase 8: Performance & Polish
+
+### Task 8.1: Bundle Optimization
+**Delegate to:** Build_Webpack_Specialist
+
+**Instructions:**
+1. Verify code splitting by route works
+2. Run bundle analyzer, identify large deps
+3. Lazy load AG Grid, Recharts
+4. Enable tree shaking
+5. Add gzip compression
+
+**Target:** <5MB initial bundle
+
+---
+
+### Task 8.2: E2E Tests for Critical Paths
+**Delegate to:** E2E_Testing_Cypress_Expert
+
+**Instructions:**
+Write Playwright tests for:
+1. User journey: Launch app → Select profile → Discover users → Export
+2. Migration journey: Create wave → Map users → Validate → Execute
+
+---
+
+## Success Criteria
+
+### Functional
+- ✅ All 102 views working
+- ✅ PowerShell integration functional
+- ✅ Migration module complete
+- ✅ All data grids handle 100K rows
+
+### Performance
+- ✅ <3s initial load
+- ✅ <500MB memory baseline
+- ✅ 60 FPS scrolling
+
+### Quality
+- ✅ 80% code coverage
+- ✅ WCAG AA compliance
+- ✅ Zero TypeScript `any` types
+- ✅ All E2E tests pass
+
+---
+
+## Agent Delegation Workflow
+
+**ProjectLead orchestrates like this:**
+
+1. **Phase 0:**
+   - Task 0.1 → Build_Webpack_Specialist
+   - Task 0.2 → E2E_Testing_Cypress_Expert
+   - Task 0.3 → Build_Webpack_Specialist
+
+2. **Phase 1 (Order matters!):**
+   - Task 1.1 → TypeScript_Typing_Guardian (FIRST - defines all types)
+   - Task 1.2 → ElectronMain_Process_Specialist (uses types from 1.1)
+   - Task 1.3 → ElectronMain_Process_Specialist (uses 1.2)
+   - Task 1.4 → ElectronMain_Process_Specialist (uses 1.2, 1.3)
+   - Task 1.5 → ElectronMain_Process_Specialist (exposes 1.4)
+   - Task 1.6 → State_Management_Specialist (uses types from 1.1)
+
+3. **Phase 2:**
+   - Task 2.1 → TypeScript_Typing_Guardian (theme types)
+   - Task 2.2 → React_Component_Architect (atoms, uses 2.1)
+   - Task 2.3 → React_Component_Architect (molecules, uses 2.2)
+   - Task 2.4 → React_Component_Architect (grid)
+   - Task 2.5 → React_Component_Architect (organisms, uses 2.2, 2.3, stores from 1.6)
+
+4. **Phase 4 (For EACH view):**
+   - Step 1: TypeScript_Typing_Guardian (ensure types exist)
+   - Step 2: State_Management_Specialist (create logic hook)
+   - Step 3: React_Component_Architect (create UI component using hook)
+   - Step 4: E2E_Testing_Cypress_Expert (write tests)
+
+**This pattern repeats for all 102 views.**
