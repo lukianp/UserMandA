@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { exportService } from '../services/exportService';
+import { powerShellService } from '../services/powerShellService';
+import { useProfileStore } from '../store/useProfileStore';
 
 interface User {
   id: string;
@@ -23,7 +25,10 @@ export const useUserManagementLogic = () => {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [warnings, setWarnings] = useState<string[]>([]);
   const { addNotification } = useNotificationStore();
+  const { getCurrentSourceProfile } = useProfileStore();
 
   useEffect(() => {
     loadUsers();
@@ -31,73 +36,126 @@ export const useUserManagementLogic = () => {
 
   const loadUsers = async () => {
     setIsLoading(true);
+    setWarnings([]);
+
     try {
-      // Simulate API call - replace with actual IPC call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setLoadingMessage('Checking cache and data sources...');
 
-      const mockUsers: User[] = [
-        {
-          id: '1',
-          username: 'admin',
-          displayName: 'System Administrator',
-          email: 'admin@company.com',
-          role: 'Administrator',
-          status: 'Active',
-          lastLogin: new Date('2025-10-03T14:30:00'),
-          createdDate: new Date('2024-01-01'),
-          createdBy: 'system',
-          modifiedDate: new Date('2025-10-03'),
-          modifiedBy: 'admin',
-        },
-        {
-          id: '2',
-          username: 'jsmith',
-          displayName: 'John Smith',
-          email: 'jsmith@company.com',
-          role: 'PowerUser',
-          status: 'Active',
-          lastLogin: new Date('2025-10-03T10:15:00'),
-          createdDate: new Date('2024-03-15'),
-          createdBy: 'admin',
-          modifiedDate: new Date('2025-09-20'),
-          modifiedBy: 'admin',
-        },
-        {
-          id: '3',
-          username: 'mjones',
-          displayName: 'Mary Jones',
-          email: 'mjones@company.com',
-          role: 'User',
-          status: 'Active',
-          lastLogin: new Date('2025-10-02T16:45:00'),
-          createdDate: new Date('2024-06-01'),
-          createdBy: 'admin',
-          modifiedDate: new Date('2024-06-01'),
-          modifiedBy: 'admin',
-        },
-        {
-          id: '4',
-          username: 'rdavis',
-          displayName: 'Robert Davis',
-          email: 'rdavis@company.com',
-          role: 'ReadOnly',
-          status: 'Disabled',
-          lastLogin: new Date('2025-09-15T09:00:00'),
-          createdDate: new Date('2024-08-10'),
-          createdBy: 'admin',
-          modifiedDate: new Date('2025-09-30'),
-          modifiedBy: 'admin',
-        },
-      ];
+      const selectedProfile = getCurrentSourceProfile();
 
-      setUsers(mockUsers);
+      // First try cached data (mirror LogicEngineService pattern)
+      let usersData: User[];
+      try {
+        usersData = await powerShellService.getCachedResult(
+          `app_users_${selectedProfile?.id || 'default'}`,
+          async () => {
+            setLoadingMessage('Loading application users from PowerShell modules...');
+
+            // Try to execute Get-ApplicationUsers module
+            const result = await powerShellService.executeModule<{ users: User[] }>(
+              'Modules/Admin/UserManagement.psm1',
+              'Get-ApplicationUsers',
+              {
+                ProfileName: selectedProfile?.companyName || 'Default',
+              }
+            );
+
+            return result.data?.users || [];
+          }
+        );
+      } catch (moduleError) {
+        // Fallback to CSV service (mirror C# fallback pattern)
+        console.warn('Module execution failed, falling back to CSV:', moduleError);
+        setLoadingMessage('Loading users from CSV files...');
+
+        try {
+          const csvResult = await powerShellService.executeScript<{ users: User[]; warnings?: string[] }>(
+            'Scripts/Get-AppUsersFromCsv.ps1',
+            { ProfilePath: selectedProfile?.dataPath || 'C:\\discoverydata' }
+          );
+
+          usersData = csvResult.data?.users || [];
+
+          // Mirror C# header warnings
+          if (csvResult.warnings && csvResult.warnings.length > 0) {
+            setWarnings(csvResult.warnings);
+          }
+        } catch (csvError) {
+          console.error('CSV fallback also failed:', csvError);
+          // Use mock data as last resort
+          usersData = getMockUsers();
+          setWarnings(['PowerShell execution failed. Using mock data.']);
+        }
+      }
+
+      setUsers(usersData);
+      setLoadingMessage('');
+
     } catch (error) {
       addNotification('error', 'Failed to load users');
       console.error('Failed to load users:', error);
+      // Use mock data on error
+      setUsers(getMockUsers());
     } finally {
       setIsLoading(false);
+      setLoadingMessage('');
     }
   };
+
+  const getMockUsers = (): User[] => [
+    {
+      id: '1',
+      username: 'admin',
+      displayName: 'System Administrator',
+      email: 'admin@company.com',
+      role: 'Administrator',
+      status: 'Active',
+      lastLogin: new Date('2025-10-03T14:30:00'),
+      createdDate: new Date('2024-01-01'),
+      createdBy: 'system',
+      modifiedDate: new Date('2025-10-03'),
+      modifiedBy: 'admin',
+    },
+    {
+      id: '2',
+      username: 'jsmith',
+      displayName: 'John Smith',
+      email: 'jsmith@company.com',
+      role: 'PowerUser',
+      status: 'Active',
+      lastLogin: new Date('2025-10-03T10:15:00'),
+      createdDate: new Date('2024-03-15'),
+      createdBy: 'admin',
+      modifiedDate: new Date('2025-09-20'),
+      modifiedBy: 'admin',
+    },
+    {
+      id: '3',
+      username: 'mjones',
+      displayName: 'Mary Jones',
+      email: 'mjones@company.com',
+      role: 'User',
+      status: 'Active',
+      lastLogin: new Date('2025-10-02T16:45:00'),
+      createdDate: new Date('2024-06-01'),
+      createdBy: 'admin',
+      modifiedDate: new Date('2024-06-01'),
+      modifiedBy: 'admin',
+    },
+    {
+      id: '4',
+      username: 'rdavis',
+      displayName: 'Robert Davis',
+      email: 'rdavis@company.com',
+      role: 'ReadOnly',
+      status: 'Disabled',
+      lastLogin: new Date('2025-09-15T09:00:00'),
+      createdDate: new Date('2024-08-10'),
+      createdBy: 'admin',
+      modifiedDate: new Date('2025-09-30'),
+      modifiedBy: 'admin',
+    },
+  ];
 
   const handleCreateUser = () => {
     // Open create user dialog
@@ -200,5 +258,7 @@ export const useUserManagementLogic = () => {
     handleResetPassword,
     handleAssignRole,
     handleExport,
+    loadingMessage,
+    warnings,
   };
 };

@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { powerShellService } from '../services/powerShellService';
+import { useProfileStore } from '../store/useProfileStore';
 
 interface LicenseUsageData {
   licenseName: string;
@@ -43,32 +45,92 @@ export const useUserAnalyticsLogic = () => {
   const [dateRange, setDateRange] = useState<DateRange>('30');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [warnings, setWarnings] = useState<string[]>([]);
+
+  // Get current profile from store
+  const { getCurrentSourceProfile } = useProfileStore();
 
   const fetchAnalyticsData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
+      setWarnings([]);
 
-      // Execute PowerShell script to get user analytics
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Analytics/UserAnalytics.psm1',
-        functionName: 'Get-UserAnalyticsData',
-        parameters: {
-          dateRange: parseInt(dateRange),
-          department: selectedDepartment === 'all' ? null : selectedDepartment,
-        },
-      });
+      setLoadingMessage('Checking cache and data sources...');
 
-      if (result.success && result.data) {
-        setAnalyticsData({
-          licenseUsage: result.data.licenseUsage || [],
-          departmentBreakdown: calculateDepartmentBreakdown(result.data.departmentData || {}),
-          activityHeatmap: result.data.activityHeatmap || [],
-          metrics: result.data.metrics || {},
-        });
-      } else {
-        throw new Error(result.error || 'Failed to fetch analytics data');
+      const selectedProfile = getCurrentSourceProfile();
+
+      // First try cached data (mirror LogicEngineService pattern)
+      let analyticsResult: AnalyticsData;
+      try {
+        analyticsResult = await powerShellService.getCachedResult(
+          `user_analytics_${selectedProfile?.id || 'default'}_${dateRange}_${selectedDepartment}`,
+          async () => {
+            setLoadingMessage('Loading analytics from PowerShell modules...');
+
+            // Try to execute Get-UserAnalyticsData module
+            const result = await powerShellService.executeModule<AnalyticsData>(
+              'Modules/Analytics/UserAnalytics.psm1',
+              'Get-UserAnalyticsData',
+              {
+                ProfileName: selectedProfile?.companyName || 'Default',
+                DateRange: parseInt(dateRange),
+                Department: selectedDepartment === 'all' ? null : selectedDepartment,
+              }
+            );
+
+            return {
+              licenseUsage: result.data?.licenseUsage || [],
+              departmentBreakdown: calculateDepartmentBreakdown(result.data?.departmentData || {}),
+              activityHeatmap: result.data?.activityHeatmap || [],
+              metrics: result.data?.metrics || {} as UserActivityMetrics,
+            };
+          }
+        );
+      } catch (moduleError) {
+        // Fallback to CSV service (mirror C# fallback pattern)
+        console.warn('Module execution failed, falling back to CSV:', moduleError);
+        setLoadingMessage('Loading analytics from CSV files...');
+
+        try {
+          const csvResult = await powerShellService.executeScript<{
+            licenseUsage: LicenseUsageData[];
+            departmentData: Record<string, number>;
+            activityHeatmap: ActivityHeatmapData[];
+            metrics: UserActivityMetrics;
+            warnings?: string[];
+          }>(
+            'Scripts/Get-UserAnalyticsFromCsv.ps1',
+            {
+              ProfilePath: selectedProfile?.dataPath || 'C:\\discoverydata',
+              DateRange: parseInt(dateRange),
+              Department: selectedDepartment === 'all' ? null : selectedDepartment,
+            }
+          );
+
+          analyticsResult = {
+            licenseUsage: csvResult.data?.licenseUsage || [],
+            departmentBreakdown: calculateDepartmentBreakdown(csvResult.data?.departmentData || {}),
+            activityHeatmap: csvResult.data?.activityHeatmap || [],
+            metrics: csvResult.data?.metrics || {} as UserActivityMetrics,
+          };
+
+          // Mirror C# header warnings
+          if (csvResult.warnings && csvResult.warnings.length > 0) {
+            setWarnings(csvResult.warnings);
+          }
+        } catch (csvError) {
+          console.error('CSV fallback also failed:', csvError);
+          // Use mock data as last resort
+          analyticsResult = getMockAnalyticsData();
+          setWarnings(['PowerShell execution failed. Using mock data.']);
+        }
       }
+
+      setAnalyticsData(analyticsResult);
+      setLoadingMessage('');
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
@@ -78,6 +140,7 @@ export const useUserAnalyticsLogic = () => {
       setAnalyticsData(getMockAnalyticsData());
     } finally {
       setIsLoading(false);
+      setLoadingMessage('');
     }
   }, [dateRange, selectedDepartment]);
 
@@ -158,27 +221,31 @@ export const useUserAnalyticsLogic = () => {
 
     setIsExporting(true);
     try {
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Analytics/ExportReport.psm1',
-        functionName: 'Export-UserAnalyticsReport',
-        parameters: {
-          data: analyticsData,
-          dateRange: parseInt(dateRange),
-          department: selectedDepartment,
-          format: 'excel',
-        },
-      });
+      const selectedProfile = getCurrentSourceProfile();
 
-      if (result.success) {
-        // Trigger file save dialog
+      const result = await powerShellService.executeModule<{ filePath: string }>(
+        'Modules/Analytics/ExportReport.psm1',
+        'Export-UserAnalyticsReport',
+        {
+          ProfileName: selectedProfile?.companyName || 'Default',
+          Data: JSON.stringify(analyticsData),
+          DateRange: parseInt(dateRange),
+          Department: selectedDepartment,
+          Format: 'excel',
+        }
+      );
+
+      if (result.success && result.data?.filePath) {
         console.log('Report exported successfully:', result.data.filePath);
+        alert(`Report exported successfully to ${result.data.filePath}`);
       } else {
-        throw new Error(result.error || 'Export failed');
+        throw new Error('Export failed');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Export failed';
       setError(errorMessage);
       console.error('Export error:', err);
+      alert(`Export failed: ${errorMessage}`);
     } finally {
       setIsExporting(false);
     }
@@ -190,26 +257,31 @@ export const useUserAnalyticsLogic = () => {
 
     setIsExporting(true);
     try {
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Analytics/ExportReport.psm1',
-        functionName: 'Export-UserAnalyticsReport',
-        parameters: {
-          data: analyticsData,
-          dateRange: parseInt(dateRange),
-          department: selectedDepartment,
-          format: 'pdf',
-        },
-      });
+      const selectedProfile = getCurrentSourceProfile();
 
-      if (result.success) {
+      const result = await powerShellService.executeModule<{ filePath: string }>(
+        'Modules/Analytics/ExportReport.psm1',
+        'Export-UserAnalyticsReport',
+        {
+          ProfileName: selectedProfile?.companyName || 'Default',
+          Data: JSON.stringify(analyticsData),
+          DateRange: parseInt(dateRange),
+          Department: selectedDepartment,
+          Format: 'pdf',
+        }
+      );
+
+      if (result.success && result.data?.filePath) {
         console.log('PDF report exported successfully:', result.data.filePath);
+        alert(`PDF report exported successfully to ${result.data.filePath}`);
       } else {
-        throw new Error(result.error || 'PDF export failed');
+        throw new Error('PDF export failed');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'PDF export failed';
       setError(errorMessage);
       console.error('PDF export error:', err);
+      alert(`PDF export failed: ${errorMessage}`);
     } finally {
       setIsExporting(false);
     }
@@ -248,5 +320,7 @@ export const useUserAnalyticsLogic = () => {
     isExporting,
     handleExportReport,
     handleExportPDF,
+    loadingMessage,
+    warnings,
   };
 };

@@ -41,26 +41,30 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
   'data-cy': dataCy,
 }) => {
   const {
-    profiles,
+    sourceProfiles,
+    targetProfiles,
     selectedSourceProfile,
     selectedTargetProfile,
     connectionStatus,
     isLoading,
     error,
-    setSelectedProfile,
-    deleteProfile,
+    setSelectedSourceProfile,
+    setSelectedTargetProfile,
+    deleteSourceProfile,
     testConnection,
-    loadProfiles,
+    loadSourceProfiles,
   } = useProfileStore();
 
   const [isTesting, setIsTesting] = useState(false);
 
+  const profiles = type === 'source' ? sourceProfiles : targetProfiles;
   const selectedProfile = type === 'source' ? selectedSourceProfile : selectedTargetProfile;
+  const setProfile = type === 'source' ? setSelectedSourceProfile : setSelectedTargetProfile;
 
   const handleProfileChange = (profileId: string) => {
     const profile = profiles.find(p => p.id === profileId);
     if (profile) {
-      setSelectedProfile(profile, type);
+      setProfile(profile as any);
     }
   };
 
@@ -82,7 +86,7 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
 
     if (confirm(`Are you sure you want to delete profile "${selectedProfile.name}"?`)) {
       try {
-        await deleteProfile(selectedProfile.id);
+        await deleteSourceProfile(selectedProfile.id);
       } catch (error) {
         console.error('Failed to delete profile:', error);
       }
@@ -91,7 +95,7 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
 
   const handleRefreshProfiles = async () => {
     try {
-      await loadProfiles();
+      await loadSourceProfiles();
     } catch (error) {
       console.error('Failed to refresh profiles:', error);
     }

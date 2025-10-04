@@ -2,146 +2,192 @@
  * Profile Store
  *
  * Manages source/target profiles, connection status, and profile operations.
+ * Mirrors C# ProfileService.Instance singleton pattern from GUI/Services/ProfileService.cs
  * Persists selected profiles to localStorage.
  */
 
 import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
+import { devtools, persist, subscribeWithSelector } from 'zustand/middleware';
 import { Profile, ConnectionStatus } from '../types/models/profile';
 
+// Mirror C# CompanyProfile and TargetProfile types
+export interface CompanyProfile extends Profile {
+  companyName: string;
+  domainController?: string;
+  tenantId?: string;
+  dataPath?: string;
+  isActive?: boolean;
+  configuration?: Record<string, any>;
+}
+
+export interface TargetProfile extends Profile {
+  sourceProfileId: string;
+  targetEnvironment: string;
+}
+
 interface ProfileState {
-  // State
-  profiles: Profile[];
-  selectedSourceProfile: Profile | null;
-  selectedTargetProfile: Profile | null;
+  // State - mirrors C# ProfileService properties
+  sourceProfiles: CompanyProfile[];
+  targetProfiles: TargetProfile[];
+  selectedSourceProfile: CompanyProfile | null;
+  selectedTargetProfile: TargetProfile | null;
   connectionStatus: ConnectionStatus;
   isLoading: boolean;
   error: string | null;
 
-  // Actions
-  loadProfiles: () => Promise<void>;
-  setSelectedProfile: (profile: Profile, type: 'source' | 'target') => void;
-  createProfile: (profile: Omit<Profile, 'id'>) => Promise<void>;
-  updateProfile: (profileId: string, updates: Partial<Profile>) => Promise<void>;
-  deleteProfile: (profileId: string) => Promise<void>;
-  testConnection: (profile: Profile) => Promise<any>;
+  // Actions - mirrors C# ProfileService methods
+  loadSourceProfiles: () => Promise<void>;
+  loadTargetProfiles: () => Promise<void>;
+  createSourceProfile: (profile: Omit<CompanyProfile, 'id' | 'createdAt'>) => Promise<string>;
+  updateSourceProfile: (id: string, updates: Partial<CompanyProfile>) => Promise<void>;
+  deleteSourceProfile: (id: string) => Promise<void>;
+  setSelectedSourceProfile: (profile: CompanyProfile | null) => void;
+  setSelectedTargetProfile: (profile: TargetProfile | null) => void;
+  testConnection: (profile: CompanyProfile) => Promise<any>;
   clearError: () => void;
+
+  // Helper methods (mirrors C# ProfileService.CurrentProfile pattern)
+  getCurrentSourceProfile: () => CompanyProfile | null;
+  getCurrentTargetProfile: () => TargetProfile | null;
+
+  // Mirror C# ProfilesChanged event with subscription pattern
+  subscribeToProfileChanges: (callback: () => void) => () => void;
 }
 
 export const useProfileStore = create<ProfileState>()(
-  devtools(
-    persist(
-      (set, get) => ({
-        // Initial state
-        profiles: [],
-        selectedSourceProfile: null,
-        selectedTargetProfile: null,
-        connectionStatus: 'disconnected',
-        isLoading: false,
-        error: null,
+  subscribeWithSelector(
+    devtools(
+      persist(
+        (set, get) => ({
+          // Initial state
+          sourceProfiles: [],
+          targetProfiles: [],
+          selectedSourceProfile: null,
+          selectedTargetProfile: null,
+          connectionStatus: 'disconnected',
+          isLoading: false,
+          error: null,
 
-        // Actions
+          // Actions
 
-        /**
-         * Load all profiles from disk
-         */
-        loadProfiles: async () => {
-          set({ isLoading: true, error: null });
-          try {
-            const profiles = await window.electronAPI.loadProfiles();
-            set({ profiles, isLoading: false });
-          } catch (error: any) {
-            console.error('Failed to load profiles:', error);
-            set({ error: error.message || 'Failed to load profiles', isLoading: false });
-          }
-        },
-
-        /**
-         * Set selected source or target profile
-         */
-        setSelectedProfile: (profile, type) => {
-          if (type === 'source') {
-            set({ selectedSourceProfile: profile });
-          } else {
-            set({ selectedTargetProfile: profile });
-          }
-        },
-
-        /**
-         * Create a new profile
-         */
-        createProfile: async (profileData) => {
-          set({ isLoading: true, error: null });
-          try {
-            const newProfile: Profile = {
-              ...profileData,
-              id: crypto.randomUUID(),
-              createdAt: new Date().toISOString(),
-              lastModified: new Date().toISOString(),
-            } as Profile;
-
-            await window.electronAPI.saveProfile(newProfile);
-            await get().loadProfiles(); // Reload profiles
-          } catch (error: any) {
-            console.error('Failed to create profile:', error);
-            set({ error: error.message || 'Failed to create profile', isLoading: false });
-            throw error;
-          }
-        },
-
-        /**
-         * Update an existing profile
-         */
-        updateProfile: async (profileId, updates) => {
-          set({ isLoading: true, error: null });
-          try {
-            const existingProfile = get().profiles.find(p => p.id === profileId);
-            if (!existingProfile) {
-              throw new Error(`Profile ${profileId} not found`);
+          /**
+           * Load source profiles from disk
+           * Mirrors C# ProfileService.GetProfilesAsync
+           */
+          loadSourceProfiles: async () => {
+            set({ isLoading: true, error: null });
+            try {
+              const profiles = await window.electronAPI.loadProfiles();
+              set({
+                sourceProfiles: profiles as CompanyProfile[],
+                isLoading: false,
+                // Mirror C# SelectedProfile restoration
+                selectedSourceProfile: profiles.find((p: any) => p.isActive) || profiles[0] || null,
+              });
+            } catch (error: any) {
+              console.error('Failed to load source profiles:', error);
+              set({ error: error.message || 'Failed to load source profiles', isLoading: false });
             }
+          },
 
-            const updatedProfile: Profile = {
-              ...existingProfile,
-              ...updates,
-              lastModified: new Date().toISOString(),
-            };
+          /**
+           * Load target profiles for current source profile
+           * Mirrors C# TargetProfileService.GetProfilesAsync
+           */
+          loadTargetProfiles: async () => {
+            try {
+              const currentSource = get().getCurrentSourceProfile();
+              if (!currentSource) return;
 
-            await window.electronAPI.saveProfile(updatedProfile);
-            await get().loadProfiles(); // Reload profiles
-          } catch (error: any) {
-            console.error('Failed to update profile:', error);
-            set({ error: error.message || 'Failed to update profile', isLoading: false });
-            throw error;
+              // In real implementation, this would call an IPC handler
+              // For now, return empty array
+              set({ targetProfiles: [] });
+            } catch (error: any) {
+              console.error('Failed to load target profiles:', error);
+              set({ error: error.message });
+            }
+          },
+
+        /**
+         * Create a new source profile
+         * Mirrors C# ProfileService.CreateProfileAsync
+         */
+        createSourceProfile: async (profileData) => {
+          const newProfile: CompanyProfile = {
+            ...profileData,
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+            lastModified: new Date().toISOString(),
+            isActive: false,
+            // Mirror C# default values
+            domainController: profileData.domainController || `dc.${profileData.companyName.toLowerCase()}.com`,
+            tenantId: profileData.tenantId || crypto.randomUUID(),
+            configuration: profileData.configuration || {},
+          } as CompanyProfile;
+
+          await window.electronAPI.saveProfile(newProfile);
+
+          const updatedProfiles = [...get().sourceProfiles, newProfile];
+          set({ sourceProfiles: updatedProfiles });
+
+          return newProfile.id;
+        },
+
+        /**
+         * Update an existing source profile
+         * Mirrors C# ProfileService.UpdateProfileAsync
+         */
+        updateSourceProfile: async (id, updates) => {
+          await window.electronAPI.saveProfile({ id, ...updates } as any);
+
+          const updatedProfiles = get().sourceProfiles.map((p) =>
+            p.id === id ? { ...p, ...updates, lastModified: new Date().toISOString() } : p
+          );
+
+          set({ sourceProfiles: updatedProfiles });
+        },
+
+        /**
+         * Delete a source profile
+         * Mirrors C# ProfileService.DeleteProfileAsync
+         */
+        deleteSourceProfile: async (id) => {
+          await window.electronAPI.deleteProfile(id);
+
+          const updatedProfiles = get().sourceProfiles.filter((p) => p.id !== id);
+          set({
+            sourceProfiles: updatedProfiles,
+            selectedSourceProfile: get().selectedSourceProfile?.id === id ? null : get().selectedSourceProfile,
+          });
+        },
+
+        /**
+         * Set selected source profile
+         * Mirrors C# ProfileService.SetCurrentProfileAsync
+         */
+        setSelectedSourceProfile: (profile) => {
+          set({ selectedSourceProfile: profile });
+
+          // Mirror C# CurrentProfile property update
+          if (profile) {
+            const updatedProfiles = get().sourceProfiles.map((p) => ({
+              ...p,
+              isActive: p.id === profile.id,
+            }));
+            set({ sourceProfiles: updatedProfiles });
           }
         },
 
         /**
-         * Delete a profile
+         * Set selected target profile
          */
-        deleteProfile: async (profileId) => {
-          set({ isLoading: true, error: null });
-          try {
-            await window.electronAPI.deleteProfile(profileId);
-
-            // Clear selected profiles if they match deleted profile
-            const state = get();
-            if (state.selectedSourceProfile?.id === profileId) {
-              set({ selectedSourceProfile: null });
-            }
-            if (state.selectedTargetProfile?.id === profileId) {
-              set({ selectedTargetProfile: null });
-            }
-
-            await get().loadProfiles(); // Reload profiles
-          } catch (error: any) {
-            console.error('Failed to delete profile:', error);
-            set({ error: error.message || 'Failed to delete profile', isLoading: false });
-            throw error;
-          }
+        setSelectedTargetProfile: (profile) => {
+          set({ selectedTargetProfile: profile });
         },
 
         /**
          * Test connection to a profile
+         * Mirrors C# connection testing functionality
          */
         testConnection: async (profile) => {
           set({ connectionStatus: 'connecting' });
@@ -172,6 +218,33 @@ export const useProfileStore = create<ProfileState>()(
          */
         clearError: () => {
           set({ error: null });
+        },
+
+        /**
+         * Get current source profile (mirrors C# ProfileService.CurrentProfile property)
+         */
+        getCurrentSourceProfile: () => {
+          return get().selectedSourceProfile || get().sourceProfiles.find((p) => p.isActive) || get().sourceProfiles[0] || null;
+        },
+
+        /**
+         * Get current target profile (mirrors C# ProfileService.CurrentProfile property)
+         */
+        getCurrentTargetProfile: () => {
+          return get().selectedTargetProfile || get().targetProfiles.find((p) => p.isActive) || get().targetProfiles[0] || null;
+        },
+
+        /**
+         * Subscribe to profile changes
+         * Mirrors C# ProfilesChanged event pattern
+         */
+        subscribeToProfileChanges: (callback) => {
+          // Use Zustand's subscribe method with selector
+          const unsubscribe = useProfileStore.subscribe(
+            (state) => state.sourceProfiles,
+            callback
+          );
+          return unsubscribe;
         },
       }),
       {

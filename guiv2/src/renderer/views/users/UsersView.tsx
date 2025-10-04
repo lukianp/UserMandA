@@ -11,6 +11,8 @@ import { Input } from '../../components/atoms/Input';
 import { Download, Trash, UserPlus, RefreshCw } from 'lucide-react';
 import { ColDef } from 'ag-grid-community';
 import { UserData } from '../../types/models/user';
+import { powerShellService } from '../../services/powerShellService';
+import { useProfileStore } from '../../store/useProfileStore';
 
 /**
  * Users management view
@@ -21,6 +23,12 @@ const UsersView: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<UserData[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+
+  // Get current profile from store
+  const { getCurrentSourceProfile } = useProfileStore();
 
   // Load users on mount
   useEffect(() => {
@@ -28,48 +36,95 @@ const UsersView: React.FC = () => {
   }, []);
 
   // Load users from PowerShell
+  // Mirrors C# UsersViewModel.LoadAsync pattern (lines 114-236)
   const loadUsers = async () => {
+    const cancellationSource = crypto.randomUUID();
     setIsLoading(true);
     setError(null);
+    setWarnings([]);
+
     try {
-      // Simulate API call - replace with actual PowerShell execution
-      const mockUsers: UserData[] = Array.from({ length: 100 }, (_, i) => ({
-        id: `user-${i}`,
-        objectId: `obj-${i}`,
-        displayName: `User ${i + 1}`,
-        firstName: `First${i}`,
-        lastName: `Last${i}`,
-        email: `user${i}@company.com`,
-        userPrincipalName: `user${i}@company.com`,
-        department: ['IT', 'Sales', 'HR', 'Finance'][i % 4],
-        jobTitle: ['Manager', 'Developer', 'Analyst', 'Director'][i % 4],
-        officeLocation: ['New York', 'London', 'Tokyo', 'Sydney'][i % 4],
-        isEnabled: i % 5 !== 0,
-        createdDate: new Date(2020, 0, i + 1).toISOString(),
-        lastSignIn: new Date(2024, 9, i % 30 + 1).toISOString(),
-        source: i % 3 === 0 ? 'AzureAD' : 'ActiveDirectory',
-        syncStatus: i % 10 === 0 ? { isSynced: false, lastSyncTime: '', syncErrors: ['Error'] } : { isSynced: true, lastSyncTime: new Date().toISOString() },
-        licenses: i % 2 === 0 ? ['Office 365 E3'] : [],
-        groups: [`Group${i % 5}`],
-        manager: i > 10 ? `User ${i - 10}` : undefined,
-        mfaStatus: i % 3 === 0 ? 'Enabled' : 'Disabled',
-        riskLevel: i % 20 === 0 ? 'High' : i % 10 === 0 ? 'Medium' : 'Low',
-      }));
+      // Mirror C# LoadAsync progress reporting
+      setLoadingMessage('Checking cache and data sources...');
 
-      setUsers(mockUsers);
+      const selectedProfile = getCurrentSourceProfile();
 
-      // Real implementation would be:
-      // const result = await window.electronAPI.executeModule({
-      //   modulePath: 'Modules/Discovery/Get-AllUsers.psm1',
-      //   functionName: 'Get-AllUsers',
-      //   parameters: {},
-      // });
-      // setUsers(result.data.users);
-    } catch (err) {
-      console.error('Failed to load users:', err);
-      setError('Failed to load users. Please try again.');
+      // First try cached data (mirror LogicEngineService pattern)
+      let users: UserData[];
+      try {
+        users = await powerShellService.getCachedResult(
+          `users_${selectedProfile?.id || 'default'}`,
+          async () => {
+            setLoadingMessage('Loading from cached LogicEngine...');
+
+            // Try to execute Get-AllUsers module
+            const result = await powerShellService.executeModule<{ users: UserData[] }>(
+              'Modules/Discovery/Get-AllUsers.psm1',
+              'Get-AllUsers',
+              { ProfileName: selectedProfile?.companyName || 'Default' }
+            );
+
+            return result.data?.users || [];
+          }
+        );
+      } catch (moduleError) {
+        // Fallback to CSV service (mirror C# fallback pattern)
+        console.warn('Module execution failed, falling back to CSV:', moduleError);
+        setLoadingMessage('Loading from CSV files...');
+
+        try {
+          const csvResult = await powerShellService.executeScript<{ users: UserData[]; warnings?: string[] }>(
+            'Scripts/Get-UsersFromCsv.ps1',
+            { ProfilePath: selectedProfile?.dataPath || 'C:\\discoverydata' }
+          );
+
+          users = csvResult.data?.users || [];
+
+          // Mirror C# header warnings
+          if (csvResult.warnings && csvResult.warnings.length > 0) {
+            setWarnings(csvResult.warnings);
+          }
+        } catch (csvError) {
+          console.error('CSV fallback also failed:', csvError);
+          // Use mock data as last resort
+          users = Array.from({ length: 100 }, (_, i) => ({
+            id: `user-${i}`,
+            objectId: `obj-${i}`,
+            displayName: `User ${i + 1}`,
+            firstName: `First${i}`,
+            lastName: `Last${i}`,
+            email: `user${i}@company.com`,
+            userPrincipalName: `user${i}@company.com`,
+            department: ['IT', 'Sales', 'HR', 'Finance'][i % 4],
+            jobTitle: ['Manager', 'Developer', 'Analyst', 'Director'][i % 4],
+            officeLocation: ['New York', 'London', 'Tokyo', 'Sydney'][i % 4],
+            isEnabled: i % 5 !== 0,
+            createdDate: new Date(2020, 0, i + 1).toISOString(),
+            lastSignIn: new Date(2024, 9, i % 30 + 1).toISOString(),
+            source: i % 3 === 0 ? 'AzureAD' : 'ActiveDirectory',
+            syncStatus: i % 10 === 0 ? { isSynced: false, lastSyncTime: '', syncErrors: ['Error'] } : { isSynced: true, lastSyncTime: new Date().toISOString() },
+            licenses: i % 2 === 0 ? ['Office 365 E3'] : [],
+            groups: [`Group${i % 5}`],
+            manager: i > 10 ? `User ${i - 10}` : undefined,
+            mfaStatus: i % 3 === 0 ? 'Enabled' : 'Disabled',
+            riskLevel: i % 20 === 0 ? 'High' : i % 10 === 0 ? 'Medium' : 'Low',
+          }));
+
+          setWarnings(['PowerShell execution failed. Using mock data.']);
+        }
+      }
+
+      // Mirror C# UI thread update pattern
+      setUsers(users);
+      setTotalCount(users.length);
+      setLoadingMessage('');
+
+    } catch (error: any) {
+      console.error('Failed to load users:', error);
+      setError(`Failed to load users: ${error.message}`);
     } finally {
       setIsLoading(false);
+      setLoadingMessage('');
     }
   };
 
