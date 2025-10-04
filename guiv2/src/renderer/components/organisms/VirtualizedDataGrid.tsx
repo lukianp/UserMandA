@@ -5,16 +5,26 @@
  * Handles 100,000+ rows with virtual scrolling at 60 FPS
  */
 
-import React, { useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef, GridApi, GridReadyEvent, SelectionChangedEvent, RowClickedEvent } from 'ag-grid-community';
 import 'ag-grid-enterprise';
-import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-alpine.css';
 import { clsx } from 'clsx';
 import { Button } from '../atoms/Button';
 import { Download, Printer, Eye, EyeOff, Filter } from 'lucide-react';
 import { Spinner } from '../atoms/Spinner';
+
+// Lazy load AG Grid CSS - only load once when first grid mounts
+let agGridStylesLoaded = false;
+const loadAgGridStyles = () => {
+  if (agGridStylesLoaded) return;
+
+  // Dynamically import AG Grid styles
+  import('ag-grid-community/styles/ag-grid.css');
+  import('ag-grid-community/styles/ag-theme-alpine.css');
+
+  agGridStylesLoaded = true;
+};
 
 export interface VirtualizedDataGridProps<T = any> {
   /** Data rows to display */
@@ -83,6 +93,11 @@ export function VirtualizedDataGrid<T = any>({
   const gridRef = useRef<AgGridReact>(null);
   const [gridApi, setGridApi] = React.useState<GridApi | null>(null);
   const [showColumnPanel, setShowColumnPanel] = React.useState(false);
+
+  // Load AG Grid styles on component mount
+  useEffect(() => {
+    loadAgGridStyles();
+  }, []);
 
   // Default column definition
   const defaultColDef = useMemo(

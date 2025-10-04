@@ -17,8 +17,13 @@ import { applyTheme } from './styles/themes';
 
 // Import CSS
 import './index.css';
-import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-alpine.css';
+
+// Lazy load AG Grid CSS only when needed
+// This reduces initial bundle size significantly
+if (typeof window !== 'undefined') {
+  // We'll load AG Grid styles dynamically when first grid component mounts
+  // See DataGridWrapper component for implementation
+}
 
 // Lazy load all views for code splitting
 const OverviewView = lazy(() => import('./views/overview/OverviewView'));
@@ -57,6 +62,8 @@ const MigrationValidationView = lazy(() => import('./views/migration/MigrationVa
 const MigrationExecutionView = lazy(() => import('./views/migration/MigrationExecutionView'));
 const ReportsView = lazy(() => import('./views/reports/ReportsView'));
 const SettingsView = lazy(() => import('./views/settings/SettingsView'));
+
+// Analytics views - These use Recharts (large library), lazy loaded for better performance
 const ExecutiveDashboardView = lazy(() => import('./views/analytics/ExecutiveDashboardView'));
 const MigrationReportView = lazy(() => import('./views/analytics/MigrationReportView'));
 const UserAnalyticsView = lazy(() => import('./views/analytics/UserAnalyticsView'));

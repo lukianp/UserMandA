@@ -27,7 +27,9 @@
       "Bash(find:*)",
       "Bash(do echo \"=== $file ===\")",
       "Bash(wc:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(cat:*)",
+      "Bash(timeout 60 npm start)"
     ],
     "deny": [],
     "ask": [],

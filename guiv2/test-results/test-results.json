@@ -1,0 +1,2340 @@
+{
+  "config": {
+    "configFile": "D:\\Scripts\\UserMandA\\guiv2\\playwright.config.ts",
+    "rootDir": "D:/Scripts/UserMandA/guiv2/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/test-results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "D:/Scripts/UserMandA/guiv2/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {},
+        "id": "electron",
+        "name": "electron",
+        "testDir": "D:/Scripts/UserMandA/guiv2/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "accessibility.spec.ts",
+      "file": "accessibility.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Keyboard Shortcuts & Accessibility",
+          "file": "accessibility.spec.ts",
+          "line": 26,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should open command palette with Ctrl+K",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-79ca18a5b18fe9692521",
+              "file": "accessibility.spec.ts",
+              "line": 27,
+              "column": 7
+            },
+            {
+              "title": "should close tab with Ctrl+W",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-918a0c5bb7bdb66791c8",
+              "file": "accessibility.spec.ts",
+              "line": 44,
+              "column": 7
+            },
+            {
+              "title": "should open new tab with Ctrl+T",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-08f5713fa136964ca873",
+              "file": "accessibility.spec.ts",
+              "line": 58,
+              "column": 7
+            },
+            {
+              "title": "should save with Ctrl+S",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-e1763313386cae73693a",
+              "file": "accessibility.spec.ts",
+              "line": 71,
+              "column": 7
+            },
+            {
+              "title": "should focus search with Ctrl+F",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-4fcd644c71291908999a",
+              "file": "accessibility.spec.ts",
+              "line": 93,
+              "column": 7
+            },
+            {
+              "title": "should trigger print with Ctrl+P",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-16d50238f7d099e4f967",
+              "file": "accessibility.spec.ts",
+              "line": 107,
+              "column": 7
+            },
+            {
+              "title": "should navigate with Tab key",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-a0987d25e007dfc590ad",
+              "file": "accessibility.spec.ts",
+              "line": 125,
+              "column": 7
+            },
+            {
+              "title": "should navigate backwards with Shift+Tab",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-7a48cc87da4287a07e3e",
+              "file": "accessibility.spec.ts",
+              "line": 151,
+              "column": 7
+            },
+            {
+              "title": "should have ARIA labels on interactive elements",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-b7189882924ba0f668ba",
+              "file": "accessibility.spec.ts",
+              "line": 169,
+              "column": 7
+            },
+            {
+              "title": "should have visible focus indicators",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-01e9bc14d22bf5daa6c5",
+              "file": "accessibility.spec.ts",
+              "line": 221,
+              "column": 7
+            },
+            {
+              "title": "should support keyboard navigation in data grids",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-9003bf3793fc33b23886",
+              "file": "accessibility.spec.ts",
+              "line": 255,
+              "column": 7
+            },
+            {
+              "title": "should announce loading states to screen readers",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-459c43aefd192eb93e41",
+              "file": "accessibility.spec.ts",
+              "line": 278,
+              "column": 7
+            },
+            {
+              "title": "should have proper heading hierarchy",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-3e1a4df1d5d529bfd433",
+              "file": "accessibility.spec.ts",
+              "line": 294,
+              "column": 7
+            },
+            {
+              "title": "should have sufficient color contrast",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-8eb53d5500021192fb0e",
+              "file": "accessibility.spec.ts",
+              "line": 319,
+              "column": 7
+            },
+            {
+              "title": "should support keyboard-only form submission",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-fc427181de72cd3c97a7",
+              "file": "accessibility.spec.ts",
+              "line": 349,
+              "column": 7
+            },
+            {
+              "title": "should have skip navigation links",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-2de7582d80a4f3578e5b",
+              "file": "accessibility.spec.ts",
+              "line": 372,
+              "column": 7
+            },
+            {
+              "title": "should prevent focus trap in modals",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-dd50b5f7bdc416110471",
+              "file": "accessibility.spec.ts",
+              "line": 393,
+              "column": 7
+            },
+            {
+              "title": "should have proper alt text on images",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddd864604af8a6a0198f-f73fffb9068062fb4d50",
+              "file": "accessibility.spec.ts",
+              "line": 428,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "discovery-journey.spec.ts",
+      "file": "discovery-journey.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Discovery Journey - All Modules",
+          "file": "discovery-journey.spec.ts",
+          "line": 285,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should navigate to Discovery Hub",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-175801f28e4404d5837b",
+              "file": "discovery-journey.spec.ts",
+              "line": 286,
+              "column": 7
+            },
+            {
+              "title": "should test Active Directory Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-ea184ea639f9abec48f7",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Azure Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-ce790cb8c3d71d24a63a",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Office 365 Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-53f6d1e84dc3bc41cd3e",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Exchange Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-bfd48e2ea947bf1cb240",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test SharePoint Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-dca4fb45b6acebba0f3e",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Teams Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-74de6728542e8bf8dba4",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test OneDrive Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-148f7f9c16019cd1613f",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Domain Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-abddaff775d161486b66",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Network Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-da1a4194507181d1188a",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Application Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-0ee61887ac5e56349ced",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test File System Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-2f8cbe00892b8b98f587",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Licensing Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-f287db520c390b8534a5",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Environment Detection",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-5a346d95afaaaa1a9432",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Conditional Access Policies Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-def6f8303f520c4591fa",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Data Loss Prevention Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-0dc2784abc309b9bab65",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Identity Governance Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-332d3375c7f6fce55666",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Intune Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-d814e1c6658e687476e8",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Power Platform Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-c4c96a162d7fbc702a33",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Security Infrastructure Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-03f0757167aa57c9b05c",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test SQL Server Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-5bbb2c477c8a3eb31d01",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test VMware Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-ca9e6d68c7d918f44bdc",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Hyper-V Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-08a566e3daee85fc4e18",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test AWS Cloud Infrastructure Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-5cfd91d6633240a3fd5e",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Google Workspace Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-2e262f5677ceb7d02820",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Web Server Configuration Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-8b3948139c3700664e78",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should test Infrastructure Discovery Hub",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-9bf2aa2c069b80b31f86",
+              "file": "discovery-journey.spec.ts",
+              "line": 313,
+              "column": 9
+            },
+            {
+              "title": "should run multiple discoveries sequentially",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-e1568b7b562995a2ac99",
+              "file": "discovery-journey.spec.ts",
+              "line": 547,
+              "column": 7
+            },
+            {
+              "title": "should handle discovery errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-a1ed3e12d3dbe8b1281b",
+              "file": "discovery-journey.spec.ts",
+              "line": 591,
+              "column": 7
+            },
+            {
+              "title": "should display discovery statistics",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-1d1b62f621b98531bde7",
+              "file": "discovery-journey.spec.ts",
+              "line": 638,
+              "column": 7
+            },
+            {
+              "title": "should support discovery result filtering",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-86ff27ca0d7281c86425",
+              "file": "discovery-journey.spec.ts",
+              "line": 678,
+              "column": 7
+            },
+            {
+              "title": "should support bulk selection in discovery results",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-4365356937bec46b0269",
+              "file": "discovery-journey.spec.ts",
+              "line": 726,
+              "column": 7
+            },
+            {
+              "title": "should refresh discovery results",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-28fa624b2876bb66a74d",
+              "file": "discovery-journey.spec.ts",
+              "line": 772,
+              "column": 7
+            },
+            {
+              "title": "should cancel running discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-2adff4b325d05dd16622",
+              "file": "discovery-journey.spec.ts",
+              "line": 814,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Discovery Journey - Integration Tests",
+          "file": "discovery-journey.spec.ts",
+          "line": 879,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should run discovery and export results to CSV",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-c7e516db2971b38c18ce",
+              "file": "discovery-journey.spec.ts",
+              "line": 880,
+              "column": 7
+            },
+            {
+              "title": "should navigate between multiple discovery modules",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-3a92669a785eeb3d2731",
+              "file": "discovery-journey.spec.ts",
+              "line": 934,
+              "column": 7
+            },
+            {
+              "title": "should maintain discovery state across navigation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "027b7b4e43842b74986b-afc3dd3868d394150576",
+              "file": "discovery-journey.spec.ts",
+              "line": 963,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "error-handling.spec.ts",
+      "file": "error-handling.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Error Handling & Error Boundaries",
+          "file": "error-handling.spec.ts",
+          "line": 26,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should display error boundary on component crash",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-8853132f5966cc161aa2",
+              "file": "error-handling.spec.ts",
+              "line": 27,
+              "column": 7
+            },
+            {
+              "title": "should handle IPC communication errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-953726b5d0b89b95f628",
+              "file": "error-handling.spec.ts",
+              "line": 71,
+              "column": 7
+            },
+            {
+              "title": "should retry failed operations",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-f5238d48ba81e739ca59",
+              "file": "error-handling.spec.ts",
+              "line": 113,
+              "column": 7
+            },
+            {
+              "title": "should handle network timeout errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-d34fbc8452e02830a692",
+              "file": "error-handling.spec.ts",
+              "line": 162,
+              "column": 7
+            },
+            {
+              "title": "should handle validation errors in forms",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-d5fc5e7df4c39acce626",
+              "file": "error-handling.spec.ts",
+              "line": 195,
+              "column": 7
+            },
+            {
+              "title": "should handle file upload errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-8478324a632c1e94e17f",
+              "file": "error-handling.spec.ts",
+              "line": 222,
+              "column": 7
+            },
+            {
+              "title": "should handle permission errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-91068806a3ba3e9579aa",
+              "file": "error-handling.spec.ts",
+              "line": 248,
+              "column": 7
+            },
+            {
+              "title": "should display user-friendly error messages",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-10122060a54c04b1033e",
+              "file": "error-handling.spec.ts",
+              "line": 273,
+              "column": 7
+            },
+            {
+              "title": "should log errors to console for debugging",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-1460145d125460744b67",
+              "file": "error-handling.spec.ts",
+              "line": 306,
+              "column": 7
+            },
+            {
+              "title": "should prevent cascading errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-acd7b97dccb1f33a3ce5",
+              "file": "error-handling.spec.ts",
+              "line": 325,
+              "column": 7
+            },
+            {
+              "title": "should provide error reporting mechanism",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-c19aabe922a19a2619e5",
+              "file": "error-handling.spec.ts",
+              "line": 347,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "migration-journey.spec.ts",
+      "file": "migration-journey.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Migration Journey - Complete Workflow",
+          "file": "migration-journey.spec.ts",
+          "line": 49,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should create migration project",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6ed01c3560e892ef506-c0c2b00640ed80310614",
+              "file": "migration-journey.spec.ts",
+              "line": 50,
+              "column": 7
+            },
+            {
+              "title": "should create migration wave",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6ed01c3560e892ef506-b778bb21998cbb9fd69d",
+              "file": "migration-journey.spec.ts",
+              "line": 105,
+              "column": 7
+            },
+            {
+              "title": "should assign users to migration wave",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6ed01c3560e892ef506-a28224e948d7fbeb85bf",
+              "file": "migration-journey.spec.ts",
+              "line": 181,
+              "column": 7
+            },
+            {
+              "title": "should map resources source to target",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6ed01c3560e892ef506-cfacaa516291f81bb25c",
+              "file": "migration-journey.spec.ts",
+              "line": 251,
+              "column": 7
+            },
+            {
+              "title": "should run validation checks",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6ed01c3560e892ef506-1a19a6dca5392ba84422",
+              "file": "migration-journey.spec.ts",
+              "line": 369,
+              "column": 7
+            },
+            {
+              "title": "should execute migration with progress tracking (dry run)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6ed01c3560e892ef506-81bf4ea544f23be265a9",
+              "file": "migration-journey.spec.ts",
+              "line": 509,
+              "column": 7
+            },
+            {
+              "title": "should pause and resume migration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6ed01c3560e892ef506-3786932b844b22c3ecb1",
+              "file": "migration-journey.spec.ts",
+              "line": 636,
+              "column": 7
+            },
+            {
+              "title": "should handle migration completion",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6ed01c3560e892ef506-b9128089246147f0745c",
+              "file": "migration-journey.spec.ts",
+              "line": 686,
+              "column": 7
+            },
+            {
+              "title": "should export migration mappings",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6ed01c3560e892ef506-00273cbf1d6a063e78e2",
+              "file": "migration-journey.spec.ts",
+              "line": 735,
+              "column": 7
+            },
+            {
+              "title": "should display validation errors gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d6ed01c3560e892ef506-e4df0860ce930ae4f00f",
+              "file": "migration-journey.spec.ts",
+              "line": 788,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "navigation.spec.ts",
+      "file": "navigation.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Navigation & Routing",
+          "file": "navigation.spec.ts",
+          "line": 26,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should navigate to Overview",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-c4e589efdcd3635e3cfd",
+              "file": "navigation.spec.ts",
+              "line": 39,
+              "column": 9
+            },
+            {
+              "title": "should navigate to Users",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-a557af8eda3ba46980cc",
+              "file": "navigation.spec.ts",
+              "line": 39,
+              "column": 9
+            },
+            {
+              "title": "should navigate to Groups",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-8df793d8365fe9f4cc97",
+              "file": "navigation.spec.ts",
+              "line": 39,
+              "column": 9
+            },
+            {
+              "title": "should navigate to Discovery",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-874f75c9eb2006689788",
+              "file": "navigation.spec.ts",
+              "line": 39,
+              "column": 9
+            },
+            {
+              "title": "should navigate to Infrastructure",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-e387b822299d3760c1d2",
+              "file": "navigation.spec.ts",
+              "line": 39,
+              "column": 9
+            },
+            {
+              "title": "should navigate to Migration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-c66031755386fe5d8858",
+              "file": "navigation.spec.ts",
+              "line": 39,
+              "column": 9
+            },
+            {
+              "title": "should navigate to Reports",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-bfd98b00f7b1b75c1667",
+              "file": "navigation.spec.ts",
+              "line": 39,
+              "column": 9
+            },
+            {
+              "title": "should navigate to Settings",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-629a2823c5cc4b1e604e",
+              "file": "navigation.spec.ts",
+              "line": 39,
+              "column": 9
+            },
+            {
+              "title": "should handle browser back/forward navigation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-848a7f969e72902c98da",
+              "file": "navigation.spec.ts",
+              "line": 63,
+              "column": 7
+            },
+            {
+              "title": "should maintain active nav state on page refresh",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-24727280236cfd85bfb4",
+              "file": "navigation.spec.ts",
+              "line": 92,
+              "column": 7
+            },
+            {
+              "title": "should navigate using sidebar links",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-ca3ffcb2aa33e401c8d8",
+              "file": "navigation.spec.ts",
+              "line": 106,
+              "column": 7
+            },
+            {
+              "title": "should display breadcrumbs for nested routes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-1ffaf8e7035eefc751a9",
+              "file": "navigation.spec.ts",
+              "line": 119,
+              "column": 7
+            },
+            {
+              "title": "should lazy load views on first navigation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-83e356bd0f009c8ca3e9",
+              "file": "navigation.spec.ts",
+              "line": 136,
+              "column": 7
+            },
+            {
+              "title": "should handle invalid routes gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-66b68dae98f339553fe1",
+              "file": "navigation.spec.ts",
+              "line": 157,
+              "column": 7
+            },
+            {
+              "title": "should persist scroll position on navigation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-2bfd791dfc471f556386",
+              "file": "navigation.spec.ts",
+              "line": 175,
+              "column": 7
+            },
+            {
+              "title": "should show loading state during route transitions",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-dcdfb7c1a59b2ab3e347",
+              "file": "navigation.spec.ts",
+              "line": 201,
+              "column": 7
+            },
+            {
+              "title": "should support deep linking to specific views",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-5a1fd51872f105887e0c",
+              "file": "navigation.spec.ts",
+              "line": 212,
+              "column": 7
+            },
+            {
+              "title": "should collapse/expand sidebar on mobile viewport",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-5ccd66a8b8cf3a18274a",
+              "file": "navigation.spec.ts",
+              "line": 230,
+              "column": 7
+            },
+            {
+              "title": "should highlight current route in navigation menu",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5d2868f7d23420c27cca-878f35ac0522aab21a20",
+              "file": "navigation.spec.ts",
+              "line": 254,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "user-discovery.spec.ts",
+      "file": "user-discovery.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "User Discovery Journey",
+          "file": "user-discovery.spec.ts",
+          "line": 30,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should complete full user discovery workflow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4b958881455e1ab55761-d33f694d2d02286176f2",
+              "file": "user-discovery.spec.ts",
+              "line": 31,
+              "column": 7
+            },
+            {
+              "title": "should handle search with no results gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4b958881455e1ab55761-5e8082dca63cbe6724d6",
+              "file": "user-discovery.spec.ts",
+              "line": 119,
+              "column": 7
+            },
+            {
+              "title": "should clear search filter",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4b958881455e1ab55761-f9ef30324293e5a6902e",
+              "file": "user-discovery.spec.ts",
+              "line": 139,
+              "column": 7
+            },
+            {
+              "title": "should select multiple users",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4b958881455e1ab55761-360874d4951f5437c516",
+              "file": "user-discovery.spec.ts",
+              "line": 158,
+              "column": 7
+            },
+            {
+              "title": "should disable delete button when no users selected",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "4b958881455e1ab55761-043cb8dfd20a21066b02",
+              "file": "user-discovery.spec.ts",
+              "line": 180,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "user-journey.spec.ts",
+      "file": "user-journey.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "User Discovery Journey",
+          "file": "user-journey.spec.ts",
+          "line": 45,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should complete full user discovery workflow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "71a1cccb6623f87e1233-28eac592012c9c00d06d",
+              "file": "user-journey.spec.ts",
+              "line": 46,
+              "column": 7
+            },
+            {
+              "title": "should handle empty search results gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "71a1cccb6623f87e1233-752e818530b4be6c54e5",
+              "file": "user-journey.spec.ts",
+              "line": 274,
+              "column": 7
+            },
+            {
+              "title": "should select multiple users and enable batch operations",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "71a1cccb6623f87e1233-d2ef9e8e475e2acd6b55",
+              "file": "user-journey.spec.ts",
+              "line": 320,
+              "column": 7
+            },
+            {
+              "title": "should disable action buttons when no users are selected",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "71a1cccb6623f87e1233-9cb8de552f706bfa3bae",
+              "file": "user-journey.spec.ts",
+              "line": 383,
+              "column": 7
+            },
+            {
+              "title": "should paginate through large user lists",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "71a1cccb6623f87e1233-87a7e348694b1439d747",
+              "file": "user-journey.spec.ts",
+              "line": 416,
+              "column": 7
+            },
+            {
+              "title": "should refresh user data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "71a1cccb6623f87e1233-898f502908345935a40d",
+              "file": "user-journey.spec.ts",
+              "line": 464,
+              "column": 7
+            },
+            {
+              "title": "should sort users by column",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "electron",
+                  "projectName": "electron",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "71a1cccb6623f87e1233-42cb11540c42aa8db738",
+              "file": "user-journey.spec.ts",
+              "line": 498,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-10-04T13:57:37.263Z",
+    "duration": 43.94100000000003,
+    "expected": 0,
+    "skipped": 107,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
