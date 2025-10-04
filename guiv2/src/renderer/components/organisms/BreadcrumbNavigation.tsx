@@ -1,11 +1,27 @@
 /**
  * Breadcrumb Navigation Component
  * Hierarchical navigation trail with overflow handling
+ *
+ * Epic 0: UI/UX Parity - Replaces WPF BreadcrumbNavigation.xaml
+ * Uses Epic 0 design system colors and typography
+ *
+ * @component
+ * @example
+ * ```tsx
+ * <BreadcrumbNavigation
+ *   items={[
+ *     { label: 'Home', path: '/', icon: <Home /> },
+ *     { label: 'Discovery', path: '/discovery' },
+ *     { label: 'Users', path: '/discovery/users' }
+ *   ]}
+ * />
+ * ```
  */
 
 import React from 'react';
-import { ChevronRight, Home } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { clsx } from 'clsx';
 
 export interface BreadcrumbItem {
   /** Display label */
@@ -33,10 +49,13 @@ export interface BreadcrumbNavigationProps {
 
 /**
  * Breadcrumb Navigation Component
+ *
+ * Displays hierarchical navigation path with theme-aware colors.
+ * Matches WPF BreadcrumbNavigation styling.
  */
-const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
+const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = React.memo(({
   items,
-  separator = <ChevronRight className="w-4 h-4 text-gray-400" />,
+  separator = <ChevronRight className="w-4 h-4" aria-hidden="true" />,
   maxItems = 5,
   className = '',
   'data-cy': dataCy = 'breadcrumb-nav',
@@ -52,26 +71,34 @@ const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
 
   return (
     <nav
-      className={`flex items-center space-x-2 text-sm ${className}`}
+      className={clsx(
+        'flex items-center text-sm',
+        className
+      )}
       aria-label="Breadcrumb"
       data-cy={dataCy}
     >
-      <ol className="flex items-center space-x-2">
+      <ol className="flex items-center">
         {displayItems.map((item, index) => {
           const isLast = index === displayItems.length - 1;
           const isEllipsis = item.label === '...';
 
           return (
-            <li key={index} className="flex items-center">
+            <li key={`${item.label}-${index}`} className="flex items-center">
               {index > 0 && (
-                <span className="mx-2">{separator}</span>
+                <span className="mx-2 text-[var(--foreground-muted)]">
+                  {separator}
+                </span>
               )}
 
               {isEllipsis ? (
-                <span className="text-gray-500 dark:text-gray-400">...</span>
+                <span className="text-[var(--foreground-muted)]">...</span>
               ) : isLast ? (
                 <span
-                  className="flex items-center gap-1 font-medium text-gray-900 dark:text-gray-100"
+                  className={clsx(
+                    'flex items-center gap-1.5 font-medium',
+                    'text-[var(--foreground)]'
+                  )}
                   aria-current="page"
                   data-cy={`breadcrumb-${index}`}
                 >
@@ -81,7 +108,13 @@ const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
               ) : item.path ? (
                 <Link
                   to={item.path}
-                  className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                  className={clsx(
+                    'flex items-center gap-1.5',
+                    'text-[var(--foreground-secondary)]',
+                    'hover:text-brand-primary',
+                    'transition-colors duration-200',
+                    'focus-visible-ring rounded-sm px-1'
+                  )}
                   data-cy={`breadcrumb-${index}`}
                 >
                   {item.icon}
@@ -90,7 +123,13 @@ const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
               ) : item.onClick ? (
                 <button
                   onClick={item.onClick}
-                  className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                  className={clsx(
+                    'flex items-center gap-1.5',
+                    'text-[var(--foreground-secondary)]',
+                    'hover:text-brand-primary',
+                    'transition-colors duration-200',
+                    'focus-visible-ring rounded-sm px-1'
+                  )}
                   data-cy={`breadcrumb-${index}`}
                 >
                   {item.icon}
@@ -98,7 +137,10 @@ const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
                 </button>
               ) : (
                 <span
-                  className="flex items-center gap-1 text-gray-600 dark:text-gray-400"
+                  className={clsx(
+                    'flex items-center gap-1.5',
+                    'text-[var(--foreground-secondary)]'
+                  )}
                   data-cy={`breadcrumb-${index}`}
                 >
                   {item.icon}
@@ -111,6 +153,8 @@ const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
       </ol>
     </nav>
   );
-};
+});
+
+BreadcrumbNavigation.displayName = 'BreadcrumbNavigation';
 
 export default BreadcrumbNavigation;
