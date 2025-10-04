@@ -26,7 +26,8 @@
       "Bash(ls:*)",
       "Bash(find:*)",
       "Bash(do echo \"=== $file ===\")",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": [],

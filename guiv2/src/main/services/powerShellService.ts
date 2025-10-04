@@ -111,6 +111,22 @@ interface QueuedRequest {
 }
 
 /**
+ * Stored script in library
+ */
+interface StoredScript {
+  id: string;
+  name: string;
+  description: string;
+  content: string;
+  category: string;
+  tags: string[];
+  parameters: Record<string, any>;
+  createdAt: Date;
+  updatedAt: Date;
+  executionCount: number;
+}
+
+/**
  * PowerShell Execution Service
  * Manages a pool of PowerShell sessions for efficient script execution
  */
@@ -120,8 +136,10 @@ class PowerShellExecutionService extends EventEmitter {
   private requestQueue: QueuedRequest[];
   private activeExecutions: Map<string, ChildProcess>;
   private moduleCache: Map<string, any>;
+  private scriptLibrary: Map<string, StoredScript>;
   private cleanupInterval: NodeJS.Timeout | null;
   private initialized: boolean;
+  private queuePaused: boolean;
 
   constructor(config: Partial<PowerShellServiceConfig> = {}) {
     super();
@@ -140,8 +158,10 @@ class PowerShellExecutionService extends EventEmitter {
     this.requestQueue = [];
     this.activeExecutions = new Map();
     this.moduleCache = new Map();
+    this.scriptLibrary = new Map();
     this.cleanupInterval = null;
     this.initialized = false;
+    this.queuePaused = false;
 
     // Bind methods
     this.processQueue = this.processQueue.bind(this);
@@ -268,6 +288,10 @@ class PowerShellExecutionService extends EventEmitter {
    * Process the request queue
    */
   private async processQueue(): Promise<void> {
+    if (this.queuePaused) {
+      return; // Queue is paused, don't process
+    }
+
     while (this.requestQueue.length > 0) {
       const session = await this.getAvailableSession();
       if (!session) {
@@ -791,24 +815,41 @@ class PowerShellExecutionService extends EventEmitter {
     params: Record<string, any> = {},
     options: ExecutionOptions = {}
   ): Promise<ExecutionResult> {
-    // Build PowerShell command to import module and call function
-    const paramsJson = JSON.stringify(params);
-    const command = `
-      Import-Module '${modulePath}' -Force
-      $params = '${paramsJson.replace(/'/g, "''")}' | ConvertFrom-Json -AsHashtable
-      ${functionName} @params | ConvertTo-Json -Depth 10 -Compress
-    `;
+    try {
+      // Build PowerShell command to import module and call function
+      const paramsJson = JSON.stringify(params);
+      const command = `
+        Import-Module '${modulePath}' -Force -ErrorAction Stop
+        $params = '${paramsJson.replace(/'/g, "''")}' | ConvertFrom-Json -AsHashtable
+        $result = ${functionName} @params
+        if ($null -eq $result) {
+          @{} | ConvertTo-Json -Compress
+        } else {
+          $result | ConvertTo-Json -Depth 10 -Compress
+        }
+      `;
 
-    // Create temp script
-    const tempScript = path.join(process.env.TEMP || '/tmp', `ps_${crypto.randomUUID()}.ps1`);
+      // Create temp script
+      const tempScript = path.join(process.env.TEMP || '/tmp', `ps_module_${crypto.randomUUID()}.ps1`);
 
-    // Would need to write file here, but for now return error
-    return {
-      success: false,
-      error: 'Module execution not fully implemented yet. Use executeScript with inline commands.',
-      duration: 0,
-      warnings: [],
-    };
+      // Write command to temp script
+      await fs.writeFile(tempScript, command, 'utf-8');
+
+      // Execute the script
+      const result = await this.executeScript(tempScript, [], options);
+
+      // Clean up temp file
+      await fs.unlink(tempScript).catch(() => {});
+
+      return result;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Module execution error: ${error.message}`,
+        duration: 0,
+        warnings: [],
+      };
+    }
   }
 
   /**
@@ -844,9 +885,304 @@ class PowerShellExecutionService extends EventEmitter {
       busySessions,
       activeExecutions: this.activeExecutions.size,
       queuedRequests: this.requestQueue.length,
+      queuePaused: this.queuePaused,
       cacheSize: this.moduleCache.size,
+      scriptLibrarySize: this.scriptLibrary.size,
       totalExecutions: Array.from(this.sessionPool.values()).reduce((sum, s) => sum + s.executionCount, 0),
     };
+  }
+
+  // ==================== Queue Management Methods ====================
+
+  /**
+   * Pause the execution queue
+   * Prevents processing of new queued requests until resumed
+   */
+  async pauseQueue(): Promise<void> {
+    this.queuePaused = true;
+    console.log('PowerShell execution queue paused');
+    this.emit('queue:paused');
+  }
+
+  /**
+   * Resume the execution queue
+   * Starts processing queued requests again
+   */
+  async resumeQueue(): Promise<void> {
+    this.queuePaused = false;
+    console.log('PowerShell execution queue resumed');
+    this.emit('queue:resumed');
+    // Process any pending requests
+    await this.processQueue();
+  }
+
+  /**
+   * Clear all pending requests from the queue
+   * Active executions are not affected
+   * @returns Number of requests removed
+   */
+  async clearQueue(): Promise<number> {
+    const count = this.requestQueue.length;
+
+    // Reject all queued requests
+    for (const request of this.requestQueue) {
+      request.reject(new Error('Request cancelled - queue cleared'));
+    }
+
+    this.requestQueue = [];
+    console.log(`Cleared ${count} requests from queue`);
+    this.emit('queue:cleared', { count });
+
+    return count;
+  }
+
+  /**
+   * Get current queue status
+   */
+  getQueueStatus() {
+    return {
+      paused: this.queuePaused,
+      length: this.requestQueue.length,
+      oldestRequest: this.requestQueue[0]?.timestamp || null,
+      requests: this.requestQueue.map(r => ({
+        id: r.id,
+        scriptPath: r.scriptPath,
+        timestamp: r.timestamp,
+        waitTime: Date.now() - r.timestamp,
+      })),
+    };
+  }
+
+  /**
+   * Queue a script for execution
+   * @param task Script task to queue
+   * @returns Promise that resolves when execution completes
+   */
+  async queueScript(task: ScriptTask): Promise<ExecutionResult> {
+    return this.executeScript(task.scriptPath, task.args, task.options);
+  }
+
+  // ==================== Script Library Management ====================
+
+  /**
+   * Get all scripts from the library
+   * @param category Optional category filter
+   * @returns Array of stored scripts
+   */
+  async getScriptLibrary(category?: string): Promise<StoredScript[]> {
+    const scripts = Array.from(this.scriptLibrary.values());
+
+    if (category) {
+      return scripts.filter(s => s.category === category);
+    }
+
+    return scripts;
+  }
+
+  /**
+   * Save a script to the library
+   * @param script Script to save (without id if new)
+   * @returns The saved script with generated id
+   */
+  async saveScript(script: Omit<StoredScript, 'id' | 'createdAt' | 'updatedAt' | 'executionCount'>): Promise<StoredScript> {
+    const now = new Date();
+
+    const storedScript: StoredScript = {
+      ...script,
+      id: crypto.randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+      executionCount: 0,
+    };
+
+    this.scriptLibrary.set(storedScript.id, storedScript);
+    console.log(`Saved script to library: ${storedScript.name} (${storedScript.id})`);
+    this.emit('script:saved', storedScript);
+
+    return storedScript;
+  }
+
+  /**
+   * Update an existing script in the library
+   * @param scriptId Script ID to update
+   * @param updates Partial updates to apply
+   * @returns Updated script
+   */
+  async updateScript(scriptId: string, updates: Partial<Omit<StoredScript, 'id' | 'createdAt' | 'executionCount'>>): Promise<StoredScript | null> {
+    const script = this.scriptLibrary.get(scriptId);
+
+    if (!script) {
+      console.warn(`Script not found in library: ${scriptId}`);
+      return null;
+    }
+
+    const updatedScript: StoredScript = {
+      ...script,
+      ...updates,
+      updatedAt: new Date(),
+    };
+
+    this.scriptLibrary.set(scriptId, updatedScript);
+    console.log(`Updated script in library: ${updatedScript.name} (${scriptId})`);
+    this.emit('script:updated', updatedScript);
+
+    return updatedScript;
+  }
+
+  /**
+   * Delete a script from the library
+   * @param scriptId Script ID to delete
+   * @returns True if deleted, false if not found
+   */
+  async deleteScript(scriptId: string): Promise<boolean> {
+    const script = this.scriptLibrary.get(scriptId);
+
+    if (!script) {
+      console.warn(`Script not found in library: ${scriptId}`);
+      return false;
+    }
+
+    this.scriptLibrary.delete(scriptId);
+    console.log(`Deleted script from library: ${script.name} (${scriptId})`);
+    this.emit('script:deleted', { id: scriptId, name: script.name });
+
+    return true;
+  }
+
+  /**
+   * Get a specific script from the library
+   * @param scriptId Script ID
+   * @returns Script if found, null otherwise
+   */
+  async getScript(scriptId: string): Promise<StoredScript | null> {
+    return this.scriptLibrary.get(scriptId) || null;
+  }
+
+  /**
+   * Search scripts by name, description, or tags
+   * @param query Search query
+   * @returns Matching scripts
+   */
+  async searchScripts(query: string): Promise<StoredScript[]> {
+    const lowerQuery = query.toLowerCase();
+    const scripts = Array.from(this.scriptLibrary.values());
+
+    return scripts.filter(s =>
+      s.name.toLowerCase().includes(lowerQuery) ||
+      s.description.toLowerCase().includes(lowerQuery) ||
+      s.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
+    );
+  }
+
+  /**
+   * Execute a script from the library by ID
+   * @param scriptId Script ID
+   * @param params Parameters to pass to the script
+   * @param options Execution options
+   * @returns Execution result
+   */
+  async executeFromLibrary(scriptId: string, params: Record<string, any> = {}, options: ExecutionOptions = {}): Promise<ExecutionResult> {
+    const script = this.scriptLibrary.get(scriptId);
+
+    if (!script) {
+      return {
+        success: false,
+        error: `Script not found in library: ${scriptId}`,
+        duration: 0,
+        warnings: [],
+      };
+    }
+
+    try {
+      // Create temp script file
+      const tempScript = path.join(process.env.TEMP || '/tmp', `library_${scriptId}_${Date.now()}.ps1`);
+      await fs.writeFile(tempScript, script.content, 'utf-8');
+
+      // Build args from parameters
+      const args = Object.entries(params).flatMap(([key, value]) => [
+        `-${key}`,
+        typeof value === 'string' ? value : JSON.stringify(value),
+      ]);
+
+      // Execute script
+      const result = await this.executeScript(tempScript, args, options);
+
+      // Clean up temp file
+      await fs.unlink(tempScript).catch(() => {});
+
+      // Update execution count
+      if (result.success) {
+        script.executionCount++;
+        this.scriptLibrary.set(scriptId, script);
+      }
+
+      return result;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Library script execution error: ${error.message}`,
+        duration: 0,
+        warnings: [],
+      };
+    }
+  }
+
+  /**
+   * Get installed PowerShell modules
+   * Wrapper around discoverModules for clearer API
+   */
+  async getInstalledModules(): Promise<ModuleInfo[]> {
+    return this.discoverModules();
+  }
+
+  /**
+   * Import a PowerShell module
+   * @param modulePath Path to module file (.psm1 or .psd1)
+   * @returns Execution result
+   */
+  async importModule(modulePath: string): Promise<ExecutionResult> {
+    const command = `Import-Module '${modulePath}' -Force -PassThru | ConvertTo-Json`;
+    const tempScript = path.join(process.env.TEMP || '/tmp', `import_${crypto.randomUUID()}.ps1`);
+
+    try {
+      await fs.writeFile(tempScript, command, 'utf-8');
+      const result = await this.executeScript(tempScript, [], { timeout: 10000 });
+      await fs.unlink(tempScript).catch(() => {});
+
+      return result;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Module import error: ${error.message}`,
+        duration: 0,
+        warnings: [],
+      };
+    }
+  }
+
+  /**
+   * Remove a PowerShell module from current session
+   * @param moduleName Module name
+   * @returns Execution result
+   */
+  async removeModule(moduleName: string): Promise<ExecutionResult> {
+    const command = `Remove-Module '${moduleName}' -Force -ErrorAction SilentlyContinue`;
+    const tempScript = path.join(process.env.TEMP || '/tmp', `remove_${crypto.randomUUID()}.ps1`);
+
+    try {
+      await fs.writeFile(tempScript, command, 'utf-8');
+      const result = await this.executeScript(tempScript, [], { timeout: 5000 });
+      await fs.unlink(tempScript).catch(() => {});
+
+      return result;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Module removal error: ${error.message}`,
+        duration: 0,
+        warnings: [],
+      };
+    }
   }
 
   /**
