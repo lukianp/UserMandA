@@ -1,0 +1,27 @@
+{
+  "files": [
+    {
+      "path": ".webpack/renderer/main_window/*.js",
+      "maxSize": "5MB",
+      "compression": "gzip"
+    },
+    {
+      "path": ".webpack/main/*.js",
+      "maxSize": "2MB",
+      "compression": "gzip"
+    },
+    {
+      "path": ".webpack/renderer/main_window/vendor*.js",
+      "maxSize": "3MB",
+      "compression": "gzip"
+    },
+    {
+      "path": ".webpack/renderer/main_window/react*.js",
+      "maxSize": "500KB",
+      "compression": "gzip"
+    }
+  ],
+  "ci": {
+    "trackBranches": ["main", "develop"]
+  }
+}

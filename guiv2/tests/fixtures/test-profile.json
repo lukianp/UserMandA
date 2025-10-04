@@ -1,0 +1,38 @@
+{
+  "id": "test-profile-source-001",
+  "name": "Test Source Profile",
+  "type": "azure",
+  "environment": "production",
+  "tenantId": "test-tenant-123-456-789",
+  "clientId": "test-client-456-789-012",
+  "credentials": {
+    "type": "servicePrincipal",
+    "certificateThumbprint": "ABCDEF1234567890"
+  },
+  "endpoints": {
+    "graphApi": "https://graph.microsoft.com",
+    "exchangeOnline": "https://outlook.office365.com",
+    "sharePoint": "https://contoso.sharepoint.com"
+  },
+  "settings": {
+    "timeout": 60000,
+    "retryAttempts": 3,
+    "batchSize": 100,
+    "maxConcurrentOperations": 5
+  },
+  "features": {
+    "userDiscovery": true,
+    "groupDiscovery": true,
+    "mailboxMigration": true,
+    "sharePointMigration": true,
+    "teamsMigration": false
+  },
+  "metadata": {
+    "createdAt": "2025-01-15T10:30:00Z",
+    "createdBy": "admin@contoso.com",
+    "lastModified": "2025-01-20T14:45:00Z",
+    "lastTested": "2025-01-20T15:00:00Z",
+    "connectionStatus": "connected",
+    "version": "2.0"
+  }
+}
