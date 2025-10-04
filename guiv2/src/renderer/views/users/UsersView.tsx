@@ -5,10 +5,11 @@
  */
 
 import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
-import { Download, Trash, UserPlus, RefreshCw } from 'lucide-react';
+import { Download, Trash, UserPlus, RefreshCw, Eye } from 'lucide-react';
 import { ColDef } from 'ag-grid-community';
 import { UserData } from '../../types/models/user';
 import { powerShellService } from '../../services/powerShellService';
@@ -29,6 +30,7 @@ const UsersView: React.FC = () => {
 
   // Get current profile from store
   const { getCurrentSourceProfile } = useProfileStore();
+  const navigate = useNavigate();
 
   // Load users on mount
   useEffect(() => {
@@ -221,8 +223,25 @@ const UsersView: React.FC = () => {
           return <span className={colors[params.value as keyof typeof colors]}>{params.value}</span>;
         },
       },
+      {
+        headerName: 'Actions',
+        minWidth: 120,
+        pinned: 'right',
+        cellRenderer: (params: any) => {
+          return (
+            <button
+              onClick={() => handleViewDetails(params.data)}
+              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline flex items-center gap-1"
+              data-cy="view-user-details"
+            >
+              <Eye size={16} />
+              View Details
+            </button>
+          );
+        },
+      },
     ],
-    []
+    [handleViewDetails]
   );
 
   // Handle export
@@ -239,6 +258,13 @@ const UsersView: React.FC = () => {
       console.log('Deleting users:', selectedUsers);
       // Implementation would call PowerShell to delete users
     }
+  };
+
+  // Handle view details
+  const handleViewDetails = (user: UserData) => {
+    const userId = user.userPrincipalName || user.id || user.email || '';
+    // Navigate to user detail view
+    navigate(`/users/${encodeURIComponent(userId)}`);
   };
 
   return (

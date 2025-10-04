@@ -3,12 +3,17 @@
  * Simpler alternative to AG Grid with built-in sorting, filtering, and pagination
  */
 
-import React, { useState, useMemo } from 'react';
-import { ChevronUp, ChevronDown, ChevronsUpDown, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { ChevronUp, ChevronDown, ChevronsUpDown, Search, ChevronLeft, ChevronRight, Columns, Download, Copy, Eye } from 'lucide-react';
 import { clsx } from 'clsx';
+import Papa from 'papaparse';
+import { Menu, Item, useContextMenu } from 'react-contexify';
+import 'react-contexify/dist/ReactContexify.css';
 import Input from '../atoms/Input';
 import Select from '../atoms/Select';
 import Checkbox from '../atoms/Checkbox';
+import { Button } from '../atoms/Button';
+import { useTabStore } from '../../store/useTabStore';
 
 export interface DataTableColumn<T = any> {
   /** Column identifier */
@@ -27,6 +32,8 @@ export interface DataTableColumn<T = any> {
   width?: string;
   /** Column alignment */
   align?: 'left' | 'center' | 'right';
+  /** Default visibility state */
+  visible?: boolean;
 }
 
 export interface DataTableProps<T = any> {
@@ -58,6 +65,20 @@ export interface DataTableProps<T = any> {
   className?: string;
   /** Data attribute for testing */
   'data-cy'?: string;
+  /** Enable column visibility control */
+  columnVisibility?: boolean;
+  /** Enable export functionality */
+  exportable?: boolean;
+  /** Export filename (without extension) */
+  exportFilename?: string;
+  /** Enable context menu */
+  contextMenu?: boolean;
+  /** Context menu handler for "View Details" */
+  onViewDetails?: (row: T) => void;
+  /** Detail view component name (for tab opening) */
+  detailViewComponent?: string;
+  /** Detail view title generator */
+  getDetailViewTitle?: (row: T) => string;
 }
 
 type SortDirection = 'asc' | 'desc' | null;
@@ -80,12 +101,29 @@ function DataTable<T = any>({
   getRowId = (_, index) => index.toString(),
   className,
   'data-cy': dataCy = 'data-table',
+  columnVisibility = true,
+  exportable = true,
+  exportFilename = 'export',
+  contextMenu = true,
+  onViewDetails,
+  detailViewComponent,
+  getDetailViewTitle,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [columnVisibilityState, setColumnVisibilityState] = useState<Record<string, boolean>>(
+    () => columns.reduce((acc, col) => ({ ...acc, [col.id]: col.visible !== false }), {})
+  );
+  const [showColumnMenu, setShowColumnMenu] = useState(false);
+  const columnMenuRef = useRef<HTMLDivElement>(null);
+  const { openTab } = useTabStore();
+
+  // Context menu setup
+  const MENU_ID = `data-table-${dataCy}`;
+  const { show } = useContextMenu({ id: MENU_ID });
 
   // Get cell value
   const getCellValue = (row: T, column: DataTableColumn<T>): any => {
@@ -187,18 +225,179 @@ function DataTable<T = any>({
   const allSelected = selectedRows.size === paginatedData.length && paginatedData.length > 0;
   const someSelected = selectedRows.size > 0 && selectedRows.size < paginatedData.length;
 
+  // Get visible columns
+  const visibleColumns = useMemo(() => {
+    return columns.filter(col => columnVisibilityState[col.id]);
+  }, [columns, columnVisibilityState]);
+
+  // Toggle column visibility
+  const toggleColumnVisibility = (columnId: string) => {
+    setColumnVisibilityState(prev => ({
+      ...prev,
+      [columnId]: !prev[columnId]
+    }));
+  };
+
+  // Handle context menu
+  const handleContextMenu = (event: React.MouseEvent, row: T) => {
+    if (!contextMenu) return;
+    event.preventDefault();
+    show({ event, props: { row } });
+  };
+
+  // Handle view details
+  const handleViewDetails = ({ props }: any) => {
+    const row = props.row as T;
+
+    if (onViewDetails) {
+      onViewDetails(row);
+    } else if (detailViewComponent && getDetailViewTitle) {
+      openTab({
+        title: getDetailViewTitle(row),
+        component: detailViewComponent,
+        icon: 'Eye',
+        closable: true,
+        data: row
+      });
+    }
+  };
+
+  // Handle copy row
+  const handleCopyRow = ({ props }: any) => {
+    const row = props.row as T;
+    const rowText = visibleColumns
+      .map(col => {
+        const value = getCellValue(row, col);
+        return `${col.header}: ${value}`;
+      })
+      .join('\n');
+
+    navigator.clipboard.writeText(rowText).then(() => {
+      // Could show a toast notification here
+      console.log('Row copied to clipboard');
+    });
+  };
+
+  // Handle export selected
+  const handleExportSelected = ({ props }: any) => {
+    const row = props.row as T;
+    const rowsToExport = selectedRows.size > 0
+      ? data.filter((_, index) => selectedRows.has(getRowId(_, index)))
+      : [row];
+
+    exportToCSV(rowsToExport);
+  };
+
+  // Export data to CSV
+  const exportToCSV = (dataToExport: T[] = sortedData) => {
+    const csvData = dataToExport.map(row => {
+      const csvRow: any = {};
+      visibleColumns.forEach(col => {
+        const value = getCellValue(row, col);
+        csvRow[col.header] = value;
+      });
+      return csvRow;
+    });
+
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${exportFilename}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Close column menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (columnMenuRef.current && !columnMenuRef.current.contains(event.target as Node)) {
+        setShowColumnMenu(false);
+      }
+    };
+
+    if (showColumnMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showColumnMenu]);
+
   return (
     <div className={clsx('flex flex-col h-full', className)} data-cy={dataCy}>
       {/* Toolbar */}
-      {searchable && (
-        <div className="mb-4">
-          <Input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={searchPlaceholder}
-            startIcon={<Search className="w-4 h-4" />}
-            data-cy="table-search"
-          />
+      {(searchable || columnVisibility || exportable) && (
+        <div className="mb-4 flex items-center gap-3">
+          {searchable && (
+            <div className="flex-1">
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={searchPlaceholder}
+                startIcon={<Search className="w-4 h-4" />}
+                data-cy="table-search"
+              />
+            </div>
+          )}
+
+          {/* Column Visibility Button */}
+          {columnVisibility && (
+            <div className="relative" ref={columnMenuRef}>
+              <Button
+                variant="secondary"
+                size="md"
+                icon={<Columns className="w-4 h-4" />}
+                onClick={() => setShowColumnMenu(!showColumnMenu)}
+                data-cy="column-visibility-btn"
+              >
+                Columns
+              </Button>
+
+              {/* Column Visibility Dropdown */}
+              {showColumnMenu && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                  <div className="p-2">
+                    <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                      Show/Hide Columns
+                    </div>
+                    <div className="space-y-1">
+                      {columns.map(column => (
+                        <label
+                          key={column.id}
+                          className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
+                          data-cy={`column-toggle-${column.id}`}
+                        >
+                          <Checkbox
+                            checked={columnVisibilityState[column.id]}
+                            onChange={() => toggleColumnVisibility(column.id)}
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-200">
+                            {column.header}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Export Button */}
+          {exportable && (
+            <Button
+              variant="secondary"
+              size="md"
+              icon={<Download className="w-4 h-4" />}
+              onClick={() => exportToCSV()}
+              data-cy="export-btn"
+            >
+              Export
+            </Button>
+          )}
         </div>
       )}
 
@@ -218,7 +417,7 @@ function DataTable<T = any>({
                   />
                 </th>
               )}
-              {columns.map((column) => (
+              {visibleColumns.map((column) => (
                 <th
                   key={column.id}
                   className={clsx(
@@ -256,7 +455,7 @@ function DataTable<T = any>({
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
               <tr>
-                <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center">
+                <td colSpan={visibleColumns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center">
                   <div className="flex items-center justify-center gap-2 text-gray-500">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
                     <span>Loading...</span>
@@ -265,7 +464,7 @@ function DataTable<T = any>({
               </tr>
             ) : paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={visibleColumns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">
                   {emptyMessage}
                 </td>
               </tr>
@@ -285,6 +484,7 @@ function DataTable<T = any>({
                         : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                     )}
                     onClick={() => onRowClick?.(row)}
+                    onContextMenu={(e) => handleContextMenu(e, row)}
                     data-cy={`table-row-${rowIndex}`}
                   >
                     {selectable && (
@@ -296,7 +496,7 @@ function DataTable<T = any>({
                         />
                       </td>
                     )}
-                    {columns.map((column) => {
+                    {visibleColumns.map((column) => {
                       const value = getCellValue(row, column);
                       const content = column.cell ? column.cell(value, row) : value;
 
@@ -351,6 +551,34 @@ function DataTable<T = any>({
             </button>
           </div>
         </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <Menu id={MENU_ID} theme="dark">
+          {(onViewDetails || detailViewComponent) && (
+            <Item onClick={handleViewDetails} data-cy="context-menu-view-details">
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                <span>View Details</span>
+              </div>
+            </Item>
+          )}
+          <Item onClick={handleCopyRow} data-cy="context-menu-copy">
+            <div className="flex items-center gap-2">
+              <Copy className="w-4 h-4" />
+              <span>Copy Row</span>
+            </div>
+          </Item>
+          {exportable && (
+            <Item onClick={handleExportSelected} data-cy="context-menu-export">
+              <div className="flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                <span>Export Selection</span>
+              </div>
+            </Item>
+          )}
+        </Menu>
       )}
     </div>
   );

@@ -295,3 +295,38 @@
     background-color: var(--hover);
   }
 }
+
+/* React Contexify Custom Styling */
+.react-contexify {
+  @apply bg-gray-800 border border-gray-700 rounded-lg shadow-xl;
+  min-width: 200px;
+}
+
+.react-contexify__item__content {
+  @apply text-gray-200 px-4 py-2.5 text-sm transition-colors duration-150;
+}
+
+.react-contexify__item:not(.react-contexify__item--disabled):hover > .react-contexify__item__content {
+  @apply bg-gray-700 text-white;
+}
+
+.react-contexify__separator {
+  @apply bg-gray-700 my-1;
+}
+
+.react-contexify__submenu-arrow {
+  @apply text-gray-400;
+}
+
+/* Dark theme specific overrides */
+.dark .react-contexify {
+  @apply bg-gray-800 border-gray-700;
+}
+
+.dark .react-contexify__item__content {
+  @apply text-gray-200;
+}
+
+.dark .react-contexify__item:not(.react-contexify__item--disabled):hover > .react-contexify__item__content {
+  @apply bg-gray-700 text-white;
+}

@@ -248,6 +248,14 @@ const electronAPI: ElectronAPI = {
   },
 
   // ========================================
+  // Generic IPC Invoke (for custom handlers)
+  // ========================================
+
+  invoke: <T = any>(channel: string, args?: any): Promise<T> => {
+    return ipcRenderer.invoke(channel, args);
+  },
+
+  // ========================================
   // Environment Detection
   // ========================================
 

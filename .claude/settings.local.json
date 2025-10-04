@@ -30,7 +30,8 @@
       "Bash(powershell:*)",
       "Bash(cat:*)",
       "Bash(timeout 60 npm start)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(pwsh:*)"
     ],
     "deny": [],
     "ask": [],

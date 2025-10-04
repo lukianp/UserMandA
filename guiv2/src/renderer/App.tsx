@@ -28,6 +28,7 @@ if (typeof window !== 'undefined') {
 // Lazy load all views for code splitting
 const OverviewView = lazy(() => import('./views/overview/OverviewView'));
 const UsersView = lazy(() => import('./views/users/UsersView'));
+const UserDetailViewWrapper = lazy(() => import('./views/users/UserDetailViewWrapper'));
 const GroupsView = lazy(() => import('./views/groups/GroupsView'));
 const DomainDiscoveryView = lazy(() => import('./views/discovery/DomainDiscoveryView'));
 const AzureDiscoveryView = lazy(() => import('./views/discovery/AzureDiscoveryView'));
@@ -140,6 +141,7 @@ export const App: React.FC = () => {
 
               {/* User Management */}
               <Route path="/users" element={<UsersView />} />
+              <Route path="/users/:userId" element={<UserDetailViewWrapper />} />
 
               {/* Group Management */}
               <Route path="/groups" element={<GroupsView />} />

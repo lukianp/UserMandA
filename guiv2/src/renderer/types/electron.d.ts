@@ -493,6 +493,25 @@ export interface ElectronAPI {
   }) => Promise<string | null>;
 
   // ========================================
+  // Generic IPC Invoke (for custom handlers)
+  // ========================================
+
+  /**
+   * Generic IPC invoke method for calling custom IPC handlers
+   * This allows invoking any registered IPC handler without adding explicit method definitions
+   *
+   * @param channel The IPC channel name (e.g., 'get-user-detail')
+   * @param args Optional arguments to pass to the handler
+   * @returns Promise resolving to the handler's return value
+   *
+   * @example
+   * ```typescript
+   * const result = await window.electronAPI.invoke<UserDetailProjection>('get-user-detail', { userId: 'user@company.com' });
+   * ```
+   */
+  invoke: <T = any>(channel: string, args?: any) => Promise<T>;
+
+  // ========================================
   // Environment Detection
   // ========================================
 
