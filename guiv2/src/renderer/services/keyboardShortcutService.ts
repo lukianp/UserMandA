@@ -18,7 +18,7 @@ import { commandPaletteService } from './commandPaletteService';
 class KeyboardShortcutService {
   private bindings: Map<string, ShortcutBinding> = new Map();
   private chordBindings: Map<string, ChordShortcut> = new Map();
-  private activeContext: string = 'global';
+  private activeContext = 'global';
   private isChordActive = false;
   private chordSequence: KeyboardShortcut[] = [];
   private chordTimeoutId?: NodeJS.Timeout;

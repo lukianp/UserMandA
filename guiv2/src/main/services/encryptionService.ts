@@ -20,8 +20,8 @@ import {
   pbkdf2,
   createHash
 } from 'crypto';
-import { createReadStream, createWriteStream } from 'fs';
-import { promises as fs } from 'fs';
+import { createReadStream, createWriteStream , promises as fs } from 'fs';
+
 import { pipeline } from 'stream/promises';
 import path from 'path';
 import { app, safeStorage } from 'electron';

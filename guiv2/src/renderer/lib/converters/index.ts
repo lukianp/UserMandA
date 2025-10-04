@@ -97,7 +97,7 @@ export const inverseBoolean = (value: boolean): boolean => {
  * Convert bytes to human-readable size
  * WPF: ByteSizeConverter
  */
-export const formatBytes = (bytes: number, decimals: number = 2): string => {
+export const formatBytes = (bytes: number, decimals = 2): string => {
   if (bytes === 0) return '0 Bytes';
 
   const k = 1024;
@@ -113,7 +113,7 @@ export const formatBytes = (bytes: number, decimals: number = 2): string => {
  * Convert number to percentage
  * WPF: PercentageConverter
  */
-export const toPercentage = (value: number, total: number, decimals: number = 1): string => {
+export const toPercentage = (value: number, total: number, decimals = 1): string => {
   if (total === 0) return '0%';
   const percentage = (value / total) * 100;
   return `${percentage.toFixed(decimals)}%`;
@@ -133,7 +133,7 @@ export const arrayLength = (value: any[]): number => {
  * Format date/time to string
  * WPF: DateTimeConverter
  */
-export const formatDateTime = (date: Date | string, formatString: string = 'PPpp'): string => {
+export const formatDateTime = (date: Date | string, formatString = 'PPpp'): string => {
   if (!date) return '';
 
   const dateObj = typeof date === 'string' ? parseISO(date) : date;
@@ -185,7 +185,7 @@ export const formatDuration = (milliseconds: number): string => {
  * Truncate string with ellipsis
  * WPF: TruncateConverter
  */
-export const truncate = (value: string, maxLength: number, suffix: string = '...'): string => {
+export const truncate = (value: string, maxLength: number, suffix = '...'): string => {
   if (!value || value.length <= maxLength) return value;
   return value.substring(0, maxLength - suffix.length) + suffix;
 };
@@ -254,7 +254,7 @@ export const enumToString = (value: any): string => {
  * Convert boolean to color
  * WPF: BooleanToColorConverter
  */
-export const booleanToColor = (value: boolean, trueColor: string = 'green', falseColor: string = 'red'): string => {
+export const booleanToColor = (value: boolean, trueColor = 'green', falseColor = 'red'): string => {
   return value ? trueColor : falseColor;
 };
 
@@ -467,7 +467,7 @@ export const environmentTypeToIcon = (envType: string): string => {
  * Format currency
  * WPF: CurrencyConverter
  */
-export const formatCurrency = (amount: number, currency: string = 'USD', locale: string = 'en-US'): string => {
+export const formatCurrency = (amount: number, currency = 'USD', locale = 'en-US'): string => {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,

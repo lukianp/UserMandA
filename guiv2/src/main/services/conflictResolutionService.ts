@@ -239,7 +239,7 @@ class ConflictResolutionService extends EventEmitter {
     conflictId: string,
     strategy: ResolutionStrategy,
     parameters: Record<string, any> = {},
-    appliedBy: string = 'system'
+    appliedBy = 'system'
   ): Promise<void> {
     const conflict = this.conflicts.get(conflictId);
     if (!conflict) {
@@ -440,9 +440,9 @@ class ConflictResolutionService extends EventEmitter {
    */
   private generateUniqueName(
     baseName: string,
-    suffix: string = '',
-    prefix: string = '',
-    addNumber: boolean = true
+    suffix = '',
+    prefix = '',
+    addNumber = true
   ): string {
     let name = `${prefix}${baseName}${suffix}`;
 

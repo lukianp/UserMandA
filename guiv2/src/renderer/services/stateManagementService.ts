@@ -50,12 +50,12 @@ class StateManagementService {
   private broadcastChannel: BroadcastChannel | null = null;
   private history: StateChangeEvent[] = [];
   private snapshots: StateSnapshot[] = [];
-  private maxHistorySize: number = 1000;
-  private maxSnapshots: number = 50;
+  private maxHistorySize = 1000;
+  private maxSnapshots = 50;
   private migrations: Map<number, StateMigration> = new Map();
-  private currentVersion: number = 1;
+  private currentVersion = 1;
   private stores: Map<string, any> = new Map();
-  private initialized: boolean = false;
+  private initialized = false;
 
   constructor() {
     // Setup BroadcastChannel for cross-tab communication
@@ -68,7 +68,7 @@ class StateManagementService {
   /**
    * Initialize the service
    */
-  async initialize(version: number = 1): Promise<void> {
+  async initialize(version = 1): Promise<void> {
     if (this.initialized) {
       console.warn('StateManagementService already initialized');
       return;

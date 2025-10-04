@@ -33,7 +33,7 @@ import {
 let electronApp: ElectronApplication;
 let mainWindow: Page;
 const downloadedFiles: string[] = [];
-let createdWaveId: string | null = null;
+const createdWaveId: string | null = null;
 
 test.beforeAll(async () => {
   const { app, page } = await launchElectronApp();

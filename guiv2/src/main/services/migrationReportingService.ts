@@ -256,7 +256,7 @@ class MigrationReportingService extends EventEmitter {
   async generateReport(
     type: ReportType,
     filters: ReportFilters,
-    generatedBy: string = 'system'
+    generatedBy = 'system'
   ): Promise<Report> {
     const reportId = crypto.randomUUID();
 

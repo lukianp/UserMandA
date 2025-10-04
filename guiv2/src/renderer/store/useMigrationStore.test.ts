@@ -53,7 +53,7 @@ describe('useMigrationStore', () => {
     it('should create a new migration wave', async () => {
       const { result } = renderHook(() => useMigrationStore());
 
-      let waveId: string = '';
+      let waveId = '';
       await act(async () => {
         waveId = await result.current.planWave({
           name: 'Test Wave 1',
@@ -77,7 +77,7 @@ describe('useMigrationStore', () => {
     it('should update an existing wave', async () => {
       const { result } = renderHook(() => useMigrationStore());
 
-      let waveId: string = '';
+      let waveId = '';
       await act(async () => {
         waveId = await result.current.planWave({
           name: 'Original Name',
@@ -105,7 +105,7 @@ describe('useMigrationStore', () => {
     it('should delete a wave', async () => {
       const { result } = renderHook(() => useMigrationStore());
 
-      let waveId: string = '';
+      let waveId = '';
       await act(async () => {
         waveId = await result.current.planWave({
           name: 'Wave to Delete',
@@ -131,7 +131,7 @@ describe('useMigrationStore', () => {
     it('should duplicate a wave', async () => {
       const { result } = renderHook(() => useMigrationStore());
 
-      let originalId: string = '';
+      let originalId = '';
       await act(async () => {
         originalId = await result.current.planWave({
           name: 'Original Wave',
@@ -145,7 +145,7 @@ describe('useMigrationStore', () => {
         });
       });
 
-      let duplicateId: string = '';
+      let duplicateId = '';
       await act(async () => {
         duplicateId = await result.current.duplicateWave(originalId);
       });
@@ -215,7 +215,7 @@ describe('useMigrationStore', () => {
 
       const { result } = renderHook(() => useMigrationStore());
 
-      let waveId: string = '';
+      let waveId = '';
       await act(async () => {
         waveId = await result.current.planWave({
           name: 'Execution Test Wave',
@@ -255,7 +255,7 @@ describe('useMigrationStore', () => {
 
       const { result } = renderHook(() => useMigrationStore());
 
-      let waveId: string = '';
+      let waveId = '';
       await act(async () => {
         waveId = await result.current.planWave({
           name: 'Failing Wave',
@@ -287,7 +287,7 @@ describe('useMigrationStore', () => {
 
       const { result } = renderHook(() => useMigrationStore());
 
-      let waveId: string = '';
+      let waveId = '';
       await act(async () => {
         waveId = await result.current.planWave({
           name: 'Pausable Wave',
@@ -325,7 +325,7 @@ describe('useMigrationStore', () => {
 
       const { result } = renderHook(() => useMigrationStore());
 
-      let waveId: string = '';
+      let waveId = '';
       await act(async () => {
         waveId = await result.current.planWave({
           name: 'Resumable Wave',
@@ -381,7 +381,7 @@ describe('useMigrationStore', () => {
       const { result } = renderHook(() => useMigrationStore());
 
       // Create initial state
-      let waveId: string = '';
+      let waveId = '';
       await act(async () => {
         waveId = await result.current.planWave({
           name: 'Original Wave',

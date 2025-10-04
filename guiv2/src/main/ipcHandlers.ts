@@ -352,7 +352,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   // File Operation Handlers
   // ========================================
 
-  ipcMain.handle('file:read', async (_, filePath: string, encoding: string = 'utf-8') => {
+  ipcMain.handle('file:read', async (_, filePath: string, encoding = 'utf-8') => {
     try {
       const sanitized = sanitizePath(filePath);
       console.log(`IPC: readFile - ${sanitized}`);
@@ -363,7 +363,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     }
   });
 
-  ipcMain.handle('file:write', async (_, filePath: string, content: string, encoding: string = 'utf-8') => {
+  ipcMain.handle('file:write', async (_, filePath: string, content: string, encoding = 'utf-8') => {
     try {
       const sanitized = sanitizePath(filePath);
       console.log(`IPC: writeFile - ${sanitized}`);

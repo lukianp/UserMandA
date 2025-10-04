@@ -690,8 +690,8 @@ class PowerShellExecutionService extends EventEmitter {
     scriptPath: string,
     args: string[] = [],
     options: ExecutionOptions = {},
-    retries: number = 3,
-    backoff: number = 1000
+    retries = 3,
+    backoff = 1000
   ): Promise<ExecutionResult> {
     let lastError: Error | null = null;
     let attempt = 0;

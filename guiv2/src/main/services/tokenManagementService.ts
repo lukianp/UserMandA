@@ -99,8 +99,8 @@ export class TokenManagementService extends EventEmitter {
   private readonly SECRET_KEY_LENGTH = 64;
 
   // Secret keys (loaded from secure storage)
-  private accessTokenSecret: string = '';
-  private refreshTokenSecret: string = '';
+  private accessTokenSecret = '';
+  private refreshTokenSecret = '';
 
   constructor() {
     super();

@@ -78,7 +78,7 @@ class WSConnection extends EventEmitter {
   private subscriptions: Map<string, Set<SubscriptionCallback>> = new Map();
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private reconnectTimeout: NodeJS.Timeout | null = null;
-  private reconnectAttempts: number = 0;
+  private reconnectAttempts = 0;
 
   constructor(config: WSConfig) {
     super();

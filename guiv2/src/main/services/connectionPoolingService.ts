@@ -81,7 +81,7 @@ class ConnectionPool<T = any> extends EventEmitter {
   private validator: ConnectionValidator<T>;
   private healthCheckInterval: NodeJS.Timeout | null = null;
   private cleanupInterval: NodeJS.Timeout | null = null;
-  private initialized: boolean = false;
+  private initialized = false;
 
   constructor(
     config: PoolConfig,

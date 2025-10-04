@@ -47,9 +47,7 @@ export interface Profile extends Identifiable, Named, TimestampMetadata {
 /**
  * Target profile for migrations (extends base profile)
  */
-export interface TargetProfile extends Profile {
-  // Additional target-specific properties can be added here
-}
+export type TargetProfile = Profile
 
 /**
  * Environment type enumeration

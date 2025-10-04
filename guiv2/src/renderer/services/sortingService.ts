@@ -169,7 +169,7 @@ export class SortingService {
    * Natural sort comparison (handles numbers in strings)
    * @example "Item 2" < "Item 10"
    */
-  private naturalCompare(a: string, b: string, caseSensitive: boolean = false): number {
+  private naturalCompare(a: string, b: string, caseSensitive = false): number {
     const options: Intl.CollatorOptions = {
       numeric: true,
       sensitivity: caseSensitive ? 'case' : 'base',
@@ -181,7 +181,7 @@ export class SortingService {
   /**
    * String comparison
    */
-  private stringCompare(a: string, b: string, caseSensitive: boolean = false): number {
+  private stringCompare(a: string, b: string, caseSensitive = false): number {
     const aStr = caseSensitive ? a : a.toLowerCase();
     const bStr = caseSensitive ? b : b.toLowerCase();
 
@@ -213,7 +213,7 @@ export class SortingService {
     field: string,
     direction: SortDirection,
     options: Partial<SortConfig> = {},
-    maxSorts: number = 3
+    maxSorts = 3
   ): SortConfig[] {
     // Remove existing sort for this field
     const filtered = currentSorts.filter((s) => s.field !== field);

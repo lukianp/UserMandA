@@ -437,7 +437,7 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
 function convertToCSV(data: any[]): string {
   if (!data || data.length === 0) return '';
 
-  const flattenObject = (obj: any, prefix: string = ''): any => {
+  const flattenObject = (obj: any, prefix = ''): any => {
     return Object.keys(obj).reduce((acc: any, key: string) => {
       const value = obj[key];
       const newKey = prefix ? `${prefix}.${key}` : key;

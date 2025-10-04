@@ -224,7 +224,7 @@ class CommandPaletteService {
   /**
    * Get recent commands
    */
-  getRecentCommands(limit: number = 10): Command[] {
+  getRecentCommands(limit = 10): Command[] {
     const recentIds = this.history
       .slice(0, limit)
       .map((entry) => entry.commandId);
@@ -240,7 +240,7 @@ class CommandPaletteService {
   /**
    * Check if command was recently used
    */
-  private isRecentCommand(commandId: string, within: number = 10): boolean {
+  private isRecentCommand(commandId: string, within = 10): boolean {
     const recentIds = this.history.slice(0, within).map((e) => e.commandId);
     return recentIds.includes(commandId);
   }

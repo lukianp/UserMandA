@@ -253,7 +253,7 @@ export class FilteringService {
     data: T[],
     searchText: string,
     fields?: string[],
-    caseSensitive: boolean = false
+    caseSensitive = false
   ): T[] {
     if (!searchText.trim()) {
       return data;

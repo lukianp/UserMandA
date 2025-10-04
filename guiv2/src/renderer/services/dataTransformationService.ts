@@ -168,7 +168,7 @@ export class DataTransformationService {
    * @param combineWithAnd True = AND all conditions, False = OR (default: true)
    * @returns Filtered data
    */
-  filter<T = any>(data: T[], conditions: FilterCondition[], combineWithAnd: boolean = true): T[] {
+  filter<T = any>(data: T[], conditions: FilterCondition[], combineWithAnd = true): T[] {
     return data.filter((row) => {
       const results = conditions.map((condition) => this.evaluateCondition(row, condition));
 
@@ -515,8 +515,8 @@ export class DataTransformationService {
   unpivot<T = any>(
     data: T[],
     rowFields: string[],
-    valueField: string = 'value',
-    columnField: string = 'column'
+    valueField = 'value',
+    columnField = 'column'
   ): any[] {
     const result: any[] = [];
 

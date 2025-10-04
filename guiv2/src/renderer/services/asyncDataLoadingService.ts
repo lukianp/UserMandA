@@ -95,7 +95,7 @@ export class AsyncDataLoadingService extends EventEmitter {
   private activeWorkers: number;
   private paused: boolean;
 
-  private constructor(maxWorkers: number = 3) {
+  private constructor(maxWorkers = 3) {
     super();
     this.taskQueue = [];
     this.activeTasks = new Map();

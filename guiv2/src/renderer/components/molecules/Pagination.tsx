@@ -69,7 +69,7 @@ export const Pagination: React.FC<PaginationProps> = ({
 
     const halfRange = Math.floor(maxPageButtons / 2);
     let start = Math.max(1, currentPage - halfRange);
-    let end = Math.min(totalPages, start + maxPageButtons - 1);
+    const end = Math.min(totalPages, start + maxPageButtons - 1);
 
     // Adjust start if we're near the end
     if (end - start + 1 < maxPageButtons) {

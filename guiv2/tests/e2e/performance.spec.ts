@@ -95,7 +95,7 @@ test.describe('Performance Tests', () => {
       const fps = await mainWindow.evaluate(() => {
         return new Promise((resolve) => {
           let frames = 0;
-          let lastTime = performance.now();
+          const lastTime = performance.now();
           const duration = 2000; // Measure for 2 seconds
           const startTime = performance.now();
 

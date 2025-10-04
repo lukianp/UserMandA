@@ -87,11 +87,11 @@ export type RecoveryHandler = (report: ErrorReport) => boolean | Promise<boolean
  */
 class ErrorHandlingService {
   private errors: ErrorReport[] = [];
-  private maxErrors: number = 1000;
+  private maxErrors = 1000;
   private handlers: Map<ErrorCategory, ErrorHandler[]> = new Map();
   private recoveryHandlers: Map<RecoveryStrategy, RecoveryHandler> = new Map();
   private sessionId: string;
-  private initialized: boolean = false;
+  private initialized = false;
 
   constructor() {
     this.sessionId = crypto.randomUUID();
@@ -519,7 +519,7 @@ class ErrorHandlingService {
   /**
    * Get recent errors
    */
-  getRecentErrors(limit: number = 10): ErrorReport[] {
+  getRecentErrors(limit = 10): ErrorReport[] {
     return this.errors.slice(-limit);
   }
 

@@ -617,7 +617,7 @@ class BackgroundTaskQueueService extends EventEmitter {
   /**
    * Clear completed tasks older than specified age
    */
-  clearOldTasks(maxAgeMs: number = 3600000): number {
+  clearOldTasks(maxAgeMs = 3600000): number {
     const now = Date.now();
     let cleared = 0;
 

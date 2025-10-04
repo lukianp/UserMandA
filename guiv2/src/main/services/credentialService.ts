@@ -4,10 +4,10 @@
  * Uses Windows Credential Manager on Windows, Keychain on macOS, libsecret on Linux
  */
 
-import { safeStorage } from 'electron';
+import { safeStorage , app } from 'electron';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { app } from 'electron';
+
 
 interface StoredCredential {
   profileId: string;

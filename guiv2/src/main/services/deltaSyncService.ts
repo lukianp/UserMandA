@@ -114,7 +114,7 @@ class DeltaSyncService extends EventEmitter {
   constructor(
     powerShellService: PowerShellExecutionService,
     dataDir?: string,
-    bandwidthLimit: number = 10 // 10 MB/s default
+    bandwidthLimit = 10 // 10 MB/s default
   ) {
     super();
     this.powerShellService = powerShellService;

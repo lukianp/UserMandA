@@ -109,7 +109,7 @@ class EnhancedPerformanceMonitor {
   private renderMetrics: RenderMetrics[] = [];
   private longTasks: LongTaskEntry[] = [];
   private longTaskObserver: PerformanceObserver | null = null;
-  private maxHistorySize: number = 1000;
+  private maxHistorySize = 1000;
 
   constructor() {
     this.fpsMonitor = {
@@ -127,7 +127,7 @@ class EnhancedPerformanceMonitor {
   /**
    * Start FPS monitoring
    */
-  startFPSMonitoring(threshold: number = 50): void {
+  startFPSMonitoring(threshold = 50): void {
     this.fpsMonitor.threshold = threshold;
     this.fpsMonitor.running = true;
     this.fpsMonitor.lastTime = performance.now();
@@ -207,7 +207,7 @@ class EnhancedPerformanceMonitor {
   /**
    * Start automatic memory monitoring
    */
-  startMemoryMonitoring(intervalMs: number = 5000): NodeJS.Timeout {
+  startMemoryMonitoring(intervalMs = 5000): NodeJS.Timeout {
     loggingService.info('Memory monitoring started', 'PerformanceMonitor', { intervalMs });
 
     return setInterval(() => {

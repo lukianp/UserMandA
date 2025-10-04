@@ -15,8 +15,8 @@
  */
 
 import { EventEmitter } from 'events';
-import { promises as fs } from 'fs';
-import { createWriteStream, WriteStream } from 'fs';
+import { promises as fs , createWriteStream, WriteStream } from 'fs';
+
 import path from 'path';
 import { app } from 'electron';
 import { createHash } from 'crypto';

@@ -121,8 +121,8 @@ class RollbackService extends EventEmitter {
   constructor(
     powerShellService: PowerShellExecutionService,
     dataDir?: string,
-    retentionDays: number = 30,
-    maxPointsPerWave: number = 10
+    retentionDays = 30,
+    maxPointsPerWave = 10
   ) {
     super();
     this.powerShellService = powerShellService;

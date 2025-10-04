@@ -152,7 +152,7 @@ class MigrationExecutionService extends EventEmitter {
   constructor(
     powerShellService: PowerShellExecutionService,
     dataDir?: string,
-    maxWorkers: number = 4
+    maxWorkers = 4
   ) {
     super();
     this.powerShellService = powerShellService;

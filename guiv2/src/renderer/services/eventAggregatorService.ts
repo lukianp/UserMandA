@@ -68,7 +68,7 @@ class EventAggregatorService {
   private subscriptions: Map<string, Subscription[]> = new Map();
   private history: Event[] = [];
   private middleware: EventMiddleware[] = [];
-  private maxHistorySize: number = 1000;
+  private maxHistorySize = 1000;
   private metrics: Map<string, { count: number; lastEmitted: Date }> = new Map();
 
   /**

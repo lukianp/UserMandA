@@ -85,7 +85,7 @@ class RealTimeUpdateService extends EventEmitter {
   private conflicts: Map<string, Conflict> = new Map();
   private entityVersions: Map<string, number> = new Map(); // entityType:entityId -> version
   private conflictResolutionStrategy: ConflictResolutionStrategy = 'last-write-wins';
-  private batchInterval: number = 100; // ms
+  private batchInterval = 100; // ms
   private batchedUpdates: DataUpdate[] = [];
   private batchTimeout: NodeJS.Timeout | null = null;
   private isOnline: boolean = navigator.onLine;

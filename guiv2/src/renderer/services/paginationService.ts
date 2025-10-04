@@ -238,7 +238,7 @@ export class PaginationService {
    * @param maxPages Maximum page numbers to show (default: 5)
    * @returns Array of page numbers to display
    */
-  getPageRange(currentPage: number, totalPages: number, maxPages: number = 5): number[] {
+  getPageRange(currentPage: number, totalPages: number, maxPages = 5): number[] {
     if (totalPages <= maxPages) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
@@ -324,7 +324,7 @@ export class PaginationService {
    * @param preserveFirstItem Preserve first item on current page (default: true)
    * @returns New page number
    */
-  changePageSize(newPageSize: number, state: PaginationState, preserveFirstItem: boolean = true): number {
+  changePageSize(newPageSize: number, state: PaginationState, preserveFirstItem = true): number {
     if (!preserveFirstItem) {
       return 1;
     }
@@ -340,7 +340,7 @@ export class PaginationService {
    * @param prefix Query param prefix (default: 'page')
    * @returns URLSearchParams
    */
-  toUrlParams(state: PaginationState, prefix: string = 'page'): URLSearchParams {
+  toUrlParams(state: PaginationState, prefix = 'page'): URLSearchParams {
     const params = new URLSearchParams();
     params.set(`${prefix}`, String(state.currentPage));
     params.set(`${prefix}Size`, String(state.pageSize));
@@ -353,7 +353,7 @@ export class PaginationService {
    * @param prefix Query param prefix (default: 'page')
    * @returns Page number and page size
    */
-  fromUrlParams(params: URLSearchParams, prefix: string = 'page'): { page: number; pageSize: number } {
+  fromUrlParams(params: URLSearchParams, prefix = 'page'): { page: number; pageSize: number } {
     const page = parseInt(params.get(`${prefix}`) || '1', 10);
     const pageSize = parseInt(params.get(`${prefix}Size`) || String(PaginationService.DEFAULT_PAGE_SIZE), 10);
 
@@ -377,7 +377,7 @@ export class PaginationService {
     itemHeight: number,
     viewportHeight: number,
     totalItems: number,
-    overscan: number = 3
+    overscan = 3
   ): { startIndex: number; endIndex: number; offsetY: number } {
     const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
     const visibleCount = Math.ceil(viewportHeight / itemHeight);
