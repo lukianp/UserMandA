@@ -25,6 +25,7 @@ class KeyboardShortcutService {
   private chordTimeout = 2000; // 2 seconds to complete chord
   private isEnabled = true;
   private listeners: Set<(event: KeyboardEvent, binding: ShortcutBinding) => void> = new Set();
+  private chordIndicatorElement?: HTMLDivElement;
 
   constructor() {
     this.loadCustomBindings();
@@ -272,7 +273,8 @@ class KeyboardShortcutService {
       this.cancelChordSequence();
     }, chord.timeout || this.chordTimeout);
 
-    // TODO: Show visual indicator for chord mode
+    // Show visual indicator for chord mode
+    this.showChordIndicator(shortcut, chord);
   }
 
   /**
@@ -316,7 +318,8 @@ class KeyboardShortcutService {
       this.chordTimeoutId = undefined;
     }
 
-    // TODO: Hide visual indicator
+    // Hide visual indicator
+    this.hideChordIndicator();
   }
 
   /**
@@ -374,6 +377,124 @@ class KeyboardShortcutService {
     } catch (error) {
       console.error('Failed to execute chord:', error);
     }
+  }
+
+  // ========================================
+  // Chord Visual Indicator
+  // ========================================
+
+  /**
+   * Show chord mode visual indicator
+   */
+  private showChordIndicator(shortcut: KeyboardShortcut, chord: ChordShortcut): void {
+    if (typeof document === 'undefined') return;
+
+    // Create indicator element if it doesn't exist
+    if (!this.chordIndicatorElement) {
+      this.chordIndicatorElement = document.createElement('div');
+      this.chordIndicatorElement.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.2s ease-out;
+        pointer-events: none;
+      `;
+
+      // Add animation keyframes
+      if (!document.getElementById('chord-indicator-styles')) {
+        const styleEl = document.createElement('style');
+        styleEl.id = 'chord-indicator-styles';
+        styleEl.textContent = `
+          @keyframes slideIn {
+            from {
+              opacity: 0;
+              transform: translateX(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+          @keyframes slideOut {
+            from {
+              opacity: 1;
+              transform: translateX(0);
+            }
+            to {
+              opacity: 0;
+              transform: translateX(20px);
+            }
+          }
+        `;
+        document.head.appendChild(styleEl);
+      }
+    }
+
+    // Update indicator content
+    const firstKey = this.shortcutToString(shortcut);
+    const remainingKeys = chord.sequence.slice(1).map(s => this.shortcutToString(s)).join(', ');
+
+    this.chordIndicatorElement.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; animation: pulse 1.5s infinite;"></div>
+        <div>
+          <div style="font-size: 12px; opacity: 0.7; margin-bottom: 2px;">Chord Mode</div>
+          <div><strong>${firstKey}</strong> → Waiting for: ${remainingKeys}</div>
+        </div>
+      </div>
+    `;
+
+    // Add pulse animation for the dot
+    if (!document.getElementById('chord-pulse-styles')) {
+      const styleEl = document.createElement('style');
+      styleEl.id = 'chord-pulse-styles';
+      styleEl.textContent = `
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+      `;
+      document.head.appendChild(styleEl);
+    }
+
+    // Append to body if not already there
+    if (!this.chordIndicatorElement.parentElement) {
+      document.body.appendChild(this.chordIndicatorElement);
+    }
+
+    // Reset animation
+    this.chordIndicatorElement.style.animation = 'none';
+    setTimeout(() => {
+      if (this.chordIndicatorElement) {
+        this.chordIndicatorElement.style.animation = 'slideIn 0.2s ease-out';
+      }
+    }, 10);
+  }
+
+  /**
+   * Hide chord mode visual indicator
+   */
+  private hideChordIndicator(): void {
+    if (!this.chordIndicatorElement || typeof document === 'undefined') return;
+
+    // Animate out
+    this.chordIndicatorElement.style.animation = 'slideOut 0.2s ease-out';
+
+    // Remove after animation
+    setTimeout(() => {
+      if (this.chordIndicatorElement && this.chordIndicatorElement.parentElement) {
+        this.chordIndicatorElement.parentElement.removeChild(this.chordIndicatorElement);
+      }
+    }, 200);
   }
 
   // ========================================

@@ -3,12 +3,28 @@ module.exports = {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
   moduleNameMapper: {
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
+  transform: {
+    '^.+\.tsx?$': ['ts-jest', {
+      tsconfig: {
+        jsx: 'react',
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        noImplicitAny: false,
+        strict: false,
+      },
+    }],
+  },
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/tests/e2e/',
+  ],
   collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
+    'src/renderer/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
     '!src/main/**/*',
+    '!src/renderer/test-utils/**/*',
   ],
   coverageThreshold: {
     global: {

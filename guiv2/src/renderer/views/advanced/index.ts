@@ -1,0 +1,39 @@
+// Advanced Features Views
+export { WorkflowAutomationView } from './WorkflowAutomationView';
+export { ScriptLibraryView } from './ScriptLibraryView';
+export { CustomFieldsView } from './CustomFieldsView';
+export { TagManagementView } from './TagManagementView';
+export { BulkOperationsView } from './BulkOperationsView';
+export { DataImportExportView } from './DataImportExportView';
+export { APIManagementView } from './APIManagementView';
+export { WebhooksView } from './WebhooksView';
+export { NotificationRulesView } from './NotificationRulesView';
+export { HealthMonitoringView } from './HealthMonitoringView';
+export { PerformanceDashboardView } from './PerformanceDashboardView';
+export { DiagnosticsView } from './DiagnosticsView';
+
+// Advanced Specialized Views
+export { CapacityPlanningView } from './CapacityPlanningView';
+export { ResourceOptimizationView } from './ResourceOptimizationView';
+export { CostOptimizationView } from './CostOptimizationView';
+export { LicenseOptimizationView } from './LicenseOptimizationView';
+export { SecurityPostureView } from './SecurityPostureView';
+export { IncidentResponseView } from './IncidentResponseView';
+export { DisasterRecoveryView } from './DisasterRecoveryView';
+export { ChangeManagementView } from './ChangeManagementView';
+export { ServiceCatalogView } from './ServiceCatalogView';
+export { KnowledgeBaseView } from './KnowledgeBaseView';
+export { TicketingSystemView } from './TicketingSystemView';
+export { AssetLifecycleView } from './AssetLifecycleView';
+export { SoftwareLicenseComplianceView } from './SoftwareLicenseComplianceView';
+export { HardwareRefreshPlanningView } from './HardwareRefreshPlanningView';
+export { CloudMigrationPlannerView } from './CloudMigrationPlannerView';
+export { HybridIdentityView } from './HybridIdentityView';
+export { SSOConfigurationView } from './SSOConfigurationView';
+export { MFAManagementView } from './MFAManagementView';
+export { PrivilegedAccessView } from './PrivilegedAccessView';
+export { DataGovernanceView } from './DataGovernanceView';
+export { RetentionPolicyView } from './RetentionPolicyView';
+export { eDiscoveryView } from './eDiscoveryView';
+export { DataClassificationView } from './DataClassificationView';
+export { EndpointProtectionView } from './EndpointProtectionView';

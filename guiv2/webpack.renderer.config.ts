@@ -24,9 +24,12 @@ export const rendererConfig: Configuration = {
           new BundleAnalyzerPlugin({
             analyzerMode: 'static',
             reportFilename: 'bundle-report.html',
-            openAnalyzer: true,
+            openAnalyzer: false, // Don't auto-open to prevent issues
             generateStatsFile: true,
             statsFilename: 'bundle-stats.json',
+            // Prevent circular dependency issues
+            excludeAssets: /\.map$/,
+            logLevel: 'warn',
           }),
         ]
       : []),
@@ -289,5 +292,18 @@ export const rendererConfig: Configuration = {
     'child_process': 'commonjs child_process',
   },
   // Stats configuration for better analysis
-  stats: isAnalyzing ? 'verbose' : 'normal',
+  stats: isAnalyzing
+    ? {
+        preset: 'normal',
+        colors: true,
+        hash: true,
+        timings: true,
+        chunks: true,
+        chunkModules: false, // Reduce output size
+        modules: false, // Reduce output size
+        children: false,
+        depth: false,
+        maxModules: 100, // Limit module output
+      }
+    : 'normal',
 };

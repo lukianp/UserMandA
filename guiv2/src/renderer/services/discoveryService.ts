@@ -20,6 +20,7 @@ import {
   ConnectionResult,
   HistoryFilter,
 } from '../types/models/discovery';
+import cron from 'node-cron';
 
 /**
  * Discovery Service Class
@@ -30,12 +31,14 @@ class DiscoveryService {
   private discoveryTemplates: Map<string, DiscoveryTemplate>;
   private scheduledDiscoveries: Map<string, ScheduledDiscovery>;
   private activeDiscoveries: Map<string, AbortController>;
+  private cronJobs: Map<string, cron.ScheduledTask>;
 
   constructor() {
     this.discoveryHistory = new Map();
     this.discoveryTemplates = new Map();
     this.scheduledDiscoveries = new Map();
     this.activeDiscoveries = new Map();
+    this.cronJobs = new Map();
 
     // Load persisted data
     this.loadPersistedData();
@@ -241,13 +244,51 @@ class DiscoveryService {
    */
   async scheduleDiscovery(config: ScheduledDiscovery): Promise<void> {
     // Validate schedule (cron expression)
-    if (!this.isValidCronExpression(config.schedule)) {
+    if (!cron.validate(config.schedule)) {
       throw new Error(`Invalid cron schedule: ${config.schedule}`);
     }
 
+    // Cancel existing job if rescheduling
+    const existingJob = this.cronJobs.get(config.id);
+    if (existingJob) {
+      existingJob.stop();
+      this.cronJobs.delete(config.id);
+    }
+
+    // Create cron job
+    const task = cron.schedule(
+      config.schedule,
+      async () => {
+        try {
+          console.log(`Running scheduled discovery: ${config.name}`);
+
+          // Build discovery config from scheduled config
+          const discoveryConfig: DiscoveryConfig = {
+            id: crypto.randomUUID(),
+            name: config.name,
+            type: config.type,
+            parameters: config.parameters,
+            credentials: config.credentials,
+            timeout: config.timeout,
+            retryPolicy: config.retryPolicy,
+          };
+
+          // Run discovery
+          await this.runDiscovery(discoveryConfig);
+        } catch (error) {
+          console.error(`Scheduled discovery failed: ${config.name}`, error);
+        }
+      },
+      {
+        scheduled: config.enabled !== false,
+        timezone: 'America/New_York', // Use system timezone or make configurable
+      }
+    );
+
+    // Store job and config
+    this.cronJobs.set(config.id, task);
     this.scheduledDiscoveries.set(config.id, config);
 
-    // TODO: Integrate with a job scheduler (e.g., node-cron)
     console.log(`Scheduled discovery: ${config.name} (${config.schedule})`);
 
     await this.saveScheduledDiscoveries();
@@ -319,7 +360,76 @@ class DiscoveryService {
 
     console.log(`Resumed discovery: ${id}`);
 
-    // TODO: Actually resume the PowerShell execution
+    // Resume PowerShell execution by re-running the discovery
+    // Note: PowerShell doesn't have native pause/resume capability
+    // So we re-run the discovery from the beginning
+    try {
+      const result = await this.runDiscovery(run.config);
+
+      // Update the run with new result
+      run.endTime = new Date();
+      run.status = result.status;
+      run.result = result;
+      run.progress = 100;
+      this.discoveryHistory.set(id, run);
+      await this.saveDiscoveryHistory();
+    } catch (error: any) {
+      run.status = 'failed';
+      run.endTime = new Date();
+      this.discoveryHistory.set(id, run);
+      await this.saveDiscoveryHistory();
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel a scheduled discovery
+   * @param id Scheduled discovery ID
+   */
+  async cancelScheduledDiscovery(id: string): Promise<void> {
+    const job = this.cronJobs.get(id);
+    if (job) {
+      job.stop();
+      this.cronJobs.delete(id);
+    }
+
+    this.scheduledDiscoveries.delete(id);
+    await this.saveScheduledDiscoveries();
+
+    console.log(`Cancelled scheduled discovery: ${id}`);
+  }
+
+  /**
+   * Get all scheduled discoveries
+   * @returns Array of scheduled discoveries
+   */
+  getScheduledDiscoveries(): ScheduledDiscovery[] {
+    return Array.from(this.scheduledDiscoveries.values());
+  }
+
+  /**
+   * Enable/disable a scheduled discovery
+   * @param id Scheduled discovery ID
+   * @param enabled Whether to enable or disable
+   */
+  async toggleScheduledDiscovery(id: string, enabled: boolean): Promise<void> {
+    const scheduled = this.scheduledDiscoveries.get(id);
+    if (!scheduled) {
+      throw new Error(`Scheduled discovery not found: ${id}`);
+    }
+
+    const job = this.cronJobs.get(id);
+    if (job) {
+      if (enabled) {
+        job.start();
+      } else {
+        job.stop();
+      }
+    }
+
+    scheduled.enabled = enabled;
+    this.scheduledDiscoveries.set(id, scheduled);
+    await this.saveScheduledDiscoveries();
   }
 
   // ==================== Discovery Templates ====================
@@ -688,14 +798,6 @@ class DiscoveryService {
     }
   }
 
-  /**
-   * Validate cron expression
-   */
-  private isValidCronExpression(cron: string): boolean {
-    // Basic validation - should be enhanced with proper cron library
-    const parts = cron.split(' ');
-    return parts.length >= 5 && parts.length <= 7;
-  }
 
   /**
    * Convert array of objects to CSV
