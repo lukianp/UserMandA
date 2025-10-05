@@ -7,7 +7,7 @@
 
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDrag } from 'react-dnd';
+import { useDrag, DragSourceMonitor } from 'react-dnd';
 import { clsx } from 'clsx';
 import { Download, Trash2, RefreshCw, Users, Plus, Eye, GripVertical } from 'lucide-react';
 import { useGroupsViewLogic } from '../../hooks/useGroupsViewLogic';
@@ -30,7 +30,7 @@ const DragHandleCell: React.FC<{ data: GroupData }> = ({ data }) => {
       type: 'GROUP',
       data: data,
     }),
-    collect: (monitor) => ({
+    collect: (monitor: DragSourceMonitor) => ({
       isDragging: monitor.isDragging(),
     }),
   });
@@ -95,14 +95,14 @@ export const GroupsView: React.FC = () => {
         sortable: false,
         filter: false,
         resizable: false,
-        cellRenderer: (params: any) => <DragHandleCell data={params.data} />,
+        cellRenderer: (params: { data: GroupData }) => <DragHandleCell data={params.data} />,
       },
       ...columnDefs,
       {
         headerName: 'Actions',
         width: 150,
         pinned: 'right' as const,
-        cellRenderer: (params: any) => (
+        cellRenderer: (params: { data: GroupData }) => (
           <Button
             onClick={() => handleViewDetails(params.data)}
             variant="secondary"

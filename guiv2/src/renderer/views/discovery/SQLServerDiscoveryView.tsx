@@ -1,10 +1,10 @@
 import React from 'react';
 import { Database, Play, Download, FileText, AlertCircle, CheckCircle2, HardDrive } from 'lucide-react';
 import { useSQLServerDiscoveryLogic } from '../../hooks/useSQLServerDiscoveryLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
-import Select from '../../components/atoms/Select';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
+import { Select } from '../../components/atoms/Select';
 
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return '0 B';
@@ -115,10 +115,8 @@ const SQLServerDiscoveryView: React.FC = () => {
     handleExport,
     filteredInstances,
     filteredDatabases,
-    filteredConfigurations,
     instanceColumns,
     databaseColumns,
-    configurationColumns,
     stats,
   } = useSQLServerDiscoveryLogic();
 
@@ -136,19 +134,19 @@ const SQLServerDiscoveryView: React.FC = () => {
         <div className="flex items-center gap-2">
           <Select
             value=""
-            onChange={(e) => {
-              const template = templates.find((t) => t.id === e.target.value);
+            onChange={(value) => {
+              const template = templates.find((t) => t.name === value);
               if (template) handleApplyTemplate(template);
             }}
+            options={[
+              { value: '', label: 'Select Template...' },
+              ...templates.map((template) => ({
+                value: template.name,
+                label: template.name,
+              })),
+            ]}
             data-cy="template-select"
-          >
-            <option value="">Select Template...</option>
-            {templates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name}
-              </option>
-            ))}
-          </Select>
+          />
           <Button
             onClick={handleStartDiscovery}
             disabled={isLoading}
@@ -169,12 +167,13 @@ const SQLServerDiscoveryView: React.FC = () => {
       {/* Configuration Summary */}
       <div className="px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex flex-wrap gap-2">
-          <ConfigBadge label="Instances" value={config.parameters.includeInstances} />
-          <ConfigBadge label="Databases" value={config.parameters.includeDatabases} />
-          <ConfigBadge label="Configuration" value={config.parameters.includeConfiguration} />
-          <ConfigBadge label="Security" value={config.parameters.includeSecurity} />
-          <ConfigBadge label="Backups" value={config.parameters.includeBackupStatus} />
-          <ConfigBadge label="Authentication" value={config.parameters.authentication || 'windows'} />
+          <ConfigBadge label="System DBs" value={config.includeSystemDatabases} />
+          <ConfigBadge label="Backup History" value={config.includeBackupHistory} />
+          <ConfigBadge label="DB Files" value={config.includeDatabaseFiles} />
+          <ConfigBadge label="Security Audit" value={config.includeSecurityAudit} />
+          <ConfigBadge label="Performance" value={config.includePerformanceMetrics} />
+          <ConfigBadge label="Configuration" value={config.includeConfiguration} />
+          <ConfigBadge label="Authentication" value={config.authenticationType} />
         </div>
       </div>
 
@@ -255,9 +254,6 @@ const SQLServerDiscoveryView: React.FC = () => {
                 <TabButton active={activeTab === 'databases'} onClick={() => setActiveTab('databases')}>
                   Databases ({filteredDatabases.length})
                 </TabButton>
-                <TabButton active={activeTab === 'configuration'} onClick={() => setActiveTab('configuration')}>
-                  Configuration ({filteredConfigurations.length})
-                </TabButton>
               </div>
 
               <div className="mt-4">
@@ -295,15 +291,6 @@ const SQLServerDiscoveryView: React.FC = () => {
                           loading={isLoading}
                           enableExport
                           data-cy="sqlserver-databases-grid"
-                        />
-                      )}
-                      {activeTab === 'configuration' && (
-                        <VirtualizedDataGrid
-                          data={filteredConfigurations}
-                          columns={configurationColumns}
-                          loading={isLoading}
-                          enableExport
-                          data-cy="sqlserver-configuration-grid"
                         />
                       )}
                     </div>

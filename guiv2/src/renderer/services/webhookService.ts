@@ -30,8 +30,8 @@ export interface WebhookConfig {
 export interface WebhookPayload {
   event: string;
   timestamp: string;
-  data: any;
-  metadata?: Record<string, any>;
+  data: unknown;
+  metadata?: Record<string, unknown>;
 }
 
 export interface WebhookDelivery {
@@ -72,7 +72,10 @@ export class WebhookService {
   private rateLimitMap: Map<string, number[]> = new Map(); // Track request timestamps
   private maxRequestsPerMinute = 60;
 
-  private constructor() {}
+  private constructor() {
+    // Initialize webhook service
+    loggingService.debug('WebhookService instance created', 'WebhookService');
+  }
 
   /**
    * Get singleton instance
@@ -167,7 +170,7 @@ export class WebhookService {
   /**
    * Trigger webhooks for an event
    */
-  async trigger(event: string, data: any, metadata?: Record<string, any>): Promise<void> {
+  async trigger(event: string, data: unknown, metadata?: Record<string, unknown>): Promise<void> {
     const webhooks = this.getWebhooksForEvent(event);
 
     if (webhooks.length === 0) {
@@ -290,9 +293,9 @@ export class WebhookService {
           status: response.status,
         }
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       delivery.status = 'failed';
-      delivery.error = error.message;
+      delivery.error = error instanceof Error ? error.message : String(error);
       delivery.completedAt = new Date();
 
       loggingService.error(
@@ -301,7 +304,7 @@ export class WebhookService {
         {
           event: payload.event,
           attempt,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         }
       );
 

@@ -22,7 +22,7 @@ import {
   ValidationError,
   ValidationWarning,
 } from '../types/models/migration';
-import { ValidationResult } from '../types/common';
+import { ValidationResult } from '../types/models/migration';
 
 // ValidationResult is imported from migration types
 
@@ -98,12 +98,22 @@ export interface MigrationError {
 export interface MigrationConflict {
   id: string;
   type: 'duplicate_user' | 'duplicate_group' | 'permission_mismatch' | 'license_unavailable' | 'mailbox_exists';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  sourceResource: Resource;
-  targetResource?: Resource;
-  suggestedResolution: ConflictResolution;
-  status: 'pending' | 'resolved' | 'skipped' | 'failed';
-  metadata: any;
+  severity: 'Low' | 'Medium' | 'High' | 'Critical';
+  sourceResource: {
+    id: string;
+    name: string;
+    type: string;
+    properties: Record<string, any>;
+  };
+  targetResource?: {
+    id: string;
+    name: string;
+    type: string;
+    properties: Record<string, any>;
+  };
+  suggestedResolution?: ConflictResolution;
+  status: 'pending' | 'resolved' | 'failed';
+  metadata: Record<string, any>;
 }
 
 /**
@@ -317,15 +327,15 @@ export const useMigrationStore = create<MigrationState>()(
       subscribeWithSelector(
         immer((set, get) => ({
           // Existing state
-          operations: new Map(),
-          plans: [],
-          selectedPlan: null,
+          operations: new Map<string, MigrationOperation>(),
+          plans: [] as MigrationPlan[],
+          selectedPlan: null as MigrationPlan | null,
           isMigrating: false,
           waves: [],
-          selectedWaveId: null,
-          currentWave: null,
+          selectedWaveId: null as string | null,
+          currentWave: null as MigrationWave | null,
           isLoading: false,
-          error: null,
+          error: null as string | null,
 
           // NEW: Wave orchestration state
           waveExecutionStatus: new Map(),
@@ -854,16 +864,13 @@ export const useMigrationStore = create<MigrationState>()(
         const result: ValidationResult = {
           isValid: errors.length === 0,
           errors: errors.map(e => ({
-            field: e.field,
+            field: e.field || '',
             message: e.message,
-            code: e.code,
-            severity: e.severity === 'critical' ? 'critical' : 'error' as 'error' | 'critical'
+            severity: e.severity === 'critical' ? 'error' : 'error' as 'error' | 'warning' | 'info'
           })),
           warnings: warnings.map(w => ({
-            field: w.field,
+            field: w.field || '',
             message: w.message,
-            code: w.code,
-            severity: w.severity === 'info' ? 'info' : 'warning' as 'warning' | 'info'
           })),
         };
 

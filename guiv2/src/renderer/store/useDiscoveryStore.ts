@@ -7,7 +7,7 @@
 
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
-import { DiscoveryResult, DiscoveryType, DiscoveryStatus } from '../types/models/discovery';
+import { DiscoveryResult, DiscoveryProgress, DiscoveryType, DiscoveryStatus } from '../types/models/discovery';
 
 export interface DiscoveryOperation {
   /** Unique operation identifier */
@@ -49,15 +49,19 @@ interface DiscoveryState {
   clearAllOperations: () => void;
   getOperation: (operationId: string) => DiscoveryOperation | undefined;
   getResults: (operationId: string) => DiscoveryResult[] | undefined;
+
+  // Compatibility methods for discovery hooks
+  addResult: (result: DiscoveryResult) => void;
+  setProgress: (progressData: DiscoveryProgress) => void;
 }
 
 export const useDiscoveryStore = create<DiscoveryState>()(
   devtools(
     subscribeWithSelector((set, get) => ({
       // Initial state
-      operations: new Map(),
-      results: new Map(),
-      selectedOperation: null,
+      operations: new Map<string, DiscoveryOperation>(),
+      results: new Map<string, DiscoveryResult[]>(),
+      selectedOperation: null as string | null,
       isDiscovering: false,
 
       // Actions
@@ -277,6 +281,34 @@ export const useDiscoveryStore = create<DiscoveryState>()(
        */
       getResults: (operationId) => {
         return get().results.get(operationId);
+      },
+
+      /**
+       * Add a discovery result (compatibility method for hooks)
+       */
+      addResult: (result) => {
+        set((state) => {
+          const newResults = new Map(state.results);
+          const existingResults = newResults.get(result.moduleName) || [];
+          newResults.set(result.moduleName, [...existingResults, result]);
+          return { results: newResults };
+        });
+      },
+
+      /**
+       * Set progress information (compatibility method for hooks)
+       */
+      setProgress: (progressData) => {
+        // Find the current operation for this module and update it
+        const operations = get().operations;
+        const operationId = Array.from(operations.keys()).find(id => {
+          const op = operations.get(id);
+          return op && op.type === progressData.moduleName;
+        });
+
+        if (operationId) {
+          get().updateProgress(operationId, progressData.overallProgress, progressData.message);
+        }
       },
     })),
     {

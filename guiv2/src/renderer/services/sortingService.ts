@@ -17,7 +17,7 @@ export interface SortConfig {
   /** Sort direction */
   direction: SortDirection;
   /** Custom comparator function */
-  comparator?: (a: any, b: any) => number;
+  comparator?: (a: unknown, b: unknown) => number;
   /** Case sensitive (for string sorting) */
   caseSensitive?: boolean;
   /** Natural sort (alphanumeric) */
@@ -38,7 +38,9 @@ export interface SortState {
 export class SortingService {
   private static instance: SortingService;
 
-  private constructor() {}
+  private constructor() {
+    // Initialize sorting service
+  }
 
   /**
    * Get singleton instance
@@ -113,8 +115,8 @@ export class SortingService {
    * Compare two values based on sort config
    */
   private compare<T>(a: T, b: T, config: SortConfig): number {
-    const aValue = (a as any)[config.field];
-    const bValue = (b as any)[config.field];
+    const aValue = (a as Record<string, unknown>)[config.field];
+    const bValue = (b as Record<string, unknown>)[config.field];
 
     // Use custom comparator if provided
     if (config.comparator) {
@@ -281,7 +283,7 @@ export class SortingService {
    */
   sortByComputed<T>(
     data: T[],
-    computeFn: (item: T) => any,
+    computeFn: (item: T) => unknown,
     direction: SortDirection = 'asc'
   ): T[] {
     const indexed = data.map((item, index) => ({
@@ -310,9 +312,9 @@ export class SortingService {
     /**
      * Date comparator
      */
-    date: (a: any, b: any): number => {
-      const dateA = a instanceof Date ? a : new Date(a);
-      const dateB = b instanceof Date ? b : new Date(b);
+    date: (a: unknown, b: unknown): number => {
+      const dateA = a instanceof Date ? a : new Date(String(a));
+      const dateB = b instanceof Date ? b : new Date(String(b));
 
       if (isNaN(dateA.getTime())) return 1;
       if (isNaN(dateB.getTime())) return -1;
@@ -323,7 +325,7 @@ export class SortingService {
     /**
      * Numeric comparator (handles string numbers)
      */
-    numeric: (a: any, b: any): number => {
+    numeric: (a: unknown, b: unknown): number => {
       const numA = Number(a);
       const numB = Number(b);
 

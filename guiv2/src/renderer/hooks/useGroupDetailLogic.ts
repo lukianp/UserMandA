@@ -83,6 +83,8 @@ export function useGroupDetailLogic(groupId: string): UseGroupDetailLogicResult 
         type: 'success',
         title: 'Group Details Loaded',
         message: `Loaded details for ${result.data?.group?.name || groupId}`,
+        priority: 'normal',
+        pinned: false,
       });
     } catch (err: any) {
       const errorMsg = err?.message || 'Failed to load group details';
@@ -92,6 +94,8 @@ export function useGroupDetailLogic(groupId: string): UseGroupDetailLogicResult 
         type: 'error',
         title: 'Load Failed',
         message: errorMsg,
+        priority: 'high',
+        pinned: false,
       });
 
       console.error('Group detail load error:', err);
@@ -124,6 +128,8 @@ export function useGroupDetailLogic(groupId: string): UseGroupDetailLogicResult 
         type: 'error',
         title: 'Refresh Failed',
         message: err?.message || 'Failed to refresh group data',
+        priority: 'high',
+        pinned: false,
       });
     }
   }, [groupId, loadGroupDetail, showNotification]);
@@ -135,30 +141,38 @@ export function useGroupDetailLogic(groupId: string): UseGroupDetailLogicResult 
     if (!groupDetail) return;
 
     openModal({
-      component: 'MigrationWaveDialog',
-      props: {
-        preSelectedItems: [
-          {
-            id: groupDetail.group.id || groupDetail.group.name || '',
-            type: 'group',
-            displayName: groupDetail.group.name || 'Unknown Group',
-          },
-        ],
-        onConfirm: (waveId: string) => {
-          addItemToWave(waveId, {
-            id: groupDetail.group.id || groupDetail.group.name || '',
-            type: 'group',
-            name: groupDetail.group.name || 'Unknown Group',
-            displayName: groupDetail.group.name || 'Unknown Group',
-          });
+      type: 'custom',
+      title: 'Add to Migration Wave',
+      data: {
+        component: 'MigrationWaveDialog',
+        props: {
+          preSelectedItems: [
+            {
+              id: groupDetail.group.id || groupDetail.group.name || '',
+              type: 'group',
+              displayName: groupDetail.group.name || 'Unknown Group',
+            },
+          ],
+          onConfirm: (waveId: string) => {
+            addItemToWave(waveId, {
+              id: groupDetail.group.id || groupDetail.group.name || '',
+              type: 'group',
+              name: groupDetail.group.name || 'Unknown Group',
+              displayName: groupDetail.group.name || 'Unknown Group',
+            });
 
-          showNotification({
-            type: 'success',
-            title: 'Added to Wave',
-            message: `Added ${groupDetail.group.name} to migration wave`,
-          });
+            showNotification({
+              type: 'success',
+              title: 'Added to Wave',
+              message: `Added ${groupDetail.group.name} to migration wave`,
+              priority: 'normal',
+              pinned: false,
+            });
+          },
         },
       },
+      dismissable: true,
+      size: 'lg',
     });
   }, [groupDetail, openModal, addItemToWave, showNotification]);
 
@@ -187,6 +201,8 @@ export function useGroupDetailLogic(groupId: string): UseGroupDetailLogicResult 
             type: 'success',
             title: 'Export Complete',
             message: `Exported group snapshot to ${fileName}`,
+            priority: 'normal',
+            pinned: false,
           });
         } else {
           throw new Error(result?.error || 'Export failed');
@@ -196,6 +212,8 @@ export function useGroupDetailLogic(groupId: string): UseGroupDetailLogicResult 
           type: 'error',
           title: 'Export Failed',
           message: err?.message || 'Failed to export group snapshot',
+          priority: 'high',
+          pinned: false,
         });
       } finally {
         setLoadingMessage('');
@@ -212,42 +230,52 @@ export function useGroupDetailLogic(groupId: string): UseGroupDetailLogicResult 
     if (!groupDetail) return;
 
     openModal({
-      component: 'AddGroupMemberDialog',
-      props: {
-        groupId: groupDetail.group.id,
-        groupName: groupDetail.group.name,
-        onConfirm: async (memberIds: string[]) => {
-          try {
-            setLoadingMessage('Adding members to group...');
+      type: 'custom',
+      title: 'Add Group Members',
+      data: {
+        component: 'AddGroupMemberDialog',
+        props: {
+          groupId: groupDetail.group.id,
+          groupName: groupDetail.group.name,
+          onConfirm: async (memberIds: string[]) => {
+            try {
+              setLoadingMessage('Adding members to group...');
 
-            const result: any = await window.electronAPI?.invoke('add-group-members', {
-              groupId: groupDetail.group.id,
-              memberIds,
-            });
-
-            if (result?.success) {
-              showNotification({
-                type: 'success',
-                title: 'Members Added',
-                message: `Added ${memberIds.length} member(s) to ${groupDetail.group.name}`,
+              const result: any = await window.electronAPI?.invoke('add-group-members', {
+                groupId: groupDetail.group.id,
+                memberIds,
               });
 
-              // Refresh group data to show new members
-              await loadGroupDetail();
-            } else {
-              throw new Error(result?.error || 'Failed to add members');
+              if (result?.success) {
+                showNotification({
+                  type: 'success',
+                  title: 'Members Added',
+                  message: `Added ${memberIds.length} member(s) to ${groupDetail.group.name}`,
+                  priority: 'normal',
+                  pinned: false,
+                });
+
+                // Refresh group data to show new members
+                await loadGroupDetail();
+              } else {
+                throw new Error(result?.error || 'Failed to add members');
+              }
+            } catch (err: any) {
+              showNotification({
+                type: 'error',
+                title: 'Add Members Failed',
+                message: err?.message || 'Failed to add members to group',
+                priority: 'high',
+                pinned: false,
+              });
+            } finally {
+              setLoadingMessage('');
             }
-          } catch (err: any) {
-            showNotification({
-              type: 'error',
-              title: 'Add Members Failed',
-              message: err?.message || 'Failed to add members to group',
-            });
-          } finally {
-            setLoadingMessage('');
-          }
+          },
         },
       },
+      dismissable: true,
+      size: 'lg',
     });
   }, [groupDetail, openModal, showNotification, loadGroupDetail]);
 
@@ -258,41 +286,51 @@ export function useGroupDetailLogic(groupId: string): UseGroupDetailLogicResult 
     if (!groupDetail) return;
 
     openModal({
-      component: 'EditGroupDialog',
-      props: {
-        group: groupDetail.group,
-        onConfirm: async (updatedGroup: any) => {
-          try {
-            setLoadingMessage('Updating group properties...');
+      type: 'custom',
+      title: 'Edit Group',
+      data: {
+        component: 'EditGroupDialog',
+        props: {
+          group: groupDetail.group,
+          onConfirm: async (updatedGroup: any) => {
+            try {
+              setLoadingMessage('Updating group properties...');
 
-            const result: any = await window.electronAPI?.invoke('update-group', {
-              groupId: groupDetail.group.id,
-              updates: updatedGroup,
-            });
-
-            if (result?.success) {
-              showNotification({
-                type: 'success',
-                title: 'Group Updated',
-                message: `Updated ${groupDetail.group.name}`,
+              const result: any = await window.electronAPI?.invoke('update-group', {
+                groupId: groupDetail.group.id,
+                updates: updatedGroup,
               });
 
-              // Refresh group data to show updated properties
-              await loadGroupDetail();
-            } else {
-              throw new Error(result?.error || 'Failed to update group');
+              if (result?.success) {
+                showNotification({
+                  type: 'success',
+                  title: 'Group Updated',
+                  message: `Updated ${groupDetail.group.name}`,
+                  priority: 'normal',
+                  pinned: false,
+                });
+
+                // Refresh group data to show updated properties
+                await loadGroupDetail();
+              } else {
+                throw new Error(result?.error || 'Failed to update group');
+              }
+            } catch (err: any) {
+              showNotification({
+                type: 'error',
+                title: 'Update Failed',
+                message: err?.message || 'Failed to update group',
+                priority: 'high',
+                pinned: false,
+              });
+            } finally {
+              setLoadingMessage('');
             }
-          } catch (err: any) {
-            showNotification({
-              type: 'error',
-              title: 'Update Failed',
-              message: err?.message || 'Failed to update group',
-            });
-          } finally {
-            setLoadingMessage('');
-          }
+          },
         },
       },
+      dismissable: true,
+      size: 'lg',
     });
   }, [groupDetail, openModal, showNotification, loadGroupDetail]);
 

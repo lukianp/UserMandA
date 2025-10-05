@@ -7,9 +7,9 @@
 import React, { useState } from 'react';
 import { Box, ChevronDown, ChevronUp, Download, FileSpreadsheet, AlertCircle, Play, XCircle, Server, Activity, Network } from 'lucide-react';
 import { useHyperVDiscoveryLogic } from '../../hooks/useHyperVDiscoveryLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 
@@ -123,9 +123,9 @@ const HyperVDiscoveryView: React.FC = () => {
                   <div className="flex gap-2 mb-2">
                     <Input
                       value={hostAddressInput}
-                      onChange={(e) => setHostAddressInput(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHostAddressInput(e.target.value)}
                       placeholder="hostname or IP address"
-                      onKeyPress={(e) => e.key === 'Enter' && handleAddHost()}
+                      onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleAddHost()}
                     />
                     <Button onClick={handleAddHost} size="sm">Add</Button>
                   </div>
@@ -153,23 +153,23 @@ const HyperVDiscoveryView: React.FC = () => {
                 <Checkbox
                   label="Include VMs"
                   checked={config.includeVMs || false}
-                  onChange={(e) => updateConfig({ includeVMs: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includeVMs: checked })}
                 />
                 <Checkbox
                   label="Include Virtual Switches"
                   checked={config.includeVirtualSwitches || false}
-                  onChange={(e) => updateConfig({ includeVirtualSwitches: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includeVirtualSwitches: checked })}
                 />
                 <Checkbox
                   label="Include VHDs"
                   checked={config.includeVHDs || false}
-                  onChange={(e) => updateConfig({ includeVHDs: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includeVHDs: checked })}
                 />
                 <Input
                   label="Timeout (ms)"
                   type="number"
                   value={config.timeout?.toString() || '300000'}
-                  onChange={(e) => updateConfig({ timeout: parseInt(e.target.value) || 300000 })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateConfig({ timeout: parseInt(e.target.value) || 300000 })}
                   min={60000}
                   max={600000}
                 />
@@ -259,7 +259,7 @@ const HyperVDiscoveryView: React.FC = () => {
           <div className="flex-1">
             <Input
               value={filter.searchText}
-              onChange={(e) => updateFilter({ searchText: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFilter({ searchText: e.target.value })}
               placeholder={`Search ${activeTab}...`}
             />
           </div>
@@ -268,7 +268,7 @@ const HyperVDiscoveryView: React.FC = () => {
             <Checkbox
               label="Show Only Running"
               checked={filter.showOnlyRunning || false}
-              onChange={(e) => updateFilter({ showOnlyRunning: e.target.checked })}
+              onChange={(checked) => updateFilter({ showOnlyRunning: checked })}
             />
           )}
         </div>
@@ -361,8 +361,9 @@ const OverviewTab: React.FC<{ stats: any; result: any }> = ({ stats, result }) =
         <div className="pb-4 border-b">
           <h3 className="text-sm font-medium mb-3">Virtual Machine States</h3>
           <div className="space-y-2">
-            {Object.entries(stats.vmsByState).map(([state, count]) => (
-              count > 0 && (
+            {Object.entries(stats.vmsByState).map(([state, count]) => {
+              const vmCount = count as number;
+              return vmCount > 0 && (
                 <div key={state} className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                   <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">{state}</span>
                   <span className={`text-sm font-medium px-2 py-1 rounded ${
@@ -370,11 +371,11 @@ const OverviewTab: React.FC<{ stats: any; result: any }> = ({ stats, result }) =
                     state === 'off' ? 'bg-gray-100 text-gray-700' :
                     'bg-yellow-100 text-yellow-700'
                   }`}>
-                    {count}
+                    {vmCount}
                   </span>
                 </div>
-              )
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

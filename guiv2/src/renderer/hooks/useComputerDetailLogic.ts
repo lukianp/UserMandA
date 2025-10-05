@@ -87,6 +87,8 @@ export function useComputerDetailLogic(computerId: string): UseComputerDetailLog
         type: 'success',
         title: 'Computer Details Loaded',
         message: `Loaded details for ${result.data?.computer?.name || computerId}`,
+        priority: 'normal',
+        pinned: false,
       });
     } catch (err: any) {
       const errorMsg = err?.message || 'Failed to load computer details';
@@ -96,6 +98,8 @@ export function useComputerDetailLogic(computerId: string): UseComputerDetailLog
         type: 'error',
         title: 'Load Failed',
         message: errorMsg,
+        priority: 'high',
+        pinned: false,
       });
 
       console.error('Computer detail load error:', err);
@@ -128,6 +132,8 @@ export function useComputerDetailLogic(computerId: string): UseComputerDetailLog
         type: 'error',
         title: 'Refresh Failed',
         message: err?.message || 'Failed to refresh computer data',
+        priority: 'high',
+        pinned: false,
       });
     }
   }, [computerId, loadComputerDetail, showNotification]);
@@ -139,30 +145,38 @@ export function useComputerDetailLogic(computerId: string): UseComputerDetailLog
     if (!computerDetail) return;
 
     openModal({
-      component: 'MigrationWaveDialog',
-      props: {
-        preSelectedItems: [
-          {
-            id: computerDetail.computer.id || computerDetail.computer.name || '',
-            type: 'computer',
-            displayName: computerDetail.computer.name || 'Unknown Computer',
-          },
-        ],
-        onConfirm: (waveId: string) => {
-          addItemToWave(waveId, {
-            id: computerDetail.computer.id || computerDetail.computer.name || '',
-            type: 'computer',
-            name: computerDetail.computer.name || 'Unknown Computer',
-            displayName: computerDetail.computer.name || 'Unknown Computer',
-          });
+      type: 'custom',
+      title: 'Add to Migration Wave',
+      data: {
+        component: 'MigrationWaveDialog',
+        props: {
+          preSelectedItems: [
+            {
+              id: computerDetail.computer.id || computerDetail.computer.name || '',
+              type: 'computer',
+              displayName: computerDetail.computer.name || 'Unknown Computer',
+            },
+          ],
+          onConfirm: (waveId: string) => {
+            addItemToWave(waveId, {
+              id: computerDetail.computer.id || computerDetail.computer.name || '',
+              type: 'computer',
+              name: computerDetail.computer.name || 'Unknown Computer',
+              displayName: computerDetail.computer.name || 'Unknown Computer',
+            });
 
-          showNotification({
-            type: 'success',
-            title: 'Added to Wave',
-            message: `Added ${computerDetail.computer.name} to migration wave`,
-          });
+            showNotification({
+              type: 'success',
+              title: 'Added to Wave',
+              message: `Added ${computerDetail.computer.name} to migration wave`,
+              priority: 'normal',
+              pinned: false,
+            });
+          },
         },
       },
+      dismissable: true,
+      size: 'lg',
     });
   }, [computerDetail, openModal, addItemToWave, showNotification]);
 
@@ -191,6 +205,8 @@ export function useComputerDetailLogic(computerId: string): UseComputerDetailLog
             type: 'success',
             title: 'Export Complete',
             message: `Exported computer snapshot to ${fileName}`,
+            priority: 'normal',
+            pinned: false,
           });
         } else {
           throw new Error(result?.error || 'Export failed');
@@ -200,6 +216,8 @@ export function useComputerDetailLogic(computerId: string): UseComputerDetailLog
           type: 'error',
           title: 'Export Failed',
           message: err?.message || 'Failed to export computer snapshot',
+          priority: 'high',
+          pinned: false,
         });
       } finally {
         setLoadingMessage('');
@@ -215,40 +233,50 @@ export function useComputerDetailLogic(computerId: string): UseComputerDetailLog
     if (!computerDetail) return;
 
     openModal({
-      component: 'RemoteConnectionDialog',
-      props: {
-        computerName: computerDetail.computer.name,
-        ipAddress: computerDetail.computer.ipAddress,
-        dns: computerDetail.computer.dns,
-        onConnect: async (connectionType: string) => {
-          try {
-            setLoadingMessage(`Initiating ${connectionType} connection...`);
+      type: 'custom',
+      title: 'Remote Connection',
+      data: {
+        component: 'RemoteConnectionDialog',
+        props: {
+          computerName: computerDetail.computer.name,
+          ipAddress: computerDetail.computer.ipAddress,
+          dns: computerDetail.computer.dns,
+          onConnect: async (connectionType: string) => {
+            try {
+              setLoadingMessage(`Initiating ${connectionType} connection...`);
 
-            const result: any = await window.electronAPI?.invoke('remote-connect', {
-              computerId: computerDetail.computer.id,
-              connectionType,
-            });
-
-            if (result?.success) {
-              showNotification({
-                type: 'success',
-                title: 'Connection Initiated',
-                message: `${connectionType} connection to ${computerDetail.computer.name} initiated`,
+              const result: any = await window.electronAPI?.invoke('remote-connect', {
+                computerId: computerDetail.computer.id,
+                connectionType,
               });
-            } else {
-              throw new Error(result?.error || 'Connection failed');
+
+              if (result?.success) {
+                showNotification({
+                  type: 'success',
+                  title: 'Connection Initiated',
+                  message: `${connectionType} connection to ${computerDetail.computer.name} initiated`,
+                  priority: 'normal',
+                  pinned: false,
+                });
+              } else {
+                throw new Error(result?.error || 'Connection failed');
+              }
+            } catch (err: any) {
+              showNotification({
+                type: 'error',
+                title: 'Connection Failed',
+                message: err?.message || 'Failed to connect to computer',
+                priority: 'high',
+                pinned: false,
+              });
+            } finally {
+              setLoadingMessage('');
             }
-          } catch (err: any) {
-            showNotification({
-              type: 'error',
-              title: 'Connection Failed',
-              message: err?.message || 'Failed to connect to computer',
-            });
-          } finally {
-            setLoadingMessage('');
-          }
+          },
         },
       },
+      dismissable: true,
+      size: 'md',
     });
   }, [computerDetail, openModal, showNotification]);
 

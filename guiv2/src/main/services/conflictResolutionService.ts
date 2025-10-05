@@ -20,6 +20,22 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import PowerShellExecutionService from './powerShellService';
 
+
+/**
+ * PowerShell script return types for conflict detection
+ */
+interface ConflictDetectionResult {
+  conflicts: Array<{
+    type: string;
+    severity?: string;
+    source: any;
+    target?: any;
+    related?: any[];
+    description: string;
+    details?: Record<string, unknown>;
+  }>;
+}
+
 /**
  * Conflict type
  */
@@ -176,20 +192,21 @@ class ConflictResolutionService extends EventEmitter {
         throw new Error(result.error || 'Conflict detection failed');
       }
 
-      const { conflicts } = result.data;
+      const conflictDetectionData = result.data as ConflictDetectionResult;
+      const { conflicts } = conflictDetectionData;
 
       for (const conflictData of conflicts || []) {
         const conflict: Conflict = {
           id: crypto.randomUUID(),
           waveId,
-          type: conflictData.type,
-          severity: conflictData.severity || 'medium',
+          type: conflictData.type as ConflictType,
+          severity: (conflictData.severity || 'medium') as ConflictSeverity,
           sourceResource: conflictData.source,
           targetResource: conflictData.target,
           relatedResources: conflictData.related || [],
           description: conflictData.description,
           details: conflictData.details || {},
-          suggestedStrategy: this.suggestResolutionStrategy(conflictData.type),
+          suggestedStrategy: this.suggestResolutionStrategy(conflictData.type as ConflictType),
           status: 'detected',
           detectedAt: new Date(),
         };
@@ -329,7 +346,7 @@ class ConflictResolutionService extends EventEmitter {
       throw new Error(result.error || 'Source wins resolution failed');
     }
 
-    return { action: 'source-wins', ...result.data };
+    return { action: 'source-wins', ...(result.data as Record<string, unknown>) };
   }
 
   /**
@@ -350,7 +367,7 @@ class ConflictResolutionService extends EventEmitter {
       throw new Error(result.error || 'Target wins resolution failed');
     }
 
-    return { action: 'target-wins', ...result.data };
+    return { action: 'target-wins', ...(result.data as Record<string, unknown>) };
   }
 
   /**
@@ -372,7 +389,7 @@ class ConflictResolutionService extends EventEmitter {
       throw new Error(result.error || 'Merge resolution failed');
     }
 
-    return { action: 'merge', ...result.data };
+    return { action: 'merge', ...(result.data as Record<string, unknown>) };
   }
 
   /**
@@ -400,7 +417,7 @@ class ConflictResolutionService extends EventEmitter {
       throw new Error(result.error || 'Rename source resolution failed');
     }
 
-    return { action: 'rename-source', newName, ...result.data };
+    return { action: 'rename-source', newName, ...(result.data as Record<string, unknown>) };
   }
 
   /**
@@ -432,7 +449,7 @@ class ConflictResolutionService extends EventEmitter {
       throw new Error(result.error || 'Rename target resolution failed');
     }
 
-    return { action: 'rename-target', newName, ...result.data };
+    return { action: 'rename-target', newName, ...(result.data as Record<string, unknown>) };
   }
 
   /**
@@ -721,4 +738,3 @@ class ConflictResolutionService extends EventEmitter {
 }
 
 export default ConflictResolutionService;
-export { ConflictType, ResolutionStrategy, ConflictSeverity, Conflict, ConflictResolution };

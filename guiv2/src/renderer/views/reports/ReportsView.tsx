@@ -1,3 +1,4 @@
+
 /**
  * Reports View
  * Report templates and generation
@@ -6,7 +7,7 @@
 import React from 'react';
 import { useReportsLogic } from '../../hooks/useReportsLogic';
 import SearchBar from '../../components/molecules/SearchBar';
-import Button from '../../components/atoms/Button';
+import { Button } from '../../components/atoms/Button';
 import Select from '../../components/atoms/Select';
 import Badge from '../../components/atoms/Badge';
 import { FileText, Download, Loader2 } from 'lucide-react';
@@ -53,7 +54,7 @@ const ReportsView: React.FC = () => {
           <div className="w-48">
             <Select
               value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
+              onChange={setFilterCategory}
               options={[
                 { value: 'all', label: 'All Categories' },
                 { value: 'Users', label: 'Users' },
@@ -83,7 +84,7 @@ const ReportsView: React.FC = () => {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                      <Badge variant="secondary">{template.format}</Badge>
+                      <Badge variant="default">{template.format}</Badge>
                     </div>
                     <Badge>{template.category}</Badge>
                   </div>

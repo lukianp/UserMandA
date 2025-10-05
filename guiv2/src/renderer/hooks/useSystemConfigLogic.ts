@@ -75,7 +75,7 @@ export const useSystemConfigLogic = () => {
         setOriginalConfig(parsed);
       }
     } catch (error) {
-      addNotification('error', 'Failed to load configuration');
+      addNotification({ type: 'error', message: 'Failed to load configuration', pinned: false, priority: 'normal' });
     }
   };
 
@@ -99,23 +99,23 @@ export const useSystemConfigLogic = () => {
     try {
       localStorage.setItem('systemConfig', JSON.stringify(config));
       setOriginalConfig(config);
-      addNotification('success', 'Configuration saved successfully');
+      addNotification({ type: 'success', message: 'Configuration saved successfully', pinned: false, priority: 'normal' });
     } catch (error) {
-      addNotification('error', 'Failed to save configuration');
+      addNotification({ type: 'error', message: 'Failed to save configuration', pinned: false, priority: 'normal' });
     }
   };
 
   const handleReset = () => {
     setConfig(originalConfig);
-    addNotification('info', 'Changes discarded');
+    addNotification({ type: 'info', message: 'Changes discarded', pinned: false, priority: 'low' });
   };
 
   const handleTestConnection = async (type: 'database' | 'email') => {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      addNotification('success', `${type} connection test successful`);
+      addNotification({ type: 'success', message: `${type} connection test successful`, pinned: false, priority: 'normal' });
     } catch (error) {
-      addNotification('error', `${type} connection test failed`);
+      addNotification({ type: 'error', message: `${type} connection test failed`, pinned: false, priority: 'normal' });
     }
   };
 

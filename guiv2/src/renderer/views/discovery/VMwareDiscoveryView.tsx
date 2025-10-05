@@ -1,10 +1,11 @@
 import React from 'react';
 import { Server, Play, Download, FileText, AlertCircle, CheckCircle2, HardDrive } from 'lucide-react';
 import { useVMwareDiscoveryLogic } from '../../hooks/useVMwareDiscoveryLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
 import Select from '../../components/atoms/Select';
+import type { VMwareDiscoveryResult } from '../../types/models/vmware';
 
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return '0 B';
@@ -65,7 +66,7 @@ const TabButton: React.FC<{
   </button>
 );
 
-const OverviewTab: React.FC<{ data: any }> = ({ data }) => {
+const OverviewTab: React.FC<{ data: VMwareDiscoveryResult }> = ({ data }) => {
   const SummaryRow: React.FC<{ label: string; value: string | number }> = ({ label, value }) => (
     <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
       <span className="text-gray-600 dark:text-gray-400">{label}</span>
@@ -137,19 +138,16 @@ const VMwareDiscoveryView: React.FC = () => {
         <div className="flex items-center gap-2">
           <Select
             value=""
-            onChange={(e) => {
-              const template = templates.find((t) => t.id === e.target.value);
+            onChange={(value) => {
+              const template = templates.find((t) => t.id === value);
               if (template) handleApplyTemplate(template);
             }}
+            options={[
+              { value: '', label: 'Select Template...' },
+              ...templates.map((template) => ({ value: template.id, label: template.name }))
+            ]}
             data-cy="template-select"
-          >
-            <option value="">Select Template...</option>
-            {templates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name}
-              </option>
-            ))}
-          </Select>
+          />
           <Button
             onClick={handleStartDiscovery}
             disabled={isLoading}
@@ -170,12 +168,12 @@ const VMwareDiscoveryView: React.FC = () => {
       {/* Configuration Summary */}
       <div className="px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex flex-wrap gap-2">
-          <ConfigBadge label="Hosts" value={config.parameters.includeHosts} />
-          <ConfigBadge label="Virtual Machines" value={config.parameters.includeVMs} />
-          <ConfigBadge label="Clusters" value={config.parameters.includeClusters} />
-          <ConfigBadge label="Datastores" value={config.parameters.includeDatastores} />
-          <ConfigBadge label="Snapshots" value={config.parameters.includeSnapshots} />
-          <ConfigBadge label="Networks" value={config.parameters.includeNetworks} />
+          <ConfigBadge label="Hosts" value={config.includeHosts} />
+          <ConfigBadge label="Virtual Machines" value={config.includeVMs} />
+          <ConfigBadge label="Clusters" value={config.includeClusters} />
+          <ConfigBadge label="Datastores" value={config.includeDatastores} />
+          <ConfigBadge label="Snapshots" value={config.includeSnapshots} />
+          <ConfigBadge label="Networks" value={config.includeNetworking} />
         </div>
       </div>
 

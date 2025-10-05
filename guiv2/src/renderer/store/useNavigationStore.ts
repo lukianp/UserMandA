@@ -56,7 +56,7 @@ export const useNavigationStore = create<NavigationState>()(
       (set, get) => ({
         // Initial state
         tabs: [],
-        activeTab: null,
+        activeTab: null as TabItem | null,
         hasTabs: false,
 
         /**

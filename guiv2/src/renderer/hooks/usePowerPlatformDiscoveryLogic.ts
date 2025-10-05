@@ -649,8 +649,8 @@ export const usePowerPlatformDiscoveryLogic = () => {
   }, [state.result]);
 
   // CSV Export
-  const exportToCSV = useCallback(() => {
-    if (filteredData.length === 0) {
+  const exportToCSV = useCallback((data: any[], filename: string) => {
+    if (data.length === 0) {
       alert('No data to export');
       return;
     }
@@ -680,7 +680,7 @@ export const usePowerPlatformDiscoveryLogic = () => {
       return flattened;
     };
 
-    const flattenedData = filteredData.map(item => flattenObject(item));
+    const flattenedData = data.map(item => flattenObject(item));
     const headers = Object.keys(flattenedData[0]);
 
     const csvContent = [
@@ -699,13 +699,13 @@ export const usePowerPlatformDiscoveryLogic = () => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `powerplatform-${state.activeTab}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = filename;
     link.click();
-  }, [filteredData, state.activeTab]);
+  }, []);
 
   // Excel Export
-  const exportToExcel = useCallback(async () => {
-    if (filteredData.length === 0) {
+  const exportToExcel = useCallback(async (data: any[], filename: string) => {
+    if (data.length === 0) {
       alert('No data to export');
       return;
     }
@@ -715,16 +715,16 @@ export const usePowerPlatformDiscoveryLogic = () => {
         modulePath: 'Modules/Export/ExportToExcel.psm1',
         functionName: 'Export-PowerPlatformData',
         parameters: {
-          Data: filteredData,
+          Data: data,
           SheetName: state.activeTab,
-          FileName: `powerplatform-${state.activeTab}-${new Date().toISOString().split('T')[0]}.xlsx`
+          FileName: filename
         }
       });
     } catch (error: any) {
       console.error('Excel export failed:', error);
       alert('Excel export failed: ' + error.message);
     }
-  }, [filteredData, state.activeTab]);
+  }, [state.activeTab]);
 
   return {
     // State

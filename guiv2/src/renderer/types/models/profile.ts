@@ -5,6 +5,9 @@
 
 import { Identifiable, Named, ConnectionStatus, TimestampMetadata, Dictionary } from '../common';
 
+// Re-export ConnectionStatus for convenience
+export type { ConnectionStatus };
+
 /**
  * Base profile interface
  */
@@ -115,7 +118,7 @@ export interface CompanyProfile extends Identifiable, Named, TimestampMetadata {
   companyName: string;
   description: string;
   domainController: string;
-  tenantId: string;
+  tenantId?: string; // Optional for company profiles
   isActive: boolean;
   created: Date | string;
   lastModified: Date | string;

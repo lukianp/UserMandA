@@ -9,6 +9,9 @@ export type VMwareToolsStatus = 'Running' | 'NotRunning' | 'NotInstalled' | 'Out
 export type HardwareVersion = 'vmx-04' | 'vmx-07' | 'vmx-08' | 'vmx-09' | 'vmx-10' | 'vmx-11' | 'vmx-13' | 'vmx-14' | 'vmx-15' | 'vmx-17' | 'vmx-18' | 'vmx-19' | 'vmx-20' | 'vmx-21';
 export type GuestOSFamily = 'Windows' | 'Linux' | 'Unix' | 'MacOS' | 'Other';
 
+// Alias for VirtualMachine to match hook import
+export type VMwareVM = VirtualMachine;
+
 export interface VMwareHost {
   id: string;
   name: string;
@@ -19,6 +22,7 @@ export interface VMwareHost {
   processorType: string;
   connectionState: VMwareConnectionState;
   powerState: 'PoweredOn' | 'PoweredOff' | 'Standby' | 'Unknown';
+  status?: string; // Alias for connectionState
   cluster?: string;
   datacenter: string;
   vcenter: string;
@@ -31,6 +35,8 @@ export interface VMwareHost {
     numNics: number;
     numHbas: number;
   };
+  cpuCores?: number; // Alias for hardware.cpuCores
+  memoryGB?: number; // Alias for hardware.memoryGB
   resources: {
     cpuUsageMhz: number;
     cpuUsagePercent: number;
@@ -39,6 +45,7 @@ export interface VMwareHost {
     totalVMs: number;
     runningVMs: number;
   };
+  vmCount?: number; // Alias for resources.totalVMs
   storage: {
     datastores: string[];
     totalCapacityGB: number;
@@ -68,6 +75,7 @@ export interface VirtualMachine {
   guestOSFamily: GuestOSFamily;
   guestOSFullName: string;
   vmToolsStatus: VMwareToolsStatus;
+  toolsStatus?: VMwareToolsStatus; // Alias for vmToolsStatus
   vmToolsVersion?: string;
   hardwareVersion: HardwareVersion;
   host: string;
@@ -84,6 +92,8 @@ export interface VirtualMachine {
     numNics: number;
     videoRamMB: number;
   };
+  cpuCount?: number; // Alias for hardware.numCPU
+  memoryGB?: number; // Alias for hardware.memoryGB
   resources: {
     cpuUsageMhz: number;
     cpuUsagePercent: number;
@@ -93,9 +103,11 @@ export interface VirtualMachine {
     diskProvisionedGB: number;
     diskThinProvisioned: boolean;
   };
+  diskGB?: number; // Alias for resources.diskUsageGB
   disks: VirtualDisk[];
   networks: VirtualNetwork[];
   snapshots: Snapshot[];
+  snapshotCount?: number; // Alias for snapshots.length
   guestInfo?: {
     hostname?: string;
     ipAddresses: string[];
@@ -126,6 +138,7 @@ export interface VMwareCluster {
   vcenter: string;
   hosts: string[];
   totalHosts: number;
+  hostCount?: number; // Alias for totalHosts
   resources: {
     totalCpuMhz: number;
     usedCpuMhz: number;
@@ -134,6 +147,11 @@ export interface VMwareCluster {
     totalVMs: number;
     runningVMs: number;
   };
+  vmCount?: number; // Alias for resources.totalVMs
+  totalCpuCores?: number; // Alias for effectiveCpu from configuration
+  totalMemoryGB?: number; // Alias for resources.totalMemoryGB
+  drsEnabled?: boolean; // Alias for features.drsEnabled
+  haEnabled?: boolean; // Alias for features.haEnabled
   features: {
     drsEnabled: boolean;
     drsAutomationLevel?: string;
@@ -155,6 +173,7 @@ export interface VMwareDatastore {
   type: 'VMFS' | 'NFS' | 'vSAN' | 'vVOL';
   capacityGB: number;
   freeSpaceGB: number;
+  freeGB?: number; // Alias for freeSpaceGB
   usedSpaceGB: number;
   percentFree: number;
   accessible: boolean;

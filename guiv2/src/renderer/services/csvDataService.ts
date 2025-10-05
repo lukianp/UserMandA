@@ -20,7 +20,7 @@ export interface CsvParseOptions {
   /** Character encoding (default: UTF-8) */
   encoding?: string;
   /** Transform function for each row */
-  transform?: (value: string, field: string | number) => any;
+  transform?: (value: string, field: string | number) => string | number | boolean | null | undefined;
   /** Progress callback for large files */
   onProgress?: (progress: number, rows: number) => void;
   /** Chunk size for streaming (default: 10000 rows) */
@@ -48,7 +48,7 @@ export interface CsvExportOptions {
 /**
  * Parsed CSV result with metadata
  */
-export interface ParsedCsvData<T = any> {
+export interface ParsedCsvData<T = Record<string, string | number | boolean | null>> {
   /** Parsed data rows */
   data: T[];
   /** Column headers */
@@ -69,6 +69,7 @@ export interface ParsedCsvData<T = any> {
 export class CsvDataService {
   private static instance: CsvDataService;
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
 
   /**
@@ -87,7 +88,7 @@ export class CsvDataService {
    * @param options Parsing options
    * @returns Parsed CSV data with metadata
    */
-  async parseFromString<T = any>(
+  async parseFromString<T = Record<string, string | number | boolean | null | undefined>>(
     csvString: string,
     options: CsvParseOptions = {}
   ): Promise<ParsedCsvData<T>> {
@@ -102,14 +103,14 @@ export class CsvDataService {
           try {
             const parsed = this.processParseResults(results, options);
             resolve(parsed);
-          } catch (error: any) {
-            reject(new Error(`CSV parse error: ${error.message}`));
+          } catch (error: unknown) {
+            reject(new Error(`CSV parse error: ${error instanceof Error ? error.message : String(error)}`));
           }
         },
         error: (error: Error) => {
           reject(new Error(`CSV parse error: ${error.message}`));
         },
-      };
+      } as any; // TODO: Fix ParseConfig type to include error callback
 
       Papa.parse(csvString, parseConfig);
     });
@@ -121,7 +122,7 @@ export class CsvDataService {
    * @param options Parsing options
    * @returns Parsed CSV data with metadata
    */
-  async parseFromFile<T = any>(
+  async parseFromFile<T = Record<string, string | number | boolean | null | undefined>>(
     file: File | string,
     options: CsvParseOptions = {}
   ): Promise<ParsedCsvData<T>> {
@@ -193,14 +194,14 @@ export class CsvDataService {
         error: (error: Error) => {
           reject(new Error(`CSV parse error: ${error.message}`));
         },
-      };
+      } as any; // TODO: Fix ParseConfig type to include chunk and error callbacks
 
       // Parse file or string
       if (typeof file === 'string') {
         // File path - would need to read via Electron IPC
         reject(new Error('File path parsing not implemented. Use parseFromString with file content.'));
       } else {
-        Papa.parse(file, parseConfig);
+        Papa.parse(file as any, parseConfig); // TODO: Fix Papa.parse to accept File type
       }
     });
   }
@@ -211,7 +212,7 @@ export class CsvDataService {
    * @param options Parsing options
    * @returns Parsed CSV data
    */
-  async parseWithAutoDetection<T = any>(
+  async parseWithAutoDetection<T = Record<string, string | number | boolean | null | undefined>>(
     csvString: string,
     options: CsvParseOptions = {}
   ): Promise<ParsedCsvData<T>> {
@@ -259,7 +260,7 @@ export class CsvDataService {
    * @param headers Column headers
    * @returns Map of column name to inferred type
    */
-  private inferColumnTypes<T = any>(
+  private inferColumnTypes<T = Record<string, string | number | boolean | null | undefined>>(
     data: T[],
     headers: string[]
   ): Record<string, 'string' | 'number' | 'boolean' | 'date'> {
@@ -279,7 +280,7 @@ export class CsvDataService {
       let totalNonNull = 0;
 
       for (const row of sample) {
-        const value = (row as any)[header];
+        const value = (row as Record<string, unknown>)[header];
 
         if (value === null || value === undefined || value === '') {
           continue;
@@ -330,7 +331,7 @@ export class CsvDataService {
   /**
    * Check if string is a date
    */
-  private isDateString(value: any): boolean {
+  private isDateString(value: unknown): boolean {
     if (typeof value !== 'string') {
       return false;
     }
@@ -354,7 +355,7 @@ export class CsvDataService {
   /**
    * Process Papa Parse results
    */
-  private processParseResults<T = any>(
+  private processParseResults<T = Record<string, string | number | boolean | null | undefined>>(
     results: ParseResult<T>,
     options: CsvParseOptions
   ): ParsedCsvData<T> {
@@ -384,7 +385,7 @@ export class CsvDataService {
    * @param options Export options
    * @returns CSV string
    */
-  exportToString<T = any>(data: T[], options: CsvExportOptions = {}): string {
+  exportToString<T = Record<string, string | number | boolean | null | undefined>>(data: T[], options: CsvExportOptions = {}): string {
     const delimiter = options.delimiter || ',';
     const newline = options.newline || '\r\n';
     const quoteAll = options.quoteAll || false;
@@ -395,7 +396,7 @@ export class CsvDataService {
     }
 
     // Get columns
-    const allColumns = Object.keys(data[0] as any);
+    const allColumns = Object.keys(data[0] as Record<string, unknown>);
     const columns = options.columns || allColumns;
 
     const lines: string[] = [];
@@ -407,7 +408,7 @@ export class CsvDataService {
 
     // Add data rows
     for (const row of data) {
-      const values = columns.map((col) => (row as any)[col]);
+      const values = columns.map((col) => (row as Record<string, unknown>)[col]);
       lines.push(this.formatCsvRow(values, delimiter, quoteAll));
     }
 
@@ -417,7 +418,7 @@ export class CsvDataService {
   /**
    * Format a CSV row with proper quoting
    */
-  private formatCsvRow(values: any[], delimiter: string, quoteAll: boolean): string {
+  private formatCsvRow(values: unknown[], delimiter: string, quoteAll: boolean): string {
     return values
       .map((value) => {
         if (value === null || value === undefined) {
@@ -451,7 +452,7 @@ export class CsvDataService {
    * @param filePath File path to save
    * @param options Export options
    */
-  async exportToFile<T = any>(
+  async exportToFile<T = Record<string, string | number | boolean | null | undefined>>(
     data: T[],
     filePath: string,
     options: CsvExportOptions = {}
@@ -460,8 +461,8 @@ export class CsvDataService {
 
     // Would need to call Electron IPC to write file
     // For now, trigger download in browser
-    if (typeof window !== 'undefined' && window.electronAPI?.saveFile) {
-      await window.electronAPI.saveFile(filePath, csv);
+    if (typeof window !== 'undefined' && (window.electronAPI as any)?.saveFile) {
+      await (window.electronAPI as any).saveFile(filePath, csv);
     } else {
       throw new Error('File export not available. Use exportToString and handle file write separately.');
     }
@@ -473,7 +474,7 @@ export class CsvDataService {
    * @param options Export options
    * @returns Blob object
    */
-  exportToBlob<T = any>(data: T[], options: CsvExportOptions = {}): Blob {
+  exportToBlob<T = Record<string, string | number | boolean | null | undefined>>(data: T[], options: CsvExportOptions = {}): Blob {
     const csv = this.exportToString(data, options);
     return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   }
@@ -484,7 +485,7 @@ export class CsvDataService {
    * @param filename Download filename
    * @param options Export options
    */
-  downloadCsv<T = any>(data: T[], filename: string, options: CsvExportOptions = {}): void {
+  downloadCsv<T = Record<string, string | number | boolean | null | undefined>>(data: T[], filename: string, options: CsvExportOptions = {}): void {
     const blob = this.exportToBlob(data, options);
     const url = URL.createObjectURL(blob);
 
@@ -506,7 +507,7 @@ export class CsvDataService {
    * @param requiredColumns Required column names
    * @returns Validation result
    */
-  validateStructure<T = any>(
+  validateStructure<T = Record<string, string | number | boolean | null | undefined>>(
     data: ParsedCsvData<T>,
     requiredColumns: string[]
   ): { valid: boolean; errors: string[] } {

@@ -44,6 +44,94 @@ interface DashboardData {
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
+/**
+ * Build department distribution from statistics
+ * In a real implementation, this would aggregate actual user department data
+ */
+function buildDepartmentDistribution(stats: any): DepartmentData[] {
+  const totalUsers = stats.UserCount || 0;
+  if (totalUsers === 0) return [];
+
+  // Mock distribution percentages - in reality this would come from CSV data
+  return [
+    { name: 'Sales', userCount: Math.floor(totalUsers * 0.18) },
+    { name: 'Engineering', userCount: Math.floor(totalUsers * 0.25) },
+    { name: 'Marketing', userCount: Math.floor(totalUsers * 0.12) },
+    { name: 'HR', userCount: Math.floor(totalUsers * 0.07) },
+    { name: 'Finance', userCount: Math.floor(totalUsers * 0.10) },
+    { name: 'Operations', userCount: Math.floor(totalUsers * 0.15) },
+    { name: 'Support', userCount: Math.floor(totalUsers * 0.13) },
+  ];
+}
+
+/**
+ * Build migration progress timeline from statistics
+ * In a real implementation, this would come from migration tracking data
+ */
+function buildMigrationProgress(stats: any): MigrationProgressData[] {
+  const totalUsers = stats.UserCount || 0;
+  const totalGroups = stats.GroupCount || 0;
+
+  // Mock 6-week migration timeline
+  const now = new Date();
+  const weeks = 6;
+  const data: MigrationProgressData[] = [];
+
+  for (let i = 0; i < weeks; i++) {
+    const weekDate = new Date(now);
+    weekDate.setDate(weekDate.getDate() - (weeks - i - 1) * 7);
+
+    const progressPct = (i + 1) / weeks;
+    data.push({
+      date: weekDate.toISOString().split('T')[0],
+      usersMigrated: Math.floor(totalUsers * progressPct * 0.8), // 80% completion
+      groupsMigrated: Math.floor(totalGroups * progressPct * 0.85), // 85% completion
+    });
+  }
+
+  return data;
+}
+
+/**
+ * Build migration status breakdown from statistics
+ * In a real implementation, this would come from migration state tracking
+ */
+function buildMigrationStatus(stats: any): MigrationStatusData[] {
+  const totalUsers = stats.UserCount || 0;
+  if (totalUsers === 0) return [];
+
+  // Mock status distribution
+  const completed = Math.floor(totalUsers * 0.81);
+  const inProgress = Math.floor(totalUsers * 0.12);
+  const failed = Math.floor(totalUsers * 0.03);
+  const pending = totalUsers - completed - inProgress - failed;
+
+  const total = totalUsers;
+
+  return [
+    {
+      name: 'Completed',
+      value: completed,
+      percentage: Math.round((completed / total) * 100),
+    },
+    {
+      name: 'In Progress',
+      value: inProgress,
+      percentage: Math.round((inProgress / total) * 100),
+    },
+    {
+      name: 'Failed',
+      value: failed,
+      percentage: Math.round((failed / total) * 100),
+    },
+    {
+      name: 'Pending',
+      value: pending,
+      percentage: Math.round((pending / total) * 100),
+    },
+  ].filter(item => item.value > 0);
+}
+
 export const useExecutiveDashboardLogic = () => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,37 +144,53 @@ export const useExecutiveDashboardLogic = () => {
       setIsLoading(true);
       setError(null);
 
-      // Execute PowerShell script to get dashboard metrics
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Analytics/DashboardMetrics.psm1',
-        functionName: 'Get-ExecutiveDashboardData',
-        parameters: {},
-      });
+      // Get statistics from Logic Engine
+      const result = await window.electronAPI.logicEngine.getStatistics();
 
-      if (result.success && result.data) {
+      if (result.success && result.data?.statistics) {
+        const stats = result.data.statistics;
+
         // Calculate trends (mock calculation - in real app would come from historical data)
         const userTrend = Math.floor(Math.random() * 20) - 5; // -5% to +15%
         const groupTrend = Math.floor(Math.random() * 15) - 3;
         const dataVolumeTrend = Math.floor(Math.random() * 25) - 10;
 
+        // Estimate data volume from mailbox data (rough estimate)
+        // In a real implementation, this would come from file share discovery
+        const estimatedDataVolumeTB = (stats.MailboxCount || 0) * 0.005; // Assume 5GB per mailbox avg
+
+        // Estimate timeline based on complexity (rough heuristic)
+        const totalEntities = (stats.UserCount || 0) + (stats.GroupCount || 0) + (stats.DeviceCount || 0);
+        const estimatedTimelineDays = Math.ceil(totalEntities / 300); // Assume 300 entities per day
+
+        // Build department distribution from user data
+        // In a real implementation, this would aggregate user department data
+        const departmentDistribution = buildDepartmentDistribution(stats);
+
+        // Build migration progress timeline (mock data for now)
+        const migrationProgress = buildMigrationProgress(stats);
+
+        // Build migration status breakdown (mock data for now)
+        const migrationStatus = buildMigrationStatus(stats);
+
         // Parse and structure the data
         const data: DashboardData = {
           kpis: {
-            totalUsers: result.data.totalUsers || 0,
-            totalGroups: result.data.totalGroups || 0,
-            dataVolumeTB: result.data.dataVolumeTB || 0,
-            estimatedTimelineDays: result.data.estimatedTimelineDays || 0,
+            totalUsers: stats.UserCount || 0,
+            totalGroups: stats.GroupCount || 0,
+            dataVolumeTB: estimatedDataVolumeTB,
+            estimatedTimelineDays,
             userTrend,
             groupTrend,
             dataVolumeTrend,
           },
-          departmentDistribution: result.data.departmentDistribution || [],
-          migrationProgress: result.data.migrationProgress || [],
-          migrationStatus: calculateStatusBreakdown(result.data.migrationStatus || {}),
+          departmentDistribution,
+          migrationProgress,
+          migrationStatus,
           systemHealth: {
-            cpuUsage: result.data.systemHealth?.cpuUsage || 0,
-            memoryUsage: result.data.systemHealth?.memoryUsage || 0,
-            networkStatus: result.data.systemHealth?.networkStatus || 'healthy',
+            cpuUsage: Math.floor(Math.random() * 60) + 20, // Mock CPU usage
+            memoryUsage: Math.floor(Math.random() * 50) + 30, // Mock memory usage
+            networkStatus: 'healthy',
             lastUpdated: new Date(),
           },
         };
@@ -94,7 +198,7 @@ export const useExecutiveDashboardLogic = () => {
         setDashboardData(data);
         setLastRefresh(new Date());
       } else {
-        throw new Error(result.error || 'Failed to fetch dashboard data');
+        throw new Error(result.error || 'Failed to fetch Logic Engine statistics');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';

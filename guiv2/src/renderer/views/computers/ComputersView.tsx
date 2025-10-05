@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDrag } from 'react-dnd';
+import { useDrag, DragSourceMonitor } from 'react-dnd';
 import { Download, RefreshCw, Monitor, Eye, GripVertical } from 'lucide-react';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
@@ -20,7 +20,7 @@ import { clsx } from 'clsx';
 /**
  * Draggable cell component for drag handle
  */
-const DragHandleCell: React.FC<{ data: any }> = ({ data }) => {
+const DragHandleCell: React.FC<{ data: { id?: string; name?: string } }> = ({ data }) => {
   const [{ isDragging }, drag] = useDrag({
     type: 'COMPUTER',
     item: () => ({
@@ -28,14 +28,14 @@ const DragHandleCell: React.FC<{ data: any }> = ({ data }) => {
       type: 'COMPUTER',
       data: data,
     }),
-    collect: (monitor) => ({
+    collect: (monitor: DragSourceMonitor) => ({
       isDragging: monitor.isDragging(),
     }),
   });
 
   return (
     <div
-      ref={drag}
+      ref={drag as any}
       className={clsx(
         'flex items-center justify-center cursor-move h-full',
         isDragging && 'opacity-50'
@@ -55,10 +55,18 @@ export const ComputersView: React.FC = () => {
   const navigate = useNavigate();
 
   // TODO: Replace with actual useComputersViewLogic hook when implemented
-  const computers: any[] = [];
+  const computers: Array<{
+    id: string;
+    name: string;
+    os: string;
+    domain: string;
+    ipAddress: string;
+    status: string;
+    lastSeen: string;
+  }> = [];
   const isLoading = false;
 
-  const handleViewDetails = (computer: any) => {
+  const handleViewDetails = (computer: { id: string }) => {
     navigate(`/computers/${computer.id}`);
   };
 
@@ -67,11 +75,11 @@ export const ComputersView: React.FC = () => {
       headerName: '',
       width: 50,
       pinned: 'left',
-      suppressMenu: true,
+      suppressHeaderMenuButton: true,
       sortable: false,
       filter: false,
       resizable: false,
-      cellRenderer: (params: any) => <DragHandleCell data={params.data} />,
+      cellRenderer: (params: { data: { id?: string; name?: string } }) => <DragHandleCell data={params.data} />,
     },
     { field: 'name', headerName: 'Computer Name', width: 200, sortable: true, filter: true },
     { field: 'os', headerName: 'Operating System', width: 180, sortable: true, filter: true },
@@ -82,7 +90,7 @@ export const ComputersView: React.FC = () => {
       headerName: 'Status',
       width: 100,
       sortable: true,
-      cellRenderer: (params: any) => {
+      cellRenderer: (params: { value: string }) => {
         const status = params.value;
         const colorClass =
           status === 'Online'
@@ -107,7 +115,7 @@ export const ComputersView: React.FC = () => {
     {
       headerName: 'Actions',
       width: 150,
-      cellRenderer: (params: any) => (
+      cellRenderer: (params: { data: { id: string } }) => (
         <Button onClick={() => handleViewDetails(params.data)} variant="secondary" size="sm" data-cy="view-computer-details">
           <Eye className="mr-1 h-3 w-3" />
           View Details

@@ -5,11 +5,13 @@
 
 import React from 'react';
 import { useTeamsDiscoveryLogic } from '../../hooks/useTeamsDiscoveryLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import SearchBar from '../../components/molecules/SearchBar';
-import Button from '../../components/atoms/Button';
+import { Button } from '../../components/atoms/Button';
 import Badge from '../../components/atoms/Badge';
 import ProgressBar from '../../components/molecules/ProgressBar';
+import Select from '../../components/atoms/Select';
+import type { TeamsDiscoveryResult } from '../../types/models/teams';
 import {
   Download,
   Play,
@@ -36,22 +38,32 @@ const TeamsDiscoveryView: React.FC = () => {
   const {
     config,
     templates,
-    currentResult,
+    result,
     isDiscovering,
     progress,
     selectedTab,
-    searchText,
-    filteredData,
-    columnDefs,
-    errors,
+    teamFilter,
+    setTeamFilter,
+    channelFilter,
+    setChannelFilter,
+    memberFilter,
+    setMemberFilter,
+    teams,
+    channels,
+    members,
+    apps,
+    teamColumns,
+    channelColumns,
+    memberColumns,
+    appColumns,
+    error,
     startDiscovery,
     cancelDiscovery,
-    updateConfig,
     loadTemplate,
     saveAsTemplate,
-    exportResults,
+    exportData,
     setSelectedTab,
-    setSearchText,
+    statistics,
   } = useTeamsDiscoveryLogic();
 
   return (
@@ -73,21 +85,19 @@ const TeamsDiscoveryView: React.FC = () => {
 
           <div className="flex items-center gap-2">
             {/* Template Selector */}
-            <select
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
-              onChange={(e) => {
-                const template = templates.find(t => t.id === e.target.value);
+            <Select
+              value=""
+              onChange={(value) => {
+                const template = templates.find(t => t.id === value);
                 if (template) loadTemplate(template);
               }}
+              options={[
+                { value: '', label: 'Select Template...' },
+                ...templates.map(template => ({ value: template.id, label: template.name }))
+              ]}
               disabled={isDiscovering}
-            >
-              <option value="">Select Template...</option>
-              {templates.map(template => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))}
-            </select>
+              data-cy="template-select"
+            />
 
             <Button
               variant="secondary"
@@ -137,22 +147,22 @@ const TeamsDiscoveryView: React.FC = () => {
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
               <div className="flex flex-wrap gap-2 text-sm">
                 <ConfigBadge
-                  enabled={config.includeTeams}
+                  enabled={config.discoverTeams}
                   label="Teams"
                   icon={<MessageSquare className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeChannels}
+                  enabled={config.discoverChannels}
                   label="Channels"
                   icon={<Hash className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeMembers}
+                  enabled={config.discoverMembers}
                   label="Members"
                   icon={<Users className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeApps}
+                  enabled={config.discoverApps}
                   label="Installed Apps"
                   icon={<Package className="w-3 h-3" />}
                 />
@@ -162,12 +172,12 @@ const TeamsDiscoveryView: React.FC = () => {
                   icon={<Settings className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeTabs}
+                  enabled={config.discoverTabs}
                   label="Tabs"
                   icon={<Activity className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeGuests}
+                  enabled={config.includeGuestUsers}
                   label="Guest Access"
                   icon={<UserCheck className="w-3 h-3" />}
                 />
@@ -182,15 +192,15 @@ const TeamsDiscoveryView: React.FC = () => {
             <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-indigo-900 dark:text-indigo-100">
-                  {progress.currentOperation}
+                  {progress.phaseLabel}
                 </span>
                 <span className="text-sm text-indigo-700 dark:text-indigo-300">
-                  {progress.progress}% complete
+                  {progress.percentComplete}% complete
                 </span>
               </div>
-              <ProgressBar value={progress.progress} max={100} />
+              <ProgressBar value={progress.percentComplete} max={100} />
               <div className="mt-2 flex items-center justify-between text-xs text-indigo-600 dark:text-indigo-400">
-                <span>{progress.objectsProcessed} objects processed</span>
+                <span>{progress.itemsProcessed} objects processed</span>
                 {progress.estimatedTimeRemaining !== null && (
                   <span>Estimated time remaining: {Math.ceil(progress.estimatedTimeRemaining / 60)} minutes</span>
                 )}
@@ -200,22 +210,18 @@ const TeamsDiscoveryView: React.FC = () => {
         )}
 
         {/* Error Display */}
-        {errors.length > 0 && (
+        {error && (
           <div className="px-4 pb-4">
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">Errors:</h3>
-              <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
-                {errors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
+              <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">Error:</h3>
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           </div>
         )}
       </div>
 
       {/* Results Section */}
-      {currentResult && (
+      {result && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Summary Stats */}
           <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
@@ -223,29 +229,29 @@ const TeamsDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<MessageSquare className="w-5 h-5" />}
                 label="Total Teams"
-                value={currentResult.stats.totalTeams}
-                subValue={`${currentResult.stats.activeTeams} active`}
+                value={result.statistics.totalTeams}
+                subValue={`${result.statistics.activeTeams} active`}
                 color="indigo"
               />
               <StatCard
                 icon={<Hash className="w-5 h-5" />}
                 label="Total Channels"
-                value={currentResult.stats.totalChannels}
-                subValue={`${currentResult.stats.privateChannels} private`}
+                value={result.statistics.totalChannels}
+                subValue={`${result.statistics.privateChannels} private`}
                 color="blue"
               />
               <StatCard
                 icon={<Users className="w-5 h-5" />}
                 label="Total Members"
-                value={currentResult.stats.totalMembers}
-                subValue={`${currentResult.stats.guestMembers} guests`}
+                value={result.statistics.totalMembers}
+                subValue={`${result.statistics.totalGuests} guests`}
                 color="green"
               />
               <StatCard
                 icon={<Package className="w-5 h-5" />}
                 label="Installed Apps"
-                value={currentResult.stats.totalApps}
-                subValue={`${currentResult.stats.customApps} custom`}
+                value={result.statistics.totalApps}
+                subValue={`${result.statistics.customApps} custom`}
                 color="purple"
               />
             </div>
@@ -263,19 +269,19 @@ const TeamsDiscoveryView: React.FC = () => {
               <TabButton
                 active={selectedTab === 'teams'}
                 onClick={() => setSelectedTab('teams')}
-                label={`Teams (${currentResult.teams.length})`}
+                label={`Teams (${teams.length})`}
                 icon={<MessageSquare className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'channels'}
                 onClick={() => setSelectedTab('channels')}
-                label={`Channels (${currentResult.channels.length})`}
+                label={`Channels (${channels.length})`}
                 icon={<Hash className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'members'}
                 onClick={() => setSelectedTab('members')}
-                label={`Members (${currentResult.members.length})`}
+                label={`Members (${members.length})`}
                 icon={<Users className="w-4 h-4" />}
               />
             </div>
@@ -287,8 +293,14 @@ const TeamsDiscoveryView: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1 max-w-md">
                   <SearchBar
-                    value={searchText}
-                    onChange={setSearchText}
+                    value={selectedTab === 'teams' ? teamFilter.searchText || '' :
+                           selectedTab === 'channels' ? channelFilter.searchText || '' :
+                           selectedTab === 'members' ? memberFilter.searchText || '' : ''}
+                    onChange={(value) => {
+                      if (selectedTab === 'teams') setTeamFilter(prev => ({ ...prev, searchText: value }));
+                      if (selectedTab === 'channels') setChannelFilter(prev => ({ ...prev, searchText: value }));
+                      if (selectedTab === 'members') setMemberFilter(prev => ({ ...prev, searchText: value }));
+                    }}
                     placeholder={`Search ${selectedTab}...`}
                     data-cy="teams-search"
                   />
@@ -305,7 +317,7 @@ const TeamsDiscoveryView: React.FC = () => {
                   <Button
                     variant="secondary"
                     icon={<Download />}
-                    onClick={() => exportResults('excel')}
+                    onClick={() => exportData({ format: 'CSV', includeTeams: true, includeChannels: true, includeMembers: true, includeApps: true, includeStatistics: true, splitByType: false })}
                     data-cy="export-btn"
                   >
                     Export
@@ -318,12 +330,16 @@ const TeamsDiscoveryView: React.FC = () => {
           {/* Content Area */}
           <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
             {selectedTab === 'overview' ? (
-              <OverviewTab result={currentResult} />
+              <OverviewTab result={result} />
             ) : (
               <div className="h-full p-4">
                 <VirtualizedDataGrid
-                  data={filteredData}
-                  columns={columnDefs}
+                  data={selectedTab === 'teams' ? teams :
+                        selectedTab === 'channels' ? channels :
+                        selectedTab === 'members' ? members : []}
+                  columns={selectedTab === 'teams' ? teamColumns :
+                          selectedTab === 'channels' ? channelColumns :
+                          selectedTab === 'members' ? memberColumns : []}
                   loading={false}
                   enableExport
                   enableColumnReorder
@@ -337,7 +353,7 @@ const TeamsDiscoveryView: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!currentResult && !isDiscovering && (
+      {!result && !isDiscovering && (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md">
             <MessageSquare className="w-24 h-24 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
@@ -448,7 +464,7 @@ const TabButton: React.FC<TabButtonProps> = ({ active, onClick, label, icon }) =
  * Overview Tab Component
  */
 interface OverviewTabProps {
-  result: any;
+  result: TeamsDiscoveryResult;
 }
 
 const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
@@ -458,11 +474,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Discovery Summary</h3>
       <div className="space-y-3">
         <SummaryRow label="Discovery ID" value={result.id} />
-        <SummaryRow label="Configuration" value={result.configName} />
+        <SummaryRow label="Configuration" value="Teams Discovery" />
         <SummaryRow label="Start Time" value={new Date(result.startTime).toLocaleString()} />
         <SummaryRow label="End Time" value={result.endTime ? new Date(result.endTime).toLocaleString() : 'N/A'} />
-        <SummaryRow label="Duration" value={`${(result.duration / 1000).toFixed(2)} seconds`} />
-        <SummaryRow label="Objects per Second" value={result.objectsPerSecond.toFixed(2)} />
+        <SummaryRow label="Duration" value={`${result.duration ? (result.duration / 1000).toFixed(2) : 0} seconds`} />
+        <SummaryRow label="Objects per Second" value="N/A" />
         <SummaryRow label="Status" value={<Badge variant={result.status === 'completed' ? 'success' : 'warning'}>{result.status}</Badge>} />
       </div>
     </div>
@@ -471,13 +487,13 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Teams Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Teams" value={result.stats.totalTeams} />
-        <SummaryRow label="Active Teams" value={result.stats.activeTeams} />
-        <SummaryRow label="Archived Teams" value={result.stats.archivedTeams} />
-        <SummaryRow label="Public Teams" value={result.stats.publicTeams} />
-        <SummaryRow label="Private Teams" value={result.stats.privateTeams} />
-        <SummaryRow label="Org-Wide Teams" value={result.stats.orgWideTeams} />
-        <SummaryRow label="Average Team Size" value={result.stats.averageTeamSize.toFixed(1)} />
+        <SummaryRow label="Total Teams" value={result.statistics.totalTeams} />
+        <SummaryRow label="Active Teams" value={result.statistics.activeTeams} />
+        <SummaryRow label="Archived Teams" value={result.statistics.archivedTeams} />
+        <SummaryRow label="Public Teams" value={result.statistics.publicTeams} />
+        <SummaryRow label="Private Teams" value={result.statistics.privateTeams} />
+        <SummaryRow label="Org-Wide Teams" value="N/A" />
+        <SummaryRow label="Average Team Size" value={result.statistics.averageMembersPerTeam?.toFixed(1) || 'N/A'} />
       </div>
     </div>
 
@@ -485,11 +501,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Channel Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Channels" value={result.stats.totalChannels} />
-        <SummaryRow label="Standard Channels" value={result.stats.standardChannels} />
-        <SummaryRow label="Private Channels" value={result.stats.privateChannels} />
-        <SummaryRow label="Shared Channels" value={result.stats.sharedChannels} />
-        <SummaryRow label="Average Channels per Team" value={result.stats.averageChannelsPerTeam.toFixed(1)} />
+        <SummaryRow label="Total Channels" value={result.statistics.totalChannels} />
+        <SummaryRow label="Standard Channels" value={result.statistics.standardChannels} />
+        <SummaryRow label="Private Channels" value={result.statistics.privateChannels} />
+        <SummaryRow label="Shared Channels" value={result.statistics.sharedChannels} />
+        <SummaryRow label="Average Channels per Team" value={result.statistics.averageChannelsPerTeam?.toFixed(1) || 'N/A'} />
       </div>
     </div>
 
@@ -497,16 +513,16 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Member Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Members" value={result.stats.totalMembers} />
-        <SummaryRow label="Internal Members" value={result.stats.internalMembers} />
-        <SummaryRow label="Guest Members" value={result.stats.guestMembers} />
-        <SummaryRow label="Team Owners" value={result.stats.teamOwners} />
-        <SummaryRow label="Team Members" value={result.stats.teamMembers} />
+        <SummaryRow label="Total Members" value={result.statistics.totalMembers} />
+        <SummaryRow label="Internal Members" value={result.statistics.totalOwners + result.statistics.totalMembers - result.statistics.totalGuests} />
+        <SummaryRow label="Guest Members" value={result.statistics.totalGuests} />
+        <SummaryRow label="Team Owners" value={result.statistics.totalOwners} />
+        <SummaryRow label="Team Members" value={result.statistics.totalMembers - result.statistics.totalOwners} />
         <SummaryRow
           label="Guest Access"
           value={
-            <Badge variant={result.stats.guestMembers > 0 ? 'warning' : 'success'}>
-              {result.stats.guestMembers > 0 ? 'Enabled' : 'Disabled'}
+            <Badge variant={result.statistics.totalGuests > 0 ? 'warning' : 'success'}>
+              {result.statistics.totalGuests > 0 ? 'Enabled' : 'Disabled'}
             </Badge>
           }
         />
@@ -517,11 +533,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">App Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Installed Apps" value={result.stats.totalApps} />
-        <SummaryRow label="Microsoft Apps" value={result.stats.microsoftApps} />
-        <SummaryRow label="Custom Apps" value={result.stats.customApps} />
-        <SummaryRow label="Third-Party Apps" value={result.stats.thirdPartyApps} />
-        <SummaryRow label="Average Apps per Team" value={result.stats.averageAppsPerTeam.toFixed(1)} />
+        <SummaryRow label="Total Installed Apps" value={result.statistics.totalApps} />
+        <SummaryRow label="Microsoft Apps" value="N/A" />
+        <SummaryRow label="Custom Apps" value={result.statistics.customApps} />
+        <SummaryRow label="Third-Party Apps" value={result.statistics.thirdPartyApps} />
+        <SummaryRow label="Average Apps per Team" value="N/A" />
       </div>
     </div>
 
@@ -529,10 +545,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Settings & Features</h3>
       <div className="space-y-3">
-        <SummaryRow label="Teams with Custom Settings" value={result.stats.teamsWithCustomSettings} />
-        <SummaryRow label="Teams with Apps Enabled" value={result.stats.teamsWithAppsEnabled} />
-        <SummaryRow label="Teams with Fun Settings" value={result.stats.teamsWithFunSettings} />
-        <SummaryRow label="Teams with Meeting Settings" value={result.stats.teamsWithMeetingSettings} />
+        <SummaryRow label="Teams with Custom Settings" value="N/A" />
+        <SummaryRow label="Teams with Apps Enabled" value="N/A" />
+        <SummaryRow label="Teams with Fun Settings" value="N/A" />
+        <SummaryRow label="Teams with Meeting Settings" value="N/A" />
       </div>
     </div>
   </div>

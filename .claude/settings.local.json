@@ -31,7 +31,11 @@
       "Bash(cat:*)",
       "Bash(timeout 60 npm start)",
       "Bash(dir:*)",
-      "Bash(pwsh:*)"
+      "Bash(pwsh:*)",
+      "Bash(npx eslint:*)",
+      "Bash(grep:*)",
+      "Bash(tee:*)",
+      "Bash(cut:*)"
     ],
     "deny": [],
     "ask": [],

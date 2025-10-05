@@ -449,9 +449,9 @@ describe('useMigrationStore', () => {
         {
           id: 'conflict-1',
           type: 'duplicate_user',
-          severity: 'high',
-          sourceResource: { id: 'src-1', name: 'User1', type: 'user', properties: {} },
-          targetResource: { id: 'tgt-1', name: 'User1', type: 'user', properties: {} },
+          severity: 'High',
+          sourceResource: { id: 'src-1', name: 'User1', type: 'User', properties: {} },
+          targetResource: { id: 'tgt-1', name: 'User1', type: 'User', properties: {} },
           suggestedResolution: { conflictId: 'conflict-1', strategy: 'merge', notes: '' },
           status: 'pending',
           metadata: {},
@@ -484,8 +484,8 @@ describe('useMigrationStore', () => {
       const mockConflict: MigrationConflict = {
         id: 'conflict-1',
         type: 'duplicate_user',
-        severity: 'high',
-        sourceResource: { id: 'src-1', name: 'User1', type: 'user', properties: {} },
+        severity: 'High',
+        sourceResource: { id: 'src-1', name: 'User1', type: 'User', properties: {} },
         status: 'pending',
         suggestedResolution: { conflictId: 'conflict-1', strategy: 'merge', notes: '' },
         metadata: {},
@@ -498,7 +498,7 @@ describe('useMigrationStore', () => {
       await act(async () => {
         await result.current.resolveConflict('conflict-1', {
           conflictId: 'conflict-1',
-          strategy: 'source',
+          strategy: 'merge',
           notes: 'Use source value',
         });
       });
@@ -522,29 +522,29 @@ describe('useMigrationStore', () => {
         {
           id: 'c1',
           type: 'duplicate_user',
-          severity: 'high',
-          sourceResource: { id: 's1', name: 'User1', type: 'user', properties: {} },
+          severity: 'High',
+          sourceResource: { id: 's1', name: 'User1', type: 'User', properties: {} },
           status: 'pending',
           suggestedResolution: { conflictId: 'c1', strategy: 'merge', notes: '' },
-          metadata: {},
+          
         },
         {
           id: 'c2',
           type: 'duplicate_group',
-          severity: 'medium',
-          sourceResource: { id: 's2', name: 'Group1', type: 'group', properties: {} },
+          severity: 'Medium',
+          sourceResource: { id: 's2', name: 'Group1', type: 'Group', properties: {} },
           status: 'pending',
           suggestedResolution: { conflictId: 'c2', strategy: 'merge', notes: '' },
-          metadata: {},
+          
         },
         {
           id: 'c3',
           type: 'duplicate_user',
-          severity: 'low',
-          sourceResource: { id: 's3', name: 'User2', type: 'user', properties: {} },
+          severity: 'Low',
+          sourceResource: { id: 's3', name: 'User2', type: 'User', properties: {} },
           status: 'pending',
           suggestedResolution: { conflictId: 'c3', strategy: 'skip', notes: '' },
-          metadata: {},
+          
         },
       ];
 
@@ -566,11 +566,13 @@ describe('useMigrationStore', () => {
       const mapping: ResourceMapping = {
         id: 'mapping-1',
         sourceId: 'src-user-1',
+        sourceName: 'User1',
         targetId: 'tgt-user-1',
-        type: 'user',
-        status: 'mapped',
+        targetName: 'User1',
+        type: 'User',
+        status: 'Mapped',
         conflicts: [],
-        metadata: {},
+        validationResult: null,
       };
 
       act(() => {
@@ -606,20 +608,22 @@ describe('useMigrationStore', () => {
         {
           id: 'm1',
           sourceId: 'src-1',
+          sourceName: 'User1',
           targetId: 'tgt-1',
-          type: 'user',
-          status: 'mapped',
+          targetName: 'User1',
+          type: 'User',
+          status: 'Mapped',
           conflicts: [],
-          metadata: {},
+          validationResult: null,
         },
         {
           id: 'm2',
           sourceId: 'src-2',
           targetId: 'tgt-2',
-          type: 'group',
-          status: 'mapped',
+          type: 'SecurityGroup',
+          status: 'Mapped',
           conflicts: [],
-          metadata: {},
+          
         },
       ];
 
@@ -886,7 +890,7 @@ describe('useMigrationStore', () => {
           dependencies: [],
           tasks: [],
           batches: [],
-          metadata: {},
+          
           notes: '',
           prerequisites: [],
           totalItems: 0,

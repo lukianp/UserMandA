@@ -5,9 +5,9 @@
 
 import React, { useEffect } from 'react';
 import { useInfrastructureLogic } from '../../hooks/useInfrastructureLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import SearchBar from '../../components/molecules/SearchBar';
-import Button from '../../components/atoms/Button';
+import { Button } from '../../components/atoms/Button';
 import Select from '../../components/atoms/Select';
 import { Download, RefreshCw, Server } from 'lucide-react';
 import { ColDef } from 'ag-grid-community';
@@ -40,8 +40,8 @@ const InfrastructureView: React.FC = () => {
       sortable: true,
       filter: true,
       width: 120,
-      cellRenderer: (params: any) => {
-        const statusColors = {
+      cellRenderer: (params: { value: string }) => {
+        const statusColors: Record<string, string> = {
           online: 'text-green-600 bg-green-50',
           offline: 'text-red-600 bg-red-50',
           unknown: 'text-gray-600 bg-gray-50',
@@ -110,7 +110,7 @@ const InfrastructureView: React.FC = () => {
           <div className="w-48">
             <Select
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
+              onChange={(value) => setFilterType(value)}
               options={[
                 { value: 'all', label: 'All Types' },
                 { value: 'server', label: 'Servers' },

@@ -20,7 +20,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { useUserDetailLogic } from '../../hooks/useUserDetailLogic';
 import { Button } from '../../components/atoms/Button';
-import { LoadingOverlay } from '../../components/molecules/LoadingOverlay';
+import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { ModernCard } from '../../components/atoms/ModernCard';
 import { RefreshCw, UserPlus, Download, X } from 'lucide-react';
@@ -117,7 +117,7 @@ export const UserDetailView: React.FC<UserDetailViewProps> = ({ userId }) => {
   return (
     <div className="relative h-full flex flex-col p-6" data-cy="user-detail-view">
       {/* Loading Overlay */}
-      {isLoading && <LoadingOverlay message={loadingMessage} isVisible={isLoading} />}
+      {isLoading && <LoadingOverlay message={loadingMessage} showCancel={false} />}
 
       {/* Header Section */}
       <header className="flex items-start justify-between mb-6" role="banner" aria-label="User detail header">

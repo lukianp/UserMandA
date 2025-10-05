@@ -21,7 +21,8 @@ import type {
   UserDetailStats,
 } from '../../renderer/types/models/userDetail';
 import type { UserData } from '../../renderer/types/models/user';
-import type { GroupData, GroupType, GroupScope, MembershipType } from '../../renderer/types/models/group';
+import type { GroupData } from '../../renderer/types/models/group';
+import { GroupType, GroupScope, MembershipType } from '../../renderer/types/models/group'; // Import as values for runtime use
 import type { ApplicationData } from '../../renderer/types/models/application';
 
 /**
@@ -192,6 +193,7 @@ export class MockLogicEngineService {
       objectType: 'User',
       isSelected: false,
       domain: 'contoso.com',
+      createdAt: new Date('2020-01-15'),
     };
   }
 

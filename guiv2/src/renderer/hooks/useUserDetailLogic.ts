@@ -54,6 +54,7 @@ export function useUserDetailLogic(userId: string): UseUserDetailLogicResult {
   /**
    * Load user detail from LogicEngineService via IPC
    * Mirrors C# LoadUserDetailAsync (lines 141-166)
+   * Updated for Epic 4: Uses Logic Engine API
    */
   const loadUserDetail = useCallback(async () => {
     if (!userId) {
@@ -68,8 +69,8 @@ export function useUserDetailLogic(userId: string): UseUserDetailLogicResult {
     try {
       setLoadingMessage('Loading user data from LogicEngine...');
 
-      // Call IPC handler 'get-user-detail'
-      const result: any = await window.electronAPI?.invoke('get-user-detail', { userId });
+      // Epic 4: Use new Logic Engine API
+      const result = await window.electronAPI.logicEngine.getUserDetail(userId);
 
       if (!result || !result.success) {
         throw new Error(result?.error || 'User not found');
@@ -111,13 +112,14 @@ export function useUserDetailLogic(userId: string): UseUserDetailLogicResult {
   /**
    * Refresh user data (clear cache, reload)
    * Mirrors C# RefreshDataCommand
+   * Updated for Epic 4: Uses Logic Engine cache invalidation
    */
   const refreshData = useCallback(async () => {
     try {
       setLoadingMessage('Clearing cache...');
 
-      // Clear any cached data for this user
-      await window.electronAPI?.invoke('clear-user-detail-cache', { userId });
+      // Epic 4: Invalidate Logic Engine cache
+      await window.electronAPI.logicEngine.invalidateCache();
 
       setLoadingMessage('Reloading user data...');
 
@@ -132,7 +134,7 @@ export function useUserDetailLogic(userId: string): UseUserDetailLogicResult {
         pinned: false,
       });
     }
-  }, [userId, loadUserDetail, showNotification]);
+  }, [loadUserDetail, showNotification]);
 
   /**
    * Add user to migration wave

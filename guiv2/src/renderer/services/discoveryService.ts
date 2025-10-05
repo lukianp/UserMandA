@@ -20,7 +20,7 @@ import {
   ConnectionResult,
   HistoryFilter,
 } from '../types/models/discovery';
-import cron from 'node-cron';
+import * as cron from 'node-cron';
 
 /**
  * Discovery Service Class
@@ -65,13 +65,21 @@ class DiscoveryService {
       if (!validation.passed) {
         return {
           id: runId,
-          configId: config.id,
-          startTime,
-          endTime: new Date(),
+          name: config.name || 'Discovery',
+          moduleName: config.moduleName || config.type || 'unknown',
+          displayName: config.name || 'Discovery',
+          itemCount: 0,
+          discoveryTime: new Date(),
+          duration: 0,
           status: 'failed',
-          itemsDiscovered: 0,
-          errors: validation.errors,
-          warnings: validation.warnings,
+          filePath: '',
+          createdAt: new Date(),
+          success: false,
+          summary: 'Discovery failed',
+          errorMessage: validation.errors.map(e => e.message).join(', '),
+          additionalData: {},
+          errors: validation.errors.map(e => e.message),
+          warnings: validation.warnings.map(w => w.message),
           data: [],
         };
       }
@@ -84,6 +92,7 @@ class DiscoveryService {
         startTime,
         status: 'running',
         progress: 0,
+        createdAt: new Date(),
       };
 
       this.discoveryHistory.set(runId, run);
@@ -93,7 +102,7 @@ class DiscoveryService {
 
       // Update run record
       run.endTime = new Date();
-      run.status = result.status;
+      run.status = result.status as DiscoveryRun['status'];
       run.result = result;
       run.progress = 100;
       this.discoveryHistory.set(runId, run);
@@ -106,21 +115,22 @@ class DiscoveryService {
       const endTime = new Date();
       const errorResult: DiscoveryResult = {
         id: runId,
-        configId: config.id,
-        startTime,
-        endTime,
+        name: config.name || 'Discovery',
+        moduleName: config.moduleName || config.type || 'unknown',
+        displayName: config.name || 'Discovery',
+        itemCount: 0,
+        discoveryTime: endTime,
+        duration: endTime.getTime() - startTime.getTime(),
         status: 'failed',
-        itemsDiscovered: 0,
-        errors: [
-          {
-            code: 'DISCOVERY_ERROR',
-            message: error.message,
-            severity: 'error',
-            details: error.stack,
-          },
-        ],
-        warnings: [],
+        filePath: '',
+        createdAt: endTime,
+        success: false,
+        summary: 'Discovery failed',
+        errorMessage: error.message,
+        additionalData: {},
         data: [],
+        errors: [error.message],
+        warnings: [],
       };
 
       // Update history
@@ -194,24 +204,22 @@ class DiscoveryService {
       if (!psResult.success) {
         return {
           id: crypto.randomUUID(),
-          configId: config.id,
-          startTime,
-          endTime,
+          name: config.name || 'Discovery',
+          moduleName: config.moduleName || config.type || 'unknown',
+          displayName: config.name || 'Discovery',
+          itemCount: 0,
+          discoveryTime: endTime,
+          duration: endTime.getTime() - startTime.getTime(),
           status: 'failed',
-          itemsDiscovered: 0,
-          errors: [
-            {
-              code: 'EXECUTION_ERROR',
-              message: psResult.error || 'Discovery execution failed',
-              severity: 'error',
-            },
-          ],
-          warnings: psResult.warnings?.map(w => ({
-            code: 'DISCOVERY_WARNING',
-            message: w,
-            severity: 'warning',
-          })) || [],
+          filePath: '',
+          createdAt: endTime,
+          success: false,
+          summary: 'Discovery execution failed',
+          errorMessage: psResult.error || 'Discovery execution failed',
+          additionalData: {},
           data: [],
+          errors: [psResult.error || 'Discovery execution failed'],
+          warnings: psResult.warnings?.map(w => w) || [],
         };
       }
 
@@ -220,18 +228,22 @@ class DiscoveryService {
 
       return {
         id: crypto.randomUUID(),
-        configId: config.id,
-        startTime,
-        endTime,
+        name: config.name || 'Discovery',
+        moduleName: config.moduleName || config.type || 'unknown',
+        displayName: config.name || 'Discovery',
+        itemCount: data.length,
+        discoveryTime: endTime,
+        duration: endTime.getTime() - startTime.getTime(),
         status: 'completed',
-        itemsDiscovered: data.length,
-        errors: [],
-        warnings: psResult.warnings?.map(w => ({
-          code: 'DISCOVERY_WARNING',
-          message: w,
-          severity: 'warning',
-        })) || [],
+        filePath: '',
+        createdAt: endTime,
+        success: true,
+        summary: `Discovery completed - ${data.length} items found`,
+        errorMessage: '',
+        additionalData: {},
         data,
+        errors: [],
+        warnings: psResult.warnings?.map(w => w) || [],
       };
     } catch (error: any) {
       throw new Error(`Discovery execution failed: ${error.message}`);
@@ -267,9 +279,14 @@ class DiscoveryService {
             id: crypto.randomUUID(),
             name: config.name,
             type: config.type,
+            moduleName: config.type,
+            isEnabled: true,
+            settings: {},
+            priority: 1,
+            parallelExecution: false,
+            timeout: config.timeout || 300000,
             parameters: config.parameters,
             credentials: config.credentials,
-            timeout: config.timeout,
             retryPolicy: config.retryPolicy,
           };
 
@@ -282,7 +299,7 @@ class DiscoveryService {
       {
         scheduled: config.enabled !== false,
         timezone: 'America/New_York', // Use system timezone or make configurable
-      }
+      } as any // TODO: Fix cron job options type
     );
 
     // Store job and config
@@ -368,7 +385,7 @@ class DiscoveryService {
 
       // Update the run with new result
       run.endTime = new Date();
-      run.status = result.status;
+      run.status = result.status as DiscoveryRun['status'];
       run.result = result;
       run.progress = 100;
       this.discoveryHistory.set(id, run);
@@ -481,9 +498,14 @@ class DiscoveryService {
       id: crypto.randomUUID(),
       name: template.name,
       type: template.type,
+      moduleName: template.config.moduleName || template.type,
+      isEnabled: true,
+      settings: template.config.settings || {},
+      priority: template.config.priority || 1,
+      parallelExecution: template.config.parallelExecution || false,
+      timeout: template.timeout || 300000,
       parameters: { ...template.parameters },
       credentials: template.credentials,
-      timeout: template.timeout,
       retryPolicy: template.retryPolicy,
     };
 
@@ -526,7 +548,11 @@ class DiscoveryService {
     }
 
     // Sort by start time (newest first)
-    runs.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+    runs.sort((a, b) => {
+      const aTime = typeof a.startTime === 'string' ? new Date(a.startTime) : a.startTime;
+      const bTime = typeof b.startTime === 'string' ? new Date(b.startTime) : b.startTime;
+      return bTime.getTime() - aTime.getTime();
+    });
 
     return runs;
   }
@@ -599,7 +625,7 @@ class DiscoveryService {
     const incrementalResult: DiscoveryResult = {
       ...newResult,
       data: [...comparison.added, ...comparison.modified],
-      itemsDiscovered: comparison.added.length + comparison.modified.length,
+      itemCount: comparison.added.length + comparison.modified.length,
     };
 
     return incrementalResult;
@@ -646,17 +672,16 @@ class DiscoveryService {
     return {
       runId1,
       runId2,
-      added,
-      removed,
-      modified,
-      unchanged,
+      timestamp: new Date(),
+      differences: {
+        added,
+        removed,
+        modified,
+      },
       summary: {
-        totalItems1: result1.data.length,
-        totalItems2: result2.data.length,
-        addedCount: added.length,
-        removedCount: removed.length,
-        modifiedCount: modified.length,
-        unchangedCount: unchanged.length,
+        totalAdded: added.length,
+        totalRemoved: removed.length,
+        totalModified: modified.length,
       },
     };
   }
@@ -692,7 +717,7 @@ class DiscoveryService {
     }
 
     return {
-      passed: errors.length === 0,
+      isValid: errors.length === 0,
       errors,
       warnings,
     };
@@ -717,14 +742,16 @@ class DiscoveryService {
       return {
         success: result.status === 'completed',
         message: result.status === 'completed' ? 'Connection successful' : 'Connection failed',
-        details: result.errors.length > 0 ? result.errors[0].message : undefined,
-        latency: result.endTime && result.startTime ? result.endTime.getTime() - result.startTime.getTime() : 0,
+        details: result.errors.length > 0 ? { error: result.errors[0] } : undefined,
+        timestamp: new Date(),
+        latency: result.endTime && result.startTime ? (typeof result.endTime === 'string' ? new Date(result.endTime).getTime() : result.endTime.getTime()) - (typeof result.startTime === 'string' ? new Date(result.startTime).getTime() : result.startTime.getTime()) : 0,
       };
     } catch (error: any) {
       return {
         success: false,
         message: 'Connection test failed',
-        details: error.message,
+        details: { error: error.message },
+        timestamp: new Date(),
         latency: 0,
       };
     }

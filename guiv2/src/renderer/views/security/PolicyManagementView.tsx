@@ -5,8 +5,8 @@
 import React from 'react';
 import { usePolicyManagementLogic } from '../../hooks/usePolicyManagementLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
 import Select from '../../components/atoms/Select';
 import { FileText, RefreshCw, Download, Filter, X, Edit, Eye } from 'lucide-react';
 
@@ -23,7 +23,6 @@ const PolicyManagementView: React.FC = () => {
     selectedPolicies,
     setSelectedPolicies,
     loadData,
-    togglePolicy,
     editPolicy,
     viewAuditTrail,
     stats,
@@ -76,18 +75,33 @@ const PolicyManagementView: React.FC = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <Input placeholder="Search policies..." value={filters.searchText} onChange={(e) => updateFilter('searchText', e.target.value)} data-cy="search-input" />
-          <Select value={filters.category} onChange={(e) => updateFilter('category', e.target.value)} data-cy="category-select">
-            <option value="">All Categories</option>
-            {filterOptions.categories.map((cat) => (<option key={cat} value={cat}>{cat}</option>))}
-          </Select>
-          <Select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)} data-cy="status-select">
-            <option value="">All Statuses</option>
-            {filterOptions.statuses.map((st) => (<option key={st} value={st}>{st}</option>))}
-          </Select>
-          <Select value={filters.compliance} onChange={(e) => updateFilter('compliance', e.target.value)} data-cy="compliance-select">
-            <option value="">All Compliance</option>
-            {filterOptions.compliance.map((comp) => (<option key={comp} value={comp}>{comp}</option>))}
-          </Select>
+          <Select
+            value={filters.category}
+            onChange={(value) => updateFilter('category', value)}
+            options={[
+              { value: '', label: 'All Categories' },
+              ...filterOptions.categories.map((cat) => ({ value: cat, label: cat }))
+            ]}
+            data-cy="category-select"
+          />
+          <Select
+            value={filters.status}
+            onChange={(value) => updateFilter('status', value)}
+            options={[
+              { value: '', label: 'All Statuses' },
+              ...filterOptions.statuses.map((st) => ({ value: st, label: st }))
+            ]}
+            data-cy="status-select"
+          />
+          <Select
+            value={filters.compliance}
+            onChange={(value) => updateFilter('compliance', value)}
+            options={[
+              { value: '', label: 'All Compliance' },
+              ...filterOptions.compliance.map((comp) => ({ value: comp, label: comp }))
+            ]}
+            data-cy="compliance-select"
+          />
         </div>
       </div>
 

@@ -31,11 +31,11 @@ const electronAPI: ElectronAPI = {
   // PowerShell Execution
   // ========================================
 
-  executeScript: <T = any>(params: ScriptExecutionParams) => {
+  executeScript: <T = unknown>(params: ScriptExecutionParams) => {
     return ipcRenderer.invoke('powershell:executeScript', params);
   },
 
-  executeModule: <T = any>(params: ModuleExecutionParams) => {
+  executeModule: <T = unknown>(params: ModuleExecutionParams) => {
     return ipcRenderer.invoke('powershell:executeModule', params);
   },
 
@@ -79,15 +79,19 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke('file:list', path, pattern);
   },
 
+  logToFile: (entry: any) => {
+    return ipcRenderer.invoke('logging:write', entry);
+  },
+
   // ========================================
   // Configuration Management
   // ========================================
 
-  getConfig: <T = any>(key: string) => {
+  getConfig: <T = unknown>(key: string) => {
     return ipcRenderer.invoke('config:get', key);
   },
 
-  setConfig: (key: string, value: any) => {
+  setConfig: (key: string, value: unknown) => {
     return ipcRenderer.invoke('config:set', key, value);
   },
 
@@ -107,7 +111,7 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke('profile:loadAll');
   },
 
-  saveProfile: (profile: any) => {
+  saveProfile: (profile: unknown) => {
     return ipcRenderer.invoke('profile:save', profile);
   },
 
@@ -251,7 +255,7 @@ const electronAPI: ElectronAPI = {
   // Generic IPC Invoke (for custom handlers)
   // ========================================
 
-  invoke: <T = any>(channel: string, args?: any): Promise<T> => {
+  invoke: <T = unknown>(channel: string, args?: unknown): Promise<T> => {
     return ipcRenderer.invoke(channel, args);
   },
 
@@ -259,7 +263,7 @@ const electronAPI: ElectronAPI = {
   // Environment Detection
   // ========================================
 
-  detectEnvironment: (config?: any) => {
+  detectEnvironment: (config?: Record<string, unknown>) => {
     return ipcRenderer.invoke('environment:detect', config);
   },
 
@@ -422,6 +426,75 @@ const electronAPI: ElectronAPI = {
     const subscription = (_: any, data: any) => callback(data);
     ipcRenderer.on('discovery:cancelled', subscription);
     return () => ipcRenderer.removeListener('discovery:cancelled', subscription);
+  },
+
+  // ========================================
+  // Logic Engine API (Epic 4)
+  // ========================================
+
+  /**
+   * Load all discovery data from CSV files
+   * @param profilePath - Optional path to profile data directory
+   * @returns Promise with success status and statistics
+   */
+  logicEngine: {
+    loadAll: (profilePath?: string) =>
+      ipcRenderer.invoke('logic-engine:load-all', { profilePath }),
+
+    /**
+     * Get comprehensive user detail projection
+     * @param userId - User SID or UPN
+     * @returns Promise with UserDetailProjection
+     */
+    getUserDetail: (userId: string) =>
+      ipcRenderer.invoke('logic-engine:get-user-detail', { userId }),
+
+    /**
+     * Get current data load statistics
+     * @returns Promise with statistics object
+     */
+    getStatistics: () =>
+      ipcRenderer.invoke('logic-engine:get-statistics'),
+
+    /**
+     * Invalidate cache and force reload on next access
+     * @returns Promise with success status
+     */
+    invalidateCache: () =>
+      ipcRenderer.invoke('logic-engine:invalidate-cache'),
+
+    /**
+     * Listen for load progress events
+     * @param callback - Called with progress updates
+     * @returns Cleanup function
+     */
+    onProgress: (callback: (progress: any) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('logic-engine:progress', handler);
+      return () => ipcRenderer.removeListener('logic-engine:progress', handler);
+    },
+
+    /**
+     * Listen for load completion events
+     * @param callback - Called when load completes
+     * @returns Cleanup function
+     */
+    onLoaded: (callback: (data: any) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('logic-engine:loaded', handler);
+      return () => ipcRenderer.removeListener('logic-engine:loaded', handler);
+    },
+
+    /**
+     * Listen for load error events
+     * @param callback - Called on load errors
+     * @returns Cleanup function
+     */
+    onError: (callback: (error: any) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('logic-engine:error', handler);
+      return () => ipcRenderer.removeListener('logic-engine:error', handler);
+    },
   },
 };
 

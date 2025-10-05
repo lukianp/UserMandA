@@ -10,15 +10,18 @@ import { create } from 'zustand';
 import { devtools, persist, subscribeWithSelector } from 'zustand/middleware';
 import { Profile, ConnectionStatus } from '../types/models/profile';
 
+// Debug logging to validate type fixes
+console.log('Profile store initialized - ConnectionStatus type imported successfully');
+console.log('Available connection statuses:', ['disconnected', 'connecting', 'connected', 'error']);
+
 // Mirror C# CompanyProfile and TargetProfile types
 export interface CompanyProfile extends Profile {
   companyName: string;
   domainController?: string;
-  tenantId?: string;
   dataPath?: string;
-  isActive?: boolean;
   configuration?: Record<string, any>;
   credential?: string; // Plain text credential for runtime use
+  // Required properties from Profile are inherited through extension
 }
 
 export interface TargetProfile extends Profile {
@@ -239,6 +242,7 @@ export const useProfileStore = create<ProfileState>()(
     subscribeToProfileChanges: (callback) => {
       // For now, just return a no-op unsubscribe function
       // TODO: Implement proper subscription when needed
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       return () => {};
     },
   })

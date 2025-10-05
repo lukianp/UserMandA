@@ -116,7 +116,17 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     });
 
     try {
-      const unsubscribe = window.electronAPI.onProgress((progressData: FileSystemProgress) => {
+      const unsubscribe = window.electronAPI.onProgress((data) => {
+        // Convert ProgressData to FileSystemProgress
+        const progressData: FileSystemProgress = {
+          phase: 'discovering_shares',
+          serversCompleted: data.itemsProcessed || 0,
+          totalServers: data.totalItems || 0,
+          sharesCompleted: 0,
+          totalShares: 0,
+          percentComplete: data.percentage,
+          message: data.message,
+        };
         setProgress(progressData);
       });
 

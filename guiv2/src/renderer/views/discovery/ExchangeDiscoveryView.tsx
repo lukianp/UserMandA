@@ -5,11 +5,11 @@
 
 import React from 'react';
 import { useExchangeDiscoveryLogic } from '../../hooks/useExchangeDiscoveryLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
-import SearchBar from '../../components/molecules/SearchBar';
-import Button from '../../components/atoms/Button';
-import Badge from '../../components/atoms/Badge';
-import ProgressBar from '../../components/molecules/ProgressBar';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { SearchBar } from '../../components/molecules/SearchBar';
+import { Button } from '../../components/atoms/Button';
+import { Badge } from '../../components/atoms/Badge';
+import { ProgressBar } from '../../components/molecules/ProgressBar';
 import {
   Download,
   Play,
@@ -35,23 +35,33 @@ import {
 const ExchangeDiscoveryView: React.FC = () => {
   const {
     config,
-    templates,
-    currentResult,
+    setConfig,
+    result,
     isDiscovering,
     progress,
-    selectedTab,
-    searchText,
-    filteredData,
-    columnDefs,
-    errors,
-    startDiscovery,
-    cancelDiscovery,
-    updateConfig,
+    error,
+    templates,
+    selectedTemplate,
     loadTemplate,
     saveAsTemplate,
-    exportResults,
+    startDiscovery,
+    cancelDiscovery,
+    mailboxes,
+    groups,
+    rules,
+    mailboxFilter,
+    setMailboxFilter,
+    groupFilter,
+    setGroupFilter,
+    ruleFilter,
+    setRuleFilter,
+    mailboxColumns,
+    groupColumns,
+    ruleColumns,
+    exportData,
+    selectedTab,
     setSelectedTab,
-    setSearchText,
+    statistics,
   } = useExchangeDiscoveryLogic();
 
   return (
@@ -137,27 +147,27 @@ const ExchangeDiscoveryView: React.FC = () => {
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
               <div className="flex flex-wrap gap-2 text-sm">
                 <ConfigBadge
-                  enabled={config.includeMailboxes}
+                  enabled={config.discoverMailboxes}
                   label="Mailboxes"
                   icon={<Inbox className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeDistributionGroups}
+                  enabled={config.discoverDistributionGroups}
                   label="Distribution Groups"
                   icon={<Users className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeTransportRules}
+                  enabled={config.discoverTransportRules}
                   label="Transport Rules"
                   icon={<Shield className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeConnectors}
+                  enabled={config.discoverConnectors}
                   label="Connectors"
                   icon={<Send className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includePublicFolders}
+                  enabled={config.discoverPublicFolders}
                   label="Public Folders"
                   icon={<Database className="w-3 h-3" />}
                 />
@@ -167,7 +177,7 @@ const ExchangeDiscoveryView: React.FC = () => {
                   icon={<Shield className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeStatistics}
+                  enabled={config.includeMailboxStatistics}
                   label="Statistics"
                   icon={<Activity className="w-3 h-3" />}
                 />
@@ -182,16 +192,16 @@ const ExchangeDiscoveryView: React.FC = () => {
             <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-green-900 dark:text-green-100">
-                  {progress.currentOperation}
+                  {progress.phaseLabel || progress.currentItem || 'Processing...'}
                 </span>
                 <span className="text-sm text-green-700 dark:text-green-300">
-                  {progress.progress}% complete
+                  {progress.percentComplete}% complete
                 </span>
               </div>
-              <ProgressBar value={progress.progress} max={100} />
+              <ProgressBar value={progress.percentComplete} max={100} />
               <div className="mt-2 flex items-center justify-between text-xs text-green-600 dark:text-green-400">
-                <span>{progress.objectsProcessed} objects processed</span>
-                {progress.estimatedTimeRemaining !== null && (
+                <span>{progress.itemsProcessed} of {progress.totalItems} items processed</span>
+                {progress.estimatedTimeRemaining !== undefined && (
                   <span>Estimated time remaining: {Math.ceil(progress.estimatedTimeRemaining / 60)} minutes</span>
                 )}
               </div>
@@ -200,22 +210,18 @@ const ExchangeDiscoveryView: React.FC = () => {
         )}
 
         {/* Error Display */}
-        {errors.length > 0 && (
+        {error && (
           <div className="px-4 pb-4">
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">Errors:</h3>
-              <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
-                {errors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
+              <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">Error:</h3>
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           </div>
         )}
       </div>
 
       {/* Results Section */}
-      {currentResult && (
+      {result && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Summary Stats */}
           <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
@@ -223,29 +229,29 @@ const ExchangeDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<Inbox className="w-5 h-5" />}
                 label="Total Mailboxes"
-                value={currentResult.stats.totalMailboxes}
-                subValue={`Avg size: ${formatBytes(currentResult.stats.averageMailboxSize)}`}
+                value={result.statistics.totalMailboxes}
+                subValue={`Avg size: ${formatBytes(result.statistics.averageMailboxSize)}`}
                 color="green"
               />
               <StatCard
                 icon={<Database className="w-5 h-5" />}
                 label="Total Storage"
-                value={formatBytes(currentResult.stats.totalStorage)}
-                subValue={`${currentResult.stats.totalItems.toLocaleString()} items`}
+                value={formatBytes(result.statistics.totalMailboxSize)}
+                subValue={`${result.statistics.totalMailboxes.toLocaleString()} mailboxes`}
                 color="blue"
               />
               <StatCard
                 icon={<Users className="w-5 h-5" />}
                 label="Distribution Groups"
-                value={currentResult.stats.totalDistributionGroups}
-                subValue={`${currentResult.stats.dynamicGroups} dynamic`}
+                value={result.statistics.totalDistributionGroups}
+                subValue={`${result.statistics.securityGroups} security`}
                 color="purple"
               />
               <StatCard
                 icon={<Shield className="w-5 h-5" />}
                 label="Transport Rules"
-                value={currentResult.stats.totalTransportRules}
-                subValue={`${currentResult.stats.enabledTransportRules} enabled`}
+                value={result.statistics.totalTransportRules}
+                subValue={`${result.statistics.enabledRules} enabled`}
                 color="orange"
               />
             </div>
@@ -263,54 +269,44 @@ const ExchangeDiscoveryView: React.FC = () => {
               <TabButton
                 active={selectedTab === 'mailboxes'}
                 onClick={() => setSelectedTab('mailboxes')}
-                label={`Mailboxes (${currentResult.mailboxes.length})`}
+                label={`Mailboxes (${result.mailboxes.length})`}
                 icon={<Inbox className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'groups'}
                 onClick={() => setSelectedTab('groups')}
-                label={`Groups (${currentResult.distributionGroups.length})`}
+                label={`Groups (${result.distributionGroups.length})`}
                 icon={<Users className="w-4 h-4" />}
               />
               <TabButton
-                active={selectedTab === 'transportRules'}
-                onClick={() => setSelectedTab('transportRules')}
-                label={`Transport Rules (${currentResult.transportRules.length})`}
+                active={selectedTab === 'rules'}
+                onClick={() => setSelectedTab('rules')}
+                label={`Transport Rules (${result.transportRules.length})`}
                 icon={<Shield className="w-4 h-4" />}
               />
             </div>
           </div>
 
-          {/* Search and Actions */}
+          {/* Actions */}
           {selectedTab !== 'overview' && (
             <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 max-w-md">
-                  <SearchBar
-                    value={searchText}
-                    onChange={setSearchText}
-                    placeholder={`Search ${selectedTab}...`}
-                    data-cy="exchange-search"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    icon={<RefreshCw />}
-                    onClick={startDiscovery}
-                    data-cy="refresh-btn"
-                  >
-                    Refresh
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    icon={<Download />}
-                    onClick={() => exportResults('excel')}
-                    data-cy="export-btn"
-                  >
-                    Export
-                  </Button>
-                </div>
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  variant="secondary"
+                  icon={<RefreshCw />}
+                  onClick={startDiscovery}
+                  data-cy="refresh-btn"
+                >
+                  Refresh
+                </Button>
+                <Button
+                  variant="secondary"
+                  icon={<Download />}
+                  onClick={() => exportData({ format: 'CSV', includeMailboxes: true, includeGroups: true, includeRules: true, includeConnectors: false, includePublicFolders: false, includeStatistics: true, splitByType: false })}
+                  data-cy="export-btn"
+                >
+                  Export
+                </Button>
               </div>
             </div>
           )}
@@ -318,13 +314,13 @@ const ExchangeDiscoveryView: React.FC = () => {
           {/* Content Area */}
           <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
             {selectedTab === 'overview' ? (
-              <OverviewTab result={currentResult} />
+              <OverviewTab result={result} />
             ) : (
               <div className="h-full p-4">
                 <VirtualizedDataGrid
-                  data={filteredData}
-                  columns={columnDefs}
-                  loading={false}
+                  data={(selectedTab === 'mailboxes' ? mailboxes : selectedTab === 'groups' ? groups : rules) as any[]}
+                  columns={selectedTab === 'mailboxes' ? mailboxColumns : selectedTab === 'groups' ? groupColumns : ruleColumns}
+                  loading={isDiscovering}
                   enableExport
                   enableColumnReorder
                   enableFiltering
@@ -337,7 +333,7 @@ const ExchangeDiscoveryView: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!currentResult && !isDiscovering && (
+      {!result && !isDiscovering && (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md">
             <Mail className="w-24 h-24 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
@@ -470,13 +466,13 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Mailbox Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Mailboxes" value={result.stats.totalMailboxes} />
-        <SummaryRow label="User Mailboxes" value={result.stats.userMailboxes} />
-        <SummaryRow label="Shared Mailboxes" value={result.stats.sharedMailboxes} />
-        <SummaryRow label="Resource Mailboxes" value={result.stats.resourceMailboxes} />
-        <SummaryRow label="Average Mailbox Size" value={formatBytes(result.stats.averageMailboxSize)} />
-        <SummaryRow label="Largest Mailbox" value={formatBytes(result.stats.largestMailboxSize)} />
-        <SummaryRow label="Total Storage" value={formatBytes(result.stats.totalStorage)} />
+        <SummaryRow label="Total Mailboxes" value={result.statistics.totalMailboxes} />
+        <SummaryRow label="User Mailboxes" value={result.statistics.userMailboxes} />
+        <SummaryRow label="Shared Mailboxes" value={result.statistics.sharedMailboxes} />
+        <SummaryRow label="Resource Mailboxes" value={result.statistics.resourceMailboxes} />
+        <SummaryRow label="Average Mailbox Size" value={formatBytes(result.statistics.averageMailboxSize)} />
+        <SummaryRow label="Largest Mailbox" value={formatBytes(result.statistics.largestMailboxSize)} />
+        <SummaryRow label="Total Storage" value={formatBytes(result.statistics.totalStorage)} />
       </div>
     </div>
 
@@ -484,11 +480,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Distribution Groups</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Distribution Groups" value={result.stats.totalDistributionGroups} />
-        <SummaryRow label="Static Groups" value={result.stats.staticGroups} />
-        <SummaryRow label="Dynamic Groups" value={result.stats.dynamicGroups} />
-        <SummaryRow label="Mail-Enabled Security Groups" value={result.stats.mailEnabledSecurityGroups} />
-        <SummaryRow label="Average Members per Group" value={result.stats.averageMembersPerGroup.toFixed(1)} />
+        <SummaryRow label="Total Distribution Groups" value={result.statistics.totalDistributionGroups} />
+        <SummaryRow label="Static Groups" value={result.statistics.staticGroups} />
+        <SummaryRow label="Dynamic Groups" value={result.statistics.dynamicGroups} />
+        <SummaryRow label="Mail-Enabled Security Groups" value={result.statistics.mailEnabledSecurityGroups} />
+        <SummaryRow label="Average Members per Group" value={result.statistics.averageMembersPerGroup.toFixed(1)} />
       </div>
     </div>
 
@@ -496,14 +492,14 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Transport Rules</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Transport Rules" value={result.stats.totalTransportRules} />
-        <SummaryRow label="Enabled Rules" value={result.stats.enabledTransportRules} />
-        <SummaryRow label="Disabled Rules" value={result.stats.disabledTransportRules} />
+        <SummaryRow label="Total Transport Rules" value={result.statistics.totalTransportRules} />
+        <SummaryRow label="Enabled Rules" value={result.statistics.enabledTransportRules} />
+        <SummaryRow label="Disabled Rules" value={result.statistics.disabledTransportRules} />
         <SummaryRow
           label="Compliance Coverage"
           value={
-            <Badge variant={result.stats.enabledTransportRules > 5 ? 'success' : result.stats.enabledTransportRules > 2 ? 'warning' : 'danger'}>
-              {result.stats.enabledTransportRules > 5 ? 'Good' : result.stats.enabledTransportRules > 2 ? 'Moderate' : 'Low'}
+            <Badge variant={result.statistics.enabledTransportRules > 5 ? 'success' : result.statistics.enabledTransportRules > 2 ? 'warning' : 'danger'}>
+              {result.statistics.enabledTransportRules > 5 ? 'Good' : result.statistics.enabledTransportRules > 2 ? 'Moderate' : 'Low'}
             </Badge>
           }
         />
@@ -514,10 +510,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Connectors</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Connectors" value={result.stats.totalConnectors} />
-        <SummaryRow label="Inbound Connectors" value={result.stats.inboundConnectors} />
-        <SummaryRow label="Outbound Connectors" value={result.stats.outboundConnectors} />
-        <SummaryRow label="Enabled Connectors" value={result.stats.enabledConnectors} />
+        <SummaryRow label="Total Connectors" value={result.statistics.totalConnectors} />
+        <SummaryRow label="Inbound Connectors" value={result.statistics.inboundConnectors} />
+        <SummaryRow label="Outbound Connectors" value={result.statistics.outboundConnectors} />
+        <SummaryRow label="Enabled Connectors" value={result.statistics.enabledConnectors} />
       </div>
     </div>
   </div>

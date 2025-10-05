@@ -14,6 +14,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { ScriptExecutionParams, ModuleExecutionParams, ScriptTask } from '../types/shared';
 import { MockLogicEngineService } from './services/mockLogicEngineService';
+import { LogicEngineService } from './services/logicEngineService';
 import type { UserDetailProjection } from '../renderer/types/models/userDetail';
 
 // Service instances
@@ -21,11 +22,15 @@ let psService: PowerShellExecutionService;
 let moduleRegistry: ModuleRegistry;
 let environmentDetectionService: EnvironmentDetectionService;
 let mockLogicEngineService: MockLogicEngineService;
+let logicEngineService: LogicEngineService;
 let mainWindow: BrowserWindow | null = null;
 
 // Configuration storage
 const configPath = path.join(process.cwd(), 'config', 'app-config.json');
-let appConfig: Record<string, any> = {};
+interface AppConfig {
+  [key: string]: string | number | boolean | null | undefined;
+}
+let appConfig: AppConfig = {};
 
 /**
  * Initialize services
@@ -51,8 +56,8 @@ async function initializeServices(): Promise<void> {
 
   try {
     await moduleRegistry.loadRegistry();
-  } catch (error: any) {
-    console.warn(`Could not load module registry: ${error.message}`);
+  } catch (error: unknown) {
+    console.warn(`Could not load module registry: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   // Initialize Environment Detection Service
@@ -63,19 +68,24 @@ async function initializeServices(): Promise<void> {
   mockLogicEngineService = MockLogicEngineService.getInstance();
   console.log('Mock Logic Engine Service initialized');
 
+  // Initialize Real Logic Engine Service
+  const defaultDataRoot = path.join('C:', 'discoverydata', 'ljpops', 'Raw');
+  logicEngineService = LogicEngineService.getInstance(defaultDataRoot);
+  console.log('Logic Engine Service initialized');
+
   // Load application configuration
   try {
     const configData = await fs.readFile(configPath, 'utf-8');
     appConfig = JSON.parse(configData);
     console.log('Loaded application configuration');
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
+  } catch (error: unknown) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
       console.log('No configuration file found, starting with defaults');
       appConfig = {};
       // Create config directory
       await fs.mkdir(path.dirname(configPath), { recursive: true });
     } else {
-      console.error(`Failed to load config: ${error.message}`);
+      console.error(`Failed to load config: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -89,8 +99,8 @@ async function saveConfig(): Promise<void> {
   try {
     await fs.mkdir(path.dirname(configPath), { recursive: true });
     await fs.writeFile(configPath, JSON.stringify(appConfig, null, 2), 'utf-8');
-  } catch (error: any) {
-    console.error(`Failed to save config: ${error.message}`);
+  } catch (error: unknown) {
+    console.error(`Failed to save config: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
   }
 }
@@ -195,11 +205,11 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     try {
       console.log(`IPC: executeScript - ${params.scriptPath}`);
       return await psService.executeScript(params.scriptPath, params.args || [], params.options);
-    } catch (error: any) {
-      console.error(`executeScript error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`executeScript error: ${error instanceof Error ? error.message : String(error)}`);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         duration: 0,
         warnings: [],
       };
@@ -215,13 +225,13 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         params.parameters || {},
         params.options
       );
-    } catch (error: any) {
-      console.error(`executeModule error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`executeModule error: ${error instanceof Error ? error.message : String(error)}`);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         duration: 0,
-        warnings: [],
+        warnings: [] as string[],
       };
     }
   });
@@ -230,8 +240,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     try {
       console.log(`IPC: cancelExecution - ${token}`);
       return psService.cancelExecution(token);
-    } catch (error: any) {
-      console.error(`cancelExecution error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`cancelExecution error: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   });
@@ -239,8 +249,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   ipcMain.handle('powershell:getStatistics', async () => {
     try {
       return psService.getStatistics();
-    } catch (error: any) {
-      console.error(`getStatistics error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`getStatistics error: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   });
@@ -250,8 +260,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     try {
       console.log('IPC: discoverModules');
       return await psService.discoverModules();
-    } catch (error: any) {
-      console.error(`discoverModules error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`discoverModules error: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   });
@@ -260,13 +270,13 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     try {
       console.log(`IPC: executeParallel - ${scripts.length} scripts`);
       return await psService.executeParallel(scripts);
-    } catch (error: any) {
-      console.error(`executeParallel error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`executeParallel error: ${error instanceof Error ? error.message : String(error)}`);
       return scripts.map(() => ({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         duration: 0,
-        warnings: [],
+        warnings: [] as string[],
       }));
     }
   });
@@ -281,11 +291,11 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         retries,
         backoff
       );
-    } catch (error: any) {
-      console.error(`executeWithRetry error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`executeWithRetry error: ${error instanceof Error ? error.message : String(error)}`);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         duration: 0,
         warnings: [],
       };
@@ -299,8 +309,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   ipcMain.handle('modules:getByCategory', async (_, category: string) => {
     try {
       return moduleRegistry.getModulesByCategory(category as any);
-    } catch (error: any) {
-      console.error(`getModulesByCategory error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`getModulesByCategory error: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   });
@@ -308,8 +318,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   ipcMain.handle('modules:getAll', async () => {
     try {
       return moduleRegistry.getAllModules();
-    } catch (error: any) {
-      console.error(`getAllModules error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`getAllModules error: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   });
@@ -317,8 +327,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   ipcMain.handle('modules:getById', async (_, moduleId: string) => {
     try {
       return moduleRegistry.getModule(moduleId);
-    } catch (error: any) {
-      console.error(`getModule error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`getModule error: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   });
@@ -326,8 +336,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   ipcMain.handle('modules:search', async (_, query: string) => {
     try {
       return moduleRegistry.searchModules(query);
-    } catch (error: any) {
-      console.error(`searchModules error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`searchModules error: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   });
@@ -336,11 +346,11 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     try {
       console.log(`IPC: executeModule - ${moduleId}`);
       return await moduleRegistry.executeModule(moduleId, params, options);
-    } catch (error: any) {
-      console.error(`executeModule error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`executeModule error: ${error instanceof Error ? error.message : String(error)}`);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         duration: 0,
         warnings: [],
       };
@@ -350,8 +360,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   ipcMain.handle('modules:getStatistics', async () => {
     try {
       return moduleRegistry.getStatistics();
-    } catch (error: any) {
-      console.error(`getModuleStatistics error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`getModuleStatistics error: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   });
@@ -365,9 +375,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       const sanitized = sanitizePath(filePath);
       console.log(`IPC: readFile - ${sanitized}`);
       return await fs.readFile(sanitized, encoding as BufferEncoding);
-    } catch (error: any) {
-      console.error(`readFile error: ${error.message}`);
-      throw new Error(`Failed to read file: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`readFile error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to read file: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -378,9 +388,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       // Ensure directory exists
       await fs.mkdir(path.dirname(sanitized), { recursive: true });
       await fs.writeFile(sanitized, content, encoding as BufferEncoding);
-    } catch (error: any) {
-      console.error(`writeFile error: ${error.message}`);
-      throw new Error(`Failed to write file: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`writeFile error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to write file: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -399,9 +409,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       const sanitized = sanitizePath(filePath);
       console.log(`IPC: deleteFile - ${sanitized}`);
       await fs.unlink(sanitized);
-    } catch (error: any) {
-      console.error(`deleteFile error: ${error.message}`);
-      throw new Error(`Failed to delete file: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`deleteFile error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to delete file: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -419,9 +429,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
       // Return full paths
       return files.map(f => path.join(sanitized, f));
-    } catch (error: any) {
-      console.error(`listFiles error: ${error.message}`);
-      throw new Error(`Failed to list files: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`listFiles error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to list files: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -436,9 +446,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         created: stats.birthtime,
         modified: stats.mtime,
       };
-    } catch (error: any) {
-      console.error(`statFile error: ${error.message}`);
-      throw new Error(`Failed to stat file: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`statFile error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to stat file: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -491,8 +501,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
       console.log(`Loaded ${profiles.length} profiles`);
       return profiles;
-    } catch (error: any) {
-      console.error(`loadProfiles error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`loadProfiles error: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   });
@@ -503,9 +513,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       const filePath = path.join(profilesDir, `${profile.id}.json`);
       await fs.writeFile(filePath, JSON.stringify(profile, null, 2), 'utf-8');
       console.log(`Saved profile: ${profile.id}`);
-    } catch (error: any) {
-      console.error(`saveProfile error: ${error.message}`);
-      throw new Error(`Failed to save profile: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`saveProfile error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to save profile: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -514,9 +524,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       const filePath = path.join(profilesDir, `${profileId}.json`);
       await fs.unlink(filePath);
       console.log(`Deleted profile: ${profileId}`);
-    } catch (error: any) {
-      console.error(`deleteProfile error: ${error.message}`);
-      throw new Error(`Failed to delete profile: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`deleteProfile error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to delete profile: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -535,9 +545,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   ipcMain.handle('system:openExternal', async (_, target: string) => {
     try {
       await shell.openExternal(target);
-    } catch (error: any) {
-      console.error(`openExternal error: ${error.message}`);
-      throw new Error(`Failed to open external: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`openExternal error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to open external: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -545,8 +555,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     try {
       const result = await dialog.showOpenDialog(options);
       return result.canceled ? null : result.filePaths;
-    } catch (error: any) {
-      console.error(`showOpenDialog error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`showOpenDialog error: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   });
@@ -555,8 +565,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     try {
       const result = await dialog.showSaveDialog(options);
       return result.canceled ? null : result.filePath;
-    } catch (error: any) {
-      console.error(`showSaveDialog error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`showSaveDialog error: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   });
@@ -569,8 +579,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     try {
       console.log('IPC: detectEnvironment');
       return await environmentDetectionService.detectEnvironment(config);
-    } catch (error: any) {
-      console.error(`detectEnvironment error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`detectEnvironment error: ${error instanceof Error ? error.message : String(error)}`);
       return {
         id: 'error',
         startTime: new Date(),
@@ -581,8 +591,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         recommendations: [],
         totalServicesFound: 0,
         confidence: 0,
-        errors: [{ timestamp: new Date(), serviceType: 'system', message: error.message }],
-        warnings: [],
+        errors: [{ timestamp: new Date(), serviceType: 'system', message: error instanceof Error ? error.message : String(error) }],
+        warnings: [] as any[], // TODO: Define proper warning type
       };
     }
   });
@@ -591,9 +601,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     try {
       console.log(`IPC: validateCredentials - ${provider}`);
       return await environmentDetectionService.validateCredentials(provider as any, credentials);
-    } catch (error: any) {
-      console.error(`validateCredentials error: ${error.message}`);
-      return { valid: false, message: error.message };
+    } catch (error: unknown) {
+      console.error(`validateCredentials error: ${error instanceof Error ? error.message : String(error)}`);
+      return { valid: false, message: error instanceof Error ? error.message : String(error) };
     }
   });
 
@@ -601,8 +611,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     try {
       console.log(`IPC: cancelDetection - ${detectionId}`);
       return await environmentDetectionService.cancelDetection(detectionId);
-    } catch (error: any) {
-      console.error(`cancelDetection error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`cancelDetection error: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   });
@@ -610,8 +620,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   ipcMain.handle('environment:getStatistics', async () => {
     try {
       return environmentDetectionService.getStatistics();
-    } catch (error: any) {
-      console.error(`getEnvironmentStatistics error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`getEnvironmentStatistics error: ${error instanceof Error ? error.message : String(error)}`);
       return { activeDetections: 0, totalDetectionsRun: 0 };
     }
   });
@@ -632,9 +642,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
       await fileWatcher.watchProfile(profileId);
       return { success: true, profileId };
-    } catch (error: any) {
-      console.error(`filewatcher:start error: ${error.message}`);
-      throw new Error(`Failed to start file watcher: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`filewatcher:start error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to start file watcher: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -646,9 +656,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
       await fileWatcher.stopWatching(profileId);
       return { success: true, profileId };
-    } catch (error: any) {
-      console.error(`filewatcher:stop error: ${error.message}`);
-      throw new Error(`Failed to stop file watcher: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`filewatcher:stop error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to stop file watcher: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -660,9 +670,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
       await fileWatcher.stopAll();
       return { success: true };
-    } catch (error: any) {
-      console.error(`filewatcher:stopAll error: ${error.message}`);
-      throw new Error(`Failed to stop all file watchers: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`filewatcher:stopAll error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to stop all file watchers: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
@@ -672,8 +682,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       const fileWatcher = getFileWatcherService();
 
       return fileWatcher.getWatchedFiles();
-    } catch (error: any) {
-      console.error(`filewatcher:getWatchedFiles error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`filewatcher:getWatchedFiles error: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   });
@@ -684,13 +694,168 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       const fileWatcher = getFileWatcherService();
 
       return fileWatcher.getStatistics();
-    } catch (error: any) {
-      console.error(`filewatcher:getStatistics error: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`filewatcher:getStatistics error: ${error instanceof Error ? error.message : String(error)}`);
       return {
         activeWatchers: 0,
-        watchedDirectories: [],
+        watchedDirectories: [] as string[],
         totalEvents: 0,
         eventsByType: { added: 0, changed: 0, deleted: 0 }
+      };
+    }
+  });
+
+  // ========================================
+  // Logic Engine Handlers (Epic 4)
+  // ========================================
+
+  /**
+   * IPC Handler: logic-engine:load-all
+   *
+   * Loads all discovery data from CSV files into the Logic Engine.
+   * Performs data correlation, inference rule application, and graph building.
+   *
+   * @param profilePath - Optional path to profile data directory
+   * @returns Success status and load statistics
+   */
+  ipcMain.handle('logic-engine:load-all', async (_, args: { profilePath?: string }) => {
+    const { profilePath } = args;
+
+    try {
+      console.log(`IPC: logic-engine:load-all - ${profilePath || 'default'}`);
+
+      // Set up progress event listener
+      const progressHandler = (progress: any) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('logic-engine:progress', progress);
+        }
+      };
+
+      const loadedHandler = (data: any) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('logic-engine:loaded', data);
+        }
+      };
+
+      const errorHandler = (error: any) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('logic-engine:error', error);
+        }
+      };
+
+      logicEngineService.on('progress', progressHandler);
+      logicEngineService.on('loaded', loadedHandler);
+      logicEngineService.on('error', errorHandler);
+
+      // Perform the load
+      const success = await logicEngineService.loadAllAsync(profilePath);
+
+      // Remove listeners
+      logicEngineService.removeListener('progress', progressHandler);
+      logicEngineService.removeListener('loaded', loadedHandler);
+      logicEngineService.removeListener('error', errorHandler);
+
+      return {
+        success,
+        statistics: success ? logicEngineService['lastLoadStats'] : null
+      };
+    } catch (error: unknown) {
+      console.error('logic-engine:load-all error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: logic-engine:get-user-detail
+   *
+   * Retrieves comprehensive user detail projection with all correlated data.
+   * Includes groups, devices, apps, permissions, risks, and migration hints.
+   *
+   * @param userId - User SID or UPN
+   * @returns UserDetailProjection with complete user context
+   */
+  ipcMain.handle('logic-engine:get-user-detail', async (_, args: { userId: string }) => {
+    const { userId } = args;
+
+    try {
+      console.log(`IPC: logic-engine:get-user-detail - ${userId}`);
+
+      if (!userId || typeof userId !== 'string') {
+        throw new Error('Invalid userId parameter');
+      }
+
+      const projection = await logicEngineService.buildUserDetailProjection(userId);
+
+      if (!projection) {
+        return {
+          success: false,
+          error: `User not found: ${userId}`
+        };
+      }
+
+      return {
+        success: true,
+        data: projection
+      };
+    } catch (error: unknown) {
+      console.error('logic-engine:get-user-detail error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: logic-engine:get-statistics
+   *
+   * Returns current data load statistics from the Logic Engine.
+   *
+   * @returns Data load statistics including entity counts and inference metrics
+   */
+  ipcMain.handle('logic-engine:get-statistics', async () => {
+    try {
+      return {
+        success: true,
+        data: {
+          statistics: logicEngineService['lastLoadStats'],
+          lastLoadTime: logicEngineService.getLastLoadTime(),
+          isLoading: logicEngineService.getIsLoading()
+        }
+      };
+    } catch (error: unknown) {
+      console.error('logic-engine:get-statistics error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: logic-engine:invalidate-cache
+   *
+   * Forces the Logic Engine to reload data on next access.
+   * Useful after external data changes.
+   *
+   * @returns Success status
+   */
+  ipcMain.handle('logic-engine:invalidate-cache', async () => {
+    try {
+      // Clear file load times to force reload
+      logicEngineService['fileLoadTimes'].clear();
+
+      return {
+        success: true
+      };
+    } catch (error: unknown) {
+      console.error('logic-engine:invalidate-cache error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   });
@@ -733,11 +898,11 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         success: true,
         data: userDetail,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('get-user-detail error:', error);
       return {
         success: false,
-        error: error.message || 'Failed to retrieve user details',
+        error: (error instanceof Error ? error.message : String(error)) || 'Failed to retrieve user details',
         data: null,
       };
     }
@@ -757,9 +922,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       mockLogicEngineService.clearUserDetailCache(userId);
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('clear-user-detail-cache error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
 
@@ -799,9 +964,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       }
 
       return { success: true, filePath: exportPath };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('export-user-snapshot error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
 
@@ -838,11 +1003,11 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         success: true,
         data: computerDetail,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('get-computer-detail error:', error);
       return {
         success: false,
-        error: error.message || 'Failed to retrieve computer details',
+        error: (error instanceof Error ? error.message : String(error)) || 'Failed to retrieve computer details',
         data: null,
       };
     }
@@ -859,8 +1024,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       const { mockComputerDetailService } = await import('./services/mockLogicEngineService');
       mockComputerDetailService.clearComputerDetailCache(computerId);
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
 
@@ -884,8 +1049,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
       console.log(`Exported computer snapshot: ${exportPath}`);
       return { success: true, path: exportPath };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
 
@@ -901,8 +1066,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       // TODO: Implement RDP/PSRemoting connection logic in future
       // For now, just log and return success
       return { success: true, message: `${connectionType} connection initiated to ${computerId}` };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
 
@@ -939,11 +1104,11 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         success: true,
         data: groupDetail,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('get-group-detail error:', error);
       return {
         success: false,
-        error: error.message || 'Failed to retrieve group details',
+        error: (error instanceof Error ? error.message : String(error)) || 'Failed to retrieve group details',
         data: null,
       };
     }
@@ -960,8 +1125,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       const { mockGroupDetailService } = await import('./services/mockLogicEngineService');
       mockGroupDetailService.clearGroupDetailCache(groupId);
       return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
 
@@ -985,8 +1150,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
       console.log(`Exported group snapshot: ${exportPath}`);
       return { success: true, path: exportPath };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
 
@@ -1002,8 +1167,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       // TODO: Implement add members logic in future
       // For now, just log and return success
       return { success: true, message: `Added ${memberIds.length} members to group ${groupId}` };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
 
@@ -1019,8 +1184,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       // TODO: Implement update group logic in future
       // For now, just log and return success
       return { success: true, message: `Updated group ${groupId}` };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
 
@@ -1173,20 +1338,20 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         result,
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('discovery:execute error:', error);
 
       // Send error event
       if (mainWindow && executionId) {
         mainWindow.webContents.send('discovery:error', {
           executionId: executionId || 'unknown',
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         });
       }
 
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   });
@@ -1206,9 +1371,55 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       }
 
       return { success };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('discovery:cancel error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  /**
+   * Get execution status for a specific discovery execution
+   */
+  ipcMain.handle('discovery:get-status', async (_, args: { executionId: string }) => {
+    const { executionId } = args;
+
+    try {
+      console.log(`IPC: discovery:get-status - ${executionId}`);
+
+      // For now, return a basic status
+      // TODO: Implement execution status tracking in PowerShellExecutionService
+      return {
+        success: true,
+        status: {
+          state: 'running',
+          progress: 0,
+          message: 'Execution in progress'
+        }
+      };
+    } catch (error: unknown) {
+      console.error('discovery:get-status error:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  /**
+   * Clear logs for a specific discovery execution
+   */
+  ipcMain.handle('discovery:clear-logs', async (_, args: { executionId: string }) => {
+    const { executionId } = args;
+
+    try {
+      console.log(`IPC: discovery:clear-logs - ${executionId}`);
+
+      // Send event to renderer to clear logs
+      if (mainWindow) {
+        mainWindow.webContents.send('discovery:logs-cleared', { executionId });
+      }
+
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('discovery:clear-logs error:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
 
@@ -1226,9 +1437,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       );
 
       return { success: true, modules: discoveryModules };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('discovery:get-modules error:', error);
-      return { success: false, error: error.message, modules: [] };
+      return { success: false, error: error instanceof Error ? error.message : String(error), modules: [] };
     }
   });
 
@@ -1254,9 +1465,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         success: true,
         info: moduleInfo,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('discovery:get-module-info error:', error);
-      return { success: false, error: error.message, info: null };
+      return { success: false, error: error instanceof Error ? error.message : String(error), info: null };
     }
   });
 

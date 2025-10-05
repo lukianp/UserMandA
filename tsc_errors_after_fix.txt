@@ -1,0 +1,175 @@
+src/main/services/deltaSyncService.ts(295,24): error TS2339: Property 'changes' does not exist on type 'unknown'.
+src/main/services/deltaSyncService.ts(328,28): error TS2339: Property 'applied' does not exist on type 'unknown'.
+src/main/services/deltaSyncService.ts(329,27): error TS2339: Property 'failed' does not exist on type 'unknown'.
+src/main/services/deltaSyncService.ts(330,30): error TS2339: Property 'conflicts' does not exist on type 'unknown'.
+src/main/services/deltaSyncService.ts(331,30): error TS2339: Property 'bandwidth' does not exist on type 'unknown'.
+src/main/services/deltaSyncService.ts(332,27): error TS2339: Property 'errors' does not exist on type 'unknown'.
+src/main/services/deltaSyncService.ts(333,29): error TS2339: Property 'warnings' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(202,56): error TS2339: Property 'Connected' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(209,39): error TS2339: Property 'Version' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(210,40): error TS2339: Property 'TenantId' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(218,73): error TS2339: Property 'HasPremium' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(232,58): error TS2339: Property 'Connected' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(239,40): error TS2339: Property 'Version' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(240,41): error TS2339: Property 'Endpoint' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(246,82): error TS2339: Property 'HasATP' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(260,62): error TS2339: Property 'Connected' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(267,42): error TS2339: Property 'Version' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(268,43): error TS2339: Property 'AdminUrl' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(274,70): error TS2339: Property 'HasAdvancedDLP' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(286,52): error TS2339: Property 'Connected' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(293,37): error TS2339: Property 'Version' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(299,65): error TS2339: Property 'HasPhoneSystem' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(337,46): error TS2339: Property 'Connected' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(344,34): error TS2339: Property 'ForestFunctionalLevel' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(345,35): error TS2339: Property 'DomainController' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(352,80): error TS2339: Property 'SupportsFGPP' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(366,70): error TS2339: Property 'Connected' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(373,46): error TS2339: Property 'Version' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(374,47): error TS2339: Property 'Server' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(380,90): error TS2339: Property 'HasDAG' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(394,74): error TS2339: Property 'Connected' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(401,48): error TS2339: Property 'Version' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(402,49): error TS2339: Property 'WebApplication' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(408,84): error TS2339: Property 'IsHybrid' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(449,48): error TS2339: Property 'Connected' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(456,35): error TS2339: Property 'Version' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(457,36): error TS2339: Property 'Region' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(464,66): error TS2339: Property 'HasSSO' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(505,48): error TS2339: Property 'Connected' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(512,35): error TS2339: Property 'Version' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(513,36): error TS2339: Property 'ProjectId' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(738,42): error TS2339: Property 'Valid' does not exist on type 'unknown'.
+src/main/services/environmentDetectionService.ts(747,33): error TS2339: Property 'Message' does not exist on type 'unknown'.
+src/main/services/logicEngineService.test.ts(48,29): error TS2339: Property 'getAllUsers' does not exist on type 'LogicEngineService'.
+src/main/services/logicEngineService.test.ts(56,30): error TS2339: Property 'getAllGroups' does not exist on type 'LogicEngineService'.
+src/main/services/logicEngineService.test.ts(63,33): error TS2339: Property 'getAllComputers' does not exist on type 'LogicEngineService'.
+src/main/services/logicEngineService.test.ts(71,22): error TS2339: Property 'getAllUsers' does not exist on type 'LogicEngineService'.
+src/main/services/logicEngineService.test.ts(72,22): error TS2339: Property 'getAllGroups' does not exist on type 'LogicEngineService'.
+src/main/services/logicEngineService.test.ts(73,22): error TS2339: Property 'getAllComputers' does not exist on type 'LogicEngineService'.
+src/main/services/logicEngineService.test.ts(109,28): error TS2339: Property 'getUser' does not exist on type 'LogicEngineService'.
+src/main/services/logicEngineService.test.ts(118,28): error TS2339: Property 'getUser' does not exist on type 'LogicEngineService'.
+src/main/services/logicEngineService.test.ts(128,28): error TS2339: Property 'getUser' does not exist on type 'LogicEngineService'.
+src/main/services/logicEngineService.test.ts(137,28): error TS2339: Property 'getUser' does not exist on type 'LogicEngineService'.
+src/main/services/logicEngineService.test.ts(202,26): error TS2551: Property 'user' does not exist on type 'UserDetailProjection'. Did you mean 'User'?
+src/main/services/logicEngineService.test.ts(203,26): error TS2551: Property 'groups' does not exist on type 'UserDetailProjection'. Did you mean 'Groups'?
+src/main/services/logicEngineService.test.ts(204,26): error TS2551: Property 'devices' does not exist on type 'UserDetailProjection'. Did you mean 'Devices'?
+src/main/services/logicEngineService.test.ts(205,26): error TS2551: Property 'apps' does not exist on type 'UserDetailProjection'. Did you mean 'Apps'?
+src/main/services/logicEngineService.test.ts(219,41): error TS2551: Property 'groups' does not exist on type 'UserDetailProjection'. Did you mean 'Groups'?
+src/main/services/logicEngineService.test.ts(220,41): error TS2551: Property 'devices' does not exist on type 'UserDetailProjection'. Did you mean 'Devices'?
+src/main/services/logicEngineService.test.ts(221,41): error TS2551: Property 'apps' does not exist on type 'UserDetailProjection'. Did you mean 'Apps'?
+src/main/services/logicEngineService.test.ts(222,41): error TS2339: Property 'fileAccess' does not exist on type 'UserDetailProjection'.
+src/main/services/logicEngineService.test.ts(223,41): error TS2551: Property 'azureRoles' does not exist on type 'UserDetailProjection'. Did you mean 'AzureRoles'?
+src/main/services/logicEngineService.test.ts(224,41): error TS2551: Property 'risks' does not exist on type 'UserDetailProjection'. Did you mean 'Risks'?
+src/main/services/logicEngineService.test.ts(225,41): error TS2551: Property 'migrationHints' does not exist on type 'UserDetailProjection'. Did you mean 'MigrationHints'?
+src/main/services/logicEngineService.test.ts(269,25): error TS2551: Property 'user' does not exist on type 'UserDetailProjection'. Did you mean 'User'?
+src/main/services/logicEngineService.test.ts(300,27): error TS2339: Property 'getAllUsers' does not exist on type 'LogicEngineService'.
+src/main/services/logicEngineService.test.ts(355,18): error TS2304: Cannot find name 'testDataPath'.
+src/main/services/logicEngineService.test.ts(361,32): error TS2304: Cannot find name 'testDataPath'.
+src/main/services/logicEngineService.test.ts(367,32): error TS2304: Cannot find name 'testDataPath'.
+src/main/services/logicEngineService.test.ts(373,32): error TS2304: Cannot find name 'testDataPath'.
+src/main/services/logicEngineService.test.ts(380,32): error TS2304: Cannot find name 'testDataPath'.
+src/main/services/logicEngineService.test.ts(386,32): error TS2304: Cannot find name 'testDataPath'.
+src/main/services/logicEngineService.test.ts(392,32): error TS2304: Cannot find name 'testDataPath'.
+src/main/services/logicEngineService.test.ts(407,34): error TS2304: Cannot find name 'testDataPath'.
+src/main/services/logicEngineService.ts(179,32): error TS2693: 'DataLoadErrorEventArgs' only refers to a type, but is being used as a value here.
+src/main/services/logicEngineService.ts(266,31): error TS2693: 'DataLoadedEventArgs' only refers to a type, but is being used as a value here.
+src/main/services/logicEngineService.ts(272,30): error TS2693: 'DataLoadErrorEventArgs' only refers to a type, but is being used as a value here.
+src/main/services/migrationExecutionService.ts(451,40): error TS2339: Property 'changes' does not exist on type 'unknown'.
+src/main/services/migrationExecutionService.ts(452,51): error TS2339: Property 'changes' does not exist on type 'unknown'.
+src/main/services/migrationExecutionService.ts(756,35): error TS2677: A type predicate's type must be assignable to its parameter's type.
+  Type 'LogEntry' is not assignable to type '{ timestamp: Date; level: any; waveId: string; userId: string; step: string; message: string; }'.
+    Property 'userId' is optional in type 'LogEntry' but required in type '{ timestamp: Date; level: any; waveId: string; userId: string; step: string; message: string; }'.
+src/main/services/migrationExecutionService.ts(785,3): error TS2484: Export declaration conflicts with exported declaration of 'ExecutionMode'.
+src/main/services/migrationExecutionService.ts(786,3): error TS2484: Export declaration conflicts with exported declaration of 'ExecutionStrategy'.
+src/main/services/migrationExecutionService.ts(787,3): error TS2484: Export declaration conflicts with exported declaration of 'MigrationPhase'.
+src/main/services/migrationReportingService.ts(21,25): error TS2307: Cannot find module 'cron' or its corresponding type declarations.
+src/main/services/migrationReportingService.ts(970,10): error TS2484: Export declaration conflicts with exported declaration of 'ReportType'.
+src/main/services/migrationReportingService.ts(970,22): error TS2484: Export declaration conflicts with exported declaration of 'ReportFormat'.
+src/main/services/migrationReportingService.ts(970,36): error TS2484: Export declaration conflicts with exported declaration of 'Report'.
+src/main/services/migrationValidationService.ts(301,15): error TS2339: Property 'sourceConnected' does not exist on type '{}'.
+src/main/services/migrationValidationService.ts(301,32): error TS2339: Property 'targetConnected' does not exist on type '{}'.
+src/main/services/migrationValidationService.ts(301,49): error TS2339: Property 'latency' does not exist on type '{}'.
+src/main/services/migrationValidationService.ts(354,13): error TS2740: Type '{}' is missing the following properties from type 'CapacityValidation': targetEnvironment, currentMailboxes, maxMailboxes, plannedMigrations, and 2 more.
+src/main/services/migrationValidationService.ts(420,61): error TS2339: Property 'users' does not exist on type 'unknown'.
+src/main/services/migrationValidationService.ts(526,15): error TS2339: Property 'invalidMappings' does not exist on type '{}'.
+src/main/services/migrationValidationService.ts(526,32): error TS2339: Property 'unmappedResources' does not exist on type '{}'.
+src/main/services/migrationValidationService.ts(526,51): error TS2339: Property 'conflicts' does not exist on type '{}'.
+src/main/services/migrationValidationService.ts(609,15): error TS2339: Property 'blockedUsers' does not exist on type '{}'.
+src/main/services/migrationValidationService.ts(609,29): error TS2339: Property 'circularDependencies' does not exist on type '{}'.
+src/main/services/migrationValidationService.ts(687,15): error TS2339: Property 'conflicts' does not exist on type '{}'.
+src/main/services/migrationValidationService.ts(754,15): error TS2339: Property 'blockers' does not exist on type '{}'.
+src/main/services/migrationValidationService.ts(943,3): error TS2484: Export declaration conflicts with exported declaration of 'ValidationSeverity'.
+src/main/services/migrationValidationService.ts(944,3): error TS2484: Export declaration conflicts with exported declaration of 'ValidationType'.
+src/main/services/migrationValidationService.ts(945,3): error TS2484: Export declaration conflicts with exported declaration of 'ValidationResult'.
+src/main/services/migrationValidationService.ts(946,3): error TS2484: Export declaration conflicts with exported declaration of 'ValidationReport'.
+src/main/services/mockLogicEngineService.ts(153,5): error TS2741: Property 'createdAt' is missing in type '{ id: string; name: string; displayName: string; userPrincipalName: string; mail: string; email: string; department: string; jobTitle: string; accountEnabled: true; samAccountName: string; companyName: string; ... 29 more ...; domain: string; }' but required in type 'UserData'.
+src/main/services/mockLogicEngineService.ts(199,38): error TS1361: 'GroupType' cannot be used as a value because it was imported using 'import type'.
+src/main/services/mockLogicEngineService.ts(199,58): error TS1361: 'GroupType' cannot be used as a value because it was imported using 'import type'.
+src/main/services/mockLogicEngineService.ts(199,82): error TS1361: 'GroupType' cannot be used as a value because it was imported using 'import type'.
+src/main/services/mockLogicEngineService.ts(200,35): error TS1361: 'GroupScope' cannot be used as a value because it was imported using 'import type'.
+src/main/services/mockLogicEngineService.ts(200,57): error TS1361: 'GroupScope' cannot be used as a value because it was imported using 'import type'.
+src/main/services/mockLogicEngineService.ts(200,76): error TS1361: 'GroupScope' cannot be used as a value because it was imported using 'import type'.
+src/main/services/mockLogicEngineService.ts(211,23): error TS1361: 'MembershipType' cannot be used as a value because it was imported using 'import type'.
+src/main/services/mockLogicEngineService.ts(429,18): error TS2367: This comparison appears to be unintentional because the types '"High" | "Medium" | "Low"' and '"Critical"' have no overlap.
+src/main/services/mockLogicEngineService.ts(684,5): error TS2739: Type '{ antivirusInstalled: true; antivirusProduct: string; antivirusUpToDate: true; antivirusLastUpdate: Date; firewallEnabled: true; firewallProfile: string; encryptionEnabled: true; ... 6 more ...; vulnerabilityCount: number; }' is missing the following properties from type 'SecurityComplianceStatus': complianceIssues, criticalVulnerabilityCount
+src/main/services/mockLogicEngineService.ts(725,11): error TS2322: Type '"Wired"' is not assignable to type '"Unknown" | "Ethernet" | "WiFi" | "Bluetooth" | "Virtual"'.
+src/main/services/mockLogicEngineService.ts(734,11): error TS2322: Type '"Wireless"' is not assignable to type '"Unknown" | "Ethernet" | "WiFi" | "Bluetooth" | "Virtual"'.
+src/main/services/mockLogicEngineService.ts(835,5): error TS2322: Type '({ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "High"; description: string; recommendation: string; category: "Security"; } | { ...; } | { ...; } | { ...; })[]' is not assignable to type 'ComputerRiskItem[]'.
+  Type '{ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "High"; description: string; recommendation: string; category: "Security"; } | { ...; } | { ...; } | { ...; }' is not assignable to type 'ComputerRiskItem'.
+    Property 'affectedComponent' is missing in type '{ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "High"; description: string; recommendation: string; category: "Security"; }' but required in type 'ComputerRiskItem'.
+src/main/services/mockLogicEngineService.ts(840,18): error TS2367: This comparison appears to be unintentional because the types '"High" | "Medium" | "Low"' and '"Critical"' have no overlap.
+src/main/services/mockLogicEngineService.ts(884,9): error TS7018: Object literal's property 'dependencies' implicitly has an 'any[]' type.
+src/main/services/mockLogicEngineService.ts(1129,5): error TS2322: Type '{ policyName: string; policyGuid: `${string}-${string}-${string}-${string}-${string}`; policyType: "User" | "Computer" | "Both"; enabled: true; linkedOu: string; order: number; enforced: boolean; appliedDate: Date; }[]' is not assignable to type 'GroupPolicyAssignment[]'.
+  Property 'appliesTo' is missing in type '{ policyName: string; policyGuid: `${string}-${string}-${string}-${string}-${string}`; policyType: "User" | "Computer" | "Both"; enabled: true; linkedOu: string; order: number; enforced: boolean; appliedDate: Date; }' but required in type 'GroupPolicyAssignment'.
+src/main/services/mockLogicEngineService.ts(1166,5): error TS2322: Type '({ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "Medium"; description: string; recommendation: string; category: "Security"; } | { ...; } | { ...; })[]' is not assignable to type 'GroupRiskItem[]'.
+  Type '{ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "Medium"; description: string; recommendation: string; category: "Security"; } | { ...; } | { ...; }' is not assignable to type 'GroupRiskItem'.
+    Type '{ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "Medium"; description: string; recommendation: string; category: "Security"; }' is missing the following properties from type 'GroupRiskItem': affectedMembers, affectedResources
+src/main/services/mockLogicEngineService.ts(1171,18): error TS2367: This comparison appears to be unintentional because the types '"High" | "Medium"' and '"Critical"' have no overlap.
+src/main/services/mockLogicEngineService.ts(1240,7): error TS2353: Object literal may only specify known properties, and 'nextSyncTime' does not exist in type 'GroupSyncStatus'.
+src/main/services/powerShellService.test.ts(20,3): error TS2614: Module '"./powerShellService"' has no exported member 'PowerShellExecutionService'. Did you mean to use 'import PowerShellExecutionService from "./powerShellService"' instead?
+src/main/services/powerShellService.test.ts(97,51): error TS7018: Object literal's property 'users' implicitly has an 'any[]' type.
+src/main/services/powerShellService.test.ts(484,23): error TS7006: Parameter 'result' implicitly has an 'any' type.
+src/main/services/powerShellService.test.ts(548,27): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/main/services/powerShellService.ts(27,14): error TS2323: Cannot redeclare exported variable 'PowerShellError'.
+src/main/services/powerShellService.ts(34,14): error TS2323: Cannot redeclare exported variable 'PowerShellSyntaxError'.
+src/main/services/powerShellService.ts(41,14): error TS2323: Cannot redeclare exported variable 'PowerShellRuntimeError'.
+src/main/services/powerShellService.ts(48,14): error TS2323: Cannot redeclare exported variable 'PowerShellTimeoutError'.
+src/main/services/powerShellService.ts(55,14): error TS2323: Cannot redeclare exported variable 'PowerShellCancellationError'.
+src/main/services/powerShellService.ts(364,15): error TS7022: 'process' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
+src/main/services/powerShellService.ts(367,16): error TS2448: Block-scoped variable 'process' used before its declaration.
+src/main/services/powerShellService.ts(370,27): error TS2448: Block-scoped variable 'process' used before its declaration.
+src/main/services/powerShellService.ts(1227,3): error TS2323: Cannot redeclare exported variable 'PowerShellError'.
+src/main/services/powerShellService.ts(1227,3): error TS2484: Export declaration conflicts with exported declaration of 'PowerShellError'.
+src/main/services/powerShellService.ts(1228,3): error TS2323: Cannot redeclare exported variable 'PowerShellSyntaxError'.
+src/main/services/powerShellService.ts(1228,3): error TS2484: Export declaration conflicts with exported declaration of 'PowerShellSyntaxError'.
+src/main/services/powerShellService.ts(1229,3): error TS2323: Cannot redeclare exported variable 'PowerShellRuntimeError'.
+src/main/services/powerShellService.ts(1229,3): error TS2484: Export declaration conflicts with exported declaration of 'PowerShellRuntimeError'.
+src/main/services/powerShellService.ts(1230,3): error TS2323: Cannot redeclare exported variable 'PowerShellTimeoutError'.
+src/main/services/powerShellService.ts(1230,3): error TS2484: Export declaration conflicts with exported declaration of 'PowerShellTimeoutError'.
+src/main/services/powerShellService.ts(1231,3): error TS2323: Cannot redeclare exported variable 'PowerShellCancellationError'.
+src/main/services/powerShellService.ts(1231,3): error TS2484: Export declaration conflicts with exported declaration of 'PowerShellCancellationError'.
+src/main/services/resourceMappingService.ts(763,10): error TS2484: Export declaration conflicts with exported declaration of 'ResourceType'.
+src/main/services/resourceMappingService.ts(763,24): error TS2484: Export declaration conflicts with exported declaration of 'MappingStatus'.
+src/main/services/resourceMappingService.ts(763,39): error TS2484: Export declaration conflicts with exported declaration of 'MappingStrategy'.
+src/main/services/resourceMappingService.ts(763,56): error TS2484: Export declaration conflicts with exported declaration of 'ResourceMapping'.
+src/main/services/rollbackService.ts(265,26): error TS2339: Property 'users' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(266,27): error TS2339: Property 'groups' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(267,32): error TS2339: Property 'permissions' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(268,29): error TS2339: Property 'settings' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(289,26): error TS2339: Property 'users' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(290,27): error TS2339: Property 'groups' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(291,32): error TS2339: Property 'permissions' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(292,29): error TS2339: Property 'settings' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(376,37): error TS2339: Property 'usersRestored' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(377,38): error TS2339: Property 'groupsRestored' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(378,43): error TS2339: Property 'permissionsRestored' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(443,37): error TS2339: Property 'errors' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(444,39): error TS2339: Property 'warnings' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(632,10): error TS2484: Export declaration conflicts with exported declaration of 'RollbackPoint'.
+src/preload.ts(16,3): error TS2305: Module '"./types/shared"' has no exported member 'ElectronAPI'.
+src/renderer/components/atoms/Tooltip.tsx(133,9): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Object literal may only specify known properties, and 'onMouseEnter' does not exist in type 'Partial<unknown> & Attributes'.
+src/renderer/components/dialogs/AboutDialog.tsx(9,8): error TS2613: Module '"D:/Scripts/UserMandA/guiv2/src/renderer/components/atoms/Button"' has no default export. Did you mean to use 'import { Button } from "D:/Scripts/UserMandA/guiv2/src/renderer/components/atoms/Button"' instead?
+src/renderer/components/dialogs/ColumnVisibilityDialog.tsx(8,8): error TS2613: Module '"D:/Scripts/UserMandA/guiv2/src/renderer/components/atoms/Button"' has no default export. Did you mean to use 

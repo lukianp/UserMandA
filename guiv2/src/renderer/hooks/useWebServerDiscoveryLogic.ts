@@ -48,11 +48,13 @@ export const useWebServerDiscoveryLogic = () => {
 
   // IPC Progress Tracking
   useEffect(() => {
-    const progressHandler = (data: any) => {
-      if (data.type === 'webserver-discovery' && data.token === state.cancellationToken) {
+    const progressHandler = (data: unknown) => {
+      if (typeof data === 'object' && data !== null &&
+          'type' in data && 'token' in data && 'progress' in data &&
+          (data as any).type === 'webserver-discovery' && (data as any).token === state.cancellationToken) {
         setState(prev => ({
           ...prev,
-          progress: data.progress || 0
+          progress: (data as any).progress || 0
         }));
       }
     };
@@ -92,10 +94,10 @@ export const useWebServerDiscoveryLogic = () => {
         progress: 100,
         cancellationToken: null
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       setState(prev => ({
         ...prev,
-        error: error.message || 'Discovery failed',
+        error: error instanceof Error ? error.message : 'Discovery failed',
         isDiscovering: false,
         cancellationToken: null
       }));
@@ -600,18 +602,18 @@ export const useWebServerDiscoveryLogic = () => {
   }, [allCertificates, filter]);
 
   // Export to CSV
-  const exportToCSV = useCallback((data: any[], filename: string) => {
+  const exportToCSV = useCallback((data: Record<string, unknown>[], filename: string) => {
     if (!data || data.length === 0) {
       console.warn('No data to export');
       return;
     }
 
     // Recursive flattening function
-    const flattenObject = (obj: any, prefix = ''): Record<string, any> => {
+    const flattenObject = (obj: Record<string, unknown>, prefix = ''): Record<string, unknown> => {
       const flattened: Record<string, any> = {};
 
       for (const key in obj) {
-        if (!obj.hasOwnProperty(key)) continue;
+        if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
 
         const value = obj[key];
         const newKey = prefix ? `${prefix}.${key}` : key;
@@ -623,7 +625,7 @@ export const useWebServerDiscoveryLogic = () => {
         } else if (Array.isArray(value)) {
           flattened[newKey] = JSON.stringify(value);
         } else if (typeof value === 'object') {
-          Object.assign(flattened, flattenObject(value, newKey));
+          Object.assign(flattened, flattenObject(value as Record<string, unknown>, newKey));
         } else {
           flattened[newKey] = value;
         }
@@ -655,7 +657,7 @@ export const useWebServerDiscoveryLogic = () => {
   }, []);
 
   // Export to Excel
-  const exportToExcel = useCallback(async (data: any[], filename: string) => {
+  const exportToExcel = useCallback(async (data: Record<string, unknown>[], filename: string) => {
     try {
       await window.electronAPI.executeModule({
         modulePath: 'Modules/Export/ExportToExcel.psm1',

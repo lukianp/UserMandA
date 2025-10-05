@@ -44,6 +44,8 @@ interface IntuneStats {
   totalConfigPolicies: number;
   totalCompliancePolicies: number;
   totalAppProtectionPolicies: number;
+  totalPolicies: number;
+  totalConfigurations: number;
   complianceRate: number;
   topDeviceModels: Array<{ model: string; count: number }>;
   topNonComplianceReasons: Array<{ reason: string; count: number }>;
@@ -673,6 +675,8 @@ export const useIntuneDiscoveryLogic = () => {
       totalConfigPolicies: state.result.totalConfigPoliciesFound || 0,
       totalCompliancePolicies: state.result.totalCompliancePoliciesFound || 0,
       totalAppProtectionPolicies: state.result.totalAppProtectionPoliciesFound || 0,
+      totalPolicies: (state.result.totalConfigPoliciesFound || 0) + (state.result.totalCompliancePoliciesFound || 0) + (state.result.totalAppProtectionPoliciesFound || 0),
+      totalConfigurations: state.result.totalConfigPoliciesFound || 0,
       complianceRate,
       topDeviceModels,
       topNonComplianceReasons

@@ -21,6 +21,14 @@ import * as crypto from 'crypto';
 import PowerShellExecutionService from './powerShellService';
 
 /**
+ * PowerShell script return types for cutover operations
+ */
+interface PostCutoverValidationResult {
+  passed: boolean;
+  warnings: string[];
+}
+
+/**
  * Cutover phase
  */
 export type CutoverPhase =
@@ -442,9 +450,10 @@ class CutoverService extends EventEmitter {
       return { passed: false, warnings: [result.error || 'Validation failed'] };
     }
 
+    const validationData = result.data as PostCutoverValidationResult;
     return {
-      passed: result.data.passed !== false,
-      warnings: result.data.warnings || [],
+      passed: validationData.passed !== false,
+      warnings: validationData.warnings || [],
     };
   }
 
@@ -615,4 +624,3 @@ class CutoverService extends EventEmitter {
 }
 
 export default CutoverService;
-export { CutoverPhase, CutoverStatus, CutoverPlan, CutoverResult };

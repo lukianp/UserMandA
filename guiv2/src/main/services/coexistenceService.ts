@@ -33,7 +33,7 @@ export type CoexistenceStatus = 'not-configured' | 'configuring' | 'active' | 'd
 /**
  * Coexistence configuration
  */
-export interface CoexistenceConfig {
+interface CoexistenceConfig {
   id: string;
   waveId: string;
   name: string;
@@ -363,14 +363,15 @@ class CoexistenceService extends EventEmitter {
       throw new Error(`GAL sync failed: ${result.error}`);
     }
 
+    const data = result.data as any;
     const syncResult: GALSyncResult = {
       timestamp: new Date(),
-      sourceEntries: result.data.sourceEntries || 0,
-      targetEntries: result.data.targetEntries || 0,
-      synchronized: result.data.synchronized || 0,
-      failed: result.data.failed || 0,
+      sourceEntries: data.sourceEntries || 0,
+      targetEntries: data.targetEntries || 0,
+      synchronized: data.synchronized || 0,
+      failed: data.failed || 0,
       duration: Date.now() - startTime,
-      errors: result.data.errors || [],
+      errors: data.errors || [],
     };
 
     this.emit('coexistence:gal-synced', { configId, result: syncResult });
@@ -399,8 +400,9 @@ class CoexistenceService extends EventEmitter {
       throw new Error(`Health check failed: ${result.error}`);
     }
 
-    const checks: HealthCheck[] = result.data.checks || [];
-    const detectedIssues: CoexistenceIssue[] = result.data.issues || [];
+    const data = result.data as any;
+    const checks: HealthCheck[] = data.checks || [];
+    const detectedIssues: CoexistenceIssue[] = data.issues || [];
 
     // Store detected issues
     for (const issue of detectedIssues) {
@@ -465,10 +467,11 @@ class CoexistenceService extends EventEmitter {
       throw new Error(`Troubleshooting failed: ${result.error}`);
     }
 
+    const data = result.data as any;
     return {
-      diagnosis: result.data.diagnosis || 'Unable to diagnose',
-      remediation: result.data.remediation || [],
-      autoFixAvailable: result.data.autoFixAvailable || false,
+      diagnosis: data.diagnosis || 'Unable to diagnose',
+      remediation: data.remediation || [],
+      autoFixAvailable: data.autoFixAvailable || false,
     };
   }
 
@@ -674,4 +677,4 @@ class CoexistenceService extends EventEmitter {
 }
 
 export default CoexistenceService;
-export { CoexistenceType, CoexistenceStatus, CoexistenceConfig, CoexistenceHealth, CoexistenceIssue };
+export type { CoexistenceConfig, CoexistenceHealth, CoexistenceIssue };

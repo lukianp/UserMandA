@@ -119,7 +119,10 @@ export class PerformanceMonitoringService {
   private maxHistorySize = 10000; // Keep last 10k data points
   private maxAlerts = 1000;
 
-  private constructor() {}
+  private constructor() {
+    // Initialize performance monitoring service
+    loggingService.debug('PerformanceMonitoringService instance created', 'PerformanceMonitoringService');
+  }
 
   /**
    * Get singleton instance

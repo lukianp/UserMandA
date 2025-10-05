@@ -26,7 +26,7 @@ import { useWebServerDiscoveryLogic } from './useWebServerDiscoveryLogic';
 // Mock electron API
 const mockExecuteModule = jest.fn();
 const mockCancelExecution = jest.fn();
-const mockOnProgress = jest.fn(() => jest.fn()); // Returns cleanup function
+const mockOnProgress = jest.fn((callback: any) => jest.fn()); // Takes callback, returns cleanup function
 
 global.window = {
   electronAPI: {
@@ -66,7 +66,7 @@ describe('Discovery Hooks - Common Pattern Tests', () => {
               deviceName: 'Test Device',
               operatingSystem: 'Windows',
               osVersion: '10.0.19045',
-              complianceState: 'compliant',
+              complianceState: 'compliant' as const,
               managementAgent: 'mdm',
               enrolledDateTime: new Date().toISOString(),
               lastSyncDateTime: new Date().toISOString(),
@@ -75,9 +75,9 @@ describe('Discovery Hooks - Common Pattern Tests', () => {
               model: 'Surface Pro',
             },
           ],
-          policies: [],
-          applications: [],
-          configurations: [],
+          policies: [] as any[],
+          applications: [] as any[],
+          configurations: [] as any[],
         },
       };
 
@@ -96,8 +96,8 @@ describe('Discovery Hooks - Common Pattern Tests', () => {
     });
 
     it('should handle IPC progress updates', async () => {
-      let progressCallback: any;
-      mockOnProgress.mockImplementationOnce((callback) => {
+      let progressCallback: (data: any) => void;
+      mockOnProgress.mockImplementationOnce((callback: (data: any) => void) => {
         progressCallback = callback;
         return jest.fn();
       });
@@ -112,7 +112,7 @@ describe('Discovery Hooks - Common Pattern Tests', () => {
                 progress: 50,
               });
             }
-            resolve({ success: true, data: { devices: [], policies: [], applications: [], configurations: [] } });
+            resolve({ success: true, data: { devices: [] as any[], policies: [] as any[], applications: [] as any[], configurations: [] as any[] } });
           }, 100);
         });
       });
@@ -156,9 +156,9 @@ describe('Discovery Hooks - Common Pattern Tests', () => {
             { id: '2', deviceName: 'iOS Device', operatingSystem: 'iOS' },
             { id: '3', deviceName: 'Android Device', operatingSystem: 'Android' },
           ],
-          policies: [],
-          applications: [],
-          configurations: [],
+          policies: [] as any[],
+          applications: [] as any[],
+          configurations: [] as any[],
         },
       };
 
@@ -217,9 +217,9 @@ describe('Discovery Hooks - Common Pattern Tests', () => {
             { id: '1', deviceName: 'Device 1', operatingSystem: 'Windows' },
             { id: '2', deviceName: 'Device 2', operatingSystem: 'iOS' },
           ],
-          policies: [],
-          applications: [],
-          configurations: [],
+          policies: [] as any[],
+          applications: [] as any[],
+          configurations: [] as any[],
         },
       };
 
@@ -251,7 +251,7 @@ describe('Discovery Hooks - Common Pattern Tests', () => {
     it('should export to Excel via IPC', async () => {
       const mockResult = {
         success: true,
-        data: { devices: [], policies: [], applications: [], configurations: [] },
+        data: { devices: [] as any[], policies: [] as any[], applications: [] as any[], configurations: [] as any[] },
       };
 
       mockExecuteModule.mockResolvedValueOnce(mockResult);
@@ -312,8 +312,8 @@ describe('Discovery Hooks - Common Pattern Tests', () => {
               suspendedUnits: 5,
             },
           ],
-          users: [],
-          assignments: [],
+          users: [] as any[],
+          assignments: [] as any[],
           usage: {},
         },
       };
@@ -339,8 +339,8 @@ describe('Discovery Hooks - Common Pattern Tests', () => {
             { skuId: '1', totalUnits: 100, consumedUnits: 80, availableUnits: 20 },
             { skuId: '2', totalUnits: 50, consumedUnits: 50, availableUnits: 0 },
           ],
-          users: [],
-          assignments: [],
+          users: [] as any[],
+          assignments: [] as any[],
           usage: {},
         },
       };
@@ -370,8 +370,8 @@ describe('Discovery Hooks - Common Pattern Tests', () => {
             { skuId: '2', skuPartNumber: 'EMS_E5', displayName: 'EMS E5' },
             { skuId: '3', skuPartNumber: 'O365_E5', displayName: 'Office 365 E5' },
           ],
-          users: [],
-          assignments: [],
+          users: [] as any[],
+          assignments: [] as any[],
           usage: {},
         },
       };
@@ -426,7 +426,7 @@ describe('Discovery Hooks - Common Pattern Tests', () => {
               environmentId: 'env-1',
             },
           ],
-          connectors: [],
+          connectors: [] as any[],
         },
       };
 
@@ -486,14 +486,14 @@ describe('Discovery Hooks - Common Pattern Tests', () => {
       const mockResult = {
         success: true,
         data: {
-          environments: [],
+          environments: [] as any[],
           apps: [
             { id: '1', appType: 'canvas', name: 'Canvas App 1' },
             { id: '2', appType: 'canvas', name: 'Canvas App 2' },
             { id: '3', appType: 'model-driven', name: 'Model Driven App' },
           ],
-          flows: [],
-          connectors: [],
+          flows: [] as any[],
+          connectors: [] as any[],
         },
       };
 
@@ -533,9 +533,9 @@ describe('Discovery Hooks - Common Pattern Tests', () => {
               operatingSystem: 'Windows Server 2019',
               totalSites: 5,
               status: 'running',
-              sites: [],
-              applicationPools: [],
-              certificates: [],
+              sites: [] as any[],
+              applicationPools: [] as any[],
+              certificates: [] as any[],
             },
           ],
         },

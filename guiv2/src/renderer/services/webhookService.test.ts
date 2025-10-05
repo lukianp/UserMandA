@@ -290,7 +290,7 @@ describe('WebhookService', () => {
 
       expect(delivery).toBeDefined();
       expect(delivery.event).toBe('test');
-      expect(delivery.payload.data.message).toContain('test');
+      expect((delivery.payload.data as any).message).toContain('test');
     });
 
     it('should throw error for non-existent webhook', async () => {

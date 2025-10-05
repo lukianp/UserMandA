@@ -5,11 +5,13 @@
  * All migration plan data is stored in profile-specific directories.
  */
 
+// eslint-disable-next-line import/no-unresolved
 import { Low } from 'lowdb';
+// eslint-disable-next-line import/no-unresolved
 import { JSONFile } from 'lowdb/node';
 import path from 'path';
 import fs from 'fs/promises';
-import type { MigrationWave, MigrationItem, MigrationBatch } from '../../renderer/types/models/migration';
+import type { MigrationWave, MigrationItem } from '../../renderer/types/models/migration';
 
 /**
  * Database schema for migration plan
@@ -40,8 +42,8 @@ const defaultData: MigrationPlanDatabase = {
  */
 class DatabaseService {
   private db: Low<MigrationPlanDatabase> | null = null;
-  private dbPath: string = '';
-  private backupDir: string = '';
+  private dbPath = '';
+  private backupDir = '';
 
   /**
    * Initialize the database for a specific profile

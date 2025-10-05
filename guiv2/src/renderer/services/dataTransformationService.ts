@@ -30,8 +30,8 @@ export type FilterOperator =
 export interface FilterCondition {
   field: string;
   operator: FilterOperator;
-  value?: any;
-  value2?: any; // For 'between' operator
+  value?: string | number | boolean | string[] | null;
+  value2?: string | number | boolean | null; // For 'between' operator
   caseSensitive?: boolean;
 }
 
@@ -236,7 +236,7 @@ export class DataTransformationService {
 
       case 'regex':
         try {
-          const regex = new RegExp(value, caseSensitive ? '' : 'i');
+          const regex = new RegExp(String(value), caseSensitive ? '' : 'i');
           return regex.test(strField);
         } catch {
           return false;
@@ -593,11 +593,12 @@ export class DataTransformationService {
       case 'string':
         return String(value);
 
-      case 'number':
+      case 'number': {
         const num = Number(value);
         return isNaN(num) ? null : num;
+      }
 
-      case 'boolean':
+      case 'boolean': {
         if (typeof value === 'boolean') return value;
         if (typeof value === 'string') {
           const lower = value.toLowerCase();
@@ -605,10 +606,12 @@ export class DataTransformationService {
           if (lower === 'false' || lower === '0' || lower === 'no') return false;
         }
         return Boolean(value);
+      }
 
-      case 'date':
+      case 'date': {
         const date = new Date(value);
         return isNaN(date.getTime()) ? null : date;
+      }
 
       default:
         return value;
@@ -645,7 +648,7 @@ export class DataTransformationService {
    * @param fields Fields to select
    * @returns Data with only selected fields
    */
-  select<T = any>(data: T[], fields: string[]): Partial<T>[] {
+  select<T extends object = any>(data: T[], fields: string[]): Partial<T>[] {
     return data.map((row) => {
       const selected: any = {};
       for (const field of fields) {

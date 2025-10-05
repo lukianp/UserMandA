@@ -89,7 +89,22 @@ export const useDomainDiscoveryLogic = () => {
   useEffect(() => {
     if (!window.electronAPI.onProgress) return;
 
-    const unsubscribe = window.electronAPI.onProgress((progressData: DiscoveryProgress) => {
+    const unsubscribe = window.electronAPI.onProgress((data) => {
+      // Convert ProgressData to DiscoveryProgress
+      const progressData: DiscoveryProgress = {
+        percentage: data.percentage,
+        message: data.message,
+        currentItem: data.currentItem,
+        itemsProcessed: data.itemsProcessed,
+        totalItems: data.totalItems,
+        moduleName: 'DomainDiscovery',
+        currentOperation: data.currentItem || 'Processing',
+        overallProgress: data.percentage,
+        moduleProgress: data.percentage,
+        status: 'Running',
+        timestamp: new Date().toISOString(),
+      };
+
       if (progressData.moduleName === 'DomainDiscovery') {
         setLocalProgress(progressData);
         setProgress(progressData);
@@ -104,9 +119,10 @@ export const useDomainDiscoveryLogic = () => {
   useEffect(() => {
     if (!window.electronAPI.onOutput) return;
 
-    const unsubscribe = window.electronAPI.onOutput((output: { message: string; type: 'stdout' | 'stderr' }) => {
-      if (output.type === 'stderr' && output.message) {
-        addLog(`[ERROR] ${output.message}`);
+    const unsubscribe = window.electronAPI.onOutput((data) => {
+      // Convert OutputData to expected format
+      if (data.type === 'error' && data.data) {
+        addLog(`[ERROR] ${data.data}`);
       }
     });
 

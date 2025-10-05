@@ -361,7 +361,7 @@ class PowerShellExecutionService extends EventEmitter {
           ...args,
         ];
 
-        const process = spawn('pwsh', pwshArgs, {
+        const childProcess = spawn('pwsh', pwshArgs, {
           cwd: options.workingDirectory || this.config.scriptsBaseDir,
           env: {
             ...process.env,
@@ -372,7 +372,7 @@ class PowerShellExecutionService extends EventEmitter {
         });
 
         // Track active execution
-        this.activeExecutions.set(executionId, process);
+        this.activeExecutions.set(executionId, childProcess);
 
         let stdout = '';
         let stderr = '';
@@ -383,7 +383,7 @@ class PowerShellExecutionService extends EventEmitter {
 
         // Setup timeout
         let timeoutHandle: NodeJS.Timeout | null = setTimeout(() => {
-          process.kill('SIGTERM');
+          childProcess.kill('SIGTERM');
           const error = new PowerShellTimeoutError(timeout, resolvedPath);
           this.activeExecutions.delete(executionId);
           this.releaseSession(session.id);
@@ -391,7 +391,7 @@ class PowerShellExecutionService extends EventEmitter {
         }, timeout);
 
         // Collect and parse stdout - contains output stream and structured data
-        process.stdout.on('data', (data: Buffer) => {
+        childProcess.stdout?.on('data', (data: Buffer) => {
           const chunk = data.toString();
           stdout += chunk;
 
@@ -400,7 +400,7 @@ class PowerShellExecutionService extends EventEmitter {
         });
 
         // Collect and parse stderr - contains error, warning, verbose, debug, information streams
-        process.stderr.on('data', (data: Buffer) => {
+        childProcess.stderr?.on('data', (data: Buffer) => {
           const chunk = data.toString();
           stderr += chunk;
 
@@ -409,7 +409,7 @@ class PowerShellExecutionService extends EventEmitter {
         });
 
         // Handle process exit
-        process.on('close', (code: number | null) => {
+        childProcess.on('close', (code: number | null) => {
           if (timeoutHandle) {
             clearTimeout(timeoutHandle);
             timeoutHandle = null;
@@ -488,8 +488,8 @@ class PowerShellExecutionService extends EventEmitter {
         });
 
         // Handle process errors
-        process.on('error', (err: Error) => {
-          clearTimeout(timeoutHandle);
+        childProcess.on('error', (err: Error) => {
+          if (timeoutHandle) clearTimeout(timeoutHandle);
           this.activeExecutions.delete(executionId);
           this.releaseSession(session.id);
 
@@ -1222,11 +1222,8 @@ class PowerShellExecutionService extends EventEmitter {
   }
 }
 
+// Export service as default and named export
 export default PowerShellExecutionService;
-export {
-  PowerShellError,
-  PowerShellSyntaxError,
-  PowerShellRuntimeError,
-  PowerShellTimeoutError,
-  PowerShellCancellationError,
-};
+export { PowerShellExecutionService };
+
+// Error classes already exported at top of file (lines 27-60)

@@ -42,7 +42,7 @@ export interface LogEntry {
   message: string;
   context?: string;
   correlationId?: string;
-  data?: any;
+  data?: Record<string, unknown>;
   error?: {
     name: string;
     message: string;
@@ -159,35 +159,35 @@ class LoggingService {
   /**
    * TRACE level logging
    */
-  trace(message: string, context?: string, data?: any): void {
+  trace(message: string, context?: string, data?: Record<string, unknown>): void {
     this.log(LogLevel.TRACE, message, context, data);
   }
 
   /**
    * DEBUG level logging
    */
-  debug(message: string, context?: string, data?: any): void {
+  debug(message: string, context?: string, data?: Record<string, unknown>): void {
     this.log(LogLevel.DEBUG, message, context, data);
   }
 
   /**
    * INFO level logging
    */
-  info(message: string, context?: string, data?: any): void {
+  info(message: string, context?: string, data?: Record<string, unknown>): void {
     this.log(LogLevel.INFO, message, context, data);
   }
 
   /**
    * WARN level logging
    */
-  warn(message: string, context?: string, data?: any): void {
+  warn(message: string, context?: string, data?: Record<string, unknown>): void {
     this.log(LogLevel.WARN, message, context, data);
   }
 
   /**
    * ERROR level logging
    */
-  error(message: string, context?: string, data?: any, error?: Error): void {
+  error(message: string, context?: string, data?: Record<string, unknown>, error?: Error): void {
     const errorData = error && this.config.enableStackTrace ? {
       name: error.name,
       message: error.message,
@@ -200,7 +200,7 @@ class LoggingService {
   /**
    * FATAL level logging
    */
-  fatal(message: string, context?: string, data?: any, error?: Error): void {
+  fatal(message: string, context?: string, data?: Record<string, unknown>, error?: Error): void {
     const errorData = error && this.config.enableStackTrace ? {
       name: error.name,
       message: error.message,
@@ -217,7 +217,7 @@ class LoggingService {
     level: LogLevel,
     message: string,
     context?: string,
-    data?: any,
+    data?: Record<string, unknown>,
     error?: { name: string; message: string; stack?: string }
   ): void {
     // Check if log level is enabled
@@ -401,7 +401,7 @@ class LoggingService {
   private outputToFile(entry: LogEntry): void {
     // Send to main process for file writing
     if (window.electronAPI?.logToFile) {
-      window.electronAPI.logToFile(entry).catch((err) => {
+      window.electronAPI.logToFile(entry).catch((err: unknown) => {
         console.error('Failed to write log to file:', err);
       });
     }

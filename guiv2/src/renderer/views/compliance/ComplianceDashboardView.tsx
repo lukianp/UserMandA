@@ -3,25 +3,25 @@
  * Comprehensive compliance monitoring and reporting for M&A discovery
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Shield, CheckCircle, XCircle, AlertTriangle, FileText, TrendingUp, Activity } from 'lucide-react';
 import { useComplianceDashboardLogic } from '../../hooks/useComplianceDashboardLogic';
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 
 export const ComplianceDashboardView: React.FC = () => {
   const {
-    complianceData,
+    dashboardData,
     isLoading,
+    error,
+    lastRefresh,
     stats,
-    selectedFramework,
-    setSelectedFramework,
     handleExport,
     handleRefresh,
-    handleRunAudit,
-    columnDefs,
   } = useComplianceDashboardLogic();
+
+  const [selectedFramework, setSelectedFramework] = useState('all');
 
   const frameworks = [
     { id: 'all', label: 'All Frameworks', color: 'blue' },
@@ -34,23 +34,23 @@ export const ComplianceDashboardView: React.FC = () => {
 
   const complianceStatus = [
     {
-      status: 'Compliant',
-      count: stats.compliant,
-      percentage: stats.compliantPercentage,
+      status: 'Resolved',
+      count: stats.resolvedViolations,
+      percentage: stats.totalViolations > 0 ? Math.round((stats.resolvedViolations / stats.totalViolations) * 100) : 0,
       icon: CheckCircle,
       color: 'green',
     },
     {
-      status: 'Non-Compliant',
-      count: stats.nonCompliant,
-      percentage: stats.nonCompliantPercentage,
+      status: 'Critical',
+      count: stats.criticalViolations,
+      percentage: stats.totalViolations > 0 ? Math.round((stats.criticalViolations / stats.totalViolations) * 100) : 0,
       icon: XCircle,
       color: 'red',
     },
     {
-      status: 'At Risk',
-      count: stats.atRisk,
-      percentage: stats.atRiskPercentage,
+      status: 'Open',
+      count: stats.openViolations,
+      percentage: stats.totalViolations > 0 ? Math.round((stats.openViolations / stats.totalViolations) * 100) : 0,
       icon: AlertTriangle,
       color: 'yellow',
     },
@@ -82,7 +82,7 @@ export const ComplianceDashboardView: React.FC = () => {
           </Button>
           <Button
             variant="primary"
-            onClick={handleRunAudit}
+            onClick={handleRefresh}
             disabled={isLoading}
             data-cy="run-audit-btn"
           >
@@ -90,7 +90,7 @@ export const ComplianceDashboardView: React.FC = () => {
           </Button>
           <Button
             variant="secondary"
-            onClick={handleExport}
+            onClick={() => handleExport('csv')}
             icon={<FileText className="w-4 h-4" />}
             data-cy="export-btn"
           >
@@ -165,18 +165,18 @@ export const ComplianceDashboardView: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Controls</p>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Violations</p>
             <Shield className="w-5 h-5 text-blue-500" />
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalControls}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalViolations}</p>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Audit Findings</p>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Open Violations</p>
             <FileText className="w-5 h-5 text-orange-500" />
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.auditFindings}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.openViolations}</p>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -185,27 +185,32 @@ export const ComplianceDashboardView: React.FC = () => {
             <TrendingUp className="w-5 h-5 text-red-500" />
           </div>
           <div className="flex items-end gap-2">
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.riskScore}</p>
-            <Badge variant={stats.riskScore > 70 ? 'error' : stats.riskScore > 40 ? 'warning' : 'success'}>
-              {stats.riskScore > 70 ? 'High' : stats.riskScore > 40 ? 'Medium' : 'Low'}
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.criticalViolations}</p>
+            <Badge variant={stats.criticalViolations > 10 ? 'danger' : stats.criticalViolations > 5 ? 'warning' : 'success'}>
+              {stats.criticalViolations > 10 ? 'High' : stats.criticalViolations > 5 ? 'Medium' : 'Low'}
             </Badge>
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Last Audit</p>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Last Refresh</p>
             <Activity className="w-5 h-5 text-purple-500" />
           </div>
-          <p className="text-sm font-medium text-gray-900 dark:text-white">{stats.lastAuditDate}</p>
+          <p className="text-sm font-medium text-gray-900 dark:text-white">{lastRefresh ? new Date(lastRefresh).toLocaleString() : 'N/A'}</p>
         </div>
       </div>
 
       {/* Compliance Data Grid */}
       <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <VirtualizedDataGrid
-          data={complianceData}
-          columns={columnDefs}
+          data={dashboardData?.violations || []}
+          columns={[
+            { field: 'id', headerName: 'ID', width: 100 },
+            { field: 'severity', headerName: 'Severity', width: 120 },
+            { field: 'status', headerName: 'Status', width: 120 },
+            { field: 'description', headerName: 'Description', width: 300 },
+          ]}
           loading={isLoading}
           enableExport
           enableGrouping

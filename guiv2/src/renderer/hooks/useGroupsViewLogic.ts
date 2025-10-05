@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { ColDef } from 'ag-grid-community';
-import { GroupData, GroupType, GroupScope } from '../types/models/group';
+import { GroupData, GroupType, GroupScope, MembershipType } from '../types/models/group';
 import { useDebounce } from './useDebounce';
 import { powerShellService } from '../services/powerShellService';
 import { useProfileStore } from '../store/useProfileStore';
@@ -98,18 +98,19 @@ export const useGroupsViewLogic = () => {
             description: `Description for Group ${i + 1}`,
             groupType: [GroupType.Security, GroupType.Distribution, GroupType.MailEnabled][i % 3],
             scope: [GroupScope.Universal, GroupScope.Global, GroupScope.DomainLocal][i % 3],
+            membershipType: [MembershipType.Static, MembershipType.Dynamic, MembershipType.RuleBased][i % 3],
             email: i % 2 === 0 ? `group${i}@company.com` : undefined,
             memberCount: Math.floor(Math.random() * 100),
+            owners: i % 3 === 0 ? [`User ${i}`] : [],
             source: i % 3 === 0 ? 'AzureAD' : 'ActiveDirectory',
             createdDate: new Date(2020, 0, i + 1).toISOString(),
-            modifiedDate: new Date(2024, 9, i % 30 + 1).toISOString(),
-            owners: i % 3 === 0 ? [`User ${i}`] : [],
+            lastModified: new Date(2024, 9, i % 30 + 1).toISOString(),
+            isSecurityEnabled: i % 2 === 1,
             isMailEnabled: i % 2 === 0,
-            isDynamic: i % 5 === 0,
             syncStatus: i % 10 === 0
               ? { isSynced: false, lastSyncTime: '', syncErrors: ['Error'] }
               : { isSynced: true, lastSyncTime: new Date().toISOString() },
-          }));
+          } as GroupData));
 
           setWarnings(['PowerShell execution failed. Using mock data.']);
         }

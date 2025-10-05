@@ -5,10 +5,10 @@
 
 import React from 'react';
 import { useSharePointDiscoveryLogic } from '../../hooks/useSharePointDiscoveryLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import SearchBar from '../../components/molecules/SearchBar';
-import Button from '../../components/atoms/Button';
-import Badge from '../../components/atoms/Badge';
+import { Button } from '../../components/atoms/Button';
+import { Badge } from '../../components/atoms/Badge';
 import ProgressBar from '../../components/molecules/ProgressBar';
 import {
   Download,
@@ -35,23 +35,33 @@ import {
 const SharePointDiscoveryView: React.FC = () => {
   const {
     config,
-    templates,
-    currentResult,
+    setConfig,
+    result,
     isDiscovering,
     progress,
-    selectedTab,
-    searchText,
-    filteredData,
-    columnDefs,
-    errors,
-    startDiscovery,
-    cancelDiscovery,
-    updateConfig,
+    error,
+    templates,
+    selectedTemplate,
     loadTemplate,
     saveAsTemplate,
-    exportResults,
+    startDiscovery,
+    cancelDiscovery,
+    sites,
+    lists,
+    permissions,
+    siteFilter,
+    setSiteFilter,
+    listFilter,
+    setListFilter,
+    permissionFilter,
+    setPermissionFilter,
+    siteColumns,
+    listColumns,
+    permissionColumns,
+    exportData,
+    selectedTab,
     setSelectedTab,
-    setSearchText,
+    statistics,
   } = useSharePointDiscoveryLogic();
 
   return (
@@ -137,37 +147,37 @@ const SharePointDiscoveryView: React.FC = () => {
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
               <div className="flex flex-wrap gap-2 text-sm">
                 <ConfigBadge
-                  enabled={config.includeSites}
+                  enabled={config.discoverSites}
                   label="Sites"
                   icon={<FolderOpen className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeLists}
+                  enabled={config.discoverLists}
                   label="Lists & Libraries"
                   icon={<FileText className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includePermissions}
+                  enabled={config.discoverPermissions}
                   label="Permissions"
                   icon={<Shield className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeContentTypes}
+                  enabled={config.discoverContentTypes}
                   label="Content Types"
                   icon={<Database className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeWorkflows}
+                  enabled={config.discoverWorkflows}
                   label="Workflows"
                   icon={<Activity className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeExternalSharing}
+                  enabled={config.detectExternalSharing}
                   label="External Sharing"
                   icon={<Users className="w-3 h-3" />}
                 />
                 <ConfigBadge
-                  enabled={config.includeStorageMetrics}
+                  enabled={config.includeSiteMetrics}
                   label="Storage Metrics"
                   icon={<Database className="w-3 h-3" />}
                 />
@@ -182,16 +192,16 @@ const SharePointDiscoveryView: React.FC = () => {
             <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-purple-900 dark:text-purple-100">
-                  {progress.currentOperation}
+                  {progress.phaseLabel || progress.currentItem || 'Processing...'}
                 </span>
                 <span className="text-sm text-purple-700 dark:text-purple-300">
-                  {progress.progress}% complete
+                  {progress.percentComplete}% complete
                 </span>
               </div>
-              <ProgressBar value={progress.progress} max={100} />
+              <ProgressBar value={progress.percentComplete} max={100} />
               <div className="mt-2 flex items-center justify-between text-xs text-purple-600 dark:text-purple-400">
-                <span>{progress.objectsProcessed} objects processed</span>
-                {progress.estimatedTimeRemaining !== null && (
+                <span>{progress.itemsProcessed} objects processed</span>
+                {progress.estimatedTimeRemaining !== undefined && (
                   <span>Estimated time remaining: {Math.ceil(progress.estimatedTimeRemaining / 60)} minutes</span>
                 )}
               </div>
@@ -200,22 +210,18 @@ const SharePointDiscoveryView: React.FC = () => {
         )}
 
         {/* Error Display */}
-        {errors.length > 0 && (
+        {error && (
           <div className="px-4 pb-4">
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">Errors:</h3>
-              <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
-                {errors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
+              <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">Error:</h3>
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           </div>
         )}
       </div>
 
       {/* Results Section */}
-      {currentResult && (
+      {result && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Summary Stats */}
           <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
@@ -223,30 +229,30 @@ const SharePointDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<FolderOpen className="w-5 h-5" />}
                 label="Total Sites"
-                value={currentResult.stats.totalSites}
-                subValue={`${currentResult.stats.subsites} subsites`}
+                value={statistics?.totalSites || 0}
+                subValue={`${statistics?.hubSites || 0} hub sites`}
                 color="purple"
               />
               <StatCard
                 icon={<Database className="w-5 h-5" />}
                 label="Total Storage"
-                value={formatBytes(currentResult.stats.totalStorage)}
-                subValue={`${formatBytes(currentResult.stats.storageUsed)} used`}
+                value={formatBytes(statistics?.totalStorage || 0)}
+                subValue={`${(statistics?.averageStoragePerSite || 0).toFixed(2)} MB avg`}
                 color="blue"
               />
               <StatCard
                 icon={<FileText className="w-5 h-5" />}
                 label="Lists & Libraries"
-                value={currentResult.stats.totalLists}
-                subValue={`${currentResult.stats.totalDocuments.toLocaleString()} documents`}
+                value={statistics?.totalLists || 0}
+                subValue={`${(statistics?.totalDocuments || 0).toLocaleString()} documents`}
                 color="green"
               />
               <StatCard
                 icon={<Shield className="w-5 h-5" />}
                 label="Unique Permissions"
-                value={currentResult.stats.uniquePermissions}
+                value={statistics?.uniquePermissions || 0}
                 subValue={
-                  currentResult.stats.uniquePermissions > 100
+                  (statistics?.uniquePermissions || 0) > 100
                     ? <span className="text-orange-600 dark:text-orange-400 flex items-center gap-1">
                         <AlertTriangle className="w-3 h-3" /> High complexity
                       </span>
@@ -269,19 +275,19 @@ const SharePointDiscoveryView: React.FC = () => {
               <TabButton
                 active={selectedTab === 'sites'}
                 onClick={() => setSelectedTab('sites')}
-                label={`Sites (${currentResult.sites.length})`}
+                label={`Sites (${sites.length})`}
                 icon={<FolderOpen className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'lists'}
                 onClick={() => setSelectedTab('lists')}
-                label={`Lists (${currentResult.lists.length})`}
+                label={`Lists (${lists.length})`}
                 icon={<FileText className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'permissions'}
                 onClick={() => setSelectedTab('permissions')}
-                label={`Permissions (${currentResult.permissions.length})`}
+                label={`Permissions (${permissions.length})`}
                 icon={<Shield className="w-4 h-4" />}
               />
             </div>
@@ -293,8 +299,16 @@ const SharePointDiscoveryView: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1 max-w-md">
                   <SearchBar
-                    value={searchText}
-                    onChange={setSearchText}
+                    value={
+                      selectedTab === 'sites' ? siteFilter.searchText || '' :
+                      selectedTab === 'lists' ? listFilter.searchText || '' :
+                      permissionFilter.searchText || ''
+                    }
+                    onChange={(value) => {
+                      if (selectedTab === 'sites') setSiteFilter({ ...siteFilter, searchText: value });
+                      else if (selectedTab === 'lists') setListFilter({ ...listFilter, searchText: value });
+                      else setPermissionFilter({ ...permissionFilter, searchText: value });
+                    }}
                     placeholder={`Search ${selectedTab}...`}
                     data-cy="sharepoint-search"
                   />
@@ -311,7 +325,16 @@ const SharePointDiscoveryView: React.FC = () => {
                   <Button
                     variant="secondary"
                     icon={<Download />}
-                    onClick={() => exportResults('excel')}
+                    onClick={() => exportData({
+                      format: 'Excel',
+                      includeSites: true,
+                      includeLists: true,
+                      includePermissions: true,
+                      includeContentTypes: false,
+                      includeWorkflows: false,
+                      includeStatistics: true,
+                      splitByType: false
+                    })}
                     data-cy="export-btn"
                   >
                     Export
@@ -324,12 +347,12 @@ const SharePointDiscoveryView: React.FC = () => {
           {/* Content Area */}
           <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
             {selectedTab === 'overview' ? (
-              <OverviewTab result={currentResult} />
+              <OverviewTab result={result} />
             ) : (
               <div className="h-full p-4">
                 <VirtualizedDataGrid
-                  data={filteredData}
-                  columns={columnDefs}
+                  data={(selectedTab === 'sites' ? sites : selectedTab === 'lists' ? lists : permissions) as any[]}
+                  columns={selectedTab === 'sites' ? siteColumns : selectedTab === 'lists' ? listColumns : permissionColumns}
                   loading={false}
                   enableExport
                   enableColumnReorder
@@ -343,7 +366,7 @@ const SharePointDiscoveryView: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!currentResult && !isDiscovering && (
+      {!result && !isDiscovering && (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md">
             <FolderOpen className="w-24 h-24 mx-auto text-gray-400 dark:text-gray-600 mb-4" />

@@ -1,10 +1,10 @@
 import React from 'react';
 import { Network, Play, Download, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useNetworkDiscoveryLogic } from '../../hooks/useNetworkDiscoveryLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
-import Select from '../../components/atoms/Select';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
+import { Select } from '../../components/atoms/Select';
 
 const ConfigBadge: React.FC<{ label: string; value: boolean | string | number }> = ({ label, value }) => (
   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded-md text-xs font-medium">
@@ -129,19 +129,19 @@ const NetworkDiscoveryView: React.FC = () => {
         <div className="flex items-center gap-2">
           <Select
             value=""
-            onChange={(e) => {
-              const template = templates.find((t) => t.id === e.target.value);
+            onChange={(value) => {
+              const template = templates.find((t) => t.name === value);
               if (template) handleApplyTemplate(template);
             }}
+            options={[
+              { value: '', label: 'Select Template...' },
+              ...templates.map((template) => ({
+                value: template.name,
+                label: template.name,
+              })),
+            ]}
             data-cy="template-select"
-          >
-            <option value="">Select Template...</option>
-            {templates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name}
-              </option>
-            ))}
-          </Select>
+          />
           <Button
             onClick={handleStartDiscovery}
             disabled={isLoading}
@@ -162,13 +162,15 @@ const NetworkDiscoveryView: React.FC = () => {
       {/* Configuration Summary */}
       <div className="px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex flex-wrap gap-2">
-          <ConfigBadge label="Devices" value={config.parameters.includeDevices} />
-          <ConfigBadge label="Subnets" value={config.parameters.includeSubnets} />
-          <ConfigBadge label="Port Scan" value={config.parameters.includePortScan} />
-          <ConfigBadge label="Topology" value={config.parameters.includeTopology} />
-          <ConfigBadge label="Vulnerability Scan" value={config.parameters.includeVulnerabilityScan} />
-          <ConfigBadge label="Port Range" value={config.parameters.portRange || 'N/A'} />
-          <ConfigBadge label="IP Ranges" value={config.parameters.ipRanges?.length || 0} />
+          <ConfigBadge label="Scan Type" value={config.scanType} />
+          <ConfigBadge label="Ping Sweep" value={config.includePingSweep} />
+          <ConfigBadge label="Port Scan" value={config.includePortScan} />
+          <ConfigBadge label="Service Detection" value={config.includeServiceDetection} />
+          <ConfigBadge label="OS Detection" value={config.includeOsDetection} />
+          <ConfigBadge label="Topology Mapping" value={config.includeTopologyMapping} />
+          <ConfigBadge label="Vulnerability Detection" value={config.includeVulnerabilityDetection} />
+          <ConfigBadge label="Port Range" value={config.portScanRange || 'Common ports'} />
+          <ConfigBadge label="Subnets" value={config.subnets?.length || 0} />
         </div>
       </div>
 
@@ -266,7 +268,7 @@ const NetworkDiscoveryView: React.FC = () => {
                         type="text"
                         placeholder="Search..."
                         value={searchText}
-                        onChange={(e) => setSearchText(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchText(e.target.value)}
                         className="flex-1"
                         data-cy="search-input"
                       />

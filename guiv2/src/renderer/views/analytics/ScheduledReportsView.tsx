@@ -5,10 +5,10 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Calendar, Clock, Mail, Play, Pause, Trash2, Plus, Edit2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
-import Select from '../../components/atoms/Select';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
+import { Select } from '../../components/atoms/Select';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { ColDef } from 'ag-grid-community';
 import { useModalStore } from '../../store/useModalStore';
 import { useNotificationStore } from '../../store/useNotificationStore';
@@ -91,7 +91,7 @@ const ScheduledReportsView: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading scheduled reports:', error);
-      addNotification('error', 'Failed to load scheduled reports');
+      addNotification({ type: 'error', message: 'Failed to load scheduled reports', pinned: false, priority: 'normal' });
     } finally {
       setIsLoading(false);
     }
@@ -192,7 +192,7 @@ const ScheduledReportsView: React.FC = () => {
       saveToStorage(updated);
       return updated;
     });
-    addNotification('success', 'Report schedule paused');
+    addNotification({ type: 'success', message: 'Report schedule paused', pinned: false, priority: 'normal' });
   };
 
   const handleResume = (id: string) => {
@@ -201,7 +201,7 @@ const ScheduledReportsView: React.FC = () => {
       saveToStorage(updated);
       return updated;
     });
-    addNotification('success', 'Report schedule resumed');
+    addNotification({ type: 'success', message: 'Report schedule resumed', pinned: false, priority: 'normal' });
   };
 
   const handleDelete = (id: string) => {
@@ -211,7 +211,7 @@ const ScheduledReportsView: React.FC = () => {
         saveToStorage(updated);
         return updated;
       });
-      addNotification('success', 'Scheduled report deleted');
+      addNotification({ type: 'success', message: 'Scheduled report deleted', pinned: false, priority: 'normal' });
     }
   };
 
@@ -220,7 +220,7 @@ const ScheduledReportsView: React.FC = () => {
     if (!report) return;
 
     try {
-      addNotification('info', `Running ${report.name}...`);
+      addNotification({ type: 'info', message: `Running ${report.name}...`, pinned: false, priority: 'normal' });
 
       // Execute report generation via PowerShell
       const result = await window.electronAPI.executeModule({
@@ -241,13 +241,13 @@ const ScheduledReportsView: React.FC = () => {
           saveToStorage(updated);
           return updated;
         });
-        addNotification('success', `${report.name} executed successfully`);
+        addNotification({ type: 'success', message: `${report.name} executed successfully`, pinned: false, priority: 'normal' });
       } else {
         throw new Error(result.error || 'Unknown error');
       }
     } catch (error: any) {
       console.error('Error running report:', error);
-      addNotification('error', `Failed to run report: ${error.message}`);
+      addNotification({ type: 'error', message: `Failed to run report: ${error.message}`, pinned: false, priority: 'normal' });
       // Update status to error
       setScheduledReports(reports => {
         const updated = reports.map(r => (r.id === id ? { ...r, status: 'error' as const } : r));
@@ -291,14 +291,14 @@ const ScheduledReportsView: React.FC = () => {
         saveToStorage(updated);
         return updated;
       });
-      addNotification('success', 'Scheduled report updated');
+      addNotification({ type: 'success', message: 'Scheduled report updated', pinned: false, priority: 'normal' });
     } else {
       setScheduledReports(reports => {
         const updated = [...reports, report];
         saveToStorage(updated);
         return updated;
       });
-      addNotification('success', 'Scheduled report created');
+      addNotification({ type: 'success', message: 'Scheduled report created', pinned: false, priority: 'normal' });
     }
     setShowEditor(false);
     setSelectedReport(null);
@@ -306,27 +306,6 @@ const ScheduledReportsView: React.FC = () => {
 
   const saveToStorage = (reports: ScheduledReport[]) => {
     localStorage.setItem('scheduledReports', JSON.stringify(reports));
-  };
-
-  // Handle grid cell clicks for action buttons
-  const onCellClicked = (event: any) => {
-    const target = event.event?.target;
-    if (!target) return;
-
-    const reportId = target.closest('[data-report-id]')?.dataset.reportId;
-    if (!reportId) return;
-
-    if (target.closest('.run-now')) {
-      handleRunNow(reportId);
-    } else if (target.closest('.pause')) {
-      handlePause(reportId);
-    } else if (target.closest('.resume')) {
-      handleResume(reportId);
-    } else if (target.closest('.edit')) {
-      handleEdit(reportId);
-    } else if (target.closest('.delete')) {
-      handleDelete(reportId);
-    }
   };
 
   return (
@@ -378,7 +357,6 @@ const ScheduledReportsView: React.FC = () => {
           columns={columnDefs}
           loading={isLoading}
           enableExport
-          onCellClicked={onCellClicked}
           data-cy="scheduled-reports-grid"
         />
       </div>
@@ -432,40 +410,38 @@ const ReportScheduleEditor: React.FC<ReportScheduleEditorProps> = ({ report, onS
           <Input
             label="Report Name"
             value={formData.name}
-            onChange={e => setFormData({ ...formData, name: e.target.value })}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
             required
           />
 
           <Input
             label="Description"
             value={formData.description}
-            onChange={e => setFormData({ ...formData, description: e.target.value })}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, description: e.target.value })}
           />
 
           <Select
             label="Schedule"
             value={formData.schedule}
-            onChange={e => {
-              const preset = schedulePresets.find(p => p.value === e.target.value);
+            onChange={(value: string) => {
+              const preset = schedulePresets.find(p => p.value === value);
               setFormData({
                 ...formData,
-                schedule: e.target.value,
-                scheduleDescription: preset?.label || e.target.value,
+                schedule: value,
+                scheduleDescription: preset?.label || value,
               });
             }}
+            options={schedulePresets.map(preset => ({
+              value: preset.value,
+              label: preset.label,
+            }))}
             required
-          >
-            {schedulePresets.map(preset => (
-              <option key={preset.value} value={preset.value}>
-                {preset.label}
-              </option>
-            ))}
-          </Select>
+          />
 
           <Input
             label="Recipients (comma-separated emails)"
             value={formData.recipients.join(', ')}
-            onChange={e => setFormData({ ...formData, recipients: e.target.value.split(',').map(s => s.trim()) })}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, recipients: e.target.value.split(',').map(s => s.trim()) })}
             placeholder="email1@company.com, email2@company.com"
             required
           />
@@ -473,13 +449,14 @@ const ReportScheduleEditor: React.FC<ReportScheduleEditorProps> = ({ report, onS
           <Select
             label="Export Format"
             value={formData.format}
-            onChange={e => setFormData({ ...formData, format: e.target.value as any })}
+            onChange={(value: string) => setFormData({ ...formData, format: value as any })}
+            options={[
+              { value: 'pdf', label: 'PDF' },
+              { value: 'excel', label: 'Excel' },
+              { value: 'csv', label: 'CSV' },
+            ]}
             required
-          >
-            <option value="pdf">PDF</option>
-            <option value="excel">Excel</option>
-            <option value="csv">CSV</option>
-          </Select>
+          />
 
           <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
             <Button type="button" variant="secondary" onClick={onCancel}>

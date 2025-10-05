@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import type { ColDef } from 'ag-grid-community';
 import type {
   VMwareDiscoveryConfig,
   VMwareDiscoveryResult,
   VMwareHost,
-  VirtualMachine,
+  VMwareVM,
   VMwareCluster,
   VMwareDiscoveryTemplate,
 } from '../types/models/vmware';
@@ -245,10 +245,10 @@ export const useVMwareDiscoveryLogic = () => {
 
     const totalHosts = result.hosts.length;
     const totalVMs = result.vms.length;
-    const poweredOnVMs = result.vms.filter((vm) => vm.powerState === 'poweredOn').length;
+    const poweredOnVMs = result.vms.filter((vm) => vm.powerState === 'PoweredOn').length;
     const totalClusters = result.clusters.length;
     const totalStorageTB = result.datastores?.reduce((sum, ds) => sum + ds.capacityGB, 0) / 1024 || 0;
-    const usedStorageTB = result.datastores?.reduce((sum, ds) => sum + (ds.capacityGB - ds.freeGB), 0) / 1024 || 0;
+    const usedStorageTB = result.datastores?.reduce((sum, ds) => sum + (ds.capacityGB - (ds.freeGB || ds.freeSpaceGB)), 0) / 1024 || 0;
 
     return {
       totalHosts,

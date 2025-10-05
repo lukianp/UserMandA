@@ -20,15 +20,15 @@ const { useDataClassificationLogic } = require('../../hooks/useDataClassificatio
 
 describe('DataClassificationView', () => {
   const mockHookDefaults = {
-    data: [],
-    
-    
-    
-    
-    selectedItems: [],
+    data: [] as any[],
+
+
+
+
+    selectedItems: [] as any[],
     searchText: '',
     isLoading: false,
-    error: null,
+    error: null as any,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

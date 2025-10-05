@@ -17,21 +17,53 @@ export type DiscoveryModuleStatus =
   | 'Disabled';
 
 /**
+ * Discovery type enumeration
+ */
+export type DiscoveryType =
+  | 'Azure'
+  | 'Domain'
+  | 'FileSystem'
+  | 'Infrastructure'
+  | 'Licensing'
+  | 'SharePoint'
+  | 'Teams'
+  | 'WebServer'
+  | 'HyperV'
+  | 'IdentityGovernance';
+
+/**
+ * Discovery status enumeration
+ */
+export type DiscoveryStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'paused';
+
+/**
  * Discovery configuration
  */
 export interface DiscoveryConfig {
+  id?: string; // Optional ID for service compatibility
+  name?: string; // Optional name for service compatibility
+  type?: string; // Optional type for service compatibility
   moduleName: string;
   isEnabled: boolean;
   settings: Dictionary<any>;
   priority: number;
   timeout: number; // seconds
   parallelExecution: boolean;
+  parameters?: Dictionary<any>; // Optional parameters for service compatibility
+  credentials?: Dictionary<any>; // Optional credentials for service compatibility
+  retryPolicy?: Dictionary<any>; // Optional retry policy for service compatibility
 }
 
 /**
  * Discovery result from a module
  */
-export interface DiscoveryResult extends Identifiable, Named, TimestampMetadata {
+export interface DiscoveryResult extends Identifiable, Named {
   moduleName: string;
   displayName: string;
   itemCount: number;
@@ -39,6 +71,8 @@ export interface DiscoveryResult extends Identifiable, Named, TimestampMetadata 
   duration: number; // milliseconds
   status: string;
   filePath: string;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
 
   // Computed display properties
   itemCountText?: string;
@@ -51,7 +85,13 @@ export interface DiscoveryResult extends Identifiable, Named, TimestampMetadata 
   errorMessage: string;
   dataCount?: number;
   additionalData: Dictionary<any>;
-  createdAt?: Date | string;
+
+  // Additional properties for service compatibility
+  data?: any[];
+  startTime?: Date | string;
+  endTime?: Date | string;
+  errors?: string[];
+  warnings?: string[];
 }
 
 /**
@@ -247,4 +287,141 @@ export interface DiscoveryFilterCriteria {
     endDate: Date | string;
   };
   searchText?: string;
+}
+
+/**
+ * Scheduled discovery configuration
+ */
+export interface ScheduledDiscovery extends Identifiable, Named {
+  id: string;
+  name: string;
+  description?: string;
+  configId: string;
+  schedule: string; // cron expression
+  isEnabled: boolean;
+  enabled?: boolean; // Alias for isEnabled
+  lastRun?: Date | string;
+  nextRun?: Date | string;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
+
+  // Additional properties for service compatibility
+  type?: string;
+  parameters?: Dictionary<any>;
+  credentials?: Dictionary<any>;
+  timeout?: number;
+  retryPolicy?: Dictionary<any>;
+}
+
+/**
+ * Discovery template for saved configurations
+ */
+export interface DiscoveryTemplate extends Identifiable, Named {
+  id: string;
+  name: string;
+  description?: string;
+  category: string;
+  config: DiscoveryConfig;
+  isDefault: boolean;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
+  createdBy: string;
+
+  // Additional properties for service compatibility
+  type?: string;
+  parameters?: Dictionary<any>;
+  credentials?: Dictionary<any>;
+  timeout?: number;
+  retryPolicy?: Dictionary<any>;
+}
+
+/**
+ * Discovery run instance
+ */
+export interface DiscoveryRun extends Identifiable, TimestampMetadata {
+  id: string;
+  configId: string;
+  templateId?: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused';
+  startTime?: Date | string;
+  endTime?: Date | string;
+  duration?: number; // milliseconds
+  progress: number; // 0-100
+  message?: string;
+  error?: string;
+  results?: DiscoveryResult[];
+  config?: DiscoveryConfig; // Full config object
+  result?: DiscoveryResult; // Single result
+}
+
+/**
+ * Comparison result between discovery runs
+ */
+export interface ComparisonResult {
+  runId1: string;
+  runId2: string;
+  timestamp: Date | string;
+  differences: {
+    added: DiscoveryResult[];
+    removed: DiscoveryResult[];
+    modified: {
+      item: DiscoveryResult;
+      changes: Dictionary<any>;
+    }[];
+  };
+  summary: {
+    totalAdded: number;
+    totalRemoved: number;
+    totalModified: number;
+  };
+  added?: DiscoveryResult[]; // Alias for differences.added
+  modified?: { item: DiscoveryResult; changes: Dictionary<any>; }[]; // Alias for differences.modified
+}
+
+/**
+ * Validation result for discovery configurations
+ */
+export interface ValidationResult {
+  isValid: boolean;
+  passed?: boolean; // Alias for isValid
+  errors: Array<{
+    field: string;
+    message: string;
+    severity: 'error' | 'warning' | 'info';
+  }>;
+  warnings: Array<{
+    field: string;
+    message: string;
+  }>;
+}
+
+/**
+ * Connection test result
+ */
+export interface ConnectionResult {
+  success: boolean;
+  message: string;
+  details?: Dictionary<any>;
+  timestamp: Date | string;
+  duration?: number; // milliseconds
+  latency?: number; // milliseconds, alias for duration
+}
+
+/**
+ * History filter for discovery runs
+ */
+export interface HistoryFilter {
+  configIds?: string[];
+  templateIds?: string[];
+  statuses?: ('pending' | 'running' | 'completed' | 'failed' | 'cancelled')[];
+  type?: string;
+  status?: string; // Single status value
+  startDate?: Date | string;
+  endDate?: Date | string;
+  dateRange?: {
+    startDate: Date | string;
+    endDate: Date | string;
+  };
+  searchText?: string;
+  limit?: number;
 }

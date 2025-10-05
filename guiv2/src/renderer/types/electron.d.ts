@@ -259,6 +259,13 @@ export interface ElectronAPI {
    */
   listFiles: (path: string, pattern?: string) => Promise<string[]>;
 
+  /**
+   * Write log entry to file
+   * @param entry Log entry to write
+   * @returns Promise resolving when log is written
+   */
+  logToFile: (entry: any) => Promise<void>;
+
   // ========================================
   // Configuration Management
   // ========================================
@@ -740,6 +747,81 @@ export interface ElectronAPI {
   onDiscoveryCancelled: (callback: (data: {
     executionId: string;
   }) => void) => () => void;
+
+  // ========================================
+  // Logic Engine API (Epic 4)
+  // ========================================
+
+  /**
+   * Logic Engine API for data correlation and inference
+   */
+  logicEngine: {
+    /**
+     * Load all discovery data from CSV files
+     * @param profilePath - Optional path to profile data directory
+     * @returns Promise with success status and statistics
+     */
+    loadAll: (profilePath?: string) => Promise<{
+      success: boolean;
+      statistics?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Get comprehensive user detail projection
+     * @param userId - User SID or UPN
+     * @returns Promise with UserDetailProjection
+     */
+    getUserDetail: (userId: string) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Get current data load statistics
+     * @returns Promise with statistics object
+     */
+    getStatistics: () => Promise<{
+      success: boolean;
+      data?: {
+        statistics: any;
+        lastLoadTime?: Date;
+        isLoading: boolean;
+      };
+      error?: string;
+    }>;
+
+    /**
+     * Invalidate cache and force reload on next access
+     * @returns Promise with success status
+     */
+    invalidateCache: () => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Listen for load progress events
+     * @param callback - Called with progress updates
+     * @returns Cleanup function
+     */
+    onProgress: (callback: (progress: any) => void) => () => void;
+
+    /**
+     * Listen for load completion events
+     * @param callback - Called when load completes
+     * @returns Cleanup function
+     */
+    onLoaded: (callback: (data: any) => void) => () => void;
+
+    /**
+     * Listen for load error events
+     * @param callback - Called on load errors
+     * @returns Cleanup function
+     */
+    onError: (callback: (error: any) => void) => () => void;
+  };
 }
 
 /**

@@ -18,7 +18,7 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { CronJob } from 'cron';
+import * as cron from 'node-cron';
 import PowerShellExecutionService from './powerShellService';
 
 /**
@@ -96,7 +96,7 @@ interface SyncSchedule {
   enabled: boolean;
   lastRun?: Date;
   nextRun?: Date;
-  job?: CronJob;
+  job?: cron.ScheduledTask;
 }
 
 /**
@@ -359,7 +359,7 @@ class DeltaSyncService extends EventEmitter {
     };
 
     // Create cron job
-    const job = new CronJob(
+    const job = cron.schedule(
       cronExpression,
       async () => {
         console.log(`Running scheduled sync: ${name}`);
@@ -371,16 +371,17 @@ class DeltaSyncService extends EventEmitter {
           console.error(`Scheduled sync failed: ${name}`, error);
         }
 
-        schedule.nextRun = job.nextDate().toJSDate();
         await this.saveData();
       },
-      null,
-      true, // Start immediately
-      'UTC'
+      {
+        timezone: 'UTC'
+      }
     );
 
+    // Start the job
+    job.start();
+
     schedule.job = job;
-    schedule.nextRun = job.nextDate().toJSDate();
 
     this.schedules.set(schedule.id, schedule);
     await this.saveData();
@@ -554,30 +555,29 @@ class DeltaSyncService extends EventEmitter {
       this.schedules.clear();
       for (const schedule of schedules) {
         // Recreate cron jobs
-        if (schedule.enabled) {
-          const job = new CronJob(
-            schedule.cronExpression,
-            async () => {
-              console.log(`Running scheduled sync: ${schedule.name}`);
-              schedule.lastRun = new Date();
+      if (schedule.enabled) {
+        const job = cron.schedule(
+          schedule.cronExpression,
+          async () => {
+            console.log(`Running scheduled sync: ${schedule.name}`);
+            schedule.lastRun = new Date();
 
-              try {
-                await this.performDeltaSync(schedule.waveId, schedule.syncType, schedule.direction);
-              } catch (error: any) {
-                console.error(`Scheduled sync failed: ${schedule.name}`, error);
-              }
+            try {
+              await this.performDeltaSync(schedule.waveId, schedule.syncType, schedule.direction);
+            } catch (error: any) {
+              console.error(`Scheduled sync failed: ${schedule.name}`, error);
+            }
 
-              schedule.nextRun = job.nextDate().toJSDate();
-              await this.saveData();
-            },
-            null,
-            true,
-            'UTC'
-          );
+            await this.saveData();
+          },
+          {
+            timezone: 'UTC'
+          }
+        );
 
-          schedule.job = job;
-          schedule.nextRun = job.nextDate().toJSDate();
-        }
+        schedule.job = job;
+        job.start();
+      }
 
         this.schedules.set(schedule.id, schedule);
       }
@@ -609,4 +609,3 @@ class DeltaSyncService extends EventEmitter {
 }
 
 export default DeltaSyncService;
-export { SyncType, ChangeType, SyncDirection, SyncResult, DetectedChange };

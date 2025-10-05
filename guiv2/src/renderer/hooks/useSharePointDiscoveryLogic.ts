@@ -58,7 +58,7 @@ export function useSharePointDiscoveryLogic() {
         functionName: 'Get-SharePointDiscoveryTemplates',
         parameters: {},
       });
-      setTemplates(result.templates || []);
+      setTemplates(result.data?.templates || []);
     } catch (err) {
       console.error('Failed to load templates:', err);
     }
@@ -82,8 +82,18 @@ export function useSharePointDiscoveryLogic() {
     });
 
     try {
-      const unsubscribe = window.electronAPI.onProgress((data: SharePointDiscoveryProgress) => {
-        setProgress(data);
+      const unsubscribe = window.electronAPI.onProgress((data) => {
+        // Convert ProgressData to SharePointDiscoveryProgress
+        const progressData: SharePointDiscoveryProgress = {
+          phase: 'initializing',
+          phaseLabel: data.message,
+          percentComplete: data.percentage,
+          itemsProcessed: data.itemsProcessed || 0,
+          totalItems: data.totalItems || 0,
+          errors: 0,
+          warnings: 0,
+        };
+        setProgress(progressData);
       });
 
       const discoveryResult = await window.electronAPI.executeModule({
@@ -94,7 +104,11 @@ export function useSharePointDiscoveryLogic() {
         },
       });
 
-      setResult(discoveryResult);
+      if (discoveryResult.success && discoveryResult.data) {
+        setResult(discoveryResult.data as SharePointDiscoveryResult);
+      } else {
+        throw new Error(discoveryResult.error || 'Discovery failed');
+      }
       setProgress(null);
       unsubscribe();
     } catch (err) {

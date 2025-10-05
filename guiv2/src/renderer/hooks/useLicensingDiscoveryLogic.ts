@@ -37,6 +37,9 @@ interface LicenseStats {
   totalLicenses: number;
   totalAssigned: number;
   totalAvailable: number;
+  totalUnits: number;
+  consumedUnits: number;
+  availableUnits: number;
   utilizationRate: number;
   totalCost: number;
   costPerMonth: number;
@@ -587,6 +590,9 @@ export const useLicensingDiscoveryLogic = () => {
       totalLicenses,
       totalAssigned,
       totalAvailable,
+      totalUnits: totalLicenses,
+      consumedUnits: totalAssigned,
+      availableUnits: totalAvailable,
       utilizationRate,
       totalCost,
       costPerMonth: totalCost,

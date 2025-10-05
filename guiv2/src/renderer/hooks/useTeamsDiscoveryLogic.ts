@@ -61,7 +61,7 @@ export function useTeamsDiscoveryLogic() {
         functionName: 'Get-TeamsDiscoveryTemplates',
         parameters: {},
       });
-      setTemplates(result.templates || []);
+      setTemplates(result.data?.templates || []);
     } catch (err) {
       console.error('Failed to load templates:', err);
     }
@@ -85,8 +85,18 @@ export function useTeamsDiscoveryLogic() {
     });
 
     try {
-      const unsubscribe = window.electronAPI.onProgress((data: TeamsDiscoveryProgress) => {
-        setProgress(data);
+      const unsubscribe = window.electronAPI.onProgress((data) => {
+        // Convert ProgressData to TeamsDiscoveryProgress
+        const progressData: TeamsDiscoveryProgress = {
+          phase: 'initializing',
+          phaseLabel: data.message,
+          percentComplete: data.percentage,
+          itemsProcessed: data.itemsProcessed || 0,
+          totalItems: data.totalItems || 0,
+          errors: 0,
+          warnings: 0,
+        };
+        setProgress(progressData);
       });
 
       const discoveryResult = await window.electronAPI.executeModule({
@@ -97,7 +107,11 @@ export function useTeamsDiscoveryLogic() {
         },
       });
 
-      setResult(discoveryResult);
+      if (discoveryResult.success && discoveryResult.data) {
+        setResult(discoveryResult.data as TeamsDiscoveryResult);
+      } else {
+        throw new Error(discoveryResult.error || 'Discovery failed');
+      }
       setProgress(null);
       unsubscribe();
     } catch (err) {

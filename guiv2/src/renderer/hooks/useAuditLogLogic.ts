@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNotificationStore } from '../store/useNotificationStore';
-import { exportService } from '../services/exportService';
+import exportService from '../services/exportService';
 
 interface AuditLog {
   id: string;
@@ -71,7 +71,7 @@ export const useAuditLogLogic = () => {
 
       setAuditLogs(mockLogs);
     } catch (error) {
-      addNotification('error', 'Failed to load audit logs');
+      addNotification({ type: 'error', message: 'Failed to load audit logs', pinned: false, priority: 'normal' });
       console.error('Failed to load audit logs:', error);
     } finally {
       setIsLoading(false);
@@ -82,15 +82,15 @@ export const useAuditLogLogic = () => {
     try {
       const filteredLogs = getFilteredLogs();
       await exportService.exportToExcel(filteredLogs, 'AuditLogs');
-      addNotification('success', `Exported ${filteredLogs.length} audit log entries`);
+      addNotification({ type: 'success', message: `Exported ${filteredLogs.length} audit log entries`, pinned: false, priority: 'normal' });
     } catch (error) {
-      addNotification('error', 'Failed to export audit logs');
+      addNotification({ type: 'error', message: 'Failed to export audit logs', pinned: false, priority: 'normal' });
     }
   };
 
   const handleRefresh = () => {
     loadAuditLogs();
-    addNotification('info', 'Audit logs refreshed');
+    addNotification({ type: 'info', message: 'Audit logs refreshed', pinned: false, priority: 'low' });
   };
 
   const getFilteredLogs = () => {

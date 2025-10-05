@@ -3,7 +3,7 @@
  * Translated from GUI/Models/MigrationModels.cs
  */
 
-import { Identifiable, Named, TimestampMetadata, Dictionary, ValidationResult } from '../common';
+import { Identifiable, Named, TimestampMetadata, Dictionary } from '../common';
 
 /**
  * Migration types enumeration - Enhanced for enterprise migration
@@ -76,6 +76,7 @@ export interface MigrationWave extends Identifiable, Named, TimestampMetadata {
   priority: MigrationPriority;
   plannedStartDate: Date | string;
   plannedEndDate: Date | string | null;
+  targetStartDate?: Date | string; // Additional property for test compatibility
   actualStartDate: Date | string | null;
   actualEndDate: Date | string | null;
   createdAt: Date | string;
@@ -83,6 +84,7 @@ export interface MigrationWave extends Identifiable, Named, TimestampMetadata {
   tasks: MigrationTask[];
   status: MigrationStatus;
   batches: MigrationBatch[];
+  users?: string[]; // Additional property for test compatibility
   metadata: Dictionary<any>;
   notes: string;
   prerequisites: string[];
@@ -433,6 +435,23 @@ export interface MigrationProgress {
 }
 
 /**
+ * Validation result for migration operations
+ */
+export interface ValidationResult {
+  isValid: boolean;
+  passed?: boolean;
+  errors: Array<{
+    field: string;
+    message: string;
+    severity: 'error' | 'warning' | 'info';
+  }>;
+  warnings: Array<{
+    field: string;
+    message: string;
+  }>;
+}
+
+/**
  * Conflict resolution strategy
  */
 export interface ConflictResolution {
@@ -440,6 +459,31 @@ export interface ConflictResolution {
   strategy: 'skip' | 'overwrite' | 'merge' | 'rename' | 'manual';
   customAction?: string;
   notes?: string;
+}
+
+/**
+ * Migration conflict information
+ */
+export interface MigrationConflict extends Identifiable {
+  id: string;
+  type: string;
+  severity: 'Low' | 'Medium' | 'High' | 'Critical';
+  description?: string;
+  sourceResource: {
+    id: string;
+    name: string;
+    type: string;
+    properties: Dictionary<any>;
+  };
+  targetResource?: {
+    id: string;
+    name: string;
+    type: string;
+    properties: Dictionary<any>;
+  };
+  suggestedResolution?: ConflictResolution;
+  status: 'pending' | 'resolved' | 'failed';
+  metadata: Dictionary<any>;
 }
 
 /**

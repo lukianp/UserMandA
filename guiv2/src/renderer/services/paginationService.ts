@@ -94,7 +94,9 @@ export class PaginationService {
   /** Default page size */
   static readonly DEFAULT_PAGE_SIZE = 25;
 
-  private constructor() {}
+  private constructor() {
+    // Initialize pagination service
+  }
 
   /**
    * Get singleton instance
@@ -202,7 +204,7 @@ export class PaginationService {
     data: T[],
     cursor: string | null,
     pageSize: number = PaginationService.DEFAULT_PAGE_SIZE,
-    getId: (item: T) => string = (item: any) => item.id
+    getId: (item: T) => string = (item: T & { id: string }) => item.id
   ): CursorPaginatedResult<T> {
     let startIndex = 0;
 

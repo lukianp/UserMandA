@@ -83,6 +83,28 @@ export interface DetectionConfig {
   timeout?: number;
 }
 
+// PowerShell result type definitions
+interface ConnectionTestResult {
+  Connected: boolean;
+  Version?: string;
+  TenantId?: string;
+  Endpoint?: string;
+  AdminUrl?: string;
+  DomainController?: string;
+  ForestFunctionalLevel?: string;
+  Region?: string;
+  AccountId?: string;
+  ProjectId?: string;
+  HasPremium?: boolean;
+  HasATP?: boolean;
+  HasAdvancedDLP?: boolean;
+  HasPhoneSystem?: boolean;
+  SupportsFGPP?: boolean;
+  SupportsADFS?: boolean;
+  SupportsExchange?: boolean;
+  [key: string]: any; // Allow additional properties
+}
+
 /**
  * Environment Detection Service
  * Detects and analyzes IT environments for M&A discovery
@@ -199,15 +221,16 @@ export default class EnvironmentDetectionService extends EventEmitter {
         { timeout: 30000, streamOutput: false }
       );
 
-      if (azureAdResult.success && azureAdResult.data?.Connected) {
+      const azureAdData = azureAdResult.data as ConnectionTestResult;
+      if (azureAdResult.success && azureAdData?.Connected) {
         services.push({
           id: 'azure-ad',
           name: 'Azure Active Directory',
           type: 'Identity',
           provider: 'azure',
           detected: true,
-          version: azureAdResult.data.Version,
-          endpoint: azureAdResult.data.TenantId,
+          version: azureAdData.Version,
+          endpoint: azureAdData.TenantId,
           authentication: 'OAuth2',
           features: ['SSO', 'MFA', 'Conditional Access', 'PIM'],
           status: 'available',
@@ -215,7 +238,7 @@ export default class EnvironmentDetectionService extends EventEmitter {
             { name: 'User Management', available: true },
             { name: 'Group Management', available: true },
             { name: 'Application Registration', available: true },
-            { name: 'Conditional Access', available: azureAdResult.data.HasPremium, requiresLicense: true, licenseType: 'Azure AD Premium' },
+            { name: 'Conditional Access', available: azureAdData.HasPremium, requiresLicense: true, licenseType: 'Azure AD Premium' },
           ],
         });
       }
@@ -229,21 +252,22 @@ export default class EnvironmentDetectionService extends EventEmitter {
         { timeout: 30000, streamOutput: false }
       );
 
-      if (exchangeResult.success && exchangeResult.data?.Connected) {
+      const exchangeData = exchangeResult.data as ConnectionTestResult;
+      if (exchangeResult.success && exchangeData?.Connected) {
         services.push({
           id: 'exchange-online',
           name: 'Exchange Online',
           type: 'Email',
           provider: 'microsoft365',
           detected: true,
-          version: exchangeResult.data.Version,
-          endpoint: exchangeResult.data.Endpoint,
+          version: exchangeData.Version,
+          endpoint: exchangeData.Endpoint,
           authentication: 'Modern Auth',
           features: ['Mailboxes', 'Distribution Groups', 'Shared Mailboxes', 'Mail Flow Rules'],
           status: 'available',
           capabilities: [
             { name: 'Mailbox Management', available: true },
-            { name: 'Advanced Threat Protection', available: exchangeResult.data.HasATP, requiresLicense: true, licenseType: 'Exchange Online Plan 2' },
+            { name: 'Advanced Threat Protection', available: exchangeData.HasATP, requiresLicense: true, licenseType: 'Exchange Online Plan 2' },
           ],
         });
       }
@@ -257,21 +281,22 @@ export default class EnvironmentDetectionService extends EventEmitter {
         { timeout: 30000, streamOutput: false }
       );
 
-      if (sharepointResult.success && sharepointResult.data?.Connected) {
+      const sharepointData = sharepointResult.data as ConnectionTestResult;
+      if (sharepointResult.success && sharepointData?.Connected) {
         services.push({
           id: 'sharepoint-online',
           name: 'SharePoint Online',
           type: 'Collaboration',
           provider: 'microsoft365',
           detected: true,
-          version: sharepointResult.data.Version,
-          endpoint: sharepointResult.data.AdminUrl,
+          version: sharepointData.Version,
+          endpoint: sharepointData.AdminUrl,
           authentication: 'OAuth2',
           features: ['Sites', 'Libraries', 'Lists', 'Content Types'],
           status: 'available',
           capabilities: [
             { name: 'Site Collection Management', available: true },
-            { name: 'Advanced DLP', available: sharepointResult.data.HasAdvancedDLP, requiresLicense: true, licenseType: 'Microsoft 365 E5' },
+            { name: 'Advanced DLP', available: sharepointData.HasAdvancedDLP, requiresLicense: true, licenseType: 'Microsoft 365 E5' },
           ],
         });
       }
@@ -283,20 +308,21 @@ export default class EnvironmentDetectionService extends EventEmitter {
         { timeout: 30000, streamOutput: false }
       );
 
-      if (teamsResult.success && teamsResult.data?.Connected) {
+      const teamsData = teamsResult.data as ConnectionTestResult;
+      if (teamsResult.success && teamsData?.Connected) {
         services.push({
           id: 'microsoft-teams',
           name: 'Microsoft Teams',
           type: 'Communication',
           provider: 'microsoft365',
           detected: true,
-          version: teamsResult.data.Version,
+          version: teamsData.Version,
           authentication: 'OAuth2',
           features: ['Teams', 'Channels', 'Calls', 'Meetings'],
           status: 'available',
           capabilities: [
             { name: 'Team Management', available: true },
-            { name: 'Phone System', available: teamsResult.data.HasPhoneSystem, requiresLicense: true, licenseType: 'Teams Phone' },
+            { name: 'Phone System', available: teamsData.HasPhoneSystem, requiresLicense: true, licenseType: 'Teams Phone' },
           ],
         });
       }
@@ -334,22 +360,23 @@ export default class EnvironmentDetectionService extends EventEmitter {
         { timeout: 30000, streamOutput: false }
       );
 
-      if (adResult.success && adResult.data?.Connected) {
+      const adData = adResult.data as ConnectionTestResult;
+      if (adResult.success && adData?.Connected) {
         services.push({
           id: 'active-directory',
           name: 'Active Directory',
           type: 'Identity',
           provider: 'on-premises',
           detected: true,
-          version: adResult.data.ForestFunctionalLevel,
-          endpoint: adResult.data.DomainController,
+          version: adData.ForestFunctionalLevel,
+          endpoint: adData.DomainController,
           authentication: 'Kerberos/NTLM',
           features: ['Users', 'Groups', 'OUs', 'GPOs', 'Trusts'],
           status: 'available',
           capabilities: [
             { name: 'User Management', available: true },
             { name: 'Group Policy Management', available: true },
-            { name: 'Fine-Grained Password Policies', available: adResult.data.SupportsFGPP },
+            { name: 'Fine-Grained Password Policies', available: adData.SupportsFGPP },
           ],
         });
       }
@@ -363,21 +390,22 @@ export default class EnvironmentDetectionService extends EventEmitter {
         { timeout: 30000, streamOutput: false }
       );
 
-      if (exchangeOnPremResult.success && exchangeOnPremResult.data?.Connected) {
+      const exchangeOnPremData = exchangeOnPremResult.data as ConnectionTestResult;
+      if (exchangeOnPremResult.success && exchangeOnPremData?.Connected) {
         services.push({
           id: 'exchange-server',
           name: 'Exchange Server',
           type: 'Email',
           provider: 'on-premises',
           detected: true,
-          version: exchangeOnPremResult.data.Version,
-          endpoint: exchangeOnPremResult.data.Server,
+          version: exchangeOnPremData.Version,
+          endpoint: exchangeOnPremData.Server,
           authentication: 'NTLM/Kerberos',
           features: ['Mailboxes', 'DAGs', 'Public Folders', 'Transport Rules'],
           status: 'available',
           capabilities: [
             { name: 'Mailbox Management', available: true },
-            { name: 'Database Availability Groups', available: exchangeOnPremResult.data.HasDAG },
+            { name: 'Database Availability Groups', available: exchangeOnPremData.HasDAG },
           ],
         });
       }
@@ -391,21 +419,22 @@ export default class EnvironmentDetectionService extends EventEmitter {
         { timeout: 30000, streamOutput: false }
       );
 
-      if (sharepointOnPremResult.success && sharepointOnPremResult.data?.Connected) {
+      const sharepointOnPremData = sharepointOnPremResult.data as ConnectionTestResult;
+      if (sharepointOnPremResult.success && sharepointOnPremData?.Connected) {
         services.push({
           id: 'sharepoint-server',
           name: 'SharePoint Server',
           type: 'Collaboration',
           provider: 'on-premises',
           detected: true,
-          version: sharepointOnPremResult.data.Version,
-          endpoint: sharepointOnPremResult.data.WebApplication,
+          version: sharepointOnPremData.Version,
+          endpoint: sharepointOnPremData.WebApplication,
           authentication: 'Windows/SAML',
           features: ['Sites', 'Service Applications', 'Search', 'Workflows'],
           status: 'available',
           capabilities: [
             { name: 'Site Collection Management', available: true },
-            { name: 'Hybrid Configuration', available: sharepointOnPremResult.data.IsHybrid },
+            { name: 'Hybrid Configuration', available: sharepointOnPremData.IsHybrid },
           ],
         });
       }
@@ -446,22 +475,23 @@ export default class EnvironmentDetectionService extends EventEmitter {
         { timeout: 30000, streamOutput: false }
       );
 
-      if (awsResult.success && awsResult.data?.Connected) {
+      const awsData = awsResult.data as ConnectionTestResult;
+      if (awsResult.success && awsData?.Connected) {
         services.push({
           id: 'aws-iam',
           name: 'AWS IAM',
           type: 'Identity',
           provider: 'aws',
           detected: true,
-          version: awsResult.data.Version,
-          endpoint: awsResult.data.Region,
+          version: awsData.Version,
+          endpoint: awsData.Region,
           authentication: 'AWS Signature',
           features: ['Users', 'Roles', 'Policies', 'Federation'],
           status: 'available',
           capabilities: [
             { name: 'User Management', available: true },
             { name: 'Role-Based Access', available: true },
-            { name: 'SSO Integration', available: awsResult.data.HasSSO },
+            { name: 'SSO Integration', available: awsData.HasSSO },
           ],
         });
       }
@@ -502,15 +532,16 @@ export default class EnvironmentDetectionService extends EventEmitter {
         { timeout: 30000, streamOutput: false }
       );
 
-      if (gcpResult.success && gcpResult.data?.Connected) {
+      const gcpData = gcpResult.data as ConnectionTestResult;
+      if (gcpResult.success && gcpData?.Connected) {
         services.push({
           id: 'gcp-iam',
           name: 'GCP IAM',
           type: 'Identity',
           provider: 'gcp',
           detected: true,
-          version: gcpResult.data.Version,
-          endpoint: gcpResult.data.ProjectId,
+          version: gcpData.Version,
+          endpoint: gcpData.ProjectId,
           authentication: 'OAuth 2.0',
           features: ['Service Accounts', 'Roles', 'Policies', 'Federation'],
           status: 'available',
@@ -735,16 +766,17 @@ export default class EnvironmentDetectionService extends EventEmitter {
           return { valid: false, message: `Unsupported provider: ${provider}` };
       }
 
-      if (result.success && result.data?.Valid) {
+      const validationData = result.data as any;
+      if (result.success && validationData?.Valid) {
         return {
           valid: true,
           message: 'Credentials validated successfully',
-          details: result.data,
+          details: validationData,
         };
       } else {
         return {
           valid: false,
-          message: result.data?.Message || result.error || 'Credential validation failed',
+          message: validationData?.Message || result.error || 'Credential validation failed',
         };
       }
     } catch (error: any) {
