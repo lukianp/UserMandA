@@ -514,83 +514,107 @@ export const useIntuneDiscoveryLogic = () => {
     }
   }, [state.activeTab, deviceColumns, applicationColumns, configPolicyColumns, compliancePolicyColumns, appProtectionPolicyColumns]);
 
-  // Filtered data based on active tab and filters
-  const filteredData = useMemo(() => {
-    if (!state.result) return [];
+  // Filtered devices
+  const filteredDevices = useMemo(() => {
+    if (!state.result?.devices) return [];
 
-    let data: any[] = [];
+    let filtered = state.result.devices;
 
-    switch (state.activeTab) {
-      case 'devices':
-        data = state.result.devices || [];
-        break;
-      case 'applications':
-        data = state.result.applications || [];
-        break;
-      case 'config-policies':
-        data = state.result.configurationPolicies || [];
-        break;
-      case 'compliance-policies':
-        data = state.result.compliancePolicies || [];
-        break;
-      case 'app-protection':
-        data = state.result.appProtectionPolicies || [];
-        break;
-      default:
-        return [];
-    }
-
-    // Apply filters
-    if (state.activeTab === 'devices') {
-      const devices = data as IntuneDevice[];
-
-      let filtered = devices;
-
-      if (state.filter.searchText) {
-        const search = state.filter.searchText.toLowerCase();
-        filtered = filtered.filter(d =>
-          d.deviceName?.toLowerCase().includes(search) ||
-          d.userPrincipalName?.toLowerCase().includes(search) ||
-          d.model?.toLowerCase().includes(search)
-        );
-      }
-
-      if (state.filter.selectedPlatforms.length > 0) {
-        filtered = filtered.filter(d =>
-          state.filter.selectedPlatforms.includes(d.operatingSystem)
-        );
-      }
-
-      if (state.filter.selectedComplianceStates.length > 0) {
-        filtered = filtered.filter(d =>
-          state.filter.selectedComplianceStates.includes(d.complianceState)
-        );
-      }
-
-      if (state.filter.selectedManagementStates.length > 0) {
-        filtered = filtered.filter(d =>
-          state.filter.selectedManagementStates.includes(d.managementState)
-        );
-      }
-
-      if (state.filter.showNonCompliantOnly) {
-        filtered = filtered.filter(d => d.complianceState !== 'compliant');
-      }
-
-      return filtered;
-    }
-
-    // For non-device tabs, just apply search filter
     if (state.filter.searchText) {
       const search = state.filter.searchText.toLowerCase();
-      return data.filter((item: any) =>
-        item.displayName?.toLowerCase().includes(search) ||
-        item.description?.toLowerCase().includes(search)
+      filtered = filtered.filter(d =>
+        d.deviceName?.toLowerCase().includes(search) ||
+        d.userPrincipalName?.toLowerCase().includes(search) ||
+        d.model?.toLowerCase().includes(search)
       );
     }
 
-    return data;
-  }, [state.result, state.activeTab, state.filter]);
+    if (state.filter.selectedPlatforms.length > 0) {
+      filtered = filtered.filter(d =>
+        state.filter.selectedPlatforms.includes(d.operatingSystem)
+      );
+    }
+
+    if (state.filter.selectedComplianceStates.length > 0) {
+      filtered = filtered.filter(d =>
+        state.filter.selectedComplianceStates.includes(d.complianceState)
+      );
+    }
+
+    if (state.filter.selectedManagementStates.length > 0) {
+      filtered = filtered.filter(d =>
+        state.filter.selectedManagementStates.includes(d.managementState)
+      );
+    }
+
+    if (state.filter.showNonCompliantOnly) {
+      filtered = filtered.filter(d => d.complianceState !== 'compliant');
+    }
+
+    return filtered;
+  }, [state.result?.devices, state.filter]);
+
+  // Filtered applications
+  const filteredApplications = useMemo(() => {
+    if (!state.result?.applications) return [];
+
+    let filtered = state.result.applications;
+
+    if (state.filter.searchText) {
+      const search = state.filter.searchText.toLowerCase();
+      filtered = filtered.filter(app =>
+        app.displayName?.toLowerCase().includes(search) ||
+        app.description?.toLowerCase().includes(search)
+      );
+    }
+
+    return filtered;
+  }, [state.result?.applications, state.filter.searchText]);
+
+  // Filtered configuration policies
+  const filteredConfigurations = useMemo(() => {
+    if (!state.result?.configurationPolicies) return [];
+
+    let filtered = state.result.configurationPolicies;
+
+    if (state.filter.searchText) {
+      const search = state.filter.searchText.toLowerCase();
+      filtered = filtered.filter(policy =>
+        policy.displayName?.toLowerCase().includes(search) ||
+        policy.description?.toLowerCase().includes(search)
+      );
+    }
+
+    return filtered;
+  }, [state.result?.configurationPolicies, state.filter.searchText]);
+
+  // Filtered data based on active tab and filters (for backward compatibility)
+  const filteredData = useMemo(() => {
+    switch (state.activeTab) {
+      case 'devices':
+        return filteredDevices;
+      case 'applications':
+        return filteredApplications;
+      case 'config-policies':
+        return filteredConfigurations;
+      case 'compliance-policies':
+        return state.result?.compliancePolicies?.filter(policy => {
+          if (!state.filter.searchText) return true;
+          const search = state.filter.searchText.toLowerCase();
+          return policy.displayName?.toLowerCase().includes(search) ||
+                 policy.description?.toLowerCase().includes(search);
+        }) || [];
+      case 'app-protection':
+        return state.result?.appProtectionPolicies?.filter(policy => {
+          if (!state.filter.searchText) return true;
+          const search = state.filter.searchText.toLowerCase();
+          return policy.displayName?.toLowerCase().includes(search) ||
+                 policy.description?.toLowerCase().includes(search);
+        }) || [];
+      default:
+        return [];
+    }
+  }, [state.result, state.activeTab, state.filter.searchText, filteredDevices, filteredApplications, filteredConfigurations]);
 
   // Statistics
   const stats = useMemo<IntuneStats | null>(() => {
@@ -656,8 +680,8 @@ export const useIntuneDiscoveryLogic = () => {
   }, [state.result]);
 
   // CSV Export with advanced flattening
-  const exportToCSV = useCallback(() => {
-    if (filteredData.length === 0) {
+  const exportToCSV = useCallback((data: any[], filename: string) => {
+    if (data.length === 0) {
       alert('No data to export');
       return;
     }
@@ -687,7 +711,7 @@ export const useIntuneDiscoveryLogic = () => {
       return flattened;
     };
 
-    const flattenedData = filteredData.map(item => flattenObject(item));
+    const flattenedData = data.map(item => flattenObject(item));
     const headers = Object.keys(flattenedData[0]);
 
     const csvContent = [
@@ -706,13 +730,13 @@ export const useIntuneDiscoveryLogic = () => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `intune-${state.activeTab}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = filename;
     link.click();
-  }, [filteredData, state.activeTab]);
+  }, []);
 
   // Excel Export
-  const exportToExcel = useCallback(async () => {
-    if (filteredData.length === 0) {
+  const exportToExcel = useCallback(async (data: any[], filename: string) => {
+    if (data.length === 0) {
       alert('No data to export');
       return;
     }
@@ -722,16 +746,16 @@ export const useIntuneDiscoveryLogic = () => {
         modulePath: 'Modules/Export/ExportToExcel.psm1',
         functionName: 'Export-IntuneData',
         parameters: {
-          Data: filteredData,
+          Data: data,
           SheetName: state.activeTab,
-          FileName: `intune-${state.activeTab}-${new Date().toISOString().split('T')[0]}.xlsx`
+          FileName: filename
         }
       });
     } catch (error: any) {
       console.error('Excel export failed:', error);
       alert('Excel export failed: ' + error.message);
     }
-  }, [filteredData, state.activeTab]);
+  }, [state.activeTab]);
 
   return {
     // State
@@ -746,7 +770,16 @@ export const useIntuneDiscoveryLogic = () => {
     // Data
     columns,
     filteredData,
+    filteredDevices,
+    filteredApplications,
+    filteredConfigurations,
     stats,
+
+    // Column definitions
+    deviceColumns,
+    policyColumns: configPolicyColumns,
+    applicationColumns,
+    configurationColumns: compliancePolicyColumns,
 
     // Actions
     startDiscovery,

@@ -7,8 +7,9 @@
 
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDrag } from 'react-dnd';
 import { clsx } from 'clsx';
-import { Download, Trash2, RefreshCw, Users, Plus, Eye } from 'lucide-react';
+import { Download, Trash2, RefreshCw, Users, Plus, Eye, GripVertical } from 'lucide-react';
 import { useGroupsViewLogic } from '../../hooks/useGroupsViewLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { SearchBar } from '../../components/molecules/SearchBar';
@@ -17,6 +18,37 @@ import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';
 import { GroupType, GroupScope } from '../../types/models/group';
 import type { GroupData } from '../../types/models/group';
+
+/**
+ * Draggable cell component for drag handle
+ */
+const DragHandleCell: React.FC<{ data: GroupData }> = ({ data }) => {
+  const [{ isDragging }, drag] = useDrag({
+    type: 'GROUP',
+    item: () => ({
+      id: data.id || data.objectId || '',
+      type: 'GROUP',
+      data: data,
+    }),
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  return (
+    <div
+      ref={drag}
+      className={clsx(
+        'flex items-center justify-center cursor-move h-full',
+        isDragging && 'opacity-50'
+      )}
+      title="Drag to add to migration wave"
+      data-cy="group-drag-handle"
+    >
+      <GripVertical size={16} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+    </div>
+  );
+};
 
 /**
  * GroupsView Component
@@ -52,9 +84,19 @@ export const GroupsView: React.FC = () => {
     navigate(`/groups/${group.id}`);
   };
 
-  // Extended column definitions with View Details action
+  // Extended column definitions with drag handle and View Details action
   const extendedColumnDefs = useMemo(
     () => [
+      {
+        headerName: '',
+        width: 50,
+        pinned: 'left' as const,
+        suppressMenu: true,
+        sortable: false,
+        filter: false,
+        resizable: false,
+        cellRenderer: (params: any) => <DragHandleCell data={params.data} />,
+      },
       ...columnDefs,
       {
         headerName: 'Actions',

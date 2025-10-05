@@ -11,16 +11,20 @@ import { immer } from 'zustand/middleware/immer';
 import {
   MigrationPlan,
   MigrationTask,
+  MigrationBatch,
+  MigrationItem,
   MigrationStatus,
   MigrationWave,
   ResourceMapping,
   RollbackPoint,
-  ValidationResult,
   MigrationProgress,
   ConflictResolution,
   ValidationError,
   ValidationWarning,
 } from '../types/models/migration';
+import { ValidationResult } from '../types/common';
+
+// ValidationResult is imported from migration types
 
 export interface MigrationOperation {
   /** Unique operation identifier */
@@ -280,6 +284,9 @@ interface MigrationState {
   autoResolveConflicts: (strategy: ConflictResolutionStrategy) => Promise<void>;
   getConflictsByType: (type: ConflictType) => MigrationConflict[];
 
+  // NEW: Wave item management
+  addItemToWave: (waveId: string, item: { id: string; type: string; name: string; displayName: string }) => void;
+
   // NEW: Resource mapping
   mapResource: (mapping: ResourceMapping) => void;
   importMappings: (file: File) => Promise<void>;
@@ -432,7 +439,7 @@ export const useMigrationStore = create<MigrationState>()(
         const operation: MigrationOperation = {
           id: operationId,
           plan,
-          status: 'pending',
+          status: 'NotStarted',
           progress: 0,
           currentTaskIndex: 0,
           taskResults: new Map(),
@@ -469,7 +476,7 @@ export const useMigrationStore = create<MigrationState>()(
               const newOperations = new Map(state.operations);
               const op = newOperations.get(operationId);
               if (op) {
-                op.status = 'running';
+                op.status = 'InProgress';
                 op.currentTaskIndex = i;
               }
               return { operations: newOperations };
@@ -518,7 +525,7 @@ export const useMigrationStore = create<MigrationState>()(
             const newOperations = new Map(state.operations);
             const op = newOperations.get(operationId);
             if (op) {
-              op.status = 'failed';
+              op.status = 'Failed';
               op.completedAt = Date.now();
             }
             return {
@@ -536,7 +543,7 @@ export const useMigrationStore = create<MigrationState>()(
        */
       cancelMigration: async (operationId) => {
         const operation = get().operations.get(operationId);
-        if (!operation || operation.status !== 'running') {
+        if (!operation || operation.status !== 'InProgress') {
           return;
         }
 
@@ -547,7 +554,7 @@ export const useMigrationStore = create<MigrationState>()(
             const newOperations = new Map(state.operations);
             const op = newOperations.get(operationId);
             if (op) {
-              op.status = 'cancelled';
+              op.status = 'Cancelled';
               op.completedAt = Date.now();
             }
             return {
@@ -624,7 +631,7 @@ export const useMigrationStore = create<MigrationState>()(
           const operation = newOperations.get(operationId);
 
           if (operation) {
-            operation.status = operation.failedTasks.length > 0 ? 'completed_with_errors' : 'completed';
+            operation.status = operation.failedTasks.length > 0 ? 'CompletedWithWarnings' : 'Completed';
             operation.progress = 100;
             operation.completedAt = Date.now();
           }
@@ -846,8 +853,18 @@ export const useMigrationStore = create<MigrationState>()(
 
         const result: ValidationResult = {
           isValid: errors.length === 0,
-          errors: errors.map((e) => e.message),
-          warnings: warnings.map((w) => w.message),
+          errors: errors.map(e => ({
+            field: e.field,
+            message: e.message,
+            code: e.code,
+            severity: e.severity === 'critical' ? 'critical' : 'error' as 'error' | 'critical'
+          })),
+          warnings: warnings.map(w => ({
+            field: w.field,
+            message: w.message,
+            code: w.code,
+            severity: w.severity === 'info' ? 'info' : 'warning' as 'warning' | 'info'
+          })),
         };
 
         set((state) => {
@@ -1022,6 +1039,215 @@ export const useMigrationStore = create<MigrationState>()(
         }
       },
 
+      /**
+       * Add an item to a migration wave
+       */
+      addItemToWave: (waveId, item) => {
+        set((state) => {
+          const wave = state.waves.find((w) => w.id === waveId);
+          if (wave) {
+            // Add item to the first batch, or create a new batch if none exists
+            if (wave.batches.length === 0) {
+              // Create a new batch
+              const newBatch: MigrationBatch = {
+                id: `batch-${Date.now()}`,
+                name: `Batch for ${item.name}`,
+                description: `Auto-created batch for ${item.name}`,
+                type: item.type as any,
+                priority: 'Normal',
+                complexity: 'Simple',
+                items: [{
+                  id: item.id,
+                  waveId,
+                  wave: wave.name,
+                  sourceIdentity: item.id,
+                  targetIdentity: item.id,
+                  sourcePath: '',
+                  targetPath: '',
+                  type: item.type as any,
+                  status: 'NotStarted',
+                  priority: 'Normal',
+                  complexity: 'Simple',
+                  startTime: null,
+                  endTime: null,
+                  validationTime: null,
+                  created: new Date(),
+                  estimatedDuration: null,
+                  actualDuration: null,
+                  errors: [],
+                  warnings: [],
+                  validationResults: [],
+                  properties: {},
+                  permissionMappings: {},
+                  sizeBytes: null,
+                  transferredBytes: null,
+                  progressPercentage: 0,
+                  displayName: item.displayName,
+                  description: item.name,
+                  output: '',
+                  dependencies: [],
+                  dependentItems: [],
+                  retryCount: 0,
+                  maxRetryAttempts: 3,
+                  lastRetryTime: null,
+                  preMigrationChecklist: [],
+                  postMigrationValidation: [],
+                  requiresUserInteraction: false,
+                  allowConcurrentMigration: true,
+                  assignedTechnician: '',
+                  businessJustification: '',
+                  customFields: {},
+                  tags: [],
+                  transferRateMBps: 100,
+                  maxConcurrentStreams: 1,
+                  enableThrottling: false,
+                  supportsRollback: true,
+                  rollbackPlan: '',
+                  rollbackInstructions: [],
+                  isValidationRequired: true,
+                  isValidationPassed: false,
+                  qualityChecks: [],
+                  isCompleted: false,
+                  hasErrors: false,
+                  hasWarnings: false,
+                  isHighRisk: false,
+                  completionPercentage: 0,
+                  formattedSize: '0 B',
+                  createdAt: new Date().toISOString(),
+                } as MigrationItem],
+                status: 'NotStarted',
+                statusMessage: 'Created automatically',
+                startTime: null,
+                endTime: null,
+                plannedStartDate: null,
+                plannedEndDate: null,
+                estimatedDuration: null,
+                actualDuration: null,
+                assignedTechnician: '',
+                businessOwner: '',
+                maxConcurrentItems: 1,
+                enableAutoRetry: true,
+                maxRetryAttempts: 3,
+                retryDelay: 300000, // 5 minutes
+                totalItems: 1,
+                completedItems: 0,
+                failedItems: 0,
+                itemsWithWarnings: 0,
+                inProgressItems: 0,
+                pendingItems: 1,
+                progressPercentage: 0,
+                successRate: 0,
+                totalSizeBytes: 0,
+                transferredBytes: 0,
+                averageTransferRateMBps: 0,
+                formattedTotalSize: '0 B',
+                prerequisites: [],
+                postMigrationTasks: [],
+                dependentBatches: [],
+                configuration: {},
+                environmentSettings: {},
+                enableThrottling: false,
+                throttlingLimitMBps: 0,
+                preMigrationChecklist: [],
+                postMigrationValidation: [],
+                qualityGates: [],
+                requiresApproval: false,
+                approvedBy: '',
+                approvalDate: null,
+                errors: [],
+                warnings: [],
+                logFilePath: '',
+                detailedLogs: [],
+                businessJustification: '',
+                estimatedCost: null,
+                actualCost: null,
+                tags: [],
+                customProperties: {},
+                supportsRollback: false,
+                rollbackPlan: '',
+                rollbackInstructions: [],
+                isCompleted: false,
+                hasErrors: false,
+                hasWarnings: false,
+                isHighRisk: false,
+                canStart: true,
+                canPause: false,
+                canResume: false,
+                isRunning: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              };
+              wave.batches.push(newBatch);
+            } else {
+              // Add to first batch
+              const batch = wave.batches[0];
+              batch.items.push({
+                id: item.id,
+                waveId,
+                wave: wave.name,
+                sourceIdentity: item.id,
+                targetIdentity: item.id,
+                sourcePath: '',
+                targetPath: '',
+                type: item.type as any,
+                status: 'NotStarted',
+                priority: 'Normal',
+                complexity: 'Simple',
+                startTime: null,
+                endTime: null,
+                validationTime: null,
+                created: new Date(),
+                estimatedDuration: null,
+                actualDuration: null,
+                errors: [],
+                warnings: [],
+                validationResults: [],
+                properties: {},
+                permissionMappings: {},
+                sizeBytes: null,
+                transferredBytes: null,
+                progressPercentage: 0,
+                displayName: item.displayName,
+                description: item.name,
+                output: '',
+                dependencies: [],
+                dependentItems: [],
+                retryCount: 0,
+                maxRetryAttempts: 3,
+                lastRetryTime: null,
+                preMigrationChecklist: [],
+                postMigrationValidation: [],
+                requiresUserInteraction: false,
+                allowConcurrentMigration: true,
+                assignedTechnician: '',
+                businessJustification: '',
+                customFields: {},
+                tags: [],
+                transferRateMBps: 100,
+                maxConcurrentStreams: 1,
+                enableThrottling: false,
+                supportsRollback: true,
+                rollbackPlan: '',
+                rollbackInstructions: [],
+                isValidationRequired: true,
+                isValidationPassed: false,
+                qualityChecks: [],
+                isCompleted: false,
+                hasErrors: false,
+                hasWarnings: false,
+                isHighRisk: false,
+                completionPercentage: 0,
+                formattedSize: '0 B',
+                createdAt: new Date().toISOString(),
+              });
+              batch.totalItems++;
+              batch.pendingItems++;
+            }
+            wave.totalItems = (wave.totalItems || 0) + 1;
+          }
+        });
+      },
+
       // ==================== ROLLBACK SYSTEM ====================
 
       /**
@@ -1166,7 +1392,7 @@ export const useMigrationStore = create<MigrationState>()(
         for (const conflict of conflicts) {
           const resolution: ConflictResolution = {
             conflictId: conflict.id,
-            strategy,
+            strategy: strategy as 'merge' | 'skip' | 'manual' | 'overwrite' | 'rename',
             notes: `Auto-resolved using ${strategy} strategy`,
           };
 
@@ -1371,11 +1597,10 @@ export const useMigrationStore = create<MigrationState>()(
       subscribeToProgress: (waveId, callback) => {
         // Listen to PowerShell progress events
         const cleanup = window.electronAPI.onProgress((data) => {
-          if (data.waveId === waveId) {
-            const status = get().waveExecutionStatus.get(waveId);
-            if (status) {
-              callback(status.progress);
-            }
+          // Note: ProgressData doesn't have waveId, filtering by other means if needed
+          const status = get().waveExecutionStatus.get(waveId);
+          if (status) {
+            callback(status.progress);
           }
         });
 

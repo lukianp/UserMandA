@@ -8,15 +8,188 @@
  * - Search and filtering
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
+import { useDrop } from 'react-dnd';
 import { useMigrationPlanningLogic } from '../../hooks/useMigrationPlanningLogic';
+import { useMigrationStore } from '../../store/useMigrationStore';
+import { useNotificationStore } from '../../store/useNotificationStore';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { SearchBar } from '../../components/molecules/SearchBar';
 import { Select } from '../../components/atoms/Select';
 import { Plus, Edit, Trash2, Copy, Calendar, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import type { MigrationPriority } from '../../types/models/migration';
+import { clsx } from 'clsx';
+import type { MigrationPriority, MigrationWave } from '../../types/models/migration';
+
+/**
+ * Wave Drop Zone Component
+ * Accepts dragged items (users, computers, groups) and adds them to the wave
+ */
+interface WaveDropZoneProps {
+  wave: MigrationWave;
+  isSelected: boolean;
+  onSelect: () => void;
+  onEdit: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+  onDrop: (item: any, waveId: string) => Promise<void>;
+}
+
+const WaveDropZone: React.FC<WaveDropZoneProps> = ({
+  wave,
+  isSelected,
+  onSelect,
+  onEdit,
+  onDuplicate,
+  onDelete,
+  onDrop,
+}) => {
+  const [{ isOver, canDrop }, drop] = useDrop({
+    accept: ['USER', 'COMPUTER', 'GROUP'],
+    drop: async (item: any) => {
+      await onDrop(item, wave.id);
+    },
+    canDrop: (item: any) => {
+      // Check if item already in wave
+      const isAlreadyInWave = wave.tasks?.some((t) => t.id === item.id);
+      return !isAlreadyInWave;
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  });
+
+  const getStatusColor = (status: string) => {
+    const statusColors: Record<string, string> = {
+      NotStarted: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      Planning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
+      Planned: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+      Validating: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200',
+      Ready: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+      InProgress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
+      Paused: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
+      Completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+      CompletedWithWarnings: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
+      Failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
+      Cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      RolledBack: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200',
+      Skipped: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+    };
+    return statusColors[status] || statusColors.NotStarted;
+  };
+
+  return (
+    <div
+      ref={drop}
+      onClick={onSelect}
+      className={clsx(
+        'p-4 border rounded-lg cursor-pointer transition-all duration-200',
+        isSelected
+          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md'
+          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm',
+        canDrop && 'border-blue-500 bg-blue-50 dark:bg-blue-900/20',
+        isOver && canDrop && 'border-green-500 bg-green-50 dark:bg-green-900/20 scale-105 shadow-lg',
+        isOver && !canDrop && 'border-red-500 bg-red-50 dark:bg-red-900/20'
+      )}
+      data-cy={`wave-dropzone-${wave.id}`}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 flex-1">{wave.name}</h3>
+        <div className="flex gap-1 ml-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+            title="Edit wave"
+            data-cy="edit-wave-btn"
+          >
+            <Edit className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate();
+            }}
+            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+            title="Duplicate wave"
+          >
+            <Copy className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-1 hover:bg-red-200 dark:hover:bg-red-900/50 rounded transition-colors"
+            title="Delete wave"
+            data-cy="delete-wave-btn"
+          >
+            <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+          </button>
+        </div>
+      </div>
+
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+        {wave.description || 'No description'}
+      </p>
+
+      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500 mb-2">
+        <Calendar className="w-3 h-3" />
+        <span>
+          {wave.plannedStartDate
+            ? format(new Date(wave.plannedStartDate), 'MMM dd, yyyy')
+            : 'Not scheduled'}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between mb-3">
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(wave.status)}`}>
+          {wave.status}
+        </span>
+        <span className="text-xs text-gray-500 dark:text-gray-500">Priority: {wave.priority}</span>
+      </div>
+
+      {/* Drop hint */}
+      {isOver && canDrop && (
+        <div className="text-center text-green-600 dark:text-green-400 font-medium text-sm py-2 border-t border-green-300 dark:border-green-700">
+          ✓ Drop to add to this wave
+        </div>
+      )}
+      {isOver && !canDrop && (
+        <div className="text-center text-red-600 dark:text-red-400 font-medium text-sm py-2 border-t border-red-300 dark:border-red-700">
+          ✗ Item already in this wave
+        </div>
+      )}
+
+      {/* Items preview */}
+      {wave.tasks && wave.tasks.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+            {wave.tasks.length} item{wave.tasks.length !== 1 ? 's' : ''}
+          </p>
+          <div className="space-y-1">
+            {wave.tasks.slice(0, 3).map((task) => (
+              <div
+                key={task.id}
+                className="text-xs p-2 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-between"
+              >
+                <span className="truncate">{task.name}</span>
+                <span className="text-gray-400 ml-2">{task.type}</span>
+              </div>
+            ))}
+            {wave.tasks.length > 3 && (
+              <div className="text-xs text-gray-500 text-center">+{wave.tasks.length - 3} more</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const MigrationPlanningView: React.FC = () => {
   const {
@@ -40,6 +213,48 @@ const MigrationPlanningView: React.FC = () => {
     isEditing,
     canSave,
   } = useMigrationPlanningLogic();
+
+  const { addItemToWave, loadWaves } = useMigrationStore();
+  const { showSuccess, showError, showInfo } = useNotificationStore();
+
+  // Handle item drop on wave
+  const handleItemDrop = useCallback(
+    async (item: any, waveId: string) => {
+      try {
+        // Show loading toast
+        showInfo('Adding item to wave...');
+
+        // Create migration task from dropped item
+        const task = {
+          id: item.id,
+          type: item.type,
+          name: item.data.displayName || item.data.name || item.id,
+          source: item.type === 'USER' ? 'ActiveDirectory' : item.type === 'COMPUTER' ? 'Infrastructure' : 'Group',
+          metadata: item.data,
+        };
+
+        // Call IPC handler to add item to wave
+        const result = await window.electronAPI.invoke('migration:add-item-to-wave', {
+          waveId,
+          item: task,
+        });
+
+        if (result.success) {
+          // Refresh waves to get updated data
+          await loadWaves();
+
+          // Success toast
+          showSuccess(`Added ${task.name} to wave`);
+        } else {
+          throw new Error(result.error || 'Failed to add item to wave');
+        }
+      } catch (error: any) {
+        console.error('Failed to add item to wave:', error);
+        showError(`Failed to add item: ${error.message}`);
+      }
+    },
+    [loadWaves, showSuccess, showError, showInfo]
+  );
 
   const getStatusColor = (status: string) => {
     const statusColors: Record<string, string> = {
@@ -91,6 +306,14 @@ const MigrationPlanningView: React.FC = () => {
         </Button>
       </div>
 
+      {/* Instructions */}
+      <div className="mx-4 mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+        <p className="text-sm text-blue-700 dark:text-blue-300">
+          <strong>💡 Tip:</strong> Drag users, computers, or groups from their respective views and drop
+          them onto a wave below to add them to that migration wave.
+        </p>
+      </div>
+
       {/* Error Display */}
       {error && (
         <div className="mx-4 mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md flex items-start gap-2">
@@ -120,83 +343,17 @@ const MigrationPlanningView: React.FC = () => {
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto space-y-2">
-              {waves.map(wave => (
-                <div
+              {waves.map((wave) => (
+                <WaveDropZone
                   key={wave.id}
-                  onClick={() => handleSelectWave(wave)}
-                  className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
-                    selectedWave?.id === wave.id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm'
-                  }`}
-                  data-cy={`wave-${wave.id}`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 flex-1">
-                      {wave.name}
-                    </h3>
-                    <div className="flex gap-1 ml-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditWave(wave);
-                        }}
-                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-                        title="Edit wave"
-                        data-cy="edit-wave-btn"
-                      >
-                        <Edit className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDuplicateWave(wave.id);
-                        }}
-                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-                        title="Duplicate wave"
-                      >
-                        <Copy className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteWave(wave.id);
-                        }}
-                        className="p-1 hover:bg-red-200 dark:hover:bg-red-900/50 rounded transition-colors"
-                        title="Delete wave"
-                        data-cy="delete-wave-btn"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-                    {wave.description || 'No description'}
-                  </p>
-
-                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500 mb-2">
-                    <Calendar className="w-3 h-3" />
-                    <span>
-                      {wave.plannedStartDate
-                        ? format(new Date(wave.plannedStartDate), 'MMM dd, yyyy')
-                        : 'Not scheduled'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                        wave.status
-                      )}`}
-                    >
-                      {wave.status}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-500">
-                      Priority: {wave.priority}
-                    </span>
-                  </div>
-                </div>
+                  wave={wave}
+                  isSelected={selectedWave?.id === wave.id}
+                  onSelect={() => handleSelectWave(wave)}
+                  onEdit={() => handleEditWave(wave)}
+                  onDuplicate={() => handleDuplicateWave(wave.id)}
+                  onDelete={() => handleDeleteWave(wave.id)}
+                  onDrop={handleItemDrop}
+                />
               ))}
             </div>
           )}

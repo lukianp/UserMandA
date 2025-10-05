@@ -6,14 +6,47 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDrag } from 'react-dnd';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
-import { Download, Trash, UserPlus, RefreshCw, Eye } from 'lucide-react';
+import { Download, Trash, UserPlus, RefreshCw, Eye, GripVertical } from 'lucide-react';
 import { ColDef } from 'ag-grid-community';
 import { UserData } from '../../types/models/user';
 import { powerShellService } from '../../services/powerShellService';
 import { useProfileStore } from '../../store/useProfileStore';
+import { clsx } from 'clsx';
+
+/**
+ * Draggable cell component for drag handle
+ */
+const DragHandleCell: React.FC<{ data: UserData }> = ({ data }) => {
+  const [{ isDragging }, drag] = useDrag({
+    type: 'USER',
+    item: () => ({
+      id: data.userPrincipalName || data.id || data.email || '',
+      type: 'USER',
+      data: data,
+    }),
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  return (
+    <div
+      ref={drag}
+      className={clsx(
+        'flex items-center justify-center cursor-move h-full',
+        isDragging && 'opacity-50'
+      )}
+      title="Drag to add to migration wave"
+      data-cy="user-drag-handle"
+    >
+      <GripVertical size={16} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+    </div>
+  );
+};
 
 /**
  * Users management view
@@ -145,6 +178,16 @@ const UsersView: React.FC = () => {
   // Column definitions for AG Grid
   const columnDefs = useMemo<ColDef[]>(
     () => [
+      {
+        headerName: '',
+        width: 50,
+        pinned: 'left',
+        suppressMenu: true,
+        sortable: false,
+        filter: false,
+        resizable: false,
+        cellRenderer: (params: any) => <DragHandleCell data={params.data} />,
+      },
       {
         field: 'displayName',
         headerName: 'Display Name',

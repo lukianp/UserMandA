@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import type { ColDef } from 'ag-grid-community';
 import type {
   NetworkDiscoveryConfig,
@@ -209,7 +209,7 @@ export const useNetworkDiscoveryLogic = () => {
       (device) =>
         device.hostname.toLowerCase().includes(search) ||
         device.ipAddress.toLowerCase().includes(search) ||
-        device.deviceType.toLowerCase().includes(search)
+        device.type.toLowerCase().includes(search)
     );
   }, [result, searchText]);
 
@@ -227,12 +227,12 @@ export const useNetworkDiscoveryLogic = () => {
 
   const filteredPorts = useMemo(() => {
     if (!result) return [];
-    if (!searchText) return result.openPorts;
+    if (!searchText) return result.ports;
 
     const search = searchText.toLowerCase();
-    return result.openPorts.filter(
-      (port) =>
-        port.port.toString().includes(search) ||
+    return result.ports.filter(
+      (port: NetworkPort) =>
+        port.portNumber.toString().includes(search) ||
         port.service?.toLowerCase().includes(search) ||
         port.protocol.toLowerCase().includes(search)
     );
@@ -242,7 +242,7 @@ export const useNetworkDiscoveryLogic = () => {
   const deviceColumns: ColDef<NetworkDevice>[] = [
     { field: 'hostname', headerName: 'Hostname', sortable: true, filter: true, flex: 1.5 },
     { field: 'ipAddress', headerName: 'IP Address', sortable: true, filter: true, flex: 1 },
-    { field: 'deviceType', headerName: 'Type', sortable: true, filter: true, flex: 1 },
+    { field: 'type', headerName: 'Type', sortable: true, filter: true, flex: 1 },
     { field: 'status', headerName: 'Status', sortable: true, filter: true, flex: 0.8 },
     { field: 'operatingSystem', headerName: 'Operating System', sortable: true, filter: true, flex: 1.2 },
     { field: 'manufacturer', headerName: 'Vendor', sortable: true, filter: true, flex: 1 },
@@ -252,20 +252,20 @@ export const useNetworkDiscoveryLogic = () => {
 
   const subnetColumns: ColDef<NetworkSubnet>[] = [
     { field: 'network', headerName: 'Network', sortable: true, filter: true, flex: 1.5 },
-    { field: 'subnetMask', headerName: 'Subnet Mask', sortable: true, filter: true, flex: 1 },
+    { field: 'mask', headerName: 'Subnet Mask', sortable: true, filter: true, flex: 1 },
     { field: 'gateway', headerName: 'Gateway', sortable: true, filter: true, flex: 1 },
     { field: 'dhcpServer', headerName: 'DHCP Server', sortable: true, filter: true, flex: 1 },
-    { field: 'deviceCount', headerName: 'Devices', sortable: true, filter: true, flex: 0.8 },
-    { field: 'vlanId', headerName: 'VLAN', sortable: true, filter: true, flex: 0.8 },
+    { field: 'totalHosts', headerName: 'Devices', sortable: true, filter: true, flex: 0.8 },
+    { field: 'vlan', headerName: 'VLAN', sortable: true, filter: true, flex: 0.8 },
   ];
 
   const portColumns: ColDef<NetworkPort>[] = [
-    { field: 'ipAddress', headerName: 'IP Address', sortable: true, filter: true, flex: 1.2 },
-    { field: 'port', headerName: 'Port', sortable: true, filter: true, flex: 0.8 },
+    { field: 'deviceId', headerName: 'IP Address', sortable: true, filter: true, flex: 1.2 },
+    { field: 'portNumber', headerName: 'Port', sortable: true, filter: true, flex: 0.8 },
     { field: 'protocol', headerName: 'Protocol', sortable: true, filter: true, flex: 0.8 },
     { field: 'service', headerName: 'Service', sortable: true, filter: true, flex: 1 },
     { field: 'version', headerName: 'Version', sortable: true, filter: true, flex: 1 },
-    { field: 'state', headerName: 'State', sortable: true, filter: true, flex: 0.8 },
+    { field: 'status', headerName: 'State', sortable: true, filter: true, flex: 0.8 },
     { field: 'riskLevel', headerName: 'Risk', sortable: true, filter: true, flex: 0.8 },
   ];
 
@@ -273,10 +273,10 @@ export const useNetworkDiscoveryLogic = () => {
   const stats = useMemo(() => {
     if (!result) return null;
 
-    const onlineDevices = result.devices.filter((d) => d.status === 'online').length;
+    const onlineDevices = result.devices.filter((d) => d.status === 'Online').length;
     const totalDevices = result.devices.length;
     const subnets = result.subnets.length;
-    const openPorts = result.openPorts.length;
+    const openPorts = result.ports.length;
     const vulnerabilities = result.vulnerabilities?.length || 0;
     const criticalVulns = result.vulnerabilities?.filter((v) => v.severity === 'Critical').length || 0;
     const highVulns = result.vulnerabilities?.filter((v) => v.severity === 'High').length || 0;

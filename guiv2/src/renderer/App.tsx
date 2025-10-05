@@ -6,6 +6,8 @@
 
 import React, { lazy, Suspense, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Spinner } from './components/atoms/Spinner';
 import { ErrorBoundary } from './components/organisms/ErrorBoundary';
 import { MainLayout } from './components/layouts/MainLayout';
@@ -102,12 +104,13 @@ export const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <HashRouter>
-        <MainLayout>
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              {/* Home/Overview */}
-              <Route path="/" element={<OverviewView />} />
+      <DndProvider backend={HTML5Backend}>
+        <HashRouter>
+          <MainLayout>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                {/* Home/Overview */}
+                <Route path="/" element={<OverviewView />} />
 
               {/* Discovery Routes */}
               <Route path="/discovery">
@@ -184,11 +187,12 @@ export const App: React.FC = () => {
         </MainLayout>
       </HashRouter>
 
-      {/* Global Toast Notifications */}
-      <ToastContainer position="top-right" />
+        {/* Global Toast Notifications */}
+        <ToastContainer position="top-right" />
 
-      {/* Global Modal Container */}
-      <ModalContainer />
+        {/* Global Modal Container */}
+        <ModalContainer />
+      </DndProvider>
     </ErrorBoundary>
   );
 };

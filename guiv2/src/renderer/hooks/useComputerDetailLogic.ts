@@ -49,7 +49,12 @@ export function useComputerDetailLogic(computerId: string): UseComputerDetailLog
   const closeTab = useTabStore((state) => state.closeTab);
   const selectedTabId = useTabStore((state) => state.selectedTabId);
   const openModal = useModalStore((state) => state.openModal);
-  const addItemToWave = useMigrationStore((state) => state.addItemToWave);
+  // Store access
+  console.log('Migration store state methods:', Object.keys(useMigrationStore.getState()));
+  const addItemToWave = useMigrationStore((state) => {
+    console.log('MigrationState keys:', Object.keys(state));
+    return state.addItemToWave;
+  });
   const showNotification = useNotificationStore((state) => state.addNotification);
 
   /**

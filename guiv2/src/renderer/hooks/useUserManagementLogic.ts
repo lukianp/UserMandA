@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNotificationStore } from '../store/useNotificationStore';
-import { exportService } from '../services/exportService';
+import exportService from '../services/exportService';
 import { powerShellService } from '../services/powerShellService';
 import { useProfileStore } from '../store/useProfileStore';
 
@@ -92,7 +92,7 @@ export const useUserManagementLogic = () => {
       setLoadingMessage('');
 
     } catch (error) {
-      addNotification('error', 'Failed to load users');
+      addNotification({ type: 'error', title: 'Load Failed', message: 'Failed to load users', pinned: false, priority: 'normal' });
       console.error('Failed to load users:', error);
       // Use mock data on error
       setUsers(getMockUsers());
@@ -159,11 +159,11 @@ export const useUserManagementLogic = () => {
 
   const handleCreateUser = () => {
     // Open create user dialog
-    addNotification('info', 'Create user dialog would open here');
+    addNotification({ type: 'info', title: 'Create User', message: 'Create user dialog would open here', pinned: false, priority: 'normal' });
   };
 
   const handleEditUser = (user: User) => {
-    addNotification('info', `Edit user: ${user.username}`);
+    addNotification({ type: 'info', title: 'Edit User', message: `Edit user: ${user.username}`, pinned: false, priority: 'normal' });
   };
 
   const handleDeleteUsers = async () => {
@@ -175,9 +175,9 @@ export const useUserManagementLogic = () => {
 
       setUsers(prev => prev.filter(u => !selectedUsers.find(s => s.id === u.id)));
       setSelectedUsers([]);
-      addNotification('success', `Deleted ${selectedUsers.length} user(s)`);
+      addNotification({ type: 'success', title: 'Users Deleted', message: `Deleted ${selectedUsers.length} user(s)`, pinned: false, priority: 'normal' });
     } catch (error) {
-      addNotification('error', 'Failed to delete users');
+      addNotification({ type: 'error', title: 'Delete Failed', message: 'Failed to delete users', pinned: false, priority: 'normal' });
     }
   };
 
@@ -189,18 +189,18 @@ export const useUserManagementLogic = () => {
         u.id === user.id ? { ...u, status: newStatus } : u
       ));
 
-      addNotification('success', `User ${newStatus.toLowerCase()}`);
+      addNotification({ type: 'success', title: 'Status Updated', message: `User ${newStatus.toLowerCase()}`, pinned: false, priority: 'normal' });
     } catch (error) {
-      addNotification('error', 'Failed to update user status');
+      addNotification({ type: 'error', title: 'Update Failed', message: 'Failed to update user status', pinned: false, priority: 'normal' });
     }
   };
 
   const handleResetPassword = async (user: User) => {
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
-      addNotification('success', `Password reset email sent to ${user.email}`);
+      addNotification({ type: 'success', title: 'Password Reset', message: `Password reset email sent to ${user.email}`, pinned: false, priority: 'normal' });
     } catch (error) {
-      addNotification('error', 'Failed to reset password');
+      addNotification({ type: 'error', title: 'Reset Failed', message: 'Failed to reset password', pinned: false, priority: 'normal' });
     }
   };
 
@@ -210,9 +210,9 @@ export const useUserManagementLogic = () => {
         u.id === user.id ? { ...u, role: newRole } : u
       ));
 
-      addNotification('success', `Role updated to ${newRole}`);
+      addNotification({ type: 'success', title: 'Role Updated', message: `Role updated to ${newRole}`, pinned: false, priority: 'normal' });
     } catch (error) {
-      addNotification('error', 'Failed to assign role');
+      addNotification({ type: 'error', title: 'Role Assignment Failed', message: 'Failed to assign role', pinned: false, priority: 'normal' });
     }
   };
 
@@ -220,9 +220,9 @@ export const useUserManagementLogic = () => {
     try {
       const filteredUsers = getFilteredUsers();
       await exportService.exportToExcel(filteredUsers, 'Users');
-      addNotification('success', 'Users exported successfully');
+      addNotification({ type: 'success', title: 'Export Complete', message: 'Users exported successfully', pinned: false, priority: 'normal' });
     } catch (error) {
-      addNotification('error', 'Failed to export users');
+      addNotification({ type: 'error', title: 'Export Failed', message: 'Failed to export users', pinned: false, priority: 'normal' });
     }
   };
 

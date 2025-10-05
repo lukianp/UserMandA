@@ -9,11 +9,44 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, RefreshCw, Monitor, Eye } from 'lucide-react';
+import { useDrag } from 'react-dnd';
+import { Download, RefreshCw, Monitor, Eye, GripVertical } from 'lucide-react';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';
 import { ColDef } from 'ag-grid-community';
+import { clsx } from 'clsx';
+
+/**
+ * Draggable cell component for drag handle
+ */
+const DragHandleCell: React.FC<{ data: any }> = ({ data }) => {
+  const [{ isDragging }, drag] = useDrag({
+    type: 'COMPUTER',
+    item: () => ({
+      id: data.id || data.name || '',
+      type: 'COMPUTER',
+      data: data,
+    }),
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  return (
+    <div
+      ref={drag}
+      className={clsx(
+        'flex items-center justify-center cursor-move h-full',
+        isDragging && 'opacity-50'
+      )}
+      title="Drag to add to migration wave"
+      data-cy="computer-drag-handle"
+    >
+      <GripVertical size={16} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+    </div>
+  );
+};
 
 /**
  * ComputersView Component
@@ -30,6 +63,16 @@ export const ComputersView: React.FC = () => {
   };
 
   const columnDefs: ColDef[] = [
+    {
+      headerName: '',
+      width: 50,
+      pinned: 'left',
+      suppressMenu: true,
+      sortable: false,
+      filter: false,
+      resizable: false,
+      cellRenderer: (params: any) => <DragHandleCell data={params.data} />,
+    },
     { field: 'name', headerName: 'Computer Name', width: 200, sortable: true, filter: true },
     { field: 'os', headerName: 'Operating System', width: 180, sortable: true, filter: true },
     { field: 'domain', headerName: 'Domain', width: 120, sortable: true },

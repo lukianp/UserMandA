@@ -24,7 +24,7 @@ interface LicensingDiscoveryState {
   activeTab: TabType;
   filter: {
     searchText: string;
-    selectedProducts: string[];
+    selectedLicenseTypes: string[];
     selectedStatuses: LicenseStatus[];
     showOnlyExpiring: boolean;
     showOnlyUnassigned: boolean;
@@ -70,7 +70,7 @@ export const useLicensingDiscoveryLogic = () => {
     activeTab: 'overview',
     filter: {
       searchText: '',
-      selectedProducts: [],
+      selectedLicenseTypes: [],
       selectedStatuses: [],
       showOnlyExpiring: false,
       showOnlyUnassigned: false
@@ -443,78 +443,71 @@ export const useLicensingDiscoveryLogic = () => {
     }
   }, [state.activeTab, licenseColumns, assignmentColumns, subscriptionColumns]);
 
-  // Filtered data based on active tab and filters
-  const filteredData = useMemo(() => {
-    if (!state.result) return [];
+  // Filtered licenses
+  const filteredLicenses = useMemo(() => {
+    if (!state.result?.licenses) return [];
 
-    let data: any[] = [];
+    let filtered = state.result.licenses;
 
-    switch (state.activeTab) {
-      case 'licenses':
-        data = state.result.licenses || [];
-        break;
-      case 'assignments':
-        data = state.result.assignments || [];
-        break;
-      case 'subscriptions':
-        data = state.result.subscriptions || [];
-        break;
-      default:
-        return [];
-    }
-
-    // Apply filters
-    if (state.activeTab === 'licenses') {
-      const licenses = data as License[];
-
-      let filtered = licenses;
-
-      if (state.filter.searchText) {
-        const search = state.filter.searchText.toLowerCase();
-        filtered = filtered.filter(l =>
-          l.productName?.toLowerCase().includes(search) ||
-          l.skuPartNumber?.toLowerCase().includes(search) ||
-          l.vendor?.toLowerCase().includes(search)
-        );
-      }
-
-      if (state.filter.selectedProducts.length > 0) {
-        filtered = filtered.filter(l =>
-          state.filter.selectedProducts.includes(l.productName)
-        );
-      }
-
-      if (state.filter.selectedStatuses.length > 0) {
-        filtered = filtered.filter(l =>
-          state.filter.selectedStatuses.includes(l.status)
-        );
-      }
-
-      if (state.filter.showOnlyExpiring) {
-        const thirtyDaysFromNow = new Date();
-        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-        filtered = filtered.filter(l =>
-          l.expirationDate && new Date(l.expirationDate) <= thirtyDaysFromNow
-        );
-      }
-
-      if (state.filter.showOnlyUnassigned) {
-        filtered = filtered.filter(l => l.availableUnits > 0);
-      }
-
-      return filtered;
-    }
-
-    // For other tabs, just apply search filter
     if (state.filter.searchText) {
       const search = state.filter.searchText.toLowerCase();
-      return data.filter((item: any) =>
-        JSON.stringify(item).toLowerCase().includes(search)
+      filtered = filtered.filter(l =>
+        l.productName?.toLowerCase().includes(search) ||
+        l.skuPartNumber?.toLowerCase().includes(search) ||
+        l.vendor?.toLowerCase().includes(search)
       );
     }
 
-    return data;
-  }, [state.result, state.activeTab, state.filter]);
+    if (state.filter.selectedLicenseTypes.length > 0) {
+      filtered = filtered.filter(l =>
+        state.filter.selectedLicenseTypes.includes(l.skuPartNumber)
+      );
+    }
+
+    if (state.filter.selectedStatuses.length > 0) {
+      filtered = filtered.filter(l =>
+        state.filter.selectedStatuses.includes(l.status)
+      );
+    }
+
+    if (state.filter.showOnlyExpiring) {
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+      filtered = filtered.filter(l =>
+        l.expirationDate && new Date(l.expirationDate) <= thirtyDaysFromNow
+      );
+    }
+
+    if (state.filter.showOnlyUnassigned) {
+      filtered = filtered.filter(l => l.availableUnits > 0);
+    }
+
+    return filtered;
+  }, [state.result?.licenses, state.filter]);
+
+  // Filtered data based on active tab and filters (for backward compatibility)
+  const filteredData = useMemo(() => {
+    switch (state.activeTab) {
+      case 'licenses':
+        return filteredLicenses;
+      case 'assignments':
+        return state.result?.assignments?.filter(assignment => {
+          if (!state.filter.searchText) return true;
+          const search = state.filter.searchText.toLowerCase();
+          return assignment.displayName?.toLowerCase().includes(search) ||
+                 assignment.userPrincipalName?.toLowerCase().includes(search);
+        }) || [];
+      case 'subscriptions':
+        return state.result?.subscriptions?.filter(sub => {
+          if (!state.filter.searchText) return true;
+          const search = state.filter.searchText.toLowerCase();
+          return sub.subscriptionName?.toLowerCase().includes(search) ||
+                 sub.subscriptionId?.toLowerCase().includes(search);
+        }) || [];
+      default:
+        return [];
+    }
+  }, [state.result, state.activeTab, state.filter.searchText, filteredLicenses]);
 
   // Statistics
   const stats = useMemo<LicenseStats | null>(() => {
@@ -608,8 +601,8 @@ export const useLicensingDiscoveryLogic = () => {
   }, [state.result]);
 
   // CSV Export with advanced flattening
-  const exportToCSV = useCallback(() => {
-    if (filteredData.length === 0) {
+  const exportToCSV = useCallback((data: any[], filename: string) => {
+    if (data.length === 0) {
       alert('No data to export');
       return;
     }
@@ -639,7 +632,7 @@ export const useLicensingDiscoveryLogic = () => {
       return flattened;
     };
 
-    const flattenedData = filteredData.map(item => flattenObject(item));
+    const flattenedData = data.map(item => flattenObject(item));
     const headers = Object.keys(flattenedData[0]);
 
     const csvContent = [
@@ -658,13 +651,13 @@ export const useLicensingDiscoveryLogic = () => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `licensing-${state.activeTab}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = filename;
     link.click();
-  }, [filteredData, state.activeTab]);
+  }, []);
 
   // Excel Export
-  const exportToExcel = useCallback(async () => {
-    if (filteredData.length === 0) {
+  const exportToExcel = useCallback(async (data: any[], filename: string) => {
+    if (data.length === 0) {
       alert('No data to export');
       return;
     }
@@ -674,16 +667,16 @@ export const useLicensingDiscoveryLogic = () => {
         modulePath: 'Modules/Export/ExportToExcel.psm1',
         functionName: 'Export-LicensingData',
         parameters: {
-          Data: filteredData,
+          Data: data,
           SheetName: state.activeTab,
-          FileName: `licensing-${state.activeTab}-${new Date().toISOString().split('T')[0]}.xlsx`
+          FileName: filename
         }
       });
     } catch (error: any) {
       console.error('Excel export failed:', error);
       alert('Excel export failed: ' + error.message);
     }
-  }, [filteredData, state.activeTab]);
+  }, [state.activeTab]);
 
   return {
     // State
@@ -698,7 +691,13 @@ export const useLicensingDiscoveryLogic = () => {
     // Data
     columns,
     filteredData,
+    filteredLicenses,
     stats,
+
+    // Column definitions
+    licenseColumns,
+    assignmentColumns,
+    subscriptionColumns,
 
     // Actions
     startDiscovery,

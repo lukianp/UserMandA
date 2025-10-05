@@ -82,6 +82,8 @@ export function useUserDetailLogic(userId: string): UseUserDetailLogicResult {
         type: 'success',
         title: 'User Details Loaded',
         message: `Loaded details for ${result.data?.user?.displayName || userId}`,
+        priority: 'normal',
+        pinned: false,
       });
     } catch (err: any) {
       const errorMsg = err?.message || 'Failed to load user details';
@@ -91,6 +93,8 @@ export function useUserDetailLogic(userId: string): UseUserDetailLogicResult {
         type: 'error',
         title: 'Load Failed',
         message: errorMsg,
+        priority: 'normal',
+        pinned: false,
       });
 
       console.error('User detail load error:', err);
@@ -124,6 +128,8 @@ export function useUserDetailLogic(userId: string): UseUserDetailLogicResult {
         type: 'error',
         title: 'Refresh Failed',
         message: err?.message || 'Failed to refresh user data',
+        priority: 'normal',
+        pinned: false,
       });
     }
   }, [userId, loadUserDetail, showNotification]);
@@ -157,6 +163,8 @@ export function useUserDetailLogic(userId: string): UseUserDetailLogicResult {
             type: 'success',
             title: 'Added to Wave',
             message: `Added ${userDetail.user.displayName} to migration wave`,
+            priority: 'normal',
+            pinned: false,
           });
         },
       },
@@ -189,6 +197,8 @@ export function useUserDetailLogic(userId: string): UseUserDetailLogicResult {
             type: 'success',
             title: 'Export Complete',
             message: `Exported user snapshot to ${fileName}`,
+            priority: 'normal',
+            pinned: false,
           });
         } else {
           throw new Error(result?.error || 'Export failed');
@@ -198,6 +208,8 @@ export function useUserDetailLogic(userId: string): UseUserDetailLogicResult {
           type: 'error',
           title: 'Export Failed',
           message: err?.message || 'Failed to export user snapshot',
+          priority: 'normal',
+          pinned: false,
         });
       } finally {
         setLoadingMessage('');

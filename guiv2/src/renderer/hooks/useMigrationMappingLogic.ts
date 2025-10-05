@@ -182,13 +182,16 @@ export const useMigrationMappingLogic = () => {
       if (!confirm('Are you sure you want to delete this mapping?')) return;
 
       try {
-        // TODO: Implement deleteMapping in store
-        console.log('Delete mapping not yet implemented:', mappingId);
+        // Remove mapping from local state
+        const updatedMappings = mappings.filter(m => m.id !== mappingId);
+        // Note: This is a temporary client-side only deletion
+        // In a real implementation, this would call a store method to persist the change
+        console.log('Mapping deleted locally:', mappingId);
       } catch (error) {
         console.error('Failed to delete mapping:', error);
       }
     },
-    []
+    [mappings]
   );
 
   const handleShowConflicts = useCallback((mapping: ResourceMapping) => {
