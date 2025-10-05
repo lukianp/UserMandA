@@ -35,15 +35,21 @@ export interface KeyboardShortcut {
  */
 export const useKeyboardShortcuts = () => {
   const navigate = useNavigate();
-  const { tabs, selectedTabId, openTab, closeTab, closeAllTabs } = useTabStore();
-  const { openModal } = useModalStore();
+  const { selectedTabId, openTab, closeTab, closeAllTabs } = useTabStore();
+  const { openCommandPalette, closeAllModals } = useModalStore();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Command Palette (Ctrl+K)
-      if (e.ctrlKey && e.key === 'k') {
+      // Command Palette (Ctrl+K or Ctrl+P)
+      if ((e.ctrlKey && e.key === 'k') || (e.ctrlKey && e.key === 'p' && !e.shiftKey)) {
         e.preventDefault();
-        openModal('commandPalette');
+        openCommandPalette();
+        return;
+      }
+
+      // Escape - close modals/dialogs
+      if (e.key === 'Escape') {
+        closeAllModals();
         return;
       }
 
@@ -61,7 +67,7 @@ export const useKeyboardShortcuts = () => {
         e.preventDefault();
         openTab({
           title: 'New Tab',
-          content: 'overview',
+          component: 'OverviewView',
           closable: true,
         });
         return;
@@ -90,10 +96,39 @@ export const useKeyboardShortcuts = () => {
         return;
       }
 
-      // Print (Ctrl+P)
-      if (e.ctrlKey && e.key === 'p') {
+      // Refresh (F5 or Ctrl+R)
+      if (e.key === 'F5' || (e.ctrlKey && e.key === 'r' && !e.shiftKey)) {
+        if (process.env.NODE_ENV !== 'development') {
+          e.preventDefault();
+          // Trigger refresh event for current view
+          const refreshEvent = new CustomEvent('app:refresh');
+          window.dispatchEvent(refreshEvent);
+        }
+        return;
+      }
+
+      // Export (Ctrl+E)
+      if (e.ctrlKey && e.key === 'e') {
         e.preventDefault();
-        window.print();
+        // Trigger export event for current view
+        const exportEvent = new CustomEvent('app:export');
+        window.dispatchEvent(exportEvent);
+        return;
+      }
+
+      // New Profile (Ctrl+N)
+      if (e.ctrlKey && e.key === 'n') {
+        e.preventDefault();
+        // Trigger new profile event
+        const newProfileEvent = new CustomEvent('app:new-profile');
+        window.dispatchEvent(newProfileEvent);
+        return;
+      }
+
+      // Open Settings (Ctrl+O)
+      if (e.ctrlKey && e.key === 'o') {
+        e.preventDefault();
+        navigate('/settings');
         return;
       }
 
@@ -164,8 +199,8 @@ export const useKeyboardShortcuts = () => {
         return;
       }
 
-      // Reload App (Ctrl+R) - only in development
-      if (e.ctrlKey && e.key === 'r') {
+      // Reload App (Ctrl+Shift+R) - only in development
+      if (e.ctrlKey && e.shiftKey && e.key === 'R') {
         if (process.env.NODE_ENV === 'development') {
           e.preventDefault();
           window.location.reload();
@@ -181,7 +216,7 @@ export const useKeyboardShortcuts = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [navigate, selectedTabId, openTab, closeTab, closeAllTabs, openModal]);
+  }, [navigate, selectedTabId, openTab, closeTab, closeAllTabs, openCommandPalette, closeAllModals]);
 };
 
 /**
@@ -191,42 +226,60 @@ export const getKeyboardShortcuts = (): KeyboardShortcut[] => [
   {
     key: 'k',
     ctrl: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:open-command-palette');
+      window.dispatchEvent(event);
+    },
     description: 'Open Command Palette',
     preventDefault: true,
   },
   {
     key: 'w',
     ctrl: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:close-tab');
+      window.dispatchEvent(event);
+    },
     description: 'Close Current Tab',
     preventDefault: true,
   },
   {
     key: 't',
     ctrl: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:new-tab');
+      window.dispatchEvent(event);
+    },
     description: 'New Tab',
     preventDefault: true,
   },
   {
     key: 's',
     ctrl: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:save');
+      window.dispatchEvent(event);
+    },
     description: 'Save',
     preventDefault: true,
   },
   {
     key: 'f',
     ctrl: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:focus-search');
+      window.dispatchEvent(event);
+    },
     description: 'Focus Search',
     preventDefault: true,
   },
   {
     key: 'p',
     ctrl: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:print');
+      window.dispatchEvent(event);
+    },
     description: 'Print',
     preventDefault: true,
   },
@@ -234,7 +287,10 @@ export const getKeyboardShortcuts = (): KeyboardShortcut[] => [
     key: 'w',
     ctrl: true,
     shift: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:close-all-tabs');
+      window.dispatchEvent(event);
+    },
     description: 'Close All Tabs',
     preventDefault: true,
   },
@@ -242,7 +298,10 @@ export const getKeyboardShortcuts = (): KeyboardShortcut[] => [
     key: 'h',
     ctrl: true,
     shift: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:goto-overview');
+      window.dispatchEvent(event);
+    },
     description: 'Go to Overview',
     preventDefault: true,
   },
@@ -250,7 +309,10 @@ export const getKeyboardShortcuts = (): KeyboardShortcut[] => [
     key: 'd',
     ctrl: true,
     shift: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:goto-discovery');
+      window.dispatchEvent(event);
+    },
     description: 'Go to Discovery',
     preventDefault: true,
   },
@@ -258,7 +320,10 @@ export const getKeyboardShortcuts = (): KeyboardShortcut[] => [
     key: 'u',
     ctrl: true,
     shift: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:goto-users');
+      window.dispatchEvent(event);
+    },
     description: 'Go to Users',
     preventDefault: true,
   },
@@ -266,7 +331,10 @@ export const getKeyboardShortcuts = (): KeyboardShortcut[] => [
     key: 'g',
     ctrl: true,
     shift: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:goto-groups');
+      window.dispatchEvent(event);
+    },
     description: 'Go to Groups',
     preventDefault: true,
   },
@@ -274,7 +342,10 @@ export const getKeyboardShortcuts = (): KeyboardShortcut[] => [
     key: 'm',
     ctrl: true,
     shift: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:goto-migration');
+      window.dispatchEvent(event);
+    },
     description: 'Go to Migration',
     preventDefault: true,
   },
@@ -282,14 +353,20 @@ export const getKeyboardShortcuts = (): KeyboardShortcut[] => [
     key: 'r',
     ctrl: true,
     shift: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:goto-reports');
+      window.dispatchEvent(event);
+    },
     description: 'Go to Reports',
     preventDefault: true,
   },
   {
     key: ',',
     ctrl: true,
-    handler: () => {},
+    handler: () => {
+      const event = new CustomEvent('app:open-settings');
+      window.dispatchEvent(event);
+    },
     description: 'Open Settings',
     preventDefault: true,
   },

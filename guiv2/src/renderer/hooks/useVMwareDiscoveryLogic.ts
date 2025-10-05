@@ -4,10 +4,11 @@ import type {
   VMwareDiscoveryConfig,
   VMwareDiscoveryResult,
   VMwareHost,
-  VMwareVM,
+  VirtualMachine,
   VMwareCluster,
-  VMwareTemplate,
+  VMwareDiscoveryTemplate,
 } from '../types/models/vmware';
+import { VMWARE_TEMPLATES } from '../types/models/vmware';
 
 export interface VMwareDiscoveryLogicState {
   config: VMwareDiscoveryConfig;
@@ -17,7 +18,7 @@ export interface VMwareDiscoveryLogicState {
   error: string | null;
   searchText: string;
   activeTab: 'overview' | 'hosts' | 'vms' | 'clusters';
-  templates: VMwareTemplate[];
+  templates: VMwareDiscoveryTemplate[];
 }
 
 const formatBytes = (bytes: number): string => {
@@ -30,19 +31,19 @@ const formatBytes = (bytes: number): string => {
 
 export const useVMwareDiscoveryLogic = () => {
   const [config, setConfig] = useState<VMwareDiscoveryConfig>({
-    id: '',
-    name: 'VMware Discovery',
-    type: 'vmware',
-    parameters: {
-      vCenterServers: [],
-      includeHosts: true,
-      includeVMs: true,
-      includeClusters: true,
-      includeDatastores: true,
-      includeSnapshots: true,
-      includeNetworks: false,
-      timeout: 300,
-    },
+    vCenters: [],
+    includeHosts: true,
+    includeVMs: true,
+    includeClusters: true,
+    includeDatastores: true,
+    includeNetworking: false,
+    includeResourcePools: false,
+    includeSnapshots: false,
+    includeTemplates: false,
+    collectPerformanceMetrics: true,
+    detectSecurityIssues: false,
+    timeout: 300,
+    parallelScans: 5,
   });
 
   const [result, setResult] = useState<VMwareDiscoveryResult | null>(null);
@@ -52,53 +53,13 @@ export const useVMwareDiscoveryLogic = () => {
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'hosts' | 'vms' | 'clusters'>('overview');
 
-  const templates: VMwareTemplate[] = [
-    {
-      id: 'quick-scan',
-      name: 'Quick VMware Scan',
-      description: 'Fast scan of hosts and VMs',
-      config: {
-        vCenterServers: [],
-        includeHosts: true,
-        includeVMs: true,
-        includeClusters: false,
-        includeDatastores: false,
-        includeSnapshots: false,
-        includeNetworks: false,
-        timeout: 60,
-      },
-    },
-    {
-      id: 'comprehensive',
-      name: 'Comprehensive Infrastructure Audit',
-      description: 'Full VMware infrastructure discovery including all components',
-      config: {
-        vCenterServers: [],
-        includeHosts: true,
-        includeVMs: true,
-        includeClusters: true,
-        includeDatastores: true,
-        includeSnapshots: true,
-        includeNetworks: true,
-        timeout: 600,
-      },
-    },
-    {
-      id: 'capacity-planning',
-      name: 'Capacity Planning Scan',
-      description: 'Focus on resource utilization and capacity metrics',
-      config: {
-        vCenterServers: [],
-        includeHosts: true,
-        includeVMs: true,
-        includeClusters: true,
-        includeDatastores: true,
-        includeSnapshots: false,
-        includeNetworks: false,
-        timeout: 300,
-      },
-    },
-  ];
+  const templates: VMwareDiscoveryTemplate[] = VMWARE_TEMPLATES.map(template => ({
+    ...template,
+    id: template.name.toLowerCase().replace(/\s+/g, '-'),
+    createdDate: new Date().toISOString(),
+    modifiedDate: new Date().toISOString(),
+    createdBy: 'system',
+  }));
 
   const handleStartDiscovery = async () => {
     setIsLoading(true);
@@ -115,14 +76,14 @@ export const useVMwareDiscoveryLogic = () => {
         modulePath: 'Modules/Discovery/VMwareDiscovery.psm1',
         functionName: 'Invoke-VMwareDiscovery',
         parameters: {
-          VCenterServers: config.parameters.vCenterServers,
-          IncludeHosts: config.parameters.includeHosts,
-          IncludeVMs: config.parameters.includeVMs,
-          IncludeClusters: config.parameters.includeClusters,
-          IncludeDatastores: config.parameters.includeDatastores,
-          IncludeSnapshots: config.parameters.includeSnapshots,
-          IncludeNetworks: config.parameters.includeNetworks,
-          Timeout: config.parameters.timeout,
+          VCenters: config.vCenters,
+          IncludeHosts: config.includeHosts,
+          IncludeVMs: config.includeVMs,
+          IncludeClusters: config.includeClusters,
+          IncludeDatastores: config.includeDatastores,
+          IncludeSnapshots: config.includeSnapshots,
+          IncludeNetworking: config.includeNetworking,
+          Timeout: config.timeout,
         },
       });
 
@@ -141,7 +102,7 @@ export const useVMwareDiscoveryLogic = () => {
     }
   };
 
-  const handleApplyTemplate = (template: VMwareTemplate) => {
+  const handleApplyTemplate = (template: VMwareDiscoveryTemplate) => {
     setConfig((prev) => ({
       ...prev,
       name: template.name,

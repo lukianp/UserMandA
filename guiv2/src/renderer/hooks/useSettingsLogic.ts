@@ -8,7 +8,7 @@ import { useThemeStore } from '../store/useThemeStore';
 import { ApplicationSettings } from '../types/models/discovery';
 
 export const useSettingsLogic = () => {
-  const { theme, setTheme } = useThemeStore();
+  const { actualMode: theme, setMode: setTheme } = useThemeStore();
 
   const [settings, setSettings] = useState<ApplicationSettings>({
     theme: {

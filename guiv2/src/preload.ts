@@ -304,6 +304,125 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('environment:detection:cancelled', subscription);
     return () => ipcRenderer.removeListener('environment:detection:cancelled', subscription);
   },
+
+  // ========================================
+  // Discovery Module Execution (Epic 3)
+  // ========================================
+
+  /**
+   * Execute discovery module with real-time streaming
+   * @param params Discovery execution parameters
+   * @returns Promise resolving to execution result
+   */
+  executeDiscovery: (params: {
+    moduleName: string;
+    parameters: Record<string, any>;
+    executionId?: string;
+  }) => {
+    return ipcRenderer.invoke('discovery:execute', params);
+  },
+
+  /**
+   * Cancel active discovery execution
+   * @param executionId Execution ID to cancel
+   * @returns Promise resolving to success status
+   */
+  cancelDiscovery: (executionId: string) => {
+    return ipcRenderer.invoke('discovery:cancel', { executionId });
+  },
+
+  /**
+   * Get available discovery modules from registry
+   * @returns Promise resolving to array of discovery modules
+   */
+  getDiscoveryModules: () => {
+    return ipcRenderer.invoke('discovery:get-modules');
+  },
+
+  /**
+   * Get detailed information about a specific module
+   * @param moduleName Module name/ID
+   * @returns Promise resolving to module information
+   */
+  getDiscoveryModuleInfo: (moduleName: string) => {
+    return ipcRenderer.invoke('discovery:get-module-info', { moduleName });
+  },
+
+  /**
+   * Register a listener for discovery output events (all 6 PowerShell streams)
+   * @param callback Function to call when output is received
+   * @returns Cleanup function to remove listener
+   */
+  onDiscoveryOutput: (callback: (data: {
+    executionId: string;
+    timestamp: string;
+    level: 'output' | 'error' | 'warning' | 'verbose' | 'debug' | 'information';
+    message: string;
+    source: string;
+  }) => void) => {
+    const subscription = (_: any, data: any) => callback(data);
+    ipcRenderer.on('discovery:output', subscription);
+    return () => ipcRenderer.removeListener('discovery:output', subscription);
+  },
+
+  /**
+   * Register a listener for discovery progress events
+   * @param callback Function to call when progress updates
+   * @returns Cleanup function to remove listener
+   */
+  onDiscoveryProgress: (callback: (data: {
+    executionId: string;
+    percentage: number;
+    currentPhase: string;
+    itemsProcessed?: number;
+    totalItems?: number;
+  }) => void) => {
+    const subscription = (_: any, data: any) => callback(data);
+    ipcRenderer.on('discovery:progress', subscription);
+    return () => ipcRenderer.removeListener('discovery:progress', subscription);
+  },
+
+  /**
+   * Register a listener for discovery completion events
+   * @param callback Function to call when execution completes
+   * @returns Cleanup function to remove listener
+   */
+  onDiscoveryComplete: (callback: (data: {
+    executionId: string;
+    result: any;
+    duration: number;
+  }) => void) => {
+    const subscription = (_: any, data: any) => callback(data);
+    ipcRenderer.on('discovery:complete', subscription);
+    return () => ipcRenderer.removeListener('discovery:complete', subscription);
+  },
+
+  /**
+   * Register a listener for discovery error events
+   * @param callback Function to call when an error occurs
+   * @returns Cleanup function to remove listener
+   */
+  onDiscoveryError: (callback: (data: {
+    executionId: string;
+    error: string;
+  }) => void) => {
+    const subscription = (_: any, data: any) => callback(data);
+    ipcRenderer.on('discovery:error', subscription);
+    return () => ipcRenderer.removeListener('discovery:error', subscription);
+  },
+
+  /**
+   * Register a listener for discovery cancellation events
+   * @param callback Function to call when execution is cancelled
+   * @returns Cleanup function to remove listener
+   */
+  onDiscoveryCancelled: (callback: (data: {
+    executionId: string;
+  }) => void) => {
+    const subscription = (_: any, data: any) => callback(data);
+    ipcRenderer.on('discovery:cancelled', subscription);
+    return () => ipcRenderer.removeListener('discovery:cancelled', subscription);
+  },
 };
 
 // Expose the API to the renderer process

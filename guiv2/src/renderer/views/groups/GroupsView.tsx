@@ -5,21 +5,26 @@
  * Features: search, filter, export, delete, view members.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { Download, Trash2, RefreshCw, Users, Plus } from 'lucide-react';
+import { Download, Trash2, RefreshCw, Users, Plus, Eye } from 'lucide-react';
 import { useGroupsViewLogic } from '../../hooks/useGroupsViewLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
-import SearchBar from '../../components/molecules/SearchBar';
-import FilterPanel, { FilterConfig } from '../../components/molecules/FilterPanel';
-import Button from '../../components/atoms/Button';
-import Badge from '../../components/atoms/Badge';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { SearchBar } from '../../components/molecules/SearchBar';
+import { FilterPanel, FilterConfig } from '../../components/molecules/FilterPanel';
+import { Button } from '../../components/atoms/Button';
+import { Badge } from '../../components/atoms/Badge';
 import { GroupType, GroupScope } from '../../types/models/group';
+import type { GroupData } from '../../types/models/group';
 
 /**
  * GroupsView Component
+ * Updated for Epic 1 Task 1.4 - Added View Details navigation
  */
 export const GroupsView: React.FC = () => {
+  const navigate = useNavigate();
+
   const {
     groups,
     isLoading,
@@ -41,6 +46,35 @@ export const GroupsView: React.FC = () => {
     totalGroups,
     filteredCount,
   } = useGroupsViewLogic();
+
+  // Handler for viewing group details
+  const handleViewDetails = (group: GroupData) => {
+    navigate(`/groups/${group.id}`);
+  };
+
+  // Extended column definitions with View Details action
+  const extendedColumnDefs = useMemo(
+    () => [
+      ...columnDefs,
+      {
+        headerName: 'Actions',
+        width: 150,
+        pinned: 'right' as const,
+        cellRenderer: (params: any) => (
+          <Button
+            onClick={() => handleViewDetails(params.data)}
+            variant="secondary"
+            size="sm"
+            data-cy="view-group-details"
+          >
+            <Eye className="mr-1 h-3 w-3" />
+            View Details
+          </Button>
+        ),
+      },
+    ],
+    [columnDefs]
+  );
 
   // Filter configuration
   const filters: FilterConfig[] = [
@@ -206,7 +240,7 @@ export const GroupsView: React.FC = () => {
         <div className="h-full bg-white rounded-lg border border-gray-200 shadow-sm">
           <VirtualizedDataGrid
             data={groups}
-            columns={columnDefs}
+            columns={extendedColumnDefs}
             loading={isLoading}
             onSelectionChange={setSelectedGroups}
             enableExport={true}

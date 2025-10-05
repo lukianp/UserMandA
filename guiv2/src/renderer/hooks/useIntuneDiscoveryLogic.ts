@@ -52,12 +52,20 @@ interface IntuneStats {
 export const useIntuneDiscoveryLogic = () => {
   const [state, setState] = useState<IntuneDiscoveryState>({
     config: {
+      id: 'default-intune-config',
+      name: 'Default Intune Discovery',
+      tenantId: '',
       includeDevices: true,
       includeApplications: true,
+      includePolicies: true,
+      includeComplianceReports: true,
       includeConfigurationPolicies: true,
       includeCompliancePolicies: true,
       includeAppProtectionPolicies: true,
-      timeout: 600000
+      platforms: [],
+      timeout: 600000,
+      createdAt: new Date(),
+      updatedAt: new Date()
     },
     result: null,
     isDiscovering: false,
@@ -257,14 +265,6 @@ export const useIntuneDiscoveryLogic = () => {
         return `${gb.toFixed(2)} GB`;
       }
     },
-    {
-      field: 'isSupervised',
-      headerName: 'Supervised',
-      sortable: true,
-      filter: true,
-      width: 120,
-      valueFormatter: (params) => params.value ? 'Yes' : 'No'
-    }
   ], []);
 
   // Application columns
@@ -284,7 +284,7 @@ export const useIntuneDiscoveryLogic = () => {
       width: 200
     },
     {
-      field: 'applicationType',
+      field: 'appType',
       headerName: 'Type',
       sortable: true,
       filter: true,
@@ -341,12 +341,12 @@ export const useIntuneDiscoveryLogic = () => {
       width: 300
     },
     {
-      field: 'platforms',
-      headerName: 'Platforms',
+      field: 'platform',
+      headerName: 'Platform',
       sortable: true,
       filter: true,
       width: 180,
-      valueFormatter: (params) => params.value?.join(', ') || 'N/A'
+      valueFormatter: (params) => params.value || 'N/A'
     },
     {
       field: 'assignments',
@@ -357,20 +357,20 @@ export const useIntuneDiscoveryLogic = () => {
       valueFormatter: (params) => params.value?.length || 0
     },
     {
-      field: 'deploymentSummary.compliantDeviceCount',
-      headerName: 'Compliant',
+      field: 'deploymentSummary.succeededDevicesCount',
+      headerName: 'Succeeded',
       sortable: true,
       filter: true,
       width: 120,
-      valueGetter: (params) => params.data?.deploymentSummary?.compliantDeviceCount || 0
+      valueGetter: (params) => params.data?.deploymentSummary?.succeededDevicesCount || 0
     },
     {
-      field: 'deploymentSummary.nonCompliantDeviceCount',
-      headerName: 'Non-Compliant',
+      field: 'deploymentSummary.errorDevicesCount',
+      headerName: 'Errors',
       sortable: true,
       filter: true,
-      width: 140,
-      valueGetter: (params) => params.data?.deploymentSummary?.nonCompliantDeviceCount || 0
+      width: 100,
+      valueGetter: (params) => params.data?.deploymentSummary?.errorDevicesCount || 0
     },
     {
       field: 'lastModifiedDateTime',
@@ -399,12 +399,12 @@ export const useIntuneDiscoveryLogic = () => {
       width: 300
     },
     {
-      field: 'platforms',
-      headerName: 'Platforms',
+      field: 'platform',
+      headerName: 'Platform',
       sortable: true,
       filter: true,
       width: 180,
-      valueFormatter: (params) => params.value?.join(', ') || 'N/A'
+      valueFormatter: (params) => params.value || 'N/A'
     },
     {
       field: 'scheduledActionsForRule',
@@ -415,20 +415,20 @@ export const useIntuneDiscoveryLogic = () => {
       valueFormatter: (params) => params.value?.length || 0
     },
     {
-      field: 'deviceStatusOverview.compliantCount',
-      headerName: 'Compliant',
+      field: 'deviceStatusOverview.successCount',
+      headerName: 'Success',
       sortable: true,
       filter: true,
       width: 120,
-      valueGetter: (params) => params.data?.deviceStatusOverview?.compliantCount || 0
+      valueGetter: (params) => params.data?.deviceStatusOverview?.successCount || 0
     },
     {
-      field: 'deviceStatusOverview.nonCompliantCount',
-      headerName: 'Non-Compliant',
+      field: 'deviceStatusOverview.errorCount',
+      headerName: 'Errors',
       sortable: true,
       filter: true,
-      width: 140,
-      valueGetter: (params) => params.data?.deviceStatusOverview?.nonCompliantCount || 0
+      width: 100,
+      valueGetter: (params) => params.data?.deviceStatusOverview?.errorCount || 0
     },
     {
       field: 'version',
@@ -456,7 +456,7 @@ export const useIntuneDiscoveryLogic = () => {
       width: 300
     },
     {
-      field: 'platformType',
+      field: 'platform',
       headerName: 'Platform',
       sortable: true,
       filter: true,

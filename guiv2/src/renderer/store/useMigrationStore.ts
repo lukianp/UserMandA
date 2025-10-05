@@ -225,6 +225,20 @@ interface MigrationState {
   lastSyncTimestamp: Date | null;
   deltaSyncEnabled: boolean;
 
+  // Validation hook compatibility properties
+  selectedWave: MigrationWave | null;
+  validateWave: (waveId: string) => Promise<void>;
+  validateAll: () => Promise<void>;
+  clearValidationResults: () => void;
+
+  // Migration execution properties
+  executionProgress: any;
+  isExecuting: boolean;
+  executeMigration: (waveId: string) => Promise<void>;
+  pauseMigration: (waveId: string) => Promise<void>;
+  resumeMigration: (waveId: string) => Promise<void>;
+  retryFailedItems: (waveId: string) => Promise<void>;
+
   // Existing actions
   createPlan: (plan: Omit<MigrationPlan, 'id' | 'createdAt'>) => void;
   updatePlan: (planId: string, updates: Partial<MigrationPlan>) => void;
@@ -327,6 +341,39 @@ export const useMigrationStore = create<MigrationState>()(
           // NEW: Delta sync state
           lastSyncTimestamp: null,
           deltaSyncEnabled: false,
+
+          // Migration execution state
+          executionProgress: null,
+          isExecuting: false,
+          executeMigration: async (waveId: string) => {
+            await get().executeWave(waveId);
+          },
+          pauseMigration: async (waveId: string) => {
+            await get().pauseWave(waveId);
+          },
+          resumeMigration: async (waveId: string) => {
+            await get().resumeWave(waveId);
+          },
+          retryFailedItems: async (waveId: string) => {
+            // Implement retry logic
+            console.log('Retry failed items for wave:', waveId);
+          },
+
+          // Validation hook compatibility
+          selectedWave: get().waves.find(w => w.id === get().selectedWaveId) || null,
+          validateWave: async (waveId: string) => {
+            await get().runPreFlightChecks(waveId);
+          },
+          validateAll: async () => {
+            for (const wave of get().waves) {
+              await get().runPreFlightChecks(wave.id);
+            }
+          },
+          clearValidationResults: () => {
+            set((state) => {
+              state.validationResults.clear();
+            });
+          },
 
       // Actions
 

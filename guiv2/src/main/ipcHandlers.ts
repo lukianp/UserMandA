@@ -11,6 +11,7 @@ import ModuleRegistry from './services/moduleRegistry';
 import EnvironmentDetectionService from './services/environmentDetectionService';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as crypto from 'crypto';
 import { ScriptExecutionParams, ModuleExecutionParams, ScriptTask } from '../types/shared';
 import { MockLogicEngineService } from './services/mockLogicEngineService';
 import type { UserDetailProjection } from '../renderer/types/models/userDetail';
@@ -1022,6 +1023,248 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       return { success: false, error: error.message };
     }
   });
+
+  // ========================================
+  // Discovery Module Execution Handlers (Epic 3)
+  // ========================================
+
+  /**
+   * Execute discovery module with real-time streaming
+   * Emits events: discovery:output, discovery:progress, discovery:complete, discovery:error
+   */
+  ipcMain.handle('discovery:execute', async (event, args: {
+    moduleName: string;
+    parameters: Record<string, any>;
+    executionId?: string;
+  }) => {
+    const { moduleName, parameters, executionId } = args;
+
+    try {
+      // Generate execution ID if not provided
+      const execId = executionId || crypto.randomUUID();
+
+      console.log(`IPC: discovery:execute - ${moduleName} (executionId: ${execId})`);
+
+      // Create execution context
+      const execution = {
+        id: execId,
+        moduleName,
+        parameters,
+        startTime: Date.now(),
+      };
+
+      // Stream output events back to renderer
+      const outputListeners: Array<() => void> = [];
+
+      // Listen to all 6 PowerShell streams
+      const onOutputStream = (data: any) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('discovery:output', {
+            executionId: execId,
+            timestamp: new Date().toISOString(),
+            level: 'output',
+            message: data.data,
+            source: moduleName,
+          });
+        }
+      };
+
+      const onErrorStream = (data: any) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('discovery:output', {
+            executionId: execId,
+            timestamp: new Date().toISOString(),
+            level: 'error',
+            message: data.data,
+            source: moduleName,
+          });
+        }
+      };
+
+      const onWarningStream = (data: any) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('discovery:output', {
+            executionId: execId,
+            timestamp: new Date().toISOString(),
+            level: 'warning',
+            message: data.data,
+            source: moduleName,
+          });
+        }
+      };
+
+      const onVerboseStream = (data: any) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('discovery:output', {
+            executionId: execId,
+            timestamp: new Date().toISOString(),
+            level: 'verbose',
+            message: data.data,
+            source: moduleName,
+          });
+        }
+      };
+
+      const onDebugStream = (data: any) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('discovery:output', {
+            executionId: execId,
+            timestamp: new Date().toISOString(),
+            level: 'debug',
+            message: data.data,
+            source: moduleName,
+          });
+        }
+      };
+
+      const onInformationStream = (data: any) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('discovery:output', {
+            executionId: execId,
+            timestamp: new Date().toISOString(),
+            level: 'information',
+            message: data.data,
+            source: moduleName,
+          });
+        }
+      };
+
+      // Register listeners
+      psService.on('stream:output', onOutputStream);
+      psService.on('stream:error', onErrorStream);
+      psService.on('stream:warning', onWarningStream);
+      psService.on('stream:verbose', onVerboseStream);
+      psService.on('stream:debug', onDebugStream);
+      psService.on('stream:information', onInformationStream);
+
+      // Store cleanup functions
+      outputListeners.push(() => psService.off('stream:output', onOutputStream));
+      outputListeners.push(() => psService.off('stream:error', onErrorStream));
+      outputListeners.push(() => psService.off('stream:warning', onWarningStream));
+      outputListeners.push(() => psService.off('stream:verbose', onVerboseStream));
+      outputListeners.push(() => psService.off('stream:debug', onDebugStream));
+      outputListeners.push(() => psService.off('stream:information', onInformationStream));
+
+      // Execute PowerShell module
+      const result = await psService.executeScript(
+        moduleName,
+        Object.entries(parameters).map(([key, value]) => `-${key} ${JSON.stringify(value)}`),
+        {
+          cancellationToken: execId,
+          streamOutput: true,
+        }
+      );
+
+      // Cleanup listeners
+      outputListeners.forEach(cleanup => cleanup());
+
+      // Send completion event
+      if (mainWindow) {
+        mainWindow.webContents.send('discovery:complete', {
+          executionId: execId,
+          result,
+          duration: Date.now() - execution.startTime,
+        });
+      }
+
+      return {
+        success: true,
+        executionId: execId,
+        result,
+      };
+
+    } catch (error: any) {
+      console.error('discovery:execute error:', error);
+
+      // Send error event
+      if (mainWindow && executionId) {
+        mainWindow.webContents.send('discovery:error', {
+          executionId: executionId || 'unknown',
+          error: error.message,
+        });
+      }
+
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  });
+
+  /**
+   * Cancel discovery execution
+   */
+  ipcMain.handle('discovery:cancel', async (_, args: { executionId: string }) => {
+    const { executionId } = args;
+
+    try {
+      console.log(`IPC: discovery:cancel - ${executionId}`);
+      const success = await psService.cancelExecution(executionId);
+
+      if (success && mainWindow) {
+        mainWindow.webContents.send('discovery:cancelled', { executionId });
+      }
+
+      return { success };
+    } catch (error: any) {
+      console.error('discovery:cancel error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  /**
+   * Get available discovery modules from registry
+   */
+  ipcMain.handle('discovery:get-modules', async () => {
+    try {
+      console.log('IPC: discovery:get-modules');
+      const allModules = moduleRegistry.getAllModules();
+
+      // Filter for discovery-category modules
+      const discoveryModules = allModules.filter(
+        (module: any) => module.category === 'discovery'
+      );
+
+      return { success: true, modules: discoveryModules };
+    } catch (error: any) {
+      console.error('discovery:get-modules error:', error);
+      return { success: false, error: error.message, modules: [] };
+    }
+  });
+
+  /**
+   * Get module information (description, parameters, etc.)
+   */
+  ipcMain.handle('discovery:get-module-info', async (_, args: { moduleName: string }) => {
+    const { moduleName } = args;
+
+    try {
+      console.log(`IPC: discovery:get-module-info - ${moduleName}`);
+      const moduleInfo = moduleRegistry.getModule(moduleName);
+
+      if (!moduleInfo) {
+        return {
+          success: false,
+          error: `Module not found: ${moduleName}`,
+          info: null,
+        };
+      }
+
+      return {
+        success: true,
+        info: moduleInfo,
+      };
+    } catch (error: any) {
+      console.error('discovery:get-module-info error:', error);
+      return { success: false, error: error.message, info: null };
+    }
+  });
+
+  // ========================================
+  // Migration Plan Persistence (Epic 2)
+  // ========================================
+  const { registerMigrationHandlers } = await import('./ipcHandlers.migration');
+  registerMigrationHandlers();
 
   console.log('All IPC handlers registered successfully');
 }

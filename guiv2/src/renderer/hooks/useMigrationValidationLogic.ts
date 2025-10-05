@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useMigrationStore } from '../store/useMigrationStore';
 
 export const useMigrationValidationLogic = () => {
@@ -12,12 +12,15 @@ export const useMigrationValidationLogic = () => {
     clearValidationResults,
   } = useMigrationStore();
 
+  // Get validation results for the selected wave
+  const waveValidationResult = selectedWave ? validationResults.get(selectedWave.id) : null;
+
   const [isValidating, setIsValidating] = useState(false);
   const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
 
   const severityCounts = useMemo(() => {
-    if (!validationResults) return { total: 0, blockers: 0, warnings: 0, info: 0, passed: 0 };
-    const checks = validationResults.checks || [];
+    if (!waveValidationResult) return { total: 0, blockers: 0, warnings: 0, info: 0, passed: 0 };
+    const checks = waveValidationResult.checks || [];
     return {
       total: checks.length,
       blockers: checks.filter(c => c.severity === 'blocker' && !c.passed).length,
@@ -25,11 +28,11 @@ export const useMigrationValidationLogic = () => {
       info: checks.filter(c => c.severity === 'info' && !c.passed).length,
       passed: checks.filter(c => c.passed).length,
     };
-  }, [validationResults]);
+  }, [waveValidationResult]);
 
   const filteredChecks = useMemo(() => {
-    if (!validationResults) return [];
-    let checks = validationResults.checks || [];
+    if (!waveValidationResult) return [];
+    let checks = waveValidationResult.checks || [];
     if (selectedSeverity !== 'all') {
       checks = checks.filter(c => c.severity === selectedSeverity);
     }
@@ -37,7 +40,7 @@ export const useMigrationValidationLogic = () => {
       const order = { blocker: 0, warning: 1, info: 2 };
       return order[a.severity] - order[b.severity];
     });
-  }, [validationResults, selectedSeverity]);
+  }, [waveValidationResult, selectedSeverity]);
 
   const handleRunValidation = useCallback(async () => {
     if (!selectedWave) return;
@@ -52,8 +55,8 @@ export const useMigrationValidationLogic = () => {
   }, [selectedWave, validateWave]);
 
   const handleExportReport = useCallback(() => {
-    if (!validationResults) return;
-    const report = JSON.stringify(validationResults, null, 2);
+    if (!waveValidationResult) return;
+    const report = JSON.stringify(waveValidationResult, null, 2);
     const blob = new Blob([report], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -61,16 +64,16 @@ export const useMigrationValidationLogic = () => {
     a.download = 'validation-report.json';
     a.click();
     URL.revokeObjectURL(url);
-  }, [validationResults]);
+  }, [waveValidationResult]);
 
   const isReady = useMemo(() => {
-    if (!validationResults) return false;
+    if (!waveValidationResult) return false;
     return severityCounts.blockers === 0;
-  }, [validationResults, severityCounts]);
+  }, [waveValidationResult, severityCounts]);
 
   return {
     selectedWave,
-    validationResults,
+    validationResults: waveValidationResult,
     filteredChecks,
     isLoading: isLoading || isValidating,
     error,
@@ -83,6 +86,6 @@ export const useMigrationValidationLogic = () => {
     handleClearResults: clearValidationResults,
     handleExportReport,
     hasWaveSelected: !!selectedWave,
-    hasResults: !!validationResults,
+    hasResults: !!waveValidationResult,
   };
 };

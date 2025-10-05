@@ -98,6 +98,20 @@ export interface ValidationResult {
   isValid: boolean;
   errors: ValidationError[];
   warnings: ValidationWarning[];
+  checks?: ValidationCheck[];
+}
+
+/**
+ * Individual validation check
+ */
+export interface ValidationCheck {
+  id?: string;
+  name: string;
+  description?: string;
+  severity: 'blocker' | 'warning' | 'info';
+  passed: boolean;
+  message?: string;
+  details?: any;
 }
 
 /**

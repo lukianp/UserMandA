@@ -169,7 +169,7 @@ export interface PerformanceMetrics {
   lazyWritesPerSecond: number;
   pageReadsPerSecond: number;
   pageWritesPerSecond: number;
-  checkpoint PagesPerSecond: number;
+  checkpointPagesPerSecond: number;
   lockWaitsPerSecond: number;
   deadlocksPerSecond: number;
   transactionsPerSecond: number;

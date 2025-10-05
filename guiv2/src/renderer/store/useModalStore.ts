@@ -15,6 +15,8 @@ export type ModalType =
   | 'columnVisibility'
   | 'exportData'
   | 'importData'
+  | 'waveScheduling'
+  | 'commandPalette'
   | 'settings'
   | 'about'
   | 'help'
@@ -48,6 +50,7 @@ export interface Modal {
 interface ModalState {
   // State
   modals: Modal[];
+  isCommandPaletteOpen: boolean;
 
   // Actions
   openModal: (modal: Omit<Modal, 'id' | 'openedAt'>) => string;
@@ -56,6 +59,10 @@ interface ModalState {
   updateModal: (modalId: string, updates: Partial<Modal>) => void;
   getModal: (modalId: string) => Modal | undefined;
   getActiveModal: () => Modal | undefined;
+
+  // Command Palette specific
+  openCommandPalette: () => void;
+  closeCommandPalette: () => void;
 
   // Convenience methods for common modal types
   showError: (title: string, message: string) => void;
@@ -70,6 +77,7 @@ export const useModalStore = create<ModalState>()(
     (set, get) => ({
       // Initial state
       modals: [],
+      isCommandPaletteOpen: false,
 
       // Actions
 
@@ -153,6 +161,20 @@ export const useModalStore = create<ModalState>()(
       getActiveModal: () => {
         const { modals } = get();
         return modals.length > 0 ? modals[modals.length - 1] : undefined;
+      },
+
+      /**
+       * Open command palette
+       */
+      openCommandPalette: () => {
+        set({ isCommandPaletteOpen: true });
+      },
+
+      /**
+       * Close command palette
+       */
+      closeCommandPalette: () => {
+        set({ isCommandPaletteOpen: false });
       },
 
       /**

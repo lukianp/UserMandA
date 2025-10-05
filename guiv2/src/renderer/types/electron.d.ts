@@ -596,6 +596,150 @@ export interface ElectronAPI {
    * @returns Cleanup function to remove listener
    */
   onEnvironmentDetectionCancelled: (callback: (data: any) => void) => () => void;
+
+  // ========================================
+  // Discovery Module Execution (Epic 3)
+  // ========================================
+
+  /**
+   * Execute discovery module with real-time streaming
+   * @param params Discovery execution parameters
+   * @returns Promise resolving to execution result
+   */
+  executeDiscovery: (params: {
+    moduleName: string;
+    parameters: Record<string, any>;
+    executionId?: string;
+  }) => Promise<{
+    success: boolean;
+    executionId?: string;
+    result?: any;
+    error?: string;
+  }>;
+
+  /**
+   * Cancel active discovery execution
+   * @param executionId Execution ID to cancel
+   * @returns Promise resolving to success status
+   */
+  cancelDiscovery: (executionId: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+
+  /**
+   * Get available discovery modules from registry
+   * @returns Promise resolving to array of discovery modules
+   */
+  getDiscoveryModules: () => Promise<{
+    success: boolean;
+    modules?: Array<{
+      id: string;
+      name: string;
+      displayName: string;
+      description: string;
+      category: string;
+      version: string;
+      parameters: Array<{
+        name: string;
+        type: string;
+        required: boolean;
+        default?: any;
+        description?: string;
+      }>;
+    }>;
+    error?: string;
+  }>;
+
+  /**
+   * Get detailed information about a specific module
+   * @param moduleName Module name/ID
+   * @returns Promise resolving to module information
+   */
+  getDiscoveryModuleInfo: (moduleName: string) => Promise<{
+    success: boolean;
+    info?: {
+      id: string;
+      name: string;
+      displayName: string;
+      description: string;
+      version: string;
+      category: string;
+      parameters: Array<{
+        name: string;
+        type: string;
+        required: boolean;
+        default?: any;
+        description?: string;
+      }>;
+      outputs?: Array<{
+        name: string;
+        type: string;
+        description?: string;
+      }>;
+      examples?: Array<{
+        description: string;
+        code: string;
+      }>;
+    };
+    error?: string;
+  }>;
+
+  /**
+   * Register a listener for discovery output events (all 6 PowerShell streams)
+   * @param callback Function to call when output is received
+   * @returns Cleanup function to remove listener
+   */
+  onDiscoveryOutput: (callback: (data: {
+    executionId: string;
+    timestamp: string;
+    level: 'output' | 'error' | 'warning' | 'verbose' | 'debug' | 'information';
+    message: string;
+    source: string;
+  }) => void) => () => void;
+
+  /**
+   * Register a listener for discovery progress events
+   * @param callback Function to call when progress updates
+   * @returns Cleanup function to remove listener
+   */
+  onDiscoveryProgress: (callback: (data: {
+    executionId: string;
+    percentage: number;
+    currentPhase: string;
+    itemsProcessed?: number;
+    totalItems?: number;
+  }) => void) => () => void;
+
+  /**
+   * Register a listener for discovery completion events
+   * @param callback Function to call when execution completes
+   * @returns Cleanup function to remove listener
+   */
+  onDiscoveryComplete: (callback: (data: {
+    executionId: string;
+    result: any;
+    duration: number;
+  }) => void) => () => void;
+
+  /**
+   * Register a listener for discovery error events
+   * @param callback Function to call when an error occurs
+   * @returns Cleanup function to remove listener
+   */
+  onDiscoveryError: (callback: (data: {
+    executionId: string;
+    error: string;
+  }) => void) => () => void;
+
+  /**
+   * Register a listener for discovery cancellation events
+   * @param callback Function to call when execution is cancelled
+   * @returns Cleanup function to remove listener
+   */
+  onDiscoveryCancelled: (callback: (data: {
+    executionId: string;
+  }) => void) => () => void;
 }
 
 /**

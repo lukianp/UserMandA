@@ -15,6 +15,9 @@ export interface IntuneDiscoveryConfig {
   includeApplications: boolean;
   includePolicies: boolean;
   includeComplianceReports: boolean;
+  includeConfigurationPolicies: boolean;
+  includeCompliancePolicies: boolean;
+  includeAppProtectionPolicies: boolean;
   platforms: DevicePlatform[];
   timeout: number;
   schedule?: {
@@ -40,6 +43,9 @@ export interface IntuneDiscoveryResult {
   appProtectionPolicies: AppProtectionPolicy[];
   totalDevicesFound: number;
   totalApplicationsFound: number;
+  totalConfigPoliciesFound: number;
+  totalCompliancePoliciesFound: number;
+  totalAppProtectionPoliciesFound: number;
   complianceSummary: ComplianceSummary;
   errors: IntuneError[];
   warnings: string[];

@@ -245,6 +245,7 @@ export const useGroupsViewLogic = () => {
 
   /**
    * Column definitions for AG Grid
+   * Updated for Epic 1 Task 1.4 - Added View Details action
    */
   const columnDefs = useMemo<ColDef[]>(
     () => [

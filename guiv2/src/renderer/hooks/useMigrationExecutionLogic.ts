@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useMigrationStore } from '../store/useMigrationStore';
 
 export const useMigrationExecutionLogic = () => {
+  const store = useMigrationStore();
+
   const {
     selectedWave,
     executionProgress,
@@ -14,7 +16,7 @@ export const useMigrationExecutionLogic = () => {
     retryFailedItems,
     subscribeToProgress,
     createRollbackPoint,
-  } = useMigrationStore();
+  } = store;
 
   const [logs, setLogs] = useState<string[]>([]);
 

@@ -6,7 +6,7 @@ import type {
   NetworkDevice,
   NetworkSubnet,
   NetworkPort,
-  NetworkTemplate,
+  NetworkDiscoveryTemplate,
 } from '../types/models/network';
 
 export interface NetworkDiscoveryLogicState {
@@ -17,24 +17,24 @@ export interface NetworkDiscoveryLogicState {
   error: string | null;
   searchText: string;
   activeTab: 'overview' | 'devices' | 'subnets' | 'ports';
-  templates: NetworkTemplate[];
+  templates: NetworkDiscoveryTemplate[];
 }
 
 export const useNetworkDiscoveryLogic = () => {
   const [config, setConfig] = useState<NetworkDiscoveryConfig>({
-    id: '',
-    name: 'Network Discovery',
-    type: 'network',
-    parameters: {
-      ipRanges: ['192.168.1.0/24'],
-      includeDevices: true,
-      includeSubnets: true,
-      includePortScan: true,
-      includeTopology: false,
-      includeVulnerabilityScan: false,
-      portRange: '1-1024',
-      timeout: 300,
-    },
+    subnets: ['192.168.1.0/24'],
+    scanType: 'Standard',
+    includePingSweep: true,
+    includePortScan: true,
+    portScanRange: '1-1024',
+    commonPortsOnly: false,
+    includeServiceDetection: true,
+    includeOsDetection: false,
+    includeTopologyMapping: false,
+    includeVulnerabilityDetection: false,
+    timeout: 300,
+    maxThreads: 50,
+    retryAttempts: 2,
   });
 
   const [result, setResult] = useState<NetworkDiscoveryResult | null>(null);
@@ -44,51 +44,78 @@ export const useNetworkDiscoveryLogic = () => {
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'devices' | 'subnets' | 'ports'>('overview');
 
-  const templates: NetworkTemplate[] = [
+  const templates: NetworkDiscoveryTemplate[] = [
     {
       id: 'quick-scan',
       name: 'Quick Network Scan',
       description: 'Fast scan of active devices on primary subnet',
       config: {
-        ipRanges: ['192.168.1.0/24'],
-        includeDevices: true,
-        includeSubnets: true,
+        subnets: ['192.168.1.0/24'],
+        scanType: 'Quick',
+        includePingSweep: true,
         includePortScan: false,
-        includeTopology: false,
-        includeVulnerabilityScan: false,
-        portRange: '1-1024',
+        commonPortsOnly: true,
+        includeServiceDetection: false,
+        includeOsDetection: false,
+        includeTopologyMapping: false,
+        includeVulnerabilityDetection: false,
         timeout: 60,
+        maxThreads: 50,
+        retryAttempts: 2,
       },
+      createdDate: new Date().toISOString(),
+      modifiedDate: new Date().toISOString(),
+      createdBy: 'system',
+      isDefault: false,
+      category: 'Quick',
     },
     {
       id: 'comprehensive',
       name: 'Comprehensive Network Discovery',
       description: 'Full network discovery with topology and vulnerability scanning',
       config: {
-        ipRanges: ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'],
-        includeDevices: true,
-        includeSubnets: true,
+        subnets: ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'],
+        scanType: 'Comprehensive',
+        includePingSweep: true,
         includePortScan: true,
-        includeTopology: true,
-        includeVulnerabilityScan: true,
-        portRange: '1-65535',
+        commonPortsOnly: false,
+        includeServiceDetection: true,
+        includeOsDetection: true,
+        includeTopologyMapping: true,
+        includeVulnerabilityDetection: true,
         timeout: 3600,
+        maxThreads: 100,
+        retryAttempts: 3,
       },
+      createdDate: new Date().toISOString(),
+      modifiedDate: new Date().toISOString(),
+      createdBy: 'system',
+      isDefault: true,
+      category: 'Full',
     },
     {
       id: 'security-audit',
       name: 'Security Audit Scan',
       description: 'Security-focused scan with port and vulnerability analysis',
       config: {
-        ipRanges: ['192.168.1.0/24'],
-        includeDevices: true,
-        includeSubnets: false,
+        subnets: ['192.168.1.0/24'],
+        scanType: 'Comprehensive',
+        includePingSweep: true,
         includePortScan: true,
-        includeTopology: false,
-        includeVulnerabilityScan: true,
-        portRange: '1-65535',
+        commonPortsOnly: false,
+        includeServiceDetection: true,
+        includeOsDetection: false,
+        includeTopologyMapping: false,
+        includeVulnerabilityDetection: true,
         timeout: 1800,
+        maxThreads: 75,
+        retryAttempts: 2,
       },
+      createdDate: new Date().toISOString(),
+      modifiedDate: new Date().toISOString(),
+      createdBy: 'system',
+      isDefault: false,
+      category: 'Security',
     },
   ];
 
@@ -107,14 +134,14 @@ export const useNetworkDiscoveryLogic = () => {
         modulePath: 'Modules/Discovery/NetworkDiscovery.psm1',
         functionName: 'Invoke-NetworkDiscovery',
         parameters: {
-          IPRanges: config.parameters.ipRanges,
-          IncludeDevices: config.parameters.includeDevices,
-          IncludeSubnets: config.parameters.includeSubnets,
-          IncludePortScan: config.parameters.includePortScan,
-          IncludeTopology: config.parameters.includeTopology,
-          IncludeVulnerabilityScan: config.parameters.includeVulnerabilityScan,
-          PortRange: config.parameters.portRange,
-          Timeout: config.parameters.timeout,
+          IPRanges: config.subnets,
+          IncludeDevices: config.includePingSweep,
+          IncludeSubnets: true,
+          IncludePortScan: config.includePortScan,
+          IncludeTopology: config.includeTopologyMapping,
+          IncludeVulnerabilityScan: config.includeVulnerabilityDetection,
+          PortRange: config.portScanRange || '1-1024',
+          Timeout: config.timeout,
         },
       });
 
@@ -133,7 +160,7 @@ export const useNetworkDiscoveryLogic = () => {
     }
   };
 
-  const handleApplyTemplate = (template: NetworkTemplate) => {
+  const handleApplyTemplate = (template: NetworkDiscoveryTemplate) => {
     setConfig((prev) => ({
       ...prev,
       name: template.name,
@@ -165,7 +192,7 @@ export const useNetworkDiscoveryLogic = () => {
         device.hostname,
         device.ipAddress,
         device.status,
-        `${device.deviceType} - ${device.manufacturer || 'Unknown'} ${device.model || ''}`,
+        `${device.type} - ${device.manufacturer || 'Unknown'} ${device.model || ''}`,
       ]);
     });
 
@@ -251,8 +278,8 @@ export const useNetworkDiscoveryLogic = () => {
     const subnets = result.subnets.length;
     const openPorts = result.openPorts.length;
     const vulnerabilities = result.vulnerabilities?.length || 0;
-    const criticalVulns = result.vulnerabilities?.filter((v) => v.severity === 'critical').length || 0;
-    const highVulns = result.vulnerabilities?.filter((v) => v.severity === 'high').length || 0;
+    const criticalVulns = result.vulnerabilities?.filter((v) => v.severity === 'Critical').length || 0;
+    const highVulns = result.vulnerabilities?.filter((v) => v.severity === 'High').length || 0;
 
     return {
       totalDevices,

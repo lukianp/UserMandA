@@ -10,10 +10,11 @@ import { Spinner } from './components/atoms/Spinner';
 import { ErrorBoundary } from './components/organisms/ErrorBoundary';
 import { MainLayout } from './components/layouts/MainLayout';
 import { ToastContainer } from './components/organisms/ToastContainer';
+import { ModalContainer } from './components/organisms/ModalContainer';
 import { useThemeStore } from './store/useThemeStore';
 import { useProfileStore } from './store/useProfileStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { applyTheme } from './styles/themes';
+import { applyTheme, getTheme } from './styles/themes';
 
 // Import CSS
 import './index.css';
@@ -30,6 +31,9 @@ const OverviewView = lazy(() => import('./views/overview/OverviewView'));
 const UsersView = lazy(() => import('./views/users/UsersView'));
 const UserDetailViewWrapper = lazy(() => import('./views/users/UserDetailViewWrapper'));
 const GroupsView = lazy(() => import('./views/groups/GroupsView'));
+const GroupDetailViewWrapper = lazy(() => import('./views/groups/GroupDetailViewWrapper'));
+const ComputersView = lazy(() => import('./views/computers/ComputersView'));
+const ComputerDetailViewWrapper = lazy(() => import('./views/computers/ComputerDetailViewWrapper'));
 const DomainDiscoveryView = lazy(() => import('./views/discovery/DomainDiscoveryView'));
 const AzureDiscoveryView = lazy(() => import('./views/discovery/AzureDiscoveryView'));
 const ActiveDirectoryDiscoveryView = lazy(() => import('./views/discovery/ActiveDirectoryDiscoveryView'));
@@ -80,25 +84,21 @@ const LoadingFallback = () => (
  * Main Application Component
  */
 export const App: React.FC = () => {
-  const { theme, loadTheme } = useThemeStore();
-  const { loadProfiles } = useProfileStore();
+  const { actualMode } = useThemeStore();
+  const { loadSourceProfiles } = useProfileStore();
 
   // Enable global keyboard shortcuts
   useKeyboardShortcuts();
 
   // Initialize application
   useEffect(() => {
-    // Load theme
-    loadTheme();
-
     // Load profiles
-    loadProfiles().catch(console.error);
+    loadSourceProfiles().catch(console.error);
 
-    // Apply theme to DOM
-    if (theme) {
-      applyTheme(theme);
-    }
-  }, [theme, loadTheme, loadProfiles]);
+    // Apply theme to DOM based on current mode
+    const theme = getTheme(actualMode === 'dark' ? 'dark' : 'light');
+    applyTheme(theme);
+  }, [actualMode, loadSourceProfiles]);
 
   return (
     <ErrorBoundary>
@@ -143,8 +143,13 @@ export const App: React.FC = () => {
               <Route path="/users" element={<UsersView />} />
               <Route path="/users/:userId" element={<UserDetailViewWrapper />} />
 
-              {/* Group Management */}
+              {/* Group Management - Epic 1 Task 1.4 */}
               <Route path="/groups" element={<GroupsView />} />
+              <Route path="/groups/:groupId" element={<GroupDetailViewWrapper />} />
+
+              {/* Computer Management - Epic 1 Task 1.3 */}
+              <Route path="/computers" element={<ComputersView />} />
+              <Route path="/computers/:computerId" element={<ComputerDetailViewWrapper />} />
 
               {/* Infrastructure */}
               <Route path="/infrastructure" element={<InfrastructureView />} />
@@ -181,6 +186,9 @@ export const App: React.FC = () => {
 
       {/* Global Toast Notifications */}
       <ToastContainer position="top-right" />
+
+      {/* Global Modal Container */}
+      <ModalContainer />
     </ErrorBoundary>
   );
 };

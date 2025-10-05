@@ -45,7 +45,7 @@ export interface CacheAwareWatcherConfig {
   recursive?: boolean;
   /** Glob patterns to watch (default: all) */
   patterns?: string[];
-  /** Glob patterns to ignore (default: ['**/.git/**', '**/node_modules/**']) */
+  /** Glob patterns to ignore (default: git and node_modules directories) */
   ignored?: string[];
   /** Enable content hashing for change detection (default: true) */
   enableHashing?: boolean;

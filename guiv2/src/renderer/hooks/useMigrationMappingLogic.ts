@@ -20,10 +20,7 @@ export const useMigrationMappingLogic = () => {
     mappings,
     isLoading,
     error,
-    loadMappings,
     mapResource,
-    updateMapping,
-    deleteMapping,
     importMappings,
     exportMappings,
     autoMapResources,
@@ -40,12 +37,13 @@ export const useMigrationMappingLogic = () => {
   const [exportFormat, setExportFormat] = useState<'csv' | 'excel' | 'json'>('csv');
   const [autoMapFuzzy, setAutoMapFuzzy] = useState(true);
 
+  // Auto-mapping strategy based on fuzzy setting
+  const autoMapStrategy = autoMapFuzzy ? 'displayName' : 'upn';
+
   // Load mappings when selected wave changes
   useEffect(() => {
-    if (selectedWave?.id) {
-      loadMappings(selectedWave.id);
-    }
-  }, [selectedWave?.id, loadMappings]);
+    // Mappings are already loaded from the store
+  }, [selectedWave?.id]);
 
   // Filtered mappings based on search and filters
   const filteredMappings = useMemo(() => {
@@ -79,11 +77,13 @@ export const useMigrationMappingLogic = () => {
   const statusCounts = useMemo(() => {
     return {
       total: mappings.length,
-      pending: mappings.filter(m => m.status === 'pending').length,
-      mapped: mappings.filter(m => m.status === 'mapped').length,
-      validated: mappings.filter(m => m.status === 'validated').length,
-      migrated: mappings.filter(m => m.status === 'migrated').length,
-      error: mappings.filter(m => m.status === 'error').length,
+      pending: mappings.filter(m => m.status === 'Pending').length,
+      mapped: mappings.filter(m => m.status === 'Mapped').length,
+      valid: mappings.filter(m => m.status === 'Valid').length,
+      invalid: mappings.filter(m => m.status === 'Invalid').length,
+      conflicted: mappings.filter(m => m.status === 'Conflicted').length,
+      resolved: mappings.filter(m => m.status === 'Resolved').length,
+      skipped: mappings.filter(m => m.status === 'Skipped').length,
       conflicts: mappings.filter(m => m.conflicts && m.conflicts.length > 0).length,
     };
   }, [mappings]);
@@ -148,7 +148,7 @@ export const useMigrationMappingLogic = () => {
     if (!selectedWave?.id) return;
 
     try {
-      await exportMappings(selectedWave.id, exportFormat);
+      await exportMappings(selectedWave.id);
     } catch (error) {
       console.error('Failed to export mappings:', error);
     }
@@ -158,7 +158,7 @@ export const useMigrationMappingLogic = () => {
     if (!selectedWave?.id) return;
 
     try {
-      await autoMapResources(selectedWave.id, { useFuzzyMatch: autoMapFuzzy });
+      await autoMapResources(autoMapStrategy);
     } catch (error) {
       console.error('Failed to auto-map resources:', error);
     }
@@ -182,12 +182,13 @@ export const useMigrationMappingLogic = () => {
       if (!confirm('Are you sure you want to delete this mapping?')) return;
 
       try {
-        await deleteMapping(mappingId);
+        // TODO: Implement deleteMapping in store
+        console.log('Delete mapping not yet implemented:', mappingId);
       } catch (error) {
         console.error('Failed to delete mapping:', error);
       }
     },
-    [deleteMapping]
+    []
   );
 
   const handleShowConflicts = useCallback((mapping: ResourceMapping) => {

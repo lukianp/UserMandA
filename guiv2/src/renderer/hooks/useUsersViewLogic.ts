@@ -46,25 +46,30 @@ export const useUsersViewLogic = () => {
       if (process.env.NODE_ENV === 'development') {
         const mockUsers: UserData[] = Array.from({ length: 100 }, (_, i) => ({
           id: `user-${i}`,
-          objectId: `obj-${i}`,
+          name: `User ${i + 1}`,
           displayName: `User ${i + 1}`,
-          firstName: `First${i}`,
-          lastName: `Last${i}`,
-          email: `user${i}@company.com`,
           userPrincipalName: `user${i}@company.com`,
+          mail: `user${i}@company.com`,
+          accountEnabled: i % 5 !== 0,
+          samAccountName: `user${i}`,
+          companyName: 'Company Inc.',
           department: ['IT', 'Sales', 'HR', 'Finance'][i % 4],
           jobTitle: ['Manager', 'Developer', 'Analyst', 'Director'][i % 4],
           officeLocation: ['New York', 'London', 'Tokyo', 'Sydney'][i % 4],
-          isEnabled: i % 5 !== 0,
-          createdDate: new Date(2020, 0, i + 1).toISOString(),
-          lastSignIn: new Date(2024, 9, (i % 30) + 1).toISOString(),
-          source: i % 3 === 0 ? 'AzureAD' : 'ActiveDirectory',
+          firstName: `First${i}`,
+          lastName: `Last${i}`,
+          createdAt: new Date(2020, 0, i + 1).toISOString(),
+          createdDateTime: new Date(2020, 0, i + 1).toISOString(),
+          lastSignInDateTime: new Date(2024, 9, (i % 30) + 1).toISOString(),
+          managerDisplayName: i > 10 ? `User ${i - 10}` : null,
+          userSource: i % 3 === 0 ? 'AzureAD' : 'ActiveDirectory',
+          status: i % 5 !== 0 ? 'active' : 'disabled',
           syncStatus:
             i % 10 === 0
               ? { isSynced: false, lastSyncTime: '', syncErrors: ['Error'] }
               : { isSynced: true, lastSyncTime: new Date().toISOString() },
           licenses: i % 2 === 0 ? ['Office 365 E3'] : [],
-          groups: [`Group${i % 5}`],
+          groups: `Group${i % 5}`,
           manager: i > 10 ? `User ${i - 10}` : undefined,
           mfaStatus: i % 3 === 0 ? 'Enabled' : 'Disabled',
           riskLevel: i % 20 === 0 ? 'High' : i % 10 === 0 ? 'Medium' : 'Low',
@@ -107,7 +112,7 @@ export const useUsersViewLogic = () => {
         headerCheckboxSelection: true,
       },
       {
-        field: 'email',
+        field: 'mail',
         headerName: 'Email',
         sortable: true,
         filter: true,
@@ -135,47 +140,30 @@ export const useUsersViewLogic = () => {
         minWidth: 120,
       },
       {
-        field: 'isEnabled',
+        field: 'accountEnabled',
         headerName: 'Status',
         sortable: true,
         filter: true,
         minWidth: 100,
-        cellRenderer: (params: { value: boolean }) => {
-          return params.value ? (
-            <span className="text-green-600 font-medium">Enabled</span>
-          ) : (
-            <span className="text-red-600 font-medium">Disabled</span>
-          );
-        },
+        cellRenderer: (params: any) => params.value ? 'Enabled' : 'Disabled',
+        cellStyle: (params: any) => ({
+          color: params.value ? 'green' : 'red',
+          fontWeight: 'bold'
+        }),
       },
       {
-        field: 'source',
+        field: 'userSource',
         headerName: 'Source',
         sortable: true,
         filter: true,
         minWidth: 120,
       },
       {
-        field: 'mfaStatus',
-        headerName: 'MFA',
+        field: 'status',
+        headerName: 'Account Status',
         sortable: true,
         filter: true,
         minWidth: 100,
-      },
-      {
-        field: 'riskLevel',
-        headerName: 'Risk',
-        sortable: true,
-        filter: true,
-        minWidth: 80,
-        cellRenderer: (params: { value: string }) => {
-          const colors: Record<string, string> = {
-            High: 'text-red-600 font-semibold',
-            Medium: 'text-yellow-600 font-medium',
-            Low: 'text-green-600',
-          };
-          return <span className={colors[params.value] || ''}>{params.value}</span>;
-        },
       },
     ],
     []
@@ -202,13 +190,13 @@ export const useUsersViewLogic = () => {
       const headers = ['Display Name', 'Email', 'Department', 'Job Title', 'Location', 'Status', 'Source', 'MFA'];
       const rows = filteredUsers.map((u) => [
         u.displayName,
-        u.email,
+        u.mail,
         u.department || '',
         u.jobTitle || '',
         u.officeLocation || '',
-        u.isEnabled ? 'Enabled' : 'Disabled',
-        u.source,
-        u.mfaStatus || '',
+        u.accountEnabled ? 'Enabled' : 'Disabled',
+        u.userSource || '',
+        u.status || '',
       ]);
 
       const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');

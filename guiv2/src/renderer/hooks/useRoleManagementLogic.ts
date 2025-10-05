@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNotificationStore } from '../store/useNotificationStore';
-import { exportService } from '../services/exportService';
+import exportService from '../services/exportService';
 
 interface Role {
   id: string;
@@ -96,7 +96,7 @@ export const useRoleManagementLogic = () => {
 
       setRoles(mockRoles);
     } catch (error) {
-      addNotification('error', 'Failed to load roles');
+      addNotification({ type: 'error', message: 'Failed to load roles', pinned: false, priority: 'normal' });
       console.error('Failed to load roles:', error);
     } finally {
       setIsLoading(false);
@@ -104,22 +104,22 @@ export const useRoleManagementLogic = () => {
   };
 
   const handleCreateRole = () => {
-    addNotification('info', 'Create role dialog would open here');
+    addNotification({ type: 'info', message: 'Create role dialog would open here', pinned: false, priority: 'normal' });
   };
 
   const handleEditRole = (role: Role) => {
     if (role.isBuiltIn) {
-      addNotification('warning', 'Built-in roles cannot be edited');
+      addNotification({ type: 'warning', message: 'Built-in roles cannot be edited', pinned: false, priority: 'normal' });
       return;
     }
-    addNotification('info', `Edit role: ${role.name}`);
+    addNotification({ type: 'info', message: `Edit role: ${role.name}`, pinned: false, priority: 'normal' });
   };
 
   const handleDeleteRoles = async () => {
     const deletableRoles = selectedRoles.filter(r => !r.isBuiltIn);
 
     if (deletableRoles.length === 0) {
-      addNotification('warning', 'Cannot delete built-in roles');
+      addNotification({ type: 'warning', message: 'Cannot delete built-in roles', pinned: false, priority: 'normal' });
       return;
     }
 
@@ -128,9 +128,9 @@ export const useRoleManagementLogic = () => {
 
       setRoles(prev => prev.filter(r => !deletableRoles.find(d => d.id === r.id)));
       setSelectedRoles([]);
-      addNotification('success', `Deleted ${deletableRoles.length} role(s)`);
+      addNotification({ type: 'success', message: `Deleted ${deletableRoles.length} role(s)`, pinned: false, priority: 'normal' });
     } catch (error) {
-      addNotification('error', 'Failed to delete roles');
+      addNotification({ type: 'error', message: 'Failed to delete roles', pinned: false, priority: 'normal' });
     }
   };
 
@@ -148,9 +148,9 @@ export const useRoleManagementLogic = () => {
       };
 
       setRoles(prev => [...prev, newRole]);
-      addNotification('success', `Role duplicated: ${newRole.name}`);
+      addNotification({ type: 'success', message: `Role duplicated: ${newRole.name}`, pinned: false, priority: 'normal' });
     } catch (error) {
-      addNotification('error', 'Failed to duplicate role');
+      addNotification({ type: 'error', message: 'Failed to duplicate role', pinned: false, priority: 'normal' });
     }
   };
 
@@ -158,9 +158,9 @@ export const useRoleManagementLogic = () => {
     try {
       const filteredRoles = getFilteredRoles();
       await exportService.exportToExcel(filteredRoles, 'Roles');
-      addNotification('success', 'Roles exported successfully');
+      addNotification({ type: 'success', message: 'Roles exported successfully', pinned: false, priority: 'normal' });
     } catch (error) {
-      addNotification('error', 'Failed to export roles');
+      addNotification({ type: 'error', message: 'Failed to export roles', pinned: false, priority: 'normal' });
     }
   };
 

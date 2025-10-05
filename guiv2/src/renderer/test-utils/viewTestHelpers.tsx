@@ -4,7 +4,7 @@
  */
 
 import { render, RenderOptions } from '@testing-library/react';
-import React, { ReactElement } from 'react';
+import React, { ReactElement, ComponentType } from 'react';
 
 // ============================================================================
 // Mock Data Factories
@@ -285,7 +285,7 @@ export const generateMockComputers = (count: number) => {
 /**
  * Test rendering without crashing
  */
-export const testComponentRenders = (Component: React.FC) => {
+export const testComponentRenders = (Component: ComponentType) => {
   const { container } = renderWithProviders(<Component />);
   expect(container).toBeInTheDocument();
 };
@@ -293,7 +293,7 @@ export const testComponentRenders = (Component: React.FC) => {
 /**
  * Test loading state
  */
-export const testLoadingState = async (Component: React.FC) => {
+export const testLoadingState = async (Component: ComponentType) => {
   mockSuccessfulExecution(mockDiscoveryData());
   const { container } = renderWithProviders(<Component />);
 
@@ -308,7 +308,7 @@ export const testLoadingState = async (Component: React.FC) => {
 /**
  * Test error state
  */
-export const testErrorState = async (Component: React.FC, errorMessage: string) => {
+export const testErrorState = async (Component: ComponentType, errorMessage: string) => {
   mockFailedExecution(errorMessage);
   const { container } = renderWithProviders(<Component />);
 
@@ -321,7 +321,7 @@ export const testErrorState = async (Component: React.FC, errorMessage: string) 
 /**
  * Test data display
  */
-export const testDataDisplay = async (Component: React.FC, expectedData: any) => {
+export const testDataDisplay = async (Component: ComponentType, expectedData: any) => {
   mockSuccessfulExecution(expectedData);
   const { container } = renderWithProviders(<Component />);
 
