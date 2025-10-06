@@ -7,8 +7,8 @@ import React, { useState, useCallback } from 'react';
 import { Dialog } from '@headlessui/react';
 import { useModalStore } from '../../store/useModalStore';
 import { useProfileStore } from '../../store/useProfileStore';
-import Button from '../atoms/Button';
-import Input from '../atoms/Input';
+import { Button } from '../atoms/Button';
+import { Input } from '../atoms/Input';
 import Select from '../atoms/Select';
 import { X, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -24,9 +24,9 @@ interface ProfileFormData {
 
 const CreateProfileDialog: React.FC = () => {
   const { modals, closeModal } = useModalStore();
-  const { createProfile, testConnection } = useProfileStore();
+  const { createSourceProfile, testConnection } = useProfileStore();
 
-  const isOpen = modals.createProfile || false;
+  const isOpen = modals.some((m) => m.id === 'createProfile') || false;
 
   const [formData, setFormData] = useState<ProfileFormData>({
     name: '',
@@ -55,18 +55,14 @@ const CreateProfileDialog: React.FC = () => {
     setTestResult(null);
 
     try {
-      const profile = {
+      const profile: any = {
         id: '',
-        name: formData.name,
-        type: formData.type,
-        connectionType: formData.connectionType,
-        server: formData.server,
-        domain: formData.domain,
-        username: formData.username,
-        password: formData.password,
-        isConnected: false,
-        lastTested: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
+        companyName: formData.name,
+        domainController: formData.server,
+        isActive: true,
+        created: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        configuration: {},
       };
 
       const result = await testConnection(profile);
@@ -89,18 +85,20 @@ const CreateProfileDialog: React.FC = () => {
     setIsSaving(true);
 
     try {
-      await createProfile({
-        name: formData.name,
-        type: formData.type,
-        connectionType: formData.connectionType,
-        server: formData.server,
-        domain: formData.domain,
-        username: formData.username,
-        password: formData.password,
-        isConnected: false,
-        lastTested: null,
-        createdAt: new Date().toISOString(),
-      });
+      await createSourceProfile({
+        companyName: formData.name,
+        domainController: formData.server,
+        isActive: true,
+        created: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        configuration: {
+          type: formData.type,
+          connectionType: formData.connectionType,
+          domain: formData.domain,
+          username: formData.username,
+          password: formData.password,
+        },
+      } as any);
 
       // Reset form and close
       setFormData({
@@ -119,7 +117,7 @@ const CreateProfileDialog: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [formData, createProfile, closeModal]);
+  }, [formData, createSourceProfile, closeModal]);
 
   const handleClose = useCallback(() => {
     setFormData({
@@ -174,7 +172,7 @@ const CreateProfileDialog: React.FC = () => {
               <Select
                 label="Profile Type"
                 value={formData.type}
-                onChange={(e) => updateField('type', e.target.value as 'source' | 'target')}
+                onChange={(value: string) => updateField('type', value as 'source' | 'target')}
                 options={[
                   { value: 'source', label: 'Source Environment' },
                   { value: 'target', label: 'Target Environment' },
@@ -185,7 +183,7 @@ const CreateProfileDialog: React.FC = () => {
               <Select
                 label="Connection Type"
                 value={formData.connectionType}
-                onChange={(e) => updateField('connectionType', e.target.value as ProfileFormData['connectionType'])}
+                onChange={(value: string) => updateField('connectionType', value as ProfileFormData['connectionType'])}
                 options={[
                   { value: 'AD', label: 'Active Directory' },
                   { value: 'Azure', label: 'Azure AD / Microsoft 365' },
@@ -210,7 +208,7 @@ const CreateProfileDialog: React.FC = () => {
               placeholder="CONTOSO"
               value={formData.domain}
               onChange={(e) => updateField('domain', e.target.value)}
-              helpText="Leave empty for Azure AD"
+              helperText="Leave empty for Azure AD"
               data-cy="domain-input"
             />
 

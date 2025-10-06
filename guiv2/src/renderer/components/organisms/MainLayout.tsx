@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import Sidebar from './Sidebar';
+import { Sidebar } from './Sidebar';
 
 export interface MainLayoutProps {
   /** Child components to render in main content area */

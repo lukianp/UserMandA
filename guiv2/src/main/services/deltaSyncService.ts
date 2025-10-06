@@ -292,7 +292,8 @@ class DeltaSyncService extends EventEmitter {
       throw new Error(result.error || 'Failed to detect changes');
     }
 
-    return result.data.changes || [];
+    const resultData = result.data as { changes?: DetectedChange[] };
+    return resultData.changes || [];
   }
 
   /**
@@ -324,13 +325,22 @@ class DeltaSyncService extends EventEmitter {
       throw new Error(result.error || 'Failed to apply changes');
     }
 
+    const resultData = result.data as {
+      applied?: number;
+      failed?: number;
+      conflicts?: number;
+      bandwidth?: number;
+      errors?: string[];
+      warnings?: string[];
+    };
+
     return {
-      applied: result.data.applied || 0,
-      failed: result.data.failed || 0,
-      conflicts: result.data.conflicts || 0,
-      bandwidth: result.data.bandwidth || 0,
-      errors: result.data.errors || [],
-      warnings: result.data.warnings || [],
+      applied: resultData.applied || 0,
+      failed: resultData.failed || 0,
+      conflicts: resultData.conflicts || 0,
+      bandwidth: resultData.bandwidth || 0,
+      errors: resultData.errors || [],
+      warnings: resultData.warnings || [],
     };
   }
 

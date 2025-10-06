@@ -130,12 +130,12 @@ export const Tooltip: React.FC<TooltipProps> = ({
     <div className="relative inline-block">
       {/* Trigger element */}
       {React.cloneElement(children, {
-        onMouseEnter: handleMouseEnter,
-        onMouseLeave: handleMouseLeave,
-        onFocus: handleFocus,
-        onBlur: handleBlur,
+        onMouseEnter: handleMouseEnter as any,
+        onMouseLeave: handleMouseLeave as any,
+        onFocus: handleFocus as any,
+        onBlur: handleBlur as any,
         'aria-describedby': isVisible ? 'tooltip' : undefined,
-      })}
+      } as any)}
 
       {/* Tooltip */}
       {isVisible && (

@@ -15,6 +15,8 @@ import * as crypto from 'crypto';
 import { ScriptExecutionParams, ModuleExecutionParams, ScriptTask } from '../types/shared';
 import { MockLogicEngineService } from './services/mockLogicEngineService';
 import { LogicEngineService } from './services/logicEngineService';
+import { ProjectService } from './services/projectService';
+import { DashboardService } from './services/dashboardService';
 import type { UserDetailProjection } from '../renderer/types/models/userDetail';
 
 // Service instances
@@ -23,6 +25,8 @@ let moduleRegistry: ModuleRegistry;
 let environmentDetectionService: EnvironmentDetectionService;
 let mockLogicEngineService: MockLogicEngineService;
 let logicEngineService: LogicEngineService;
+let projectService: ProjectService;
+let dashboardService: DashboardService;
 let mainWindow: BrowserWindow | null = null;
 
 // Configuration storage
@@ -72,6 +76,14 @@ async function initializeServices(): Promise<void> {
   const defaultDataRoot = path.join('C:', 'discoverydata', 'ljpops', 'Raw');
   logicEngineService = LogicEngineService.getInstance(defaultDataRoot);
   console.log('Logic Engine Service initialized');
+
+  // Initialize Project Service
+  projectService = new ProjectService();
+  console.log('Project Service initialized');
+
+  // Initialize Dashboard Service (depends on LogicEngine and Project Service)
+  dashboardService = new DashboardService(logicEngineService, projectService);
+  console.log('Dashboard Service initialized');
 
   // Load application configuration
   try {
@@ -853,6 +865,190 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       };
     } catch (error: unknown) {
       console.error('logic-engine:invalidate-cache error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  // ========================================
+  // Dashboard & Project Handlers (Dashboard Enhancement)
+  // ========================================
+
+  /**
+   * IPC Handler: dashboard:getStats
+   *
+   * Get aggregated dashboard statistics from Logic Engine
+   */
+  ipcMain.handle('dashboard:getStats', async (_, profileName: string) => {
+    try {
+      const stats = await dashboardService.getStats(profileName);
+      return { success: true, data: stats };
+    } catch (error: unknown) {
+      console.error('dashboard:getStats error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: dashboard:getProjectTimeline
+   *
+   * Get project timeline information
+   */
+  ipcMain.handle('dashboard:getProjectTimeline', async (_, profileName: string) => {
+    try {
+      const timeline = await dashboardService.getProjectTimeline(profileName);
+      return { success: true, data: timeline };
+    } catch (error: unknown) {
+      console.error('dashboard:getProjectTimeline error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: dashboard:getSystemHealth
+   *
+   * Get system health status
+   */
+  ipcMain.handle('dashboard:getSystemHealth', async () => {
+    try {
+      const health = await dashboardService.getSystemHealth();
+      return { success: true, data: health };
+    } catch (error: unknown) {
+      console.error('dashboard:getSystemHealth error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: dashboard:getRecentActivity
+   *
+   * Get recent activity from logs
+   */
+  ipcMain.handle('dashboard:getRecentActivity', async (_, profileName: string, limit: number = 10) => {
+    try {
+      const activities = await dashboardService.getRecentActivity(profileName, limit);
+      return { success: true, data: activities };
+    } catch (error: unknown) {
+      console.error('dashboard:getRecentActivity error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: dashboard:acknowledgeAlert
+   *
+   * Acknowledge a system alert
+   */
+  ipcMain.handle('dashboard:acknowledgeAlert', async (_, alertId: string) => {
+    try {
+      await dashboardService.acknowledgeAlert(alertId);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('dashboard:acknowledgeAlert error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: project:getConfiguration
+   *
+   * Get project configuration for a profile
+   */
+  ipcMain.handle('project:getConfiguration', async (_, profileName: string) => {
+    try {
+      const config = await projectService.loadProjectConfig(profileName);
+      return { success: true, data: config };
+    } catch (error: unknown) {
+      console.error('project:getConfiguration error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: project:saveConfiguration
+   *
+   * Save project configuration
+   */
+  ipcMain.handle('project:saveConfiguration', async (_, profileName: string, config: any) => {
+    try {
+      await projectService.saveProjectConfig(profileName, config);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('project:saveConfiguration error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: project:updateStatus
+   *
+   * Update project status
+   */
+  ipcMain.handle('project:updateStatus', async (_, profileName: string, status: string) => {
+    try {
+      await projectService.updateProjectStatus(profileName, status as any);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('project:updateStatus error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: project:addWave
+   *
+   * Add a migration wave
+   */
+  ipcMain.handle('project:addWave', async (_, profileName: string, wave: any) => {
+    try {
+      await projectService.addMigrationWave(profileName, wave);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('project:addWave error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: project:updateWaveStatus
+   *
+   * Update wave status
+   */
+  ipcMain.handle('project:updateWaveStatus', async (_, profileName: string, waveId: string, status: string) => {
+    try {
+      await projectService.updateWaveStatus(profileName, waveId, status as any);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('project:updateWaveStatus error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)

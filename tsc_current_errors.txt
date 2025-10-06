@@ -57,48 +57,56 @@ src/main/services/migrationValidationService.ts(943,3): error TS2484: Export dec
 src/main/services/migrationValidationService.ts(944,3): error TS2484: Export declaration conflicts with exported declaration of 'ValidationType'.
 src/main/services/migrationValidationService.ts(945,3): error TS2484: Export declaration conflicts with exported declaration of 'ValidationResult'.
 src/main/services/migrationValidationService.ts(946,3): error TS2484: Export declaration conflicts with exported declaration of 'ValidationReport'.
-src/main/services/mockLogicEngineService.ts(153,5): error TS2741: Property 'createdAt' is missing in type '{ id: string; name: string; displayName: string; userPrincipalName: string; mail: string; email: string; department: string; jobTitle: string; accountEnabled: true; samAccountName: string; companyName: string; ... 29 more ...; domain: string; }' but required in type 'UserData'.
-src/main/services/mockLogicEngineService.ts(199,38): error TS1361: 'GroupType' cannot be used as a value because it was imported using 'import type'.
-src/main/services/mockLogicEngineService.ts(199,58): error TS1361: 'GroupType' cannot be used as a value because it was imported using 'import type'.
-src/main/services/mockLogicEngineService.ts(199,82): error TS1361: 'GroupType' cannot be used as a value because it was imported using 'import type'.
-src/main/services/mockLogicEngineService.ts(200,35): error TS1361: 'GroupScope' cannot be used as a value because it was imported using 'import type'.
-src/main/services/mockLogicEngineService.ts(200,57): error TS1361: 'GroupScope' cannot be used as a value because it was imported using 'import type'.
-src/main/services/mockLogicEngineService.ts(200,76): error TS1361: 'GroupScope' cannot be used as a value because it was imported using 'import type'.
-src/main/services/mockLogicEngineService.ts(211,23): error TS1361: 'MembershipType' cannot be used as a value because it was imported using 'import type'.
-src/main/services/mockLogicEngineService.ts(429,18): error TS2367: This comparison appears to be unintentional because the types '"High" | "Medium" | "Low"' and '"Critical"' have no overlap.
-src/main/services/mockLogicEngineService.ts(684,5): error TS2739: Type '{ antivirusInstalled: true; antivirusProduct: string; antivirusUpToDate: true; antivirusLastUpdate: Date; firewallEnabled: true; firewallProfile: string; encryptionEnabled: true; ... 6 more ...; vulnerabilityCount: number; }' is missing the following properties from type 'SecurityComplianceStatus': complianceIssues, criticalVulnerabilityCount
-src/main/services/mockLogicEngineService.ts(725,11): error TS2322: Type '"Wired"' is not assignable to type '"Unknown" | "Ethernet" | "WiFi" | "Bluetooth" | "Virtual"'.
-src/main/services/mockLogicEngineService.ts(734,11): error TS2322: Type '"Wireless"' is not assignable to type '"Unknown" | "Ethernet" | "WiFi" | "Bluetooth" | "Virtual"'.
-src/main/services/mockLogicEngineService.ts(835,5): error TS2322: Type '({ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "High"; description: string; recommendation: string; category: "Security"; } | { ...; } | { ...; } | { ...; })[]' is not assignable to type 'ComputerRiskItem[]'.
+src/main/services/mockLogicEngineService.ts(431,18): error TS2367: This comparison appears to be unintentional because the types '"High" | "Medium" | "Low"' and '"Critical"' have no overlap.
+src/main/services/mockLogicEngineService.ts(686,5): error TS2739: Type '{ antivirusInstalled: true; antivirusProduct: string; antivirusUpToDate: true; antivirusLastUpdate: Date; firewallEnabled: true; firewallProfile: string; encryptionEnabled: true; ... 6 more ...; vulnerabilityCount: number; }' is missing the following properties from type 'SecurityComplianceStatus': complianceIssues, criticalVulnerabilityCount
+src/main/services/mockLogicEngineService.ts(727,11): error TS2322: Type '"Wired"' is not assignable to type '"Unknown" | "Ethernet" | "WiFi" | "Bluetooth" | "Virtual"'.
+src/main/services/mockLogicEngineService.ts(736,11): error TS2322: Type '"Wireless"' is not assignable to type '"Unknown" | "Ethernet" | "WiFi" | "Bluetooth" | "Virtual"'.
+src/main/services/mockLogicEngineService.ts(837,5): error TS2322: Type '({ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "High"; description: string; recommendation: string; category: "Security"; } | { ...; } | { ...; } | { ...; })[]' is not assignable to type 'ComputerRiskItem[]'.
   Type '{ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "High"; description: string; recommendation: string; category: "Security"; } | { ...; } | { ...; } | { ...; }' is not assignable to type 'ComputerRiskItem'.
     Property 'affectedComponent' is missing in type '{ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "High"; description: string; recommendation: string; category: "Security"; }' but required in type 'ComputerRiskItem'.
-src/main/services/mockLogicEngineService.ts(840,18): error TS2367: This comparison appears to be unintentional because the types '"High" | "Medium" | "Low"' and '"Critical"' have no overlap.
-src/main/services/mockLogicEngineService.ts(884,9): error TS7018: Object literal's property 'dependencies' implicitly has an 'any[]' type.
-src/main/services/mockLogicEngineService.ts(1129,5): error TS2322: Type '{ policyName: string; policyGuid: `${string}-${string}-${string}-${string}-${string}`; policyType: "User" | "Computer" | "Both"; enabled: true; linkedOu: string; order: number; enforced: boolean; appliedDate: Date; }[]' is not assignable to type 'GroupPolicyAssignment[]'.
+src/main/services/mockLogicEngineService.ts(842,18): error TS2367: This comparison appears to be unintentional because the types '"High" | "Medium" | "Low"' and '"Critical"' have no overlap.
+src/main/services/mockLogicEngineService.ts(886,9): error TS7018: Object literal's property 'dependencies' implicitly has an 'any[]' type.
+src/main/services/mockLogicEngineService.ts(1131,5): error TS2322: Type '{ policyName: string; policyGuid: `${string}-${string}-${string}-${string}-${string}`; policyType: "User" | "Computer" | "Both"; enabled: true; linkedOu: string; order: number; enforced: boolean; appliedDate: Date; }[]' is not assignable to type 'GroupPolicyAssignment[]'.
   Property 'appliesTo' is missing in type '{ policyName: string; policyGuid: `${string}-${string}-${string}-${string}-${string}`; policyType: "User" | "Computer" | "Both"; enabled: true; linkedOu: string; order: number; enforced: boolean; appliedDate: Date; }' but required in type 'GroupPolicyAssignment'.
-src/main/services/mockLogicEngineService.ts(1166,5): error TS2322: Type '({ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "Medium"; description: string; recommendation: string; category: "Security"; } | { ...; } | { ...; })[]' is not assignable to type 'GroupRiskItem[]'.
+src/main/services/mockLogicEngineService.ts(1168,5): error TS2322: Type '({ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "Medium"; description: string; recommendation: string; category: "Security"; } | { ...; } | { ...; })[]' is not assignable to type 'GroupRiskItem[]'.
   Type '{ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "Medium"; description: string; recommendation: string; category: "Security"; } | { ...; } | { ...; }' is not assignable to type 'GroupRiskItem'.
     Type '{ affectedEntity: string; detectedAt: Date; remediation: string; cvssScore: number; type: string; severity: "Medium"; description: string; recommendation: string; category: "Security"; }' is missing the following properties from type 'GroupRiskItem': affectedMembers, affectedResources
-src/main/services/mockLogicEngineService.ts(1171,18): error TS2367: This comparison appears to be unintentional because the types '"High" | "Medium"' and '"Critical"' have no overlap.
-src/main/services/mockLogicEngineService.ts(1240,7): error TS2353: Object literal may only specify known properties, and 'nextSyncTime' does not exist in type 'GroupSyncStatus'.
-src/main/services/powerShellService.test.ts(20,3): error TS2614: Module '"./powerShellService"' has no exported member 'PowerShellExecutionService'. Did you mean to use 'import PowerShellExecutionService from "./powerShellService"' instead?
+src/main/services/mockLogicEngineService.ts(1173,18): error TS2367: This comparison appears to be unintentional because the types '"High" | "Medium"' and '"Critical"' have no overlap.
+src/main/services/mockLogicEngineService.ts(1242,7): error TS2353: Object literal may only specify known properties, and 'nextSyncTime' does not exist in type 'GroupSyncStatus'.
+src/main/services/powerShellService.test.ts(74,21): error TS2339: Property 'dispose' does not exist on type 'PowerShellExecutionService'.
+src/main/services/powerShellService.test.ts(83,20): error TS2339: Property 'queueLength' does not exist on type '{ poolSize: number; idleSessions: number; busySessions: number; activeExecutions: number; queuedRequests: number; queuePaused: boolean; cacheSize: number; scriptLibrarySize: number; totalExecutions: number; }'.
 src/main/services/powerShellService.test.ts(97,51): error TS7018: Object literal's property 'users' implicitly has an 'any[]' type.
-src/main/services/powerShellService.test.ts(484,23): error TS7006: Parameter 'result' implicitly has an 'any' type.
-src/main/services/powerShellService.test.ts(548,27): error TS7006: Parameter 'm' implicitly has an 'any' type.
-src/main/services/powerShellService.ts(27,14): error TS2323: Cannot redeclare exported variable 'PowerShellError'.
-src/main/services/powerShellService.ts(34,14): error TS2323: Cannot redeclare exported variable 'PowerShellSyntaxError'.
-src/main/services/powerShellService.ts(41,14): error TS2323: Cannot redeclare exported variable 'PowerShellRuntimeError'.
-src/main/services/powerShellService.ts(48,14): error TS2323: Cannot redeclare exported variable 'PowerShellTimeoutError'.
-src/main/services/powerShellService.ts(55,14): error TS2323: Cannot redeclare exported variable 'PowerShellCancellationError'.
-src/main/services/powerShellService.ts(364,15): error TS7022: 'process' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
-src/main/services/powerShellService.ts(367,16): error TS2448: Block-scoped variable 'process' used before its declaration.
-src/main/services/powerShellService.ts(370,27): error TS2448: Block-scoped variable 'process' used before its declaration.
-src/main/services/powerShellService.ts(1227,3): error TS2323: Cannot redeclare exported variable 'PowerShellError'.
-src/main/services/powerShellService.ts(1227,3): error TS2484: Export declaration conflicts with exported declaration of 'PowerShellError'.
-src/main/services/powerShellService.ts(1228,3): error TS2323: Cannot redeclare exported variable 'PowerShellSyntaxError'.
-src/main/services/powerShellService.ts(1228,3): error TS2484: Export declaration conflicts with exported declaration of 'PowerShellSyntaxError'.
-src/main/services/powerShellService.ts(1229,3): error TS2323: Cannot redeclare exported variable 'PowerShellRuntimeError'.
-src/main/services/powerShellService.ts(1229,3): error TS2484: Export declaration conflicts with exported declaration of 'PowerShellRuntimeError'.
-src/main/services/powerShellService.ts(1230,3): error TS2323: Cannot redeclare exported variable 'PowerShellTimeoutError'.
-src/main/services/powerShellService.ts(1230,3): error TS2484: Export declaration conflicts with exported declaration of 'PowerShellTimeoutError'.
-src/main/services/powerShellService.ts(1231,3): error TS2323: Cannot redeclare exported variable 'PowerShellCancellationError'.
+src/main/services/powerShellService.test.ts(199,36): error TS2554: Expected 2-4 arguments, but got 1.
+src/main/services/powerShellService.test.ts(206,26): error TS2339: Property 'discovered' does not exist on type 'unknown'.
+src/main/services/powerShellService.test.ts(219,37): error TS2554: Expected 2-4 arguments, but got 1.
+src/main/services/powerShellService.test.ts(228,37): error TS2554: Expected 2-4 arguments, but got 1.
+src/main/services/powerShellService.test.ts(297,20): error TS2339: Property 'queueLength' does not exist on type '{ poolSize: number; idleSessions: number; busySessions: number; activeExecutions: number; queuedRequests: number; queuePaused: boolean; cacheSize: number; scriptLibrarySize: number; totalExecutions: number; }'.
+src/main/services/powerShellService.test.ts(545,53): error TS2554: Expected 0 arguments, but got 1.
+src/main/services/powerShellService.test.ts(575,11): error TS2353: Object literal may only specify known properties, and 'retries' does not exist in type 'ExecutionOptions'.
+src/main/services/powerShellService.test.ts(597,13): error TS2353: Object literal may only specify known properties, and 'retries' does not exist in type 'ExecutionOptions'.
+src/main/services/powerShellService.test.ts(630,20): error TS2339: Property 'averageExecutionTime' does not exist on type '{ poolSize: number; idleSessions: number; busySessions: number; activeExecutions: number; queuedRequests: number; queuePaused: boolean; cacheSize: number; scriptLibrarySize: number; totalExecutions: number; }'.
+src/main/services/powerShellService.test.ts(657,20): error TS2551: Property 'failedExecutions' does not exist on type '{ poolSize: number; idleSessions: number; busySessions: number; activeExecutions: number; queuedRequests: number; queuePaused: boolean; cacheSize: number; scriptLibrarySize: number; totalExecutions: number; }'. Did you mean 'activeExecutions'?
+src/main/services/powerShellService.test.ts(675,21): error TS2339: Property 'dispose' does not exist on type 'PowerShellExecutionService'.
+src/main/services/powerShellService.test.ts(687,21): error TS2339: Property 'dispose' does not exist on type 'PowerShellExecutionService'.
+src/main/services/resourceMappingService.ts(763,10): error TS2484: Export declaration conflicts with exported declaration of 'ResourceType'.
+src/main/services/resourceMappingService.ts(763,24): error TS2484: Export declaration conflicts with exported declaration of 'MappingStatus'.
+src/main/services/resourceMappingService.ts(763,39): error TS2484: Export declaration conflicts with exported declaration of 'MappingStrategy'.
+src/main/services/resourceMappingService.ts(763,56): error TS2484: Export declaration conflicts with exported declaration of 'ResourceMapping'.
+src/main/services/rollbackService.ts(265,26): error TS2339: Property 'users' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(266,27): error TS2339: Property 'groups' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(267,32): error TS2339: Property 'permissions' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(268,29): error TS2339: Property 'settings' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(289,26): error TS2339: Property 'users' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(290,27): error TS2339: Property 'groups' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(291,32): error TS2339: Property 'permissions' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(292,29): error TS2339: Property 'settings' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(376,37): error TS2339: Property 'usersRestored' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(377,38): error TS2339: Property 'groupsRestored' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(378,43): error TS2339: Property 'permissionsRestored' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(443,37): error TS2339: Property 'errors' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(444,39): error TS2339: Property 'warnings' does not exist on type 'unknown'.
+src/main/services/rollbackService.ts(632,10): error TS2484: Export declaration conflicts with exported declaration of 'RollbackPoint'.
+src/preload.ts(16,3): error TS2305: Module '"./types/shared"' has no exported member 'ElectronAPI'.
+src/renderer/components/atoms/Tooltip.tsx(133,9): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Object literal may only specify known properties, and 'onMouseEnter

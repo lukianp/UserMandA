@@ -23,7 +23,7 @@ describe('LogicEngineService', () => {
 
   beforeAll(async () => {
     // Create test CSV files
-    await createTestData();
+    await createTestData(testDataPath);
   });
 
   afterAll(async () => {
@@ -227,10 +227,10 @@ describe('LogicEngineService', () => {
       const projection = await service.buildUserDetailProjection('S-1-5-21-123');
 
       expect(projection).toBeDefined();
-      expect(projection?.user).toBeDefined();
-      expect(projection?.groups).toBeDefined();
-      expect(projection?.devices).toBeDefined();
-      expect(projection?.apps).toBeDefined();
+      expect(projection?.User).toBeDefined();
+      expect(projection?.Groups).toBeDefined();
+      expect(projection?.Devices).toBeDefined();
+      expect(projection?.Apps).toBeDefined();
     });
 
     it('should return null for non-existent user', async () => {
@@ -244,13 +244,13 @@ describe('LogicEngineService', () => {
 
       if (projection) {
         // Verify all sections are present (even if empty)
-        expect(Array.isArray(projection.groups)).toBe(true);
-        expect(Array.isArray(projection.devices)).toBe(true);
-        expect(Array.isArray(projection.apps)).toBe(true);
-        expect(Array.isArray(projection.fileAccess)).toBe(true);
-        expect(Array.isArray(projection.azureRoles)).toBe(true);
-        expect(Array.isArray(projection.risks)).toBe(true);
-        expect(Array.isArray(projection.migrationHints)).toBe(true);
+        expect(Array.isArray(projection.Groups)).toBe(true);
+        expect(Array.isArray(projection.Devices)).toBe(true);
+        expect(Array.isArray(projection.Apps)).toBe(true);
+        expect(Array.isArray(projection.Shares)).toBe(true);
+        expect(Array.isArray(projection.AzureRoles)).toBe(true);
+        expect(Array.isArray(projection.Risks)).toBe(true);
+        expect(Array.isArray(projection.MigrationHints)).toBe(true);
       }
     });
   });
@@ -294,7 +294,7 @@ describe('LogicEngineService', () => {
       expect(results.length).toBe(3);
       results.forEach(result => {
         if (result) {
-          expect(result.user).toBeDefined();
+          expect(result.User).toBeDefined();
         }
       });
     });
@@ -325,7 +325,9 @@ describe('LogicEngineService', () => {
       const emptyService = LogicEngineService.getInstance(emptyPath);
       await emptyService.loadAllAsync();
 
-      expect(emptyService.getAllUsers().length).toBe(0);
+      const usersBySid = (emptyService as any).usersBySid;
+      const users = Array.from(usersBySid.values());
+      expect(users.length).toBe(0);
     });
 
     it('should emit error events for load failures', async () => {
@@ -379,7 +381,7 @@ describe('LogicEngineService', () => {
 /**
  * Creates test CSV files with sample data
  */
-async function createTestData() {
+async function createTestData(testDataPath: string) {
   await fs.mkdir(testDataPath, { recursive: true });
 
   // Create test Users.csv

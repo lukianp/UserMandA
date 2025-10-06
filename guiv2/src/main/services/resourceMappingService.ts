@@ -760,4 +760,3 @@ class ResourceMappingService extends EventEmitter {
 }
 
 export default ResourceMappingService;
-export { ResourceType, MappingStatus, MappingStrategy, ResourceMapping, MappingConflict, MappingTemplate };

@@ -20,7 +20,7 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { FixedSizeList as List } from 'react-window';
+import { List, type ListImperativeAPI } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { Terminal, Trash2, Download, Search, X, Settings, Copy } from 'lucide-react';
 import type { LogLine } from '../../hooks/useDiscoveryExecution';
@@ -148,18 +148,26 @@ const LogLevelFilter: React.FC<LogLevelFilterProps> = ({ selected, onChange }) =
 /**
  * Log Row Component (used by react-window)
  */
+interface LogRowData {
+  logs: LogLine[];
+  showTimestamps: boolean;
+  searchTerm: string;
+}
+
 interface LogRowProps {
   index: number;
   style: React.CSSProperties;
-  data: {
-    logs: LogLine[];
-    showTimestamps: boolean;
-    searchTerm: string;
+  ariaAttributes: {
+    'aria-posinset': number;
+    'aria-setsize': number;
+    role: 'listitem';
   };
+  logs: LogLine[];
+  showTimestamps: boolean;
+  searchTerm: string;
 }
 
-const LogRow: React.FC<LogRowProps> = ({ index, style, data }) => {
-  const { logs, showTimestamps, searchTerm } = data;
+const LogRow = ({ index, style, ariaAttributes, logs, showTimestamps, searchTerm }: LogRowProps): React.ReactNode => {
   const log = logs[index];
 
   // Highlight search term
@@ -182,6 +190,7 @@ const LogRow: React.FC<LogRowProps> = ({ index, style, data }) => {
     <div
       style={style}
       className={`flex gap-3 px-3 py-1 hover:bg-gray-800/50 ${getLogLevelColor(log.level)}`}
+      {...ariaAttributes}
     >
       {showTimestamps && (
         <span className="text-gray-500 text-xs whitespace-nowrap font-mono">
@@ -226,7 +235,7 @@ export const DiscoveryLogViewer: React.FC<DiscoveryLogViewerProps> = ({
   const [showSettings, setShowSettings] = useState(false);
 
   // Refs
-  const listRef = useRef<List>(null);
+  const listRef = useRef<ListImperativeAPI | null>(null);
   const lastLogCountRef = useRef(logs.length);
 
   // Filtered logs
@@ -245,7 +254,7 @@ export const DiscoveryLogViewer: React.FC<DiscoveryLogViewerProps> = ({
   // Auto-scroll when new logs arrive
   useEffect(() => {
     if (autoScroll && listRef.current && filteredLogs.length > lastLogCountRef.current) {
-      listRef.current.scrollToItem(filteredLogs.length - 1, 'end');
+      listRef.current.scrollToRow({ index: filteredLogs.length - 1 });
     }
     lastLogCountRef.current = filteredLogs.length;
   }, [filteredLogs, autoScroll]);
@@ -437,21 +446,20 @@ export const DiscoveryLogViewer: React.FC<DiscoveryLogViewerProps> = ({
           </div>
         ) : (
           <AutoSizer>
-            {({ height, width }) => (
-              <List
-                ref={listRef}
-                height={height}
-                width={width}
-                itemCount={filteredLogs.length}
-                itemSize={32} // Height of each log row
-                itemData={{
+            {({ height, width }: { height: number; width: number }) => (
+              <List<LogRowData>
+                listRef={listRef}
+                defaultHeight={height}
+                style={{ width }}
+                rowCount={filteredLogs.length}
+                rowHeight={32}
+                rowProps={{
                   logs: filteredLogs,
                   showTimestamps,
                   searchTerm,
                 }}
-              >
-                {LogRow}
-              </List>
+                rowComponent={LogRow}
+              />
             )}
           </AutoSizer>
         )}

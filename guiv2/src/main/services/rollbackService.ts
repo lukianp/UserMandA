@@ -259,13 +259,14 @@ class RollbackService extends EventEmitter {
       throw new Error(result.error || 'Failed to capture snapshot');
     }
 
+    const snapshotData = result.data as { users?: any[]; groups?: any[]; permissions?: any[]; settings?: any };
     return {
       version: '1.0',
       timestamp: new Date(),
-      users: result.data.users || [],
-      groups: result.data.groups || [],
-      permissions: result.data.permissions || [],
-      settings: result.data.settings || {},
+      users: snapshotData.users || [],
+      groups: snapshotData.groups || [],
+      permissions: snapshotData.permissions || [],
+      settings: snapshotData.settings || {},
     };
   }
 
@@ -283,13 +284,14 @@ class RollbackService extends EventEmitter {
       throw new Error(result.error || 'Failed to capture selective snapshot');
     }
 
+    const snapshotData = result.data as { users?: any[]; groups?: any[]; permissions?: any[]; settings?: any };
     return {
       version: '1.0',
       timestamp: new Date(),
-      users: result.data.users || [],
-      groups: result.data.groups || [],
-      permissions: result.data.permissions || [],
-      settings: result.data.settings || {},
+      users: snapshotData.users || [],
+      groups: snapshotData.groups || [],
+      permissions: snapshotData.permissions || [],
+      settings: snapshotData.settings || {},
     };
   }
 
@@ -369,13 +371,14 @@ class RollbackService extends EventEmitter {
         throw new Error(result.error || 'Rollback execution failed');
       }
 
+      const resultData = result.data as { usersRestored?: number; groupsRestored?: number; permissionsRestored?: number };
       const rollbackResult: RollbackResult = {
         success: true,
         rollbackPointId,
         type: options.userIds ? 'selective' : 'full',
-        usersRestored: result.data?.usersRestored || usersToRollback.length,
-        groupsRestored: result.data?.groupsRestored || snapshot.groups.length,
-        permissionsRestored: result.data?.permissionsRestored || snapshot.permissions.length,
+        usersRestored: resultData?.usersRestored || usersToRollback.length,
+        groupsRestored: resultData?.groupsRestored || snapshot.groups.length,
+        permissionsRestored: resultData?.permissionsRestored || snapshot.permissions.length,
         errors,
         warnings,
         duration: Date.now() - startTime,
@@ -440,8 +443,9 @@ class RollbackService extends EventEmitter {
       );
 
       if (result.success && result.data) {
-        errors.push(...(result.data.errors || []));
-        warnings.push(...(result.data.warnings || []));
+        const validationData = result.data as { errors?: string[]; warnings?: string[] };
+        errors.push(...(validationData.errors || []));
+        warnings.push(...(validationData.warnings || []));
       }
     } catch (error: any) {
       warnings.push(`Validation check failed: ${error.message}`);
@@ -629,4 +633,3 @@ class RollbackService extends EventEmitter {
 }
 
 export default RollbackService;
-export { RollbackPoint, RollbackSnapshot, RollbackResult };

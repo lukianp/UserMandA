@@ -26,8 +26,8 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { format, addDays, isWeekend, isBefore, isAfter } from 'date-fns';
-import Button from '../atoms/Button';
-import Input from '../atoms/Input';
+import { Button } from '../atoms/Button';
+import { Input } from '../atoms/Input';
 import Select from '../atoms/Select';
 
 export interface BlackoutPeriod {
@@ -431,7 +431,6 @@ const WaveSchedulingDialog: React.FC<WaveSchedulingDialogProps> = ({
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Blackout Periods</h3>
               <Button
                 variant="secondary"
-                size="sm"
                 onClick={addBlackoutPeriod}
                 icon={<Plus className="w-4 h-4" />}
                 data-cy="add-blackout-btn"
@@ -459,11 +458,12 @@ const WaveSchedulingDialog: React.FC<WaveSchedulingDialogProps> = ({
                       />
                       <Button
                         variant="danger"
-                        size="sm"
                         onClick={() => removeBlackoutPeriod(period.id)}
                         icon={<Trash2 className="w-4 h-4" />}
                         data-cy="remove-blackout-btn"
-                      />
+                      >
+                        Remove
+                      </Button>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <div>
@@ -493,7 +493,6 @@ const WaveSchedulingDialog: React.FC<WaveSchedulingDialogProps> = ({
                         value={period.type}
                         onChange={(value) => updateBlackoutPeriod(period.id, { type: value as any })}
                         options={blackoutTypeOptions}
-                        size="sm"
                       />
                     </div>
                     <label className="flex items-center gap-2">

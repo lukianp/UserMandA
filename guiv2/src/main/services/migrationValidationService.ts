@@ -298,7 +298,8 @@ class MigrationValidationService extends EventEmitter {
         };
       }
 
-      const { sourceConnected, targetConnected, latency } = result.data;
+      const resultData = result.data as { sourceConnected: boolean; targetConnected: boolean; latency: number };
+      const { sourceConnected, targetConnected, latency } = resultData;
 
       return {
         id: crypto.randomUUID(),
@@ -351,7 +352,7 @@ class MigrationValidationService extends EventEmitter {
         };
       }
 
-      const capacity: CapacityValidation = result.data;
+      const capacity = result.data as CapacityValidation;
       const sufficient = capacity.remainingCapacity >= userCount;
 
       return {
@@ -417,7 +418,8 @@ class MigrationValidationService extends EventEmitter {
         return results;
       }
 
-      const userValidations: UserValidation[] = result.data.users || [];
+      const resultData = result.data as { users?: UserValidation[] };
+      const userValidations: UserValidation[] = resultData.users || [];
 
       for (const userVal of userValidations) {
         // License validation
@@ -523,7 +525,8 @@ class MigrationValidationService extends EventEmitter {
         return results;
       }
 
-      const { invalidMappings, unmappedResources, conflicts } = result.data;
+      const mappingData = result.data as { invalidMappings?: any[]; unmappedResources?: string[]; conflicts?: any[] };
+      const { invalidMappings, unmappedResources, conflicts } = mappingData;
 
       if (invalidMappings && invalidMappings.length > 0) {
         results.push({
@@ -606,7 +609,8 @@ class MigrationValidationService extends EventEmitter {
         };
       }
 
-      const { blockedUsers, circularDependencies } = result.data;
+      const dependencyData = result.data as { blockedUsers?: any[]; circularDependencies?: string[] };
+      const { blockedUsers, circularDependencies } = dependencyData;
 
       if (blockedUsers && blockedUsers.length > 0) {
         return {
@@ -684,7 +688,8 @@ class MigrationValidationService extends EventEmitter {
         };
       }
 
-      const { conflicts } = result.data;
+      const scheduleData = result.data as { conflicts?: any[] };
+      const { conflicts } = scheduleData;
 
       if (conflicts && conflicts.length > 0) {
         return {
@@ -751,7 +756,8 @@ class MigrationValidationService extends EventEmitter {
         return results;
       }
 
-      const { blockers } = result.data;
+      const blockerData = result.data as { blockers?: any[] };
+      const { blockers } = blockerData;
 
       for (const blocker of blockers || []) {
         results.push({
@@ -939,9 +945,3 @@ class MigrationValidationService extends EventEmitter {
 }
 
 export default MigrationValidationService;
-export {
-  ValidationSeverity,
-  ValidationType,
-  ValidationResult,
-  ValidationReport,
-};

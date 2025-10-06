@@ -749,6 +749,92 @@ export interface ElectronAPI {
   }) => void) => () => void;
 
   // ========================================
+  // Dashboard API (Dashboard Enhancement)
+  // ========================================
+
+  /**
+   * Dashboard API for statistics, timeline, health, and activity
+   */
+  dashboard: {
+    /**
+     * Get aggregated dashboard statistics from Logic Engine
+     * @returns Promise with DashboardStats
+     */
+    getStats: () => Promise<any>;
+
+    /**
+     * Get project timeline information
+     * @returns Promise with ProjectTimeline
+     */
+    getProjectTimeline: () => Promise<any>;
+
+    /**
+     * Get system health status
+     * @returns Promise with SystemHealth
+     */
+    getSystemHealth: () => Promise<any>;
+
+    /**
+     * Get recent activity from logs
+     * @param limit - Maximum number of items to return (default: 10)
+     * @returns Promise with ActivityItem array
+     */
+    getRecentActivity: (limit?: number) => Promise<any[]>;
+
+    /**
+     * Acknowledge a system alert
+     * @param alertId - ID of alert to acknowledge
+     * @returns Promise with success status
+     */
+    acknowledgeAlert: (alertId: string) => Promise<void>;
+  };
+
+  /**
+   * Project Management API
+   */
+  project: {
+    /**
+     * Get project configuration
+     * @param profileName - Profile name to load configuration for
+     * @returns Promise with ProjectConfig result
+     */
+    getConfiguration: (profileName: string) => Promise<{ success: boolean; data?: any; error?: string }>;
+
+    /**
+     * Save project configuration
+     * @param profileName - Profile name to save configuration for
+     * @param config - Project configuration to save
+     * @returns Promise with success status
+     */
+    saveConfiguration: (profileName: string, config: any) => Promise<{ success: boolean; error?: string }>;
+
+    /**
+     * Update project status
+     * @param profileName - Profile name
+     * @param status - New project status
+     * @returns Promise with success status
+     */
+    updateStatus: (profileName: string, status: any) => Promise<{ success: boolean; error?: string }>;
+
+    /**
+     * Add a migration wave
+     * @param profileName - Profile name
+     * @param wave - Wave configuration
+     * @returns Promise with success status
+     */
+    addWave: (profileName: string, wave: any) => Promise<{ success: boolean; error?: string }>;
+
+    /**
+     * Update wave status
+     * @param profileName - Profile name
+     * @param waveId - Wave ID
+     * @param status - New wave status
+     * @returns Promise with success status
+     */
+    updateWaveStatus: (profileName: string, waveId: string, status: any) => Promise<{ success: boolean; error?: string }>;
+  };
+
+  // ========================================
   // Logic Engine API (Epic 4)
   // ========================================
 

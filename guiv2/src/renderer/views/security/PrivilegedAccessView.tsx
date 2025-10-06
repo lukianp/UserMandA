@@ -338,3 +338,5 @@ export const PrivilegedAccessView: React.FC = () => {
     </div>
   );
 };
+
+export default PrivilegedAccessView;

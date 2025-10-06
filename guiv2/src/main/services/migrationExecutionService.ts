@@ -448,8 +448,9 @@ class MigrationExecutionService extends EventEmitter {
         }
 
         // Record transaction changes
-        if (result.data && result.data.changes) {
-          transaction.changes.push(...result.data.changes);
+        const resultData = result.data as { changes?: any[] };
+        if (result.data && resultData.changes) {
+          transaction.changes.push(...resultData.changes);
         }
 
         // Update progress
@@ -753,7 +754,7 @@ class MigrationExecutionService extends EventEmitter {
             message: match[6],
           };
         })
-        .filter((entry): entry is LogEntry => entry !== null)
+        .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
         .filter(entry => !waveId || entry.waveId === waveId);
     } catch (error) {
       console.error('Failed to read execution logs:', error);
@@ -782,9 +783,6 @@ class MigrationExecutionService extends EventEmitter {
 
 export default MigrationExecutionService;
 export {
-  ExecutionMode,
-  ExecutionStrategy,
-  MigrationPhase,
   ExecutionStep,
   UserMigrationTask,
   WaveExecutionContext,

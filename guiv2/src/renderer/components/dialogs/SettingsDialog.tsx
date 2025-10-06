@@ -5,10 +5,10 @@
 
 import React, { useState } from 'react';
 import { X, Settings } from 'lucide-react';
-import Button from '../atoms/Button';
+import { Button } from '../atoms/Button';
 import Checkbox from '../atoms/Checkbox';
 import Select from '../atoms/Select';
-import Input from '../atoms/Input';
+import { Input } from '../atoms/Input';
 
 export interface SettingsDialogProps {
   /** Dialog open state */
@@ -105,7 +105,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({
               <Select
                 label="Theme"
                 value={settings.theme}
-                onChange={(e) => setSettings({ ...settings, theme: e.target.value })}
+                onChange={(value: string) => setSettings({ ...settings, theme: value })}
                 options={[
                   { value: 'light', label: 'Light' },
                   { value: 'dark', label: 'Dark' },
@@ -115,12 +115,12 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({
               <Checkbox
                 label="Auto-save settings"
                 checked={settings.autoSave}
-                onChange={(e) => setSettings({ ...settings, autoSave: e.target.checked })}
+                onChange={(value: boolean) => setSettings({ ...settings, autoSave: value })}
               />
               <Checkbox
                 label="Enable notifications"
                 checked={settings.notifications}
-                onChange={(e) => setSettings({ ...settings, notifications: e.target.checked })}
+                onChange={(value: boolean) => setSettings({ ...settings, notifications: value })}
               />
             </div>
           )}

@@ -75,6 +75,24 @@ const ExecutiveDashboardView = lazy(() => import('./views/analytics/ExecutiveDas
 const MigrationReportView = lazy(() => import('./views/analytics/MigrationReportView'));
 const UserAnalyticsView = lazy(() => import('./views/analytics/UserAnalyticsView'));
 
+// Project Management views - TASK 2
+const ProjectConfigurationView = lazy(() => import('./views/project/ProjectConfigurationView'));
+
+// Security/Compliance views - TASK 3
+const AccessReviewView = lazy(() => import('./views/security/AccessReviewView'));
+const CertificationView = lazy(() => import('./views/security/CertificationView'));
+const ComplianceDashboardView = lazy(() => import('./views/security/ComplianceDashboardView'));
+const DataClassificationView = lazy(() => import('./views/security/DataClassificationView'));
+const IdentityGovernanceView = lazy(() => import('./views/security/IdentityGovernanceView'));
+const IncidentResponseView = lazy(() => import('./views/security/IncidentResponseView'));
+const PolicyManagementView = lazy(() => import('./views/security/PolicyManagementView'));
+const PrivilegedAccessView = lazy(() => import('./views/security/PrivilegedAccessView'));
+const RiskAssessmentView = lazy(() => import('./views/security/RiskAssessmentView'));
+const SecurityAuditView = lazy(() => import('./views/security/SecurityAuditView'));
+const SecurityDashboardView = lazy(() => import('./views/security/SecurityDashboardView'));
+const ThreatAnalysisView = lazy(() => import('./views/security/ThreatAnalysisView'));
+const VulnerabilityManagementView = lazy(() => import('./views/security/VulnerabilityManagementView'));
+
 // Loading fallback component
 const LoadingFallback = () => (
   <div className="flex items-center justify-center h-screen">
@@ -175,6 +193,28 @@ export const App: React.FC = () => {
                 <Route path="dashboard" element={<ExecutiveDashboardView />} />
                 <Route path="migration" element={<MigrationReportView />} />
                 <Route path="users" element={<UserAnalyticsView />} />
+              </Route>
+
+              {/* Project Management Routes - TASK 2 */}
+              <Route path="/project" element={<ProjectConfigurationView />} />
+              <Route path="/project/configuration" element={<ProjectConfigurationView />} />
+
+              {/* Security/Compliance Routes - TASK 3 */}
+              <Route path="/security">
+                <Route index element={<Navigate to="/security/dashboard" replace />} />
+                <Route path="dashboard" element={<SecurityDashboardView />} />
+                <Route path="compliance" element={<ComplianceDashboardView />} />
+                <Route path="access-review" element={<AccessReviewView />} />
+                <Route path="certification" element={<CertificationView />} />
+                <Route path="data-classification" element={<DataClassificationView />} />
+                <Route path="identity-governance" element={<IdentityGovernanceView />} />
+                <Route path="incident-response" element={<IncidentResponseView />} />
+                <Route path="policy-management" element={<PolicyManagementView />} />
+                <Route path="privileged-access" element={<PrivilegedAccessView />} />
+                <Route path="risk-assessment" element={<RiskAssessmentView />} />
+                <Route path="audit" element={<SecurityAuditView />} />
+                <Route path="threat-analysis" element={<ThreatAnalysisView />} />
+                <Route path="vulnerability-management" element={<VulnerabilityManagementView />} />
               </Route>
 
               {/* Settings */}

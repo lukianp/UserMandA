@@ -203,7 +203,7 @@ export function VirtualizedDataGrid<T = any>({
   // Print grid
   const printGrid = useCallback(() => {
     if (gridApi) {
-      gridApi.setDomLayout('print');
+      gridApi.setGridOption('domLayout', 'print');
       setTimeout(() => {
         window.print();
         gridApi.setDomLayout(undefined);
@@ -250,7 +250,7 @@ export function VirtualizedDataGrid<T = any>({
               size="sm"
               variant="ghost"
               icon={<Filter size={16} />}
-              onClick={() => gridApi?.setFloatingFiltersHeight(gridApi.getFloatingFiltersHeight() === 0 ? 40 : 0)}
+              onClick={() => gridApi?.setFloatingFiltersHeight(40 === 0 ? 40 : 0)}
               title="Toggle filters"
               data-cy="toggle-filters"
             >
@@ -367,7 +367,7 @@ export function VirtualizedDataGrid<T = any>({
                   defaultChecked
                   onChange={(e) => {
                     if (gridApi && col.field) {
-                      gridApi.setColumnVisible(col.field, e.target.checked);
+                      gridApi.setColumnsVisible([col.field], e.target.checked);
                     }
                   }}
                 />

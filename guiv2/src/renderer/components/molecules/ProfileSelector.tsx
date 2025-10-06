@@ -12,7 +12,8 @@ import { useProfileStore } from '../../store/useProfileStore';
 import { Select } from '../atoms/Select';
 import { Button } from '../atoms/Button';
 import { StatusIndicator } from '../atoms/StatusIndicator';
-import { Profile } from '../../types/models/profile';
+import type { CompanyProfile, TargetProfile } from '../../store/useProfileStore';
+import type { StatusType } from '../atoms/StatusIndicator';
 
 export interface ProfileSelectorProps {
   /** Profile type: source or target */
@@ -63,8 +64,12 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
 
   const handleProfileChange = (profileId: string) => {
     const profile = profiles.find(p => p.id === profileId);
-    if (profile) {
-      setProfile(profile as any);
+    if (!profile) return;
+
+    if (type === 'source') {
+      setSelectedSourceProfile(profile as CompanyProfile);
+    } else {
+      setSelectedTargetProfile(profile as TargetProfile);
     }
   };
 
@@ -73,7 +78,7 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
 
     setIsTesting(true);
     try {
-      await testConnection(selectedProfile);
+      await testConnection(selectedProfile as CompanyProfile);
     } catch (error) {
       console.error('Connection test failed:', error);
     } finally {
@@ -108,17 +113,17 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
   };
 
   // Get status for indicator
-  const getConnectionStatus = () => {
-    if (isTesting) return 'loading';
+  const getConnectionStatus = (): StatusType => {
+    if (isTesting) return 'info'; // Use 'info' for loading state
     switch (connectionStatus) {
       case 'connected':
         return 'success';
       case 'connecting':
-        return 'loading';
+        return 'info'; // Use 'info' for connecting state
       case 'error':
         return 'error';
       default:
-        return 'neutral';
+        return 'unknown'; // Use 'unknown' for neutral/disconnected state
     }
   };
 
@@ -144,9 +149,9 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
         {selectedProfile && (
           <StatusIndicator
             status={getConnectionStatus()}
-            label={getConnectionLabel()}
+            text={getConnectionLabel()}
             size="sm"
-            pulse={isTesting || connectionStatus === 'connecting'}
+            animate={isTesting || connectionStatus === 'connecting'}
           />
         )}
       </div>
@@ -155,10 +160,16 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
       <Select
         value={selectedProfile?.id || ''}
         onChange={handleProfileChange}
-        options={profiles.map(profile => ({
-          value: profile.id,
-          label: `${profile.name} (${profile.environment})`,
-        }))}
+        options={profiles.map(profile => {
+          // CompanyProfile uses companyName, Profile uses name
+          const profileName = 'companyName' in profile ? profile.companyName : profile.name;
+          // Only Profile has environment property
+          const envLabel = 'environment' in profile ? ` (${profile.environment})` : '';
+          return {
+            value: profile.id,
+            label: `${profileName}${envLabel}`,
+          };
+        })}
         placeholder="Select a profile..."
         disabled={isLoading}
         error={error || undefined}
@@ -223,14 +234,18 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
       {selectedProfile && (
         <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-200 text-sm">
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <span className="font-medium text-gray-700">Type:</span>
-              <span className="ml-2 text-gray-600">{selectedProfile.connectionType}</span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Environment:</span>
-              <span className="ml-2 text-gray-600">{selectedProfile.environment}</span>
-            </div>
+            {'environment' in selectedProfile && (
+              <div>
+                <span className="font-medium text-gray-700">Environment:</span>
+                <span className="ml-2 text-gray-600">{selectedProfile.environment}</span>
+              </div>
+            )}
+            {'companyName' in selectedProfile && (
+              <div>
+                <span className="font-medium text-gray-700">Company:</span>
+                <span className="ml-2 text-gray-600">{selectedProfile.companyName}</span>
+              </div>
+            )}
             {selectedProfile.tenantId && (
               <div className="col-span-2">
                 <span className="font-medium text-gray-700">Tenant:</span>

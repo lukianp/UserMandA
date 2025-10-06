@@ -13,7 +13,6 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 import {
-  ElectronAPI,
   ScriptExecutionParams,
   ModuleExecutionParams,
   ExecutionOptions,
@@ -22,6 +21,7 @@ import {
   ScriptTask,
   ModuleInfo,
 } from './types/shared';
+import type { ElectronAPI } from './renderer/types/electron';
 
 /**
  * Expose secure Electron API to renderer process
@@ -495,6 +495,100 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.on('logic-engine:error', handler);
       return () => ipcRenderer.removeListener('logic-engine:error', handler);
     },
+  },
+
+  // ========================================
+  // Dashboard API (Phases 1-3 Backend)
+  // ========================================
+
+  dashboard: {
+    /**
+     * Get dashboard statistics from Logic Engine
+     * @returns Promise with DashboardStats
+     */
+    getStats: () =>
+      ipcRenderer.invoke('dashboard:getStats'),
+
+    /**
+     * Get project timeline and wave information
+     * @returns Promise with ProjectTimeline
+     */
+    getProjectTimeline: () =>
+      ipcRenderer.invoke('dashboard:getProjectTimeline'),
+
+    /**
+     * Get system health metrics
+     * @returns Promise with SystemHealth
+     */
+    getSystemHealth: () =>
+      ipcRenderer.invoke('dashboard:getSystemHealth'),
+
+    /**
+     * Get recent activity feed
+     * @param limit - Maximum number of activities to return
+     * @returns Promise with ActivityItem array
+     */
+    getRecentActivity: (limit?: number) =>
+      ipcRenderer.invoke('dashboard:getRecentActivity', limit),
+
+    /**
+     * Acknowledge a system alert
+     * @param alertId - Alert ID to acknowledge
+     * @returns Promise with success status
+     */
+    acknowledgeAlert: (alertId: string) =>
+      ipcRenderer.invoke('dashboard:acknowledgeAlert', alertId),
+  },
+
+  // ========================================
+  // Project Management API
+  // ========================================
+
+  project: {
+    /**
+     * Get current project configuration
+     * @param profileName - Profile name to load configuration for
+     * @returns Promise with ProjectConfig
+     */
+    getConfiguration: (profileName: string) =>
+      ipcRenderer.invoke('project:getConfiguration', profileName),
+
+    /**
+     * Save project configuration
+     * @param profileName - Profile name to save configuration for
+     * @param config - Project configuration object
+     * @returns Promise with success status
+     */
+    saveConfiguration: (profileName: string, config: any) =>
+      ipcRenderer.invoke('project:saveConfiguration', profileName, config),
+
+    /**
+     * Update project status
+     * @param profileName - Profile name
+     * @param status - New project status
+     * @returns Promise with success status
+     */
+    updateStatus: (profileName: string, status: any) =>
+      ipcRenderer.invoke('project:updateStatus', profileName, status),
+
+    /**
+     * Add a new migration wave
+     * @param profileName - Profile name
+     * @param wave - Wave configuration
+     * @returns Promise with created wave
+     */
+    addWave: (profileName: string, wave: any) =>
+      ipcRenderer.invoke('project:addWave', profileName, wave),
+
+    /**
+     * Update migration wave status
+     * @param profileName - Profile name
+     * @param waveId - Wave ID
+     * @param status - New wave status
+     * @returns Promise with success status
+     */
+    updateWaveStatus: (profileName: string, waveId: string, status: any) =>
+      ipcRenderer.invoke('project:updateWaveStatus', profileName, waveId, status),
   },
 };
 

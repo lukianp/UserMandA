@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { Dialog } from '@headlessui/react';
-import Button from '../atoms/Button';
+import { Button } from '../atoms/Button';
 import Select from '../atoms/Select';
 import Checkbox from '../atoms/Checkbox';
 import { X, Download } from 'lucide-react';
@@ -97,7 +97,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
             <Select
               label="Export Format"
               value={format}
-              onChange={(e) => setFormat(e.target.value as ExportOptions['format'])}
+              onChange={(value: string) => setFormat(value as ExportOptions['format'])}
               options={[
                 { value: 'CSV', label: 'CSV (Comma-Separated Values)' },
                 { value: 'Excel', label: 'Excel Workbook (.xlsx)' },

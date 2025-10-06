@@ -40,7 +40,7 @@ interface NavItem {
  */
 export const Sidebar: React.FC = () => {
   const { selectedSourceProfile, selectedTargetProfile } = useProfileStore();
-  const { themeName, setTheme } = useThemeStore();
+  const { mode, setMode } = useThemeStore();
 
   // Navigation items
   const navItems: NavItem[] = [
@@ -99,14 +99,14 @@ export const Sidebar: React.FC = () => {
   // Theme toggle
   const cycleTheme = () => {
     const themes = ['light', 'dark', 'highContrast', 'colorBlind'];
-    const currentIndex = themes.indexOf(themeName || 'light');
+    const currentIndex = themes.indexOf(mode || 'light');
     const nextIndex = (currentIndex + 1) % themes.length;
-    setTheme(themes[nextIndex]);
+    setMode(themes[nextIndex]);
   };
 
   // Get theme icon
   const getThemeIcon = () => {
-    switch (themeName) {
+    switch (mode) {
       case 'dark':
         return <Moon size={18} />;
       case 'highContrast':
@@ -208,9 +208,9 @@ export const Sidebar: React.FC = () => {
           onClick={cycleTheme}
           className="justify-start text-gray-300 hover:text-white"
         >
-          {themeName === 'dark' ? 'Dark' :
-           themeName === 'highContrast' ? 'High Contrast' :
-           themeName === 'colorBlind' ? 'Color Blind' : 'Light'} Theme
+          {mode === 'dark' ? 'Dark' :
+           mode === 'highContrast' ? 'High Contrast' :
+           mode === 'colorBlind' ? 'Color Blind' : 'Light'} Theme
         </Button>
       </div>
     </aside>

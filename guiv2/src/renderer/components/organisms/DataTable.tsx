@@ -9,9 +9,9 @@ import { clsx } from 'clsx';
 import Papa from 'papaparse';
 import { Menu, Item, useContextMenu } from 'react-contexify';
 import 'react-contexify/dist/ReactContexify.css';
-import Input from '../atoms/Input';
-import Select from '../atoms/Select';
-import Checkbox from '../atoms/Checkbox';
+import { Input } from '../atoms/Input';
+import { Select } from '../atoms/Select';
+import { Checkbox } from '../atoms/Checkbox';
 import { Button } from '../atoms/Button';
 import { useTabStore } from '../../store/useTabStore';
 
@@ -335,7 +335,7 @@ function DataTable<T = any>({
             <div className="flex-1">
               <Input
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 placeholder={searchPlaceholder}
                 startIcon={<Search className="w-4 h-4" />}
                 data-cy="table-search"

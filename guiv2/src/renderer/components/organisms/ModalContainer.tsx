@@ -59,19 +59,8 @@ export const ModalContainer: React.FC = () => {
         const renderDialog = () => {
           switch (modal.type) {
             case 'createProfile':
-              return (
-                <CreateProfileDialog
-                  isOpen={true}
-                  onClose={handleClose}
-                  onSave={async (profile) => {
-                    if (modal.onConfirm) {
-                      modal.onConfirm(profile);
-                    }
-                    closeModal(modal.id, profile);
-                  }}
-                  data-cy="modal-create-profile"
-                />
-              );
+              // CreateProfileDialog manages its own state via useModalStore
+              return <CreateProfileDialog key={modal.id} />;
 
             case 'editProfile':
               return (
@@ -142,8 +131,8 @@ export const ModalContainer: React.FC = () => {
                     }
                     closeModal(modal.id, options);
                   }}
-                  data={modal.data?.data}
-                  availableFormats={modal.data?.availableFormats}
+                  availableColumns={modal.data?.availableColumns}
+                  defaultFormat={modal.data?.defaultFormat}
                   data-cy="modal-export"
                 />
               );
@@ -153,13 +142,14 @@ export const ModalContainer: React.FC = () => {
                 <ImportDialog
                   isOpen={true}
                   onClose={handleClose}
-                  onImport={async (data) => {
+                  onImport={async (file, format) => {
                     if (modal.onConfirm) {
-                      await modal.onConfirm(data);
+                      await modal.onConfirm({ file, format });
                     }
-                    closeModal(modal.id, data);
+                    closeModal(modal.id, { file, format });
                   }}
-                  acceptedFormats={modal.data?.acceptedFormats}
+                  formats={modal.data?.formats}
+                  showPreview={modal.data?.showPreview}
                   data-cy="modal-import"
                 />
               );
@@ -201,6 +191,12 @@ export const ModalContainer: React.FC = () => {
                 <SettingsDialog
                   isOpen={true}
                   onClose={handleClose}
+                  onSave={(settings) => {
+                    if (modal.onConfirm) {
+                      modal.onConfirm(settings);
+                    }
+                    closeModal(modal.id, settings);
+                  }}
                   data-cy="modal-settings"
                 />
               );

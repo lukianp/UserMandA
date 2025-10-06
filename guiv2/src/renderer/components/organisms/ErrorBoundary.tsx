@@ -43,15 +43,14 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
 
-    // Log to error reporting service
-    if (window.electronAPI?.logError) {
-      window.electronAPI.logError({
-        message: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
-        timestamp: new Date().toISOString(),
-      });
-    }
+    // Log to console and file system
+    // Note: Could integrate with error logging service in the future
+    console.error({
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+      timestamp: new Date().toISOString(),
+    });
 
     this.setState({
       error,

@@ -459,3 +459,5 @@ export const IdentityGovernanceView: React.FC = () => {
     </div>
   );
 };
+
+export default IdentityGovernanceView;

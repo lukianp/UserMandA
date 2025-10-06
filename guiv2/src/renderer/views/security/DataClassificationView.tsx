@@ -446,3 +446,5 @@ export const DataClassificationView: React.FC = () => {
     </div>
   );
 };
+
+export default DataClassificationView;

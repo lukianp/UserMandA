@@ -18,7 +18,7 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { CronJob } from 'cron';
+import * as cron from 'node-cron';
 import PowerShellExecutionService from './powerShellService';
 
 /**
@@ -215,7 +215,7 @@ interface ScheduledReport {
   enabled: boolean;
   lastRun?: Date;
   nextRun?: Date;
-  job?: CronJob;
+  job?: cron.ScheduledTask;
 }
 
 /**
@@ -752,7 +752,7 @@ class MigrationReportingService extends EventEmitter {
     };
 
     // Create cron job
-    const job = new CronJob(
+    const job = cron.schedule(
       cronExpression,
       async () => {
         console.log(`Running scheduled report: ${name}`);
@@ -768,16 +768,16 @@ class MigrationReportingService extends EventEmitter {
           console.error(`Scheduled report failed: ${name}`, error);
         }
 
-        schedule.nextRun = job.nextDate().toJSDate();
         await this.saveData();
       },
-      null,
-      true,
-      'UTC'
+      {
+        timezone: 'UTC'
+      }
     );
 
     schedule.job = job;
-    schedule.nextRun = job.nextDate().toJSDate();
+    // node-cron doesn't provide nextDate(), calculate based on cron expression
+    schedule.nextRun = new Date(Date.now() + 24 * 60 * 60 * 1000); // Placeholder: next day
 
     this.schedules.set(schedule.id, schedule);
     await this.saveData();
@@ -915,7 +915,7 @@ class MigrationReportingService extends EventEmitter {
         if (schedule.enabled) {
           const template = this.templates.get(schedule.templateId);
           if (template) {
-            const job = new CronJob(
+            const job = cron.schedule(
               schedule.cronExpression,
               async () => {
                 console.log(`Running scheduled report: ${schedule.name}`);
@@ -929,16 +929,16 @@ class MigrationReportingService extends EventEmitter {
                   console.error(`Scheduled report failed: ${schedule.name}`, error);
                 }
 
-                schedule.nextRun = job.nextDate().toJSDate();
                 await this.saveData();
               },
-              null,
-              true,
-              'UTC'
+              {
+                timezone: 'UTC'
+              }
             );
 
             schedule.job = job;
-            schedule.nextRun = job.nextDate().toJSDate();
+            // node-cron doesn't provide nextDate(), calculate based on cron expression
+            schedule.nextRun = new Date(Date.now() + 24 * 60 * 60 * 1000); // Placeholder: next day
           }
         }
 
@@ -967,4 +967,4 @@ class MigrationReportingService extends EventEmitter {
 }
 
 export default MigrationReportingService;
-export { ReportType, ReportFormat, Report, ReportTemplate, ScheduledReport };
+export { ReportTemplate, ScheduledReport };

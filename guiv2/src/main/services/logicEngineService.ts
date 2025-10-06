@@ -96,6 +96,7 @@ export class LogicEngineService extends EventEmitter {
   private mailboxByUpn: Map<string, MailboxDto> = new Map();
   private rolesByPrincipalId: Map<string, AzureRoleAssignment[]> = new Map();
   private sqlDbsByKey: Map<string, SqlDbDto> = new Map();
+  private fileSharesByPath: Map<string, FileShareDto> = new Map();
 
   // T-029: New data stores for expanded modules
   private threatsByThreatId: Map<string, ThreatDetectionDTO> = new Map();
@@ -175,11 +176,12 @@ export class LogicEngineService extends EventEmitter {
       try {
         await fs.access(dataPath);
       } catch {
+        const error = new Error(`Data directory not found: ${dataPath}`);
         console.error(`Data directory not found: ${dataPath}`);
-        this.emit('error', new DataLoadErrorEventArgs(
-          new Error(`Data directory not found: ${dataPath}`),
-          'Data directory not found'
-        ));
+        this.emit('error', {
+          Error: error,
+          Message: error.message
+        } as DataLoadErrorEventArgs);
         return false;
       }
 
@@ -263,13 +265,19 @@ export class LogicEngineService extends EventEmitter {
       console.log(`LogicEngine data load completed successfully in ${duration}ms`);
 
       this.emit('progress', { stage: 'complete', message: 'Data load complete', percentage: 100 });
-      this.emit('loaded', new DataLoadedEventArgs(this.lastLoadStats, this.appliedInferenceRules));
+      this.emit('loaded', {
+        Statistics: this.lastLoadStats,
+        AppliedInferenceRules: this.appliedInferenceRules
+      } as DataLoadedEventArgs);
 
       return true;
 
     } catch (error: any) {
       console.error('Failed to load LogicEngine data:', error);
-      this.emit('error', new DataLoadErrorEventArgs(error, error.message));
+      this.emit('error', {
+        Error: error instanceof Error ? error : new Error(String(error)),
+        Message: error.message || String(error)
+      } as DataLoadErrorEventArgs);
       return false;
     } finally {
       this.isLoading = false;
@@ -734,6 +742,111 @@ export class LogicEngineService extends EventEmitter {
 
   private generateSessionId(): string {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  // ========================================
+  // Dashboard-Specific Aggregation Methods
+  // ========================================
+
+  /**
+   * Get total user count
+   */
+  public getUserCount(): number {
+    return this.usersBySid.size;
+  }
+
+  /**
+   * Get total group count
+   */
+  public getGroupCount(): number {
+    return this.groupsBySid.size;
+  }
+
+  /**
+   * Get total device count
+   */
+  public getDeviceCount(): number {
+    return this.devicesByName.size;
+  }
+
+  /**
+   * Get total infrastructure count (servers + databases + file shares)
+   */
+  public getInfrastructureCount(): number {
+    return this.sqlDbsByKey.size + this.fileSharesByPath.size;
+  }
+
+  /**
+   * Get total application count
+   */
+  public getApplicationCount(): number {
+    return this.appsById.size;
+  }
+
+  /**
+   * Get users discovered in last N days
+   */
+  public getDiscoveredUserCount(days: number = 7): number {
+    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    let count = 0;
+
+    this.usersBySid.forEach(user => {
+      if (user.DiscoveryTimestamp && new Date(user.DiscoveryTimestamp) > cutoffDate) {
+        count++;
+      }
+    });
+
+    return count;
+  }
+
+  /**
+   * Get groups discovered in last N days
+   */
+  public getDiscoveredGroupCount(days: number = 7): number {
+    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    let count = 0;
+
+    this.groupsBySid.forEach(group => {
+      if (group.DiscoveryTimestamp && new Date(group.DiscoveryTimestamp) > cutoffDate) {
+        count++;
+      }
+    });
+
+    return count;
+  }
+
+  /**
+   * Get devices discovered in last N days
+   */
+  public getDiscoveredDeviceCount(days: number = 7): number {
+    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    let count = 0;
+
+    this.devicesByName.forEach(device => {
+      if (device.DiscoveryTimestamp && new Date(device.DiscoveryTimestamp) > cutoffDate) {
+        count++;
+      }
+    });
+
+    return count;
+  }
+
+  /**
+   * Get the timestamp of the last discovery run
+   */
+  public getLastDiscoveryRun(): string | undefined {
+    let latestTimestamp: Date | undefined;
+
+    this.usersBySid.forEach(user => {
+      if (user.DiscoveryTimestamp) {
+        const timestamp = new Date(user.DiscoveryTimestamp);
+        if (!latestTimestamp || timestamp > latestTimestamp) {
+          latestTimestamp = timestamp;
+        }
+      }
+    });
+
+    return latestTimestamp?.toISOString();
   }
 }
 

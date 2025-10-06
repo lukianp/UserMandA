@@ -6,7 +6,7 @@
 import React from 'react';
 import { Dialog } from '@headlessui/react';
 import { AlertTriangle, Info, AlertCircle, CheckCircle, X } from 'lucide-react';
-import Button from '../atoms/Button';
+import { Button } from '../atoms/Button';
 
 export interface ConfirmDialogProps {
   /** Dialog open state */

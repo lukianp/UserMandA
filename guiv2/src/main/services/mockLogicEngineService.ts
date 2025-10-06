@@ -428,7 +428,7 @@ export class MockLogicEngineService {
       affectedEntity: `user-${i}`,
       detectedAt: new Date(2024, 9, 1),
       remediation: risk.recommendation,
-      cvssScore: risk.severity === 'Critical' ? 9.5 : risk.severity === 'High' ? 7.5 : risk.severity === 'Medium' ? 5.0 : 2.0,
+      cvssScore: risk.severity === 'High' ? 7.5 : risk.severity === 'Medium' ? 5.0 : 2.0,
     }));
   }
 
@@ -697,7 +697,9 @@ export class MockComputerDetailService {
       lastPatchDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
       patchLevel: 'Fully Patched',
       complianceStatus: 'Compliant',
+      complianceIssues: [],
       vulnerabilityCount: 2,
+      criticalVulnerabilityCount: 0,
     };
   }
 
@@ -719,26 +721,26 @@ export class MockComputerDetailService {
       dnsServers: ['192.168.1.10', '192.168.1.11'],
       dhcpEnabled: true,
       dhcpServer: '192.168.1.1',
+      vlan: null,
       connectionType: 'Wired',
+      wifiSSID: null,
       networkSpeed: '1 Gbps',
       adapters: [
         {
           name: 'Ethernet',
-          type: 'Wired',
+          type: 'Ethernet',
           macAddress: '00:15:5D:AB:CD:EF',
           status: 'Connected',
           speed: '1 Gbps',
-          ipAddress: '192.168.1.100',
-          dhcpEnabled: true,
+          ipAddresses: ['192.168.1.100'],
         },
         {
           name: 'Wi-Fi',
-          type: 'Wireless',
+          type: 'WiFi',
           macAddress: '00:15:5D:12:34:56',
           status: 'Disconnected',
           speed: null,
-          ipAddress: null,
-          dhcpEnabled: true,
+          ipAddresses: [],
         },
       ],
     };
@@ -830,21 +832,20 @@ export class MockComputerDetailService {
         severity: 'High' as const,
         description: 'Computer has not been backed up in 30+ days',
         recommendation: 'Enable automated backup schedule',
-        category: 'DataProtection' as const,
+        category: 'Configuration' as const,
       },
     ];
 
     return riskTypes.slice(0, count).map((risk, i) => ({
       ...risk,
-      affectedEntity: `computer-${i}`,
+      affectedComponent: `computer-${i}`,
       detectedAt: new Date(2024, 9, 1),
       remediation: risk.recommendation,
-      cvssScore: risk.severity === 'Critical' ? 9.5 : risk.severity === 'High' ? 7.5 : risk.severity === 'Medium' ? 5.0 : 2.0,
     }));
   }
 
   private generateMockComputerMigrationHints(count: number): ComputerMigrationHint[] {
-    const hints = [
+    const hints: ComputerMigrationHint[] = [
       {
         category: 'Hardware',
         priority: 'Medium' as const,
@@ -1136,7 +1137,7 @@ export class MockGroupDetailService {
       linkedOu: 'OU=Groups,DC=contoso,DC=com',
       order: i + 1,
       enforced: i === 0,
-      appliedDate: new Date(2023, i % 12, (i % 28) + 1),
+      appliesTo: 'All Users',
     }));
   }
 
@@ -1167,10 +1168,10 @@ export class MockGroupDetailService {
 
     return riskTypes.slice(0, count).map((risk, i) => ({
       ...risk,
-      affectedEntity: `group-${i}`,
+      affectedMembers: [`member-${i}`],
+      affectedResources: [`resource-${i}`],
       detectedAt: new Date(2024, 9, 1),
       remediation: risk.recommendation,
-      cvssScore: risk.severity === 'Critical' ? 9.5 : risk.severity === 'High' ? 7.5 : risk.severity === 'Medium' ? 5.0 : 2.0,
     }));
   }
 
@@ -1239,7 +1240,6 @@ export class MockGroupDetailService {
       syncErrors: [],
       deltaChanges: 0,
       syncEnabled: true,
-      nextSyncTime: new Date(Date.now() + 4 * 60 * 60 * 1000),
     };
   }
 }

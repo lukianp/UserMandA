@@ -11,7 +11,8 @@
     "./src/renderer/index.css"
   ],
   "scripts": {
-    "start": "electron-forge start",
+    "start": "cross-env DEBUG=true electron-forge start",
+    "start:prod": "cross-env NODE_ENV=production electron-forge start",
     "package": "cross-env NODE_ENV=production electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
@@ -33,7 +34,10 @@
     "performance:measure": "npm run build:prod && node scripts/measure-performance.js",
     "docs:generate": "typedoc",
     "docs:serve": "npm run docs:generate && http-server docs/api -p 8080",
-    "docs:clean": "rimraf docs/api"
+    "docs:clean": "rimraf docs/api",
+    "debug:logs": "node scripts/view-debug-logs.js",
+    "debug:analyze": "node scripts/analyze-debug-logs.js",
+    "debug:clean": "node scripts/clean-debug-logs.js"
   },
   "keywords": [],
   "author": {
@@ -115,6 +119,7 @@
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.9.3",
+    "react-virtualized-auto-sizer": "^1.0.26",
     "react-window": "^2.2.0",
     "recharts": "^3.2.1",
     "tailwind-merge": "^3.3.1",
