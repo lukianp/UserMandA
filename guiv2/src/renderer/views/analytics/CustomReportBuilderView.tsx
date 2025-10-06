@@ -271,14 +271,9 @@ const CustomReportBuilderView: React.FC = () => {
                 <Select
                   label="Data Source"
                   value={reportConfig.dataSource}
-                  onChange={(e) => setReportConfig({ ...reportConfig, dataSource: e.target.value, fields: [], filters: [] })}
-                >
-                  {dataSources.map(ds => (
-                    <option key={ds.value} value={ds.value}>
-                      {ds.label}
-                    </option>
-                  ))}
-                </Select>
+                  onChange={(value) => setReportConfig({ ...reportConfig, dataSource: value, fields: [], filters: [] })}
+                  options={dataSources}
+                />
               </div>
             </div>
 
@@ -349,34 +344,21 @@ const CustomReportBuilderView: React.FC = () => {
                         <Select
                           label="Field"
                           value={filter.field}
-                          onChange={(e) => handleUpdateFilter(filter.id, { field: e.target.value })}
-                          size="sm"
-                        >
-                          {currentFields.map(f => (
-                            <option key={f.id} value={f.id}>
-                              {f.name}
-                            </option>
-                          ))}
-                        </Select>
+                          onChange={(value) => handleUpdateFilter(filter.id, { field: value })}
+                          options={currentFields.map(f => ({ value: f.id, label: f.name }))}
+                        />
                         <Select
                           label="Operator"
                           value={filter.operator}
-                          onChange={(e) => handleUpdateFilter(filter.id, { operator: e.target.value as any })}
-                          size="sm"
-                        >
-                          {filterOperators.map(op => (
-                            <option key={op.value} value={op.value}>
-                              {op.label}
-                            </option>
-                          ))}
-                        </Select>
+                          onChange={(value) => handleUpdateFilter(filter.id, { operator: value as any })}
+                          options={filterOperators}
+                        />
                       </div>
                       <div className="flex gap-2">
                         <Input
                           label="Value"
                           value={filter.value}
                           onChange={(e) => handleUpdateFilter(filter.id, { value: e.target.value })}
-                          size="sm"
                         />
                         <Button size="sm" variant="danger" onClick={() => handleRemoveFilter(filter.id)}>
                           <Trash2 className="w-4 h-4" />
@@ -395,42 +377,22 @@ const CustomReportBuilderView: React.FC = () => {
                 <Select
                   label="Group By"
                   value={reportConfig.groupBy || ''}
-                  onChange={(e) => setReportConfig({ ...reportConfig, groupBy: e.target.value || undefined })}
-                >
-                  <option value="">None</option>
-                  {reportConfig.fields.map(fieldId => {
-                    const field = currentFields.find(f => f.id === fieldId);
-                    return (
-                      <option key={fieldId} value={fieldId}>
-                        {field?.name || fieldId}
-                      </option>
-                    );
-                  })}
-                </Select>
+                  onChange={(value) => setReportConfig({ ...reportConfig, groupBy: value || undefined })}
+                  options={[{value: '', label: 'None'}, ...reportConfig.fields.map(fieldId => { const field = currentFields.find(f => f.id === fieldId); return { value: fieldId, label: field?.name || fieldId }; })]}
+                />
                 <div className="grid grid-cols-2 gap-2">
                   <Select
                     label="Sort By"
                     value={reportConfig.sortBy || ''}
-                    onChange={(e) => setReportConfig({ ...reportConfig, sortBy: e.target.value || undefined })}
-                  >
-                    <option value="">None</option>
-                    {reportConfig.fields.map(fieldId => {
-                      const field = currentFields.find(f => f.id === fieldId);
-                      return (
-                        <option key={fieldId} value={fieldId}>
-                          {field?.name || fieldId}
-                        </option>
-                      );
-                    })}
-                  </Select>
+                    onChange={(value) => setReportConfig({ ...reportConfig, sortBy: value || undefined })}
+                    options={[{value: '', label: 'None'}, ...reportConfig.fields.map(fieldId => { const field = currentFields.find(f => f.id === fieldId); return { value: fieldId, label: field?.name || fieldId }; })]}
+                  />
                   <Select
                     label="Direction"
                     value={reportConfig.sortDirection || 'asc'}
-                    onChange={(e) => setReportConfig({ ...reportConfig, sortDirection: e.target.value as any })}
-                  >
-                    <option value="asc">Ascending</option>
-                    <option value="desc">Descending</option>
-                  </Select>
+                    onChange={(value) => setReportConfig({ ...reportConfig, sortDirection: value as any })}
+                    options={[{value: 'asc', label: 'Ascending'}, {value: 'desc', label: 'Descending'}]}
+                  />
                 </div>
               </div>
             </div>
@@ -469,10 +431,6 @@ const CustomReportBuilderView: React.FC = () => {
                 data={reportData}
                 columns={columnDefs}
                 loading={isGenerating}
-                enableExport
-                enableGrouping
-                enableFiltering
-                data-cy="report-preview-grid"
               />
             )}
           </div>

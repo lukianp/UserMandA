@@ -85,8 +85,8 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
             {/* Template Selector */}
             <select
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500"
-              onChange={(e) => {
-                const template = templates.find(t => t.id === e.target.value);
+              onChange={(value) => {
+                const template = templates.find(t => t.id === value);
                 if (template) loadTemplate(template);
               }}
               disabled={isDiscovering}
@@ -361,7 +361,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                   <Server className="w-4 h-4" />
                   Devices
                   {currentResult && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="default" className="text-xs">
                       {currentResult.devices.length}
                     </Badge>
                   )}
@@ -383,7 +383,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                   <FileText className="w-4 h-4" />
                   Policies
                   {currentResult && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="default" className="text-xs">
                       {currentResult.policies.length}
                     </Badge>
                   )}
@@ -405,7 +405,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                   <AlertTriangle className="w-4 h-4" />
                   Incidents
                   {currentResult && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="default" className="text-xs">
                       {currentResult.incidents.length}
                     </Badge>
                   )}
@@ -427,7 +427,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                   <Bug className="w-4 h-4" />
                   Vulnerabilities
                   {currentResult && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="default" className="text-xs">
                       {currentResult.vulnerabilities.length}
                     </Badge>
                   )}
@@ -575,9 +575,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                 data={filteredData}
                 columns={columnDefs}
                 loading={isDiscovering}
-                enableExport
                 enableColumnReorder
-                enableFiltering
                 data-cy={`${selectedTab}-grid`}
               />
             </div>

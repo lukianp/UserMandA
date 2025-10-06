@@ -23,10 +23,10 @@ export interface UserData extends Identifiable, Selectable, Named, TimestampMeta
   createdDateTime: Date | string | null;
   userSource?: string | null;
 
-  // Compatibility properties
-  name?: string | null; // Maps to displayName
+  // Required compatibility properties (override from interfaces)
+  name: string; // Maps to displayName
   email?: string | null; // Maps to mail
-  id?: string; // Maps to userPrincipalName
+  id: string; // Maps to userPrincipalName
   domain?: string | null;
 
   // Additional properties for enhanced functionality

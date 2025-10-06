@@ -144,19 +144,19 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
                 <Checkbox
                   label="Include Access Reviews"
                   checked={config.includeAccessReviews || false}
-                  onChange={(e) => updateConfig({ includeAccessReviews: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includeAccessReviews: checked })}
                   data-cy="include-access-reviews-checkbox"
                 />
                 <Checkbox
                   label="Include Entitlement Packages"
                   checked={config.includeEntitlements || false}
-                  onChange={(e) => updateConfig({ includeEntitlements: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includeEntitlements: checked })}
                   data-cy="include-entitlements-checkbox"
                 />
                 <Checkbox
                   label="Include PIM Roles"
                   checked={config.includePIM || false}
-                  onChange={(e) => updateConfig({ includePIM: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includePIM: checked })}
                   data-cy="include-pim-checkbox"
                 />
               </div>
@@ -306,10 +306,9 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
               data={filteredData}
               columns={columns}
               loading={isDiscovering}
-              enableExport
               enableColumnReorder
               enableColumnResize
-              data-cy="discovery-grid"
+             
             />
           </div>
         )}

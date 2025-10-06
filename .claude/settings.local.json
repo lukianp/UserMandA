@@ -35,7 +35,10 @@
       "Bash(npx eslint:*)",
       "Bash(grep:*)",
       "Bash(tee:*)",
-      "Bash(cut:*)"
+      "Bash(cut:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": [],

@@ -109,10 +109,10 @@ export const ComplianceDashboardView: React.FC = () => {
       headerName: 'Status',
       width: 140,
       cellRenderer: (params: any) => {
-        const variantMap: Record<string, 'success' | 'warning' | 'secondary' | 'danger'> = {
+        const variantMap: Record<string, 'success' | 'warning' | 'default' | 'danger'> = {
           Certified: 'success',
           InProgress: 'warning',
-          NotCertified: 'secondary',
+          NotCertified: 'default',
           Expired: 'danger',
         };
         return (
@@ -167,11 +167,11 @@ export const ComplianceDashboardView: React.FC = () => {
       headerName: 'Severity',
       width: 120,
       cellRenderer: (params: any) => {
-        const variantMap: Record<string, 'danger' | 'warning' | 'secondary'> = {
+        const variantMap: Record<string, 'danger' | 'warning' | 'default'> = {
           Critical: 'danger',
           High: 'danger',
           Medium: 'warning',
-          Low: 'secondary',
+          Low: 'default',
         };
         return (
           <Badge variant={variantMap[params.value] || 'default'} size="sm">
@@ -185,11 +185,11 @@ export const ComplianceDashboardView: React.FC = () => {
       headerName: 'Status',
       width: 140,
       cellRenderer: (params: any) => {
-        const variantMap: Record<string, 'success' | 'warning' | 'secondary'> = {
+        const variantMap: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
           Resolved: 'success',
           InRemediation: 'warning',
           Open: 'danger',
-          Accepted: 'secondary',
+          Accepted: 'default',
         };
         return (
           <Badge variant={variantMap[params.value] || 'default'} size="sm">
@@ -433,31 +433,19 @@ export const ComplianceDashboardView: React.FC = () => {
         {activeTab === 'frameworks' && (
           <VirtualizedDataGrid
             data={dashboardData.frameworks}
-            columnDefs={frameworkColumns}
-            enableVirtualization={true}
-            enableFiltering={true}
-            enableSorting={true}
-            enableExport={true}
+            columns={frameworkColumns}
           />
         )}
         {activeTab === 'findings' && (
           <VirtualizedDataGrid
             data={dashboardData.findings}
-            columnDefs={findingsColumns}
-            enableVirtualization={true}
-            enableFiltering={true}
-            enableSorting={true}
-            enableExport={true}
+            columns={findingsColumns}
           />
         )}
         {activeTab === 'deadlines' && (
           <VirtualizedDataGrid
             data={dashboardData.upcomingDeadlines}
-            columnDefs={deadlinesColumns}
-            enableVirtualization={true}
-            enableFiltering={true}
-            enableSorting={true}
-            enableExport={true}
+            columns={deadlinesColumns}
           />
         )}
         {activeTab === 'overview' && (

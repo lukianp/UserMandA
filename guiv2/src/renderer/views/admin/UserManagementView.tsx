@@ -55,7 +55,7 @@ export const UserManagementView: React.FC = () => {
       sortable: true,
       filter: 'agSetColumnFilter',
       cellRenderer: (params: any) => (
-        <Badge variant={params.value === 'Administrator' ? 'error' : params.value === 'PowerUser' ? 'warning' : 'info'}>
+        <Badge variant={params.value === 'Administrator' ? 'danger' : params.value === 'PowerUser' ? 'warning' : 'info'}>
           {params.value}
         </Badge>
       ),
@@ -96,24 +96,30 @@ export const UserManagementView: React.FC = () => {
           <Button
             size="sm"
             variant="secondary"
-            icon={Edit2}
+            icon={<Edit2 />}
             onClick={() => handleEditUser(params.data)}
             aria-label="Edit user"
-          />
+          >
+            Edit
+          </Button>
           <Button
             size="sm"
             variant={params.data.status === 'Active' ? 'secondary' : 'primary'}
-            icon={params.data.status === 'Active' ? Lock : Unlock}
+            icon={params.data.status === 'Active' ? <Lock /> : <Unlock />}
             onClick={() => handleToggleUserStatus(params.data)}
             aria-label={params.data.status === 'Active' ? 'Disable user' : 'Enable user'}
-          />
+          >
+            {params.data.status === 'Active' ? 'Disable' : 'Enable'}
+          </Button>
           <Button
             size="sm"
             variant="secondary"
-            icon={Shield}
+            icon={<Shield />}
             onClick={() => handleResetPassword(params.data)}
             aria-label="Reset password"
-          />
+          >
+            Reset
+          </Button>
         </div>
       ),
     },
@@ -132,14 +138,14 @@ export const UserManagementView: React.FC = () => {
         <div className="flex gap-2">
           <Button
             variant="primary"
-            icon={UserPlus}
+            icon={<UserPlus />}
             onClick={handleCreateUser}
           >
             Create User
           </Button>
           <Button
             variant="danger"
-            icon={Trash2}
+            icon={<Trash2 />}
             onClick={handleDeleteUsers}
             disabled={selectedUsers.length === 0}
           >
@@ -162,26 +168,28 @@ export const UserManagementView: React.FC = () => {
           <Select
             label="Role"
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-          >
-            <option value="">All Roles</option>
-            <option value="Administrator">Administrator</option>
-            <option value="PowerUser">Power User</option>
-            <option value="User">User</option>
-            <option value="ReadOnly">Read Only</option>
-          </Select>
+            onChange={(value) => setRoleFilter(value)}
+            options={[
+              { value: "", label: "All Roles" },
+              { value: "Administrator", label: "Administrator" },
+              { value: "PowerUser", label: "Power User" },
+              { value: "User", label: "User" },
+              { value: "ReadOnly", label: "Read Only" },
+            ]}
+          />
         </div>
         <div className="w-48">
           <Select
             label="Status"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">All Statuses</option>
-            <option value="Active">Active</option>
-            <option value="Disabled">Disabled</option>
-            <option value="Locked">Locked</option>
-          </Select>
+            onChange={(value) => setStatusFilter(value)}
+            options={[
+              { value: "", label: "All Statuses" },
+              { value: "Active", label: "Active" },
+              { value: "Disabled", label: "Disabled" },
+              { value: "Locked", label: "Locked" },
+            ]}
+          />
         </div>
         <Button variant="secondary" onClick={handleExport}>
           Export
@@ -220,10 +228,6 @@ export const UserManagementView: React.FC = () => {
           data={users}
           columns={columns}
           loading={isLoading}
-          rowSelection="multiple"
-          onSelectionChanged={(selected) => {
-            // Update selected users
-          }}
         />
       </div>
     </div>

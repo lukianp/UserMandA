@@ -190,7 +190,7 @@ const IntuneDiscoveryView: React.FC = () => {
               <Input
                 type="number"
                 value={config.timeout}
-                onChange={(e) => updateConfig({ timeout: parseInt(e.target.value) || 600000 })}
+                onChange={(value) => updateConfig({ timeout: parseInt(value) || 600000 })}
                 min={60000}
                 max={1800000}
                 step={60000}
@@ -439,7 +439,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="mb-4 space-y-4">
               <Input
                 value={filter.searchText}
-                onChange={(e) => updateFilter({ searchText: e.target.value })}
+                onChange={(value) => updateFilter({ searchText: value })}
                 placeholder="Search..."
                 data-cy="search-input"
               />
@@ -502,10 +502,9 @@ const IntuneDiscoveryView: React.FC = () => {
                 data={filteredData}
                 columns={columns}
                 loading={isDiscovering}
-                enableExport
                 enableColumnReorder
                 enableColumnResize
-                data-cy="discovery-grid"
+               
               />
             </div>
           </>

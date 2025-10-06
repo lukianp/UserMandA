@@ -6,7 +6,7 @@
 import { LogicEngineService } from './logicEngineService';
 import { ProjectService } from './projectService';
 import { DashboardStats, ProjectTimeline, SystemHealth, ActivityItem, ServiceStatus, SystemAlert, ActivityType } from '../../renderer/types/dashboard';
-import { ProjectConfig } from '../../renderer/types/project';
+import { ProjectConfig, WaveConfig } from '../../renderer/types/project';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -169,7 +169,7 @@ export class DashboardService {
   /**
    * Get recent activity from logs
    */
-  async getRecentActivity(profileName: string, limit: number = 10): Promise<ActivityItem[]> {
+  async getRecentActivity(profileName: string, limit = 10): Promise<ActivityItem[]> {
     const logPath = path.join('C:', 'discoverydata', profileName, 'Logs', 'activity.log');
 
     try {
@@ -197,7 +197,7 @@ export class DashboardService {
             actionUrl: this.getActivityActionUrl(type)
           };
         })
-        .filter((activity): activity is ActivityItem => activity !== null)
+        .filter((activity): activity is NonNullable<typeof activity> => activity !== null)
         .slice(0, limit);
 
       return activities;
@@ -262,7 +262,7 @@ export class DashboardService {
     const projectConfig = await this.projectService.loadProjectConfig(profileName);
     const completedWaves = projectConfig.waves
       .filter(w => w.status === 'Complete' && w.completedAt)
-      .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime());
+      .sort((a, b) => new Date(b.completedAt as string).getTime() - new Date(a.completedAt as string).getTime());
 
     return completedWaves.length > 0 ? completedWaves[0].completedAt : undefined;
   }
@@ -328,7 +328,7 @@ export class DashboardService {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
 
-  private calculatePhaseProgress(phase: string, daysElapsed: number, estimatedDuration: number): number {
+  private calculatePhaseProgress(phase: string, _daysElapsed: number, _estimatedDuration: number): number {
     // Simple progress calculation based on phase and time
     const phaseWeights: Record<string, number> = {
       Discovery: 20,
@@ -342,13 +342,13 @@ export class DashboardService {
     return phaseWeights[phase] || 0;
   }
 
-  private calculateWaveProgress(wave: any): number {
+  private calculateWaveProgress(wave: WaveConfig): number {
     if (wave.status === 'Complete') return 100;
     if (wave.status === 'InProgress') return 50;
     return 0;
   }
 
-  private calculateEstimatedCompletion(config: ProjectConfig, daysElapsed: number): string {
+  private calculateEstimatedCompletion(config: ProjectConfig, _daysElapsed: number): string {
     const avgWaveDuration = 7; // days
     const remainingWaves = config.waves.filter(w => w.status !== 'Complete').length;
     const estimatedDays = remainingWaves * avgWaveDuration;

@@ -6,6 +6,8 @@
     <UseWPF>true</UseWPF>
     <IsPackable>false</IsPackable>
     <UseWindowsForms>false</UseWindowsForms>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>NU1605</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

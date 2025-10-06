@@ -36,12 +36,17 @@ export const PermissionsView: React.FC = () => {
       </div>
       
       <div className="w-64">
-        <Select label="Select Role" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)}>
-          <option value="Administrator">Administrator</option>
-          <option value="PowerUser">Power User</option>
-          <option value="User">User</option>
-          <option value="ReadOnly">Read Only</option>
-        </Select>
+        <Select
+          label="Select Role"
+          value={selectedRole}
+          onChange={(value) => setSelectedRole(value)}
+          options={[
+            { value: "Administrator", label: "Administrator" },
+            { value: "PowerUser", label: "Power User" },
+            { value: "User", label: "User" },
+            { value: "ReadOnly", label: "Read Only" },
+          ]}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-6">
@@ -57,6 +62,7 @@ export const PermissionsView: React.FC = () => {
                   key={permission}
                   label={permission}
                   checked={selectedRole === 'Administrator' || Math.random() > 0.5}
+                  // eslint-disable-next-line @typescript-eslint/no-empty-function
                   onChange={() => {}}
                 />
               ))}

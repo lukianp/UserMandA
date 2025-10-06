@@ -3,15 +3,10 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { PermissionsView } from './PermissionsView';
 import {
-  mockSuccessfulExecution,
-  mockFailedExecution,
-  
-  
-  mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
 
@@ -20,18 +15,17 @@ jest.mock('../../hooks/usePermissionsLogic', () => ({
   usePermissionsLogic: jest.fn(),
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { usePermissionsLogic } = require('../../hooks/usePermissionsLogic');
 
 describe('PermissionsView', () => {
   const mockHookDefaults = {
-    
-    
-    
-    error: null,
-    
-    
-  };
 
+
+    error: null as string | null,
+
+
+  };
   beforeEach(() => {
     resetAllMocks();
     usePermissionsLogic.mockReturnValue(mockHookDefaults);

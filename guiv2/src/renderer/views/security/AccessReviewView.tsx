@@ -95,7 +95,7 @@ export const AccessReviewView: React.FC = () => {
       headerName: 'Type',
       width: 130,
       cellRenderer: (params: any) => (
-        <Badge variant="secondary" size="sm">
+        <Badge variant="default" size="sm">
           {params.value}
         </Badge>
       ),
@@ -107,7 +107,7 @@ export const AccessReviewView: React.FC = () => {
       cellRenderer: (params: any) => {
         const isHighPrivilege = ['Admin', 'Owner', 'FullControl'].includes(params.value);
         return (
-          <Badge variant={isHighPrivilege ? 'danger' : 'secondary'} size="sm">
+          <Badge variant={isHighPrivilege ? 'danger' : 'default'} size="sm">
             {params.value}
           </Badge>
         );
@@ -118,14 +118,14 @@ export const AccessReviewView: React.FC = () => {
       headerName: 'Risk',
       width: 120,
       cellRenderer: (params: any) => {
-        const variantMap: Record<string, 'danger' | 'warning' | 'success' | 'secondary'> = {
+        const variantMap: Record<string, 'danger' | 'warning' | 'success' | 'default'> = {
           Critical: 'danger',
           High: 'danger',
           Medium: 'warning',
           Low: 'success',
         };
         return (
-          <Badge variant={variantMap[params.value] || 'secondary'} size="sm">
+          <Badge variant={variantMap[params.value] || 'default'} size="sm">
             {params.value}
           </Badge>
         );
@@ -136,15 +136,15 @@ export const AccessReviewView: React.FC = () => {
       headerName: 'Review Status',
       width: 140,
       cellRenderer: (params: any) => {
-        const variantMap: Record<string, 'success' | 'danger' | 'warning' | 'secondary'> = {
+        const variantMap: Record<string, 'success' | 'danger' | 'warning' | 'default'> = {
           Approved: 'success',
           Denied: 'danger',
           Pending: 'warning',
-          Expired: 'secondary',
+          Expired: 'default',
           Revoked: 'danger',
         };
         return (
-          <Badge variant={variantMap[params.value] || 'secondary'} size="sm">
+          <Badge variant={variantMap[params.value] || 'default'} size="sm">
             {params.value}
           </Badge>
         );
@@ -196,14 +196,14 @@ export const AccessReviewView: React.FC = () => {
       headerName: 'Status',
       width: 130,
       cellRenderer: (params: any) => {
-        const variantMap: Record<string, 'success' | 'warning' | 'secondary'> = {
+        const variantMap: Record<string, 'success' | 'warning' | 'default'> = {
           Completed: 'success',
           InProgress: 'warning',
-          Draft: 'secondary',
-          Cancelled: 'secondary',
+          Draft: 'default',
+          Cancelled: 'default',
         };
         return (
-          <Badge variant={variantMap[params.value] || 'secondary'} size="sm">
+          <Badge variant={variantMap[params.value] || 'default'} size="sm">
             {params.value}
           </Badge>
         );
@@ -283,14 +283,14 @@ export const AccessReviewView: React.FC = () => {
       headerName: 'Risk',
       width: 120,
       cellRenderer: (params: any) => {
-        const variantMap: Record<string, 'danger' | 'warning' | 'success' | 'secondary'> = {
+        const variantMap: Record<string, 'danger' | 'warning' | 'success' | 'default'> = {
           Critical: 'danger',
           High: 'danger',
           Medium: 'warning',
           Low: 'success',
         };
         return (
-          <Badge variant={variantMap[params.value] || 'secondary'} size="sm">
+          <Badge variant={variantMap[params.value] || 'default'} size="sm">
             {params.value}
           </Badge>
         );
@@ -526,7 +526,7 @@ export const AccessReviewView: React.FC = () => {
             {selectedItems.length} item(s) selected
           </span>
           <div className="flex gap-2 ml-auto">
-            <Button variant="success" size="sm" onClick={handleBulkApprove}>
+            <Button variant="primary" size="sm" onClick={handleBulkApprove}>
               <CheckCircle2 className="w-4 h-4 mr-1" />
               Approve
             </Button>
@@ -543,41 +543,25 @@ export const AccessReviewView: React.FC = () => {
         {activeTab === 'items' && (
           <VirtualizedDataGrid
             data={reviewData.accessItems}
-            columnDefs={accessItemColumns}
-            enableVirtualization={true}
-            enableFiltering={true}
-            enableSorting={true}
-            enableExport={true}
+            columns={accessItemColumns}
           />
         )}
         {activeTab === 'campaigns' && (
           <VirtualizedDataGrid
             data={reviewData.campaigns}
-            columnDefs={campaignColumns}
-            enableVirtualization={true}
-            enableFiltering={true}
-            enableSorting={true}
-            enableExport={true}
+            columns={campaignColumns}
           />
         )}
         {activeTab === 'resources' && (
           <VirtualizedDataGrid
             data={reviewData.resourceSummaries}
-            columnDefs={resourceColumns}
-            enableVirtualization={true}
-            enableFiltering={true}
-            enableSorting={true}
-            enableExport={true}
+            columns={resourceColumns}
           />
         )}
         {activeTab === 'users' && (
           <VirtualizedDataGrid
             data={reviewData.userSummaries}
-            columnDefs={userColumns}
-            enableVirtualization={true}
-            enableFiltering={true}
-            enableSorting={true}
-            enableExport={true}
+            columns={userColumns}
           />
         )}
       </div>

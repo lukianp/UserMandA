@@ -71,10 +71,7 @@ export const LicenseManagementView: React.FC = () => {
           data={licenses}
           columns={columnDefs}
           loading={isLoading}
-          enableExport
-          enableGrouping
-          enableFiltering
-          data-cy="license-grid"
+         
         />
       </div>
     </div>

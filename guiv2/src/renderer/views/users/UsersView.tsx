@@ -326,7 +326,7 @@ const UsersView: React.FC = () => {
           <Input
             placeholder="Search users..."
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={(value) => setSearchText(value)}
             className="w-64"
             data-cy="user-search"
           />
@@ -387,10 +387,9 @@ const UsersView: React.FC = () => {
           columns={columnDefs}
           loading={isLoading}
           onSelectionChange={setSelectedUsers}
-          enableExport
           enablePrint
           height="calc(100vh - 320px)"
-          data-cy="users-grid"
+         
         />
       </div>
     </div>

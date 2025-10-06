@@ -3,15 +3,10 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AboutView } from './AboutView';
 import {
-  mockSuccessfulExecution,
-  mockFailedExecution,
-  
-  
-  mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
 
@@ -20,18 +15,17 @@ jest.mock('../../hooks/useAboutLogic', () => ({
   useAboutLogic: jest.fn(),
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { useAboutLogic } = require('../../hooks/useAboutLogic');
 
 describe('AboutView', () => {
   const mockHookDefaults = {
-    
-    
-    
-    error: null,
-    
-    
-  };
 
+
+    error: null as string | null,
+
+
+  };
   beforeEach(() => {
     resetAllMocks();
     useAboutLogic.mockReturnValue(mockHookDefaults);

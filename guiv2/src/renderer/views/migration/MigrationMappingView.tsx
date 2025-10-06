@@ -80,7 +80,7 @@ const MigrationMappingView: React.FC = () => {
           </div>
         ) : (
           <div className="h-full">
-            <VirtualizedDataGrid data={logic.mappings} columns={logic.columnDefs} loading={logic.isLoading} data-cy="grid" />
+            <VirtualizedDataGrid data={logic.mappings} columns={logic.columnDefs} loading={logic.isLoading} />
           </div>
         )}
       </div>

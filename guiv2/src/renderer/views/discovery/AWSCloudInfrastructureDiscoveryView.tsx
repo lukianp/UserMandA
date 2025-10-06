@@ -317,21 +317,21 @@ const AWSCloudInfrastructureDiscoveryView: React.FC = () => {
                   <Checkbox
                     label="Include Tag Details"
                     checked={config.includeTagDetails || false}
-                    onChange={(e) => setConfig({ includeTagDetails: e.target.checked })}
+                    onChange={(checked) => setConfig({ includeTagDetails: checked })}
                     disabled={isDiscovering}
                     data-cy="option-tags"
                   />
                   <Checkbox
                     label="Include Cost Estimates"
                     checked={config.includeCostEstimates || false}
-                    onChange={(e) => setConfig({ includeCostEstimates: e.target.checked })}
+                    onChange={(checked) => setConfig({ includeCostEstimates: checked })}
                     disabled={isDiscovering}
                     data-cy="option-costs"
                   />
                   <Checkbox
                     label="Include Security Analysis"
                     checked={config.includeSecurityAnalysis || false}
-                    onChange={(e) => setConfig({ includeSecurityAnalysis: e.target.checked })}
+                    onChange={(checked) => setConfig({ includeSecurityAnalysis: checked })}
                     disabled={isDiscovering}
                     data-cy="option-security"
                   />
@@ -449,9 +449,7 @@ const AWSCloudInfrastructureDiscoveryView: React.FC = () => {
                   data={filteredData}
                   columns={columns}
                   loading={isDiscovering}
-                  enableExport
                   enableColumnReorder
-                  enableFiltering
                   data-cy={`aws-${activeTab}-grid`}
                 />
               </div>

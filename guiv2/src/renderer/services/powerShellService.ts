@@ -55,7 +55,7 @@ interface PowerShellServiceConfig {
 export class PowerShellService {
   private cache: Map<string, CachedResult> = new Map();
   private config: PowerShellServiceConfig;
-  private cacheCleanupInterval: NodeJS.Timeout | null = null;
+  private cacheCleanupInterval: any = null;
   private progressCallbacks: Map<string, (data: ProgressData) => void> = new Map();
   private outputCallbacks: Map<string, (data: OutputData) => void> = new Map();
 
@@ -167,7 +167,7 @@ export class PowerShellService {
       args,
       options: {
         timeout: options.timeout || this.config.defaultCacheTTL,
-        cancellationToken: options.cancellationToken || crypto.randomUUID(),
+        cancellationToken: options.cancellationToken || window.crypto.randomUUID(),
         streamOutput: options.streamOutput !== false,
         ...options,
       },
@@ -210,7 +210,7 @@ export class PowerShellService {
       parameters,
       options: {
         timeout: options.timeout || this.config.defaultCacheTTL,
-        cancellationToken: options.cancellationToken || crypto.randomUUID(),
+        cancellationToken: options.cancellationToken || window.crypto.randomUUID(),
         streamOutput: options.streamOutput !== false,
         ...options,
       },

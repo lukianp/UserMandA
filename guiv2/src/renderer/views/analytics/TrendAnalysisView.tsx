@@ -151,7 +151,7 @@ export const TrendAnalysisView: React.FC = () => {
         <div className="flex gap-2">
           <Select
             value={selectedMetric}
-            onChange={(e) => setSelectedMetric(e.target.value as any)}
+            onChange={(value) => setSelectedMetric(value as any)}
             className="w-48"
           >
             <option value="users">Users</option>
@@ -162,7 +162,7 @@ export const TrendAnalysisView: React.FC = () => {
           </Select>
           <Select
             value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value as any)}
+            onChange={(value) => setTimeRange(value as any)}
             className="w-40"
           >
             <option value="7days">7 Days</option>

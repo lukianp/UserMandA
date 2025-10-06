@@ -161,27 +161,29 @@ const DeviceManagementView: React.FC = () => {
           />
           <Select
             value={filter.deviceType || ''}
-            onChange={(e) => setFilter({ ...filter, deviceType: e.target.value })}
+            onChange={(value) => setFilter({ ...filter, deviceType: value })}
+            options={[
+              { value: '', label: 'All Device Types' },
+              { value: 'windows', label: 'Windows' },
+              { value: 'mac', label: 'Mac' },
+              { value: 'ios', label: 'iOS' },
+              { value: 'android', label: 'Android' },
+              { value: 'linux', label: 'Linux' }
+            ]}
             className="min-w-[150px]"
-          >
-            <option value="">All Device Types</option>
-            <option value="windows">Windows</option>
-            <option value="mac">Mac</option>
-            <option value="ios">iOS</option>
-            <option value="android">Android</option>
-            <option value="linux">Linux</option>
-          </Select>
+          />
           <Select
             value={filter.complianceStatus || ''}
-            onChange={(e) => setFilter({ ...filter, complianceStatus: e.target.value })}
+            onChange={(value) => setFilter({ ...filter, complianceStatus: value })}
+            options={[
+              { value: '', label: 'All Compliance Status' },
+              { value: 'compliant', label: 'Compliant' },
+              { value: 'non_compliant', label: 'Non-Compliant' },
+              { value: 'in_grace_period', label: 'In Grace Period' },
+              { value: 'not_evaluated', label: 'Not Evaluated' }
+            ]}
             className="min-w-[150px]"
-          >
-            <option value="">All Compliance Status</option>
-            <option value="compliant">Compliant</option>
-            <option value="non_compliant">Non-Compliant</option>
-            <option value="in_grace_period">In Grace Period</option>
-            <option value="not_evaluated">Not Evaluated</option>
-          </Select>
+          />
           <Button
             variant="secondary"
             onClick={() => setFilter({})}
@@ -206,10 +208,10 @@ const DeviceManagementView: React.FC = () => {
       {/* Data Grid */}
       <div className="flex-1 px-6 py-4">
         <VirtualizedDataGrid
-          rowData={filteredDevices}
-          columnDefs={columns}
+          data={filteredDevices}
+          columns={columns}
           loading={isLoading}
-          onSelectionChanged={(selectedRows) => {
+          onSelectionChange={(selectedRows: any[]) => {
             // Handle selection if needed
           }}
         />

@@ -82,7 +82,7 @@ const AzureDiscoveryView: React.FC = () => {
                   label="Tenant ID"
                   placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                   value={formData.tenantId}
-                  onChange={(e) => updateFormField('tenantId', e.target.value)}
+                  onChange={(value) => updateFormField('tenantId', value)}
                   disabled={isRunning}
                   required
                   helpText="Your Azure AD Tenant ID or domain name"
@@ -173,7 +173,7 @@ const AzureDiscoveryView: React.FC = () => {
                   label="Max Results"
                   type="number"
                   value={formData.maxResults.toString()}
-                  onChange={(e) => updateFormField('maxResults', parseInt(e.target.value) || 50000)}
+                  onChange={(value) => updateFormField('maxResults', parseInt(value) || 50000)}
                   disabled={isRunning}
                   min={1}
                   max={100000}
@@ -184,7 +184,7 @@ const AzureDiscoveryView: React.FC = () => {
                   label="Timeout (seconds)"
                   type="number"
                   value={formData.timeout.toString()}
-                  onChange={(e) => updateFormField('timeout', parseInt(e.target.value) || 600)}
+                  onChange={(value) => updateFormField('timeout', parseInt(value) || 600)}
                   disabled={isRunning}
                   min={60}
                   max={3600}

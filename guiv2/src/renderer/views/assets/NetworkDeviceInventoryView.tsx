@@ -150,12 +150,12 @@ const NetworkDeviceInventoryView: React.FC = () => {
           <Input
             placeholder="Search name, IP, MAC..."
             value={filters.searchText}
-            onChange={(e) => updateFilter('searchText', e.target.value)}
+            onChange={(value) => updateFilter('searchText', value)}
             data-cy="search-input"
           />
           <Select
             value={filters.deviceType}
-            onChange={(e) => updateFilter('deviceType', e.target.value)}
+            onChange={(value) => updateFilter('deviceType', value)}
             data-cy="device-type-select"
           >
             <option value="">All Device Types</option>
@@ -167,7 +167,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
           </Select>
           <Select
             value={filters.vendor}
-            onChange={(e) => updateFilter('vendor', e.target.value)}
+            onChange={(value) => updateFilter('vendor', value)}
             data-cy="vendor-select"
           >
             <option value="">All Vendors</option>
@@ -179,7 +179,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
           </Select>
           <Select
             value={filters.status}
-            onChange={(e) => updateFilter('status', e.target.value)}
+            onChange={(value) => updateFilter('status', value)}
             data-cy="status-select"
           >
             <option value="">All Statuses</option>
@@ -191,7 +191,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
           </Select>
           <Select
             value={filters.location}
-            onChange={(e) => updateFilter('location', e.target.value)}
+            onChange={(value) => updateFilter('location', value)}
             data-cy="location-select"
           >
             <option value="">All Locations</option>
@@ -268,10 +268,8 @@ const NetworkDeviceInventoryView: React.FC = () => {
           enableSelection={true}
           selectionMode="multiple"
           onSelectionChange={setSelectedDevices}
-          enableExport={true}
-          enableFiltering={true}
           height="calc(100vh - 650px)"
-          data-cy="network-device-grid"
+         
         />
       </div>
     </div>

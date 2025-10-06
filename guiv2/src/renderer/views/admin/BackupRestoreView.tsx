@@ -28,7 +28,7 @@ export const BackupRestoreView: React.FC = () => {
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Create a full backup of the current database
           </p>
-          <Button variant="primary" icon={Download} className="w-full">
+          <Button variant="primary" icon={<Download />} className="w-full">
             Create Backup Now
           </Button>
         </div>
@@ -41,7 +41,7 @@ export const BackupRestoreView: React.FC = () => {
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Restore database from a previous backup
           </p>
-          <Button variant="secondary" icon={Upload} className="w-full">
+          <Button variant="secondary" icon={<Upload />} className="w-full">
             Select Backup File
           </Button>
         </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { DataTable } from '../../components/organisms/DataTable';
+import DataTable from '../../components/organisms/DataTable';
 import { useMonitoringSystemsLogic } from '../../hooks/infrastructure/useMonitoringSystemsLogic';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw } from 'lucide-react';
@@ -59,7 +59,7 @@ const MonitoringSystemsView: React.FC = () => {
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Monitoring Systems</h1>
-        <Button onClick={reload} variant="outline" size="sm" disabled={isLoading}>
+        <Button onClick={reload} variant="secondary" size="sm" disabled={isLoading}>
           <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
@@ -74,7 +74,7 @@ const MonitoringSystemsView: React.FC = () => {
       <DataTable
         data={data}
         columns={columns}
-        isLoading={isLoading}
+        loading={isLoading}
         emptyMessage="No monitoring systems data available. Run infrastructure discovery to populate this view."
       />
     </div>

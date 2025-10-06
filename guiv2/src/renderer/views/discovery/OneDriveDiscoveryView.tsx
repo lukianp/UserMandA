@@ -76,8 +76,8 @@ const OneDriveDiscoveryView: React.FC = () => {
             {/* Template Selector */}
             <select
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cyan-500"
-              onChange={(e) => {
-                const template = templates.find(t => t.id === e.target.value);
+              onChange={(value) => {
+                const template = templates.find(t => t.id === value);
                 if (template) loadTemplate(template);
               }}
               disabled={isDiscovering}
@@ -348,7 +348,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                   <Users className="w-4 h-4" />
                   Accounts
                   {currentResult && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="default" className="text-xs">
                       {currentResult.accounts.length}
                     </Badge>
                   )}
@@ -370,7 +370,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                   <Files className="w-4 h-4" />
                   Files
                   {currentResult && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="default" className="text-xs">
                       {currentResult.files.length}
                     </Badge>
                   )}
@@ -392,7 +392,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                   <Share2 className="w-4 h-4" />
                   Sharing Links
                   {currentResult && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="default" className="text-xs">
                       {currentResult.sharing.length}
                     </Badge>
                   )}
@@ -537,9 +537,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                 data={filteredData}
                 columns={columnDefs}
                 loading={isDiscovering}
-                enableExport
                 enableColumnReorder
-                enableFiltering
                 data-cy={`${selectedTab}-grid`}
               />
             </div>

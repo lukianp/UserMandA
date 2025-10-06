@@ -128,7 +128,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
                 <Input
                   label="Tenant ID"
                   value={config.tenantId || ''}
-                  onChange={(e) => updateConfig({ tenantId: e.target.value })}
+                  onChange={(value) => updateConfig({ tenantId: value })}
                   placeholder="e.g., contoso.onmicrosoft.com or tenant GUID"
                   error={validationErrors.includes('Tenant ID is required') ? 'Tenant ID is required' : undefined}
                   data-cy="tenant-id-input"
@@ -165,7 +165,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
                   label="Timeout (seconds)"
                   type="number"
                   value={((config.timeout || 300000) / 1000).toString()}
-                  onChange={(e) => updateConfig({ timeout: parseInt(e.target.value) * 1000 })}
+                  onChange={(value) => updateConfig({ timeout: parseInt(value) * 1000 })}
                   data-cy="timeout-input"
                 />
               </div>
@@ -285,7 +285,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
       <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900">
         <Input
           value={filter.searchText}
-          onChange={(e) => updateFilter({ searchText: e.target.value })}
+          onChange={(value) => updateFilter({ searchText: value })}
           placeholder={`Search ${activeTab}...`}
           data-cy="search-input"
         />
@@ -301,10 +301,9 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
               data={filteredData}
               columns={columns}
               loading={isDiscovering}
-              enableExport
               enableColumnReorder
               enableColumnResize
-              data-cy="discovery-grid"
+             
             />
           </div>
         )}

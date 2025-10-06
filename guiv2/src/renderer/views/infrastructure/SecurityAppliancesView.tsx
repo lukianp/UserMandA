@@ -1,5 +1,5 @@
 import React from 'react';
-import { DataTable } from '../../components/organisms/DataTable';
+import DataTable from '../../components/organisms/DataTable';
 import { useSecurityAppliancesLogic } from '../../hooks/infrastructure/useSecurityAppliancesLogic';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw } from 'lucide-react';
@@ -56,7 +56,7 @@ const SecurityAppliancesView: React.FC = () => {
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Security Appliances</h1>
-        <Button onClick={reload} variant="outline" size="sm" disabled={isLoading}>
+        <Button onClick={reload} variant="secondary" size="sm" disabled={isLoading}>
           <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
@@ -71,7 +71,7 @@ const SecurityAppliancesView: React.FC = () => {
       <DataTable
         data={data}
         columns={columns}
-        isLoading={isLoading}
+        loading={isLoading}
         emptyMessage="No security appliances data available. Run infrastructure discovery to populate this view."
       />
     </div>

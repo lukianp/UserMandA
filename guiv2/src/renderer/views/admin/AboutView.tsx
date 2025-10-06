@@ -149,18 +149,18 @@ export const AboutView: React.FC = () => {
       <div>
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Resources</h2>
         <div className="flex gap-3">
-          <Button variant="secondary" icon={Globe}>
+          <Button variant="secondary" icon={<Globe />}>
             Documentation
             <ExternalLink className="w-4 h-4 ml-2" />
           </Button>
-          <Button variant="secondary" icon={Code}>
+          <Button variant="secondary" icon={<Code />}>
             GitHub Repository
             <ExternalLink className="w-4 h-4 ml-2" />
           </Button>
-          <Button variant="secondary" icon={Mail}>
+          <Button variant="secondary" icon={<Mail />}>
             Support
           </Button>
-          <Button variant="secondary" icon={Info}>
+          <Button variant="secondary" icon={<Info />}>
             Release Notes
           </Button>
         </div>

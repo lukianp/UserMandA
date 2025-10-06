@@ -178,10 +178,7 @@ export const SecurityDashboardView: React.FC = () => {
           data={securityData}
           columns={columnDefs}
           loading={isLoading}
-          enableExport
-          enableGrouping
-          enableFiltering
-          data-cy="security-grid"
+         
         />
       </div>
     </div>

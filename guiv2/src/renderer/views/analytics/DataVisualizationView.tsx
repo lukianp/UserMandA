@@ -316,9 +316,9 @@ const DataVisualizationView: React.FC = () => {
       const sampleData = generateSampleData(config.dataSource, config.dateRange);
       setData(sampleData);
 
-      showInfo(`Loaded ${sampleData.length} records from ${config.dataSource}`);
+      showInfo({ message: `Loaded ${sampleData.length} records from ${config.dataSource}` });
     } catch (error) {
-      showError(`Failed to load data: ${error}`);
+      showError({ message: `Failed to load data: ${error}` });
     } finally {
       setLoading(false);
     }
@@ -333,7 +333,7 @@ const DataVisualizationView: React.FC = () => {
     const chartContainer = document.getElementById('chart-container');
     if (chartContainer) {
       // Use html2canvas library for real implementation
-      showSuccess('Chart exported as PNG successfully');
+      showSuccess({ message: 'Chart exported as PNG successfully' });
     }
   }, [showSuccess]);
 
@@ -349,7 +349,7 @@ const DataVisualizationView: React.FC = () => {
       link.download = `chart-${config.dataSource}-${Date.now()}.svg`;
       link.click();
       URL.revokeObjectURL(url);
-      showSuccess('Chart exported as SVG successfully');
+      showSuccess({ message: 'Chart exported as SVG successfully' });
     }
   }, [config.dataSource, showSuccess]);
 
@@ -707,7 +707,7 @@ const DataVisualizationView: React.FC = () => {
             <Select
               label="Data Source"
               value={config.dataSource}
-              onChange={e => setConfig(prev => ({ ...prev, dataSource: e.target.value as DataSource }))}
+              onChange={value => setConfig(prev => ({ ...prev, dataSource: value as DataSource }))}
               data-cy="data-source-select"
             >
               {Object.keys(dataSourceFields).map(source => (
@@ -723,7 +723,7 @@ const DataVisualizationView: React.FC = () => {
             <Select
               label="Chart Type"
               value={config.type}
-              onChange={e => setConfig(prev => ({ ...prev, type: e.target.value as ChartType }))}
+              onChange={value => setConfig(prev => ({ ...prev, type: value as ChartType }))}
               data-cy="chart-type-select"
             >
               <option value="bar">Bar Chart</option>
@@ -742,7 +742,7 @@ const DataVisualizationView: React.FC = () => {
               <Select
                 label="X Axis"
                 value={config.xAxis}
-                onChange={e => setConfig(prev => ({ ...prev, xAxis: e.target.value }))}
+                onChange={value => setConfig(prev => ({ ...prev, xAxis: value }))}
                 data-cy="x-axis-select"
               >
                 {dataSourceFields[config.dataSource].map(field => (
@@ -759,8 +759,8 @@ const DataVisualizationView: React.FC = () => {
             <Select
               label={config.type === 'pie' ? 'Value Field' : 'Y Axis'}
               value={config.yAxis?.[0] || ''}
-              onChange={e => {
-                const value = e.target.value;
+              onChange={value => {
+                const value = value;
                 setConfig(prev => ({
                   ...prev,
                   yAxis: value ? [value] : []
@@ -782,7 +782,7 @@ const DataVisualizationView: React.FC = () => {
             <Select
               label="Date Range"
               value={config.dateRange?.preset || 'month'}
-              onChange={e => handleDateRangeChange(e.target.value as DateRange['preset'])}
+              onChange={value => handleDateRangeChange(value as DateRange['preset'])}
               data-cy="date-range-select"
             >
               <option value="today">Today</option>
@@ -798,8 +798,8 @@ const DataVisualizationView: React.FC = () => {
             <Select
               label="Color Palette"
               value={selectedPalette}
-              onChange={e => {
-                const palette = e.target.value as keyof typeof colorPalettes;
+              onChange={value => {
+                const palette = value as keyof typeof colorPalettes;
                 setSelectedPalette(palette);
                 setConfig(prev => ({ ...prev, colors: colorPalettes[palette] }));
               }}

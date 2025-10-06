@@ -139,12 +139,12 @@ const ServerInventoryView: React.FC = () => {
           <Input
             placeholder="Search name, IP, role..."
             value={filters.searchText}
-            onChange={(e) => updateFilter('searchText', e.target.value)}
+            onChange={(value) => updateFilter('searchText', value)}
             data-cy="search-input"
           />
           <Select
             value={filters.role}
-            onChange={(e) => updateFilter('role', e.target.value)}
+            onChange={(value) => updateFilter('role', value)}
             data-cy="role-select"
           >
             <option value="">All Roles</option>
@@ -156,7 +156,7 @@ const ServerInventoryView: React.FC = () => {
           </Select>
           <Select
             value={filters.osType}
-            onChange={(e) => updateFilter('osType', e.target.value)}
+            onChange={(value) => updateFilter('osType', value)}
             data-cy="os-type-select"
           >
             <option value="">All OS Types</option>
@@ -168,7 +168,7 @@ const ServerInventoryView: React.FC = () => {
           </Select>
           <Select
             value={filters.criticality}
-            onChange={(e) => updateFilter('criticality', e.target.value)}
+            onChange={(value) => updateFilter('criticality', value)}
             data-cy="criticality-select"
           >
             <option value="">All Criticality Levels</option>
@@ -180,7 +180,7 @@ const ServerInventoryView: React.FC = () => {
           </Select>
           <Select
             value={filters.clusterMembership}
-            onChange={(e) => updateFilter('clusterMembership', e.target.value)}
+            onChange={(value) => updateFilter('clusterMembership', value)}
             data-cy="cluster-select"
           >
             <option value="">All Clusters</option>
@@ -257,10 +257,8 @@ const ServerInventoryView: React.FC = () => {
           enableSelection={true}
           selectionMode="multiple"
           onSelectionChange={setSelectedServers}
-          enableExport={true}
-          enableFiltering={true}
           height="calc(100vh - 600px)"
-          data-cy="server-inventory-grid"
+         
         />
       </div>
     </div>

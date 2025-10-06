@@ -91,11 +91,13 @@ export const RoleManagementView: React.FC = () => {
           <Button
             size="sm"
             variant="secondary"
-            icon={Edit2}
+            icon={<Edit2 />}
             onClick={() => handleEditRole(params.data)}
             disabled={params.data.isBuiltIn}
             aria-label="Edit role"
-          />
+          >
+            Edit
+          </Button>
           <Button
             size="sm"
             variant="secondary"
@@ -120,12 +122,12 @@ export const RoleManagementView: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="primary" icon={Plus} onClick={handleCreateRole}>
+          <Button variant="primary" icon={<Plus />} onClick={handleCreateRole}>
             Create Role
           </Button>
           <Button
             variant="danger"
-            icon={Trash2}
+            icon={<Trash2 />}
             onClick={handleDeleteRoles}
             disabled={selectedRoles.length === 0 || selectedRoles.some(r => r.isBuiltIn)}
           >
@@ -181,10 +183,6 @@ export const RoleManagementView: React.FC = () => {
           data={roles}
           columns={columns}
           loading={isLoading}
-          rowSelection="multiple"
-          onSelectionChanged={(selected) => {
-            // Update selected roles
-          }}
         />
       </div>
     </div>

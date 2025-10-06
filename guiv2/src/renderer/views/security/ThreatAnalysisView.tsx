@@ -73,16 +73,16 @@ const ThreatAnalysisView: React.FC = () => {
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <Input placeholder="Search threats..." value={filters.searchText} onChange={(e) => updateFilter('searchText', e.target.value)} data-cy="search-input" />
-          <Select value={filters.threatType} onChange={(e) => updateFilter('threatType', e.target.value)} data-cy="threat-type-select">
+          <Input placeholder="Search threats..." value={filters.searchText} onChange={(value) => updateFilter('searchText', value)} data-cy="search-input" />
+          <Select value={filters.threatType} onChange={(value) => updateFilter('threatType', value)} data-cy="threat-type-select">
             <option value="">All Threat Types</option>
             {filterOptions.threatTypes.map((tt) => (<option key={tt} value={tt}>{tt}</option>))}
           </Select>
-          <Select value={filters.severity} onChange={(e) => updateFilter('severity', e.target.value)} data-cy="severity-select">
+          <Select value={filters.severity} onChange={(value) => updateFilter('severity', value)} data-cy="severity-select">
             <option value="">All Severities</option>
             {filterOptions.severities.map((sev) => (<option key={sev} value={sev}>{sev}</option>))}
           </Select>
-          <Select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)} data-cy="status-select">
+          <Select value={filters.status} onChange={(value) => updateFilter('status', value)} data-cy="status-select">
             <option value="">All Statuses</option>
             {filterOptions.statuses.map((st) => (<option key={st} value={st}>{st}</option>))}
           </Select>
@@ -106,7 +106,7 @@ const ThreatAnalysisView: React.FC = () => {
       )}
 
       <div className="flex-1 overflow-hidden p-6">
-        <VirtualizedDataGrid data={data} columns={columns} loading={isLoading} enableSelection={true} selectionMode="multiple" onSelectionChange={setSelectedThreats} enableExport={true} enableFiltering={true} height="calc(100vh - 450px)" data-cy="threat-grid" />
+        <VirtualizedDataGrid data={data} columns={columns} loading={isLoading} enableSelection={true} selectionMode="multiple" onSelectionChange={setSelectedThreats} height="calc(100vh - 450px)" />
       </div>
     </div>
   );

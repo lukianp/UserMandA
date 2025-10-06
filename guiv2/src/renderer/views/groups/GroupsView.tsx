@@ -285,10 +285,6 @@ export const GroupsView: React.FC = () => {
             columns={extendedColumnDefs}
             loading={isLoading}
             onSelectionChange={setSelectedGroups}
-            enableExport={true}
-            enableGrouping={true}
-            enableFiltering={true}
-            data-cy="groups-grid"
           />
         </div>
       </div>

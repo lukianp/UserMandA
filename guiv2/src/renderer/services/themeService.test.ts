@@ -9,7 +9,7 @@ import { useThemeStore } from '../store/useThemeStore';
 const mockMatchMedia = (matches: boolean) => ({
   matches,
   media: '(prefers-color-scheme: dark)',
-  onchange: null,
+  onchange: null as any,
   addEventListener: jest.fn(),
   removeEventListener: jest.fn(),
   dispatchEvent: jest.fn(),

@@ -108,12 +108,12 @@ const ComputerInventoryView: React.FC = () => {
           <Input
             placeholder="Search name, IP, serial..."
             value={filters.searchText}
-            onChange={(e) => updateFilter('searchText', e.target.value)}
+            onChange={(value) => updateFilter('searchText', value)}
             data-cy="search-input"
           />
           <Select
             value={filters.osType}
-            onChange={(e) => updateFilter('osType', e.target.value)}
+            onChange={(value) => updateFilter('osType', value)}
             data-cy="os-type-select"
           >
             <option value="">All OS Types</option>
@@ -125,7 +125,7 @@ const ComputerInventoryView: React.FC = () => {
           </Select>
           <Select
             value={filters.domain}
-            onChange={(e) => updateFilter('domain', e.target.value)}
+            onChange={(value) => updateFilter('domain', value)}
             data-cy="domain-select"
           >
             <option value="">All Domains</option>
@@ -137,7 +137,7 @@ const ComputerInventoryView: React.FC = () => {
           </Select>
           <Select
             value={filters.ou}
-            onChange={(e) => updateFilter('ou', e.target.value)}
+            onChange={(value) => updateFilter('ou', value)}
             data-cy="ou-select"
           >
             <option value="">All OUs</option>
@@ -149,7 +149,7 @@ const ComputerInventoryView: React.FC = () => {
           </Select>
           <Select
             value={filters.status}
-            onChange={(e) => updateFilter('status', e.target.value)}
+            onChange={(value) => updateFilter('status', value)}
             data-cy="status-select"
           >
             <option value="">All Statuses</option>
@@ -216,10 +216,8 @@ const ComputerInventoryView: React.FC = () => {
           enableSelection={true}
           selectionMode="multiple"
           onSelectionChange={setSelectedComputers}
-          enableExport={true}
-          enableFiltering={true}
           height="calc(100vh - 450px)"
-          data-cy="computer-inventory-grid"
+         
         />
       </div>
     </div>

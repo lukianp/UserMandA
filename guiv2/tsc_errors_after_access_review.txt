@@ -1,0 +1,15 @@
+src/renderer/views/security/ComplianceDashboardView.tsx(437,40): error TS1003: Identifier expected.
+src/renderer/views/security/ComplianceDashboardView.tsx(437,46): error TS1005: ':' expected.
+src/renderer/views/security/ComplianceDashboardView.tsx(438,13): error TS1005: ')' expected.
+src/renderer/views/security/ComplianceDashboardView.tsx(439,12): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/renderer/views/security/ComplianceDashboardView.tsx(440,10): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/renderer/views/security/ComplianceDashboardView.tsx(445,40): error TS1003: Identifier expected.
+src/renderer/views/security/ComplianceDashboardView.tsx(445,46): error TS1005: ':' expected.
+src/renderer/views/security/ComplianceDashboardView.tsx(446,13): error TS1005: ')' expected.
+src/renderer/views/security/ComplianceDashboardView.tsx(447,12): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/renderer/views/security/ComplianceDashboardView.tsx(448,10): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/renderer/views/security/ComplianceDashboardView.tsx(453,40): error TS1003: Identifier expected.
+src/renderer/views/security/ComplianceDashboardView.tsx(453,46): error TS1005: ':' expected.
+src/renderer/views/security/ComplianceDashboardView.tsx(454,13): error TS1005: ')' expected.
+src/renderer/views/security/ComplianceDashboardView.tsx(455,12): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/renderer/views/security/ComplianceDashboardView.tsx(456,10): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?

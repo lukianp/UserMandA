@@ -104,9 +104,7 @@ export const CostAnalysisView: React.FC = () => {
           data={costData}
           columns={columnDefs}
           loading={isLoading}
-          enableExport
-          enableGrouping
-          data-cy="cost-grid"
+         
         />
       </div>
     </div>

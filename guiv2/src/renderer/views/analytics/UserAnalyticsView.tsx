@@ -214,7 +214,7 @@ const UserAnalyticsView: React.FC = () => {
             <Calendar className="w-4 h-4 text-gray-500" />
             <Select
               value={dateRange}
-              onChange={(e) => setDateRange(e.target.value as any)}
+              onChange={(value) => setDateRange(value as any)}
               className="w-32"
               data-cy="date-range-select"
             >
@@ -227,7 +227,7 @@ const UserAnalyticsView: React.FC = () => {
             <Filter className="w-4 h-4 text-gray-500" />
             <Select
               value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
+              onChange={(value) => setSelectedDepartment(value)}
               className="w-40"
               data-cy="department-filter"
             >

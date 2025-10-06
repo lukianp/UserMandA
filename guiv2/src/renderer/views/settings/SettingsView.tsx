@@ -88,7 +88,7 @@ const SettingsView: React.FC = () => {
                   label="Accent Color"
                   type="color"
                   value={settings.theme.accentColor}
-                  onChange={(e) => updateThemeSetting('accentColor', e.target.value)}
+                  onChange={(value) => updateThemeSetting('accentColor', value)}
                   data-cy="accent-color-input"
                 />
 
@@ -96,7 +96,7 @@ const SettingsView: React.FC = () => {
                   label="Font Size (px)"
                   type="number"
                   value={settings.theme.fontSize.toString()}
-                  onChange={(e) => updateThemeSetting('fontSize', parseInt(e.target.value) || 14)}
+                  onChange={(value) => updateThemeSetting('fontSize', parseInt(value) || 14)}
                   min={10}
                   max={24}
                   data-cy="font-size-input"
@@ -106,7 +106,7 @@ const SettingsView: React.FC = () => {
               <Input
                 label="Font Family"
                 value={settings.theme.fontFamily}
-                onChange={(e) => updateThemeSetting('fontFamily', e.target.value)}
+                onChange={(value) => updateThemeSetting('fontFamily', value)}
                 data-cy="font-family-input"
               />
 
@@ -127,7 +127,7 @@ const SettingsView: React.FC = () => {
                   max="1.0"
                   step="0.05"
                   value={settings.theme.windowOpacity}
-                  onChange={(e) => updateThemeSetting('windowOpacity', parseFloat(e.target.value))}
+                  onChange={(value) => updateThemeSetting('windowOpacity', parseFloat(value))}
                   className="w-full"
                   data-cy="opacity-slider"
                 />
@@ -156,7 +156,7 @@ const SettingsView: React.FC = () => {
                   label="Refresh Interval (seconds)"
                   type="number"
                   value={settings.refreshInterval.toString()}
-                  onChange={(e) => updateSetting('refreshInterval', parseInt(e.target.value) || 30)}
+                  onChange={(value) => updateSetting('refreshInterval', parseInt(value) || 30)}
                   min={10}
                   max={300}
                   data-cy="refresh-interval-input"
@@ -187,7 +187,7 @@ const SettingsView: React.FC = () => {
             <Select
               label="Default Export Format"
               value={settings.defaultExportFormat}
-              onChange={(e) => updateSetting('defaultExportFormat', e.target.value as 'CSV' | 'JSON' | 'XLSX')}
+              onChange={(value) => updateSetting('defaultExportFormat', value as 'CSV' | 'JSON' | 'XLSX')}
               options={[
                 { value: 'CSV', label: 'CSV (Comma-Separated Values)' },
                 { value: 'JSON', label: 'JSON (JavaScript Object Notation)' },

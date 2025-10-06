@@ -16,19 +16,20 @@ jest.mock('../../hooks/useDataClassificationLogic', () => ({
   useDataClassificationLogic: jest.fn(),
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { useDataClassificationLogic } = require('../../hooks/useDataClassificationLogic');
 
 describe('DataClassificationView', () => {
   const mockHookDefaults = {
-    data: [] as any[],
-
-
-
-
-    selectedItems: [] as any[],
+    data: [] as unknown[],
+    
+    
+    
+    
+    selectedItems: [] as unknown[],
     searchText: '',
     isLoading: false,
-    error: null as any,
+    error: null as string | null,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

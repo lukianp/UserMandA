@@ -16,19 +16,21 @@ jest.mock('../../hooks/useAPIManagementLogic', () => ({
   useAPIManagementLogic: jest.fn(),
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { useAPIManagementLogic } = require('../../hooks/useAPIManagementLogic');
 
 describe('APIManagementView', () => {
   const mockHookDefaults = {
-    data: [],
-    
-    
-    
-    
-    selectedItems: [],
+
+    data: [] as unknown[],
+
+
+
+
+    selectedItems: [] as unknown[],
     searchText: '',
     isLoading: false,
-    error: null,
+    error: null as string | null,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };
@@ -116,7 +118,7 @@ describe('APIManagementView', () => {
     it('shows empty state when no data', () => {
       useAPIManagementLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: [],
+        data: [] as any[],
       });
 
       render(<APIManagementView />);
@@ -200,7 +202,7 @@ describe('APIManagementView', () => {
     it('disables export button when no data', () => {
       useAPIManagementLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: [],
+        data: [] as any[],
       });
 
       render(<APIManagementView />);

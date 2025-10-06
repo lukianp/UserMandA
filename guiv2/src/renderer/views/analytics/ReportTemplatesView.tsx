@@ -128,7 +128,7 @@ const ReportTemplatesView: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading templates:', error);
-      addNotification('error', 'Failed to load report templates');
+      addNotification({ type: 'error', message: 'Failed to load report templates', pinned: false, priority: 'normal' });
     } finally {
       setIsLoading(false);
     }
@@ -238,7 +238,7 @@ const ReportTemplatesView: React.FC = () => {
       };
       setTemplates([...templates, duplicate]);
       saveToStorage([...templates, duplicate]);
-      addNotification('success', 'Template duplicated successfully');
+      addNotification({ type: 'success', message: 'Template duplicated successfully', pinned: false, priority: 'normal' });
     }
   };
 
@@ -247,7 +247,7 @@ const ReportTemplatesView: React.FC = () => {
       const updated = templates.filter(t => t.id !== id);
       setTemplates(updated);
       saveToStorage(updated);
-      addNotification('success', 'Template deleted');
+      addNotification({ type: 'success', message: 'Template deleted', pinned: false, priority: 'normal' });
     }
   };
 
@@ -266,7 +266,7 @@ const ReportTemplatesView: React.FC = () => {
       saveToStorage(updated);
 
       // Navigate to report builder with template
-      addNotification('success', `Loading template: ${template.name}`);
+      addNotification({ type: 'success', message: `Loading template: ${template.name}`, pinned: false, priority: 'normal' });
       // TODO: Navigate to CustomReportBuilderView with template data
     }
   };
@@ -282,7 +282,7 @@ const ReportTemplatesView: React.FC = () => {
       link.download = `${template.name.replace(/\s+/g, '_')}_template.json`;
       link.click();
       URL.revokeObjectURL(url);
-      addNotification('success', 'Template exported');
+      addNotification({ type: 'success', message: 'Template exported', pinned: false, priority: 'normal' });
     }
   };
 
@@ -292,11 +292,11 @@ const ReportTemplatesView: React.FC = () => {
       const updated = templates.map(t => (t.id === template.id ? { ...template, modifiedDate: new Date() } : t));
       setTemplates(updated);
       saveToStorage(updated);
-      addNotification('success', 'Template updated');
+      addNotification({ type: 'success', message: 'Template updated', pinned: false, priority: 'normal' });
     } else {
       setTemplates([...templates, template]);
       saveToStorage([...templates, template]);
-      addNotification('success', 'Template created');
+      addNotification({ type: 'success', message: 'Template created', pinned: false, priority: 'normal' });
     }
     setShowEditor(false);
     setSelectedTemplate(null);
@@ -353,18 +353,11 @@ const ReportTemplatesView: React.FC = () => {
               type="text"
               placeholder="Search templates..."
               value={searchText}
-              onChange={e => setSearchText(e.target.value)}
-              icon={<Search className="w-4 h-4 text-gray-400" />}
+              onChange={(e) => setSearchText(e.target.value)}
             />
           </div>
           <div className="w-64">
-            <Select label="" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>
-                  {cat === 'all' ? 'All Categories' : cat}
-                </option>
-              ))}
-            </Select>
+            <Select label="" value={categoryFilter} onChange={value => setCategoryFilter(value)} options={categories.map(cat => ({ value: cat, label: cat === 'all' ? 'All Categories' : cat }))} />
           </div>
         </div>
       </div>
@@ -401,9 +394,6 @@ const ReportTemplatesView: React.FC = () => {
           data={filteredTemplates}
           columns={columnDefs}
           loading={isLoading}
-          enableExport
-          onCellClicked={onCellClicked}
-          data-cy="templates-grid"
         />
       </div>
 
@@ -448,42 +438,31 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave, onCan
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <Input label="Template Name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
+          <Input label="Template Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
 
           <Input
             label="Description"
             value={formData.description}
-            onChange={e => setFormData({ ...formData, description: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             required
           />
 
           <div className="grid grid-cols-2 gap-4">
-            <Select label="Category" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} required>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </Select>
+            <Select label="Category" value={formData.category} onChange={value => setFormData({ ...formData, category: value })} required options={categories.map(cat => ({ value: cat, label: cat }))} />
 
             <Select
               label="Data Source"
               value={formData.dataSource}
-              onChange={e => setFormData({ ...formData, dataSource: e.target.value })}
+              onChange={value => setFormData({ ...formData, dataSource: value })}
               required
-            >
-              {dataSources.map(ds => (
-                <option key={ds} value={ds}>
-                  {ds.charAt(0).toUpperCase() + ds.slice(1)}
-                </option>
-              ))}
-            </Select>
+              options={dataSources.map(ds => ({ value: ds, label: ds.charAt(0).toUpperCase() + ds.slice(1) }))}
+            />
           </div>
 
           <Input
             label="Tags (comma-separated)"
             value={formData.tags?.join(', ') || ''}
-            onChange={e => setFormData({ ...formData, tags: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+            onChange={(e) => setFormData({ ...formData, tags: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean) })}
             placeholder="users, active, summary"
           />
 

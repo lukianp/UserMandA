@@ -112,12 +112,12 @@ const ServerInventoryView: React.FC = () => {
             type="text"
             placeholder="Search servers..."
             value={filters.searchText}
-            onChange={(e) => updateFilter('searchText', e.target.value)}
+            onChange={(value) => updateFilter('searchText', value)}
             className="flex-1 min-w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
           <Select
             value={filters.role}
-            onChange={(e) => updateFilter('role', e.target.value)}
+            onChange={(value) => updateFilter('role', value)}
             className="min-w-[180px]"
           >
             <option value="">All Roles</option>
@@ -129,7 +129,7 @@ const ServerInventoryView: React.FC = () => {
           </Select>
           <Select
             value={filters.osType}
-            onChange={(e) => updateFilter('osType', e.target.value)}
+            onChange={(value) => updateFilter('osType', value)}
             className="min-w-[180px]"
           >
             <option value="">All OS Types</option>
@@ -141,7 +141,7 @@ const ServerInventoryView: React.FC = () => {
           </Select>
           <Select
             value={filters.criticality}
-            onChange={(e) => updateFilter('criticality', e.target.value)}
+            onChange={(value) => updateFilter('criticality', value)}
             className="min-w-[150px]"
           >
             <option value="">All Criticality</option>
@@ -153,7 +153,7 @@ const ServerInventoryView: React.FC = () => {
           </Select>
           <Select
             value={filters.clusterMembership}
-            onChange={(e) => updateFilter('clusterMembership', e.target.value)}
+            onChange={(value) => updateFilter('clusterMembership', value)}
             className="min-w-[150px]"
           >
             <option value="">All Clusters</option>

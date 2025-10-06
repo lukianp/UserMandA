@@ -3,15 +3,10 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { SystemConfigurationView } from './SystemConfigurationView';
 import {
-  mockSuccessfulExecution,
-  mockFailedExecution,
-  
-  
-  mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
 
@@ -20,18 +15,17 @@ jest.mock('../../hooks/useSystemConfigurationLogic', () => ({
   useSystemConfigurationLogic: jest.fn(),
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { useSystemConfigurationLogic } = require('../../hooks/useSystemConfigurationLogic');
 
 describe('SystemConfigurationView', () => {
   const mockHookDefaults = {
-    
-    
-    
-    error: null,
-    
-    
-  };
 
+
+    error: null as string | null,
+
+
+  };
   beforeEach(() => {
     resetAllMocks();
     useSystemConfigurationLogic.mockReturnValue(mockHookDefaults);

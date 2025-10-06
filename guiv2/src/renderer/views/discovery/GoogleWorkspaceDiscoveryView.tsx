@@ -132,27 +132,27 @@ const GoogleWorkspaceDiscoveryView: React.FC = () => {
                 <Checkbox
                   label="Include User Details"
                   checked={config.includeUserDetails || false}
-                  onChange={(e) => updateConfig({ includeUserDetails: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includeUserDetails: checked })}
                 />
                 <Checkbox
                   label="Include Group Membership"
                   checked={config.includeGroupMembership || false}
-                  onChange={(e) => updateConfig({ includeGroupMembership: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includeGroupMembership: checked })}
                 />
                 <Checkbox
                   label="Include Mailbox Size"
                   checked={config.includeMailboxSize || false}
-                  onChange={(e) => updateConfig({ includeMailboxSize: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includeMailboxSize: checked })}
                 />
                 <Checkbox
                   label="Include Drive Usage"
                   checked={config.includeDriveUsage || false}
-                  onChange={(e) => updateConfig({ includeDriveUsage: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includeDriveUsage: checked })}
                 />
                 <Checkbox
                   label="Include Calendar Details"
                   checked={config.includeCalendarDetails || false}
-                  onChange={(e) => updateConfig({ includeCalendarDetails: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includeCalendarDetails: checked })}
                 />
               </div>
             </div>
@@ -278,7 +278,7 @@ const GoogleWorkspaceDiscoveryView: React.FC = () => {
               <Checkbox
                 label="Show Only Admins"
                 checked={filter.showOnlyAdmins || false}
-                onChange={(e) => updateFilter({ showOnlyAdmins: e.target.checked })}
+                onChange={(checked) => updateFilter({ showOnlyAdmins: checked })}
               />
             </>
           )}
@@ -295,7 +295,6 @@ const GoogleWorkspaceDiscoveryView: React.FC = () => {
               data={filteredData}
               columns={columns}
               loading={isDiscovering}
-              enableExport
               enableColumnReorder
               enableColumnResize
             />

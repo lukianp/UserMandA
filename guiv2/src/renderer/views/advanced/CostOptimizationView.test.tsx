@@ -16,19 +16,20 @@ jest.mock('../../hooks/useCostOptimizationLogic', () => ({
   useCostOptimizationLogic: jest.fn(),
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { useCostOptimizationLogic } = require('../../hooks/useCostOptimizationLogic');
 
 describe('CostOptimizationView', () => {
   const mockHookDefaults = {
-    data: [],
+    data: [] as unknown[],
     
     
     
     
-    selectedItems: [],
+    selectedItems: [] as unknown[],
     searchText: '',
     isLoading: false,
-    error: null,
+    error: null as string | null,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

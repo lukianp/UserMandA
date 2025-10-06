@@ -130,13 +130,13 @@ const SecurityAuditView: React.FC = () => {
           <Input
             placeholder="Search events..."
             value={filters.searchText}
-            onChange={(e) => updateFilter('searchText', e.target.value)}
+            onChange={(value) => updateFilter('searchText', value)}
             className="md:col-span-2"
             data-cy="search-input"
           />
           <Select
             value={filters.eventCategory}
-            onChange={(e) => updateFilter('eventCategory', e.target.value)}
+            onChange={(value) => updateFilter('eventCategory', value)}
             data-cy="category-select"
           >
             <option value="">All Categories</option>
@@ -146,7 +146,7 @@ const SecurityAuditView: React.FC = () => {
           </Select>
           <Select
             value={filters.severity}
-            onChange={(e) => updateFilter('severity', e.target.value)}
+            onChange={(value) => updateFilter('severity', value)}
             data-cy="severity-select"
           >
             <option value="">All Severities</option>
@@ -156,7 +156,7 @@ const SecurityAuditView: React.FC = () => {
           </Select>
           <Select
             value={filters.result}
-            onChange={(e) => updateFilter('result', e.target.value)}
+            onChange={(value) => updateFilter('result', value)}
             data-cy="result-select"
           >
             <option value="">All Results</option>
@@ -168,20 +168,20 @@ const SecurityAuditView: React.FC = () => {
             type="date"
             placeholder="From Date"
             value={filters.dateFrom}
-            onChange={(e) => updateFilter('dateFrom', e.target.value)}
+            onChange={(value) => updateFilter('dateFrom', value)}
             data-cy="date-from-input"
           />
           <Input
             type="date"
             placeholder="To Date"
             value={filters.dateTo}
-            onChange={(e) => updateFilter('dateTo', e.target.value)}
+            onChange={(value) => updateFilter('dateTo', value)}
             data-cy="date-to-input"
           />
           <Input
             placeholder="User..."
             value={filters.user}
-            onChange={(e) => updateFilter('user', e.target.value)}
+            onChange={(value) => updateFilter('user', value)}
             data-cy="user-input"
           />
         </div>
@@ -257,10 +257,8 @@ const SecurityAuditView: React.FC = () => {
           enableSelection={true}
           selectionMode="multiple"
           onSelectionChange={setSelectedEvents}
-          enableExport={true}
-          enableFiltering={true}
           height="calc(100vh - 700px)"
-          data-cy="security-audit-grid"
+         
         />
       </div>
     </div>

@@ -341,9 +341,7 @@ const TeamsDiscoveryView: React.FC = () => {
                           selectedTab === 'channels' ? channelColumns :
                           selectedTab === 'members' ? memberColumns : []}
                   loading={false}
-                  enableExport
                   enableColumnReorder
-                  enableFiltering
                   data-cy={`teams-${selectedTab}-grid`}
                 />
               </div>

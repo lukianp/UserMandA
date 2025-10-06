@@ -5,20 +5,27 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { eDiscoveryView } from './eDiscoveryView';
+
+
+
+
+
+
+
+import { EDiscoveryView } from './eDiscoveryView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
 
 // Mock the hook
-jest.mock('../../hooks/useeDiscoveryLogic', () => ({
-  useeDiscoveryLogic: jest.fn(),
+jest.mock('../../hooks/useEDiscoveryLogic', () => ({
+  useEDiscoveryLogic: jest.fn(),
 }));
 
-const { useeDiscoveryLogic } = require('../../hooks/useeDiscoveryLogic');
+const { useEDiscoveryLogic } = require('../../hooks/useEDiscoveryLogic');
 
-describe('eDiscoveryView', () => {
+describe('EDiscoveryView', () => {
   const mockHookDefaults = {
     data: [],
     
@@ -35,7 +42,7 @@ describe('eDiscoveryView', () => {
 
   beforeEach(() => {
     resetAllMocks();
-    useeDiscoveryLogic.mockReturnValue(mockHookDefaults);
+    useEDiscoveryLogic.mockReturnValue(mockHookDefaults);
   });
 
   afterEach(() => {
@@ -48,30 +55,30 @@ describe('eDiscoveryView', () => {
 
   describe('Rendering', () => {
     it('renders without crashing', () => {
-      render(<eDiscoveryView />);
-      expect(screen.getByTestId('-discovery-view')).toBeInTheDocument();
+      render(<EDiscoveryView />);
+      expect(screen.getByTestId('ediscovery-view')).toBeInTheDocument();
     });
 
     it('displays the view title', () => {
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       expect(screen.getByText('eDiscovery')).toBeInTheDocument();
     });
 
     it('displays the view description', () => {
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       expect(
         screen.getByText(/Electronic discovery/i)
       ).toBeInTheDocument();
     });
 
     it('displays the icon', () => {
-      const { container } = render(<eDiscoveryView />);
+      const { container } = render(<EDiscoveryView />);
       const icon = container.querySelector('svg');
       expect(icon).toBeInTheDocument();
     });
 
     it('has proper heading structure', () => {
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       const headings = screen.getAllByRole('heading');
       expect(headings.length).toBeGreaterThan(0);
     });
@@ -83,17 +90,17 @@ describe('eDiscoveryView', () => {
 
   describe('Loading State', () => {
     it('shows loading state when data is loading', () => {
-      useeDiscoveryLogic.mockReturnValue({
+      useEDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isLoading: true,
       });
 
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       expect(screen.getByRole('status') || screen.getByText(/loading/i)).toBeInTheDocument();
     });
 
     it('does not show loading state when data is loaded', () => {
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
   });
@@ -104,22 +111,22 @@ describe('eDiscoveryView', () => {
 
   describe('Data Display', () => {
     it('displays data when loaded', () => {
-      useeDiscoveryLogic.mockReturnValue({
+      useEDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         data: mockDiscoveryData().users,
       });
 
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       expect(screen.queryByText(/no.*data/i)).not.toBeInTheDocument();
     });
 
     it('shows empty state when no data', () => {
-      useeDiscoveryLogic.mockReturnValue({
+      useEDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         data: [],
       });
 
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       expect(
         screen.queryByText(/no.*data/i) ||
         screen.queryByText(/no.*results/i) ||
@@ -140,13 +147,13 @@ describe('eDiscoveryView', () => {
 
   describe('Search and Filtering', () => {
     it('renders search input', () => {
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       const searchInput = screen.queryByPlaceholderText(/search/i);
       expect(searchInput).toBeTruthy();
     });
 
     it('handles search input changes', () => {
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       const searchInput = screen.queryByPlaceholderText(/search/i);
       if (searchInput) {
         fireEvent.change(searchInput, { target: { value: 'test' } });
@@ -161,20 +168,20 @@ describe('eDiscoveryView', () => {
 
   describe('Button Actions', () => {
     it('renders action buttons', () => {
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       const buttons = screen.getAllByRole('button');
       expect(buttons.length).toBeGreaterThan(0);
     });
 
     it('calls exportData when export button clicked', () => {
       const exportData = jest.fn();
-      useeDiscoveryLogic.mockReturnValue({
+      useEDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         data: mockDiscoveryData().users,
         exportData,
       });
 
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       const exportButton = screen.queryByText(/Export/i);
       if (exportButton) {
         fireEvent.click(exportButton);
@@ -184,12 +191,12 @@ describe('eDiscoveryView', () => {
 
     it('calls refreshData when refresh button clicked', () => {
       const refreshData = jest.fn();
-      useeDiscoveryLogic.mockReturnValue({
+      useEDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         refreshData,
       });
 
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       const refreshButton = screen.queryByText(/Refresh/i) || screen.queryByRole('button', { name: /refresh/i });
       if (refreshButton) {
         fireEvent.click(refreshButton);
@@ -198,12 +205,12 @@ describe('eDiscoveryView', () => {
     });
 
     it('disables export button when no data', () => {
-      useeDiscoveryLogic.mockReturnValue({
+      useEDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         data: [],
       });
 
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       const exportButton = screen.queryByText(/Export/i);
       if (exportButton) {
         expect(exportButton.closest('button')).toBeDisabled();
@@ -217,23 +224,23 @@ describe('eDiscoveryView', () => {
 
   describe('Item Selection', () => {
     it('allows selecting items', () => {
-      useeDiscoveryLogic.mockReturnValue({
+      useEDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         data: mockDiscoveryData().users,
       });
 
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       const checkboxes = screen.queryAllByRole('checkbox');
       expect(checkboxes.length >= 0).toBeTruthy();
     });
 
     it('displays selected count when items are selected', () => {
-      useeDiscoveryLogic.mockReturnValue({
+      useEDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         selectedItems: mockDiscoveryData().users.slice(0, 2),
       });
 
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       expect(screen.queryByText(/selected/i) || screen.queryByText(/2/)).toBeTruthy();
     });
   });
@@ -244,27 +251,27 @@ describe('eDiscoveryView', () => {
 
   describe('Error Handling', () => {
     it('displays error message when error occurs', () => {
-      useeDiscoveryLogic.mockReturnValue({
+      useEDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         error: 'Test error message',
       });
 
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       expect(screen.getByText(/Test error message/i)).toBeInTheDocument();
     });
 
     it('does not display error when no error', () => {
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
     it('shows error alert with proper styling', () => {
-      useeDiscoveryLogic.mockReturnValue({
+      useEDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         error: 'Test error',
       });
 
-      const { container } = render(<eDiscoveryView />);
+      const { container } = render(<EDiscoveryView />);
       const alert = container.querySelector('[role="alert"]');
       expect(alert).toBeInTheDocument();
     });
@@ -276,12 +283,12 @@ describe('eDiscoveryView', () => {
 
   describe('Accessibility', () => {
     it('has accessible data-cy attributes', () => {
-      render(<eDiscoveryView />);
-      expect(screen.getByTestId('-discovery-view')).toBeInTheDocument();
+      render(<EDiscoveryView />);
+      expect(screen.getByTestId('ediscovery-view')).toBeInTheDocument();
     });
 
     it('has accessible button labels', () => {
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       const buttons = screen.getAllByRole('button');
       buttons.forEach(button => {
         const hasText = button.textContent && button.textContent.length > 0;
@@ -291,7 +298,7 @@ describe('eDiscoveryView', () => {
     });
 
     it('has accessible form labels', () => {
-      render(<eDiscoveryView />);
+      render(<EDiscoveryView />);
       const inputs = screen.queryAllByRole('textbox');
       inputs.forEach(input => {
         const hasLabel = input.getAttribute('aria-label') || input.id;
@@ -310,23 +317,23 @@ describe('eDiscoveryView', () => {
       const exportData = jest.fn();
 
       // Initial state - loading
-      useeDiscoveryLogic.mockReturnValue({
+      useEDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isLoading: true,
       });
 
-      const { rerender } = render(<eDiscoveryView />);
+      const { rerender } = render(<EDiscoveryView />);
       expect(screen.getByRole('status') || screen.getByText(/loading/i)).toBeInTheDocument();
 
       // Data loaded
-      useeDiscoveryLogic.mockReturnValue({
+      useEDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         data: mockDiscoveryData().users,
         refreshData,
         exportData,
       });
 
-      rerender(<eDiscoveryView />);
+      rerender(<EDiscoveryView />);
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
 
       // Refresh data

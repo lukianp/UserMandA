@@ -129,40 +129,31 @@ const ComputerInventoryView: React.FC = () => {
           />
           <Select
             value={filters.osType}
-            onChange={(e) => updateFilter('osType', e.target.value)}
+            onChange={(value) => updateFilter('osType', value)}
+            options={[
+              { value: '', label: 'All OS Types' },
+              ...filterOptions.osTypes.map((os) => ({ value: os, label: os }))
+            ]}
             className="min-w-[150px]"
-          >
-            <option value="">All OS Types</option>
-            {filterOptions.osTypes.map((os) => (
-              <option key={os} value={os}>
-                {os}
-              </option>
-            ))}
-          </Select>
+          />
           <Select
             value={filters.domain}
-            onChange={(e) => updateFilter('domain', e.target.value)}
+            onChange={(value) => updateFilter('domain', value)}
+            options={[
+              { value: '', label: 'All Domains' },
+              ...filterOptions.domains.map((domain) => ({ value: domain, label: domain }))
+            ]}
             className="min-w-[150px]"
-          >
-            <option value="">All Domains</option>
-            {filterOptions.domains.map((domain) => (
-              <option key={domain} value={domain}>
-                {domain}
-              </option>
-            ))}
-          </Select>
+          />
           <Select
             value={filters.status}
-            onChange={(e) => updateFilter('status', e.target.value)}
+            onChange={(value) => updateFilter('status', value)}
+            options={[
+              { value: '', label: 'All Statuses' },
+              ...filterOptions.statuses.map((status) => ({ value: status, label: status }))
+            ]}
             className="min-w-[120px]"
-          >
-            <option value="">All Statuses</option>
-            {filterOptions.statuses.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
-          </Select>
+          />
           <Button variant="secondary" onClick={clearFilters} size="sm">
             Clear Filters
           </Button>
@@ -183,10 +174,10 @@ const ComputerInventoryView: React.FC = () => {
       {/* Data Grid */}
       <div className="flex-1 px-6 py-4">
         <VirtualizedDataGrid
-          rowData={data}
-          columnDefs={columns}
+          data={data}
+          columns={columns}
           loading={isLoading}
-          onSelectionChanged={(selectedRows) => {
+          onSelectionChange={(selectedRows: any[]) => {
             // Handle selection if needed
           }}
         />

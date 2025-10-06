@@ -103,7 +103,7 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
               <Input
                 label="Tenant ID"
                 value={config.tenantId || ''}
-                onChange={(e) => updateConfig({ tenantId: e.target.value })}
+                onChange={(value) => updateConfig({ tenantId: value })}
                 placeholder="contoso.onmicrosoft.com"
                 error={validationErrors.includes('Tenant ID is required') ? 'Required' : undefined}
               />
@@ -173,7 +173,7 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
       <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900">
         <Input
           value={filter.searchText}
-          onChange={(e) => updateFilter({ searchText: e.target.value })}
+          onChange={(value) => updateFilter({ searchText: value })}
           placeholder={`Search ${activeTab}...`}
         />
       </div>
@@ -188,7 +188,6 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
               data={filteredData}
               columns={columns}
               loading={isDiscovering}
-              enableExport
               enableColumnReorder
               enableColumnResize
             />

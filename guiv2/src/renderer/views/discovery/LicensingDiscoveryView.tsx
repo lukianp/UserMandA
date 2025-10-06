@@ -172,7 +172,7 @@ const LicensingDiscoveryView: React.FC = () => {
               <Input
                 type="text"
                 value={config.tenantId || ''}
-                onChange={(e) => updateConfig({ tenantId: e.target.value })}
+                onChange={(value) => updateConfig({ tenantId: value })}
                 placeholder="Enter Tenant ID"
                 data-cy="tenant-id-input"
               />
@@ -185,7 +185,7 @@ const LicensingDiscoveryView: React.FC = () => {
               <Input
                 type="number"
                 value={config.timeout ?? 600000}
-                onChange={(e) => updateConfig({ timeout: parseInt(e.target.value) || 600000 })}
+                onChange={(value) => updateConfig({ timeout: parseInt(value) || 600000 })}
                 min={60000}
                 max={1800000}
                 step={60000}
@@ -506,7 +506,7 @@ const LicensingDiscoveryView: React.FC = () => {
             <div className="mb-4 space-y-4">
               <Input
                 value={filter.searchText}
-                onChange={(e) => updateFilter({ searchText: e.target.value })}
+                onChange={(value) => updateFilter({ searchText: value })}
                 placeholder="Search..."
                 data-cy="search-input"
               />
@@ -557,10 +557,9 @@ const LicensingDiscoveryView: React.FC = () => {
                 data={filteredData}
                 columns={columns}
                 loading={isDiscovering}
-                enableExport
                 enableColumnReorder
                 enableColumnResize
-                data-cy="discovery-grid"
+               
               />
             </div>
           </>

@@ -3,15 +3,10 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AuditLogView } from './AuditLogView';
 import {
-  mockSuccessfulExecution,
-  mockFailedExecution,
-  
-  
-  mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
 
@@ -20,18 +15,17 @@ jest.mock('../../hooks/useAuditLogLogic', () => ({
   useAuditLogLogic: jest.fn(),
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { useAuditLogLogic } = require('../../hooks/useAuditLogLogic');
 
 describe('AuditLogView', () => {
   const mockHookDefaults = {
-    
-    
-    
-    error: null,
-    
-    
-  };
 
+
+    error: null as string | null,
+
+
+  };
   beforeEach(() => {
     resetAllMocks();
     useAuditLogLogic.mockReturnValue(mockHookDefaults);

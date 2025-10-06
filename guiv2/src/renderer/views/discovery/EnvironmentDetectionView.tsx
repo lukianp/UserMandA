@@ -133,7 +133,7 @@ const EnvironmentDetectionView: React.FC = () => {
                   label="Timeout (ms)"
                   type="number"
                   value={config.timeout?.toString() || '300000'}
-                  onChange={(e) => updateConfig({ timeout: parseInt(e.target.value) || 300000 })}
+                  onChange={(value) => updateConfig({ timeout: parseInt(value) || 300000 })}
                   min={60000}
                   max={600000}
                 />
@@ -252,7 +252,7 @@ const EnvironmentDetectionView: React.FC = () => {
           <div className="flex-1">
             <Input
               value={filter.searchText}
-              onChange={(e) => updateFilter({ searchText: e.target.value })}
+              onChange={(value) => updateFilter({ searchText: value })}
               placeholder={`Search ${activeTab}...`}
             />
           </div>
@@ -330,7 +330,6 @@ const EnvironmentDetectionView: React.FC = () => {
               data={filteredData}
               columns={columns}
               loading={isDetecting}
-              enableExport
               enableColumnReorder
               enableColumnResize
             />

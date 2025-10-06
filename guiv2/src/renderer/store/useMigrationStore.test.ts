@@ -81,10 +81,8 @@ describe('useMigrationStore', () => {
           description: 'Original Description',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: [],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
       });
 
       await act(async () => {
@@ -108,10 +106,8 @@ describe('useMigrationStore', () => {
           description: 'Will be deleted',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: [],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
       });
 
       expect(result.current.waves).toHaveLength(1);
@@ -133,10 +129,8 @@ describe('useMigrationStore', () => {
           description: 'Original Description',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: ['user1', 'user2'],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
       });
 
       let duplicateId = '';
@@ -160,28 +154,22 @@ describe('useMigrationStore', () => {
           description: 'First',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: [],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
         ids[1] = await result.current.planWave({
           name: 'Wave 2',
           description: 'Second',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: [],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
         ids[2] = await result.current.planWave({
           name: 'Wave 3',
           description: 'Third',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: [],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
       });
 
       act(() => {
@@ -213,10 +201,8 @@ describe('useMigrationStore', () => {
           description: 'Test execution',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: [],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
       });
 
       await act(async () => {
@@ -252,10 +238,8 @@ describe('useMigrationStore', () => {
           description: 'Will fail',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: [],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
       });
 
       await act(async () => {
@@ -283,10 +267,8 @@ describe('useMigrationStore', () => {
           description: 'Can be paused',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: [],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
       });
 
       // Set wave to in-progress state
@@ -320,10 +302,8 @@ describe('useMigrationStore', () => {
           description: 'Can be resumed',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: [],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
       });
 
       // Set wave to paused state
@@ -375,10 +355,8 @@ describe('useMigrationStore', () => {
           description: 'Before rollback',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: [],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
       });
 
       // Create rollback point
@@ -478,7 +456,7 @@ describe('useMigrationStore', () => {
       };
 
       act(() => {
-        result.current.conflicts.push(mockConflict);
+        result.current.conflicts.push(mockConflict as any);
       });
 
       await act(async () => {
@@ -535,7 +513,7 @@ describe('useMigrationStore', () => {
       ];
 
       act(() => {
-        result.current.conflicts.push(...conflicts);
+        result.current.conflicts.push(...(conflicts as any));
       });
 
       const userConflicts = result.current.getConflictsByType('duplicate_user');
@@ -794,10 +772,8 @@ describe('useMigrationStore', () => {
           description: 'Done',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: ['u1', 'u2', 'u3'],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
       });
 
       await act(async () => {
@@ -811,10 +787,8 @@ describe('useMigrationStore', () => {
           description: 'Running',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: ['u4', 'u5'],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
       });
 
       await act(async () => {
@@ -844,10 +818,8 @@ describe('useMigrationStore', () => {
           description: 'Will be saved',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
-          users: [],
-          
-          dependencies: [],
-        });
+          priority: 'Normal',
+        } as any);
       });
 
       const saved = localStorage.getItem('migration-waves');
@@ -880,9 +852,9 @@ describe('useMigrationStore', () => {
           prerequisites: [] as string[],
           totalItems: 0,
           progressPercentage: 0,
-          actualStartDate: null,
-          actualEndDate: null,
-          estimatedDuration: null,
+          actualStartDate: null as string | Date | null,
+          actualEndDate: null as string | Date | null,
+          estimatedDuration: null as number | null,
         },
       ];
 

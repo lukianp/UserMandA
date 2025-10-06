@@ -6,6 +6,7 @@
     "configurations": [
         
         
+        
         {
             "name": "PowerShell: Launch Current File",
             "type": "PowerShell",

@@ -3,15 +3,10 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { BackupRestoreView } from './BackupRestoreView';
 import {
-  mockSuccessfulExecution,
-  mockFailedExecution,
-  
-  
-  mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
 
@@ -20,18 +15,17 @@ jest.mock('../../hooks/useBackupRestoreLogic', () => ({
   useBackupRestoreLogic: jest.fn(),
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { useBackupRestoreLogic } = require('../../hooks/useBackupRestoreLogic');
 
 describe('BackupRestoreView', () => {
   const mockHookDefaults = {
-    
-    
-    
-    error: null,
-    
-    
-  };
 
+
+    error: null as string | null,
+
+
+  };
   beforeEach(() => {
     resetAllMocks();
     useBackupRestoreLogic.mockReturnValue(mockHookDefaults);

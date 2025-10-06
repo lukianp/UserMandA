@@ -3,15 +3,11 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { UserManagementView } from './UserManagementView';
 import {
-  mockSuccessfulExecution,
-  mockFailedExecution,
-  
-  
-  mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
 
@@ -20,18 +16,17 @@ jest.mock('../../hooks/useUserManagementLogic', () => ({
   useUserManagementLogic: jest.fn(),
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { useUserManagementLogic } = require('../../hooks/useUserManagementLogic');
 
 describe('UserManagementView', () => {
   const mockHookDefaults = {
-    
-    
-    
-    error: null,
-    
-    
-  };
 
+
+    error: null as string | null,
+
+
+  };
   beforeEach(() => {
     resetAllMocks();
     useUserManagementLogic.mockReturnValue(mockHookDefaults);

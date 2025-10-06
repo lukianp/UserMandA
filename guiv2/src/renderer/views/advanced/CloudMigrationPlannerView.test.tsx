@@ -16,23 +16,27 @@ jest.mock('../../hooks/useCloudMigrationPlannerLogic', () => ({
   useCloudMigrationPlannerLogic: jest.fn(),
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { useCloudMigrationPlannerLogic } = require('../../hooks/useCloudMigrationPlannerLogic');
 
 describe('CloudMigrationPlannerView', () => {
   const mockHookDefaults = {
-    data: [],
+
+
+
+
+    data: [] as unknown[],
     
     
     
     
-    selectedItems: [],
+    selectedItems: [] as unknown[],
     searchText: '',
     isLoading: false,
-    error: null,
+    error: null as string | null,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };
-
   beforeEach(() => {
     resetAllMocks();
     useCloudMigrationPlannerLogic.mockReturnValue(mockHookDefaults);
@@ -116,7 +120,7 @@ describe('CloudMigrationPlannerView', () => {
     it('shows empty state when no data', () => {
       useCloudMigrationPlannerLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: [],
+        data: [] as any[],
       });
 
       render(<CloudMigrationPlannerView />);
@@ -200,7 +204,7 @@ describe('CloudMigrationPlannerView', () => {
     it('disables export button when no data', () => {
       useCloudMigrationPlannerLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: [],
+        data: [] as any[],
       });
 
       render(<CloudMigrationPlannerView />);

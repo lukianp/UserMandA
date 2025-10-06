@@ -248,7 +248,7 @@ const MigrationReportView: React.FC = () => {
             <Filter className="w-4 h-4 text-gray-500" />
             <Select
               value={selectedWave}
-              onChange={(e) => setSelectedWave(e.target.value)}
+              onChange={(value) => setSelectedWave(value)}
               className="w-48"
               data-cy="wave-filter"
             >

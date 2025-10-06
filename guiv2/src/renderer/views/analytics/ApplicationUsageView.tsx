@@ -133,7 +133,8 @@ export const ApplicationUsageView: React.FC = () => {
         <div className="flex gap-2">
           <Select
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+
+            onChange={(value) => setSelectedCategory(value)}
             className="w-48"
           >
             <option value="all">All Categories</option>
@@ -143,7 +144,7 @@ export const ApplicationUsageView: React.FC = () => {
           </Select>
           <Select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(value) => setSortBy(value as any)}
             className="w-48"
           >
             <option value="userCount">Sort by Users</option>

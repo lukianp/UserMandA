@@ -1216,4 +1216,1947 @@ Estimated Time to Feature Parity: 8-12 weeks with focused development effort.
 
 Recommendation: Proceed with guiv2 as the future platform - the architectural advantages outweigh the implementation effort required for feature parity.
 
+### ⌨️ KEYBOARD SHORTCUTS & ADVANCED NAVIGATION
+
+**Current guiv2/ State**: Basic keyboard shortcuts
+**Required GUI/ Parity**: 50+ shortcuts with command palette
+
+**Step 1: Comprehensive Keyboard Shortcuts System**
+```typescript
+// guiv2/src/renderer/hooks/useKeyboardShortcuts.ts
+import { useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useProfileStore } from '../store/useProfileStore';
+import { useTabStore } from '../store/useTabStore';
+import { useModalStore } from '../store/useModalStore';
+
+interface ShortcutDefinition {
+  key: string;
+  ctrl?: boolean;
+  alt?: boolean;
+  shift?: boolean;
+  action: () => void;
+  description: string;
+  category: string;
+}
+
+export const useKeyboardShortcuts = () => {
+  const navigate = useNavigate();
+  const { selectedSourceProfile, selectedTargetProfile } = useProfileStore();
+  const { openTab, closeTab, selectedTabId } = useTabStore();
+  const { openModal } = useModalStore();
+
+  const shortcuts: ShortcutDefinition[] = [
+    // Navigation shortcuts (matching GUI F1-F10)
+    {
+      key: 'F1', action: () => navigate('/'),
+      description: 'Navigate to Overview/Dashboard',
+      category: 'Navigation'
+    },
+    {
+      key: 'F2', action: () => navigate('/users'),
+      description: 'Navigate to Users view',
+      category: 'Navigation'
+    },
+    {
+      key: 'F3', action: () => navigate('/groups'),
+      description: 'Navigate to Groups view',
+      category: 'Navigation'
+    },
+    {
+      key: 'F4', action: () => navigate('/computers'),
+      description: 'Navigate to Computers view',
+      category: 'Navigation'
+    },
+    {
+      key: 'F5', action: () => window.location.reload(),
+      description: 'Refresh current view',
+      category: 'Navigation'
+    },
+    {
+      key: 'F6', action: () => navigate('/migration/execution'),
+      description: 'Navigate to Migration Execution',
+      category: 'Navigation'
+    },
+    {
+      key: 'F9', action: () => navigate('/settings'),
+      description: 'Navigate to Settings',
+      category: 'Navigation'
+    },
+    {
+      key: 'F10', action: () => navigate('/reports'),
+      description: 'Navigate to Reports',
+      category: 'Navigation'
+    },
+
+    // Action shortcuts
+    {
+      key: 'S', ctrl: true, action: () => {/* Save current work */},
+      description: 'Save current work',
+      category: 'Actions'
+    },
+    {
+      key: 'R', ctrl: true, action: () => window.location.reload(),
+      description: 'Refresh data',
+      category: 'Actions'
+    },
+    {
+      key: 'N', ctrl: true, action: () => navigate('/profiles/create'),
+      description: 'Create new profile',
+      category: 'Actions'
+    },
+
+    // Profile management
+    {
+      key: 'P', ctrl: true, shift: true, action: () => openModal('commandPalette'),
+      description: 'Open command palette',
+      category: 'Profile'
+    },
+    {
+      key: '1', ctrl: true, action: () => navigate('/discovery/domain'),
+      description: 'Domain Discovery',
+      category: 'Discovery'
+    },
+    {
+      key: '2', ctrl: true, action: () => navigate('/discovery/azure'),
+      description: 'Azure Discovery',
+      category: 'Discovery'
+    },
+    {
+      key: '3', ctrl: true, action: () => navigate('/discovery/exchange'),
+      description: 'Exchange Discovery',
+      category: 'Discovery'
+    },
+
+    // Tab management (matching GUI tab behavior)
+    {
+      key: 'W', ctrl: true, action: () => {
+        if (selectedTabId) closeTab(selectedTabId);
+      },
+      description: 'Close current tab',
+      category: 'Tabs'
+    },
+    {
+      key: 'T', ctrl: true, action: () => openTab('new', 'New Tab'),
+      description: 'Open new tab',
+      category: 'Tabs'
+    },
+
+    // Theme shortcuts
+    {
+      key: 'T', ctrl: true, alt: true, action: () => {
+        // Toggle theme
+        const current = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+        applyTheme(current);
+      },
+      description: 'Toggle theme',
+      category: 'Theme'
+    }
+  ];
+
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    // Find matching shortcut
+    const shortcut = shortcuts.find(s =>
+      s.key.toLowerCase() === event.key.toLowerCase() &&
+      !!s.ctrl === event.ctrlKey &&
+      !!s.alt === event.altKey &&
+      !!s.shift === event.shiftKey
+    );
+
+    if (shortcut) {
+      event.preventDefault();
+      event.stopPropagation();
+      shortcut.action();
+    }
+  }, [shortcuts]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+};
+```
+
+**Step 2: Command Palette Implementation**
+```typescript
+// guiv2/src/renderer/components/organisms/CommandPalette.tsx
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Command } from 'lucide-react';
+
+interface CommandItem {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  action: () => void;
+  keywords: string[];
+}
+
+export const CommandPalette: React.FC<{ open: boolean; onClose: () => void }> = ({
+  open,
+  onClose
+}) => {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const commands: CommandItem[] = useMemo(() => [
+    // Navigation commands
+    {
+      id: 'nav-overview',
+      title: 'Go to Overview',
+      description: 'Navigate to the main dashboard',
+      category: 'Navigation',
+      action: () => navigate('/'),
+      keywords: ['overview', 'dashboard', 'home', 'main']
+    },
+    {
+      id: 'nav-users',
+      title: 'Go to Users',
+      description: 'Navigate to user management',
+      category: 'Navigation',
+      action: () => navigate('/users'),
+      keywords: ['users', 'people', 'accounts']
+    },
+    {
+      id: 'nav-groups',
+      title: 'Go to Groups',
+      description: 'Navigate to group management',
+      category: 'Navigation',
+      action: () => navigate('/groups'),
+      keywords: ['groups', 'security', 'distribution']
+    },
+    {
+      id: 'nav-migration',
+      title: 'Go to Migration',
+      description: 'Navigate to migration planning',
+      category: 'Navigation',
+      action: () => navigate('/migration/planning'),
+      keywords: ['migration', 'migrate', 'planning']
+    },
+
+    // Action commands
+    {
+      id: 'action-refresh',
+      title: 'Refresh Data',
+      description: 'Refresh all current data',
+      category: 'Actions',
+      action: () => window.location.reload(),
+      keywords: ['refresh', 'reload', 'update', 'data']
+    },
+    {
+      id: 'action-settings',
+      title: 'Open Settings',
+      description: 'Navigate to application settings',
+      category: 'Actions',
+      action: () => navigate('/settings'),
+      keywords: ['settings', 'configuration', 'config']
+    },
+
+    // Discovery commands
+    {
+      id: 'discovery-azure',
+      title: 'Azure Discovery',
+      description: 'Run Azure infrastructure discovery',
+      category: 'Discovery',
+      action: () => navigate('/discovery/azure'),
+      keywords: ['azure', 'cloud', 'microsoft', 'subscription']
+    },
+    {
+      id: 'discovery-exchange',
+      title: 'Exchange Discovery',
+      description: 'Run Exchange server discovery',
+      category: 'Discovery',
+      action: () => navigate('/discovery/exchange'),
+      keywords: ['exchange', 'email', 'mail', 'outlook']
+    }
+  ], [navigate]);
+
+  const filteredCommands = useMemo(() => {
+    if (!query) return commands;
+
+    const searchTerm = query.toLowerCase();
+    return commands.filter(cmd =>
+      cmd.title.toLowerCase().includes(searchTerm) ||
+      cmd.description.toLowerCase().includes(searchTerm) ||
+      cmd.keywords.some(keyword => keyword.includes(searchTerm))
+    );
+  }, [commands, query]);
+
+  const groupedCommands = useMemo(() => {
+    const groups: Record<string, CommandItem[]> = {};
+    filteredCommands.forEach(cmd => {
+      if (!groups[cmd.category]) groups[cmd.category] = [];
+      groups[cmd.category].push(cmd);
+    });
+    return groups;
+  }, [filteredCommands]);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [query]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(prev =>
+          prev < filteredCommands.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(prev => prev > 0 ? prev - 1 : prev);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (filteredCommands[selectedIndex]) {
+          filteredCommands[selectedIndex].action();
+          onClose();
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        onClose();
+        break;
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-20 z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl mx-4">
+        {/* Header */}
+        <div className="p-4 border-b">
+          <div className="flex items-center gap-2">
+            <Command className="w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Type a command or search..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-1 bg-transparent border-0 outline-none text-lg"
+              autoFocus
+            />
+          </div>
+        </div>
+
+        {/* Results */}
+        <div className="max-h-96 overflow-y-auto">
+          {Object.entries(groupedCommands).map(([category, categoryCommands]) => (
+            <div key={category}>
+              <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50 dark:bg-gray-700">
+                {category}
+              </div>
+              {categoryCommands.map((cmd, index) => {
+                const globalIndex = filteredCommands.findIndex(c => c.id === cmd.id);
+                return (
+                  <div
+                    key={cmd.id}
+                    className={`px-4 py-3 cursor-pointer border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                      globalIndex === selectedIndex ? 'bg-blue-50 dark:bg-blue-900' : ''
+                    }`}
+                    onClick={() => {
+                      cmd.action();
+                      onClose();
+                    }}
+                  >
+                    <div className="font-medium">{cmd.title}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">{cmd.description}</div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+
+          {filteredCommands.length === 0 && (
+            <div className="px-4 py-8 text-center text-gray-500">
+              No commands found for "{query}"
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-4 py-2 border-t text-xs text-gray-500 flex justify-between">
+          <span>↑↓ to navigate • Enter to select • Esc to close</span>
+          <span>{filteredCommands.length} commands</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+---
+
+## 📋 SUMMARY: CRITICAL IMPLEMENTATION REQUIREMENTS
+
+### **BLOCKERS TO FEATURE PARITY**
+
+1. **Migration Execution Sophistication** - Pre-flight validation, rollback, progress tracking
+2. **Project Management System** - Full lifecycle with Gantt charts and risk assessment  
+3. **Profile Management Enhancement** - Dual profiles with app registration
+4. **Discovery Module Depth** - Summary statistics and detail views
+5. **Navigation & UX Framework** - 50+ keyboard shortcuts and command palette
+
+### **IMPLEMENTATION PRIORITY ORDER**
+
+1. **HIGH**: Migration Execution (Pre-flight + Rollback) - Enterprise requirement
+2. **HIGH**: Project Management System - Core business functionality  
+3. **MEDIUM**: Profile Management - User experience enhancement
+4. **MEDIUM**: Discovery Enhancements - Data visualization improvements
+5. **LOW**: Advanced Navigation - Quality of life features
+
+### **TECHNICAL APPROACH**
+
+- Extend existing services with new methods rather than replacing
+- Maintain TypeScript strict typing throughout
+- Follow established patterns from working components
+- Implement comprehensive error handling
+- Add extensive logging for debugging
+
+### **SUCCESS CRITERIA**
+
+- All GUI/ functionality replicated in guiv2/
+- Performance equivalent or better than WPF application
+- Modern web UX with desktop capabilities
+- Comprehensive test coverage
+- Production-ready error handling
+
+This specification provides the complete technical roadmap for achieving 100% feature parity between GUI/ and guiv2/ implementations.
+---
+
+## 📋 DETAILED TECHNICAL SPECIFICATIONS FOR GUI/ → GUIV2/ FEATURE REPLICATION
+
+### 🔧 MIGRATION EXECUTION SYSTEM ENHANCEMENT
+
+#### Pre-Flight Validation Framework Implementation
+
+**Current guiv2/ State**: Basic start/pause/cancel with simple progress bar
+**Required GUI/ Parity**: Comprehensive pre-flight validation with 6+ check categories, real-time progress, and detailed reporting
+
+**Step 1: Create Pre-Flight Check Types**
+```typescript
+// guiv2/src/renderer/types/migration.ts
+export enum CheckStatus {
+  Pending = 'pending',
+  Running = 'running',
+  Passed = 'passed',
+  Warning = 'warning',
+  Failed = 'failed'
+}
+
+export enum CheckCategory {
+  Connectivity = 'connectivity',
+  Dependencies = 'dependencies',
+  Security = 'security',
+  Resources = 'resources',
+  Validation = 'validation',
+  Permissions = 'permissions'
+}
+
+export interface PreFlightCheck {
+  id: string;
+  name: string;
+  description: string;
+  category: CheckCategory;
+  status: CheckStatus;
+  isRequired: boolean;
+  startTime?: Date;
+  endTime?: Date;
+  duration?: number;
+  resultMessage?: string;
+  remediationSteps?: string[];
+}
+```
+
+**Step 2: Implement Pre-Flight Validation Service**
+```typescript
+// guiv2/src/main/services/preFlightValidationService.ts
+export class PreFlightValidationService {
+  async runPreFlightChecks(
+    sourceProfile: string,
+    targetProfile: string,
+    migrationItems: MigrationItem[]
+  ): Promise<PreFlightCheck[]> {
+    const checks: PreFlightCheck[] = [
+      {
+        id: 'source-connectivity',
+        name: 'Source Domain Connectivity',
+        description: 'Verify connectivity to source Active Directory domain',
+        category: CheckCategory.Connectivity,
+        status: CheckStatus.Pending,
+        isRequired: true
+      },
+      {
+        id: 'target-connectivity',
+        name: 'Target Domain Connectivity',
+        description: 'Verify connectivity to target Active Directory domain',
+        category: CheckCategory.Connectivity,
+        status: CheckStatus.Pending,
+        isRequired: true
+      },
+      {
+        id: 'powershell-modules',
+        name: 'PowerShell Modules',
+        description: 'Verify required PowerShell modules are available',
+        category: CheckCategory.Dependencies,
+        status: CheckStatus.Pending,
+        isRequired: true
+      },
+      {
+        id: 'migration-permissions',
+        name: 'Migration Permissions',
+        description: 'Verify account has necessary permissions for migration operations',
+        category: CheckCategory.Security,
+        status: CheckStatus.Pending,
+        isRequired: true
+      }
+    ];
+
+    // Execute checks with real validation logic
+    for (const check of checks) {
+      await this.executeCheck(check, sourceProfile, targetProfile);
+    }
+
+    return checks;
+  }
+
+  private async executeCheck(
+    check: PreFlightCheck,
+    sourceProfile: string,
+    targetProfile: string
+  ): Promise<void> {
+    check.status = CheckStatus.Running;
+    check.startTime = new Date();
+
+    try {
+      // Implement actual validation logic based on check type
+      switch (check.id) {
+        case 'source-connectivity':
+          await this.validateSourceConnectivity(sourceProfile);
+          break;
+        case 'target-connectivity':
+          await this.validateTargetConnectivity(targetProfile);
+          break;
+        // Add other check implementations
+      }
+
+      check.status = CheckStatus.Passed;
+      check.resultMessage = 'Check completed successfully';
+    } catch (error) {
+      check.status = CheckStatus.Failed;
+      check.resultMessage = error.message;
+      check.remediationSteps = this.getRemediationSteps(check.id);
+    }
+
+    check.endTime = new Date();
+    check.duration = check.endTime.getTime() - check.startTime.getTime();
+  }
+}
+```
+
+**Step 3: Enhanced Migration Execution View**
+```typescript
+// guiv2/src/renderer/views/migration/MigrationExecutionView.tsx
+export const MigrationExecutionView: React.FC = () => {
+  const [preFlightChecks, setPreFlightChecks] = useState<PreFlightCheck[]>([]);
+  const [isRunningPreFlight, setIsRunningPreFlight] = useState(false);
+  const [executionItems, setExecutionItems] = useState<MigrationExecutionItem[]>([]);
+  const [rollbackPoints, setRollbackPoints] = useState<RollbackPoint[]>([]);
+
+  const runPreFlightValidation = async () => {
+    setIsRunningPreFlight(true);
+    try {
+      const checks = await window.electronAPI.migration.runPreFlightValidation(
+        selectedSourceProfile,
+        selectedTargetProfile,
+        migrationItems
+      );
+      setPreFlightChecks(checks);
+
+      const allPassed = checks.every(c => c.status === CheckStatus.Passed);
+      if (!allPassed) {
+        const failedCount = checks.filter(c => c.status === CheckStatus.Failed).length;
+        message.error(`Pre-flight validation failed: ${failedCount} critical issues found`);
+      }
+    } finally {
+      setIsRunningPreFlight(false);
+    }
+  };
+
+  const createRollbackPoint = async () => {
+    const point: RollbackPoint = {
+      id: uuidv4(),
+      name: `Manual rollback - ${new Date().toISOString()}`,
+      createdAt: new Date(),
+      description: 'User-created rollback point',
+      isAutomatic: false,
+      migratedItemsCount: executionItems.filter(i => i.status === MigrationStatus.Completed).length,
+      canRollback: true
+    };
+
+    await window.electronAPI.migration.createRollbackPoint(point);
+    setRollbackPoints(prev => [...prev, point]);
+  };
+
+  // Progress tracking by migration type (matching GUI/ functionality)
+  const progressByType = useMemo(() => {
+    const types = ['users', 'groups', 'mailboxes', 'filesystems', 'vms', 'profiles'];
+    return types.map(type => ({
+      type,
+      total: executionItems.filter(i => i.type.toLowerCase().includes(type.slice(0, -1))).length,
+      completed: executionItems.filter(i =>
+        i.status === MigrationStatus.Completed &&
+        i.type.toLowerCase().includes(type.slice(0, -1))
+      ).length,
+      failed: executionItems.filter(i =>
+        i.status === MigrationStatus.Failed &&
+        i.type.toLowerCase().includes(type.slice(0, -1))
+      ).length
+    }));
+  }, [executionItems]);
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Pre-flight Validation Section */}
+      <div className="p-4 border-b bg-gray-50">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Pre-Flight Validation</h3>
+          <Button
+            onClick={runPreFlightValidation}
+            disabled={isRunningPreFlight}
+            variant={preFlightChecks.length > 0 && preFlightChecks.every(c => c.status === CheckStatus.Passed) ? 'success' : 'primary'}
+          >
+            {isRunningPreFlight ? 'Running...' : 'Run Pre-Flight Checks'}
+          </Button>
+        </div>
+
+        {preFlightChecks.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {preFlightChecks.map(check => (
+              <div key={check.id} className={`p-3 rounded border ${
+                check.status === CheckStatus.Passed ? 'bg-green-50 border-green-200' :
+                check.status === CheckStatus.Failed ? 'bg-red-50 border-red-200' :
+                check.status === CheckStatus.Warning ? 'bg-yellow-50 border-yellow-200' :
+                'bg-gray-50 border-gray-200'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-sm">{check.name}</span>
+                  <StatusIndicator status={check.status} />
+                </div>
+                <p className="text-xs text-gray-600">{check.description}</p>
+                {check.resultMessage && (
+                  <p className="text-xs mt-1 font-mono">{check.resultMessage}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Progress Overview */}
+      <div className="p-4 bg-blue-50 border-b">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          {progressByType.map(type => (
+            <div key={type.type} className="text-center">
+              <div className="text-2xl font-bold">{type.completed}/{type.total}</div>
+              <div className="text-xs text-gray-600 capitalize">{type.type}</div>
+              <div className="text-xs text-red-600">Failed: {type.failed}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Execution Controls */}
+      <div className="p-4 border-b">
+        <div className="flex gap-2 mb-4">
+          <Button onClick={startMigration} disabled={!canStartMigration}>
+            <Play className="w-4 h-4 mr-2" />
+            Start Migration
+          </Button>
+          <Button variant="secondary" onClick={pauseMigration} disabled={!isRunning}>
+            <Pause className="w-4 h-4 mr-2" />
+            Pause
+          </Button>
+          <Button variant="secondary" onClick={stopMigration} disabled={!isRunning}>
+            <Square className="w-4 h-4 mr-2" />
+            Stop
+          </Button>
+          <Button variant="secondary" onClick={createRollbackPoint}>
+            <Save className="w-4 h-4 mr-2" />
+            Rollback Point
+          </Button>
+        </div>
+      </div>
+
+      {/* Execution Items Grid */}
+      <div className="flex-1 overflow-auto">
+        <VirtualizedDataGrid
+          data={executionItems}
+          columns={executionColumns}
+          loading={isLoading}
+        />
+      </div>
+
+      {/* Rollback Points Panel */}
+      {rollbackPoints.length > 0 && (
+        <div className="p-4 border-t bg-gray-50">
+          <h4 className="font-semibold mb-2">Rollback Points</h4>
+          <div className="flex gap-2 overflow-x-auto">
+            {rollbackPoints.map(point => (
+              <Button
+                key={point.id}
+                variant="outline"
+                size="sm"
+                onClick={() => executeRollback(point)}
+              >
+                {point.name} ({point.migratedItemsCount} items)
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+#### Rollback Implementation
+```typescript
+// guiv2/src/main/services/rollbackService.ts
+export interface RollbackPoint {
+  id: string;
+  name: string;
+  createdAt: Date;
+  description: string;
+  isAutomatic: boolean;
+  migratedItemsCount: number;
+  canRollback: boolean;
+  snapshotData?: any; // Store state snapshot
+}
+
+export class RollbackService {
+  private rollbackPoints: RollbackPoint[] = [];
+
+  async createRollbackPoint(description: string, migrationState: any): Promise<RollbackPoint> {
+    const point: RollbackPoint = {
+      id: uuidv4(),
+      name: `Automatic - ${description}`,
+      createdAt: new Date(),
+      description,
+      isAutomatic: true,
+      migratedItemsCount: this.countMigratedItems(migrationState),
+      canRollback: true,
+      snapshotData: migrationState
+    };
+
+    this.rollbackPoints.push(point);
+    await this.persistRollbackPoints();
+    return point;
+  }
+
+  async executeRollback(point: RollbackPoint): Promise<void> {
+    // Implement rollback logic
+    // This would reverse migration operations using the snapshot data
+    console.log(`Executing rollback to: ${point.name}`);
+
+    // Reverse migration items
+    // Restore original permissions, groups, etc.
+    // This requires detailed implementation based on migration type
+  }
+
+  private countMigratedItems(state: any): number {
+    // Count successfully migrated items from current state
+    return state?.completedItems?.length || 0;
+  }
+
+  private async persistRollbackPoints(): Promise<void> {
+    const filePath = path.join(app.getPath('userData'), 'rollback-points.json');
+    await fs.promises.writeFile(filePath, JSON.stringify(this.rollbackPoints, null, 2));
+  }
+}
+```
+
+### 🏗️ PROJECT MANAGEMENT SYSTEM IMPLEMENTATION
+
+**Current guiv2/ State**: Basic project configuration
+**Required GUI/ Parity**: Complete project lifecycle with phases, tasks, Gantt charts, risk assessment
+
+**Step 1: Enhanced Project Types**
+```typescript
+// guiv2/src/renderer/types/project.ts
+export interface MigrationProject {
+  id: string;
+  name: string;
+  description?: string;
+  sourceProfile: string;
+  targetProfile: string;
+  startDate: Date;
+  endDate: Date;
+  status: ProjectStatus;
+  phases: MigrationPhase[];
+  risks: Risk[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MigrationPhase {
+  id: string;
+  name: string;
+  description?: string;
+  startDate: Date;
+  endDate: Date;
+  status: PhaseStatus;
+  tasks: MigrationProjectTask[];
+  dependencies: string[]; // Phase IDs this depends on
+  progress: number; // 0-100
+}
+
+export interface MigrationProjectTask {
+  id: string;
+  phaseId: string;
+  name: string;
+  description?: string;
+  startDate: Date;
+  endDate: Date;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assignedTo?: string;
+  dependencies: string[]; // Task IDs this depends on
+  isCriticalPath: boolean;
+  estimatedHours?: number;
+  actualHours?: number;
+  progress: number; // 0-100
+  riskLevel: RiskSeverity;
+}
+
+export enum ProjectStatus {
+  Planning = 'planning',
+  Active = 'active',
+  OnHold = 'on_hold',
+  Completed = 'completed',
+  Cancelled = 'cancelled'
+}
+
+export enum RiskSeverity {
+  Low = 'low',
+  Medium = 'medium',
+  High = 'high',
+  Critical = 'critical'
+}
+```
+
+**Step 2: Project Service Implementation**
+```typescript
+// guiv2/src/main/services/projectService.ts
+export class ProjectService {
+  private readonly projectPath: string;
+
+  constructor() {
+    this.projectPath = path.join(app.getPath('userData'), 'projects');
+    this.ensureProjectDirectory();
+  }
+
+  async createProject(projectData: Partial<MigrationProject>): Promise<MigrationProject> {
+    const project: MigrationProject = {
+      id: uuidv4(),
+      name: projectData.name || 'New Migration Project',
+      description: projectData.description,
+      sourceProfile: projectData.sourceProfile || '',
+      targetProfile: projectData.targetProfile || '',
+      startDate: projectData.startDate || new Date(),
+      endDate: projectData.endDate || addDays(new Date(), 90),
+      status: ProjectStatus.Planning,
+      phases: this.createDefaultPhases(),
+      risks: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    await this.saveProject(project);
+    return project;
+  }
+
+  async loadProject(projectId: string): Promise<MigrationProject | null> {
+    try {
+      const filePath = path.join(this.projectPath, `${projectId}.json`);
+      const content = await fs.promises.readFile(filePath, 'utf-8');
+      const project = JSON.parse(content);
+
+      // Convert date strings back to Date objects
+      return this.deserializeProject(project);
+    } catch (error) {
+      console.error('Error loading project:', error);
+      return null;
+    }
+  }
+
+  async updateProject(project: MigrationProject): Promise<void> {
+    project.updatedAt = new Date();
+    await this.saveProject(project);
+  }
+
+  async calculateOverallProgress(project: MigrationProject): Promise<number> {
+    if (!project.phases || project.phases.length === 0) return 0;
+
+    const totalTasks = project.phases.reduce((sum, phase) => sum + phase.tasks.length, 0);
+    if (totalTasks === 0) return 0;
+
+    const completedTasks = project.phases.reduce((sum, phase) =>
+      sum + phase.tasks.filter(task => task.status === TaskStatus.Completed).length, 0);
+
+    return Math.round((completedTasks / totalTasks) * 100);
+  }
+
+  private createDefaultPhases(): MigrationPhase[] {
+    const today = new Date();
+    return [
+      {
+        id: uuidv4(),
+        name: 'Discovery & Assessment',
+        description: 'Initial discovery and environment assessment',
+        startDate: today,
+        endDate: addDays(today, 14),
+        status: PhaseStatus.NotStarted,
+        tasks: [],
+        dependencies: [],
+        progress: 0
+      },
+      {
+        id: uuidv4(),
+        name: 'Planning & Design',
+        description: 'Migration planning and design',
+        startDate: addDays(today, 15),
+        endDate: addDays(today, 35),
+        status: PhaseStatus.NotStarted,
+        tasks: [],
+        dependencies: [],
+        progress: 0
+      },
+      {
+        id: uuidv4(),
+        name: 'Pilot Migration',
+        description: 'Pilot migration testing',
+        startDate: addDays(today, 36),
+        endDate: addDays(today, 49),
+        status: PhaseStatus.NotStarted,
+        tasks: [],
+        dependencies: [],
+        progress: 0
+      },
+      {
+        id: uuidv4(),
+        name: 'Full Migration',
+        description: 'Complete migration execution',
+        startDate: addDays(today, 50),
+        endDate: addDays(today, 70),
+        status: PhaseStatus.NotStarted,
+        tasks: [],
+        dependencies: [],
+        progress: 0
+      },
+      {
+        id: uuidv4(),
+        name: 'Validation & Go-Live',
+        description: 'Final validation and go-live',
+        startDate: addDays(today, 71),
+        endDate: addDays(today, 84),
+        status: PhaseStatus.NotStarted,
+        tasks: [],
+        dependencies: [],
+        progress: 0
+      }
+    ];
+  }
+
+  private async saveProject(project: MigrationProject): Promise<void> {
+    const filePath = path.join(this.projectPath, `${project.id}.json`);
+    const serialized = this.serializeProject(project);
+    await fs.promises.writeFile(filePath, JSON.stringify(serialized, null, 2));
+  }
+
+  private serializeProject(project: MigrationProject): any {
+    return {
+      ...project,
+      startDate: project.startDate.toISOString(),
+      endDate: project.endDate.toISOString(),
+      createdAt: project.createdAt.toISOString(),
+      updatedAt: project.updatedAt.toISOString(),
+      phases: project.phases.map(phase => ({
+        ...phase,
+        startDate: phase.startDate.toISOString(),
+        endDate: phase.endDate.toISOString(),
+        tasks: phase.tasks.map(task => ({
+          ...task,
+          startDate: task.startDate.toISOString(),
+          endDate: task.endDate.toISOString()
+        }))
+      }))
+    };
+  }
+
+  private deserializeProject(data: any): MigrationProject {
+    return {
+      ...data,
+      startDate: new Date(data.startDate),
+      endDate: new Date(data.endDate),
+      createdAt: new Date(data.createdAt),
+      updatedAt: new Date(data.updatedAt),
+      phases: data.phases.map((phase: any) => ({
+        ...phase,
+        startDate: new Date(phase.startDate),
+        endDate: new Date(phase.endDate),
+        tasks: phase.tasks.map((task: any) => ({
+          ...task,
+          startDate: new Date(task.startDate),
+          endDate: new Date(task.endDate)
+        }))
+      }))
+    };
+  }
+
+  private ensureProjectDirectory(): void {
+    if (!fs.existsSync(this.projectPath)) {
+      fs.mkdirSync(this.projectPath, { recursive: true });
+    }
+  }
+}
+```
+
+**Step 3: Project Management Dashboard View**
+```typescript
+// guiv2/src/renderer/views/project/ProjectManagementDashboardView.tsx
+export const ProjectManagementDashboardView: React.FC = () => {
+  const { project, loading, updateProject, calculateProgress } = useProjectManagement();
+
+  const overallProgress = useMemo(() => calculateProgress(project), [project, calculateProgress]);
+
+  const tasksAtRisk = useMemo(() => {
+    if (!project?.phases) return 0;
+    return project.phases.reduce((count, phase) =>
+      count + phase.tasks.filter(task =>
+        task.status === TaskStatus.Blocked ||
+        task.status === TaskStatus.AtRisk ||
+        (task.endDate < new Date() && task.status !== TaskStatus.Completed)
+      ).length, 0);
+  }, [project]);
+
+  const upcomingDeadlines = useMemo(() => {
+    if (!project?.phases) return [];
+    const allTasks = project.phases.flatMap(phase => phase.tasks);
+    return allTasks
+      .filter(task =>
+        task.endDate <= addDays(new Date(), 7) &&
+        task.status !== TaskStatus.Completed
+      )
+      .sort((a, b) => a.endDate.getTime() - b.endDate.getTime())
+      .slice(0, 10);
+  }, [project]);
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Project Management Dashboard</h1>
+          <p className="text-gray-600 mt-1">{project?.name}</p>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-bold">{overallProgress}%</div>
+          <div className="text-sm text-gray-600">Overall Progress</div>
+        </div>
+      </div>
+
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <MetricCard
+          title="Total Tasks"
+          value={project?.phases?.reduce((sum, phase) => sum + phase.tasks.length, 0) || 0}
+          icon={<CheckSquare className="w-6 h-6" />}
+        />
+        <MetricCard
+          title="Completed Tasks"
+          value={project?.phases?.reduce((sum, phase) =>
+            sum + phase.tasks.filter(task => task.status === TaskStatus.Completed).length, 0) || 0}
+          icon={<CheckCircle className="w-6 h-6" />}
+          color="green"
+        />
+        <MetricCard
+          title="Tasks at Risk"
+          value={tasksAtRisk}
+          icon={<AlertTriangle className="w-6 h-6" />}
+          color="red"
+        />
+        <MetricCard
+          title="Days Remaining"
+          value={project ? differenceInDays(project.endDate, new Date()) : 0}
+          icon={<Calendar className="w-6 h-6" />}
+        />
+      </div>
+
+      {/* Project Timeline */}
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold mb-4">Project Timeline</h2>
+        <ProjectTimelineChart project={project} />
+      </Card>
+
+      {/* Phase Progress */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Phase Progress</h3>
+          <PhaseProgressChart phases={project?.phases || []} />
+        </Card>
+
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Upcoming Deadlines</h3>
+          <UpcomingDeadlinesList tasks={upcomingDeadlines} />
+        </Card>
+      </div>
+
+      {/* Risk Assessment */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4">Risk Assessment</h3>
+        <RiskMatrix risks={project?.risks || []} />
+      </Card>
+    </div>
+  );
+};
+```
+
+#### Gantt Chart Implementation
+```typescript
+// guiv2/src/renderer/components/charts/GanttChart.tsx
+interface GanttChartProps {
+  tasks: MigrationProjectTask[];
+  phases: MigrationPhase[];
+  onTaskUpdate: (taskId: string, updates: Partial<MigrationProjectTask>) => void;
+}
+
+export const GanttChart: React.FC<GanttChartProps> = ({ tasks, phases, onTaskUpdate }) => {
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+
+  const chartData = useMemo(() => {
+    return tasks.map(task => {
+      const phase = phases.find(p => p.id === task.phaseId);
+      return {
+        id: task.id,
+        name: task.name,
+        start: task.startDate,
+        end: task.endDate,
+        progress: task.progress,
+        dependencies: task.dependencies,
+        phase: phase?.name || 'Unknown',
+        status: task.status,
+        isCriticalPath: task.isCriticalPath
+      };
+    });
+  }, [tasks, phases]);
+
+  return (
+    <div className="gantt-chart-container">
+      <div className="gantt-header flex border-b">
+        <div className="w-64 p-2 font-semibold">Task</div>
+        <div className="flex-1 p-2 font-semibold">Timeline</div>
+      </div>
+
+      <div className="gantt-body max-h-96 overflow-y-auto">
+        {chartData.map(task => (
+          <GanttRow
+            key={task.id}
+            task={task}
+            isSelected={selectedTask === task.id}
+            onSelect={() => setSelectedTask(task.id)}
+            onUpdate={(updates) => onTaskUpdate(task.id, updates)}
+          />
+        ))}
+      </div>
+
+      <GanttLegend />
+    </div>
+  );
+};
+
+// Individual Gantt row component
+const GanttRow: React.FC<{
+  task: any;
+  isSelected: boolean;
+  onSelect: () => void;
+  onUpdate: (updates: any) => void;
+}> = ({ task, isSelected, onSelect, onUpdate }) => {
+  return (
+    <div
+      className={`gantt-row flex border-b hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''}`}
+      onClick={onSelect}
+    >
+      <div className="w-64 p-2 border-r">
+        <div className="font-medium">{task.name}</div>
+        <div className="text-sm text-gray-600">{task.phase}</div>
+      </div>
+
+      <div className="flex-1 relative p-2">
+        <GanttBar
+          task={task}
+          onUpdate={onUpdate}
+        />
+      </div>
+    </div>
+  );
+};
+```
+
+### 🔐 PROFILE MANAGEMENT ENHANCEMENT
+
+**Current guiv2/ State**: Basic profile selection
+**Required GUI/ Parity**: Dual profile management with app registration, connection testing
+
+**Step 1: Enhanced Profile Store**
+```typescript
+// guiv2/src/renderer/store/useProfileStore.ts
+interface ProfileState {
+  sourceProfiles: CompanyProfile[];
+  targetProfiles: TargetProfile[];
+  selectedSourceProfile: CompanyProfile | null;
+  selectedTargetProfile: TargetProfile | null;
+  connectionStatuses: Record<string, ConnectionStatus>;
+  isLoadingProfiles: boolean;
+
+  // Actions
+  loadSourceProfiles: () => Promise<void>;
+  loadTargetProfiles: () => Promise<void>;
+  setSelectedSourceProfile: (profile: CompanyProfile | null) => void;
+  setSelectedTargetProfile: (profile: TargetProfile | null) => void;
+  testSourceConnection: (profile: CompanyProfile) => Promise<ConnectionTestResult>;
+  testTargetConnection: (profile: TargetProfile) => Promise<ConnectionTestResult>;
+  createTargetProfile: (profile: Partial<TargetProfile>) => Promise<void>;
+  runAppRegistration: (profile: CompanyProfile, isTarget: boolean) => Promise<void>;
+}
+
+export const useProfileStore = create<ProfileState>((set, get) => ({
+  sourceProfiles: [],
+  targetProfiles: [],
+  selectedSourceProfile: null,
+  selectedTargetProfile: null,
+  connectionStatuses: {},
+  isLoadingProfiles: false,
+
+  loadSourceProfiles: async () => {
+    set({ isLoadingProfiles: true });
+    try {
+      const profiles = await window.electronAPI.profiles.getSourceProfiles();
+      set({ sourceProfiles: profiles });
+
+      // Restore selected profile from persistent storage
+      const savedId = await window.electronAPI.settings.get('selectedSourceProfileId');
+      if (savedId) {
+        const savedProfile = profiles.find(p => p.id === savedId);
+        if (savedProfile) {
+          set({ selectedSourceProfile: savedProfile });
+        }
+      }
+    } finally {
+      set({ isLoadingProfiles: false });
+    }
+  },
+
+  loadTargetProfiles: async () => {
+    const state = get();
+    if (!state.selectedSourceProfile) return;
+
+    try {
+      const profiles = await window.electronAPI.profiles.getTargetProfiles(state.selectedSourceProfile.id);
+      set({ targetProfiles: profiles });
+
+      // Restore selected target profile
+      const savedId = await window.electronAPI.settings.get('selectedTargetProfileId');
+      if (savedId) {
+        const savedProfile = profiles.find(p => p.id === savedId);
+        if (savedProfile) {
+          set({ selectedTargetProfile: savedProfile });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load target profiles:', error);
+    }
+  },
+
+  setSelectedSourceProfile: async (profile) => {
+    set({ selectedSourceProfile: profile });
+
+    // Persist selection
+    await window.electronAPI.settings.set('selectedSourceProfileId', profile?.id || null);
+
+    // Refresh target profiles when source changes
+    if (profile) {
+      await get().loadTargetProfiles();
+    } else {
+      set({ targetProfiles: [], selectedTargetProfile: null });
+    }
+  },
+
+  setSelectedTargetProfile: async (profile) => {
+    set({ selectedTargetProfile: profile });
+
+    // Persist selection
+    await window.electronAPI.settings.set('selectedTargetProfileId', profile?.id || null);
+  },
+
+  testSourceConnection: async (profile) => {
+    const testId = `source-${profile.id}`;
+    set(state => ({
+      connectionStatuses: { ...state.connectionStatuses, [testId]: ConnectionStatus.Testing }
+    }));
+
+    try {
+      const result = await window.electronAPI.profiles.testSourceConnection(profile);
+
+      set(state => ({
+        connectionStatuses: { ...state.connectionStatuses, [testId]: result.success ? ConnectionStatus.Connected : ConnectionStatus.Failed }
+      }));
+
+      return result;
+    } catch (error) {
+      set(state => ({
+        connectionStatuses: { ...state.connectionStatuses, [testId]: ConnectionStatus.Error }
+      }));
+
+      throw error;
+    }
+  },
+
+  testTargetConnection: async (profile) => {
+    const testId = `target-${profile.id}`;
+    set(state => ({
+      connectionStatuses: { ...state.connectionStatuses, [testId]: ConnectionStatus.Testing }
+    }));
+
+    try {
+      const result = await window.electronAPI.profiles.testTargetConnection(profile);
+
+      set(state => ({
+        connectionStatuses: { ...state.connectionStatuses, [testId]: result.success ? ConnectionStatus.Connected : ConnectionStatus.Failed }
+      }));
+
+      return result;
+    } catch (error) {
+      set(state => ({
+        connectionStatuses: { ...state.connectionStatuses, [testId]: ConnectionStatus.Error }
+      }));
+
+      throw error;
+    }
+  },
+
+  createTargetProfile: async (profileData) => {
+    const state = get();
+    if (!state.selectedSourceProfile) {
+      throw new Error('No source profile selected');
+    }
+
+    const newProfile: TargetProfile = {
+      id: uuidv4(),
+      name: profileData.name || 'New Target Profile',
+      tenantId: profileData.tenantId || '',
+      clientId: profileData.clientId || '',
+      description: profileData.description || '',
+      isActive: false,
+      createdAt: new Date(),
+      lastModified: new Date()
+    };
+
+    await window.electronAPI.profiles.createTargetProfile(state.selectedSourceProfile.id, newProfile);
+
+    // Refresh target profiles
+    await get().loadTargetProfiles();
+  },
+
+  runAppRegistration: async (profile, isTarget) => {
+    try {
+      await window.electronAPI.profiles.runAppRegistration({
+        profileId: profile.id,
+        isTarget,
+        companyName: profile.companyName
+      });
+
+      // Show success message and refresh profiles
+      await get().loadSourceProfiles();
+      if (isTarget) {
+        await get().loadTargetProfiles();
+      }
+    } catch (error) {
+      console.error('App registration failed:', error);
+      throw error;
+    }
+  }
+}));
+```
+
+**Step 2: Enhanced Profile Selector Component**
+```typescript
+// guiv2/src/renderer/components/molecules/ProfileSelector.tsx
+interface ProfileSelectorProps {
+  className?: string;
+}
+
+export const ProfileSelector: React.FC<ProfileSelectorProps> = ({ className }) => {
+  const {
+    sourceProfiles,
+    targetProfiles,
+    selectedSourceProfile,
+    selectedTargetProfile,
+    connectionStatuses,
+    isLoadingProfiles,
+    setSelectedSourceProfile,
+    setSelectedTargetProfile,
+    testSourceConnection,
+    testTargetConnection,
+    createTargetProfile,
+    runAppRegistration
+  } = useProfileStore();
+
+  const [showCreateTargetDialog, setShowCreateTargetDialog] = useState(false);
+
+  return (
+    <div className={`space-y-6 ${className}`}>
+      {/* Source Profile Section */}
+      <div className="p-4 bg-white rounded-lg border">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Source Company Profile</h3>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/profiles/create')}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => selectedSourceProfile && runAppRegistration(selectedSourceProfile, false)}
+              disabled={!selectedSourceProfile}
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              App Reg
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Source Profile
+            </label>
+            <Select
+              value={selectedSourceProfile?.id || ''}
+              onValueChange={(value) => {
+                const profile = sourceProfiles.find(p => p.id === value);
+                setSelectedSourceProfile(profile || null);
+              }}
+              disabled={isLoadingProfiles}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose source profile..." />
+              </SelectTrigger>
+              <SelectContent>
+                {sourceProfiles.map(profile => (
+                  <SelectItem key={profile.id} value={profile.id}>
+                    {profile.companyName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedSourceProfile && (
+            <div className="grid grid-cols-2 gap-4">
+              <ConnectionStatusCard
+                title="Environment"
+                status={connectionStatuses[`source-${selectedSourceProfile.id}`] || ConnectionStatus.Unknown}
+                onTest={() => testSourceConnection(selectedSourceProfile)}
+              />
+              <ConnectionStatusCard
+                title="Data Available"
+                status={selectedSourceProfile.hasData ? ConnectionStatus.Connected : ConnectionStatus.NoData}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Target Profile Section */}
+      <div className="p-4 bg-white rounded-lg border">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Target Company Profile</h3>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCreateTargetDialog(true)}
+              disabled={!selectedSourceProfile}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => selectedTargetProfile && runAppRegistration(selectedTargetProfile, true)}
+              disabled={!selectedTargetProfile}
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              App Reg
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Target Profile
+            </label>
+            <Select
+              value={selectedTargetProfile?.id || ''}
+              onValueChange={(value) => {
+                const profile = targetProfiles.find(p => p.id === value);
+                setSelectedTargetProfile(profile || null);
+              }}
+              disabled={!selectedSourceProfile || targetProfiles.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={selectedSourceProfile ? "Choose target profile..." : "Select source profile first"} />
+              </SelectTrigger>
+              <SelectContent>
+                {targetProfiles.map(profile => (
+                  <SelectItem key={profile.id} value={profile.id}>
+                    {profile.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedTargetProfile && (
+            <div className="grid grid-cols-2 gap-4">
+              <ConnectionStatusCard
+                title="Environment"
+                status={connectionStatuses[`target-${selectedTargetProfile.id}`] || ConnectionStatus.Unknown}
+                onTest={() => testTargetConnection(selectedTargetProfile)}
+              />
+              <ConnectionStatusCard
+                title="Credentials"
+                status={selectedTargetProfile.hasValidCredentials ? ConnectionStatus.Connected : ConnectionStatus.NoCredentials}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Create Target Profile Dialog */}
+      <CreateTargetProfileDialog
+        open={showCreateTargetDialog}
+        onClose={() => setShowCreateTargetDialog(false)}
+        onCreate={createTargetProfile}
+        sourceProfile={selectedSourceProfile}
+      />
+    </div>
+  );
+};
+```
+
+### 🎨 DISCOVERY MODULE ENHANCEMENT
+
+**Current guiv2/ State**: Basic discovery hooks
+**Required GUI/ Parity**: Summary statistics, detail views, export capabilities
+
+**Step 1: Enhanced Discovery View Template**
+```typescript
+// guiv2/src/renderer/components/templates/DiscoveryViewTemplate.tsx
+interface DiscoveryViewTemplateProps<T> {
+  title: string;
+  moduleInfo: ModuleInfo;
+  data: T[];
+  columns: ColumnDef<T>[];
+  summaryStats?: DiscoverySummaryStats;
+  onRefresh: () => Promise<void>;
+  onExport: (format: 'csv' | 'json') => Promise<void>;
+  onViewDetails: (item: T) => void;
+  isLoading: boolean;
+  error?: string;
+}
+
+export function DiscoveryViewTemplate<T extends DiscoveryItem>(props: DiscoveryViewTemplateProps<T>) {
+  const {
+    title,
+    moduleInfo,
+    data,
+    columns,
+    summaryStats,
+    onRefresh,
+    onExport,
+    onViewDetails,
+    isLoading,
+    error
+  } = props;
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b">
+        <div>
+          <h1 className="text-2xl font-bold">{title}</h1>
+          <p className="text-sm text-gray-600">{moduleInfo.description}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onRefresh} disabled={isLoading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button variant="outline" onClick={() => onExport('csv')}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button variant="outline" onClick={() => onExport('json')}>
+            <Download className="w-4 h-4 mr-2" />
+            Export JSON
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary Statistics Cards */}
+      {summaryStats && (
+        <div className="p-4 border-b bg-gray-50">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <StatsCard
+              title="Total Items"
+              value={summaryStats.totalItems}
+              icon={<Database className="w-5 h-5" />}
+            />
+            <StatsCard
+              title="Unique Resources"
+              value={summaryStats.uniqueResources}
+              icon={<Layers className="w-5 h-5" />}
+            />
+            <StatsCard
+              title="Last Discovery"
+              value={summaryStats.lastDiscovery?.toLocaleString() || 'Never'}
+              icon={<Clock className="w-5 h-5" />}
+            />
+            <StatsCard
+              title="Data Sources"
+              value={summaryStats.dataSources}
+              icon={<Server className="w-5 h-5" />}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="p-4 border-b bg-red-50">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <span className="text-red-700">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Data Grid */}
+      <div className="flex-1 overflow-hidden">
+        <DataGrid
+          data={data}
+          columns={columns}
+          loading={isLoading}
+          onRowDoubleClick={onViewDetails}
+          enableColumnResize
+          enableSorting
+          enableFiltering
+          enablePagination
+          pageSize={50}
+        />
+      </div>
+
+      {/* Footer */}
+      <div className="p-2 border-t text-center text-xs text-gray-500">
+        {data.length} items loaded • {moduleInfo.displayName} Discovery Module
+      </div>
+    </div>
+  );
+}
+```
+
+**Step 2: Detail View Modal Implementation**
+```typescript
+// guiv2/src/renderer/components/organisms/DetailViewModal.tsx
+interface DetailViewModalProps<T> {
+  item: T | null;
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  fields: DetailField[];
+  onEdit?: (item: T, field: string, value: any) => void;
+  readonly?: boolean;
+}
+
+interface DetailField {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'boolean' | 'date' | 'json';
+  readonly?: boolean;
+  format?: (value: any) => string;
+}
+
+export function DetailViewModal<T extends Record<string, any>>({
+  item,
+  open,
+  onClose,
+  title,
+  fields,
+  onEdit,
+  readonly = true
+}: DetailViewModalProps<T>) {
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+
+  const handleEdit = (field: DetailField, value: any) => {
+    if (readonly || !onEdit || !item) return;
+
+    setEditingField(field.key);
+    setEditValue(String(value));
+  };
+
+  const handleSave = () => {
+    if (!editingField || !onEdit || !item) return;
+
+    onEdit(item, editingField, editValue);
+    setEditingField(null);
+  };
+
+  const handleCancel = () => {
+    setEditingField(null);
+    setEditValue('');
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title={title} size="lg">
+      <div className="space-y-4">
+        {fields.map(field => {
+          const value = item?.[field.key];
+          const isEditing = editingField === field.key;
+
+          return (
+            <div key={field.key} className="grid grid-cols-3 gap-4 items-center">
+              <label className="font-medium text-gray-700">
+                {field.label}:
+              </label>
+
+              <div className="col-span-2">
+                {isEditing ? (
+                  <div className="flex gap-2">
+                    {field.type === 'boolean' ? (
+                      <Switch
+                        checked={editValue === 'true'}
+                        onCheckedChange={(checked) => setEditValue(String(checked))}
+                      />
+                    ) : (
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        type={field.type}
+                      />
+                    )}
+                    <Button size="sm" onClick={handleSave}>
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleCancel}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    className={`p-2 bg-gray-50 rounded ${!readonly && !field.readonly ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                    onClick={() => handleEdit(field, value)}
+                  >
+                    {field.format ? field.format(value) :
+                     field.type === 'json' ? JSON.stringify(value, null, 2) :
+                     field.type === 'boolean' ? (value ? 'Yes' : 'No') :
+                     String(value || 'N/A')}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-end gap-2 mt-6">
+        <Button variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+```
+
+### ⌨️ KEYBOARD SHORTCUTS & ADVANCED NAVIGATION
+
+**Current guiv2/ State**: Basic keyboard shortcuts
+**Required GUI/ Parity**: 50+ shortcuts with command palette
+
+**Step 1: Comprehensive Keyboard Shortcuts System**
+```typescript
+// guiv2/src/renderer/hooks/useKeyboardShortcuts.ts
 This analysis was completed on October 5, 2025, based on comprehensive code review of both /gui/ and /guiv2/ implementations.
+---
+### WPF Parity Implementation Backlog (generated 2025-10-15)
+
+The legacy WPF surface still contains production-grade tooling that is not yet represented in /guiv2. Ship the feature groups below to close the gap. Each item lists the canonical WPF source, the guiv2 integration points, and concrete implementation steps.
+
+#### Discovery & Infrastructure parity
+- **Infrastructure drill-down (Azure/Network/Physical/File server)**  
+  - Source: `GUI/ViewModels/AzureInfrastructureDiscoveryViewModel.cs:10`, `GUI/ViewModels/NetworkInfrastructureDiscoveryViewModel.cs:11`, `GUI/Services/CsvDataServiceNew.cs:381`, `GUI/Models/InfrastructureData.cs:9`.  
+  - guiv2 targets: add IPC endpoints in `src/main/ipcHandlers.ts` and `src/main/services/logicEngineService.ts`, renderer views under `src/renderer/views/infrastructure`.  
+  - Steps:  
+    1. Extend `LogicEngineService` with typed selectors (`getInfrastructureSummary`, `getNetworkSegments`, `getPhysicalServers`, `getFileServers`) that hydrate from the existing maps populated in `loadDevicesStreamingAsync` and `loadSqlDatabasesStreamingAsync`.  
+    2. Register IPC handlers (`ipcMain.handle('infrastructure:get-summary', ...)`) that pass the current profile from `useProfileStore`.  
+    3. Replace the static `defaultDiscoveryModules` array in `useInfrastructureDiscoveryHubLogic.ts:54` with data retrieved from the module registry so tiles dynamically enable the new views.  
+    4. Create hooks such as `useInfrastructureDetailLogic.ts` that call the IPC layer and wrap loading/error states. Example skeleton:
+       ```ts
+       export const useInfrastructureDetailLogic = (segment: string) => {
+         const [state, setState] = useState<InfrastructureSummary | null>(null);
+         const profile = useProfileStore.getState().activeProfile;
+         useEffect(() => {
+           if (!profile) return;
+           window.electronAPI.infrastructure.getSummary({ profile, segment })
+             .then(setState)
+             .catch(err => setError(err.message));
+         }, [profile, segment]);
+         return state;
+       };
+       ```
+    5. Build React surfaces (`AzureInfrastructureView.tsx`, `NetworkInfrastructureView.tsx`, `PhysicalServerDiscoveryView.tsx`, `FileServersView.tsx`) that mirror the tab/metric layout from the XAML layer (see `GUI/Views/AzureInfrastructureDiscoveryView.xaml`). Reuse the shared table components (`VirtualizedTable`, badges, sparklines`) for KPI rows defined in WPF.
+
+- **Discovery launchpad parity**  
+  - Source: `GUI/ViewModels/DiscoveryViewModel.cs:13` and `GUI/Services/ModuleRegistryService.cs:38`.  
+  - guiv2 targets: `src/main/services/moduleRegistry.ts`, `src/renderer/views/discovery/InfrastructureDiscoveryHubView.tsx:45`, `src/renderer/store/useDiscoveryStore.ts:18`.  
+  - Steps: surface all WPF module descriptors inside `config/module-registry.json`, then hydrate the hub view from IPC instead of `localStorage` (replace code around `localStorage.getItem('discoveryModulesStatus')` in the hook). Add support for category filters exposed in WPF (`identity`, `security`, `storage`) and wire the "Start discovery" buttons to `useDiscoveryStore.startDiscovery` with the correct PowerShell module names (pulled from `ModuleInfo.ModulePath` in the registry).
+
+- **Asset detail inspector**  
+  - Source: `GUI/ViewModels/AssetDetailViewModel.cs:15`, `GUI/Services/DataExportService.cs:24`.  
+  - guiv2 targets: new IPC endpoint `logicEngine.getAssetDetail(deviceName)` plus renderer view `src/renderer/views/assets/AssetDetailView.tsx`.  
+  - Steps:  
+    1. Port the asset projection builder from `AssetDetailViewModel.LoadAssetDetailAsync` into a TypeScript method that composes the existing maps in `LogicEngineService` (`devicesByName`, `appsByDevice`, `aclByIdentitySid`).  
+    2. Expose that projection through IPC and add an export handler that reuses `renderer/services/exportService.ts`.  
+    3. Create `useAssetDetailLogic` hook that fetches the projection and groupings (users, apps, ACLs, GPOs, SQL DBs, risks) and memoizes tab payloads.  
+    4. Implement tabbed UI with seven panes to match the WPF layout (Profile, Ownership, Applications, File Access, Policies, Databases, Risks). Include migration wave actions by dispatching to `useMigrationStore.addItemsToWave`.
+
+#### Migration & project orchestration
+- **Wave planner, Gantt, phase tracker, and VMMigration parity**  
+  - Source: `GUI/ViewModels/MigrationPlanningViewModel.cs:18`, `GUI/ViewModels/GanttViewModel.cs:12`, `GUI/Views/WaveView.xaml`, `GUI/Views/VMMigrationView.xaml`.  
+  - guiv2 targets: extend `src/main/services/projectService.ts`, `src/main/services/dashboardService.ts`, renderer views under `src/renderer/views/migration` and `src/renderer/views/project`.  
+  - Steps:  
+    1. Add persistent wave schema parity using the WPF `MigrationWave` model (`GUI/Models/MigrationModels.cs:21`) and map to the existing Zustand store (`useMigrationStore.ts:20`). Ensure ordering, priority, and dependency metadata are stored.  
+    2. Implement `projectService.listGanttMilestones()` that emits the milestone structure captured in WPF (`ProjectPhase.Components.Tasks`). Feed this into new components `WaveTimeline` and `PhaseTrackerPanel`.  
+    3. Transport virtualization tasks (Hyper-V, VMware) into dedicated views by adding PowerShell module bindings via IPC and reusing `useMigrationPlanningLogic`.  
+    4. Wire pre/post migration validation flows by porting the command pipeline from `MigrationExecutionViewModel` to the existing `MigrationExecutionView.tsx`, enabling status transitions identical to the WPF `TabsService.OpenMigrationTabsAsync`.
+
+- **Project management cockpit**  
+  - Source: `GUI/ViewModels/ProjectManagementViewModel.cs:13`, `GUI/Models/ProjectManagementModels.cs:9`.  
+  - guiv2 targets: create `src/renderer/views/project/ProjectManagementView.tsx` backed by a new `useProjectManagementLogic.ts` hook.  
+  - Steps:  
+    1. Extend `projectService.ts` with CRUD operations for phases, components, tasks, risks, and stakeholders mirroring the WPF models. Persist to `Project.json`.  
+    2. Build a dedicated Zustand slice (`useProjectStore`) to manage the selected phase/component/task and expose computed stats (completed tasks, overdue tasks, high risks).  
+    3. Implement UI regions: dashboard tiles, milestone timeline, expandable phase tree, risk matrix, and stakeholder roster. Reuse `DragDropContext` to support task reprioritization and emit events for `useNotificationStore`.  
+    4. Hook export/report actions to `renderer/services/exportService.ts` to reproduce WPF save/export behavior.
+
+- **What-If simulation & migration complexity**  
+  - Source: `GUI/ViewModels/WhatIfSimulationViewModel.cs:15`, `GUI/Services/WhatIfSimulationService.cs:22`, `GUI/Services/LogicEngineService.cs:856`.  
+  - guiv2 targets: add `logicEngine.runSimulation(parameters)` in the main process and build a renderer flow under `src/renderer/views/migration/WhatIfSimulationView.tsx`.  
+  - Steps: port the scenario definitions (parameters, comparisons, risk outputs) and expose progress events via IPC streaming so the React view can show progress, status, and result tabs. Persist saved simulations in `config/simulations.json` with the same schema as the WPF service.
+
+#### Data management & UX tooling
+- **Advanced filter & bulk edit**  
+  - Source: `GUI/ViewModels/AdvancedFilterViewModel.cs:15`, `GUI/ViewModels/BulkEditViewModel.cs:12`, `GUI/Services/IAdvancedFilterService.cs:9`.  
+  - guiv2 targets: renderer view `src/renderer/views/advanced/AdvancedFilterView.tsx`, leverage `renderer/services/filteringService.ts` and `renderer/services/importService.ts`.  
+  - Steps:  
+    1. Build a reusable `AdvancedFilterPanel` component that mirrors rule groups, presets, and quick filters described in the WPF view model. Persist filters via `FilteringService.savePreset`.  
+    2. Integrate bulk edit operations by sending selected entity IDs and edit payloads through `window.electronAPI.bulkEdit` (implement module execution using the existing PowerShell service).  
+    3. Provide context menu entry points in entity tables (Users, Groups, Assets) to launch the filter/bulk-edit dialogs exactly as `MainViewModel.OpenAdvancedFilterCommand` does.
+
+- **Virtualization, shimmer loading, keyboard shortcuts, command palette**  
+  - Source: `GUI/Controls/VirtualizedListView.xaml`, `GUI/ViewModels/ShimmerLoadingViewModel.cs:9`, `GUI/ViewModels/KeyboardShortcutsViewModel.cs:11`, `GUI/ViewModels/CommandPaletteViewModel.cs:19`.  
+  - guiv2 targets: wrap existing table components with `react-window`, surface shimmer placeholders in shared `LoadingSkeleton` components, expose keyboard shortcut inventory via `renderer/services/keyboardShortcutService.ts`, and connect `commandPaletteService.ts` to a UI overlay triggered by `Ctrl+P`.  
+  - Steps:  
+    1. Replace manual pagination in heavy tables with windowed rendering (for example integrate `VariableSizeList` in `components/organisms/DataGrid`).  
+    2. Publish the shortcut list through a new route `/advanced/keyboard-shortcuts` replicating WPF�s reference sheet.  
+    3. Ensure palette actions proxy to `useTabStore.openTab` so behavior matches `TabsService.OpenTabAsync`.
+
+- **Notes tagging & notification templates**  
+  - Source: `GUI/ViewModels/NotesTaggingViewModel.cs:13`, `GUI/ViewModels/NotificationTemplateEditorViewModel.cs:12`.  
+  - guiv2 targets: new stores `useNotesStore`, `useNotificationTemplateStore`, renderer views under `src/renderer/views/advanced`.  
+  - Steps: persist tag metadata in profile-scoped JSON (`Notes.json`, `NotificationTemplates.json`), expose CRUD IPC handlers, and build editors using existing form atoms. Ensure exports rely on `exportService` to maintain parity with WPF `DataExportService`.
+
+#### Analytics, reporting & audit
+- **Analytics dashboard & management hubs**  
+  - Source: `GUI/ViewModels/AnalyticsViewModel.cs:10`, `GUI/ViewModels/ManagementHubViewModel.cs:14`, `GUI/ViewModels/ManagementDashboardViewModel.cs:11`.  
+  - guiv2 targets: extend `useDashboardLogic.ts:53` to call new IPC endpoints (`dashboard.getAnalyticsSummary`, `dashboard.getManagementKPIs`) backed by `DashboardService`.  
+  - Steps: add aggregation helpers in `DashboardService` that reuse logic engine counts (`getUserCount`, `getApplicationCount`) and emit the same KPI structure used in WPF. Update `OverviewView.tsx` and add dedicated views under `src/renderer/views/overview` to show persona cards, quick actions, and heat maps.
+
+- **Report builder & templates**  
+  - Source: `GUI/ViewModels/ReportBuilderViewModel.cs:18`, `GUI/Models/ReportModels.cs:9`.  
+  - guiv2 targets: finish `ReportTemplatesView.tsx`, create `ReportBuilderView.tsx`, and use `renderer/services/exportService.ts` plus a new `renderer/services/reportBuilderService.ts`.  
+  - Steps:  
+    1. Port the report definition schema (data sources, columns, filters, groupings, sorting, execution history).  
+    2. Implement main-process orchestration (`reportingService.generateReport(profile, definition)`) that batches logic-engine queries and streams progress via IPC.  
+    3. Support template import/export (JSON) and quick execution to CSV/Excel/PDF to match `DataExportService.ExecuteExportAsync`.
+
+- **Snapshot comparison & audit logging**  
+  - Source: `GUI/ViewModels/SnapshotComparisonViewModel.cs:12`, `GUI/ViewModels/LogsAuditViewModel.cs:11`.  
+  - guiv2 targets: create IPC endpoints to load profile snapshots (`Snapshots/*.json`) and audit logs (`Logs/gui-clicks.log`), store them in `renderer/store/useAuditStore.ts`, and build views under `src/renderer/views/reports`. Provide diff visualization using `Diff2Html` or existing diff components.
+
+#### Security & compliance modules
+- **Security posture / policy / group detail parity**  
+  - Source: `GUI/ViewModels/SecurityViewModel.cs:12`, `GUI/ViewModels/SecurityPolicyViewModel.cs:14`, `GUI/ViewModels/SecurityGroupDetailViewModel.cs:16`, `GUI/ViewModels/SecurityGroupsViewModel.cs:17`.  
+  - guiv2 targets: expand security views to include the missing policy detail blades, reuse (or create) `renderer/services/securityDashboardService.ts`, and provide drill-down routes `/security/policies/:id`, `/security/groups/:sid`.  
+  - Steps:  
+    1. Surface policy metadata by porting the CSV loader logic (`CsvDataServiceNew.LoadGroupPoliciesAsync`) into the TypeScript `csvDataService`.  
+    2. Expose a `security.getGroupDetail` IPC endpoint to return membership, effective permissions, and risk flags so the detail pane matches WPF.  
+    3. Add bulk actions (enable MFA, remediate risky policies) that map to PowerShell modules via `PowerShellExecutionService`.
+
+- **Compliance/audit views** (Audit, Environment Risk Assessment, Risk Analysis)  
+  - Source: `GUI/ViewModels/AuditViewModel.cs:12`, `GUI/ViewModels/EnvironmentRiskAssessmentViewModel.cs:13`, `GUI/ViewModels/RiskAnalysisViewModel.cs:15`.  
+  - guiv2 targets: create views under `src/renderer/views/compliance` and `src/renderer/views/security`, using data from `logicEngineService.getRiskDashboard()` and the audit log pipeline.  
+  - Steps: implement scoring logic in TypeScript mirroring the WPF calculation (see risk aggregation in `LogicEngineService` around line 3000) and render risk matrices plus recommended controls.
+
+#### Automation & scheduling
+- **Script editor & library**  
+  - Source: `GUI/ViewModels/ScriptEditorViewModel.cs:18`, `GUI/Services/ScriptEditorService.cs:24`.  
+  - guiv2 targets: enrich `ScriptLibraryView.tsx` and create `ScriptEditorView.tsx` with Monaco integration.  
+  - Steps:  
+    1. Store scripts in `config/scripts/*.ps1` with metadata (tags, description, run history).  
+    2. Use the existing main-process `PowerShellExecutionService` for execution, wiring streaming output to an append-only console component.  
+    3. Provide formatting, validation, and template loaders matching the WPF behaviors (format via `pwsh -Command Invoke-Formatter` or integrate `PSScriptAnalyzer`).
+
+- **Task scheduler & notifications**  
+  - Source: `GUI/ViewModels/TaskSchedulerViewModel.cs:12`, `GUI/Services/TaskSchedulerService.cs:18`, `GUI/ViewModels/NotificationTemplateEditorViewModel.cs:12`.  
+  - guiv2 targets: add background scheduling in the main process using `node-cron`, store schedules per profile, and expose UI in `src/renderer/views/advanced/TaskSchedulerView.tsx`. Trigger notifications via `notificationService.ts`, mirroring WPF template merge fields such as `{{UserName}}` and `{{WaveName}}`.
+
+Ship these workstreams sequentially; each unlocks parity for the named WPF modules. Keep IPC contracts narrow, reuse the existing `logicEngine` caches, and validate with CSV fixture data under `C:\discoverydata\ljpops`. Update Jest/Playwright suites alongside new views to preserve regression coverage in /guiv2.
+
+
+Column Visibility Management - Dynamic column showing/hiding
+Advanced Search Dialog - Multi-field query builder
+Export Format Selection - CSV/Excel/JSON/PDF chooser
+Theme Selection Dialog - Theme preview and selection
+PowerShell Window - Dedicated PowerShell console
+Password Policy Management - Security policy configuration
+Password Generator - Secure password creation tool
+Breadcrumb Navigation - Application location trail
+System Tray Integration - Minimize to tray functionality
+Dependency Graph Visualization - System relationship mapping
+Each includes complete TypeScript implementation details for immediate development.

@@ -114,7 +114,7 @@ export const GroupAnalyticsView: React.FC = () => {
         <div className="flex gap-2">
           <Select
             value={selectedGroupType}
-            onChange={(e) => setSelectedGroupType(e.target.value)}
+            onChange={(value) => setSelectedGroupType(value)}
             className="w-48"
           >
             <option value="all">All Group Types</option>

@@ -77,7 +77,8 @@ export const AuditLogView: React.FC = () => {
       cellRenderer: (params: any) => (
         <Badge
           variant={
-            params.value === 'Critical' ? 'error' :
+
+            params.value === 'Critical' ? 'danger' :
             params.value === 'Warning' ? 'warning' :
             params.value === 'Info' ? 'info' : 'success'
           }
@@ -107,7 +108,7 @@ export const AuditLogView: React.FC = () => {
       filter: 'agSetColumnFilter',
       width: 100,
       cellRenderer: (params: any) => (
-        <Badge variant={params.value ? 'success' : 'error'}>
+        <Badge variant={params.value ? 'success' : 'danger'}>
           {params.value ? 'Success' : 'Failed'}
         </Badge>
       ),
@@ -125,10 +126,10 @@ export const AuditLogView: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" icon={Activity} onClick={handleRefresh}>
+          <Button variant="secondary" icon={<Activity className="h-4 w-4" />} onClick={handleRefresh}>
             Refresh
           </Button>
-          <Button variant="primary" icon={Download} onClick={handleExport}>
+          <Button variant="primary" icon={<Download className="h-4 w-4" />} onClick={handleExport}>
             Export Logs
           </Button>
         </div>
@@ -148,44 +149,47 @@ export const AuditLogView: React.FC = () => {
           <Select
             label="Action"
             value={actionFilter}
-            onChange={(e) => setActionFilter(e.target.value)}
-          >
-            <option value="">All Actions</option>
-            <option value="Login">Login</option>
-            <option value="Logout">Logout</option>
-            <option value="Create">Create</option>
-            <option value="Update">Update</option>
-            <option value="Delete">Delete</option>
-            <option value="Export">Export</option>
-            <option value="Import">Import</option>
-            <option value="Execute">Execute</option>
-          </Select>
+            onChange={(value) => setActionFilter(value)}
+            options={[
+              { value: '', label: 'All Actions' },
+              { value: 'Login', label: 'Login' },
+              { value: 'Logout', label: 'Logout' },
+              { value: 'Create', label: 'Create' },
+              { value: 'Update', label: 'Update' },
+              { value: 'Delete', label: 'Delete' },
+              { value: 'Export', label: 'Export' },
+              { value: 'Import', label: 'Import' },
+              { value: 'Execute', label: 'Execute' },
+            ]}
+          />
         </div>
         <div>
           <Select
             label="Severity"
             value={severityFilter}
-            onChange={(e) => setSeverityFilter(e.target.value)}
-          >
-            <option value="">All Severities</option>
-            <option value="Critical">Critical</option>
-            <option value="Warning">Warning</option>
-            <option value="Info">Info</option>
-            <option value="Success">Success</option>
-          </Select>
+            onChange={(value) => setSeverityFilter(value)}
+            options={[
+              { value: '', label: 'All Severities' },
+              { value: 'Critical', label: 'Critical' },
+              { value: 'Warning', label: 'Warning' },
+              { value: 'Info', label: 'Info' },
+              { value: 'Success', label: 'Success' },
+            ]}
+          />
         </div>
         <div>
           <Select
             label="Time Range"
             value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-          >
-            <option value="today">Today</option>
-            <option value="week">Last 7 Days</option>
-            <option value="month">Last 30 Days</option>
-            <option value="quarter">Last 90 Days</option>
-            <option value="all">All Time</option>
-          </Select>
+            onChange={(value) => setDateRange(value)}
+            options={[
+              { value: 'today', label: 'Today' },
+              { value: 'week', label: 'Last 7 Days' },
+              { value: 'month', label: 'Last 30 Days' },
+              { value: 'quarter', label: 'Last 90 Days' },
+              { value: 'all', label: 'All Time' },
+            ]}
+          />
         </div>
       </div>
 
@@ -229,7 +233,6 @@ export const AuditLogView: React.FC = () => {
           data={auditLogs}
           columns={columns}
           loading={isLoading}
-          rowSelection="none"
         />
       </div>
     </div>

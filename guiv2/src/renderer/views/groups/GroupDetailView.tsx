@@ -420,7 +420,7 @@ const MembersTab: React.FC<{ members: GroupMemberData[] }> = React.memo(({ membe
     );
   }
 
-  return <VirtualizedDataGrid data={members} columns={columnDefs} loading={false} height="100%" data-cy="members-grid" />;
+  return <VirtualizedDataGrid data={members} columns={columnDefs} loading={false} height="100%" />;
 });
 
 const OwnersTab: React.FC<{ owners: GroupOwnerData[] }> = React.memo(({ owners }) => {
@@ -454,7 +454,7 @@ const OwnersTab: React.FC<{ owners: GroupOwnerData[] }> = React.memo(({ owners }
     );
   }
 
-  return <VirtualizedDataGrid data={owners} columns={columnDefs} loading={false} height="100%" data-cy="owners-grid" />;
+  return <VirtualizedDataGrid data={owners} columns={columnDefs} loading={false} height="100%" />;
 });
 
 const PermissionsTab: React.FC<{ permissions: GroupPermissionData[] }> = React.memo(({ permissions }) => {
@@ -489,7 +489,7 @@ const PermissionsTab: React.FC<{ permissions: GroupPermissionData[] }> = React.m
   }
 
   return (
-    <VirtualizedDataGrid data={permissions} columns={columnDefs} loading={false} height="100%" data-cy="permissions-grid" />
+    <VirtualizedDataGrid data={permissions} columns={columnDefs} loading={false} height="100%" />
   );
 });
 
@@ -525,7 +525,7 @@ const ApplicationsTab: React.FC<{ applications: GroupApplicationAccess[] }> = Re
   }
 
   return (
-    <VirtualizedDataGrid data={applications} columns={columnDefs} loading={false} height="100%" data-cy="applications-grid" />
+    <VirtualizedDataGrid data={applications} columns={columnDefs} loading={false} height="100%" />
   );
 });
 
@@ -557,7 +557,7 @@ const NestedGroupsTab: React.FC<{ nestedGroups: NestedGroupData[] }> = React.mem
   }
 
   return (
-    <VirtualizedDataGrid data={nestedGroups} columns={columnDefs} loading={false} height="100%" data-cy="nested-groups-grid" />
+    <VirtualizedDataGrid data={nestedGroups} columns={columnDefs} loading={false} height="100%" />
   );
 });
 

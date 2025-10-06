@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MandADiscoverySuite.Migration;
+using MandADiscoverySuite.Models.Migration;
+using MandADiscoverySuite.Services.Migration;
 
 namespace MandADiscoverySuite.Tests.Migration
 {
@@ -22,7 +24,7 @@ namespace MandADiscoverySuite.Tests.Migration
         private Mock<IFileValidationProvider> _mockFileValidator;
         private Mock<ISqlValidationProvider> _mockSqlValidator;
         private Mock<ICriticalGapMonitor> _mockGapMonitor;
-        private TargetContext _testTargetContext;
+        private MandADiscoverySuite.Migration.TargetContext _testTargetContext;
         private List<string> _criticalGapReports;
 
         [TestInitialize]
@@ -41,7 +43,7 @@ namespace MandADiscoverySuite.Tests.Migration
                 _mockFileValidator.Object,
                 _mockSqlValidator.Object);
 
-            _testTargetContext = new TargetContext
+            _testTargetContext = new MandADiscoverySuite.Migration.TargetContext
             {
                 TenantId = "test-tenant-123",
                 Environment = "Critical Gap Testing"
@@ -67,24 +69,24 @@ namespace MandADiscoverySuite.Tests.Migration
             SetupRollbackMethodChecks();
 
             // Act & Assert - Verify all providers have rollback methods
-            await AssertRollbackMethodExists<IUserValidationProvider, UserDto>(
-                _mockUserValidator.Object, 
-                testObjects.User, 
+            await AssertRollbackMethodExists<IUserValidationProvider, MandADiscoverySuite.Models.Migration.UserDto>(
+                _mockUserValidator.Object,
+                testObjects.User,
                 "UserValidationProvider must implement RollbackUserAsync method");
 
-            await AssertRollbackMethodExists<IMailboxValidationProvider, MailboxDto>(
-                _mockMailboxValidator.Object, 
-                testObjects.Mailbox, 
+            await AssertRollbackMethodExists<IMailboxValidationProvider, MandADiscoverySuite.Models.Migration.MailboxDto>(
+                _mockMailboxValidator.Object,
+                testObjects.Mailbox,
                 "MailboxValidationProvider must implement RollbackMailboxAsync method");
 
-            await AssertRollbackMethodExists<IFileValidationProvider, FileItemDto>(
-                _mockFileValidator.Object, 
-                testObjects.FileItem, 
+            await AssertRollbackMethodExists<IFileValidationProvider, MandADiscoverySuite.Models.Migration.FileItemDto>(
+                _mockFileValidator.Object,
+                testObjects.FileItem,
                 "FileValidationProvider must implement RollbackFilesAsync method");
 
-            await AssertRollbackMethodExists<ISqlValidationProvider, DatabaseDto>(
-                _mockSqlValidator.Object, 
-                testObjects.Database, 
+            await AssertRollbackMethodExists<ISqlValidationProvider, MandADiscoverySuite.Models.Migration.DatabaseDto>(
+                _mockSqlValidator.Object,
+                testObjects.Database,
                 "SqlValidationProvider must implement RollbackSqlAsync method");
 
             RecordGapResolution("Gap1_MissingRollbackMethods", "RESOLVED", "All validation providers implement required rollback methods");
@@ -109,8 +111,8 @@ namespace MandADiscoverySuite.Tests.Migration
             Assert.IsTrue(result.Success, "Test rollback should succeed");
             
             _mockUserValidator.Verify(u => u.RollbackUserAsync(
-                It.IsAny<UserDto>(), 
-                It.IsAny<TargetContext>(), 
+                It.IsAny<MandADiscoverySuite.Models.Migration.UserDto>(),
+                It.IsAny<MandADiscoverySuite.Migration.TargetContext>(),
                 It.IsAny<IProgress<ValidationProgress>>()), Times.Once);
 
             RecordGapResolution("Gap1_RollbackSignatures", "RESOLVED", "Rollback methods follow consistent signature pattern");
@@ -124,7 +126,7 @@ namespace MandADiscoverySuite.Tests.Migration
         public async Task CriticalGap2_ServiceIntegration_ValidationServiceProperlyIntegratesProviders()
         {
             // Arrange - Test identified gap: Service integration issues between validation service and providers
-            var testWave = new MigrationWave
+            var testWave = new TestMigrationWave
             {
                 Users = { CreateTestUser() },
                 Mailboxes = { CreateTestMailbox() },
@@ -140,10 +142,10 @@ namespace MandADiscoverySuite.Tests.Migration
             // Assert - Verify service properly integrates with all providers
             Assert.AreEqual(4, results.Count, "Service should integrate with all 4 validation providers");
             
-            _mockUserValidator.Verify(u => u.ValidateUserAsync(It.IsAny<UserDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()), Times.Once);
-            _mockMailboxValidator.Verify(m => m.ValidateMailboxAsync(It.IsAny<MailboxDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()), Times.Once);
-            _mockFileValidator.Verify(f => f.ValidateFilesAsync(It.IsAny<FileItemDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()), Times.Once);
-            _mockSqlValidator.Verify(s => s.ValidateSqlAsync(It.IsAny<DatabaseDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()), Times.Once);
+            _mockUserValidator.Verify(u => u.ValidateUserAsync(It.IsAny<MandADiscoverySuite.Models.Migration.UserDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()), Times.Once);
+            _mockMailboxValidator.Verify(m => m.ValidateMailboxAsync(It.IsAny<MandADiscoverySuite.Models.Migration.MailboxDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()), Times.Once);
+            _mockFileValidator.Verify(f => f.ValidateFilesAsync(It.IsAny<MandADiscoverySuite.Models.Migration.FileItemDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()), Times.Once);
+            _mockSqlValidator.Verify(s => s.ValidateSqlAsync(It.IsAny<MandADiscoverySuite.Models.Migration.DatabaseDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()), Times.Once);
 
             RecordGapResolution("Gap2_ServiceIntegration", "RESOLVED", "Validation service properly integrates with all providers");
         }
@@ -233,7 +235,7 @@ namespace MandADiscoverySuite.Tests.Migration
                     .ThrowsAsync(error.exception);
 
                 // Act
-                var result = await _validationService.RollbackUserAsync(testUser, _testTargetContext);
+                var result = await _validationService.RollbackUserAsync(testUser, _testTargetContext, null);
 
                 // Assert
                 Assert.IsFalse(result.Success, $"Should handle rollback error for {error.scenario}");
@@ -298,7 +300,7 @@ namespace MandADiscoverySuite.Tests.Migration
 
             // Act
             validationResult.RollbackInProgress = true;
-            var rollbackResult = await _validationService.RollbackUserAsync(testUser, _testTargetContext);
+            var rollbackResult = await _validationService.RollbackUserAsync(testUser, _testTargetContext, null);
             validationResult.RollbackInProgress = false;
 
             // Assert
@@ -317,15 +319,15 @@ namespace MandADiscoverySuite.Tests.Migration
         public async Task CriticalGap5_ConcurrencyHandling_MultipleValidationsHandleConcurrently()
         {
             // Arrange - Test identified gap: Potential concurrency issues in validation processing
-            var users = new List<UserDto>();
+            var users = new List<MandADiscoverySuite.Models.Migration.UserDto>();
             for (int i = 0; i < 10; i++)
             {
                 users.Add(CreateTestUser($"user{i}"));
             }
 
             _mockUserValidator
-                .Setup(u => u.ValidateUserAsync(It.IsAny<UserDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .Returns(async (UserDto user, TargetContext context, IProgress<ValidationProgress> progress) =>
+                .Setup(u => u.ValidateUserAsync(It.IsAny<MandADiscoverySuite.Models.Migration.UserDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Returns(async (MandADiscoverySuite.Models.Migration.UserDto user, MandADiscoverySuite.Migration.TargetContext context, IProgress<ValidationProgress> progress) =>
                 {
                     await Task.Delay(Random.Shared.Next(50, 200)); // Simulate variable processing time
                     return ValidationResult.Success(user, "User", user.DisplayName);
@@ -354,8 +356,8 @@ namespace MandADiscoverySuite.Tests.Migration
             var tasks = new List<Task<ValidationResult>>();
 
             _mockUserValidator
-                .Setup(u => u.ValidateUserAsync(It.IsAny<UserDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .Returns(async (UserDto user, TargetContext context, IProgress<ValidationProgress> progress) =>
+                .Setup(u => u.ValidateUserAsync(It.IsAny<MandADiscoverySuite.Models.Migration.UserDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Returns(async (MandADiscoverySuite.Models.Migration.UserDto user, MandADiscoverySuite.Migration.TargetContext context, IProgress<ValidationProgress> progress) =>
                 {
                     await Task.Delay(10); // Small delay to increase chance of race conditions
                     return ValidationResult.Success(user, "User", user.DisplayName);
@@ -456,13 +458,22 @@ namespace MandADiscoverySuite.Tests.Migration
         public async Task CriticalGap7_DataValidation_AllRequiredFieldsValidated()
         {
             // Arrange - Test identified gap: Incomplete data validation
-            var incompleteUser = new UserDto(); // Missing required fields
+            var incompleteUser = new MandADiscoverySuite.Models.Migration.UserDto(); // Missing required fields
 
             _mockUserValidator
-                .Setup(u => u.ValidateUserAsync(incompleteUser, null, null, null, TargetContext context, Category = "Required Field", Description = "UserPrincipalName is required" });
-                    
+                .Setup(u => u.ValidateUserAsync(incompleteUser, _testTargetContext, It.IsAny<IProgress<ValidationProgress>>()))
+                .ReturnsAsync((MandADiscoverySuite.Models.Migration.UserDto user, MandADiscoverySuite.Migration.TargetContext context, IProgress<ValidationProgress> progress) =>
+                {
+                    var issues = new List<ValidationIssue>();
+
+                    if (string.IsNullOrEmpty(user.UserPrincipalName))
+                        issues.Add(new ValidationIssue { Severity = ValidationSeverity.Error, Category = "Required Field", Description = "UserPrincipalName is required" });
+
                     if (string.IsNullOrEmpty(user.DisplayName))
-                        issues.Add(new ValidationIssue { Severity = ValidationSeverity.Error, Category = "Required Field", _testTargetContext, null, user.DisplayName ?? "Unknown", "Required fields missing", issues)
+                        issues.Add(new ValidationIssue { Severity = ValidationSeverity.Error, Category = "Required Field", Description = "DisplayName is required" });
+
+                    return issues.Any()
+                        ? ValidationResult.Failed(user, "User", user.DisplayName ?? "Unknown", "Required fields missing", issues)
                         : ValidationResult.Success(user, "User", user.DisplayName);
                 });
 
@@ -487,18 +498,18 @@ namespace MandADiscoverySuite.Tests.Migration
 
             _mockUserValidator
                 .Setup(u => u.ValidateUserAsync(testUser, _testTargetContext, It.IsAny<IProgress<ValidationProgress>>()))
-                .ReturnsAsync((UserDto user, TargetContext context, IProgress<ValidationProgress> progress) =>
+                .ReturnsAsync((MandADiscoverySuite.Models.Migration.UserDto user, MandADiscoverySuite.Migration.TargetContext context, IProgress<ValidationProgress> progress) =>
                 {
                     var issues = new List<ValidationIssue>();
-                    
+
                     // Business rule validations
                     if (!user.UserPrincipalName.Contains("@") || !user.UserPrincipalName.Contains("."))
                         issues.Add(new ValidationIssue { Severity = ValidationSeverity.Error, Category = "Format Validation", Description = "Invalid UPN format" });
-                    
+
                     if (user.UserPrincipalName.Length > 320) // RFC standard
                         issues.Add(new ValidationIssue { Severity = ValidationSeverity.Error, Category = "Length Validation", Description = "UPN too long" });
 
-                    return issues.Any() 
+                    return issues.Any()
                         ? ValidationResult.Failed(user, "User", user.DisplayName, "Business rule violations", issues)
                         : ValidationResult.Success(user, "User", user.DisplayName);
                 });
@@ -537,9 +548,9 @@ namespace MandADiscoverySuite.Tests.Migration
             try
             {
                 // This will work because our mocks implement the rollback methods
-                if (provider is IUserValidationProvider userProvider && dto is UserDto userDto)
+                if (provider is IUserValidationProvider userProvider && dto is MandADiscoverySuite.Models.Migration.UserDto userDto)
                 {
-                    var result = await userProvider.RollbackUserAsync(userDto, _testTargetContext);
+                    var result = await userProvider.RollbackUserAsync(userDto, _testTargetContext, null);
                     Assert.IsNotNull(result, "Rollback method should return a result");
                 }
                 // Add similar checks for other provider types as needed
@@ -553,87 +564,85 @@ namespace MandADiscoverySuite.Tests.Migration
         private void SetupRollbackMethodChecks()
         {
             _mockUserValidator
-                .Setup(u => u.RollbackUserAsync(It.IsAny<UserDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Setup(u => u.RollbackUserAsync(It.IsAny<MandADiscoverySuite.Models.Migration.UserDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
                 .ReturnsAsync(RollbackResult.Succeeded("Method exists"));
 
             _mockMailboxValidator
-                .Setup(m => m.RollbackMailboxAsync(It.IsAny<MailboxDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Setup(m => m.RollbackMailboxAsync(It.IsAny<MandADiscoverySuite.Models.Migration.MailboxDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
                 .ReturnsAsync(RollbackResult.Succeeded("Method exists"));
 
             _mockFileValidator
-                .Setup(f => f.RollbackFilesAsync(It.IsAny<FileItemDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Setup(f => f.RollbackFilesAsync(It.IsAny<MandADiscoverySuite.Models.Migration.FileItemDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
                 .ReturnsAsync(RollbackResult.Succeeded("Method exists"));
 
             _mockSqlValidator
-                .Setup(s => s.RollbackSqlAsync(It.IsAny<DatabaseDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .Setup(s => s.RollbackSqlAsync(It.IsAny<MandADiscoverySuite.Models.Migration.DatabaseDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
                 .ReturnsAsync(RollbackResult.Succeeded("Method exists"));
         }
 
         private void SetupServiceIntegrationMocks()
         {
             _mockUserValidator
-                .Setup(u => u.ValidateUserAsync(It.IsAny<UserDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .ReturnsAsync((UserDto user, TargetContext ctx, IProgress<ValidationProgress> progress) => 
+                .Setup(u => u.ValidateUserAsync(It.IsAny<MandADiscoverySuite.Models.Migration.UserDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .ReturnsAsync((MandADiscoverySuite.Models.Migration.UserDto user, MandADiscoverySuite.Migration.TargetContext ctx, IProgress<ValidationProgress> progress) =>
                     ValidationResult.Success(user, "User", user.DisplayName));
 
             _mockMailboxValidator
-                .Setup(m => m.ValidateMailboxAsync(It.IsAny<MailboxDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .ReturnsAsync((MailboxDto mailbox, TargetContext ctx, IProgress<ValidationProgress> progress) => 
+                .Setup(m => m.ValidateMailboxAsync(It.IsAny<MandADiscoverySuite.Models.Migration.MailboxDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .ReturnsAsync((MandADiscoverySuite.Models.Migration.MailboxDto mailbox, MandADiscoverySuite.Migration.TargetContext ctx, IProgress<ValidationProgress> progress) =>
                     ValidationResult.Success(mailbox, "Mailbox", mailbox.PrimarySmtpAddress));
 
             _mockFileValidator
-                .Setup(f => f.ValidateFilesAsync(It.IsAny<FileItemDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .ReturnsAsync((FileItemDto fileItem, TargetContext ctx, IProgress<ValidationProgress> progress) => 
+                .Setup(f => f.ValidateFilesAsync(It.IsAny<MandADiscoverySuite.Models.Migration.FileItemDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .ReturnsAsync((MandADiscoverySuite.Models.Migration.FileItemDto fileItem, MandADiscoverySuite.Migration.TargetContext ctx, IProgress<ValidationProgress> progress) =>
                     ValidationResult.Success(fileItem, "File", fileItem.SourcePath));
 
             _mockSqlValidator
-                .Setup(s => s.ValidateSqlAsync(It.IsAny<DatabaseDto>(), It.IsAny<TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
-                .ReturnsAsync((DatabaseDto database, TargetContext ctx, IProgress<ValidationProgress> progress) => 
+                .Setup(s => s.ValidateSqlAsync(It.IsAny<MandADiscoverySuite.Models.Migration.DatabaseDto>(), It.IsAny<MandADiscoverySuite.Migration.TargetContext>(), It.IsAny<IProgress<ValidationProgress>>()))
+                .ReturnsAsync((MandADiscoverySuite.Models.Migration.DatabaseDto database, MandADiscoverySuite.Migration.TargetContext ctx, IProgress<ValidationProgress> progress) =>
                     ValidationResult.Success(database, "Database", database.Name));
         }
 
-        private UserDto CreateTestUser(string identifier = "testuser")
+        private MandADiscoverySuite.Models.Migration.UserDto CreateTestUser(string identifier = "testuser")
         {
-            return new UserDto
+            return new MandADiscoverySuite.Models.Migration.UserDto
             {
                 DisplayName = $"Test User {identifier}",
                 UserPrincipalName = $"{identifier}@contoso.com",
-                SamAccountName = identifier,
                 Department = "IT",
                 JobTitle = "Test Engineer"
             };
         }
 
-        private MailboxDto CreateTestMailbox()
+        private MandADiscoverySuite.Models.Migration.MailboxDto CreateTestMailbox()
         {
-            return new MailboxDto
+            return new MandADiscoverySuite.Models.Migration.MailboxDto
             {
                 PrimarySmtpAddress = "testmailbox@contoso.com",
                 DisplayName = "Test Mailbox",
-                Database = "TestDB01",
+                TotalSizeBytes = 1024L * 1024 * 100, // 100 MB
                 ItemCount = 1500
             };
         }
 
-        private FileItemDto CreateTestFileItem()
+        private MandADiscoverySuite.Models.Migration.FileItemDto CreateTestFileItem()
         {
-            return new FileItemDto
+            return new MandADiscoverySuite.Models.Migration.FileItemDto
             {
                 SourcePath = @"\\source\share\TestFolder",
                 TargetPath = @"\\target\share\TestFolder",
-                FileCount = 1250,
-                TotalSize = 1024 * 1024 * 500
+                FileSize = 1024L * 1024 * 500 // 500 MB
             };
         }
 
-        private DatabaseDto CreateTestDatabase()
+        private MandADiscoverySuite.Models.Migration.DatabaseDto CreateTestDatabase()
         {
-            return new DatabaseDto
+            return new MandADiscoverySuite.Models.Migration.DatabaseDto
             {
                 Name = "TestDatabase",
-                Server = "TestSQLServer",
-                Size = 1024 * 1024 * 1024,
-                CompatibilityLevel = 150
+                ServerName = "TestSQLServer",
+                SizeMB = 1024, // 1 GB
+                CompatibilityLevel = "150"
             };
         }
 
@@ -688,4 +697,13 @@ namespace MandADiscoverySuite.Tests.Migration
     }
 
     #endregion
+
+    // Test-specific MigrationWave that uses consistent DTO types for validation
+    public class TestMigrationWave : MandADiscoverySuite.Models.Migration.MigrationWave
+    {
+        public new List<MandADiscoverySuite.Models.Migration.UserDto> Users { get; set; } = new();
+        public new List<MandADiscoverySuite.Models.Migration.MailboxDto> Mailboxes { get; set; } = new();
+        public new List<MandADiscoverySuite.Models.Migration.FileItemDto> Files { get; set; } = new();
+        public new List<MandADiscoverySuite.Models.Migration.DatabaseDto> Databases { get; set; } = new();
+    }
 }

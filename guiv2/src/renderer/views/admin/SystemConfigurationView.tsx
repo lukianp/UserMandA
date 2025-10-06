@@ -26,10 +26,10 @@ export const SystemConfigurationView: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" icon={RotateCcw} onClick={handleReset} disabled={!hasChanges}>
+          <Button variant="secondary" icon={<RotateCcw />} onClick={handleReset} disabled={!hasChanges}>
             Reset
           </Button>
-          <Button variant="primary" icon={Save} onClick={handleSave} disabled={!hasChanges}>
+          <Button variant="primary" icon={<Save />} onClick={handleSave} disabled={!hasChanges}>
             Save Changes
           </Button>
         </div>
@@ -45,7 +45,7 @@ export const SystemConfigurationView: React.FC = () => {
           <Input
             label="Connection String"
             value={config.database.connectionString}
-            onChange={(e) => handleChange('database.connectionString', e.target.value)}
+            onChange={(value) => handleChange('database.connectionString', value)}
             placeholder="Data Source=..."
           />
           <div className="grid grid-cols-2 gap-4">
@@ -79,7 +79,7 @@ export const SystemConfigurationView: React.FC = () => {
             <Input
               label="SMTP Server"
               value={config.email.smtpServer}
-              onChange={(e) => handleChange('email.smtpServer', e.target.value)}
+              onChange={(value) => handleChange('email.smtpServer', value)}
             />
             <Input
               label="SMTP Port"
@@ -92,13 +92,13 @@ export const SystemConfigurationView: React.FC = () => {
             <Input
               label="Username"
               value={config.email.username}
-              onChange={(e) => handleChange('email.username', e.target.value)}
+              onChange={(value) => handleChange('email.username', value)}
             />
             <Input
               label="From Address"
               type="email"
               value={config.email.fromAddress}
-              onChange={(e) => handleChange('email.fromAddress', e.target.value)}
+              onChange={(value) => handleChange('email.fromAddress', value)}
             />
           </div>
           <Checkbox
@@ -153,21 +153,23 @@ export const SystemConfigurationView: React.FC = () => {
           <Select
             label="Default Theme"
             value={config.application.defaultTheme}
-            onChange={(e) => handleChange('application.defaultTheme', e.target.value)}
-          >
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-            <option value="system">System</option>
-          </Select>
+            onChange={(value) => handleChange('application.defaultTheme', value)}
+            options={[
+              { value: "light", label: "Light" },
+              { value: "dark", label: "Dark" },
+              { value: "system", label: "System" },
+            ]}
+          />
           <Select
             label="Date Format"
             value={config.application.dateFormat}
-            onChange={(e) => handleChange('application.dateFormat', e.target.value)}
-          >
-            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-            <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-            <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-          </Select>
+            onChange={(value) => handleChange('application.dateFormat', value)}
+            options={[
+              { value: "MM/DD/YYYY", label: "MM/DD/YYYY" },
+              { value: "DD/MM/YYYY", label: "DD/MM/YYYY" },
+              { value: "YYYY-MM-DD", label: "YYYY-MM-DD" },
+            ]}
+          />
           <Input
             label="Items Per Page"
             type="number"

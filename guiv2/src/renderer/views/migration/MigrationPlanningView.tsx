@@ -258,7 +258,7 @@ const MigrationPlanningView: React.FC = () => {
     async (item: any, waveId: string) => {
       try {
         // Show loading toast
-        showInfo('Adding item to wave...');
+        showInfo({ message: 'Adding item to wave...' });
 
         // Create migration task from dropped item
         const task = {
@@ -280,13 +280,13 @@ const MigrationPlanningView: React.FC = () => {
           await loadWaves();
 
           // Success toast
-          showSuccess(`Added ${task.name} to wave`);
+          showSuccess({ message: `Added ${task.name} to wave` });
         } else {
           throw new Error(result.error || 'Failed to add item to wave');
         }
       } catch (error: any) {
         console.error('Failed to add item to wave:', error);
-        showError(`Failed to add item: ${error.message}`);
+        showError({ message: `Failed to add item: ${error.message}` });
       }
     },
     [loadWaves, showSuccess, showError, showInfo]
@@ -295,62 +295,62 @@ const MigrationPlanningView: React.FC = () => {
   // Bulk operation handlers
   const handleAnalyzeSelected = useCallback(async () => {
     if (selectedUsers.length === 0) {
-      showError('No users selected for analysis');
+      showError({ message: 'No users selected for analysis' });
       return;
     }
 
-    showInfo(`Analyzing complexity for ${selectedUsers.length} users...`);
+    showInfo({ message: `Analyzing complexity for ${selectedUsers.length} users...` });
 
     try {
       const userIds = selectedUsers.map(u => u.id || u.userPrincipalName);
       await analyzeUsers(userIds);
-      showSuccess(`Complexity analysis complete for ${selectedUsers.length} users`);
+      showSuccess({ message: `Complexity analysis complete for ${selectedUsers.length} users` });
     } catch (err: any) {
-      showError(`Analysis failed: ${err.message}`);
+      showError({ message: `Analysis failed: ${err.message}` });
     }
   }, [selectedUsers, analyzeUsers, showSuccess, showError, showInfo]);
 
   const handleAssignToWave = useCallback(async () => {
     if (selectedUsers.length === 0) {
-      showError('No users selected to assign');
+      showError({ message: 'No users selected to assign' });
       return;
     }
 
     if (!selectedWave) {
-      showError('No wave selected');
+      showError({ message: 'No wave selected' });
       return;
     }
 
-    showInfo(`Assigning ${selectedUsers.length} users to wave...`);
+    showInfo({ message: `Assigning ${selectedUsers.length} users to wave...` });
 
     try {
       for (const user of selectedUsers) {
         await handleItemDrop({ id: user.id, type: 'USER', data: user }, selectedWave.id);
       }
-      showSuccess(`Assigned ${selectedUsers.length} users to wave`);
+      showSuccess({ message: `Assigned ${selectedUsers.length} users to wave` });
       setSelectedUsers([]);
     } catch (err: any) {
-      showError(`Assignment failed: ${err.message}`);
+      showError({ message: `Assignment failed: ${err.message}` });
     }
   }, [selectedUsers, selectedWave, handleItemDrop, showSuccess, showError, showInfo]);
 
   const handleRemapGroups = useCallback(() => {
     if (selectedUsers.length === 0) {
-      showError('No users selected for group remapping');
+      showError({ message: 'No users selected for group remapping' });
       return;
     }
 
     setShowGroupRemapping(true);
-    showInfo('Configure group mappings for selected users');
+    showInfo({ message: 'Configure group mappings for selected users' });
   }, [selectedUsers, showError, showInfo]);
 
   const handleValidateSelection = useCallback(async () => {
     if (selectedUsers.length === 0) {
-      showError('No users selected for validation');
+      showError({ message: 'No users selected for validation' });
       return;
     }
 
-    showInfo('Validating selected users for migration...');
+    showInfo({ message: 'Validating selected users for migration...' });
 
     try {
       // Perform validation checks
@@ -366,13 +366,13 @@ const MigrationPlanningView: React.FC = () => {
       });
 
       if (issues.length > 0) {
-        showError(`Validation found ${issues.length} issues. Review user details.`);
+        showError({ message: `Validation found ${issues.length} issues. Review user details.` });
         console.warn('Validation issues:', issues);
       } else {
-        showSuccess('All selected users passed validation checks');
+        showSuccess({ message: 'All selected users passed validation checks' });
       }
     } catch (err: any) {
-      showError(`Validation failed: ${err.message}`);
+      showError({ message: `Validation failed: ${err.message}` });
     }
   }, [selectedUsers, showSuccess, showError, showInfo]);
 
@@ -490,7 +490,7 @@ const MigrationPlanningView: React.FC = () => {
               disabled={isAnalyzing || selectedUsers.length === 0}
               loading={isAnalyzing}
               variant="primary"
-              size="small"
+              size="sm"
             >
               <FileSearch className="w-4 h-4 mr-2" />
               Analyze Selected ({selectedUsers.length})
@@ -499,7 +499,7 @@ const MigrationPlanningView: React.FC = () => {
               onClick={handleAssignToWave}
               disabled={selectedUsers.length === 0 || !selectedWave}
               variant="primary"
-              size="small"
+              size="sm"
             >
               <Users className="w-4 h-4 mr-2" />
               Assign to Wave
@@ -508,7 +508,7 @@ const MigrationPlanningView: React.FC = () => {
               onClick={handleRemapGroups}
               disabled={selectedUsers.length === 0}
               variant="secondary"
-              size="small"
+              size="sm"
             >
               <GitBranch className="w-4 h-4 mr-2" />
               Remap Groups
@@ -517,7 +517,7 @@ const MigrationPlanningView: React.FC = () => {
               onClick={handleValidateSelection}
               disabled={selectedUsers.length === 0}
               variant="secondary"
-              size="small"
+              size="sm"
             >
               <CheckCircle className="w-4 h-4 mr-2" />
               Validate Selection
@@ -560,7 +560,7 @@ const MigrationPlanningView: React.FC = () => {
           <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button
               onClick={() => {
-                showSuccess('Group mappings saved');
+                showSuccess({ message: 'Group mappings saved' });
                 setShowGroupRemapping(false);
               }}
               variant="primary"
@@ -628,7 +628,7 @@ const MigrationPlanningView: React.FC = () => {
               <Input
                 label="Wave Name"
                 value={formData.name || ''}
-                onChange={(e) => handleFieldChange('name', e.target.value)}
+                onChange={(value) => handleFieldChange('name', value)}
                 placeholder="e.g., Executive Team Migration"
                 required
                 fullWidth
@@ -646,7 +646,7 @@ const MigrationPlanningView: React.FC = () => {
                            transition-all duration-200"
                   rows={3}
                   value={formData.description || ''}
-                  onChange={(e) => handleFieldChange('description', e.target.value)}
+                  onChange={(value) => handleFieldChange('description', value)}
                   placeholder="Detailed description of this migration wave..."
                   data-cy="wave-description-input"
                 />
@@ -657,8 +657,7 @@ const MigrationPlanningView: React.FC = () => {
                   label="Start Date & Time"
                   type="datetime-local"
                   value={formatDateForInput(formData.plannedStartDate)}
-                  onChange={(e) =>
-                    handleFieldChange('plannedStartDate', new Date(e.target.value).toISOString())
+                  onChange={(value) => handleFieldChange('plannedStartDate', new Date(value).toISOString())
                   }
                   fullWidth
                   data-cy="wave-start-input"
@@ -667,8 +666,7 @@ const MigrationPlanningView: React.FC = () => {
                   label="End Date & Time"
                   type="datetime-local"
                   value={formatDateForInput(formData.plannedEndDate)}
-                  onChange={(e) =>
-                    handleFieldChange('plannedEndDate', new Date(e.target.value).toISOString())
+                  onChange={(value) => handleFieldChange('plannedEndDate', new Date(value).toISOString())
                   }
                   fullWidth
                   data-cy="wave-end-input"
@@ -699,7 +697,7 @@ const MigrationPlanningView: React.FC = () => {
                            transition-all duration-200"
                   rows={2}
                   value={formData.notes || ''}
-                  onChange={(e) => handleFieldChange('notes', e.target.value)}
+                  onChange={(value) => handleFieldChange('notes', value)}
                   placeholder="Additional notes or instructions..."
                   data-cy="wave-notes-input"
                 />

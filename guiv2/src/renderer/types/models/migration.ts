@@ -106,6 +106,30 @@ export interface MigrationTask extends Identifiable, Named {
   dueDate: Date | string | null;
   completedDate: Date | string | null;
   dependencies: string[];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  type?: string; // Migration task type
+  parameters?: Record<string, any>; // Task parameters
+  timeout?: number; // Timeout in milliseconds
+  critical?: boolean; // Whether task failure should stop the migration
 }
 
 /**

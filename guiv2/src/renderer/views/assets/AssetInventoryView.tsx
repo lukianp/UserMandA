@@ -95,7 +95,7 @@ export const AssetInventoryView: React.FC = () => {
             type="text"
             placeholder="Search assets by name, serial number, or location..."
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={(value) => setSearchText(value)}
             className="pl-10"
             data-cy="asset-search"
           />
@@ -108,10 +108,7 @@ export const AssetInventoryView: React.FC = () => {
           data={assets}
           columns={columnDefs}
           loading={isLoading}
-          enableExport
-          enableGrouping
-          enableFiltering
-          data-cy="asset-grid"
+         
         />
       </div>
     </div>

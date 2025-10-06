@@ -57,9 +57,9 @@ $Global:ErrorCollection = @{
     Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 }
 
-Write-Host "╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║   M&A Discovery Suite - GUI v2 Build & Debug Monitor     ║" -ForegroundColor Cyan
-Write-Host "╚═══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "+===========================================================+" -ForegroundColor Cyan
+Write-Host "|   M&A Discovery Suite - GUI v2 Build & Debug Monitor    |" -ForegroundColor Cyan
+Write-Host "+===========================================================+" -ForegroundColor Cyan
 Write-Host ""
 
 # Function to log errors
@@ -102,7 +102,7 @@ function Save-ErrorsToMarkdown {
 
     # Build Errors
     if ($Global:ErrorCollection.BuildErrors.Count -gt 0) {
-        $content += "## 🔴 Build Errors ($($Global:ErrorCollection.BuildErrors.Count))`n`n"
+        $content += "## BUILD ERRORS ($($Global:ErrorCollection.BuildErrors.Count))`n`n"
         foreach ($err in $Global:ErrorCollection.BuildErrors) {
             $content += "### [$($err.Timestamp)] $($err.Source)`n"
             $content += "``````n$($err.Message)`n``````n`n"
@@ -111,7 +111,7 @@ function Save-ErrorsToMarkdown {
 
     # TypeScript Errors
     if ($Global:ErrorCollection.TypeScriptErrors.Count -gt 0) {
-        $content += "## 🟠 TypeScript Errors ($($Global:ErrorCollection.TypeScriptErrors.Count))`n`n"
+        $content += "## TYPESCRIPT ERRORS ($($Global:ErrorCollection.TypeScriptErrors.Count))`n`n"
         foreach ($err in $Global:ErrorCollection.TypeScriptErrors) {
             $content += "### [$($err.Timestamp)] $($err.Source)`n"
             $content += "``````typescript`n$($err.Message)`n``````n`n"
@@ -120,7 +120,7 @@ function Save-ErrorsToMarkdown {
 
     # Runtime Errors
     if ($Global:ErrorCollection.RuntimeErrors.Count -gt 0) {
-        $content += "## 🔴 Runtime Errors ($($Global:ErrorCollection.RuntimeErrors.Count))`n`n"
+        $content += "## RUNTIME ERRORS ($($Global:ErrorCollection.RuntimeErrors.Count))`n`n"
         foreach ($err in $Global:ErrorCollection.RuntimeErrors) {
             $content += "### [$($err.Timestamp)] $($err.Source)`n"
             $content += "``````javascript`n$($err.Message)`n``````n`n"
@@ -129,7 +129,7 @@ function Save-ErrorsToMarkdown {
 
     # Console Errors
     if ($Global:ErrorCollection.ConsoleErrors.Count -gt 0) {
-        $content += "## ⚠️ Console Errors ($($Global:ErrorCollection.ConsoleErrors.Count))`n`n"
+        $content += "## CONSOLE ERRORS ($($Global:ErrorCollection.ConsoleErrors.Count))`n`n"
         foreach ($err in $Global:ErrorCollection.ConsoleErrors) {
             $content += "### [$($err.Timestamp)] $($err.Source)`n"
             $content += "``````n$($err.Message)`n``````n`n"
@@ -138,7 +138,7 @@ function Save-ErrorsToMarkdown {
 
     # Warnings
     if ($Global:ErrorCollection.Warnings.Count -gt 0) {
-        $content += "## ⚡ Warnings ($($Global:ErrorCollection.Warnings.Count))`n`n"
+        $content += "## WARNINGS ($($Global:ErrorCollection.Warnings.Count))`n`n"
         foreach ($warn in $Global:ErrorCollection.Warnings) {
             $content += "- **[$($warn.Timestamp)]** $($warn.Source): $($warn.Message)`n"
         }
@@ -148,7 +148,7 @@ function Save-ErrorsToMarkdown {
 
 ---
 
-## 🔧 Next Steps
+## NEXT STEPS
 
 1. **Fix Build Errors First** - These prevent compilation
 2. **Fix TypeScript Errors** - Type safety issues
@@ -169,7 +169,7 @@ function Save-ErrorsToMarkdown {
 "@
 
     Set-Content -Path $ErrorLogPath -Value $content -Encoding UTF8
-    Write-Host "[✓] Errors saved to: $ErrorLogPath" -ForegroundColor Green
+    Write-Host "[OK] Errors saved to: $ErrorLogPath" -ForegroundColor Green
 }
 
 # STEP 1: BUILD
@@ -178,12 +178,12 @@ if (-not $SkipBuild) {
     Write-Host ""
 
     if (!(Test-Path $BuildScript)) {
-        Write-Host "[✗] Build script not found: $BuildScript" -ForegroundColor Red
+        Write-Host "[ERROR] Build script not found: $BuildScript" -ForegroundColor Red
         exit 1
     }
 
-    Write-Host "[→] Running buildguiv2.ps1 (Configuration: $Configuration)..." -ForegroundColor Cyan
-    Write-Host "[→] Capturing all output to: $BuildLogPath" -ForegroundColor Gray
+    Write-Host "[INFO] Running buildguiv2.ps1 (Configuration: $Configuration)..." -ForegroundColor Cyan
+    Write-Host "[INFO] Capturing all output to: $BuildLogPath" -ForegroundColor Gray
     Write-Host ""
 
     # Run build and capture output
@@ -219,15 +219,15 @@ if (-not $SkipBuild) {
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host ""
-        Write-Host "[✗] Build failed with exit code $LASTEXITCODE" -ForegroundColor Red
+        Write-Host "[ERROR] Build failed with exit code $LASTEXITCODE" -ForegroundColor Red
         Save-ErrorsToMarkdown
         Write-Host ""
-        Write-Host "[→] Review errors in: $ErrorLogPath" -ForegroundColor Cyan
+        Write-Host "[INFO] Review errors in: $ErrorLogPath" -ForegroundColor Cyan
         exit 1
     }
 
     Write-Host ""
-    Write-Host "[✓] Build completed successfully" -ForegroundColor Green
+    Write-Host "[OK] Build completed successfully" -ForegroundColor Green
     Write-Host ""
 } else {
     Write-Host "═══ SKIPPING BUILD (Using existing build) ═══" -ForegroundColor Yellow
@@ -240,8 +240,8 @@ Write-Host ""
 
 # Check if output directory exists
 if (!(Test-Path $OutputPath)) {
-    Write-Host "[✗] Output directory not found: $OutputPath" -ForegroundColor Red
-    Write-Host "[→] Run build first: .\buildguiv2.ps1" -ForegroundColor Cyan
+    Write-Host "[ERROR] Output directory not found: $OutputPath" -ForegroundColor Red
+    Write-Host "[INFO] Run build first: .\buildguiv2.ps1" -ForegroundColor Cyan
     exit 1
 }
 
@@ -255,9 +255,9 @@ $criticalFiles = @(
 foreach ($file in $criticalFiles) {
     $filePath = Join-Path $OutputPath $file
     if (Test-Path $filePath) {
-        Write-Host "[✓] $file" -ForegroundColor Green
+        Write-Host "[OK] $file" -ForegroundColor Green
     } else {
-        Write-Host "[✗] Missing: $file" -ForegroundColor Red
+        Write-Host "[ERROR] Missing: $file" -ForegroundColor Red
         Add-Error -Category "Build" -Message "Missing critical file: $file" -Source "Pre-Launch Check"
     }
 }
@@ -267,9 +267,9 @@ Write-Host ""
 # Check Node.js
 try {
     $nodeVersion = & node --version 2>&1
-    Write-Host "[✓] Node.js: $nodeVersion" -ForegroundColor Green
+    Write-Host "[OK] Node.js: $nodeVersion" -ForegroundColor Green
 } catch {
-    Write-Host "[✗] Node.js not found" -ForegroundColor Red
+    Write-Host "[ERROR] Node.js not found" -ForegroundColor Red
     Add-Error -Category "Build" -Message "Node.js not found in PATH" -Source "Environment Check"
 }
 
@@ -281,9 +281,9 @@ Write-Host ""
 
 Push-Location $OutputPath
 
-Write-Host "[→] Starting Electron application..." -ForegroundColor Cyan
-Write-Host "[→] Monitoring console output for errors..." -ForegroundColor Gray
-Write-Host "[→] Press Ctrl+C to stop monitoring" -ForegroundColor Gray
+Write-Host "[INFO] Starting Electron application..." -ForegroundColor Cyan
+Write-Host "[INFO] Monitoring console output for errors..." -ForegroundColor Gray
+Write-Host "[INFO] Press Ctrl+C to stop monitoring" -ForegroundColor Gray
 Write-Host ""
 Write-Host "──────────────────────────────────────────────────────" -ForegroundColor DarkGray
 Write-Host ""
@@ -296,7 +296,7 @@ $env:ELECTRON_ENABLE_LOGGING = "1"
 # Start the application and monitor output
 $process = Start-Process -FilePath "npm" -ArgumentList "start" -PassThru -NoNewWindow -RedirectStandardOutput "$ScriptDir\app-stdout.log" -RedirectStandardError "$ScriptDir\app-stderr.log"
 
-Write-Host "[✓] Application launched (PID: $($process.Id))" -ForegroundColor Green
+Write-Host "[OK] Application launched (PID: $($process.Id))" -ForegroundColor Green
 Write-Host ""
 
 # Monitor log files in real-time
@@ -359,14 +359,14 @@ Write-Host ""
 # Check if process exited
 if ($process.HasExited) {
     if ($process.ExitCode -eq 0) {
-        Write-Host "[✓] Application exited normally" -ForegroundColor Green
+        Write-Host "[OK] Application exited normally" -ForegroundColor Green
     } else {
-        Write-Host "[✗] Application crashed with exit code: $($process.ExitCode)" -ForegroundColor Red
+        Write-Host "[ERROR] Application crashed with exit code: $($process.ExitCode)" -ForegroundColor Red
         Add-Error -Category "Runtime" -Message "Application crashed with exit code $($process.ExitCode)" -Source "Electron Process"
     }
 } else {
-    Write-Host "[→] Application still running after $timeout seconds" -ForegroundColor Cyan
-    Write-Host "[→] Check the application window for UI errors" -ForegroundColor Cyan
+    Write-Host "[INFO] Application still running after $timeout seconds" -ForegroundColor Cyan
+    Write-Host "[INFO] Check the application window for UI errors" -ForegroundColor Cyan
 }
 
 Pop-Location
@@ -385,7 +385,7 @@ $totalErrors = $Global:ErrorCollection.BuildErrors.Count +
                $Global:ErrorCollection.ConsoleErrors.Count
 
 Write-Host ""
-Write-Host "╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+Write-Host "+===========================================================+" -ForegroundColor Cyan
 Write-Host "║                    ERROR SUMMARY                          ║" -ForegroundColor Cyan
 Write-Host "╠═══════════════════════════════════════════════════════════╣" -ForegroundColor Cyan
 Write-Host "║  Build Errors:      $($Global:ErrorCollection.BuildErrors.Count.ToString().PadLeft(3))                                  ║" -ForegroundColor $(if ($Global:ErrorCollection.BuildErrors.Count -gt 0) { "Red" } else { "Green" })
@@ -395,14 +395,14 @@ Write-Host "║  Console Errors:    $($Global:ErrorCollection.ConsoleErrors.Coun
 Write-Host "║  Warnings:          $($Global:ErrorCollection.Warnings.Count.ToString().PadLeft(3))                                  ║" -ForegroundColor $(if ($Global:ErrorCollection.Warnings.Count -gt 0) { "Yellow" } else { "Green" })
 Write-Host "╠═══════════════════════════════════════════════════════════╣" -ForegroundColor Cyan
 Write-Host "║  TOTAL ERRORS:      $($totalErrors.ToString().PadLeft(3))                                  ║" -ForegroundColor $(if ($totalErrors -gt 0) { "Red" } else { "Green" })
-Write-Host "╚═══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "+===========================================================+" -ForegroundColor Cyan
 Write-Host ""
 
 if ($totalErrors -gt 0) {
-    Write-Host "[→] Review detailed errors in: $ErrorLogPath" -ForegroundColor Cyan
-    Write-Host "[→] Fix errors and run again: .\Monitor-GuiV2Build.ps1" -ForegroundColor Cyan
+    Write-Host "[INFO] Review detailed errors in: $ErrorLogPath" -ForegroundColor Cyan
+    Write-Host "[INFO] Fix errors and run again: .\Monitor-GuiV2Build.ps1" -ForegroundColor Cyan
 } else {
-    Write-Host "[✓] No errors detected! Application is running successfully." -ForegroundColor Green
+    Write-Host "[OK] No errors detected! Application is running successfully." -ForegroundColor Green
 }
 
 Write-Host ""

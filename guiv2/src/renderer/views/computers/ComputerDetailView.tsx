@@ -19,7 +19,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { useComputerDetailLogic } from '../../hooks/useComputerDetailLogic';
 import { Button } from '../../components/atoms/Button';
-import { LoadingOverlay } from '../../components/molecules/LoadingOverlay';
+import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { ModernCard } from '../../components/atoms/ModernCard';
 import { RefreshCw, UserPlus, Download, X, MonitorPlay } from 'lucide-react';
@@ -115,7 +115,7 @@ export const ComputerDetailView: React.FC<ComputerDetailViewProps> = ({ computer
   return (
     <div className="relative h-full flex flex-col p-6" data-cy="computer-detail-view">
       {/* Loading Overlay */}
-      {isLoading && <LoadingOverlay message={loadingMessage} isVisible={isLoading} />}
+      {isLoading && <LoadingOverlay message={loadingMessage} />}
 
       {/* Header Section */}
       <header className="flex items-start justify-between mb-6">
