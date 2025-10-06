@@ -28,7 +28,7 @@ import {
 import { format, addDays, isWeekend, isBefore, isAfter } from 'date-fns';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
-import Select from '../atoms/Select';
+import { Select } from '../atoms/Select';
 
 export interface BlackoutPeriod {
   id: string;

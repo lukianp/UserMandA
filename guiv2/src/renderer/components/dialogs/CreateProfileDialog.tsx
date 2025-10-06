@@ -9,7 +9,7 @@ import { useModalStore } from '../../store/useModalStore';
 import { useProfileStore } from '../../store/useProfileStore';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
-import Select from '../atoms/Select';
+import { Select } from '../atoms/Select';
 import { X, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface ProfileFormData {

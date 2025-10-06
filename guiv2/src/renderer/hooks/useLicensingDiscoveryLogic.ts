@@ -234,7 +234,7 @@ export const useLicensingDiscoveryLogic = () => {
       width: 120
     },
     {
-      field: 'utilization',
+      field: 'utilization' as any,
       headerName: 'Utilization',
       sortable: true,
       filter: true,
@@ -387,7 +387,7 @@ export const useLicensingDiscoveryLogic = () => {
       width: 120
     },
     {
-      field: 'utilization',
+      field: 'utilization' as any,
       headerName: 'Utilization',
       sortable: true,
       filter: true,

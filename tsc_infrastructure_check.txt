@@ -1,0 +1,106 @@
+src/main/services/dashboardService.ts(200,41): error TS2677: A type predicate's type must be assignable to its parameter's type.
+  Type 'ActivityItem' is not assignable to type '{ id: string; type: ActivityType; title: string; description: string; timestamp: string; status: "info"; actionUrl: string; }'.
+    Types of property 'status' are incompatible.
+      Type '"error" | "warning" | "success" | "info"' is not assignable to type '"info"'.
+        Type '"error"' is not assignable to type '"info"'.
+src/main/services/dashboardService.ts(232,60): error TS1064: The return type of an async function or method must be the global Promise<T> type. Did you mean to write 'Promise<number>'?
+src/main/services/dashboardService.ts(240,61): error TS1064: The return type of an async function or method must be the global Promise<T> type. Did you mean to write 'Promise<number>'?
+src/main/services/dashboardService.ts(247,68): error TS1064: The return type of an async function or method must be the global Promise<T> type. Did you mean to write 'Promise<number>'?
+src/main/services/dashboardService.ts(254,69): error TS1064: The return type of an async function or method must be the global Promise<T> type. Did you mean to write 'Promise<number>'?
+src/main/services/debugService.ts(211,7): error TS2741: Property 'sessionId' is missing in type '{ userId?: string; profile?: string; }' but required in type '{ sessionId: string; userId?: string; profile?: string; }'.
+src/main/services/powerShellService.test.ts(251,47): error TS2345: Argument of type '{ scriptPath: string; args: undefined[]; options: {}; }' is not assignable to parameter of type 'string'.
+src/main/services/powerShellService.test.ts(271,47): error TS2345: Argument of type '{ scriptPath: string; args: undefined[]; options: {}; }' is not assignable to parameter of type 'string'.
+src/renderer/components/organisms/Sidebar.tsx(104,13): error TS2345: Argument of type 'string' is not assignable to parameter of type 'ThemeMode'.
+src/renderer/components/organisms/Sidebar.tsx(112,12): error TS2678: Type '"highContrast"' is not comparable to type 'ThemeMode'.
+src/renderer/components/organisms/Sidebar.tsx(113,12): error TS2678: Type '"colorBlind"' is not comparable to type 'ThemeMode'.
+src/renderer/components/organisms/Sidebar.tsx(212,12): error TS2367: This comparison appears to be unintentional because the types '"system" | "light"' and '"highContrast"' have no overlap.
+src/renderer/components/organisms/Sidebar.tsx(213,12): error TS2367: This comparison appears to be unintentional because the types '"system" | "light"' and '"colorBlind"' have no overlap.
+src/renderer/components/organisms/VirtualizedDataGrid.test.tsx(20,8): error TS2613: Module '"D:/Scripts/UserMandA/guiv2/src/renderer/components/organisms/VirtualizedDataGrid"' has no default export. Did you mean to use 'import { VirtualizedDataGrid } from "D:/Scripts/UserMandA/guiv2/src/renderer/components/organisms/VirtualizedDataGrid"' instead?
+src/renderer/components/organisms/VirtualizedDataGrid.tsx(23,10): error TS2307: Cannot find module 'ag-grid-community/styles/ag-grid.css' or its corresponding type declarations.
+src/renderer/components/organisms/VirtualizedDataGrid.tsx(24,10): error TS2307: Cannot find module 'ag-grid-community/styles/ag-theme-alpine.css' or its corresponding type declarations.
+src/renderer/components/organisms/VirtualizedDataGrid.tsx(209,17): error TS2339: Property 'setDomLayout' does not exist on type 'GridApi<any>'.
+src/renderer/components/organisms/VirtualizedDataGrid.tsx(253,39): error TS2339: Property 'setFloatingFiltersHeight' does not exist on type 'GridApi<any>'.
+src/renderer/components/organisms/VirtualizedDataGrid.tsx(253,64): error TS2367: This comparison appears to be unintentional because the types '40' and '0' have no overlap.
+src/renderer/hooks/security/useIdentityGovernanceLogic.ts(17,8): error TS1149: File name 'D:/Scripts/UserMandA/guiv2/src/renderer/types/models/identityGovernance.ts' differs from already included file name 'D:/Scripts/UserMandA/guiv2/src/renderer/types/models/identitygovernance.ts' only in casing.
+  The file is in the program because:
+    Imported via '../types/models/identitygovernance' from file 'D:/Scripts/UserMandA/guiv2/src/renderer/hooks/useIdentityGovernanceDiscoveryLogic.ts'
+    Imported via '../../types/models/identityGovernance' from file 'D:/Scripts/UserMandA/guiv2/src/renderer/hooks/security/useIdentityGovernanceLogic.ts'
+    Matched by include pattern 'src/**/*' in 'D:/Scripts/UserMandA/guiv2/tsconfig.json'
+src/renderer/hooks/useExchangeDiscoveryLogic.ts(61,27): error TS2339: Property 'templates' does not exist on type 'ExecutionResult<any>'.
+src/renderer/hooks/useExchangeDiscoveryLogic.ts(86,57): error TS2345: Argument of type '(data: ExchangeDiscoveryProgress) => void' is not assignable to parameter of type '(data: ProgressData) => void'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'ProgressData' is missing the following properties from type 'ExchangeDiscoveryProgress': phase, phaseLabel, percentComplete, errors, warnings
+src/renderer/hooks/useExchangeDiscoveryLogic.ts(99,17): error TS2345: Argument of type 'ExecutionResult<any>' is not assignable to parameter of type 'SetStateAction<ExchangeDiscoveryResult>'.
+  Type 'ExecutionResult<any>' is missing the following properties from type 'ExchangeDiscoveryResult': id, startTime, status, config, and 9 more.
+src/renderer/hooks/useLicensingDiscoveryLogic.ts(237,7): error TS2322: Type '"utilization"' is not assignable to type 'NestedFieldPaths<License, any, []>'.
+src/renderer/hooks/useLicensingDiscoveryLogic.ts(390,7): error TS2322: Type '"utilization"' is not assignable to type 'NestedFieldPaths<Subscription, any, []>'.
+src/renderer/hooks/useMigrationExecutionLogic.ts(25,21): error TS2554: Expected 2 arguments, but got 1.
+src/renderer/hooks/useMigrationExecutionLogic.ts(25,42): error TS7006: Parameter 'progress' implicitly has an 'any' type.
+src/renderer/hooks/useMigrationExecutionLogic.ts(38,31): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/renderer/hooks/useMigrationExecutionLogic.ts(39,28): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/renderer/hooks/useMigrationExecutionLogic.ts(40,32): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/renderer/hooks/useMigrationExecutionLogic.ts(41,29): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/renderer/hooks/useMigrationReportLogic.ts(121,69): error TS2365: Operator '+' cannot be applied to types 'unknown' and 'unknown'.
+src/renderer/hooks/useMigrationReportLogic.ts(124,5): error TS2322: Type '{ errorType: string; count: unknown; percentage: number; }[]' is not assignable to type 'ErrorBreakdownData[]'.
+  Type '{ errorType: string; count: unknown; percentage: number; }' is not assignable to type 'ErrorBreakdownData'.
+    Types of property 'count' are incompatible.
+      Type 'unknown' is not assignable to type 'number'.
+src/renderer/hooks/useMigrationReportLogic.ts(128,33): error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+src/renderer/hooks/useMigrationReportLogic.ts(128,41): error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+src/renderer/hooks/useMigrationReportLogic.ts(130,23): error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+src/renderer/hooks/useMigrationReportLogic.ts(130,33): error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+src/renderer/hooks/useMigrationValidationLogic.ts(23,41): error TS2339: Property 'checks' does not exist on type 'ValidationResult'.
+src/renderer/hooks/useMigrationValidationLogic.ts(26,31): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/renderer/hooks/useMigrationValidationLogic.ts(27,31): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/renderer/hooks/useMigrationValidationLogic.ts(28,27): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/renderer/hooks/useMigrationValidationLogic.ts(29,29): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/renderer/hooks/useMigrationValidationLogic.ts(35,39): error TS2339: Property 'checks' does not exist on type 'ValidationResult'.
+src/renderer/hooks/useMigrationValidationLogic.ts(37,30): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/renderer/hooks/useMigrationValidationLogic.ts(39,25): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/renderer/hooks/useMigrationValidationLogic.ts(39,28): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/renderer/hooks/useMigrationValidationLogic.ts(41,14): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ blocker: number; warning: number; info: number; }'.
+src/renderer/hooks/useMigrationValidationLogic.ts(41,34): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ blocker: number; warning: number; info: number; }'.
+src/renderer/hooks/usePerformanceMetricsLogic.ts(297,43): error TS2339: Property 'lastLoadStats' does not exist on type '{ statistics: any; lastLoadTime?: Date; isLoading: boolean; }'.
+src/renderer/hooks/usePerformanceMonitoringLogic.ts(23,27): error TS2554: Expected 1 arguments, but got 0.
+src/renderer/hooks/useUserDetailLogic.ts(147,7): error TS2353: Object literal may only specify known properties, and 'component' does not exist in type 'Omit<Modal, "id" | "openedAt">'.
+src/renderer/lib/converters/index.ts(288,5): error TS1117: An object literal cannot have multiple properties with the same name.
+src/renderer/lib/performanceMonitor.ts(479,41): error TS2339: Property 'onFID' does not exist on type '{ default: typeof import("D:/Scripts/UserMandA/guiv2/node_modules/web-vitals/dist/modules/index"); onCLS: (onReport: (metric: CLSMetric) => void, opts?: ReportOpts) => void; ... 8 more ...; TTFBThresholds: MetricRatingThresholds; }'.
+src/renderer/services/dataTransformationService.ts(120,25): error TS2322: Type 'T' is not assignable to type 'object'.
+src/renderer/services/dataTransformationService.ts(148,20): error TS2322: Type 'T' is not assignable to type 'object'.
+src/renderer/services/dataTransformationService.ts(451,22): error TS2322: Type 'T1 & T2' is not assignable to type 'object'.
+src/renderer/services/dataTransformationService.ts(452,29): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{}'.
+  No index signature with a parameter of type 'string' was found on type '{}'.
+src/renderer/services/importService.ts(259,7): error TS2322: Type '(progress: number, message: string) => void' is not assignable to type '(progress: number, rows: number) => void'.
+  Types of parameters 'message' and 'rows' are incompatible.
+    Type 'number' is not assignable to type 'string'.
+src/renderer/services/themeService.test.ts(12,3): error TS7018: Object literal's property 'onchange' implicitly has an 'any' type.
+src/renderer/store/useMigrationStore.test.ts(62,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(86,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(114,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(140,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(168,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(178,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(188,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(224,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(264,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(296,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(334,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(390,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(495,39): error TS2345: Argument of type 'import("D:/Scripts/UserMandA/guiv2/src/renderer/types/models/migration").MigrationConflict' is not assignable to parameter of type 'import("D:/Scripts/UserMandA/guiv2/src/renderer/store/useMigrationStore").MigrationConflict'.
+  Types of property 'type' are incompatible.
+    Type 'string' is not assignable to type '"duplicate_user" | "duplicate_group" | "permission_mismatch" | "license_unavailable" | "mailbox_exists"'.
+src/renderer/store/useMigrationStore.test.ts(522,9): error TS2741: Property 'metadata' is missing in type '{ id: string; type: string; severity: "High"; sourceResource: { id: string; name: string; type: string; properties: {}; }; status: "pending"; suggestedResolution: { conflictId: string; strategy: "merge"; notes: string; }; }' but required in type 'MigrationConflict'.
+src/renderer/store/useMigrationStore.test.ts(531,9): error TS2741: Property 'metadata' is missing in type '{ id: string; type: string; severity: "Medium"; sourceResource: { id: string; name: string; type: string; properties: {}; }; status: "pending"; suggestedResolution: { conflictId: string; strategy: "merge"; notes: string; }; }' but required in type 'MigrationConflict'.
+src/renderer/store/useMigrationStore.test.ts(540,9): error TS2741: Property 'metadata' is missing in type '{ id: string; type: string; severity: "Low"; sourceResource: { id: string; name: string; type: string; properties: {}; }; status: "pending"; suggestedResolution: { conflictId: string; strategy: "skip"; notes: string; }; }' but required in type 'MigrationConflict'.
+src/renderer/store/useMigrationStore.test.ts(552,39): error TS2345: Argument of type 'import("D:/Scripts/UserMandA/guiv2/src/renderer/types/models/migration").MigrationConflict' is not assignable to parameter of type 'import("D:/Scripts/UserMandA/guiv2/src/renderer/store/useMigrationStore").MigrationConflict'.
+  Types of property 'type' are incompatible.
+    Type 'string' is not assignable to type '"duplicate_user" | "duplicate_group" | "permission_mismatch" | "license_unavailable" | "mailbox_exists"'.
+src/renderer/store/useMigrationStore.test.ts(619,9): error TS2739: Type '{ id: string; sourceId: string; targetId: string; type: "SecurityGroup"; status: "Mapped"; conflicts: undefined[]; }' is missing the following properties from type 'ResourceMapping': sourceName, targetName, validationResult
+src/renderer/store/useMigrationStore.test.ts(808,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(826,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(860,11): error TS2353: Object literal may only specify known properties, and 'targetEndDate' does not exist in type 'Omit<MigrationWave, "id" | "createdAt">'.
+src/renderer/store/useMigrationStore.test.ts(887,11): error TS7018: Object literal's property 'users' implicitly has an 'any[]' type.
+src/renderer/store/useMigrationStore.test.ts(888,11): error TS7018: Object literal's property 'groups' implicitly has an 'any[]' type.
+src/renderer/store/useMigrationStore.test.ts(889,11): error TS7018: Object literal's property 'resources' implicitly has an 'any[]' type.
+src/renderer/store/useMigrationStore.test.ts(890,11): error TS7018: Object literal's property 'dependencies' implicitly has an 'any[]' type.
+src/renderer/store/useMigrationStore.test.ts(891,11): error TS701

@@ -14,7 +14,7 @@ import {
   EntitlementPackage,
   PIMRole,
   IGStats
-} from '../types/models/identitygovernance';
+} from '../types/models/identityGovernance';
 
 type TabType = 'overview' | 'access-reviews' | 'entitlements' | 'pim-roles';
 

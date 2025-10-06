@@ -8,7 +8,7 @@ import { Key, TrendingUp, DollarSign, AlertCircle, CheckCircle, Clock } from 'lu
 import { useLicenseManagementLogic } from '../../hooks/useLicenseManagementLogic';
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 
 export const LicenseManagementView: React.FC = () => {
   const {

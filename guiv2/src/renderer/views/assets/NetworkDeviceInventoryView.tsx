@@ -6,9 +6,9 @@
 import React from 'react';
 import { useNetworkDeviceInventoryLogic } from '../../hooks/useNetworkDeviceInventoryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
-import Select from '../../components/atoms/Select';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
+import { Select } from '../../components/atoms/Select';
 import { Network, RefreshCw, Download, Eye, Filter, X, Activity } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 

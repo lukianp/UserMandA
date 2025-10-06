@@ -206,7 +206,7 @@ export function VirtualizedDataGrid<T = any>({
       gridApi.setGridOption('domLayout', 'print');
       setTimeout(() => {
         window.print();
-        gridApi.setDomLayout(undefined);
+        gridApi.setGridOption('domLayout', undefined);
       }, 100);
     }
   }, [gridApi]);
@@ -250,7 +250,11 @@ export function VirtualizedDataGrid<T = any>({
               size="sm"
               variant="ghost"
               icon={<Filter size={16} />}
-              onClick={() => gridApi?.setFloatingFiltersHeight(40 === 0 ? 40 : 0)}
+              onClick={() => {
+                // Note: setFloatingFiltersHeight is deprecated in AG Grid v34
+                // Floating filters are now controlled through column definitions
+                console.warn('Filter toggle not yet implemented for AG Grid v34');
+              }}
               title="Toggle filters"
               data-cy="toggle-filters"
             >

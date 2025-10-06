@@ -58,7 +58,7 @@ export function useExchangeDiscoveryLogic() {
         functionName: 'Get-ExchangeDiscoveryTemplates',
         parameters: {},
       });
-      setTemplates(result.templates || []);
+      setTemplates((result.data as any)?.templates || []);
     } catch (err) {
       console.error('Failed to load templates:', err);
     }
@@ -83,8 +83,8 @@ export function useExchangeDiscoveryLogic() {
 
     try {
       // Set up progress listener
-      const unsubscribe = window.electronAPI.onProgress((data: ExchangeDiscoveryProgress) => {
-        setProgress(data);
+      const unsubscribe = window.electronAPI.onProgress((data) => {
+        setProgress(data as unknown as ExchangeDiscoveryProgress);
       });
 
       // Execute discovery
@@ -96,7 +96,7 @@ export function useExchangeDiscoveryLogic() {
         },
       });
 
-      setResult(discoveryResult);
+      setResult(discoveryResult.data as ExchangeDiscoveryResult);
       setProgress(null);
       unsubscribe();
     } catch (err) {

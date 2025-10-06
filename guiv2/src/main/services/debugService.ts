@@ -208,7 +208,11 @@ export class DebugService extends EventEmitter {
       message,
       data,
       correlationId,
-      userSession
+      userSession: userSession ? {
+        sessionId: this.sessionId,
+        userId: userSession.userId,
+        profile: userSession.profile
+      } : undefined
     };
 
     if (error) {

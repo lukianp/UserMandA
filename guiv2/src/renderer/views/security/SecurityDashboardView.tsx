@@ -8,7 +8,7 @@ import { Shield, AlertTriangle, Lock, Unlock, Activity, Eye, Bug, TrendingDown }
 import { useSecurityDashboardLogic } from '../../hooks/useSecurityDashboardLogic';
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 
 export const SecurityDashboardView: React.FC = () => {
   const {

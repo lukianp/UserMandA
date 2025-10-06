@@ -63,6 +63,19 @@ const WebServerConfigurationDiscoveryView = lazy(() => import('./views/discovery
 const HyperVDiscoveryView = lazy(() => import('./views/discovery/HyperVDiscoveryView'));
 const EnvironmentDetectionView = lazy(() => import('./views/discovery/EnvironmentDetectionView'));
 const InfrastructureView = lazy(() => import('./views/infrastructure/InfrastructureView'));
+// TASK 4: Infrastructure views (13 new views)
+const NetworkTopologyView = lazy(() => import('./views/infrastructure/NetworkTopologyView'));
+const StorageAnalysisView = lazy(() => import('./views/infrastructure/StorageAnalysisView'));
+const VirtualizationView = lazy(() => import('./views/infrastructure/VirtualizationView'));
+const CloudResourcesView = lazy(() => import('./views/infrastructure/CloudResourcesView'));
+const DatabaseInventoryView = lazy(() => import('./views/infrastructure/DatabaseInventoryView'));
+const ApplicationServersView = lazy(() => import('./views/infrastructure/ApplicationServersView'));
+const WebServersView = lazy(() => import('./views/infrastructure/WebServersView'));
+const SecurityAppliancesView = lazy(() => import('./views/infrastructure/SecurityAppliancesView'));
+const BackupSystemsView = lazy(() => import('./views/infrastructure/BackupSystemsView'));
+const MonitoringSystemsView = lazy(() => import('./views/infrastructure/MonitoringSystemsView'));
+const NetworkDevicesView = lazy(() => import('./views/infrastructure/NetworkDevicesView'));
+const EndpointDevicesView = lazy(() => import('./views/infrastructure/EndpointDevicesView'));
 const MigrationPlanningView = lazy(() => import('./views/migration/MigrationPlanningView'));
 const MigrationMappingView = lazy(() => import('./views/migration/MigrationMappingView'));
 const MigrationValidationView = lazy(() => import('./views/migration/MigrationValidationView'));
@@ -172,8 +185,22 @@ export const App: React.FC = () => {
               <Route path="/computers" element={<ComputersView />} />
               <Route path="/computers/:computerId" element={<ComputerDetailViewWrapper />} />
 
-              {/* Infrastructure */}
-              <Route path="/infrastructure" element={<InfrastructureView />} />
+              {/* Infrastructure Routes - TASK 4 */}
+              <Route path="/infrastructure">
+                <Route index element={<InfrastructureView />} />
+                <Route path="network-topology" element={<NetworkTopologyView />} />
+                <Route path="storage" element={<StorageAnalysisView />} />
+                <Route path="virtualization" element={<VirtualizationView />} />
+                <Route path="cloud" element={<CloudResourcesView />} />
+                <Route path="databases" element={<DatabaseInventoryView />} />
+                <Route path="app-servers" element={<ApplicationServersView />} />
+                <Route path="web-servers" element={<WebServersView />} />
+                <Route path="security-appliances" element={<SecurityAppliancesView />} />
+                <Route path="backup" element={<BackupSystemsView />} />
+                <Route path="monitoring" element={<MonitoringSystemsView />} />
+                <Route path="network-devices" element={<NetworkDevicesView />} />
+                <Route path="endpoints" element={<EndpointDevicesView />} />
+              </Route>
 
               {/* Migration Routes */}
               <Route path="/migration">

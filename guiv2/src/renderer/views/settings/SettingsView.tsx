@@ -5,9 +5,9 @@
 
 import React from 'react';
 import { useSettingsLogic } from '../../hooks/useSettingsLogic';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
-import Select from '../../components/atoms/Select';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
+import { Select } from '../../components/atoms/Select';
 import Checkbox from '../../components/atoms/Checkbox';
 import { Save, RotateCcw, Settings as SettingsIcon, CheckCircle } from 'lucide-react';
 

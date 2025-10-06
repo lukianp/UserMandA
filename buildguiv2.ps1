@@ -170,10 +170,10 @@ if (!(Test-Path "node_modules")) {
 
 if ($needsInstall) {
     Write-Host "Installing npm dependencies..." -ForegroundColor Yellow
-    & npm ci --prefer-offline --no-audit 2>&1 | Out-Null
+    npm ci --prefer-offline --no-audit 2>&1 | Out-Host
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "npm ci failed, trying npm install..."
-        & npm install --prefer-offline --no-audit
+        npm install --prefer-offline --no-audit 2>&1 | Out-Host
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Failed to install dependencies"
             exit 1
@@ -300,7 +300,7 @@ if (Test-Path $NodeModulesDest) {
 
 Write-Host "  Installing production dependencies in output directory..." -ForegroundColor Cyan
 Push-Location $OutputPath
-& npm ci --production --prefer-offline --no-audit 2>&1 | Out-Null
+npm ci --production --prefer-offline --no-audit 2>&1 | Out-Host
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "Production dependency installation had issues, but continuing..."
 }

@@ -20,24 +20,24 @@ export const useMigrationValidationLogic = () => {
 
   const severityCounts = useMemo(() => {
     if (!waveValidationResult) return { total: 0, blockers: 0, warnings: 0, info: 0, passed: 0 };
-    const checks = waveValidationResult.checks || [];
+    const checks = (waveValidationResult as any).checks || [];
     return {
       total: checks.length,
-      blockers: checks.filter(c => c.severity === 'blocker' && !c.passed).length,
-      warnings: checks.filter(c => c.severity === 'warning' && !c.passed).length,
-      info: checks.filter(c => c.severity === 'info' && !c.passed).length,
-      passed: checks.filter(c => c.passed).length,
+      blockers: checks.filter((c: any) => c.severity === 'blocker' && !c.passed).length,
+      warnings: checks.filter((c: any) => c.severity === 'warning' && !c.passed).length,
+      info: checks.filter((c: any) => c.severity === 'info' && !c.passed).length,
+      passed: checks.filter((c: any) => c.passed).length,
     };
   }, [waveValidationResult]);
 
   const filteredChecks = useMemo(() => {
     if (!waveValidationResult) return [];
-    let checks = waveValidationResult.checks || [];
+    let checks = (waveValidationResult as any).checks || [];
     if (selectedSeverity !== 'all') {
-      checks = checks.filter(c => c.severity === selectedSeverity);
+      checks = checks.filter((c: any) => c.severity === selectedSeverity);
     }
-    return checks.sort((a, b) => {
-      const order = { blocker: 0, warning: 1, info: 2 };
+    return checks.sort((a: any, b: any) => {
+      const order: any = { blocker: 0, warning: 1, info: 2 };
       return order[a.severity] - order[b.severity];
     });
   }, [waveValidationResult, selectedSeverity]);

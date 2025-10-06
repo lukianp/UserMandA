@@ -248,11 +248,11 @@ describe('PowerShellExecutionService', () => {
 
       // Try to create more sessions than max pool size
       for (let i = 0; i < 10; i++) {
-        const promise = service.executeScript({
-          scriptPath: `Scripts/Test${i}.ps1`,
-          args: [],
-          options: {}
-        });
+        const promise = service.executeScript(
+          `Scripts/Test${i}.ps1`,
+          [],
+          {}
+        );
         promises.push(promise);
       }
 
@@ -268,11 +268,11 @@ describe('PowerShellExecutionService', () => {
 
       // Fill the pool
       for (let i = 0; i < 10; i++) {
-        const promise = service.executeScript({
-          scriptPath: `Scripts/Test${i}.ps1`,
-          args: [],
-          options: {}
-        });
+        const promise = service.executeScript(
+          `Scripts/Test${i}.ps1`,
+          [],
+          {}
+        );
         promises.push(promise);
       }
 

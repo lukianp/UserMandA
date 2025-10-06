@@ -14,8 +14,8 @@ import React from 'react';
 import { RefreshCw, Download, Package, TrendingUp, DollarSign, AlertTriangle, BarChart3, PieChart } from 'lucide-react';
 import { BarChart, Bar, PieChart as RePieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useApplicationUsageLogic } from '../../hooks/useApplicationUsageLogic';
-import Button from '../../components/atoms/Button';
-import Select from '../../components/atoms/Select';
+import { Button } from '../../components/atoms/Button';
+import { Select } from '../../components/atoms/Select';
 import LoadingSpinner from '../../components/atoms/LoadingSpinner';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];

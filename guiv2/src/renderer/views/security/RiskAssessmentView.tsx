@@ -5,9 +5,9 @@
 import React from 'react';
 import { useRiskAssessmentLogic } from '../../hooks/useRiskAssessmentLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
-import Select from '../../components/atoms/Select';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
+import { Select } from '../../components/atoms/Select';
 import { AlertTriangle, RefreshCw, Download, Filter, X } from 'lucide-react';
 
 const RiskAssessmentView: React.FC = () => {

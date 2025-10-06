@@ -5,8 +5,8 @@
 
 import React from 'react';
 import { useAzureDiscoveryLogic } from '../../hooks/useAzureDiscoveryLogic';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import StatusIndicator from '../../components/atoms/StatusIndicator';
 import { Play, Square, RefreshCw, Download, Trash2, Cloud, CheckCircle } from 'lucide-react';

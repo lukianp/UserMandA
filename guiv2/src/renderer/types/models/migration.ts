@@ -497,3 +497,35 @@ export interface MigrationPlan extends Identifiable, Named, TimestampMetadata {
   tasks: MigrationTask[];
   status: MigrationStatus;
 }
+
+/**
+ * Complexity score for migration planning
+ */
+export interface ComplexityScore {
+  score: number;
+  level: 'Low' | 'Medium' | 'High';
+  factors: string[];
+}
+
+/**
+ * Group mapping for migration planning
+ */
+export interface GroupMapping {
+  userId: string;
+  sourceGroupId: string;
+  targetGroupId: string;
+  mappingType: 'Direct' | 'Merge' | 'Split';
+  status: MappingStatus;
+}
+
+/**
+ * Migration analysis result
+ */
+export interface MigrationAnalysis {
+  userId: string;
+  complexity: ComplexityScore;
+  dependencies: string[];
+  recommendations: string[];
+  estimatedDuration: number | null; // milliseconds
+  risks: string[];
+}

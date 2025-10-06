@@ -55,8 +55,8 @@ import {
   ComposedChart
 } from 'recharts';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
-import Button from '../../components/atoms/Button';
-import Select from '../../components/atoms/Select';
+import { Button } from '../../components/atoms/Button';
+import { Select } from '../../components/atoms/Select';
 import { Input } from '../../components/atoms/Input';
 import { useNotificationStore } from '../../store/useNotificationStore';
 

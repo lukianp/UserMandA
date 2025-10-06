@@ -9,7 +9,7 @@ import { useAssetInventoryLogic } from '../../hooks/useAssetInventoryLogic';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { Badge } from '../../components/atoms/Badge';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 
 export const AssetInventoryView: React.FC = () => {
   const {

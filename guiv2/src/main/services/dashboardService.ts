@@ -229,7 +229,7 @@ export class DashboardService {
   // Helper Methods
   // ========================================
 
-  private async getMigratedUserCount(profileName: string): number {
+  private async getMigratedUserCount(profileName: string): Promise<number> {
     // Would check migration status from project waves
     const projectConfig = await this.projectService.loadProjectConfig(profileName);
     return projectConfig.waves
@@ -237,21 +237,21 @@ export class DashboardService {
       .reduce((sum, wave) => sum + wave.userCount, 0);
   }
 
-  private async getMigratedGroupCount(profileName: string): number {
+  private async getMigratedGroupCount(profileName: string): Promise<number> {
     const projectConfig = await this.projectService.loadProjectConfig(profileName);
     return projectConfig.waves
       .filter(w => w.status === 'Complete')
       .reduce((sum, wave) => sum + wave.groupCount, 0);
   }
 
-  private async getPendingMigrationUserCount(profileName: string): number {
+  private async getPendingMigrationUserCount(profileName: string): Promise<number> {
     const projectConfig = await this.projectService.loadProjectConfig(profileName);
     return projectConfig.waves
       .filter(w => w.status === 'Scheduled' || w.status === 'InProgress')
       .reduce((sum, wave) => sum + wave.userCount, 0);
   }
 
-  private async getPendingMigrationGroupCount(profileName: string): number {
+  private async getPendingMigrationGroupCount(profileName: string): Promise<number> {
     const projectConfig = await this.projectService.loadProjectConfig(profileName);
     return projectConfig.waves
       .filter(w => w.status === 'Scheduled' || w.status === 'InProgress')

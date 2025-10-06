@@ -16,8 +16,8 @@ import {
 } from 'recharts';
 import { Download, FileText, CheckCircle, XCircle, Clock, AlertCircle, Filter } from 'lucide-react';
 import { useMigrationReportLogic } from '../../hooks/useMigrationReportLogic';
-import Button from '../../components/atoms/Button';
-import Select from '../../components/atoms/Select';
+import { Button } from '../../components/atoms/Button';
+import { Select } from '../../components/atoms/Select';
 
 // Statistics Card Component
 interface StatCardProps {

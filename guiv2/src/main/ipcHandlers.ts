@@ -966,6 +966,97 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     }
   });
 
+  // ========================================
+  // Migration Analysis Handlers (TASK 5)
+  // ========================================
+
+  /**
+   * IPC Handler: logicEngine:analyzeMigrationComplexity
+   *
+   * Analyze migration complexity for a user
+   * Returns complexity score with level and contributing factors
+   */
+  ipcMain.handle('logicEngine:analyzeMigrationComplexity', async (_, userId: string) => {
+    try {
+      console.log(`Analyzing migration complexity for user: ${userId}`);
+
+      if (!userId || typeof userId !== 'string') {
+        throw new Error('Invalid userId parameter');
+      }
+
+      // Call Logic Engine complexity analysis
+      const complexity = await logicEngineService.analyzeMigrationComplexity(userId);
+
+      return {
+        success: true,
+        data: complexity
+      };
+    } catch (error: unknown) {
+      console.error('logicEngine:analyzeMigrationComplexity error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: logicEngine:batchAnalyzeMigrationComplexity
+   *
+   * Batch analyze migration complexity for multiple users
+   */
+  ipcMain.handle('logicEngine:batchAnalyzeMigrationComplexity', async (_, userIds: string[]) => {
+    try {
+      console.log(`Batch analyzing migration complexity for ${userIds.length} users`);
+
+      if (!Array.isArray(userIds) || userIds.length === 0) {
+        throw new Error('Invalid userIds parameter');
+      }
+
+      // Call Logic Engine batch analysis
+      const results = await logicEngineService.batchAnalyzeMigrationComplexity(userIds);
+
+      // Convert Map to object for JSON serialization
+      const resultsObj: Record<string, any> = {};
+      results.forEach((value, key) => {
+        resultsObj[key] = value;
+      });
+
+      return {
+        success: true,
+        data: resultsObj
+      };
+    } catch (error: unknown) {
+      console.error('logicEngine:batchAnalyzeMigrationComplexity error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: logicEngine:getComplexityStatistics
+   *
+   * Get complexity statistics for all analyzed users
+   */
+  ipcMain.handle('logicEngine:getComplexityStatistics', async () => {
+    try {
+      const stats = logicEngineService.getComplexityStatistics();
+
+      return {
+        success: true,
+        data: stats
+      };
+    } catch (error: unknown) {
+      console.error('logicEngine:getComplexityStatistics error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
   /**
    * IPC Handler: project:getConfiguration
    *

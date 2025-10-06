@@ -6,9 +6,9 @@
 import React, { useState } from 'react';
 import { Lock, ChevronDown, ChevronUp, Download, FileSpreadsheet, AlertCircle, Play, XCircle, Shield } from 'lucide-react';
 import { useDataLossPreventionDiscoveryLogic } from '../../hooks/useDataLossPreventionDiscoveryLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 

@@ -21,7 +21,7 @@ import {
 import { useAccessReviewLogic } from '../../hooks/security/useAccessReviewLogic';
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import type { AccessReviewItem, BulkReviewAction } from '../../types/models/accessReview';
 
 export const AccessReviewView: React.FC = () => {

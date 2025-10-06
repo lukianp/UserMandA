@@ -5,9 +5,9 @@
 
 import React from 'react';
 import { useSecurityInfrastructureDiscoveryLogic } from '../../hooks/useSecurityInfrastructureDiscoveryLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import SearchBar from '../../components/molecules/SearchBar';
-import Button from '../../components/atoms/Button';
+import { Button } from '../../components/atoms/Button';
 import Badge from '../../components/atoms/Badge';
 import ProgressBar from '../../components/molecules/ProgressBar';
 import {

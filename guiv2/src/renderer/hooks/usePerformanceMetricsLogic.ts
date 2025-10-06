@@ -294,7 +294,7 @@ export const usePerformanceMetricsLogic = () => {
 
       if (result.success && result.data?.statistics) {
         const stats = result.data.statistics;
-        const lastLoadStats = result.data.lastLoadStats;
+        const lastLoadStats = (result.data as any).lastLoadStats;
 
         // Calculate engine metrics
         const engineMetrics = calculateEngineMetrics(stats, lastLoadStats);

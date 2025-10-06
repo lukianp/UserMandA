@@ -907,6 +907,52 @@ export interface ElectronAPI {
      * @returns Cleanup function
      */
     onError: (callback: (error: any) => void) => () => void;
+
+    /**
+     * Analyze migration complexity for a user
+     * @param userId - User SID or UPN
+     * @returns Promise with complexity score, level, and contributing factors
+     */
+    analyzeMigrationComplexity: (userId: string) => Promise<{
+      success: boolean;
+      data?: {
+        score: number;
+        level: 'Low' | 'Medium' | 'High';
+        factors: string[];
+      };
+      error?: string;
+    }>;
+
+    /**
+     * Batch analyze migration complexity for multiple users
+     * @param userIds - Array of user SIDs or UPNs
+     * @returns Promise with complexity results mapped by userId
+     */
+    batchAnalyzeMigrationComplexity: (userIds: string[]) => Promise<{
+      success: boolean;
+      data?: Record<string, {
+        score: number;
+        level: 'Low' | 'Medium' | 'High';
+        factors: string[];
+      }>;
+      error?: string;
+    }>;
+
+    /**
+     * Get complexity statistics for all analyzed users
+     * @returns Promise with complexity statistics
+     */
+    getComplexityStatistics: () => Promise<{
+      success: boolean;
+      data?: {
+        total: number;
+        low: number;
+        medium: number;
+        high: number;
+        analyzed: number;
+      };
+      error?: string;
+    }>;
   };
 }
 
@@ -918,5 +964,9 @@ declare global {
     electronAPI: ElectronAPI;
   }
 }
+
+// AG Grid CSS Module Declarations
+declare module 'ag-grid-community/styles/ag-grid.css';
+declare module 'ag-grid-community/styles/ag-theme-alpine.css';
 
 export {};

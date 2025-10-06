@@ -20,7 +20,7 @@ export const usePerformanceMonitoringLogic = (options: PerformanceMonitoringOpti
     slowOperationThreshold = 100
   } = options;
 
-  const renderStartTime = useRef<number | undefined>();
+  const renderStartTime = useRef<number | undefined>(undefined);
   const operationTimers = useRef<Map<string, number>>(new Map());
 
   // Send performance metrics to main process

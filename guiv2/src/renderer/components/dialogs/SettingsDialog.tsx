@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { X, Settings } from 'lucide-react';
 import { Button } from '../atoms/Button';
 import Checkbox from '../atoms/Checkbox';
-import Select from '../atoms/Select';
+import { Select } from '../atoms/Select';
 import { Input } from '../atoms/Input';
 
 export interface SettingsDialogProps {

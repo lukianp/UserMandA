@@ -21,8 +21,8 @@ export const useMigrationExecutionLogic = () => {
   const [logs, setLogs] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!selectedWave) return;
-    const cleanup = subscribeToProgress((progress) => {
+    if (!selectedWave?.id) return;
+    const cleanup = subscribeToProgress(selectedWave.id, (progress: any) => {
       if (progress.message) {
         setLogs(prev => [...prev.slice(-99), progress.message]);
       }
@@ -35,10 +35,10 @@ export const useMigrationExecutionLogic = () => {
     const items = executionProgress.items || [];
     return {
       total: items.length,
-      completed: items.filter(i => i.status === 'completed').length,
-      failed: items.filter(i => i.status === 'failed').length,
-      inProgress: items.filter(i => i.status === 'in-progress').length,
-      pending: items.filter(i => i.status === 'pending').length,
+      completed: items.filter((i: any) => i.status === 'completed').length,
+      failed: items.filter((i: any) => i.status === 'failed').length,
+      inProgress: items.filter((i: any) => i.status === 'in-progress').length,
+      pending: items.filter((i: any) => i.status === 'pending').length,
     };
   }, [executionProgress]);
 

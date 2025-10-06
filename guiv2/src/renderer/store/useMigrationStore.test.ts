@@ -58,13 +58,10 @@ describe('useMigrationStore', () => {
         waveId = await result.current.planWave({
           name: 'Test Wave 1',
           description: 'Test wave for unit testing',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date(Date.now() + 86400000).toISOString(),
-          users: [],
-          groups: [],
-          resources: [],
-          dependencies: [],
-        });
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date(Date.now() + 86400000).toISOString(),
+          priority: 'Normal',
+        } as any);
       });
 
       expect(waveId).toBeTruthy();
@@ -82,11 +79,10 @@ describe('useMigrationStore', () => {
         waveId = await result.current.planWave({
           name: 'Original Name',
           description: 'Original Description',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: [],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
       });
@@ -110,11 +106,10 @@ describe('useMigrationStore', () => {
         waveId = await result.current.planWave({
           name: 'Wave to Delete',
           description: 'Will be deleted',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: [],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
       });
@@ -136,11 +131,10 @@ describe('useMigrationStore', () => {
         originalId = await result.current.planWave({
           name: 'Original Wave',
           description: 'Original Description',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: ['user1', 'user2'],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
       });
@@ -164,31 +158,28 @@ describe('useMigrationStore', () => {
         ids[0] = await result.current.planWave({
           name: 'Wave 1',
           description: 'First',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: [],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
         ids[1] = await result.current.planWave({
           name: 'Wave 2',
           description: 'Second',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: [],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
         ids[2] = await result.current.planWave({
           name: 'Wave 3',
           description: 'Third',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: [],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
       });
@@ -220,11 +211,10 @@ describe('useMigrationStore', () => {
         waveId = await result.current.planWave({
           name: 'Execution Test Wave',
           description: 'Test execution',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: [],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
       });
@@ -260,11 +250,10 @@ describe('useMigrationStore', () => {
         waveId = await result.current.planWave({
           name: 'Failing Wave',
           description: 'Will fail',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: [],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
       });
@@ -292,11 +281,10 @@ describe('useMigrationStore', () => {
         waveId = await result.current.planWave({
           name: 'Pausable Wave',
           description: 'Can be paused',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: [],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
       });
@@ -330,11 +318,10 @@ describe('useMigrationStore', () => {
         waveId = await result.current.planWave({
           name: 'Resumable Wave',
           description: 'Can be resumed',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: [],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
       });
@@ -386,11 +373,10 @@ describe('useMigrationStore', () => {
         waveId = await result.current.planWave({
           name: 'Original Wave',
           description: 'Before rollback',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: [],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
       });
@@ -526,7 +512,7 @@ describe('useMigrationStore', () => {
           sourceResource: { id: 's1', name: 'User1', type: 'User', properties: {} },
           status: 'pending',
           suggestedResolution: { conflictId: 'c1', strategy: 'merge', notes: '' },
-          
+          metadata: {},
         },
         {
           id: 'c2',
@@ -535,7 +521,7 @@ describe('useMigrationStore', () => {
           sourceResource: { id: 's2', name: 'Group1', type: 'Group', properties: {} },
           status: 'pending',
           suggestedResolution: { conflictId: 'c2', strategy: 'merge', notes: '' },
-          
+          metadata: {},
         },
         {
           id: 'c3',
@@ -544,7 +530,7 @@ describe('useMigrationStore', () => {
           sourceResource: { id: 's3', name: 'User2', type: 'User', properties: {} },
           status: 'pending',
           suggestedResolution: { conflictId: 'c3', strategy: 'skip', notes: '' },
-          
+          metadata: {},
         },
       ];
 
@@ -619,11 +605,13 @@ describe('useMigrationStore', () => {
         {
           id: 'm2',
           sourceId: 'src-2',
+          sourceName: 'Group1',
           targetId: 'tgt-2',
+          targetName: 'Group1',
           type: 'SecurityGroup',
           status: 'Mapped',
           conflicts: [],
-          
+          validationResult: null,
         },
       ];
 
@@ -804,11 +792,10 @@ describe('useMigrationStore', () => {
         await result.current.planWave({
           name: 'Completed Wave',
           description: 'Done',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: ['u1', 'u2', 'u3'],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
       });
@@ -822,11 +809,10 @@ describe('useMigrationStore', () => {
         await result.current.planWave({
           name: 'In Progress Wave',
           description: 'Running',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: ['u4', 'u5'],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
       });
@@ -856,11 +842,10 @@ describe('useMigrationStore', () => {
         await result.current.planWave({
           name: 'Persistent Wave',
           description: 'Will be saved',
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
           users: [],
-          groups: [],
-          resources: [],
+          
           dependencies: [],
         });
       });
@@ -879,20 +864,20 @@ describe('useMigrationStore', () => {
           id: 'wave-1',
           name: 'Loaded Wave',
           description: 'From storage',
-          status: 'Planning',
+          status: 'Planning' as const,
           order: 1,
+          priority: 'Normal' as const,
           createdAt: new Date().toISOString(),
-          targetStartDate: new Date().toISOString(),
-          targetEndDate: new Date().toISOString(),
-          users: [],
-          groups: [],
-          resources: [],
-          dependencies: [],
-          tasks: [],
-          batches: [],
-          
+          plannedStartDate: new Date().toISOString(),
+          plannedEndDate: new Date().toISOString(),
+          users: [] as string[],
+          resources: [] as string[],
+          dependencies: [] as string[],
+          tasks: [] as any[],
+          batches: [] as any[],
+          metadata: {},
           notes: '',
-          prerequisites: [],
+          prerequisites: [] as string[],
           totalItems: 0,
           progressPercentage: 0,
           actualStartDate: null,

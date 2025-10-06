@@ -7,7 +7,7 @@ import React, { useEffect } from 'react';
 import { useComputerInventoryLogic } from '../../hooks/useComputerInventoryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
-import Select from '../../components/atoms/Select';
+import { Select } from '../../components/atoms/Select';
 import { Download, RefreshCw, Monitor, AlertCircle } from 'lucide-react';
 
 const ComputerInventoryView: React.FC = () => {

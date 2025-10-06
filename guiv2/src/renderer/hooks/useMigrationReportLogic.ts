@@ -118,16 +118,16 @@ export const useMigrationReportLogic = () => {
       return acc;
     }, {});
 
-    const total = Object.values(errorCounts).reduce((sum, count) => sum + count, 0);
+    const total = Object.values(errorCounts).reduce((sum: number, count: number) => sum + count, 0);
     if (total === 0) return [];
 
     return Object.entries(errorCounts)
       .map(([errorType, count]) => ({
         errorType,
-        count,
-        percentage: Math.round((count / total) * 100),
+        count: count as number,
+        percentage: Math.round(((count as number) / total) * 100),
       }))
-      .sort((a, b) => b.count - a.count);
+      .sort((a, b) => (b.count as number) - (a.count as number));
   };
 
   // Mock data for development/testing

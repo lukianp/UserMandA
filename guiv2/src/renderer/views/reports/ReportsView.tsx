@@ -8,7 +8,7 @@ import React from 'react';
 import { useReportsLogic } from '../../hooks/useReportsLogic';
 import SearchBar from '../../components/molecules/SearchBar';
 import { Button } from '../../components/atoms/Button';
-import Select from '../../components/atoms/Select';
+import { Select } from '../../components/atoms/Select';
 import Badge from '../../components/atoms/Badge';
 import { FileText, Download, Loader2 } from 'lucide-react';
 

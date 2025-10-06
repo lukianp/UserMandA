@@ -8,7 +8,7 @@ import { Dialog } from '@headlessui/react';
 import { X, User, Key, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
-import Select from '../atoms/Select';
+import { Select } from '../atoms/Select';
 
 export interface Profile {
   id?: string;

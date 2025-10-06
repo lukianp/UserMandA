@@ -7,7 +7,7 @@ import React from 'react';
 import { useDeviceManagementLogic } from '../../hooks/useDeviceManagementLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
-import Select from '../../components/atoms/Select';
+import { Select } from '../../components/atoms/Select';
 import { Download, RefreshCw, Smartphone, AlertCircle, Shield } from 'lucide-react';
 import { ColDef } from 'ag-grid-community';
 

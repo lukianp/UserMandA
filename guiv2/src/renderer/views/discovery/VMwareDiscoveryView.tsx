@@ -4,7 +4,7 @@ import { useVMwareDiscoveryLogic } from '../../hooks/useVMwareDiscoveryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
-import Select from '../../components/atoms/Select';
+import { Select } from '../../components/atoms/Select';
 import type { VMwareDiscoveryResult } from '../../types/models/vmware';
 
 const formatBytes = (bytes: number): string => {

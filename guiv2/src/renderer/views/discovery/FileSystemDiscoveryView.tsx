@@ -1,8 +1,8 @@
 import React from 'react';
 import { FolderOpen, Play, XCircle, Download, Clock, HardDrive, Shield, AlertTriangle } from 'lucide-react';
 import { useFileSystemDiscoveryLogic } from '../../hooks/useFileSystemDiscoveryLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
-import Button from '../../components/atoms/Button';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { Button } from '../../components/atoms/Button';
 import SearchBar from '../../components/molecules/SearchBar';
 import ProgressBar from '../../components/molecules/ProgressBar';
 

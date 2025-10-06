@@ -8,7 +8,7 @@ import { DollarSign, TrendingDown, TrendingUp, PieChart, BarChart3, Calculator }
 import { useCostAnalysisLogic } from '../../hooks/useCostAnalysisLogic';
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 
 export const CostAnalysisView: React.FC = () => {
   const {

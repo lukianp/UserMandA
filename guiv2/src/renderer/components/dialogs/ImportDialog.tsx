@@ -7,7 +7,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Dialog } from '@headlessui/react';
 import { X, Upload, File, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '../atoms/Button';
-import Select from '../atoms/Select';
+import { Select } from '../atoms/Select';
 
 export interface ImportDialogProps {
   /** Dialog open state */

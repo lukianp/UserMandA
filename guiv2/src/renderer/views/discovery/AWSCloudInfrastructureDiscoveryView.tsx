@@ -9,10 +9,10 @@ import {
   ChevronDown, ChevronUp, AlertTriangle, DollarSign, Shield
 } from 'lucide-react';
 import { useAWSDiscoveryLogic } from '../../hooks/useAWSDiscoveryLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
-import Select from '../../components/atoms/Select';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
+import { Select } from '../../components/atoms/Select';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import ProgressBar from '../../components/molecules/ProgressBar';

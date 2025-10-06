@@ -848,6 +848,191 @@ export class LogicEngineService extends EventEmitter {
 
     return latestTimestamp?.toISOString();
   }
+
+  /**
+   * Analyze migration complexity for a user
+   * Returns complexity score based on group memberships, permissions, and service dependencies
+   */
+  public async analyzeMigrationComplexity(userId: string): Promise<{
+    score: number;
+    level: 'Low' | 'Medium' | 'High';
+    factors: string[];
+  }> {
+    const user = this.usersBySid.get(userId) || this.usersByUpn.get(userId);
+
+    if (!user) {
+      console.warn(`User not found for complexity analysis: ${userId}`);
+      return {
+        score: 0,
+        level: 'Low',
+        factors: ['User not found in discovery data']
+      };
+    }
+
+    let score = 0;
+    const factors: string[] = [];
+
+    // Get correlated data
+    const groups = this.getGroupsForUser(user.Sid);
+    const devices = this.getDevicesForUser(user.Sid);
+    const mailbox = this.mailboxByUpn.get(user.UPN) || this.mailboxByUpn.get(user.Mail || '');
+    const azureRoles = this.rolesByPrincipalId.get(user.AzureObjectId || '') || [];
+    const drives = this.drivesByUserSid.get(user.Sid) || [];
+    const acls = this.aclByIdentitySid.get(user.Sid) || [];
+
+    // Group membership complexity (0-10 points)
+    if (groups.length > 20) {
+      score += 10;
+      factors.push(`High group membership count (${groups.length} groups)`);
+    } else if (groups.length > 10) {
+      score += 5;
+      factors.push(`Moderate group membership count (${groups.length} groups)`);
+    } else if (groups.length > 5) {
+      score += 2;
+      factors.push(`Several group memberships (${groups.length} groups)`);
+    }
+
+    // Permission complexity - check for administrative roles (0-15 points)
+    const adminGroups = groups.filter(g =>
+      g.Name?.toLowerCase().includes('admin') ||
+      g.Name?.toLowerCase().includes('domain') ||
+      g.Type?.toLowerCase().includes('privileged')
+    );
+
+    if (adminGroups.length > 0) {
+      score += 15;
+      factors.push(`Administrative permissions detected (${adminGroups.length} admin groups)`);
+    }
+
+    // Azure role assignments (0-10 points)
+    if (azureRoles.length > 5) {
+      score += 10;
+      factors.push(`Multiple Azure role assignments (${azureRoles.length} roles)`);
+    } else if (azureRoles.length > 0) {
+      score += 5;
+      factors.push(`Azure role assignments (${azureRoles.length} roles)`);
+    }
+
+    // External system dependencies (0-8 points)
+    const hasMailbox = !!mailbox;
+    const hasDevices = devices.length > 0;
+    const hasDrives = drives.length > 0;
+
+    if (hasMailbox && hasDevices) {
+      score += 4;
+      factors.push('Multiple Microsoft 365 services (Mailbox + Devices)');
+    }
+
+    if (hasDrives) {
+      score += 2;
+      factors.push(`Mapped network drives (${drives.length} drives)`);
+    }
+
+    if (hasDevices && devices.length > 1) {
+      score += 2;
+      factors.push(`Multiple devices (${devices.length} devices)`);
+    }
+
+    // SharePoint/file share access (0-7 points)
+    if (acls.length > 10) {
+      score += 7;
+      factors.push(`Extensive file share permissions (${acls.length} ACL entries)`);
+    } else if (acls.length > 0) {
+      score += 3;
+      factors.push(`File share permissions (${acls.length} ACL entries)`);
+    }
+
+    // Teams ownership - check if user manages teams (0-5 points)
+    const teamsOwned = groups.filter(g =>
+      (g.Type === 'Team' || g.Name?.toLowerCase().includes('team')) &&
+      g.ManagedBy === user.Dn
+    );
+
+    if (teamsOwned.length > 0) {
+      score += 5;
+      factors.push(`Teams owner (${teamsOwned.length} teams)`);
+    }
+
+    // Manager role - adds complexity if user has direct reports (0-5 points)
+    if (user.Manager) {
+      const directReports = Array.from(this.usersBySid.values()).filter(u =>
+        u.Manager === user.Dn || u.ManagerSid === user.Sid
+      );
+
+      if (directReports.length > 0) {
+        score += 5;
+        factors.push(`Manager with direct reports (${directReports.length} reports)`);
+      }
+    }
+
+    // Calculate complexity level based on score
+    // Score ranges: 0-15 = Low, 16-35 = Medium, 36+ = High
+    let level: 'Low' | 'Medium' | 'High';
+
+    if (score <= 15) {
+      level = 'Low';
+    } else if (score <= 35) {
+      level = 'Medium';
+    } else {
+      level = 'High';
+    }
+
+    // Add summary factor
+    if (factors.length === 0) {
+      factors.push('Minimal dependencies - straightforward migration');
+    }
+
+    console.log(`Complexity analysis for ${user.DisplayName || user.Sam}: Score=${score}, Level=${level}, Factors=${factors.length}`);
+
+    return {
+      score,
+      level,
+      factors
+    };
+  }
+
+  /**
+   * Batch analyze complexity for multiple users
+   */
+  public async batchAnalyzeMigrationComplexity(userIds: string[]): Promise<Map<string, {
+    score: number;
+    level: 'Low' | 'Medium' | 'High';
+    factors: string[];
+  }>> {
+    const results = new Map<string, {
+      score: number;
+      level: 'Low' | 'Medium' | 'High';
+      factors: string[];
+    }>();
+
+    for (const userId of userIds) {
+      const complexity = await this.analyzeMigrationComplexity(userId);
+      results.set(userId, complexity);
+    }
+
+    return results;
+  }
+
+  /**
+   * Get complexity statistics for all users
+   */
+  public getComplexityStatistics(): {
+    total: number;
+    low: number;
+    medium: number;
+    high: number;
+    analyzed: number;
+  } {
+    // This would be populated by running analysis
+    // For now, return empty stats
+    return {
+      total: this.usersBySid.size,
+      low: 0,
+      medium: 0,
+      high: 0,
+      analyzed: 0
+    };
+  }
 }
 
 // Apply mixins to LogicEngineService class

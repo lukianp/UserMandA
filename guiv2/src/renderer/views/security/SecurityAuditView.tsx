@@ -6,9 +6,9 @@
 import React from 'react';
 import { useSecurityAuditLogic } from '../../hooks/useSecurityAuditLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
-import Select from '../../components/atoms/Select';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
+import { Select } from '../../components/atoms/Select';
 import { Shield, RefreshCw, Download, Filter, X, Radio, Calendar } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 

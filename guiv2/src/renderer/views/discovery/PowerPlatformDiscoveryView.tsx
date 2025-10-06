@@ -14,9 +14,9 @@ import {
   XCircle
 } from 'lucide-react';
 import { usePowerPlatformDiscoveryLogic } from '../../hooks/usePowerPlatformDiscoveryLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 

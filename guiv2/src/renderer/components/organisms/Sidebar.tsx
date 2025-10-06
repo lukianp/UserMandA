@@ -1,7 +1,10 @@
 /**
  * Sidebar Component
  *
- * Application sidebar with navigation and profile management
+ * Application sidebar with navigation, profile management, and system status.
+ * Enhanced with SystemStatus component for real-time health monitoring.
+ *
+ * Epic 0: UI/UX Enhancement - Navigation & UX (TASK 6)
  */
 
 import React from 'react';
@@ -24,6 +27,8 @@ import {
 import { useProfileStore } from '../../store/useProfileStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { Button } from '../atoms/Button';
+import { SystemStatus } from '../molecules/SystemStatus';
+import { useSystemHealthLogic } from '../../hooks/useSystemHealthLogic';
 
 /**
  * Navigation item interface
@@ -41,6 +46,7 @@ interface NavItem {
 export const Sidebar: React.FC = () => {
   const { selectedSourceProfile, selectedTargetProfile } = useProfileStore();
   const { mode, setMode } = useThemeStore();
+  const { systemStatus } = useSystemHealthLogic();
 
   // Navigation items
   const navItems: NavItem[] = [
@@ -98,7 +104,7 @@ export const Sidebar: React.FC = () => {
 
   // Theme toggle
   const cycleTheme = () => {
-    const themes = ['light', 'dark', 'highContrast', 'colorBlind'];
+    const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
     const currentIndex = themes.indexOf(mode || 'light');
     const nextIndex = (currentIndex + 1) % themes.length;
     setMode(themes[nextIndex]);
@@ -109,11 +115,22 @@ export const Sidebar: React.FC = () => {
     switch (mode) {
       case 'dark':
         return <Moon size={18} />;
-      case 'highContrast':
-      case 'colorBlind':
+      case 'system':
         return <Monitor size={18} />;
       default:
         return <Sun size={18} />;
+    }
+  };
+
+  // Get theme label
+  const getThemeLabel = () => {
+    switch (mode) {
+      case 'dark':
+        return 'Dark';
+      case 'system':
+        return 'System';
+      default:
+        return 'Light';
     }
   };
 
@@ -198,7 +215,12 @@ export const Sidebar: React.FC = () => {
         ))}
       </nav>
 
-      {/* Footer */}
+      {/* System Status Section */}
+      <div className="p-4 border-t border-gray-800">
+        <SystemStatus indicators={systemStatus} showLastSync={true} />
+      </div>
+
+      {/* Footer - Theme Toggle */}
       <div className="p-4 border-t border-gray-800">
         <Button
           variant="ghost"
@@ -208,9 +230,7 @@ export const Sidebar: React.FC = () => {
           onClick={cycleTheme}
           className="justify-start text-gray-300 hover:text-white"
         >
-          {mode === 'dark' ? 'Dark' :
-           mode === 'highContrast' ? 'High Contrast' :
-           mode === 'colorBlind' ? 'Color Blind' : 'Light'} Theme
+          {getThemeLabel()} Theme
         </Button>
       </div>
     </aside>

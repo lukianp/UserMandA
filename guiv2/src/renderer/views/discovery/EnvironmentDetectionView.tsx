@@ -7,9 +7,9 @@
 import React, { useState } from 'react';
 import { Radar, ChevronDown, ChevronUp, Download, FileSpreadsheet, AlertCircle, Play, XCircle, Cloud } from 'lucide-react';
 import { useEnvironmentDetectionLogic } from '../../hooks/useEnvironmentDetectionLogic';
-import VirtualizedDataGrid from '../../components/organisms/VirtualizedDataGrid';
-import Button from '../../components/atoms/Button';
-import Input from '../../components/atoms/Input';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 

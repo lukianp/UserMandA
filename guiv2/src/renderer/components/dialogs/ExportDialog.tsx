@@ -6,7 +6,7 @@
 import React, { useState, useCallback } from 'react';
 import { Dialog } from '@headlessui/react';
 import { Button } from '../atoms/Button';
-import Select from '../atoms/Select';
+import { Select } from '../atoms/Select';
 import Checkbox from '../atoms/Checkbox';
 import { X, Download } from 'lucide-react';
 

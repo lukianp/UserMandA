@@ -8,7 +8,7 @@ import { Dialog } from '@headlessui/react';
 import { X, Plus, Trash2, Save, RotateCcw } from 'lucide-react';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
-import Select from '../atoms/Select';
+import { Select } from '../atoms/Select';
 
 export interface FilterCriterion {
   id: string;

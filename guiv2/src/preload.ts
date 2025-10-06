@@ -495,6 +495,29 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.on('logic-engine:error', handler);
       return () => ipcRenderer.removeListener('logic-engine:error', handler);
     },
+
+    /**
+     * Analyze migration complexity for a user
+     * @param userId - User SID or UPN
+     * @returns Promise with complexity score, level, and contributing factors
+     */
+    analyzeMigrationComplexity: (userId: string) =>
+      ipcRenderer.invoke('logicEngine:analyzeMigrationComplexity', userId),
+
+    /**
+     * Batch analyze migration complexity for multiple users
+     * @param userIds - Array of user SIDs or UPNs
+     * @returns Promise with complexity results mapped by userId
+     */
+    batchAnalyzeMigrationComplexity: (userIds: string[]) =>
+      ipcRenderer.invoke('logicEngine:batchAnalyzeMigrationComplexity', userIds),
+
+    /**
+     * Get complexity statistics for all analyzed users
+     * @returns Promise with complexity statistics
+     */
+    getComplexityStatistics: () =>
+      ipcRenderer.invoke('logicEngine:getComplexityStatistics'),
   },
 
   // ========================================
