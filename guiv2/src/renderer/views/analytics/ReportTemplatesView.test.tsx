@@ -110,8 +110,8 @@ describe('ReportTemplatesView', () => {
 
       render(<ReportTemplatesView />);
       // Charts should be rendered
-      const { container } = screen.getByTestId('report-templates-view');
-      expect(container).toBeInTheDocument();
+      const viewElement = screen.getByTestId('report-templates-view');
+      expect(viewElement).toBeInTheDocument();
     });
 
     it('displays KPIs when available', () => {

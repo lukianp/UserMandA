@@ -110,8 +110,8 @@ describe('CostAnalysisView', () => {
 
       render(<CostAnalysisView />);
       // Charts should be rendered
-      const { container } = screen.getByTestId('cost-analysis-view');
-      expect(container).toBeInTheDocument();
+      const viewElement = screen.getByTestId('cost-analysis-view');
+      expect(viewElement).toBeInTheDocument();
     });
 
     it('displays KPIs when available', () => {

@@ -110,8 +110,8 @@ describe('ExecutiveDashboardView', () => {
 
       render(<ExecutiveDashboardView />);
       // Charts should be rendered
-      const { container } = screen.getByTestId('executive-dashboard-view');
-      expect(container).toBeInTheDocument();
+      const viewElement = screen.getByTestId('executive-dashboard-view');
+      expect(viewElement).toBeInTheDocument();
     });
 
     it('displays KPIs when available', () => {

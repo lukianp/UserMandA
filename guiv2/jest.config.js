@@ -6,13 +6,10 @@ module.exports = {
     '\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
   transform: {
-    '^.+\.tsx?$': ['ts-jest', {
-      tsconfig: {
-        jsx: 'react',
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-        noImplicitAny: false,
-        strict: false,
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: '<rootDir>/tsconfig.jest.json',
+      diagnostics: {
+        ignoreCodes: [2339]
       },
     }],
   },

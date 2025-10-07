@@ -110,8 +110,8 @@ describe('BenchmarkingView', () => {
 
       render(<BenchmarkingView />);
       // Charts should be rendered
-      const { container } = screen.getByTestId('benchmarking-view');
-      expect(container).toBeInTheDocument();
+      const viewElement = screen.getByTestId('benchmarking-view');
+      expect(viewElement).toBeInTheDocument();
     });
 
     it('displays KPIs when available', () => {

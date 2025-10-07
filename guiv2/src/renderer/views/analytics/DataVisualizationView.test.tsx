@@ -110,8 +110,8 @@ describe('DataVisualizationView', () => {
 
       render(<DataVisualizationView />);
       // Charts should be rendered
-      const { container } = screen.getByTestId('data-visualization-view');
-      expect(container).toBeInTheDocument();
+      const viewElement = screen.getByTestId('data-visualization-view');
+      expect(viewElement).toBeInTheDocument();
     });
 
     it('displays KPIs when available', () => {

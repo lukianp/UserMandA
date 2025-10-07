@@ -110,8 +110,8 @@ describe('CustomReportBuilderView', () => {
 
       render(<CustomReportBuilderView />);
       // Charts should be rendered
-      const { container } = screen.getByTestId('custom-report-builder-view');
-      expect(container).toBeInTheDocument();
+      const viewElement = screen.getByTestId('custom-report-builder-view');
+      expect(viewElement).toBeInTheDocument();
     });
 
     it('displays KPIs when available', () => {

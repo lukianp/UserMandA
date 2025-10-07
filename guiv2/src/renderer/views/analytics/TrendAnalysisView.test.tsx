@@ -110,8 +110,8 @@ describe('TrendAnalysisView', () => {
 
       render(<TrendAnalysisView />);
       // Charts should be rendered
-      const { container } = screen.getByTestId('trend-analysis-view');
-      expect(container).toBeInTheDocument();
+      const viewElement = screen.getByTestId('trend-analysis-view');
+      expect(viewElement).toBeInTheDocument();
     });
 
     it('displays KPIs when available', () => {

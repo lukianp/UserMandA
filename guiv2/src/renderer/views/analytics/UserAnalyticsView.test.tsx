@@ -110,8 +110,8 @@ describe('UserAnalyticsView', () => {
 
       render(<UserAnalyticsView />);
       // Charts should be rendered
-      const { container } = screen.getByTestId('user-analytics-view');
-      expect(container).toBeInTheDocument();
+      const viewElement = screen.getByTestId('user-analytics-view');
+      expect(viewElement).toBeInTheDocument();
     });
 
     it('displays KPIs when available', () => {

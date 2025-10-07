@@ -28,7 +28,7 @@ const loadAgGridStyles = () => {
 
 export interface VirtualizedDataGridProps<T = any> {
   /** Data rows to display */
-  data: T[];
+  data?: T[] | null;
   /** Column definitions */
   columns: ColDef[];
   /** Loading state */
@@ -93,6 +93,7 @@ export function VirtualizedDataGrid<T = any>({
   const gridRef = useRef<AgGridReact>(null);
   const [gridApi, setGridApi] = React.useState<GridApi | null>(null);
   const [showColumnPanel, setShowColumnPanel] = React.useState(false);
+  const rowData = useMemo(() => data ?? [], [data]);
 
   // Load AG Grid styles on component mount
   useEffect(() => {
@@ -239,7 +240,7 @@ export function VirtualizedDataGrid<T = any>({
             {loading ? (
               <Spinner size="sm" />
             ) : (
-              `${data.length.toLocaleString()} rows`
+              `${rowData.length.toLocaleString()} rows`
             )}
           </span>
         </div>
@@ -341,7 +342,7 @@ export function VirtualizedDataGrid<T = any>({
         >
           <AgGridReact
             ref={gridRef}
-            rowData={data}
+            rowData={rowData}
             columnDefs={columns}
             defaultColDef={defaultColDef}
             gridOptions={gridOptions}

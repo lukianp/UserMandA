@@ -110,8 +110,8 @@ describe('MigrationReportView', () => {
 
       render(<MigrationReportView />);
       // Charts should be rendered
-      const { container } = screen.getByTestId('migration-report-view');
-      expect(container).toBeInTheDocument();
+      const viewElement = screen.getByTestId('migration-report-view');
+      expect(viewElement).toBeInTheDocument();
     });
 
     it('displays KPIs when available', () => {

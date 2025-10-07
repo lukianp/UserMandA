@@ -110,8 +110,8 @@ describe('ScheduledReportsView', () => {
 
       render(<ScheduledReportsView />);
       // Charts should be rendered
-      const { container } = screen.getByTestId('scheduled-reports-view');
-      expect(container).toBeInTheDocument();
+      const viewElement = screen.getByTestId('scheduled-reports-view');
+      expect(viewElement).toBeInTheDocument();
     });
 
     it('displays KPIs when available', () => {
