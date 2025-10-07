@@ -14,9 +14,9 @@ import React from 'react';
 import { RefreshCw, Download, Package, TrendingUp, DollarSign, AlertTriangle, BarChart3, PieChart } from 'lucide-react';
 import { BarChart, Bar, PieChart as RePieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useApplicationUsageLogic } from '../../hooks/useApplicationUsageLogic';
-import { Button } from '../../components/atoms/Button';
-import { Select } from '../../components/atoms/Select';
-import LoadingSpinner from '../../components/atoms/LoadingSpinner';
+import { Button } from '@components/atoms/Button';
+import { Select } from '@components/atoms/Select';
+import LoadingSpinner from '@components/atoms/LoadingSpinner';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
@@ -133,24 +133,26 @@ export const ApplicationUsageView: React.FC = () => {
         <div className="flex gap-2">
           <Select
             value={selectedCategory}
-
             onChange={(value) => setSelectedCategory(value)}
+            options={[
+              { value: 'all', label: 'All Categories' },
+              ...availableCategories.map(cat => ({
+                value: cat.id,
+                label: cat.name
+              }))
+            ]}
             className="w-48"
-          >
-            <option value="all">All Categories</option>
-            {availableCategories.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </Select>
+          />
           <Select
             value={sortBy}
             onChange={(value) => setSortBy(value as any)}
+            options={[
+              { value: 'userCount', label: 'Sort by Users' },
+              { value: 'utilizationRate', label: 'Sort by Utilization' },
+              { value: 'totalCost', label: 'Sort by Cost' }
+            ]}
             className="w-48"
-          >
-            <option value="userCount">Sort by Users</option>
-            <option value="utilizationRate">Sort by Utilization</option>
-            <option value="totalCost">Sort by Cost</option>
-          </Select>
+          />
           <Button
             variant="secondary"
             onClick={refreshData}

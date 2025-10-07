@@ -1,51 +1,56 @@
 import React from 'react';
-import DataTable from '../../components/organisms/DataTable';
+import DataTable, { DataTableColumn } from '../../components/organisms/DataTable';
 import { useCloudResourcesLogic } from '../../hooks/infrastructure/useCloudResourcesLogic';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw } from 'lucide-react';
-import type { ColumnDef } from '@tanstack/react-table';
 import type { CloudResourcesData } from '../../hooks/infrastructure/useCloudResourcesLogic';
 
 const CloudResourcesView: React.FC = () => {
   const { data, isLoading, error, reload } = useCloudResourcesLogic();
 
-  const columns: ColumnDef<CloudResourcesData>[] = [
+  const columns: DataTableColumn<CloudResourcesData>[] = [
     {
-      accessorKey: 'resourceName',
+      id: 'resourceName',
+      accessor: 'resourceName',
       header: 'Resource Name',
-      enableSorting: true,
-      enableColumnFilter: true,
+      sortable: true,
+      filterable: true,
     },
     {
-      accessorKey: 'type',
+      id: 'type',
+      accessor: 'type',
       header: 'Type',
-      enableSorting: true,
-      enableColumnFilter: true,
+      sortable: true,
+      filterable: true,
     },
     {
-      accessorKey: 'provider',
+      id: 'provider',
+      accessor: 'provider',
       header: 'Provider',
-      enableSorting: true,
-      enableColumnFilter: true,
+      sortable: true,
+      filterable: true,
     },
     {
-      accessorKey: 'region',
+      id: 'region',
+      accessor: 'region',
       header: 'Region',
-      enableSorting: true,
-      enableColumnFilter: true,
+      sortable: true,
+      filterable: true,
     },
     {
-      accessorKey: 'cost',
+      id: 'cost',
+      accessor: 'cost',
       header: 'Cost',
-      enableSorting: true,
+      sortable: true,
     },
     {
-      accessorKey: 'status',
+      id: 'status',
+      accessor: 'status',
       header: 'Status',
-      enableSorting: true,
-      enableColumnFilter: true,
-      cell: ({ getValue }) => {
-        const status = getValue() as string;
+      sortable: true,
+      filterable: true,
+      cell: (value: any, row: CloudResourcesData) => {
+        const status = value as string;
         const statusClass =
           status === 'Active'
             ? 'text-success'

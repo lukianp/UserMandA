@@ -24,7 +24,7 @@ import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { ModernCard } from '../../components/atoms/ModernCard';
 import { RefreshCw, UserPlus, Download, X } from 'lucide-react';
-import { ColDef } from 'ag-grid-community';
+import { ColDef, ICellRendererParams } from 'ag-grid-community';
 import type {
   UserDetailProjection,
   DeviceData,
@@ -526,7 +526,7 @@ const GposTab: React.FC<{ gpoLinks: GpoData[]; gpoFilters: GpoData[] }> = React.
           field: 'enabled',
           headerName: 'Enabled',
           width: 100,
-          cellRenderer: (params: any) => (params.value ? '✓' : '✗'),
+          cellRenderer: (params: ICellRendererParams) => (params.value ? '✓' : '✗'),
         },
       ],
       []
@@ -596,19 +596,19 @@ const FileAccessTab: React.FC<{ fileAccess: FileAccessEntry[] }> = React.memo(({
         field: 'inherited',
         headerName: 'Inherited',
         width: 100,
-        cellRenderer: (params: any) => (params.value ? 'Yes' : 'No'),
+        cellRenderer: (params: ICellRendererParams) => (params.value ? 'Yes' : 'No'),
       },
       {
         field: 'isShare',
         headerName: 'Share',
         width: 80,
-        cellRenderer: (params: any) => (params.value ? '✓' : '✗'),
+        cellRenderer: (params: ICellRendererParams) => (params.value ? '✓' : '✗'),
       },
       {
         field: 'isNtfs',
         headerName: 'NTFS',
         width: 80,
-        cellRenderer: (params: any) => (params.value ? '✓' : '✗'),
+        cellRenderer: (params: ICellRendererParams) => (params.value ? '✓' : '✗'),
       },
     ],
     []
@@ -729,7 +729,7 @@ const SqlRisksTab: React.FC<{ sqlDatabases: SqlDatabaseData[]; risks: RiskItem[]
           headerName: 'Severity',
           width: 120,
           sortable: true,
-          cellRenderer: (params: any) => {
+          cellRenderer: (params: ICellRendererParams) => {
             const colors = {
               Critical: 'text-red-700 dark:text-red-400 font-bold',
               High: 'text-red-600 dark:text-red-400',

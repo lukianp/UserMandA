@@ -5,12 +5,13 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ReportTemplatesView } from './ReportTemplatesView';
+import ReportTemplatesView from './ReportTemplatesView';
+import { useReportTemplatesLogic } from '../../hooks/useReportTemplatesLogic';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
   mockAnalyticsData,
-  
+
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
@@ -20,18 +21,16 @@ jest.mock('../../hooks/useReportTemplatesLogic', () => ({
   useReportTemplatesLogic: jest.fn(),
 }));
 
-const { useReportTemplatesLogic } = require('../../hooks/useReportTemplatesLogic');
-
 describe('ReportTemplatesView', () => {
   const mockHookDefaults = {
-    
-    
-    data: null,
-    chartData: [],
-    kpis: [],
+
+
+    data: null as any,
+    chartData: [] as any[],
+    kpis: [] as any[],
     isLoading: false,
-    
-    error: null,
+
+    error: null as any,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

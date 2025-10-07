@@ -16,21 +16,20 @@ jest.mock('../../hooks/useAPIManagementLogic', () => ({
   useAPIManagementLogic: jest.fn(),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { useAPIManagementLogic } = require('../../hooks/useAPIManagementLogic');
+import { useAPIManagementLogic } from '../../hooks/useAPIManagementLogic';
 
 describe('APIManagementView', () => {
   const mockHookDefaults = {
 
-    data: [] as unknown[],
+    data: [] as any[],
 
 
 
 
-    selectedItems: [] as unknown[],
+    selectedItems: [] as any[],
     searchText: '',
     isLoading: false,
-    error: null as string | null,
+    error: {} as any,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

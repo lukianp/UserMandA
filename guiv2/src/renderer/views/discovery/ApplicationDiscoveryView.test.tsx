@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ApplicationDiscoveryView } from './ApplicationDiscoveryView';
+import ApplicationDiscoveryView from './ApplicationDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -18,26 +18,28 @@ jest.mock('../../hooks/useApplicationDiscoveryLogic', () => ({
   useApplicationDiscoveryLogic: jest.fn(),
 }));
 
-const { useApplicationDiscoveryLogic } = require('../../hooks/useApplicationDiscoveryLogic');
+import { useApplicationDiscoveryLogic } from '../../hooks/useApplicationDiscoveryLogic';
 
 describe('ApplicationDiscoveryView', () => {
+  const mockUseApplicationDiscoveryLogic = useApplicationDiscoveryLogic as jest.MockedFunction<typeof useApplicationDiscoveryLogic>;
+
   const mockHookDefaults = {
     isRunning: false,
     isCancelling: false,
-    progress: null,
-    results: null,
-    error: null,
-    logs: [],
+    progress: null as any,
+    results: null as any,
+    error: null as any,
+    logs: [] as any[],
     startDiscovery: jest.fn(),
     cancelDiscovery: jest.fn(),
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
-    selectedProfile: null,
+    selectedProfile: null as any,
   };
 
   beforeEach(() => {
     resetAllMocks();
-    useApplicationDiscoveryLogic.mockReturnValue(mockHookDefaults);
+    mockUseApplicationDiscoveryLogic.mockReturnValue(mockHookDefaults);
   });
 
   afterEach(() => {
@@ -73,7 +75,7 @@ describe('ApplicationDiscoveryView', () => {
     });
 
     it('displays selected profile when available', () => {
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         selectedProfile: { name: 'Test Profile' },
       });
@@ -89,7 +91,7 @@ describe('ApplicationDiscoveryView', () => {
   describe('Button Actions', () => {
     it('calls startDiscovery when start button clicked', () => {
       const startDiscovery = jest.fn();
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         startDiscovery,
       });
@@ -102,7 +104,7 @@ describe('ApplicationDiscoveryView', () => {
     });
 
     it('shows stop button when discovery is running', () => {
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
       });
@@ -113,7 +115,7 @@ describe('ApplicationDiscoveryView', () => {
 
     it('calls cancelDiscovery when stop button clicked', () => {
       const cancelDiscovery = jest.fn();
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         cancelDiscovery,
@@ -128,7 +130,7 @@ describe('ApplicationDiscoveryView', () => {
 
     it('calls exportResults when export button clicked', () => {
       const exportResults = jest.fn();
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: mockDiscoveryData(),
         exportResults,
@@ -142,7 +144,7 @@ describe('ApplicationDiscoveryView', () => {
     });
 
     it('disables export button when no results', () => {
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: null,
       });
@@ -159,7 +161,7 @@ describe('ApplicationDiscoveryView', () => {
 
   describe('Progress Display', () => {
     it('shows progress when discovery is running', () => {
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         progress: {
@@ -188,7 +190,7 @@ describe('ApplicationDiscoveryView', () => {
   describe('Results Display', () => {
     it('displays results when available', () => {
       const results = mockDiscoveryData();
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results,
       });
@@ -213,7 +215,7 @@ describe('ApplicationDiscoveryView', () => {
 
   describe('Error Handling', () => {
     it('displays error message when error occurs', () => {
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         error: 'Test error message',
       });
@@ -234,7 +236,7 @@ describe('ApplicationDiscoveryView', () => {
 
   describe('Logs Display', () => {
     it('displays logs when available', () => {
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         logs: [
           { timestamp: '10:00:00', level: 'info', message: 'Discovery started' },
@@ -247,7 +249,7 @@ describe('ApplicationDiscoveryView', () => {
 
     it('calls clearLogs when clear button clicked', () => {
       const clearLogs = jest.fn();
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         logs: [
           { timestamp: '10:00:00', level: 'info', message: 'Test log' },
@@ -294,7 +296,7 @@ describe('ApplicationDiscoveryView', () => {
       const exportResults = jest.fn();
 
       // Initial state
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         startDiscovery,
       });
@@ -307,7 +309,7 @@ describe('ApplicationDiscoveryView', () => {
       expect(startDiscovery).toHaveBeenCalled();
 
       // Running state
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         progress: { current: 50, total: 100, percentage: 50 },
@@ -317,7 +319,7 @@ describe('ApplicationDiscoveryView', () => {
       expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
 
       // Completed state with results
-      useApplicationDiscoveryLogic.mockReturnValue({
+      mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: mockDiscoveryData(),
         exportResults,

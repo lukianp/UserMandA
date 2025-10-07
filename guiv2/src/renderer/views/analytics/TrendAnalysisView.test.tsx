@@ -6,11 +6,12 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { TrendAnalysisView } from './TrendAnalysisView';
+import { useTrendAnalysisLogic } from '../../hooks/useTrendAnalysisLogic';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
   mockAnalyticsData,
-  
+
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
@@ -20,18 +21,16 @@ jest.mock('../../hooks/useTrendAnalysisLogic', () => ({
   useTrendAnalysisLogic: jest.fn(),
 }));
 
-const { useTrendAnalysisLogic } = require('../../hooks/useTrendAnalysisLogic');
-
 describe('TrendAnalysisView', () => {
   const mockHookDefaults = {
-    
-    
-    data: null,
-    chartData: [],
-    kpis: [],
+
+
+    data: null as any,
+    chartData: [] as any[],
+    kpis: [] as any[],
     isLoading: false,
-    
-    error: null,
+
+    error: null as any,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

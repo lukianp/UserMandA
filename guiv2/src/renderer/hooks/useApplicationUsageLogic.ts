@@ -33,7 +33,7 @@ interface ApplicationData {
 /**
  * Application category distribution
  */
-interface CategoryDistribution {
+interface CategoryDistribution extends Record<string, unknown> {
   category: string;
   count: number;
   userCount: number;

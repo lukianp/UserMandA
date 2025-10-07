@@ -18,7 +18,7 @@ interface WaveTimelineData {
   duration: number;
 }
 
-interface ErrorBreakdownData {
+interface ErrorBreakdownData extends Record<string, unknown> {
   errorType: string;
   count: number;
   percentage: number;
@@ -112,22 +112,22 @@ export const useMigrationReportLogic = () => {
 
   // Calculate error breakdown with percentages
   const calculateErrorBreakdown = (errors: any[]): ErrorBreakdownData[] => {
-    const errorCounts = errors.reduce((acc: Record<string, number>, error: any) => {
+    const errorCounts: Record<string, number> = errors.reduce((acc, error: any) => {
       const type = error.type || 'Unknown';
       acc[type] = (acc[type] || 0) + 1;
       return acc;
     }, {});
 
-    const total = Object.values(errorCounts).reduce((sum: number, count: number) => sum + count, 0);
+    const total = Object.values(errorCounts).reduce((sum, count) => sum + count, 0);
     if (total === 0) return [];
 
     return Object.entries(errorCounts)
       .map(([errorType, count]) => ({
         errorType,
-        count: count as number,
-        percentage: Math.round(((count as number) / total) * 100),
+        count,
+        percentage: Math.round((count / total) * 100),
       }))
-      .sort((a, b) => (b.count as number) - (a.count as number));
+      .sort((a, b) => b.count - a.count);
   };
 
   // Mock data for development/testing

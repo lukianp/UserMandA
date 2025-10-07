@@ -16,8 +16,7 @@ jest.mock('../../hooks/useCloudMigrationPlannerLogic', () => ({
   useCloudMigrationPlannerLogic: jest.fn(),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { useCloudMigrationPlannerLogic } = require('../../hooks/useCloudMigrationPlannerLogic');
+import { useCloudMigrationPlannerLogic } from '../../hooks/useCloudMigrationPlannerLogic';
 
 describe('CloudMigrationPlannerView', () => {
   const mockHookDefaults = {
@@ -25,15 +24,15 @@ describe('CloudMigrationPlannerView', () => {
 
 
 
-    data: [] as unknown[],
-    
-    
-    
-    
-    selectedItems: [] as unknown[],
+    data: [] as any[],
+
+
+
+
+    selectedItems: [] as any[],
     searchText: '',
     isLoading: false,
-    error: null as string | null,
+    error: {} as any,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

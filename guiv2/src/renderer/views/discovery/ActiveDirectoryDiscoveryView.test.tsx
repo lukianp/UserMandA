@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ActiveDirectoryDiscoveryView } from './ActiveDirectoryDiscoveryView';
+import ActiveDirectoryDiscoveryView from './ActiveDirectoryDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -18,26 +18,28 @@ jest.mock('../../hooks/useActiveDirectoryDiscoveryLogic', () => ({
   useActiveDirectoryDiscoveryLogic: jest.fn(),
 }));
 
-const { useActiveDirectoryDiscoveryLogic } = require('../../hooks/useActiveDirectoryDiscoveryLogic');
+import { useActiveDirectoryDiscoveryLogic } from '../../hooks/useActiveDirectoryDiscoveryLogic';
 
 describe('ActiveDirectoryDiscoveryView', () => {
+  const mockUseActiveDirectoryDiscoveryLogic = useActiveDirectoryDiscoveryLogic as jest.MockedFunction<typeof useActiveDirectoryDiscoveryLogic>;
+
   const mockHookDefaults = {
     isRunning: false,
     isCancelling: false,
-    progress: null,
-    results: null,
-    error: null,
-    logs: [],
+    progress: null as any,
+    results: null as any,
+    error: null as any,
+    logs: [] as any[],
     startDiscovery: jest.fn(),
     cancelDiscovery: jest.fn(),
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
-    selectedProfile: null,
+    selectedProfile: null as any,
   };
 
   beforeEach(() => {
     resetAllMocks();
-    useActiveDirectoryDiscoveryLogic.mockReturnValue(mockHookDefaults);
+    mockUseActiveDirectoryDiscoveryLogic.mockReturnValue(mockHookDefaults as any);
   });
 
   afterEach(() => {
@@ -73,10 +75,10 @@ describe('ActiveDirectoryDiscoveryView', () => {
     });
 
     it('displays selected profile when available', () => {
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         selectedProfile: { name: 'Test Profile' },
-      });
+      } as any);
       render(<ActiveDirectoryDiscoveryView />);
       expect(screen.getByText('Test Profile')).toBeInTheDocument();
     });
@@ -89,10 +91,10 @@ describe('ActiveDirectoryDiscoveryView', () => {
   describe('Button Actions', () => {
     it('calls startDiscovery when start button clicked', () => {
       const startDiscovery = jest.fn();
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         startDiscovery,
-      });
+      } as any);
 
       render(<ActiveDirectoryDiscoveryView />);
       const button = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
@@ -102,10 +104,10 @@ describe('ActiveDirectoryDiscoveryView', () => {
     });
 
     it('shows stop button when discovery is running', () => {
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
-      });
+      } as any);
 
       render(<ActiveDirectoryDiscoveryView />);
       expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
@@ -113,11 +115,11 @@ describe('ActiveDirectoryDiscoveryView', () => {
 
     it('calls cancelDiscovery when stop button clicked', () => {
       const cancelDiscovery = jest.fn();
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         cancelDiscovery,
-      });
+      } as any);
 
       render(<ActiveDirectoryDiscoveryView />);
       const button = screen.getByText(/Stop/i) || screen.getByText(/Cancel/i);
@@ -128,11 +130,11 @@ describe('ActiveDirectoryDiscoveryView', () => {
 
     it('calls exportResults when export button clicked', () => {
       const exportResults = jest.fn();
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: mockDiscoveryData(),
         exportResults,
-      });
+      } as any);
 
       render(<ActiveDirectoryDiscoveryView />);
       const button = screen.getByText(/Export/i);
@@ -142,7 +144,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
     });
 
     it('disables export button when no results', () => {
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: null,
       });
@@ -159,7 +161,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
 
   describe('Progress Display', () => {
     it('shows progress when discovery is running', () => {
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         progress: {
@@ -188,7 +190,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
   describe('Results Display', () => {
     it('displays results when available', () => {
       const results = mockDiscoveryData();
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results,
       });
@@ -213,7 +215,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
 
   describe('Error Handling', () => {
     it('displays error message when error occurs', () => {
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         error: 'Test error message',
       });
@@ -234,7 +236,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
 
   describe('Logs Display', () => {
     it('displays logs when available', () => {
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         logs: [
           { timestamp: '10:00:00', level: 'info', message: 'Discovery started' },
@@ -247,7 +249,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
 
     it('calls clearLogs when clear button clicked', () => {
       const clearLogs = jest.fn();
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         logs: [
           { timestamp: '10:00:00', level: 'info', message: 'Test log' },
@@ -294,7 +296,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       const exportResults = jest.fn();
 
       // Initial state
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         startDiscovery,
       });
@@ -307,7 +309,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       expect(startDiscovery).toHaveBeenCalled();
 
       // Running state
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         progress: { current: 50, total: 100, percentage: 50 },
@@ -317,7 +319,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
 
       // Completed state with results
-      useActiveDirectoryDiscoveryLogic.mockReturnValue({
+      mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: mockDiscoveryData(),
         exportResults,

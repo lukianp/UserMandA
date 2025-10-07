@@ -22,6 +22,7 @@ import { useAccessReviewLogic } from '../../hooks/security/useAccessReviewLogic'
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { ColDef, ICellRendererParams } from 'ag-grid-community';
 import type { AccessReviewItem, BulkReviewAction } from '../../types/models/accessReview';
 
 export const AccessReviewView: React.FC = () => {
@@ -94,7 +95,7 @@ export const AccessReviewView: React.FC = () => {
       field: 'resourceType',
       headerName: 'Type',
       width: 130,
-      cellRenderer: (params: any) => (
+      cellRenderer: (params: ICellRendererParams) => (
         <Badge variant="default" size="sm">
           {params.value}
         </Badge>
@@ -104,7 +105,7 @@ export const AccessReviewView: React.FC = () => {
       field: 'accessLevel',
       headerName: 'Access Level',
       width: 140,
-      cellRenderer: (params: any) => {
+      cellRenderer: (params: ICellRendererParams) => {
         const isHighPrivilege = ['Admin', 'Owner', 'FullControl'].includes(params.value);
         return (
           <Badge variant={isHighPrivilege ? 'danger' : 'default'} size="sm">
@@ -117,7 +118,7 @@ export const AccessReviewView: React.FC = () => {
       field: 'riskLevel',
       headerName: 'Risk',
       width: 120,
-      cellRenderer: (params: any) => {
+      cellRenderer: (params: ICellRendererParams) => {
         const variantMap: Record<string, 'danger' | 'warning' | 'success' | 'default'> = {
           Critical: 'danger',
           High: 'danger',

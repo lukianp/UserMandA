@@ -2,7 +2,7 @@ import React from 'react';
 import { Shield, Lock, Cloud, FileText } from 'lucide-react';
 import { Button } from '../../components/atoms/Button';
 
-export const eDiscoveryView: React.FC = () => {
+export const EDiscoveryView: React.FC = () => {
   return (
     <div className="flex flex-col h-full p-6 space-y-6">
       <div>

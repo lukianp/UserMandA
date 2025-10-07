@@ -21,7 +21,7 @@ interface MigrationProgressData {
   groupsMigrated: number;
 }
 
-interface MigrationStatusData {
+interface MigrationStatusData extends Record<string, unknown> {
   name: string;
   value: number;
   percentage: number;

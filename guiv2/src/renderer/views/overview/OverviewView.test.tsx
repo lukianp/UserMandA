@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { OverviewView } from './OverviewView';
+import OverviewView from './OverviewView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -20,18 +20,18 @@ jest.mock('../../hooks/useOverviewLogic', () => ({
   useOverviewLogic: jest.fn(),
 }));
 
-const { useOverviewLogic } = require('../../hooks/useOverviewLogic');
+import { useOverviewLogic } from '../../hooks/useOverviewLogic';
 
 describe('OverviewView', () => {
   const mockHookDefaults = {
     
     
     
-    data: [],
-    selectedItems: [],
+    data: [] as any[],
+    selectedItems: [] as any[],
     searchText: '',
     isLoading: false,
-    error: null,
+    error: null as string | null,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

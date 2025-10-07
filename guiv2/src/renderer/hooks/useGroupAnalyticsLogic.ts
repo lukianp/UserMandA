@@ -30,7 +30,7 @@ interface GroupSizeDistribution {
 /**
  * Group type breakdown
  */
-interface GroupTypeData {
+interface GroupTypeData extends Record<string, unknown> {
   type: string;
   count: number;
   percentage: number;

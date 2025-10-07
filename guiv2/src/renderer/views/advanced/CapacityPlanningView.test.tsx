@@ -16,23 +16,24 @@ jest.mock('../../hooks/useCapacityPlanningLogic', () => ({
   useCapacityPlanningLogic: jest.fn(),
 }));
 
-const { useCapacityPlanningLogic } = require('../../hooks/useCapacityPlanningLogic');
+import { useCapacityPlanningLogic } from '../../hooks/useCapacityPlanningLogic';
 
 describe('CapacityPlanningView', () => {
   const mockHookDefaults = {
-    data: [],
-    
-    
-    
-    
-    selectedItems: [],
+    data: [] as any[],
+
+
+
+
+
+
+    selectedItems: [] as any[],
     searchText: '',
     isLoading: false,
-    error: null,
+    error: {} as any,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };
-
   beforeEach(() => {
     resetAllMocks();
     useCapacityPlanningLogic.mockReturnValue(mockHookDefaults);

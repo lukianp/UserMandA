@@ -14,9 +14,9 @@ import React from 'react';
 import { RefreshCw, Download, Users, TrendingUp, BarChart3, PieChart } from 'lucide-react';
 import { BarChart, Bar, PieChart as RePieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useGroupAnalyticsLogic } from '../../hooks/useGroupAnalyticsLogic';
-import { Button } from '../../components/atoms/Button';
-import { Select } from '../../components/atoms/Select';
-import LoadingSpinner from '../../components/atoms/LoadingSpinner';
+import { Button } from '@components/atoms/Button';
+import { Select } from '@components/atoms/Select';
+import LoadingSpinner from '@components/atoms/LoadingSpinner';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 

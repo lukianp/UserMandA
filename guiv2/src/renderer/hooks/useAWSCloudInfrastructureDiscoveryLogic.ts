@@ -1,6 +1,6 @@
 /**
- * Active Directory Discovery Logic Hook
- * Provides state management and business logic for Active Directory discovery operations
+ * AWS Cloud Infrastructure Discovery Logic Hook
+ * Provides state management and business logic for AWS infrastructure discovery operations
  */
 
 import { useState, useCallback } from 'react';
@@ -33,9 +33,9 @@ export interface Profile {
 }
 
 /**
- * Active Directory Discovery Hook Return Type
+ * AWS Cloud Infrastructure Discovery Hook Return Type
  */
-export interface ActiveDirectoryDiscoveryHookResult {
+export interface AWSCloudInfrastructureDiscoveryHookResult {
   isRunning: boolean;
   isCancelling: boolean;
   progress: ProgressInfo | null;
@@ -50,9 +50,9 @@ export interface ActiveDirectoryDiscoveryHookResult {
 }
 
 /**
- * Custom hook for Active Directory discovery logic
+ * Custom hook for AWS cloud infrastructure discovery logic
  */
-export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHookResult => {
+export const useAWSCloudInfrastructureDiscoveryLogic = (): AWSCloudInfrastructureDiscoveryHookResult => {
   const [isRunning, setIsRunning] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
@@ -74,7 +74,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
   }, []);
 
   /**
-   * Start the Active Directory discovery process
+   * Start the AWS cloud infrastructure discovery process
    */
   const startDiscovery = useCallback(async () => {
     if (isRunning) return;
@@ -86,7 +86,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
     setError(null);
     setLogs([]);
 
-    addLog('info', 'Starting Active Directory discovery...');
+    addLog('info', 'Starting AWS Cloud Infrastructure discovery...');
 
     try {
       // Simulate discovery process
@@ -94,14 +94,17 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
 
       // Mock progress updates
       const progressSteps = [
-        { current: 25, message: 'Connecting to domain controller...' },
-        { current: 50, message: 'Enumerating domain objects...' },
-        { current: 75, message: 'Processing results...' },
+        { current: 15, message: 'Authenticating with AWS...' },
+        { current: 30, message: 'Enumerating EC2 instances...' },
+        { current: 45, message: 'Scanning RDS databases...' },
+        { current: 60, message: 'Analyzing S3 buckets...' },
+        { current: 75, message: 'Checking Lambda functions...' },
+        { current: 90, message: 'Reviewing CloudFormation stacks...' },
         { current: 100, message: 'Discovery completed' },
       ];
 
       for (const step of progressSteps) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 700));
         if (isCancelling) break;
         setProgress({ ...step, total: 100, percentage: step.current });
         addLog('info', step.message);
@@ -110,22 +113,38 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
       if (!isCancelling) {
         // Mock results
         const mockResults = {
-          users: [
-            { name: 'user1', domain: 'example.com', enabled: true },
-            { name: 'user2', domain: 'example.com', enabled: true },
-          ],
-          groups: [
-            { name: 'Domain Admins', type: 'Security', memberCount: 5 },
-            { name: 'Domain Users', type: 'Security', memberCount: 100 },
-          ],
-          computers: [
-            { name: 'computer1', os: 'Windows 10', enabled: true },
-            { name: 'computer2', os: 'Windows 11', enabled: true },
-          ],
+          ec2: {
+            instances: [
+              { id: 'i-1234567890abcdef0', type: 't3.medium', state: 'running', region: 'us-east-1' },
+              { id: 'i-0987654321fedcba0', type: 't3.large', state: 'stopped', region: 'us-west-2' },
+            ],
+            total: 2,
+          },
+          rds: {
+            instances: [
+              { id: 'db-instance-1', engine: 'mysql', status: 'available', size: 'db.t3.micro' },
+              { id: 'db-instance-2', engine: 'postgres', status: 'available', size: 'db.t3.small' },
+            ],
+            total: 2,
+          },
+          s3: {
+            buckets: [
+              { name: 'my-app-bucket', region: 'us-east-1', objects: 150 },
+              { name: 'logs-archive', region: 'us-west-2', objects: 5000 },
+            ],
+            total: 2,
+          },
+          lambda: {
+            functions: [
+              { name: 'process-data', runtime: 'nodejs18.x', memory: 256 },
+              { name: 'cleanup-logs', runtime: 'python3.9', memory: 128 },
+            ],
+            total: 2,
+          },
         };
 
         setResults(mockResults);
-        addLog('info', `Discovery completed. Found ${mockResults.users.length} users, ${mockResults.groups.length} groups, ${mockResults.computers.length} computers.`);
+        addLog('info', `Discovery completed. Found ${mockResults.ec2.total} EC2 instances, ${mockResults.rds.total} RDS instances, ${mockResults.s3.total} S3 buckets, ${mockResults.lambda.total} Lambda functions.`);
       } else {
         addLog('warn', 'Discovery was cancelled by user.');
       }
@@ -163,7 +182,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
       const dataStr = JSON.stringify(results, null, 2);
       const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
 
-      const exportFileDefaultName = `ad-discovery-results-${new Date().toISOString().split('T')[0]}.json`;
+      const exportFileDefaultName = `aws-discovery-results-${new Date().toISOString().split('T')[0]}.json`;
 
       const linkElement = document.createElement('a');
       linkElement.setAttribute('href', dataUri);

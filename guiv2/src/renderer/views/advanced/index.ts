@@ -34,6 +34,6 @@ export { MFAManagementView } from './MFAManagementView';
 export { PrivilegedAccessView } from './PrivilegedAccessView';
 export { DataGovernanceView } from './DataGovernanceView';
 export { RetentionPolicyView } from './RetentionPolicyView';
-export { eDiscoveryView } from './eDiscoveryView';
+export { EDiscoveryView } from './eDiscoveryView';
 export { DataClassificationView } from './DataClassificationView';
 export { EndpointProtectionView } from './EndpointProtectionView';

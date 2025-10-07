@@ -20,19 +20,19 @@ jest.mock('../../hooks/useMigrationMappingLogic', () => ({
   useMigrationMappingLogic: jest.fn(),
 }));
 
-const { useMigrationMappingLogic } = require('../../hooks/useMigrationMappingLogic');
+import { useMigrationMappingLogic } from '../../hooks/useMigrationMappingLogic';
 
 describe('MigrationMappingView', () => {
   const mockHookDefaults = {
     
-    waves: [],
-    mappings: [],
-    validationResults: [],
+    waves: [] as any[],
+    mappings: [] as any[],
+    validationResults: [] as any[],
     isValidating: false,
     isExecuting: false,
-    
-    
-    error: null,
+
+
+    error: null as string | null,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

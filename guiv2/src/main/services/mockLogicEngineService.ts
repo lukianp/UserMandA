@@ -33,8 +33,6 @@ export class MockLogicEngineService {
   private static instance: MockLogicEngineService;
   private cache: Map<string, UserDetailProjection> = new Map();
 
-  private constructor() {}
-
   public static getInstance(): MockLogicEngineService {
     if (!MockLogicEngineService.instance) {
       MockLogicEngineService.instance = new MockLogicEngineService();
@@ -50,7 +48,7 @@ export class MockLogicEngineService {
     // Check cache first
     if (this.cache.has(userId)) {
       console.log(`[MockLogicEngine] Returning cached user detail for ${userId}`);
-      return this.cache.get(userId)!;
+      return this.cache.get(userId) as UserDetailProjection;
     }
 
     // Generate mock data
@@ -510,8 +508,6 @@ export class MockComputerDetailService {
   private static instance: MockComputerDetailService;
   private cache: Map<string, ComputerDetailProjection> = new Map();
 
-  private constructor() {}
-
   public static getInstance(): MockComputerDetailService {
     if (!MockComputerDetailService.instance) {
       MockComputerDetailService.instance = new MockComputerDetailService();
@@ -522,7 +518,7 @@ export class MockComputerDetailService {
   public async getComputerDetailAsync(computerId: string): Promise<ComputerDetailProjection | null> {
     if (this.cache.has(computerId)) {
       console.log(`[MockComputerDetail] Returning cached computer detail for ${computerId}`);
-      return this.cache.get(computerId)!;
+      return this.cache.get(computerId) as ComputerDetailProjection;
     }
 
     console.log(`[MockComputerDetail] Generating mock computer detail for ${computerId}`);
@@ -581,7 +577,7 @@ export class MockComputerDetailService {
         totalRisks: risks.length,
         highRiskCount: risks.filter((r) => r.severity === 'High').length,
         criticalRiskCount: risks.filter((r) => r.severity === 'Critical').length,
-        diskUsagePercentage: Math.floor((1 - (hardware.freeDiskGB! / hardware.totalDiskGB!)) * 100),
+        diskUsagePercentage: Math.floor((1 - (hardware.freeDiskGB / hardware.totalDiskGB)) * 100),
         complianceScore: 85,
       },
     };
@@ -917,14 +913,11 @@ import type {
   GroupRiskItem,
   GroupMigrationHint,
   GroupSyncStatus,
-  GroupDetailStats,
 } from '../../renderer/types/models/groupDetail';
 
 export class MockGroupDetailService {
   private static instance: MockGroupDetailService;
   private cache: Map<string, GroupDetailProjection> = new Map();
-
-  private constructor() {}
 
   public static getInstance(): MockGroupDetailService {
     if (!MockGroupDetailService.instance) {
@@ -936,7 +929,7 @@ export class MockGroupDetailService {
   public async getGroupDetailAsync(groupId: string): Promise<GroupDetailProjection | null> {
     if (this.cache.has(groupId)) {
       console.log(`[MockGroupDetail] Returning cached group detail for ${groupId}`);
-      return this.cache.get(groupId)!;
+      return this.cache.get(groupId) as GroupDetailProjection;
     }
 
     console.log(`[MockGroupDetail] Generating mock group detail for ${groupId}`);
@@ -1118,7 +1111,7 @@ export class MockGroupDetailService {
       groupId: `nested-group-${i}`,
       groupName: `Nested Group ${i}`,
       relationshipType: (i < 3 ? 'Child' : 'Parent') as 'Child' | 'Parent',
-      relationship: (i < 3 ? 'Child' : 'Parent') as any,
+      relationship: i < 3 ? 'Child' : 'Parent',
       groupType: 'Security',
       scope: 'Global',
       memberCount: Math.floor(Math.random() * 50) + 5,

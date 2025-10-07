@@ -10,29 +10,29 @@ import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+import { useAssetLifecycleLogic } from '../../hooks/useAssetLifecycleLogic';
 
 // Mock the hook
 jest.mock('../../hooks/useAssetLifecycleLogic', () => ({
   useAssetLifecycleLogic: jest.fn(),
 }));
 
-const { useAssetLifecycleLogic } = require('../../hooks/useAssetLifecycleLogic');
-
 describe('AssetLifecycleView', () => {
   const mockHookDefaults = {
-    data: [],
-    
-    
-    
-    
-    selectedItems: [],
+    data: [] as any[],
+
+
+
+
+
+
+    selectedItems: [] as any[],
     searchText: '',
     isLoading: false,
-    error: null,
+    error: {} as any,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };
-
   beforeEach(() => {
     resetAllMocks();
     useAssetLifecycleLogic.mockReturnValue(mockHookDefaults);

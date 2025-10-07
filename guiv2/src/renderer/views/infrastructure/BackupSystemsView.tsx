@@ -1,39 +1,42 @@
 import React from 'react';
-import DataTable from '../../components/organisms/DataTable';
+import DataTable, { DataTableColumn } from '../../components/organisms/DataTable';
 import { useBackupSystemsLogic } from '../../hooks/infrastructure/useBackupSystemsLogic';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw } from 'lucide-react';
-import type { ColumnDef } from '@tanstack/react-table';
 import type { BackupSystemsData } from '../../hooks/infrastructure/useBackupSystemsLogic';
 
 const BackupSystemsView: React.FC = () => {
   const { data, isLoading, error, reload } = useBackupSystemsLogic();
 
-  const columns: ColumnDef<BackupSystemsData>[] = [
+  const columns: DataTableColumn<BackupSystemsData>[] = [
     {
-      accessorKey: 'systemName',
+      id: 'systemName',
+      accessor: 'systemName',
       header: 'System Name',
-      enableSorting: true,
-      enableColumnFilter: true,
+      sortable: true,
+      filterable: true,
     },
     {
-      accessorKey: 'type',
+      id: 'type',
+      accessor: 'type',
       header: 'Type',
-      enableSorting: true,
-      enableColumnFilter: true,
+      sortable: true,
+      filterable: true,
     },
     {
-      accessorKey: 'lastBackup',
+      id: 'lastBackup',
+      accessor: 'lastBackup',
       header: 'Last Backup',
-      enableSorting: true,
+      sortable: true,
     },
     {
-      accessorKey: 'status',
+      id: 'status',
+      accessor: 'status',
       header: 'Status',
-      enableSorting: true,
-      enableColumnFilter: true,
-      cell: ({ getValue }) => {
-        const status = getValue() as string;
+      sortable: true,
+      filterable: true,
+      cell: (value: any, row: BackupSystemsData) => {
+        const status = value as string;
         const statusClass =
           status === 'Success'
             ? 'text-success'
@@ -44,9 +47,10 @@ const BackupSystemsView: React.FC = () => {
       },
     },
     {
-      accessorKey: 'capacity',
+      id: 'capacity',
+      accessor: 'capacity',
       header: 'Capacity',
-      enableSorting: true,
+      sortable: true,
     },
   ];
 

@@ -6,11 +6,12 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { CostAnalysisView } from './CostAnalysisView';
+import { useCostAnalysisLogic } from '../../hooks/useCostAnalysisLogic';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
   mockAnalyticsData,
-  
+
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
@@ -20,18 +21,16 @@ jest.mock('../../hooks/useCostAnalysisLogic', () => ({
   useCostAnalysisLogic: jest.fn(),
 }));
 
-const { useCostAnalysisLogic } = require('../../hooks/useCostAnalysisLogic');
-
 describe('CostAnalysisView', () => {
   const mockHookDefaults = {
-    
-    
-    data: null,
-    chartData: [],
-    kpis: [],
+
+
+    data: null as any,
+    chartData: [] as any[],
+    kpis: [] as any[],
     isLoading: false,
-    
-    error: null,
+
+    error: null as any,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

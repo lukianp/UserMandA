@@ -18,7 +18,7 @@ export const HealthMonitoringView: React.FC = () => {
         <p className="text-gray-600 dark:text-gray-400 mb-4">
           This advanced feature provides comprehensive HealthMonitoring capabilities.
         </p>
-        <Button variant="primary" icon={Settings}>
+        <Button variant="primary" icon={<Settings />}>
           Configure HealthMonitoring
         </Button>
       </div>

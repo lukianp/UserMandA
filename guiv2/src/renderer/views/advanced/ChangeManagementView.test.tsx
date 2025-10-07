@@ -16,23 +16,24 @@ jest.mock('../../hooks/useChangeManagementLogic', () => ({
   useChangeManagementLogic: jest.fn(),
 }));
 
-const { useChangeManagementLogic } = require('../../hooks/useChangeManagementLogic');
+import { useChangeManagementLogic } from '../../hooks/useChangeManagementLogic';
 
 describe('ChangeManagementView', () => {
   const mockHookDefaults = {
-    data: [],
-    
-    
-    
-    
-    selectedItems: [],
+    data: [] as any[],
+
+
+
+
+
+
+    selectedItems: [] as any[],
     searchText: '',
     isLoading: false,
-    error: null,
+    error: {} as any,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };
-
   beforeEach(() => {
     resetAllMocks();
     useChangeManagementLogic.mockReturnValue(mockHookDefaults);

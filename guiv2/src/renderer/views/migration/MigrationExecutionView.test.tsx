@@ -20,19 +20,19 @@ jest.mock('../../hooks/useMigrationExecutionLogic', () => ({
   useMigrationExecutionLogic: jest.fn(),
 }));
 
-const { useMigrationExecutionLogic } = require('../../hooks/useMigrationExecutionLogic');
+import { useMigrationExecutionLogic } from '../../hooks/useMigrationExecutionLogic';
 
 describe('MigrationExecutionView', () => {
   const mockHookDefaults = {
     
-    waves: [],
-    mappings: [],
-    validationResults: [],
+    waves: [] as any[],
+    mappings: [] as any[],
+    validationResults: [] as any[],
     isValidating: false,
     isExecuting: false,
-    
-    
-    error: null,
+
+
+    error: null as string | null,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

@@ -1,11 +1,11 @@
 // Analytics Views
-export { ExecutiveDashboardView } from './ExecutiveDashboardView';
-export { UserAnalyticsView } from './UserAnalyticsView';
-export { MigrationReportView } from './MigrationReportView';
-export { CostAnalysisView } from './CostAnalysisView';
-export { CustomReportBuilderView } from './CustomReportBuilderView';
-export { ScheduledReportsView } from './ScheduledReportsView';
-export { ReportTemplatesView } from './ReportTemplatesView';
-export { DataVisualizationView } from './DataVisualizationView';
-export { TrendAnalysisView } from './TrendAnalysisView';
+export { default as ExecutiveDashboardView } from './ExecutiveDashboardView';
+export { default as UserAnalyticsView } from './UserAnalyticsView';
+export { default as MigrationReportView } from './MigrationReportView';
+export { default as CostAnalysisView } from './CostAnalysisView';
+export { default as CustomReportBuilderView } from './CustomReportBuilderView';
+export { default as ScheduledReportsView } from './ScheduledReportsView';
+export { default as ReportTemplatesView } from './ReportTemplatesView';
+export { default as DataVisualizationView } from './DataVisualizationView';
+export { default as TrendAnalysisView } from './TrendAnalysisView';
 export { BenchmarkingView } from './BenchmarkingView';

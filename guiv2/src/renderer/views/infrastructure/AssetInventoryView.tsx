@@ -3,7 +3,7 @@ import { useAssetInventoryLogic } from '../../hooks/useAssetInventoryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw, Download, Filter, Search } from 'lucide-react';
-import { Column } from '@tanstack/react-table';
+import { ColDef } from 'ag-grid-community';
 
 /**
  * Asset Inventory View Component
@@ -26,22 +26,22 @@ const AssetInventoryView: React.FC = () => {
   } = useAssetInventoryLogic();
 
   // Column definitions for the data grid
-  const columnDefs = [
+  const columnDefs: ColDef[] = [
     {
-      accessorKey: 'name',
-      header: 'Asset Name',
-      size: 200,
-      cell: (info: any) => (
+      field: 'name',
+      headerName: 'Asset Name',
+      width: 200,
+      cellRenderer: (params: any) => (
         <div className="font-medium text-gray-900 dark:text-white">
-          {info.getValue()}
+          {params.value}
         </div>
       ),
     },
     {
-      accessorKey: 'type',
-      header: 'Type',
-      size: 120,
-      cell: (info: any) => {
+      field: 'type',
+      headerName: 'Type',
+      width: 120,
+      cellRenderer: (params: any) => {
         const typeColors: Record<string, string> = {
           Workstation: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
           Server: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
@@ -49,70 +49,70 @@ const AssetInventoryView: React.FC = () => {
           Network: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
           Printer: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
         };
-        const colorClass = typeColors[info.getValue()] || 'bg-gray-100 text-gray-800';
+        const colorClass = typeColors[params.value] || 'bg-gray-100 text-gray-800';
         return (
           <span className={`px-2 py-1 rounded-md text-xs font-medium ${colorClass}`}>
-            {info.getValue()}
+            {params.value}
           </span>
         );
       },
     },
     {
-      accessorKey: 'manufacturer',
-      header: 'Manufacturer',
-      size: 140,
+      field: 'manufacturer',
+      headerName: 'Manufacturer',
+      width: 140,
     },
     {
-      accessorKey: 'model',
-      header: 'Model',
-      size: 160,
+      field: 'model',
+      headerName: 'Model',
+      width: 160,
     },
     {
-      accessorKey: 'serialNumber',
-      header: 'Serial Number',
-      size: 150,
+      field: 'serialNumber',
+      headerName: 'Serial Number',
+      width: 150,
     },
     {
-      accessorKey: 'ipAddress',
-      header: 'IP Address',
-      size: 140,
-      cell: (info: any) => (
+      field: 'ipAddress',
+      headerName: 'IP Address',
+      width: 140,
+      cellRenderer: (params: any) => (
         <span className="font-mono text-sm text-gray-700 dark:text-gray-300">
-          {info.getValue() || 'N/A'}
+          {params.value || 'N/A'}
         </span>
       ),
     },
     {
-      accessorKey: 'operatingSystem',
-      header: 'Operating System',
-      size: 180,
+      field: 'operatingSystem',
+      headerName: 'Operating System',
+      width: 180,
     },
     {
-      accessorKey: 'location',
-      header: 'Location',
-      size: 130,
+      field: 'location',
+      headerName: 'Location',
+      width: 130,
     },
     {
-      accessorKey: 'department',
-      header: 'Department',
-      size: 130,
+      field: 'department',
+      headerName: 'Department',
+      width: 130,
     },
     {
-      accessorKey: 'assignedUser',
-      header: 'Assigned To',
-      size: 200,
-      cell: (info: any) => (
+      field: 'assignedUser',
+      headerName: 'Assigned To',
+      width: 200,
+      cellRenderer: (params: any) => (
         <span className="text-gray-700 dark:text-gray-300">
-          {info.getValue() || 'Unassigned'}
+          {params.value || 'Unassigned'}
         </span>
       ),
     },
     {
-      accessorKey: 'age',
-      header: 'Age (Years)',
-      size: 120,
-      cell: (info: any) => {
-        const age = info.getValue() as number;
+      field: 'age',
+      headerName: 'Age (Years)',
+      width: 120,
+      cellRenderer: (params: any) => {
+        const age = params.value as number;
         const colorClass = age < 2 ? 'text-green-600 dark:text-green-400' :
                           age < 4 ? 'text-yellow-600 dark:text-yellow-400' :
                           'text-red-600 dark:text-red-400';
@@ -120,39 +120,39 @@ const AssetInventoryView: React.FC = () => {
       },
     },
     {
-      accessorKey: 'lifecycleStatus',
-      header: 'Lifecycle Status',
-      size: 150,
-      cell: (info: any) => {
+      field: 'lifecycleStatus',
+      headerName: 'Lifecycle Status',
+      width: 150,
+      cellRenderer: (params: any) => {
         const statusColors: Record<string, string> = {
           'New': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
           'Current': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
           'Aging': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
           'End of Life': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
         };
-        const colorClass = statusColors[info.getValue()] || 'bg-gray-100 text-gray-800';
+        const colorClass = statusColors[params.value] || 'bg-gray-100 text-gray-800';
         return (
           <span className={`px-2 py-1 rounded-md text-xs font-medium ${colorClass}`}>
-            {info.getValue()}
+            {params.value}
           </span>
         );
       },
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
-      size: 120,
-      cell: (info: any) => {
+      field: 'status',
+      headerName: 'Status',
+      width: 120,
+      cellRenderer: (params: any) => {
         const statusColors: Record<string, string> = {
           Active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
           Inactive: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
           'In Repair': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
           Decommissioned: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
         };
-        const colorClass = statusColors[info.getValue()] || 'bg-gray-100 text-gray-800';
+        const colorClass = statusColors[params.value] || 'bg-gray-100 text-gray-800';
         return (
           <span className={`px-2 py-1 rounded-md text-xs font-medium ${colorClass}`}>
-            {info.getValue()}
+            {params.value}
           </span>
         );
       },

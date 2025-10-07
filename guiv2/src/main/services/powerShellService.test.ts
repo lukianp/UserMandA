@@ -94,7 +94,7 @@ describe('PowerShellExecutionService', () => {
 
   describe('Script Execution', () => {
     it('should execute a script successfully', async () => {
-      const mockResult = { success: true, data: { users: [] as any[] } };
+      const mockResult = { success: true, data: { users: [] as any[] as any[] } };
 
       // Simulate successful execution
       setTimeout(() => {
@@ -106,7 +106,7 @@ describe('PowerShellExecutionService', () => {
       const result = await service.executeScript('Scripts/Discovery/Get-Users.ps1', ['-Domain', 'contoso.com'], {});
 
       expect(result.success).toBe(true);
-      expect(result.data).toEqual({ users: [] as any[] });
+      expect(result.data).toEqual({ users: [] as any[] as any[] });
       expect(spawn).toHaveBeenCalledWith(
         'pwsh',
         expect.arrayContaining([

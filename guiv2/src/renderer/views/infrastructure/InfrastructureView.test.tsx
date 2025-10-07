@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { InfrastructureView } from './InfrastructureView';
+import InfrastructureView from './InfrastructureView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -20,18 +20,18 @@ jest.mock('../../hooks/useInfrastructureLogic', () => ({
   useInfrastructureLogic: jest.fn(),
 }));
 
-const { useInfrastructureLogic } = require('../../hooks/useInfrastructureLogic');
+import { useInfrastructureLogic } from '../../hooks/useInfrastructureLogic';
 
 describe('InfrastructureView', () => {
   const mockHookDefaults = {
     
     
     
-    data: [],
-    selectedItems: [],
+    data: [] as any[],
+    selectedItems: [] as any[],
     searchText: '',
     isLoading: false,
-    error: null,
+    error: null as string | null,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

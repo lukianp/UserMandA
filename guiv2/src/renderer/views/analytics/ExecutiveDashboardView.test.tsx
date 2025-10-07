@@ -5,12 +5,13 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ExecutiveDashboardView } from './ExecutiveDashboardView';
+import ExecutiveDashboardView from './ExecutiveDashboardView';
+import { useExecutiveDashboardLogic } from '../../hooks/useExecutiveDashboardLogic';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
   mockAnalyticsData,
-  
+
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
@@ -20,18 +21,16 @@ jest.mock('../../hooks/useExecutiveDashboardLogic', () => ({
   useExecutiveDashboardLogic: jest.fn(),
 }));
 
-const { useExecutiveDashboardLogic } = require('../../hooks/useExecutiveDashboardLogic');
-
 describe('ExecutiveDashboardView', () => {
   const mockHookDefaults = {
-    
-    
-    data: null,
-    chartData: [],
-    kpis: [],
+
+
+    data: null as any,
+    chartData: [] as any[],
+    kpis: [] as any[],
     isLoading: false,
-    
-    error: null,
+
+    error: null as any,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

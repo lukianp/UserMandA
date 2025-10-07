@@ -13,6 +13,14 @@
     "resolveJsonModule": true,
     "jsx": "react-jsx",
     "paths": {
+      "@/*": ["src/renderer/*"],
+      "@components/*": ["src/renderer/components/*"],
+      "@views/*": ["src/renderer/views/*"],
+      "@hooks/*": ["src/renderer/hooks/*"],
+      "@store/*": ["src/renderer/store/*"],
+      "@services/*": ["src/renderer/services/*"],
+      "@types/*": ["src/renderer/types/*"],
+      "@lib/*": ["src/renderer/lib/*"],
       "*": ["node_modules/*"]
     }
   },

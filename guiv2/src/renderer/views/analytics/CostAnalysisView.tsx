@@ -5,10 +5,10 @@
 
 import React from 'react';
 import { DollarSign, TrendingDown, TrendingUp, PieChart, BarChart3, Calculator } from 'lucide-react';
-import { useCostAnalysisLogic } from '../../hooks/useCostAnalysisLogic';
-import { Button } from '../../components/atoms/Button';
-import { Badge } from '../../components/atoms/Badge';
-import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { useCostAnalysisLogic } from '@hooks/useCostAnalysisLogic';
+import { Button } from '@components/atoms/Button';
+import { Badge } from '@components/atoms/Badge';
+import { VirtualizedDataGrid } from '@components/organisms/VirtualizedDataGrid';
 
 export const CostAnalysisView: React.FC = () => {
   const {

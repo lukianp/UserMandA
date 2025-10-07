@@ -13,9 +13,9 @@ import React from 'react';
 import { TrendingUp, TrendingDown, BarChart3, RefreshCw, Download, Minus } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { useTrendAnalysisLogic } from '../../hooks/useTrendAnalysisLogic';
-import { Button } from '../../components/atoms/Button';
-import { Select } from '../../components/atoms/Select';
-import LoadingSpinner from '../../components/atoms/LoadingSpinner';
+import { Button } from '@components/atoms/Button';
+import { Select } from '@components/atoms/Select';
+import LoadingSpinner from '@components/atoms/LoadingSpinner';
 
 /**
  * Format number with commas

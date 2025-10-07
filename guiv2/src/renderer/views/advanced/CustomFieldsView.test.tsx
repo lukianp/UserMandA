@@ -16,20 +16,19 @@ jest.mock('../../hooks/useCustomFieldsLogic', () => ({
   useCustomFieldsLogic: jest.fn(),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { useCustomFieldsLogic } = require('../../hooks/useCustomFieldsLogic');
+import { useCustomFieldsLogic } from '../../hooks/useCustomFieldsLogic';
 
 describe('CustomFieldsView', () => {
   const mockHookDefaults = {
-    data: [] as unknown[],
-    
-    
-    
-    
-    selectedItems: [] as unknown[],
+    data: [] as any[],
+
+
+
+
+    selectedItems: [] as any[],
     searchText: '',
     isLoading: false,
-    error: null as string | null,
+    error: {} as any,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

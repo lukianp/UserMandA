@@ -65,9 +65,9 @@ const statusVariantMap: Record<string, 'default' | 'primary' | 'success' | 'warn
 /**
  * Status indicator type mapping
  */
-const statusIndicatorMap: Record<string, 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'loading'> = {
-  idle: 'neutral',
-  running: 'loading',
+const statusIndicatorMap: Record<string, 'success' | 'warning' | 'error' | 'info' | 'idle' | 'unknown'> = {
+  idle: 'idle',
+  running: 'info',
   completed: 'success',
   failed: 'error',
 };
@@ -174,7 +174,7 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <StatusIndicator status="loading" size="sm" />
+                            <StatusIndicator status="info" size="sm" text="Running" />
                             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {active.moduleName}
                             </span>
@@ -327,7 +327,8 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
                       </span>
                       <StatusIndicator
                         status={statusIndicatorMap[activity.status]}
-                        size="xs"
+                        size="sm"
+                        text={activity.status}
                       />
                     </div>
                     <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">

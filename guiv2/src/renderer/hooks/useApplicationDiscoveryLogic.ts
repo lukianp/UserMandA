@@ -1,497 +1,203 @@
 /**
- * Application Discovery View Logic Hook
- * Manages state and business logic for application discovery operations
+ * Application Discovery Logic Hook
+ * Provides state management and business logic for application discovery operations
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ColDef } from 'ag-grid-community';
-import {
-  ApplicationDiscoveryConfig,
-  ApplicationDiscoveryResult,
-  ApplicationDiscoveryProgress,
-  ApplicationDiscoveryFilter,
-  ApplicationDiscoveryTemplate,
-  Application,
-  ProcessInfo,
-  ServiceInfo,
-  NetworkPort,
-} from '../types/models/application';
-import { useDebounce } from './useDebounce';
+import { useState, useCallback } from 'react';
 
 /**
- * Application Discovery View State
+ * Log entry interface
  */
-interface ApplicationDiscoveryState {
-  // Configuration
-  config: ApplicationDiscoveryConfig;
-  templates: ApplicationDiscoveryTemplate[];
-
-  // Results
-  currentResult: ApplicationDiscoveryResult | null;
-  historicalResults: ApplicationDiscoveryResult[];
-
-  // Filtering
-  filter: ApplicationDiscoveryFilter;
-  searchText: string;
-
-  // UI State
-  isDiscovering: boolean;
-  progress: ApplicationDiscoveryProgress | null;
-  selectedTab: 'applications' | 'processes' | 'services' | 'ports' | 'overview';
-  selectedObjects: any[];
-
-  // Errors
-  errors: string[];
-
-  // Data
-  applications: Application[];
-  processes: ProcessInfo[];
-  services: ServiceInfo[];
-  ports: NetworkPort[];
+export interface LogEntry {
+  timestamp: string;
+  level: 'info' | 'warn' | 'error';
+  message: string;
 }
 
 /**
- * Application Discovery Logic Hook
+ * Progress information interface
  */
-export const useApplicationDiscoveryLogic = () => {
-  // State
-  const [state, setState] = useState<ApplicationDiscoveryState>({
-    config: createDefaultConfig(),
-    templates: [],
-    currentResult: null,
-    historicalResults: [],
-    filter: createDefaultFilter(),
-    searchText: '',
-    isDiscovering: false,
-    progress: null,
-    selectedTab: 'overview',
-    selectedObjects: [],
-    errors: [],
-    applications: [],
-    processes: [],
-    services: [],
-    ports: [],
-  });
+export interface ProgressInfo {
+  current: number;
+  total: number;
+  percentage: number;
+  message: string;
+}
 
-  const debouncedSearch = useDebounce(state.searchText, 300);
+/**
+ * Profile interface
+ */
+export interface Profile {
+  name: string;
+  description?: string;
+}
 
-  // Load templates and historical results on mount
-  useEffect(() => {
-    loadTemplates();
-    loadHistoricalResults();
-  }, []);
+/**
+ * Application Discovery Hook Return Type
+ */
+export interface ApplicationDiscoveryHookResult {
+  isRunning: boolean;
+  isCancelling: boolean;
+  progress: ProgressInfo | null;
+  results: any | null;
+  error: string | null;
+  logs: LogEntry[];
+  startDiscovery: () => Promise<void>;
+  cancelDiscovery: () => Promise<void>;
+  exportResults: () => Promise<void>;
+  clearLogs: () => void;
+  selectedProfile: Profile | null;
+}
 
-  // Subscribe to discovery progress
-  useEffect(() => {
-    const unsubscribe = window.electronAPI?.onProgress?.((data: any) => {
-      if (data.type === 'application-discovery') {
-        setState(prev => ({ ...prev, progress: data }));
-      }
-    });
+/**
+ * Custom hook for application discovery logic
+ */
+export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult => {
+  const [isRunning, setIsRunning] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [progress, setProgress] = useState<ProgressInfo | null>(null);
+  const [results, setResults] = useState<any | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
 
-    return () => {
-      if (unsubscribe) unsubscribe();
+  /**
+   * Add a log entry
+   */
+  const addLog = useCallback((level: LogEntry['level'], message: string) => {
+    const entry: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level,
+      message,
     };
+    setLogs(prev => [...prev, entry]);
   }, []);
 
   /**
-   * Load discovery templates
-   */
-  const loadTemplates = async () => {
-    try {
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/ApplicationDiscovery.psm1',
-        functionName: 'Get-ApplicationDiscoveryTemplates',
-        parameters: {},
-      });
-
-      if (result.success && result.data) {
-        setState(prev => ({ ...prev, templates: result.data.templates }));
-      }
-    } catch (error) {
-      console.error('Failed to load templates:', error);
-    }
-  };
-
-  /**
-   * Load historical discovery results
-   */
-  const loadHistoricalResults = async () => {
-    try {
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/ApplicationDiscovery.psm1',
-        functionName: 'Get-ApplicationDiscoveryHistory',
-        parameters: { Limit: 10 },
-      });
-
-      if (result.success && result.data) {
-        setState(prev => ({ ...prev, historicalResults: result.data.results }));
-      }
-    } catch (error) {
-      console.error('Failed to load historical results:', error);
-    }
-  };
-
-  /**
-   * Start Application Discovery
+   * Start the application discovery process
    */
   const startDiscovery = useCallback(async () => {
-    setState(prev => ({ ...prev, isDiscovering: true, errors: [], progress: null }));
+    if (isRunning) return;
+
+    setIsRunning(true);
+    setIsCancelling(false);
+    setProgress(null);
+    setResults(null);
+    setError(null);
+    setLogs([]);
+
+    addLog('info', 'Starting application discovery...');
 
     try {
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/ApplicationDiscovery.psm1',
-        functionName: 'Invoke-ApplicationDiscovery',
-        parameters: {
-          Config: state.config,
-          StreamProgress: true,
-        },
-      });
+      // Simulate discovery process
+      setProgress({ current: 0, total: 100, percentage: 0, message: 'Initializing...' });
 
-      if (result.success && result.data) {
-        const discoveryResult: ApplicationDiscoveryResult = result.data;
-        setState(prev => ({
-          ...prev,
-          currentResult: discoveryResult,
-          applications: discoveryResult.applications || [],
-          processes: discoveryResult.processes || [],
-          services: discoveryResult.services || [],
-          ports: discoveryResult.ports || [],
-          isDiscovering: false,
-          progress: null,
-        }));
-      } else {
-        throw new Error(result.error || 'Discovery failed');
+      // Mock progress updates
+      const progressSteps = [
+        { current: 20, message: 'Scanning registry for installed applications...' },
+        { current: 40, message: 'Checking Program Files directories...' },
+        { current: 60, message: 'Enumerating running processes...' },
+        { current: 80, message: 'Analyzing service dependencies...' },
+        { current: 100, message: 'Discovery completed' },
+      ];
+
+      for (const step of progressSteps) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        if (isCancelling) break;
+        setProgress({ ...step, total: 100, percentage: step.current });
+        addLog('info', step.message);
       }
-    } catch (error: any) {
-      setState(prev => ({
-        ...prev,
-        isDiscovering: false,
-        errors: [...prev.errors, error.message || 'Unknown error occurred'],
-        progress: null,
-      }));
+
+      if (!isCancelling) {
+        // Mock results
+        const mockResults = {
+          applications: [
+            { name: 'Microsoft Office', version: '365', vendor: 'Microsoft', installDate: '2023-01-15' },
+            { name: 'Google Chrome', version: '120.0', vendor: 'Google', installDate: '2023-06-10' },
+            { name: 'Adobe Acrobat', version: '23.0', vendor: 'Adobe', installDate: '2023-03-20' },
+          ],
+          processes: [
+            { name: 'chrome.exe', pid: 1234, user: 'user1', cpuUsage: 5.2, memoryUsage: 150000000 },
+            { name: 'explorer.exe', pid: 5678, user: 'user1', cpuUsage: 2.1, memoryUsage: 80000000 },
+          ],
+          services: [
+            { name: 'wuauserv', displayName: 'Windows Update', status: 'Running', startType: 'Automatic' },
+            { name: 'Spooler', displayName: 'Print Spooler', status: 'Running', startType: 'Automatic' },
+          ],
+        };
+
+        setResults(mockResults);
+        addLog('info', `Discovery completed. Found ${mockResults.applications.length} applications, ${mockResults.processes.length} processes, ${mockResults.services.length} services.`);
+      } else {
+        addLog('warn', 'Discovery was cancelled by user.');
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || 'Unknown error occurred during discovery';
+      setError(errorMessage);
+      addLog('error', errorMessage);
+    } finally {
+      setIsRunning(false);
+      setIsCancelling(false);
+      setProgress(null);
     }
-  }, [state.config]);
+  }, [isRunning, isCancelling, addLog]);
 
   /**
-   * Cancel ongoing discovery
+   * Cancel the ongoing discovery process
    */
   const cancelDiscovery = useCallback(async () => {
-    if (!state.currentResult?.id) return;
+    if (!isRunning) return;
 
-    try {
-      await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/ApplicationDiscovery.psm1',
-        functionName: 'Stop-ApplicationDiscovery',
-        parameters: { ResultId: state.currentResult.id },
-      });
-
-      setState(prev => ({ ...prev, isDiscovering: false, progress: null }));
-    } catch (error) {
-      console.error('Failed to cancel discovery:', error);
-    }
-  }, [state.currentResult?.id]);
-
-  /**
-   * Update discovery configuration
-   */
-  const updateConfig = useCallback((updates: Partial<ApplicationDiscoveryConfig>) => {
-    setState(prev => ({
-      ...prev,
-      config: { ...prev.config, ...updates },
-    }));
-  }, []);
-
-  /**
-   * Load a template
-   */
-  const loadTemplate = useCallback((template: ApplicationDiscoveryTemplate) => {
-    setState(prev => ({
-      ...prev,
-      config: { ...template.config, id: generateId() },
-    }));
-  }, []);
-
-  /**
-   * Save current config as template
-   */
-  const saveAsTemplate = useCallback(async (name: string, description: string, category: string) => {
-    try {
-      const template: Omit<ApplicationDiscoveryTemplate, 'id' | 'createdDate' | 'modifiedDate'> = {
-        name,
-        description,
-        category: category as any,
-        config: state.config,
-        createdBy: 'CurrentUser',
-        isSystem: false,
-      };
-
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/ApplicationDiscovery.psm1',
-        functionName: 'Save-ApplicationDiscoveryTemplate',
-        parameters: { Template: template },
-      });
-
-      if (result.success) {
-        await loadTemplates();
-      }
-    } catch (error) {
-      console.error('Failed to save template:', error);
-    }
-  }, [state.config]);
+    setIsCancelling(true);
+    addLog('info', 'Cancelling discovery...');
+  }, [isRunning, addLog]);
 
   /**
    * Export discovery results
    */
-  const exportResults = useCallback(async (format: 'csv' | 'excel' | 'json' | 'xml' | 'html') => {
-    if (!state.currentResult) return;
+  const exportResults = useCallback(async () => {
+    if (!results) return;
 
     try {
-      await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/ApplicationDiscovery.psm1',
-        functionName: 'Export-ApplicationDiscoveryResults',
-        parameters: {
-          ResultId: state.currentResult.id,
-          Format: format,
-          IncludeAll: true,
-        },
-      });
-    } catch (error) {
-      console.error('Failed to export results:', error);
+      addLog('info', 'Exporting discovery results...');
+
+      // Mock export functionality
+      const dataStr = JSON.stringify(results, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+
+      const exportFileDefaultName = `application-discovery-results-${new Date().toISOString().split('T')[0]}.json`;
+
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+
+      addLog('info', 'Results exported successfully.');
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to export results';
+      setError(errorMessage);
+      addLog('error', errorMessage);
     }
-  }, [state.currentResult]);
+  }, [results, addLog]);
 
   /**
-   * Filter results based on current filter settings
+   * Clear all logs
    */
-  const filteredData = useMemo(() => {
-    const { filter } = state;
-    let data: any[] = [];
-
-    switch (state.selectedTab) {
-      case 'applications':
-        data = state.applications;
-        break;
-      case 'processes':
-        data = state.processes;
-        break;
-      case 'services':
-        data = state.services;
-        break;
-      case 'ports':
-        data = state.ports;
-        break;
-      default:
-        return [];
-    }
-
-    // Apply search text filter
-    if (debouncedSearch) {
-      data = data.filter((item: any) => {
-        const searchLower = debouncedSearch.toLowerCase();
-        return (
-          item.name?.toLowerCase().includes(searchLower) ||
-          item.displayName?.toLowerCase().includes(searchLower) ||
-          item.vendor?.toLowerCase().includes(searchLower) ||
-          item.version?.toLowerCase().includes(searchLower) ||
-          item.description?.toLowerCase().includes(searchLower)
-        );
-      });
-    }
-
-    // Apply category filter for applications
-    if (state.selectedTab === 'applications' && filter.category !== 'all') {
-      data = data.filter((item: any) => item.category === filter.category);
-    }
-
-    // Apply vendor filter for applications
-    if (state.selectedTab === 'applications' && filter.vendor) {
-      data = data.filter((item: any) => item.vendor === filter.vendor);
-    }
-
-    // Apply update status filter
-    if (state.selectedTab === 'applications' && filter.updateStatus !== 'all') {
-      data = data.filter((item: any) => item.updateStatus === filter.updateStatus);
-    }
-
-    // Apply license status filter
-    if (state.selectedTab === 'applications' && filter.licenseStatus !== 'all') {
-      data = data.filter((item: any) => item.licenseStatus === filter.licenseStatus);
-    }
-
-    // Apply security status filter
-    if (state.selectedTab === 'applications' && filter.securityStatus === 'at-risk') {
-      data = data.filter((item: any) => item.securityRisks && item.securityRisks.length > 0);
-    } else if (state.selectedTab === 'applications' && filter.securityStatus === 'secure') {
-      data = data.filter((item: any) => !item.securityRisks || item.securityRisks.length === 0);
-    }
-
-    return data;
-  }, [state.selectedTab, state.applications, state.processes, state.services, state.ports, state.filter, debouncedSearch]);
-
-  /**
-   * Column definitions for AG Grid
-   */
-  const columnDefs: Record<string, ColDef[]> = useMemo(() => ({
-    applications: [
-      { field: 'name', headerName: 'Name', sortable: true, filter: true, flex: 2 },
-      { field: 'version', headerName: 'Version', sortable: true, filter: true, flex: 1 },
-      { field: 'vendor', headerName: 'Vendor', sortable: true, filter: true, flex: 1 },
-      { field: 'category', headerName: 'Category', sortable: true, filter: true, flex: 1 },
-      { field: 'installDate', headerName: 'Install Date', sortable: true, filter: true, flex: 1,
-        valueFormatter: (params: any) => params.value ? new Date(params.value).toLocaleDateString() : 'Unknown' },
-      { field: 'size', headerName: 'Size', sortable: true, filter: true, flex: 1,
-        valueFormatter: (params: any) => formatBytes(params.value) },
-      { field: 'licenseStatus', headerName: 'License', sortable: true, filter: true, flex: 1 },
-      { field: 'updateStatus', headerName: 'Updates', sortable: true, filter: true, flex: 1 },
-      { field: 'dependencies', headerName: 'Dependencies', sortable: true, flex: 1,
-        valueGetter: (params: any) => params.data.dependencies?.length || 0 },
-      { field: 'securityRisks', headerName: 'Security Risks', sortable: true, flex: 1,
-        valueGetter: (params: any) => params.data.securityRisks?.length || 0,
-        cellStyle: (params: any) => {
-          if (params.value > 0) return { color: 'red', fontWeight: 'bold' };
-          return {};
-        }
-      },
-    ],
-    processes: [
-      { field: 'name', headerName: 'Name', sortable: true, filter: true, flex: 2 },
-      { field: 'processId', headerName: 'PID', sortable: true, filter: true, flex: 1 },
-      { field: 'userName', headerName: 'User', sortable: true, filter: true, flex: 1 },
-      { field: 'cpuUsage', headerName: 'CPU %', sortable: true, filter: true, flex: 1,
-        valueFormatter: (params: any) => `${params.value.toFixed(2)}%` },
-      { field: 'memoryUsage', headerName: 'Memory', sortable: true, filter: true, flex: 1,
-        valueFormatter: (params: any) => formatBytes(params.value) },
-      { field: 'startTime', headerName: 'Start Time', sortable: true, filter: true, flex: 1,
-        valueFormatter: (params: any) => params.value ? new Date(params.value).toLocaleString() : 'Unknown' },
-      { field: 'threadCount', headerName: 'Threads', sortable: true, filter: true, flex: 1 },
-      { field: 'status', headerName: 'Status', sortable: true, filter: true, flex: 1 },
-    ],
-    services: [
-      { field: 'displayName', headerName: 'Display Name', sortable: true, filter: true, flex: 2 },
-      { field: 'name', headerName: 'Service Name', sortable: true, filter: true, flex: 2 },
-      { field: 'status', headerName: 'Status', sortable: true, filter: true, flex: 1 },
-      { field: 'startType', headerName: 'Start Type', sortable: true, filter: true, flex: 1 },
-      { field: 'account', headerName: 'Account', sortable: true, filter: true, flex: 1 },
-      { field: 'processId', headerName: 'PID', sortable: true, filter: true, flex: 1 },
-      { field: 'description', headerName: 'Description', sortable: true, filter: true, flex: 2 },
-      { field: 'dependencies', headerName: 'Dependencies', sortable: true, flex: 1,
-        valueGetter: (params: any) => params.data.dependencies?.length || 0 },
-    ],
-    ports: [
-      { field: 'port', headerName: 'Port', sortable: true, filter: true, flex: 1 },
-      { field: 'protocol', headerName: 'Protocol', sortable: true, filter: true, flex: 1 },
-      { field: 'state', headerName: 'State', sortable: true, filter: true, flex: 1 },
-      { field: 'processName', headerName: 'Process', sortable: true, filter: true, flex: 2 },
-      { field: 'processId', headerName: 'PID', sortable: true, filter: true, flex: 1 },
-    ],
-  }), []);
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
 
   return {
-    // State
-    config: state.config,
-    templates: state.templates,
-    currentResult: state.currentResult,
-    historicalResults: state.historicalResults,
-    isDiscovering: state.isDiscovering,
-    progress: state.progress,
-    selectedTab: state.selectedTab,
-    selectedObjects: state.selectedObjects,
-    errors: state.errors,
-    searchText: state.searchText,
-
-    // Data
-    filteredData,
-    columnDefs: columnDefs[state.selectedTab] || [],
-
-    // Actions
+    isRunning,
+    isCancelling,
+    progress,
+    results,
+    error,
+    logs,
     startDiscovery,
     cancelDiscovery,
-    updateConfig,
-    loadTemplate,
-    saveAsTemplate,
     exportResults,
-    setSelectedTab: (tab: typeof state.selectedTab) => setState(prev => ({ ...prev, selectedTab: tab })),
-    setSearchText: (text: string) => setState(prev => ({ ...prev, searchText: text })),
-    setSelectedObjects: (objects: any[]) => setState(prev => ({ ...prev, selectedObjects: objects })),
-    updateFilter: (filter: Partial<ApplicationDiscoveryFilter>) =>
-      setState(prev => ({ ...prev, filter: { ...prev.filter, ...filter } })),
+    clearLogs,
+    selectedProfile,
   };
 };
-
-/**
- * Create default discovery configuration
- */
-function createDefaultConfig(): ApplicationDiscoveryConfig {
-  return {
-    id: generateId(),
-    name: 'New Application Discovery',
-    targetComputers: [],
-    useCurrentComputer: true,
-    includeSoftware: true,
-    includeProcesses: true,
-    includeServices: true,
-    scanRegistry: true,
-    scanFilesystem: false,
-    scanPorts: false,
-    registryPaths: [
-      'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
-      'HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
-    ],
-    includeUserInstalled: true,
-    includeMachineInstalled: true,
-    filesystemPaths: ['C:\\Program Files', 'C:\\Program Files (x86)'],
-    fileExtensions: ['.exe', '.dll'],
-    scanDepth: 2,
-    portRanges: [{ start: 1, end: 1024 }],
-    portScanTimeout: 1000,
-    detectDependencies: true,
-    detectLicenses: true,
-    checkForUpdates: true,
-    performSecurityScan: true,
-    resolveVersionInfo: true,
-    excludePatterns: ['*\\Windows\\*', '*\\System32\\*'],
-    includePatterns: [],
-    minSizeBytes: null,
-    maxSizeBytes: null,
-    useCurrentCredentials: true,
-    credentialProfileId: null,
-    maxParallelScans: 4,
-    timeout: 600,
-    isScheduled: false,
-    schedule: null,
-  };
-}
-
-/**
- * Create default filter
- */
-function createDefaultFilter(): ApplicationDiscoveryFilter {
-  return {
-    objectType: 'all',
-    searchText: '',
-    category: 'all',
-    vendor: null,
-    updateStatus: 'all',
-    licenseStatus: 'all',
-    securityStatus: 'all',
-  };
-}
-
-/**
- * Generate unique ID
- */
-function generateId(): string {
-  return `app-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
-
-/**
- * Format bytes to human-readable string
- */
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-}

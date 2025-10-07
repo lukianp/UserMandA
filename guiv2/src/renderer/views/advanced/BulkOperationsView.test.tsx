@@ -16,23 +16,24 @@ jest.mock('../../hooks/useBulkOperationsLogic', () => ({
   useBulkOperationsLogic: jest.fn(),
 }));
 
-const { useBulkOperationsLogic } = require('../../hooks/useBulkOperationsLogic');
+import { useBulkOperationsLogic } from '../../hooks/useBulkOperationsLogic';
 
 describe('BulkOperationsView', () => {
   const mockHookDefaults = {
-    data: [],
-    
-    
-    
-    
-    selectedItems: [],
+    data: [] as any[],
+
+
+
+
+
+
+    selectedItems: [] as any[],
     searchText: '',
     isLoading: false,
-    error: null,
+    error: {} as any,
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };
-
   beforeEach(() => {
     resetAllMocks();
     useBulkOperationsLogic.mockReturnValue(mockHookDefaults);
