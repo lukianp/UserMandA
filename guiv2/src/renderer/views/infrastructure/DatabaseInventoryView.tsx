@@ -1,51 +1,56 @@
 import React from 'react';
-import { DataTable } from '../../components/organisms/DataTable';
+import DataTable, { DataTableColumn } from '../../components/organisms/DataTable';
 import { useDatabaseInventoryLogic } from '../../hooks/infrastructure/useDatabaseInventoryLogic';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw } from 'lucide-react';
-import type { ColumnDef } from '@tanstack/react-table';
 import type { DatabaseInventoryData } from '../../hooks/infrastructure/useDatabaseInventoryLogic';
 
 const DatabaseInventoryView: React.FC = () => {
   const { data, isLoading, error, reload } = useDatabaseInventoryLogic();
 
-  const columns: ColumnDef<DatabaseInventoryData>[] = [
+  const columns: DataTableColumn<DatabaseInventoryData>[] = [
     {
-      accessorKey: 'databaseName',
+      id: 'databaseName',
       header: 'Database Name',
-      enableSorting: true,
-      enableColumnFilter: true,
+      accessor: 'databaseName',
+      sortable: true,
+      filterable: true,
     },
     {
-      accessorKey: 'type',
+      id: 'type',
       header: 'Type',
-      enableSorting: true,
-      enableColumnFilter: true,
+      accessor: 'type',
+      sortable: true,
+      filterable: true,
     },
     {
-      accessorKey: 'server',
+      id: 'server',
       header: 'Server',
-      enableSorting: true,
-      enableColumnFilter: true,
+      accessor: 'server',
+      sortable: true,
+      filterable: true,
     },
     {
-      accessorKey: 'size',
+      id: 'size',
       header: 'Size',
-      enableSorting: true,
+      accessor: 'size',
+      sortable: true,
     },
     {
-      accessorKey: 'version',
+      id: 'version',
       header: 'Version',
-      enableSorting: true,
-      enableColumnFilter: true,
+      accessor: 'version',
+      sortable: true,
+      filterable: true,
     },
     {
-      accessorKey: 'status',
+      id: 'status',
       header: 'Status',
-      enableSorting: true,
-      enableColumnFilter: true,
-      cell: ({ getValue }) => {
-        const status = getValue() as string;
+      accessor: 'status',
+      sortable: true,
+      filterable: true,
+      cell: (value: string) => {
+        const status = value as string;
         const statusClass =
           status === 'Online'
             ? 'text-success'
@@ -61,7 +66,7 @@ const DatabaseInventoryView: React.FC = () => {
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Database Inventory</h1>
-        <Button onClick={reload} variant="outline" size="sm" disabled={isLoading}>
+        <Button onClick={reload} variant="secondary" size="sm" disabled={isLoading}>
           <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
@@ -76,7 +81,7 @@ const DatabaseInventoryView: React.FC = () => {
       <DataTable
         data={data}
         columns={columns}
-        isLoading={isLoading}
+        loading={isLoading}
         emptyMessage="No database inventory data available. Run infrastructure discovery to populate this view."
       />
     </div>
