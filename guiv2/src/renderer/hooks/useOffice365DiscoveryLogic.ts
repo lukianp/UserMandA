@@ -364,7 +364,7 @@ export const useOffice365DiscoveryLogic = () => {
         valueGetter: (params: any) => params.data.mfaStatus?.state || 'disabled',
         cellStyle: (params: any) => {
           const state = params.data.mfaStatus?.state;
-          if (state === 'enabled' || state === 'enforced') return { color: 'green', fontWeight: 'bold' };
+          if (state === 'enabled' || state === 'enforced') return { color: 'green', fontWeight: 'bold' as const };
           return { color: 'red' };
         }
       },
@@ -382,7 +382,7 @@ export const useOffice365DiscoveryLogic = () => {
         filter: true,
         flex: 1,
         cellRenderer: (params: any) => params.value ? '✓ Admin' : '',
-        cellStyle: (params: any) => params.value ? { color: 'orange', fontWeight: 'bold' } : {}
+        cellStyle: (params: any) => params.value ? { color: 'orange', fontWeight: 'bold' } : undefined
       },
       { field: 'department', headerName: 'Department', sortable: true, filter: true, flex: 1 },
       { field: 'jobTitle', headerName: 'Job Title', sortable: true, filter: true, flex: 2 },

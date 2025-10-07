@@ -89,11 +89,11 @@ export const useUsersViewLogic = () => {
     const search = searchText.toLowerCase();
     return users.filter(
       (u) =>
-        u.displayName.toLowerCase().includes(search) ||
-        u.email.toLowerCase().includes(search) ||
+        u.displayName?.toLowerCase().includes(search) ||
+        u.email?.toLowerCase().includes(search) ||
         u.department?.toLowerCase().includes(search) ||
         u.jobTitle?.toLowerCase().includes(search) ||
-        u.userPrincipalName.toLowerCase().includes(search)
+        u.userPrincipalName?.toLowerCase().includes(search)
     );
   }, [users, searchText]);
 

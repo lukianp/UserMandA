@@ -258,7 +258,7 @@ const MigrationPlanningView: React.FC = () => {
     async (item: any, waveId: string) => {
       try {
         // Show loading toast
-        showInfo({ message: 'Adding item to wave...' });
+        showInfo('Adding item to wave...');
 
         // Create migration task from dropped item
         const task = {
@@ -280,13 +280,13 @@ const MigrationPlanningView: React.FC = () => {
           await loadWaves();
 
           // Success toast
-          showSuccess({ message: `Added ${task.name} to wave` });
+          showSuccess(`Added ${task.name} to wave`);
         } else {
           throw new Error(result.error || 'Failed to add item to wave');
         }
       } catch (error: any) {
         console.error('Failed to add item to wave:', error);
-        showError({ message: `Failed to add item: ${error.message}` });
+        showError(`Failed to add item: ${error.message}`);
       }
     },
     [loadWaves, showSuccess, showError, showInfo]
@@ -295,62 +295,62 @@ const MigrationPlanningView: React.FC = () => {
   // Bulk operation handlers
   const handleAnalyzeSelected = useCallback(async () => {
     if (selectedUsers.length === 0) {
-      showError({ message: 'No users selected for analysis' });
+      showError('No users selected for analysis');
       return;
     }
 
-    showInfo({ message: `Analyzing complexity for ${selectedUsers.length} users...` });
+    showInfo(`Analyzing complexity for ${selectedUsers.length} users...`);
 
     try {
       const userIds = selectedUsers.map(u => u.id || u.userPrincipalName);
       await analyzeUsers(userIds);
-      showSuccess({ message: `Complexity analysis complete for ${selectedUsers.length} users` });
+      showSuccess(`Complexity analysis complete for ${selectedUsers.length} users`);
     } catch (err: any) {
-      showError({ message: `Analysis failed: ${err.message}` });
+      showError(`Analysis failed: ${err.message}`);
     }
   }, [selectedUsers, analyzeUsers, showSuccess, showError, showInfo]);
 
   const handleAssignToWave = useCallback(async () => {
     if (selectedUsers.length === 0) {
-      showError({ message: 'No users selected to assign' });
+      showError('No users selected to assign');
       return;
     }
 
     if (!selectedWave) {
-      showError({ message: 'No wave selected' });
+      showError('No wave selected');
       return;
     }
 
-    showInfo({ message: `Assigning ${selectedUsers.length} users to wave...` });
+    showInfo(`Assigning ${selectedUsers.length} users to wave...`);
 
     try {
       for (const user of selectedUsers) {
         await handleItemDrop({ id: user.id, type: 'USER', data: user }, selectedWave.id);
       }
-      showSuccess({ message: `Assigned ${selectedUsers.length} users to wave` });
+      showSuccess(`Assigned ${selectedUsers.length} users to wave`);
       setSelectedUsers([]);
     } catch (err: any) {
-      showError({ message: `Assignment failed: ${err.message}` });
+      showError(`Assignment failed: ${err.message}`);
     }
   }, [selectedUsers, selectedWave, handleItemDrop, showSuccess, showError, showInfo]);
 
   const handleRemapGroups = useCallback(() => {
     if (selectedUsers.length === 0) {
-      showError({ message: 'No users selected for group remapping' });
+      showError('No users selected for group remapping');
       return;
     }
 
     setShowGroupRemapping(true);
-    showInfo({ message: 'Configure group mappings for selected users' });
+    showInfo('Configure group mappings for selected users');
   }, [selectedUsers, showError, showInfo]);
 
   const handleValidateSelection = useCallback(async () => {
     if (selectedUsers.length === 0) {
-      showError({ message: 'No users selected for validation' });
+      showError('No users selected for validation');
       return;
     }
 
-    showInfo({ message: 'Validating selected users for migration...' });
+    showInfo('Validating selected users for migration...');
 
     try {
       // Perform validation checks
@@ -366,13 +366,13 @@ const MigrationPlanningView: React.FC = () => {
       });
 
       if (issues.length > 0) {
-        showError({ message: `Validation found ${issues.length} issues. Review user details.` });
+        showError(`Validation found ${issues.length} issues. Review user details.`);
         console.warn('Validation issues:', issues);
       } else {
-        showSuccess({ message: 'All selected users passed validation checks' });
+        showSuccess('All selected users passed validation checks');
       }
     } catch (err: any) {
-      showError({ message: `Validation failed: ${err.message}` });
+      showError(`Validation failed: ${err.message}`);
     }
   }, [selectedUsers, showSuccess, showError, showInfo]);
 
@@ -560,7 +560,7 @@ const MigrationPlanningView: React.FC = () => {
           <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button
               onClick={() => {
-                showSuccess({ message: 'Group mappings saved' });
+                showSuccess('Group mappings saved');
                 setShowGroupRemapping(false);
               }}
               variant="primary"

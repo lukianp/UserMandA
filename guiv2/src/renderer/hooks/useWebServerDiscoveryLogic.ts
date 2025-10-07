@@ -424,7 +424,7 @@ export const useWebServerDiscoveryLogic = () => {
       width: 150,
       type: 'numericColumn',
       cellStyle: (params) => {
-        if (params.value < 30) return { color: '#ef4444', fontWeight: 'bold' };
+        if (params.value < 30) return { color: '#ef4444', fontWeight: 'bold' as const };
         if (params.value < 90) return { color: '#f59e0b' };
         return { color: '#10b981' };
       }

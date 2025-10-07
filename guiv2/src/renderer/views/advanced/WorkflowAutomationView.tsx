@@ -18,7 +18,7 @@ export const WorkflowAutomationView: React.FC = () => {
         <p className="text-gray-600 dark:text-gray-400 mb-4">
           This advanced feature provides comprehensive WorkflowAutomation capabilities.
         </p>
-        <Button variant="primary" icon={Settings}>
+        <Button variant="primary" icon={<Settings />}>
           Configure WorkflowAutomation
         </Button>
       </div>

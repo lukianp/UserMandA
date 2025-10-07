@@ -22,6 +22,10 @@ export interface ProgressInfo {
   total: number;
   percentage: number;
   message: string;
+  currentOperation?: string;
+  progress?: number;
+  objectsProcessed?: number;
+  estimatedTimeRemaining?: string;
 }
 
 /**
@@ -36,6 +40,7 @@ export interface Profile {
  * Application Discovery Hook Return Type
  */
 export interface ApplicationDiscoveryHookResult {
+  // Existing properties
   isRunning: boolean;
   isCancelling: boolean;
   progress: ProgressInfo | null;
@@ -47,6 +52,23 @@ export interface ApplicationDiscoveryHookResult {
   exportResults: () => Promise<void>;
   clearLogs: () => void;
   selectedProfile: Profile | null;
+
+  // Additional properties expected by the view
+  config: any;
+  templates: any[];
+  currentResult: any | null;
+  isDiscovering: boolean;
+  selectedTab: string;
+  searchText: string;
+  filteredData: any[];
+  columnDefs: any[];
+  errors: string[];
+  updateConfig: (updates: any) => void;
+  loadTemplate: (template: any) => void;
+  saveAsTemplate: (name: string) => void;
+  setSelectedTab: (tab: string) => void;
+  setSearchText: (text: string) => void;
+  exportData: (format: string) => Promise<void>;
 }
 
 /**
@@ -60,6 +82,20 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+
+  // Additional state for view compatibility
+  const [config, setConfig] = useState<any>({
+    includeSoftware: true,
+    includeProcesses: true,
+    includeServices: true,
+    scanRegistry: false,
+    scanFilesystem: false,
+    scanPorts: false
+  });
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [selectedTab, setSelectedTab] = useState<string>('software');
+  const [searchText, setSearchText] = useState<string>('');
+  const [errors, setErrors] = useState<string[]>([]);
 
   /**
    * Add a log entry
@@ -187,6 +223,38 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
     setLogs([]);
   }, []);
 
+  /**
+   * Update configuration
+   */
+  const updateConfig = useCallback((updates: any) => {
+    setConfig(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  /**
+   * Load a template
+   */
+  const loadTemplate = useCallback((template: any) => {
+    setConfig(template.config || {});
+    addLog('info', `Loaded template: ${template.name}`);
+  }, [addLog]);
+
+  /**
+   * Save current config as template
+   */
+  const saveAsTemplate = useCallback((name: string) => {
+    const template = { name, config };
+    setTemplates(prev => [...prev, template]);
+    addLog('info', `Saved template: ${name}`);
+  }, [config, addLog]);
+
+  /**
+   * Export data in specified format
+   */
+  const exportData = useCallback(async (format: string) => {
+    addLog('info', `Exporting data as ${format}...`);
+    await exportResults();
+  }, [exportResults, addLog]);
+
   return {
     isRunning,
     isCancelling,
@@ -199,5 +267,22 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
     exportResults,
     clearLogs,
     selectedProfile,
+
+    // Additional properties
+    config,
+    templates,
+    currentResult: results,
+    isDiscovering: isRunning,
+    selectedTab,
+    searchText,
+    filteredData: results ? Object.values(results).flat() : [],
+    columnDefs: [],
+    errors,
+    updateConfig,
+    loadTemplate,
+    saveAsTemplate,
+    setSelectedTab,
+    setSearchText,
+    exportData,
   };
 };

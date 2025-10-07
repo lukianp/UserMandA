@@ -12,8 +12,10 @@ import {
 } from '../../test-utils/viewTestHelpers';
 
 // Mock the hook
+const mockUseAPIManagementLogic = jest.fn();
+
 jest.mock('../../hooks/useAPIManagementLogic', () => ({
-  useAPIManagementLogic: jest.fn(),
+  useAPIManagementLogic: mockUseAPIManagementLogic,
 }));
 
 import { useAPIManagementLogic } from '../../hooks/useAPIManagementLogic';

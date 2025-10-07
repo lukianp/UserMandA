@@ -177,17 +177,17 @@ const ApplicationDiscoveryView: React.FC = () => {
             <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-purple-900 dark:text-purple-100">
-                  {progress.currentOperation}
+                  {progress.currentOperation || progress.message}
                 </span>
                 <span className="text-sm text-purple-700 dark:text-purple-300">
-                  {progress.progress}% complete
+                  {progress.progress ?? progress.percentage}% complete
                 </span>
               </div>
-              <ProgressBar value={progress.progress} max={100} />
+              <ProgressBar value={progress.progress ?? progress.percentage ?? 0} max={100} />
               <div className="mt-2 flex items-center justify-between text-xs text-purple-600 dark:text-purple-400">
-                <span>{progress.objectsProcessed} objects processed</span>
-                {progress.estimatedTimeRemaining !== null && (
-                  <span>Estimated time remaining: {Math.ceil(progress.estimatedTimeRemaining / 60)} minutes</span>
+                <span>{progress.objectsProcessed ?? progress.current} objects processed</span>
+                {progress.estimatedTimeRemaining && (
+                  <span>Estimated time remaining: {progress.estimatedTimeRemaining}</span>
                 )}
               </div>
             </div>
@@ -310,7 +310,7 @@ const ApplicationDiscoveryView: React.FC = () => {
                   <Button
                     variant="secondary"
                     icon={<Download />}
-                    onClick={() => exportResults('excel')}
+                    onClick={() => exportData('excel')}
                     data-cy="export-btn"
                   >
                     Export

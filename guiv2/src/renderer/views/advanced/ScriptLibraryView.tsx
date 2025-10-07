@@ -20,8 +20,8 @@ export const ScriptLibraryView: React.FC = () => {
     { field: 'lastRun', headerName: 'Last Run', sortable: true, valueFormatter: (p: any) => p.value.toLocaleString() },
     { field: 'actions', headerName: 'Actions', sortable: false, cellRenderer: () => (
       <div className="flex gap-2">
-        <Button size="sm" variant="primary" icon={Play}>Run</Button>
-        <Button size="sm" variant="secondary" icon={Edit2} />
+        <Button size="sm" variant="primary" icon={<Play />}>Run</Button>
+        <Button size="sm" variant="secondary" icon={<Edit2 />} />
       </div>
     )},
   ];
@@ -33,11 +33,11 @@ export const ScriptLibraryView: React.FC = () => {
           <h1 className="text-2xl font-bold">Script Library</h1>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Manage and execute PowerShell scripts</p>
         </div>
-        <Button variant="primary" icon={Plus}>New Script</Button>
+        <Button variant="primary" icon={<Plus />}>New Script</Button>
       </div>
       
       <div className="flex gap-4">
-        <Input placeholder="Search scripts..." icon={Search} className="flex-1" />
+        <Input placeholder="Search scripts..." startIcon={<Search />} className="flex-1" />
       </div>
 
       <div className="flex-1">

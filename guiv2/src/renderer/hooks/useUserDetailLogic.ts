@@ -144,8 +144,9 @@ export function useUserDetailLogic(userId: string): UseUserDetailLogicResult {
     if (!userDetail) return;
 
     openModal({
-      component: 'MigrationWaveDialog',
-      props: {
+      type: 'custom',
+      title: 'Add to Migration Wave',
+      data: {
         preSelectedItems: [
           {
             id: userDetail.user.id || userDetail.user.userPrincipalName || '',
@@ -153,22 +154,22 @@ export function useUserDetailLogic(userId: string): UseUserDetailLogicResult {
             displayName: userDetail.user.displayName || 'Unknown User',
           },
         ],
-        onConfirm: (waveId: string) => {
-          addItemToWave(waveId, {
-            id: userDetail.user.id || userDetail.user.userPrincipalName || '',
-            type: 'user',
-            name: userDetail.user.displayName || 'Unknown User',
-            displayName: userDetail.user.displayName || 'Unknown User',
-          });
+      },
+      onConfirm: (waveId: string) => {
+        addItemToWave(waveId, {
+          id: userDetail.user.id || userDetail.user.userPrincipalName || '',
+          type: 'user',
+          name: userDetail.user.displayName || 'Unknown User',
+          displayName: userDetail.user.displayName || 'Unknown User',
+        });
 
-          showNotification({
-            type: 'success',
-            title: 'Added to Wave',
-            message: `Added ${userDetail.user.displayName} to migration wave`,
-            priority: 'normal',
-            pinned: false,
-          });
-        },
+        showNotification({
+          type: 'success',
+          title: 'Added to Wave',
+          message: `Added ${userDetail.user.displayName} to migration wave`,
+          priority: 'normal',
+          pinned: false,
+        });
       },
     });
   }, [userDetail, openModal, addItemToWave, showNotification]);

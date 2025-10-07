@@ -98,6 +98,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
+    "@testing-library/dom": "^10.4.1",
     "@types/node-cron": "^3.0.11",
     "@types/react-window": "^1.8.8",
     "ag-grid-community": "^34.2.0",

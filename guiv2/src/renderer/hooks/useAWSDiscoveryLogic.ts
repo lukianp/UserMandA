@@ -277,7 +277,7 @@ export const useAWSDiscoveryLogic = () => {
       cellStyle: (params: any) => {
         if (params.value === 'running') return { color: 'green' };
         if (params.value === 'stopped') return { color: 'red' };
-        return {};
+        return undefined;
       }
     },
     { field: 'region', headerName: 'Region', sortable: true, filter: true, flex: 1 },
@@ -305,7 +305,7 @@ export const useAWSDiscoveryLogic = () => {
     { field: 'versioning', headerName: 'Versioning', sortable: true, flex: 1,
       cellRenderer: (params: any) => params.value ? 'Enabled' : 'Disabled' },
     { field: 'publicAccess', headerName: 'Public Access', sortable: true, flex: 1,
-      cellStyle: (params: any) => params.value ? { color: 'red', fontWeight: 'bold' } : {} },
+      cellStyle: (params: any) => params.value ? { color: 'red', fontWeight: 'bold' } : undefined },
     { field: 'totalSize', headerName: 'Size', sortable: true,
       valueFormatter: (p) => p.value ? formatBytes(p.value) : '-', flex: 1 },
     { field: 'objectCount', headerName: 'Objects', sortable: true,
@@ -325,7 +325,7 @@ export const useAWSDiscoveryLogic = () => {
       cellStyle: (params: any) => {
         if (params.value === 'available') return { color: 'green' };
         if (params.value === 'stopped') return { color: 'red' };
-        return {};
+        return undefined;
       }
     },
     { field: 'instanceClass', headerName: 'Class', sortable: true, filter: true, flex: 1 },

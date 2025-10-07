@@ -285,7 +285,6 @@ export const statusToColor = (status: string): string => {
     'planned': '#f59e0b',
     'ready': '#10b981',
     'executing': '#3b82f6',
-    'completed': '#10b981',
     'validated': '#10b981',
     'mapped': '#3b82f6',
     'migrated': '#10b981',

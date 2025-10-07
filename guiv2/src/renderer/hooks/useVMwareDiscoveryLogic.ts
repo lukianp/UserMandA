@@ -131,12 +131,12 @@ export const useVMwareDiscoveryLogic = () => {
     data.hosts.forEach((host) => {
       rows.push([
         'Host',
-        host.name,
-        host.cluster || 'N/A',
-        host.status,
-        `${host.cpuCores} cores`,
-        formatBytes(host.memoryGB * 1024 * 1024 * 1024),
-        `VMs: ${host.vmCount}`,
+        host.name ?? 'Unknown',
+        host.cluster ?? 'N/A',
+        host.status ?? 'Unknown',
+        `${host.cpuCores ?? 0} cores`,
+        formatBytes((host.memoryGB ?? 0) * 1024 * 1024 * 1024),
+        `VMs: ${host.vmCount ?? 0}`,
       ]);
     });
 

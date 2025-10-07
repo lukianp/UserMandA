@@ -13,6 +13,9 @@ module.exports = {
       },
     }],
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(@react-dnd|react-dnd|dnd-core|@dnd-kit|react-dnd-html5-backend)/)',
+  ],
   testPathIgnorePatterns: [
     '/node_modules/',
     '/tests/e2e/',

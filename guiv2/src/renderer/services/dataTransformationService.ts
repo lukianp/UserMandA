@@ -112,20 +112,20 @@ export class DataTransformationService {
    * @param fieldMap Field mapping (oldName -> newName)
    * @returns Transformed data
    */
-  mapFields<T = any, R = any>(data: T[], fieldMap: Record<string, string>): R[] {
+  mapFields<T extends Record<string, any> = any, R = any>(data: T[], fieldMap: Record<string, string>): R[] {
     return data.map((row) => {
       const mapped: any = {};
 
       for (const [oldField, newField] of Object.entries(fieldMap)) {
         if (oldField in row) {
-          mapped[newField] = (row as any)[oldField];
+          mapped[newField] = row[oldField];
         }
       }
 
       // Include fields not in mapping
-      for (const key of Object.keys(row as any)) {
+      for (const key of Object.keys(row)) {
         if (!(key in fieldMap)) {
-          mapped[key] = (row as any)[key];
+          mapped[key] = row[key];
         }
       }
 
@@ -139,19 +139,19 @@ export class DataTransformationService {
    * @param columnOrder Desired column order
    * @returns Data with reordered columns
    */
-  reorderColumns<T = any>(data: T[], columnOrder: string[]): T[] {
+  reorderColumns<T extends Record<string, any> = any>(data: T[], columnOrder: string[]): T[] {
     return data.map((row) => {
       const reordered: any = {};
 
       // Add columns in specified order
       for (const col of columnOrder) {
         if (col in row) {
-          reordered[col] = (row as any)[col];
+          reordered[col] = row[col];
         }
       }
 
       // Add remaining columns
-      for (const key of Object.keys(row as any)) {
+      for (const key of Object.keys(row)) {
         if (!columnOrder.includes(key)) {
           reordered[key] = (row as any)[key];
         }
@@ -214,19 +214,19 @@ export class DataTransformationService {
         return strField.endsWith(strValue);
 
       case 'greaterThan':
-        return fieldValue > value;
+        return fieldValue != null && value != null && fieldValue > value;
 
       case 'greaterThanOrEqual':
-        return fieldValue >= value;
+        return fieldValue != null && value != null && fieldValue >= value;
 
       case 'lessThan':
-        return fieldValue < value;
+        return fieldValue != null && value != null && fieldValue < value;
 
       case 'lessThanOrEqual':
-        return fieldValue <= value;
+        return fieldValue != null && value != null && fieldValue <= value;
 
       case 'between':
-        return fieldValue >= value && fieldValue <= value2;
+        return fieldValue != null && value != null && value2 != null && fieldValue >= value && fieldValue <= value2;
 
       case 'in':
         return Array.isArray(value) ? value.includes(fieldValue) : false;
@@ -442,14 +442,18 @@ export class DataTransformationService {
   /**
    * Merge two rows for join
    */
-  private mergeRows<T1 = any, T2 = any>(left: T1, right: T2, select?: string[]): any {
+  private mergeRows<T1 extends Record<string, any> = any, T2 extends Record<string, any> = any>(
+    left: T1,
+    right: T2,
+    select?: string[]
+  ): any {
     const merged = { ...left, ...right };
 
     if (select) {
       const filtered: any = {};
       for (const field of select) {
         if (field in merged) {
-          filtered[field] = merged[field];
+          filtered[field] = (merged as any)[field];
         }
       }
       return filtered;

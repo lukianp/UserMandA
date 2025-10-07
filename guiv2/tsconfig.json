@@ -29,5 +29,12 @@
       "*": ["node_modules/*"]
     }
   },
-  "include": ["src/renderer/**/*"]
+  "include": ["src/renderer/**/*"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".webpack",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
 }

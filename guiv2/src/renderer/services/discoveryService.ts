@@ -87,7 +87,7 @@ class DiscoveryService {
       // Create discovery run record
       const run: DiscoveryRun = {
         id: runId,
-        configId: config.id,
+        configId: config.id ?? runId,
         config,
         startTime,
         status: 'running',
@@ -182,9 +182,10 @@ class DiscoveryService {
       'environment-detection': { module: 'Modules/Discovery/EnvironmentDetection.psm1', function: 'Invoke-EnvironmentDetection' },
     };
 
-    const moduleConfig = moduleMapping[config.type];
+    const configType = config.type ?? 'domain';
+    const moduleConfig = moduleMapping[configType];
     if (!moduleConfig) {
-      throw new Error(`Unknown discovery type: ${config.type}`);
+      throw new Error(`Unknown discovery type: ${configType}`);
     }
 
     // Execute via IPC
@@ -192,7 +193,7 @@ class DiscoveryService {
       const psResult = await window.electronAPI.executeModule({
         modulePath: moduleConfig.module,
         functionName: moduleConfig.function,
-        parameters: config.parameters,
+        parameters: config.parameters ?? {},
         options: {
           timeout: config.timeout || 300000, // 5 minutes default
           streamOutput: true,
@@ -277,9 +278,9 @@ class DiscoveryService {
           // Build discovery config from scheduled config
           const discoveryConfig: DiscoveryConfig = {
             id: crypto.randomUUID(),
-            name: config.name,
-            type: config.type,
-            moduleName: config.type,
+            name: config.name ?? 'Scheduled Discovery',
+            type: config.type ?? 'domain',
+            moduleName: config.type ?? 'domain',
             isEnabled: true,
             settings: {},
             priority: 1,
@@ -381,6 +382,9 @@ class DiscoveryService {
     // Note: PowerShell doesn't have native pause/resume capability
     // So we re-run the discovery from the beginning
     try {
+      if (!run.config) {
+        throw new Error('Discovery configuration not found');
+      }
       const result = await this.runDiscovery(run.config);
 
       // Update the run with new result
@@ -496,9 +500,9 @@ class DiscoveryService {
 
     const config: DiscoveryConfig = {
       id: crypto.randomUUID(),
-      name: template.name,
-      type: template.type,
-      moduleName: template.config.moduleName || template.type,
+      name: template.name ?? 'Template Discovery',
+      type: template.type ?? 'domain',
+      moduleName: template.config.moduleName || template.type || 'domain',
       isEnabled: true,
       settings: template.config.settings || {},
       priority: template.config.priority || 1,
@@ -525,7 +529,7 @@ class DiscoveryService {
     if (filter) {
       // Filter by type
       if (filter.type) {
-        runs = runs.filter(r => r.config.type === filter.type);
+        runs = runs.filter(r => r.config?.type === filter.type);
       }
 
       // Filter by status
@@ -535,10 +539,10 @@ class DiscoveryService {
 
       // Filter by date range
       if (filter.startDate) {
-        runs = runs.filter(r => r.startTime >= filter.startDate!);
+        runs = runs.filter(r => r.startTime && r.startTime >= filter.startDate!);
       }
       if (filter.endDate) {
-        runs = runs.filter(r => r.startTime <= filter.endDate!);
+        runs = runs.filter(r => r.startTime && r.startTime <= filter.endDate!);
       }
 
       // Limit results
@@ -549,8 +553,8 @@ class DiscoveryService {
 
     // Sort by start time (newest first)
     runs.sort((a, b) => {
-      const aTime = typeof a.startTime === 'string' ? new Date(a.startTime) : a.startTime;
-      const bTime = typeof b.startTime === 'string' ? new Date(b.startTime) : b.startTime;
+      const aTime = a.startTime ? (typeof a.startTime === 'string' ? new Date(a.startTime) : a.startTime) : new Date(0);
+      const bTime = b.startTime ? (typeof b.startTime === 'string' ? new Date(b.startTime) : b.startTime) : new Date(0);
       return bTime.getTime() - aTime.getTime();
     });
 
@@ -597,7 +601,7 @@ class DiscoveryService {
       const json = JSON.stringify(result, null, 2);
       await this.downloadFile(`discovery_${runId}.json`, json, 'application/json');
     } else if (format === 'csv') {
-      const csv = this.convertToCSV(result.data);
+      const csv = this.convertToCSV(result.data ?? []);
       await this.downloadFile(`discovery_${runId}.csv`, csv, 'text/csv');
     }
   }
@@ -616,6 +620,9 @@ class DiscoveryService {
     }
 
     // Run new discovery with same configuration
+    if (!lastRun.config) {
+      throw new Error('Previous discovery configuration not found');
+    }
     const newResult = await this.runDiscovery(lastRun.config);
 
     // Compare results to find changes
@@ -624,8 +631,8 @@ class DiscoveryService {
     // Return only changed/new items
     const incrementalResult: DiscoveryResult = {
       ...newResult,
-      data: [...comparison.added, ...comparison.modified],
-      itemCount: comparison.added.length + comparison.modified.length,
+      data: [...(comparison.added ?? []), ...(comparison.modified?.map(m => m.item) ?? [])],
+      itemCount: (comparison.added?.length ?? 0) + (comparison.modified?.length ?? 0),
     };
 
     return incrementalResult;
@@ -642,8 +649,8 @@ class DiscoveryService {
     const result2 = await this.getResults(runId2);
 
     // Simple comparison based on ID field
-    const data1Map = new Map(result1.data.map(item => [item.id || item.Id || item.ID, item]));
-    const data2Map = new Map(result2.data.map(item => [item.id || item.Id || item.ID, item]));
+    const data1Map = new Map((result1.data ?? []).map(item => [item.id || item.Id || item.ID, item]));
+    const data2Map = new Map((result2.data ?? []).map(item => [item.id || item.Id || item.ID, item]));
 
     const added: any[] = [];
     const removed: any[] = [];
@@ -712,7 +719,7 @@ class DiscoveryService {
     }
 
     // Validate parameters based on type
-    if (config.type === 'active-directory' && !config.parameters.Domain && !config.parameters.Forest) {
+    if (config.type === 'active-directory' && config.parameters && !config.parameters.Domain && !config.parameters.Forest) {
       errors.push({ code: 'MISSING_DOMAIN', message: 'Domain or Forest parameter is required for AD discovery', severity: 'error' });
     }
 

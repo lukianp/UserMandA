@@ -79,11 +79,11 @@ export const useDebugIntegrationLogic = (options: DebugIntegrationOptions = {}) 
 
     try {
       const result = await operation();
-      debugInteraction.endPerformanceMark(markId, operationName);
+      debugInteraction.endPerformanceMark(markId ?? '', operationName);
       return result;
     } catch (error) {
-      debugInteraction.endPerformanceMark(markId, operationName, { error: error.message });
-      captureError(error, additionalContext);
+      debugInteraction.endPerformanceMark(markId ?? '', operationName, { error: error instanceof Error ? error.message : String(error) });
+      captureError(error instanceof Error ? error : new Error(String(error)), additionalContext);
       throw error;
     }
   };

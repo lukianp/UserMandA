@@ -217,7 +217,7 @@ const WaveSchedulingDialog: React.FC<WaveSchedulingDialogProps> = ({
       await onSchedule(formData);
       onClose();
     } catch (error) {
-      setValidationErrors([`Failed to schedule wave: ${error.message}`]);
+      setValidationErrors([`Failed to schedule wave: ${error instanceof Error ? error.message : String(error)}`]);
     } finally {
       setIsScheduling(false);
     }

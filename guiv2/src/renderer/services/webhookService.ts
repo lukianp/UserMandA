@@ -92,11 +92,11 @@ export class WebhookService {
    */
   register(config: WebhookConfig): void {
     this.webhooks.set(config.id, {
-      enabled: true,
       timeout: 30000,
       retryCount: 3,
       retryDelay: 1000,
       ...config,
+      enabled: config.enabled ?? true,
     });
 
     loggingService.info(`Webhook registered: ${config.name}`, 'WebhookService', {

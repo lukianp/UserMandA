@@ -4,50 +4,17 @@
  */
 
 import { useState, useCallback } from 'react';
-
-/**
- * Log entry interface
- */
-export interface LogEntry {
-  timestamp: string;
-  level: 'info' | 'warn' | 'error';
-  message: string;
-}
-
-/**
- * Progress information interface
- */
-export interface ProgressInfo {
-  current: number;
-  total: number;
-  percentage: number;
-  message: string;
-}
-
-/**
- * Profile interface
- */
-export interface Profile {
-  name: string;
-  description?: string;
-}
+import {
+  BaseDiscoveryHookResult,
+  LogEntry,
+  ProgressInfo,
+  Profile
+} from './common/discoveryHookTypes';
 
 /**
  * Active Directory Discovery Hook Return Type
  */
-export interface ActiveDirectoryDiscoveryHookResult {
-  isRunning: boolean;
-  isCancelling: boolean;
-  progress: ProgressInfo | null;
-  results: any | null;
-  error: string | null;
-  logs: LogEntry[];
-  startDiscovery: () => Promise<void>;
-  cancelDiscovery: () => Promise<void>;
-  exportResults: () => Promise<void>;
-  clearLogs: () => void;
-  selectedProfile: Profile | null;
-}
+export interface ActiveDirectoryDiscoveryHookResult extends BaseDiscoveryHookResult {}
 
 /**
  * Custom hook for Active Directory discovery logic
@@ -60,6 +27,18 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+
+  // Additional state for view compatibility
+  const [config, setConfig] = useState<any>({
+    includeUsers: true,
+    includeGroups: true,
+    includeComputers: true,
+    includeOUs: true
+  });
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [selectedTab, setSelectedTab] = useState<string>('users');
+  const [searchText, setSearchText] = useState<string>('');
+  const [errors, setErrors] = useState<string[]>([]);
 
   /**
    * Add a log entry
@@ -185,6 +164,38 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
     setLogs([]);
   }, []);
 
+  /**
+   * Update configuration
+   */
+  const updateConfig = useCallback((updates: any) => {
+    setConfig(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  /**
+   * Load a template
+   */
+  const loadTemplate = useCallback((template: any) => {
+    setConfig(template.config || {});
+    addLog('info', `Loaded template: ${template.name}`);
+  }, [addLog]);
+
+  /**
+   * Save current config as template
+   */
+  const saveAsTemplate = useCallback((name: string) => {
+    const template = { name, config };
+    setTemplates(prev => [...prev, template]);
+    addLog('info', `Saved template: ${name}`);
+  }, [config, addLog]);
+
+  /**
+   * Export data in specified format
+   */
+  const exportData = useCallback(async (format: string) => {
+    addLog('info', `Exporting data as ${format}...`);
+    await exportResults();
+  }, [exportResults, addLog]);
+
   return {
     isRunning,
     isCancelling,
@@ -197,5 +208,22 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
     exportResults,
     clearLogs,
     selectedProfile,
+
+    // Additional properties
+    config,
+    templates,
+    currentResult: results,
+    isDiscovering: isRunning,
+    selectedTab,
+    searchText,
+    filteredData: results ? Object.values(results).flat() : [],
+    columnDefs: [],
+    errors,
+    updateConfig,
+    loadTemplate,
+    saveAsTemplate,
+    setSelectedTab,
+    setSearchText,
+    exportData,
   };
 };

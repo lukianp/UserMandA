@@ -4,7 +4,7 @@
  */
 
 import { useNotificationStore } from '../store/useNotificationStore';
-import {
+import type {
   Notification,
   NotificationOptions,
   NotificationType,

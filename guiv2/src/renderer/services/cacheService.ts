@@ -533,7 +533,7 @@ export class CacheService {
         }
       }
     } catch (error) {
-      loggingService.error('Failed to load cache from localStorage', 'CacheService', error);
+      loggingService.error('Failed to load cache from localStorage', 'CacheService', error as Record<string, unknown>);
     }
   }
 
@@ -553,7 +553,7 @@ export class CacheService {
     try {
       localStorage.setItem(`cache:${key}`, JSON.stringify(entry));
     } catch (error) {
-      loggingService.error('Failed to persist to localStorage', 'CacheService', error);
+      loggingService.error('Failed to persist to localStorage', 'CacheService', error as Record<string, unknown>);
     }
   }
 

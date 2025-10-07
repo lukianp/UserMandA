@@ -9,7 +9,7 @@ import { Identifiable, Selectable, Named, TimestampMetadata } from '../common';
  * Core user data model
  * Immutable record representing user data from CSV files and Active Directory
  */
-export interface UserData extends Identifiable, Selectable, Named, TimestampMetadata {
+export interface UserData extends Omit<Named, 'displayName'>, Identifiable, Selectable, TimestampMetadata {
   // Core properties from UserData.cs
   displayName: string | null;
   userPrincipalName: string | null;

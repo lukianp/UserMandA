@@ -1,0 +1,434 @@
+src/renderer/hooks/useOffice365DiscoveryLogic.ts(343,9): error TS2322: Type '{ users: ({ field: string; headerName: string; sortable: true; filter: boolean; flex: number; pinned: "left"; cellRenderer?: undefined; cellStyle?: undefined; valueGetter?: undefined; valueFormatter?: undefined; } | ... 5 more ... | { ...; })[]; licenses: ({ ...; } | ... 3 more ... | { ...; })[]; services: ({ ...; }...' is not assignable to type 'Record<string, ColDef<any, any>[]>'.
+  Property 'users' is incompatible with index signature.
+    Type '({ field: string; headerName: string; sortable: true; filter: boolean; flex: number; pinned: "left"; cellRenderer?: undefined; cellStyle?: undefined; valueGetter?: undefined; valueFormatter?: undefined; } | ... 5 more ... | { ...; })[]' is not assignable to type 'ColDef<any, any>[]'.
+      Type '{ field: string; headerName: string; sortable: true; filter: boolean; flex: number; pinned: "left"; cellRenderer?: undefined; cellStyle?: undefined; valueGetter?: undefined; valueFormatter?: undefined; } | ... 5 more ... | { ...; }' is not assignable to type 'ColDef<any, any>'.
+        Type '{ field: string; headerName: string; sortable: true; filter: boolean; flex: number; valueGetter: (params: any) => any; cellStyle: (params: any) => { color: string; fontWeight: "bold"; } | { color: string; fontWeight?: undefined; }; pinned?: undefined; cellRenderer?: undefined; valueFormatter?: undefined; }' is not assignable to type 'ColDef<any, any>'.
+          Types of property 'cellStyle' are incompatible.
+            Type '(params: any) => { color: string; fontWeight: "bold"; } | { color: string; fontWeight?: undefined; }' is not assignable to type 'CellStyle | CellStyleFunc<any, any, any> | undefined'.
+              Type '(params: any) => { color: string; fontWeight: "bold"; } | { color: string; fontWeight?: undefined; }' is not assignable to type 'CellStyleFunc<any, any, any>'.
+                Type '{ color: string; fontWeight: "bold"; } | { color: string; fontWeight?: undefined; }' is not assignable to type 'CellStyle | null | undefined'.
+                  Type '{ color: string; fontWeight?: undefined; }' is not assignable to type 'CellStyle'.
+                    Property 'fontWeight' is incompatible with index signature.
+                      Type 'undefined' is not assignable to type 'string | number'.
+src/renderer/hooks/useUserDetailLogic.ts(146,15): error TS2345: Argument of type '{ type: "custom"; title: string; data: { preSelectedItems: { id: string; type: string; displayName: string; }[]; }; onConfirm: (waveId: string) => void; }' is not assignable to parameter of type 'Omit<Modal, "id" | "openedAt">'.
+  Property 'dismissable' is missing in type '{ type: "custom"; title: string; data: { preSelectedItems: { id: string; type: string; displayName: string; }[]; }; onConfirm: (waveId: string) => void; }' but required in type 'Omit<Modal, "id" | "openedAt">'.
+src/renderer/hooks/useWebServerDiscoveryLogic.ts(426,7): error TS2322: Type '(params: CellClassParams<Certificate, any, any>) => { color: string; fontWeight: "bold"; } | { color: string; fontWeight?: undefined; }' is not assignable to type 'CellStyle | CellStyleFunc<Certificate, any, any> | undefined'.
+  Type '(params: CellClassParams<Certificate, any, any>) => { color: string; fontWeight: "bold"; } | { color: string; fontWeight?: undefined; }' is not assignable to type 'CellStyleFunc<Certificate, any, any>'.
+    Type '{ color: string; fontWeight: "bold"; } | { color: string; fontWeight?: undefined; }' is not assignable to type 'CellStyle | null | undefined'.
+      Type '{ color: string; fontWeight?: undefined; }' is not assignable to type 'CellStyle'.
+        Property 'fontWeight' is incompatible with index signature.
+          Type 'undefined' is not assignable to type 'string | number'.
+src/renderer/services/dataTransformationService.ts(416,41): error TS2345: Argument of type 'T1' is not assignable to parameter of type 'Record<string, any>'.
+src/renderer/services/dataTransformationService.ts(422,39): error TS2345: Argument of type 'T1' is not assignable to parameter of type 'Record<string, any>'.
+src/renderer/services/dataTransformationService.ts(432,43): error TS2345: Argument of type 'T1' is not assignable to parameter of type 'Record<string, any>'.
+src/renderer/services/discoveryService.ts(752,18): error TS18048: 'result.errors' is possibly 'undefined'.
+src/renderer/services/discoveryService.ts(752,54): error TS18048: 'result.errors' is possibly 'undefined'.
+src/renderer/services/importService.ts(259,7): error TS2322: Type '((progress: number, message: string) => void) | undefined' is not assignable to type '((progress: number, rows: number) => void) | undefined'.
+  Type '(progress: number, message: string) => void' is not assignable to type '(progress: number, rows: number) => void'.
+    Types of parameters 'message' and 'rows' are incompatible.
+      Type 'number' is not assignable to type 'string'.
+src/renderer/services/paginationService.ts(207,5): error TS2322: Type '(item: T & { id: string; }) => string' is not assignable to type '(item: T) => string'.
+  Types of parameters 'item' and 'item' are incompatible.
+    Type 'T' is not assignable to type 'T & { id: string; }'.
+      Type 'T' is not assignable to type '{ id: string; }'.
+src/renderer/services/sortingService.ts(298,11): error TS18046: 'a.computed' is of type 'unknown'.
+src/renderer/services/sortingService.ts(298,24): error TS18046: 'b.computed' is of type 'unknown'.
+src/renderer/services/sortingService.ts(299,16): error TS18046: 'a.computed' is of type 'unknown'.
+src/renderer/services/sortingService.ts(299,29): error TS18046: 'b.computed' is of type 'unknown'.
+src/renderer/services/validationService.ts(37,5): error TS2322: Type 'string | boolean' is not assignable to type 'boolean'.
+  Type 'string' is not assignable to type 'boolean'.
+src/renderer/services/validationService.ts(44,5): error TS2322: Type 'string | boolean' is not assignable to type 'boolean'.
+  Type 'string' is not assignable to type 'boolean'.
+src/renderer/services/webhookService.ts(533,9): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Record<string, unknown> | undefined'.
+src/renderer/store/useMigrationStore.ts(500,17): error TS2322: Type 'Record<string, any> | undefined' is not assignable to type 'Dictionary<any>'.
+  Type 'undefined' is not assignable to type 'Dictionary<any>'.
+src/renderer/test-utils/viewTestHelpers.tsx(290,21): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/renderer/views/admin/SystemConfigurationView.tsx(107,64): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/admin/SystemConfigurationView.tsx(136,79): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/admin/SystemConfigurationView.tsx(141,72): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/advanced/NotificationRulesView.tsx(21,40): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ReactNode'.
+src/renderer/views/advanced/PerformanceDashboardView.tsx(21,40): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ReactNode'.
+src/renderer/views/advanced/ScriptLibraryView.tsx(23,50): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ReactNode'.
+src/renderer/views/advanced/ScriptLibraryView.tsx(24,52): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ReactNode'.
+src/renderer/views/advanced/ScriptLibraryView.tsx(36,40): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ReactNode'.
+src/renderer/views/advanced/ScriptLibraryView.tsx(40,48): error TS2322: Type '{ placeholder: string; icon: ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>; className: string; }' is not assignable to type 'IntrinsicAttributes & InputProps & RefAttributes<HTMLInputElement>'.
+  Property 'icon' does not exist on type 'IntrinsicAttributes & InputProps & RefAttributes<HTMLInputElement>'.
+src/renderer/views/advanced/TagManagementView.tsx(21,40): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ReactNode'.
+src/renderer/views/advanced/WebhooksView.tsx(21,40): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ReactNode'.
+src/renderer/views/advanced/WorkflowAutomationView.tsx(21,40): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ReactNode'.
+src/renderer/views/analytics/CostAnalysisView.tsx(17,5): error TS2339: Property 'stats' does not exist on type '{ costData: CostAnalysisData | null; isLoading: boolean; error: string | null; selectedTimeRange: "3months" | "6months" | "1year"; setSelectedTimeRange: Dispatch<SetStateAction<"3months" | ... 1 more ... | "1year">>; filteredProjections: CostProjection[]; potentialSavings: number; refreshData: () => Promise<...>; }'.
+src/renderer/views/analytics/CostAnalysisView.tsx(18,5): error TS2339: Property 'timeRange' does not exist on type '{ costData: CostAnalysisData | null; isLoading: boolean; error: string | null; selectedTimeRange: "3months" | "6months" | "1year"; setSelectedTimeRange: Dispatch<SetStateAction<"3months" | ... 1 more ... | "1year">>; filteredProjections: CostProjection[]; potentialSavings: number; refreshData: () => Promise<...>; }'.
+src/renderer/views/analytics/CostAnalysisView.tsx(19,5): error TS2339: Property 'setTimeRange' does not exist on type '{ costData: CostAnalysisData | null; isLoading: boolean; error: string | null; selectedTimeRange: "3months" | "6months" | "1year"; setSelectedTimeRange: Dispatch<SetStateAction<"3months" | ... 1 more ... | "1year">>; filteredProjections: CostProjection[]; potentialSavings: number; refreshData: () => Promise<...>; }'.
+src/renderer/views/analytics/CostAnalysisView.tsx(20,5): error TS2339: Property 'handleExport' does not exist on type '{ costData: CostAnalysisData | null; isLoading: boolean; error: string | null; selectedTimeRange: "3months" | "6months" | "1year"; setSelectedTimeRange: Dispatch<SetStateAction<"3months" | ... 1 more ... | "1year">>; filteredProjections: CostProjection[]; potentialSavings: number; refreshData: () => Promise<...>; }'.
+src/renderer/views/analytics/CostAnalysisView.tsx(21,5): error TS2339: Property 'handleForecast' does not exist on type '{ costData: CostAnalysisData | null; isLoading: boolean; error: string | null; selectedTimeRange: "3months" | "6months" | "1year"; setSelectedTimeRange: Dispatch<SetStateAction<"3months" | ... 1 more ... | "1year">>; filteredProjections: CostProjection[]; potentialSavings: number; refreshData: () => Promise<...>; }'.
+src/renderer/views/analytics/CostAnalysisView.tsx(22,5): error TS2339: Property 'columnDefs' does not exist on type '{ costData: CostAnalysisData | null; isLoading: boolean; error: string | null; selectedTimeRange: "3months" | "6months" | "1year"; setSelectedTimeRange: Dispatch<SetStateAction<"3months" | ... 1 more ... | "1year">>; filteredProjections: CostProjection[]; potentialSavings: number; refreshData: () => Promise<...>; }'.
+src/renderer/views/analytics/CostAnalysisView.tsx(104,11): error TS2322: Type 'CostAnalysisData | null' is not assignable to type 'any[] | null | undefined'.
+  Type 'CostAnalysisData' is missing the following properties from type 'any[]': length, pop, push, concat, and 29 more.
+src/renderer/views/analytics/DataVisualizationView.tsx(319,16): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/analytics/DataVisualizationView.tsx(321,17): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/analytics/DataVisualizationView.tsx(336,19): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/analytics/DataVisualizationView.tsx(352,19): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/analytics/DataVisualizationView.tsx(707,14): error TS2322: Type '{ children: Element[]; label: string; value: DataSource; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/analytics/DataVisualizationView.tsx(723,14): error TS2322: Type '{ children: Element[]; label: string; value: ChartType; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/analytics/DataVisualizationView.tsx(742,16): error TS2322: Type '{ children: Element[]; label: string; value: string | undefined; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/analytics/DataVisualizationView.tsx(759,14): error TS2322: Type '{ children: (Element | Element[])[]; label: string; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/analytics/DataVisualizationView.tsx(762,25): error TS2300: Duplicate identifier 'value'.
+src/renderer/views/analytics/DataVisualizationView.tsx(763,23): error TS2300: Duplicate identifier 'value'.
+src/renderer/views/analytics/DataVisualizationView.tsx(782,14): error TS2322: Type '{ children: Element[]; label: string; value: "custom" | "month" | "week" | "year" | "quarter" | "today"; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/analytics/DataVisualizationView.tsx(798,14): error TS2322: Type '{ children: Element[]; label: string; value: "default" | "pastel" | "vibrant" | "professional" | "monochrome"; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/analytics/GroupAnalyticsView.tsx(115,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/analytics/MigrationReportView.tsx(249,14): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; className: string; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/analytics/TrendAnalysisView.tsx(152,12): error TS2322: Type '{ children: Element[]; value: MetricType; onChange: (value: string) => void; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/analytics/TrendAnalysisView.tsx(163,12): error TS2322: Type '{ children: Element[]; value: TimeRange; onChange: (value: string) => void; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/analytics/UserAnalyticsView.tsx(156,5): error TS2339: Property 'filteredLicenseUsage' does not exist on type '{ analyticsData: AnalyticsData | null; isLoading: boolean; error: string | null; dateRange: DateRange; setDateRange: Dispatch<SetStateAction<DateRange>>; ... 5 more ...; refreshData: () => Promise<...>; }'.
+src/renderer/views/analytics/UserAnalyticsView.tsx(157,5): error TS2339: Property 'filteredDepartmentBreakdown' does not exist on type '{ analyticsData: AnalyticsData | null; isLoading: boolean; error: string | null; dateRange: DateRange; setDateRange: Dispatch<SetStateAction<DateRange>>; ... 5 more ...; refreshData: () => Promise<...>; }'.
+src/renderer/views/analytics/UserAnalyticsView.tsx(161,5): error TS2339: Property 'handleExportPDF' does not exist on type '{ analyticsData: AnalyticsData | null; isLoading: boolean; error: string | null; dateRange: DateRange; setDateRange: Dispatch<SetStateAction<DateRange>>; ... 5 more ...; refreshData: () => Promise<...>; }'.
+src/renderer/views/analytics/UserAnalyticsView.tsx(215,14): error TS2322: Type '{ children: Element[]; value: DateRange; onChange: (value: string) => void; className: string; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/analytics/UserAnalyticsView.tsx(228,14): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; className: string; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/analytics/UserAnalyticsView.tsx(236,25): error TS2322: Type '{ id: string; name: string; }' is not assignable to type 'Key | null | undefined'.
+src/renderer/views/analytics/UserAnalyticsView.tsx(236,36): error TS2322: Type '{ id: string; name: string; }' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/renderer/views/analytics/UserAnalyticsView.tsx(237,19): error TS2322: Type '{ id: string; name: string; }' is not assignable to type 'ReactNode'.
+src/renderer/views/analytics/UserAnalyticsView.tsx(316,42): error TS7006: Parameter 'license' implicitly has an 'any' type.
+src/renderer/views/analytics/UserAnalyticsView.tsx(316,51): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/renderer/views/analytics/UserAnalyticsView.tsx(352,53): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+src/renderer/views/analytics/UserAnalyticsView.tsx(352,60): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/renderer/views/assets/AssetInventoryView.tsx(18,5): error TS2339: Property 'stats' does not exist on type '{ assets: AssetData[]; statistics: AssetStatistics | null; isLoading: boolean; error: string | null; searchText: string; setSearchText: Dispatch<SetStateAction<string>>; ... 5 more ...; exportAssets: () => Promise<...>; }'.
+src/renderer/views/assets/AssetInventoryView.tsx(21,5): error TS2339: Property 'selectedAssetType' does not exist on type '{ assets: AssetData[]; statistics: AssetStatistics | null; isLoading: boolean; error: string | null; searchText: string; setSearchText: Dispatch<SetStateAction<string>>; ... 5 more ...; exportAssets: () => Promise<...>; }'.
+src/renderer/views/assets/AssetInventoryView.tsx(22,5): error TS2339: Property 'setSelectedAssetType' does not exist on type '{ assets: AssetData[]; statistics: AssetStatistics | null; isLoading: boolean; error: string | null; searchText: string; setSearchText: Dispatch<SetStateAction<string>>; ... 5 more ...; exportAssets: () => Promise<...>; }'.
+src/renderer/views/assets/AssetInventoryView.tsx(23,5): error TS2339: Property 'handleExport' does not exist on type '{ assets: AssetData[]; statistics: AssetStatistics | null; isLoading: boolean; error: string | null; searchText: string; setSearchText: Dispatch<SetStateAction<string>>; ... 5 more ...; exportAssets: () => Promise<...>; }'.
+src/renderer/views/assets/AssetInventoryView.tsx(24,5): error TS2339: Property 'handleRefresh' does not exist on type '{ assets: AssetData[]; statistics: AssetStatistics | null; isLoading: boolean; error: string | null; searchText: string; setSearchText: Dispatch<SetStateAction<string>>; ... 5 more ...; exportAssets: () => Promise<...>; }'.
+src/renderer/views/assets/AssetInventoryView.tsx(25,5): error TS2339: Property 'columnDefs' does not exist on type '{ assets: AssetData[]; statistics: AssetStatistics | null; isLoading: boolean; error: string | null; searchText: string; setSearchText: Dispatch<SetStateAction<string>>; ... 5 more ...; exportAssets: () => Promise<...>; }'.
+src/renderer/views/assets/AssetInventoryView.tsx(83,24): error TS2322: Type '"primary" | "secondary"' is not assignable to type '"primary" | "default" | "danger" | "success" | "info" | "warning" | undefined'.
+  Type '"secondary"' is not assignable to type '"primary" | "default" | "danger" | "success" | "info" | "warning" | undefined'.
+src/renderer/views/assets/AssetInventoryView.tsx(98,48): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'SetStateAction<string>'.
+src/renderer/views/assets/ComputerInventoryView.tsx(111,61): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/assets/ComputerInventoryView.tsx(114,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/assets/ComputerInventoryView.tsx(126,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/assets/ComputerInventoryView.tsx(138,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/assets/ComputerInventoryView.tsx(150,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/assets/NetworkDeviceInventoryView.tsx(153,61): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/assets/NetworkDeviceInventoryView.tsx(156,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/assets/NetworkDeviceInventoryView.tsx(168,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/assets/NetworkDeviceInventoryView.tsx(180,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/assets/NetworkDeviceInventoryView.tsx(192,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/assets/ServerInventoryView.tsx(142,61): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/assets/ServerInventoryView.tsx(145,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/assets/ServerInventoryView.tsx(157,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/assets/ServerInventoryView.tsx(169,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/assets/ServerInventoryView.tsx(181,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/compliance/ComplianceReportView.tsx(76,126): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/compliance/ComplianceReportView.tsx(77,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/compliance/ComplianceReportView.tsx(79,69): error TS2322: Type 'string | null' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/renderer/views/compliance/ComplianceReportView.tsx(81,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/compliance/ComplianceReportView.tsx(83,67): error TS2322: Type 'string | null' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/renderer/views/compliance/ComplianceReportView.tsx(85,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/compliance/ComplianceReportView.tsx(89,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/compliance/ComplianceReportView.tsx(91,67): error TS2322: Type 'string | null' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(21,5): error TS2339: Property 'config' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(22,5): error TS2339: Property 'templates' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(23,5): error TS2339: Property 'currentResult' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(24,5): error TS2339: Property 'isDiscovering' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(26,5): error TS2339: Property 'selectedTab' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(27,5): error TS2339: Property 'searchText' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(28,5): error TS2339: Property 'filteredData' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(29,5): error TS2339: Property 'columnDefs' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(30,5): error TS2339: Property 'errors' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(33,5): error TS2339: Property 'updateConfig' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(34,5): error TS2339: Property 'loadTemplate' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(35,5): error TS2339: Property 'saveAsTemplate' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(37,5): error TS2339: Property 'setSelectedTab' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(38,5): error TS2339: Property 'setSearchText' does not exist on type 'ActiveDirectoryDiscoveryHookResult'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(63,49): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(69,30): error TS7006: Parameter 'template' implicitly has an 'any' type.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(124,29): error TS2339: Property 'currentOperation' does not exist on type 'ProgressInfo'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(127,29): error TS2339: Property 'progress' does not exist on type 'ProgressInfo'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(130,44): error TS2339: Property 'progress' does not exist on type 'ProgressInfo'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(131,25): error TS2339: Property 'estimatedTimeRemaining' does not exist on type 'ProgressInfo'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(133,65): error TS2339: Property 'estimatedTimeRemaining' does not exist on type 'ProgressInfo'.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(146,30): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(146,37): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/renderer/views/discovery/ActiveDirectoryDiscoveryView.tsx(270,50): error TS2554: Expected 0 arguments, but got 1.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(37,5): error TS2339: Property 'config' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(38,5): error TS2339: Property 'templates' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(39,5): error TS2339: Property 'currentResult' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(40,5): error TS2339: Property 'isDiscovering' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(42,5): error TS2339: Property 'selectedTab' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(43,5): error TS2339: Property 'searchText' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(44,5): error TS2339: Property 'filteredData' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(45,5): error TS2339: Property 'columnDefs' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(46,5): error TS2339: Property 'errors' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(49,5): error TS2339: Property 'updateConfig' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(50,5): error TS2339: Property 'loadTemplate' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(51,5): error TS2339: Property 'saveAsTemplate' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(53,5): error TS2339: Property 'setSelectedTab' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(54,5): error TS2339: Property 'setSearchText' does not exist on type 'ApplicationDiscoveryHookResult'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(79,49): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(85,30): error TS7006: Parameter 'template' implicitly has an 'any' type.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(180,29): error TS2339: Property 'currentOperation' does not exist on type 'ProgressInfo'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(183,29): error TS2339: Property 'progress' does not exist on type 'ProgressInfo'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(186,44): error TS2339: Property 'progress' does not exist on type 'ProgressInfo'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(188,33): error TS2339: Property 'objectsProcessed' does not exist on type 'ProgressInfo'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(189,27): error TS2339: Property 'estimatedTimeRemaining' does not exist on type 'ProgressInfo'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(190,71): error TS2339: Property 'estimatedTimeRemaining' does not exist on type 'ProgressInfo'.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(203,30): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(203,37): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/renderer/views/discovery/ApplicationDiscoveryView.tsx(313,50): error TS2554: Expected 0 arguments, but got 1.
+src/renderer/views/discovery/AzureDiscoveryView.tsx(59,15): error TS2322: Type '{ status: "error" | "success" | "warning"; label: string; }' is not assignable to type 'IntrinsicAttributes & StatusIndicatorProps'.
+  Property 'label' does not exist on type 'IntrinsicAttributes & StatusIndicatorProps'.
+src/renderer/views/discovery/AzureDiscoveryView.tsx(85,68): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/discovery/AzureDiscoveryView.tsx(88,19): error TS2322: Type '{ label: string; placeholder: string; value: string; onChange: (value: ChangeEvent<HTMLInputElement>) => void; disabled: boolean; required: true; helpText: string; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & InputProps & RefAttributes<HTMLInputElement>'.
+  Property 'helpText' does not exist on type 'IntrinsicAttributes & InputProps & RefAttributes<HTMLInputElement>'. Did you mean 'helperText'?
+src/renderer/views/discovery/AzureDiscoveryView.tsx(176,79): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/discovery/AzureDiscoveryView.tsx(187,76): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/discovery/AzureDiscoveryView.tsx(191,19): error TS2322: Type '{ label: string; type: "number"; value: string; onChange: (value: ChangeEvent<HTMLInputElement>) => void; disabled: boolean; min: number; max: number; helpText: string; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & InputProps & RefAttributes<HTMLInputElement>'.
+  Property 'helpText' does not exist on type 'IntrinsicAttributes & InputProps & RefAttributes<HTMLInputElement>'. Did you mean 'helperText'?
+src/renderer/views/discovery/ConditionalAccessPoliciesDiscoveryView.tsx(131,55): error TS2322: Type 'ChangeEvent<HTMLInputElement>' is not assignable to type 'string'.
+src/renderer/views/discovery/ConditionalAccessPoliciesDiscoveryView.tsx(144,73): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/discovery/ConditionalAccessPoliciesDiscoveryView.tsx(150,72): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/discovery/ConditionalAccessPoliciesDiscoveryView.tsx(156,70): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/discovery/ConditionalAccessPoliciesDiscoveryView.tsx(168,73): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/discovery/ConditionalAccessPoliciesDiscoveryView.tsx(288,47): error TS2322: Type 'ChangeEvent<HTMLInputElement>' is not assignable to type 'string'.
+src/renderer/views/discovery/DataLossPreventionDiscoveryView.tsx(106,53): error TS2322: Type 'ChangeEvent<HTMLInputElement>' is not assignable to type 'string'.
+src/renderer/views/discovery/DataLossPreventionDiscoveryView.tsx(113,145): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/discovery/DataLossPreventionDiscoveryView.tsx(114,136): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/discovery/DataLossPreventionDiscoveryView.tsx(115,148): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/discovery/DataLossPreventionDiscoveryView.tsx(176,47): error TS2322: Type 'ChangeEvent<HTMLInputElement>' is not assignable to type 'string'.
+src/renderer/views/discovery/DomainDiscoveryView.tsx(71,76): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/discovery/DomainDiscoveryView.tsx(82,70): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/discovery/DomainDiscoveryView.tsx(84,19): error TS2322: Type '{ label: string; placeholder: string; value: string; onChange: (value: ChangeEvent<HTMLInputElement>) => void; disabled: boolean; helpText: string; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & InputProps & RefAttributes<HTMLInputElement>'.
+  Property 'helpText' does not exist on type 'IntrinsicAttributes & InputProps & RefAttributes<HTMLInputElement>'. Did you mean 'helperText'?
+src/renderer/views/discovery/DomainDiscoveryView.tsx(128,79): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/discovery/DomainDiscoveryView.tsx(139,76): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/discovery/EnvironmentDetectionView.tsx(111,66): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/discovery/EnvironmentDetectionView.tsx(116,71): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/discovery/EnvironmentDetectionView.tsx(121,64): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/discovery/EnvironmentDetectionView.tsx(126,64): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/discovery/EnvironmentDetectionView.tsx(136,73): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/discovery/EnvironmentDetectionView.tsx(255,51): error TS2322: Type 'ChangeEvent<HTMLInputElement>' is not assignable to type 'string'.
+src/renderer/views/discovery/EnvironmentDetectionView.tsx(316,70): error TS2339: Property 'target' does not exist on type 'boolean'.
+src/renderer/views/discovery/IntuneDiscoveryView.tsx(100,17): error TS2322: Type '(data: any[], filename: string) => void' is not assignable to type 'MouseEventHandler<HTMLButtonElement>'.
+  Target signature provides too few arguments. Expected 2 or more, but got 1.
+src/renderer/views/discovery/IntuneDiscoveryView.tsx(108,17): error TS2322: Type '(data: any[], filename: string) => Promise<void>' is not assignable to type 'MouseEventHandler<HTMLButtonElement>'.
+  Target signature provides too few arguments. Expected 2 or more, but got 1.
+src/renderer/views/discovery/IntuneDiscoveryView.tsx(193,71): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/discovery/IntuneDiscoveryView.tsx(442,53): error TS2322: Type 'ChangeEvent<HTMLInputElement>' is not assignable to type 'string'.
+src/renderer/views/discovery/IntuneDiscoveryView.tsx(502,17): error TS2322: Type 'IntuneDevice[] | IntuneApplication[] | ConfigurationPolicy[] | CompliancePolicy[] | AppProtectionPolicy[]' is not assignable to type 'IntuneDevice[] | null | undefined'.
+  Type 'IntuneApplication[]' is not assignable to type 'IntuneDevice[]'.
+    Type 'IntuneApplication' is missing the following properties from type 'IntuneDevice': deviceName, userDisplayName, userPrincipalName, deviceType, and 16 more.
+src/renderer/views/discovery/LicensingDiscoveryView.tsx(82,17): error TS2322: Type '(data: any[], filename: string) => void' is not assignable to type 'MouseEventHandler<HTMLButtonElement>'.
+  Target signature provides too few arguments. Expected 2 or more, but got 1.
+src/renderer/views/discovery/LicensingDiscoveryView.tsx(90,17): error TS2322: Type '(data: any[], filename: string) => Promise<void>' is not assignable to type 'MouseEventHandler<HTMLButtonElement>'.
+  Target signature provides too few arguments. Expected 2 or more, but got 1.
+src/renderer/views/discovery/LicensingDiscoveryView.tsx(175,53): error TS2322: Type 'ChangeEvent<HTMLInputElement>' is not assignable to type 'string'.
+src/renderer/views/discovery/LicensingDiscoveryView.tsx(188,71): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/discovery/LicensingDiscoveryView.tsx(509,53): error TS2322: Type 'ChangeEvent<HTMLInputElement>' is not assignable to type 'string'.
+src/renderer/views/discovery/LicensingDiscoveryView.tsx(557,17): error TS2322: Type 'License[] | LicenseAssignment[] | Subscription[]' is not assignable to type 'License[] | null | undefined'.
+  Type 'LicenseAssignment[]' is not assignable to type 'License[]'.
+    Type 'LicenseAssignment' is missing the following properties from type 'License': skuPartNumber, productName, servicePlans, prepaidUnits, and 6 more.
+src/renderer/views/discovery/OneDriveDiscoveryView.tsx(80,54): error TS2367: This comparison appears to be unintentional because the types 'string' and 'ChangeEvent<HTMLSelectElement>' have no overlap.
+src/renderer/views/discovery/OneDriveDiscoveryView.tsx(191,13): error TS2322: Type '"primary"' is not assignable to type '"default" | "danger" | "success" | "info" | "warning" | undefined'.
+src/renderer/views/discovery/OneDriveDiscoveryView.tsx(481,25): error TS2322: Type '"primary"' is not assignable to type '"default" | "danger" | "success" | "info" | "warning" | undefined'.
+src/renderer/views/discovery/PowerPlatformDiscoveryView.tsx(91,17): error TS2322: Type '(data: any[], filename: string) => void' is not assignable to type 'MouseEventHandler<HTMLButtonElement>'.
+  Target signature provides too few arguments. Expected 2 or more, but got 1.
+src/renderer/views/discovery/PowerPlatformDiscoveryView.tsx(99,17): error TS2322: Type '(data: any[], filename: string) => Promise<void>' is not assignable to type 'MouseEventHandler<HTMLButtonElement>'.
+  Target signature provides too few arguments. Expected 2 or more, but got 1.
+src/renderer/views/discovery/PowerPlatformDiscoveryView.tsx(151,53): error TS2322: Type 'ChangeEvent<HTMLInputElement>' is not assignable to type 'string'.
+src/renderer/views/discovery/PowerPlatformDiscoveryView.tsx(191,71): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/discovery/PowerPlatformDiscoveryView.tsx(436,53): error TS2322: Type 'ChangeEvent<HTMLInputElement>' is not assignable to type 'string'.
+src/renderer/views/discovery/SecurityInfrastructureDiscoveryView.tsx(89,54): error TS2367: This comparison appears to be unintentional because the types 'string' and 'ChangeEvent<HTMLSelectElement>' have no overlap.
+src/renderer/views/discovery/SecurityInfrastructureDiscoveryView.tsx(200,13): error TS2322: Type '"primary"' is not assignable to type '"default" | "danger" | "success" | "info" | "warning" | undefined'.
+src/renderer/views/discovery/SecurityInfrastructureDiscoveryView.tsx(503,25): error TS2322: Type '{ progress: number; variant: "danger" | "success" | "warning"; showLabel: true; }' is not assignable to type 'IntrinsicAttributes & ProgressBarProps'.
+  Property 'progress' does not exist on type 'IntrinsicAttributes & ProgressBarProps'.
+src/renderer/views/discovery/TeamsDiscoveryView.tsx(205,62): error TS18048: 'progress.estimatedTimeRemaining' is possibly 'undefined'.
+src/renderer/views/discovery/TeamsDiscoveryView.tsx(337,19): error TS2322: Type 'TeamMember[] | TeamChannel[] | Team[]' is not assignable to type 'TeamMember[] | null | undefined'.
+  Type 'TeamChannel[]' is not assignable to type 'TeamMember[]'.
+    Type 'TeamChannel' is missing the following properties from type 'TeamMember': userId, userPrincipalName, role, isGuest, and 2 more.
+src/renderer/views/discovery/VMwareDiscoveryView.tsx(83,56): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/renderer/views/discovery/VMwareDiscoveryView.tsx(84,71): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/renderer/views/groups/GroupDetailView.tsx(22,10): error TS2614: Module '"../../components/molecules/LoadingOverlay"' has no exported member 'LoadingOverlay'. Did you mean to use 'import LoadingOverlay from "../../components/molecules/LoadingOverlay"' instead?
+src/renderer/views/groups/GroupDetailView.tsx(338,17): error TS18047: 'groupDetail.syncStatus' is possibly 'null'.
+src/renderer/views/groups/GroupDetailView.tsx(343,16): error TS18047: 'groupDetail.syncStatus' is possibly 'null'.
+src/renderer/views/groups/GroupsView.tsx(40,7): error TS2322: Type 'ConnectDragSource' is not assignable to type 'Ref<HTMLDivElement> | undefined'.
+  Type 'ConnectDragSource' is not assignable to type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)'.
+    Type 'ReactElement<unknown, string | JSXElementConstructor<any>> | null' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+      Type 'null' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+src/renderer/views/infrastructure/EndpointDevicesView.tsx(78,9): error TS2322: Type 'ColumnDef<EndpointDevicesData>[]' is not assignable to type 'DataTableColumn<EndpointDevicesData>[]'.
+  Type 'ColumnDef<EndpointDevicesData>' is not assignable to type 'DataTableColumn<EndpointDevicesData>'.
+    Property 'accessor' is missing in type 'ColumnDefBase<EndpointDevicesData, unknown> & StringHeaderIdentifier' but required in type 'DataTableColumn<EndpointDevicesData>'.
+src/renderer/views/infrastructure/MonitoringSystemsView.tsx(76,9): error TS2322: Type 'ColumnDef<MonitoringSystemsData>[]' is not assignable to type 'DataTableColumn<MonitoringSystemsData>[]'.
+  Type 'ColumnDef<MonitoringSystemsData>' is not assignable to type 'DataTableColumn<MonitoringSystemsData>'.
+    Property 'accessor' is missing in type 'ColumnDefBase<MonitoringSystemsData, unknown> & StringHeaderIdentifier' but required in type 'DataTableColumn<MonitoringSystemsData>'.
+src/renderer/views/infrastructure/NetworkDevicesView.tsx(78,9): error TS2322: Type 'ColumnDef<NetworkDevicesData>[]' is not assignable to type 'DataTableColumn<NetworkDevicesData>[]'.
+  Type 'ColumnDef<NetworkDevicesData>' is not assignable to type 'DataTableColumn<NetworkDevicesData>'.
+    Property 'accessor' is missing in type 'ColumnDefBase<NetworkDevicesData, unknown> & StringHeaderIdentifier' but required in type 'DataTableColumn<NetworkDevicesData>'.
+src/renderer/views/infrastructure/NetworkInfrastructureView.tsx(318,11): error TS2322: Type '({ accessorKey: string; header: string; size: number; cell: (info: any) => Element; } | { accessorKey: string; header: string; size: number; cell?: undefined; })[]' is not assignable to type 'ColDef<any, any>[]'.
+  Type '{ accessorKey: string; header: string; size: number; cell: (info: any) => Element; } | { accessorKey: string; header: string; size: number; cell?: undefined; }' is not assignable to type 'ColDef<any, any>'.
+    Type '{ accessorKey: string; header: string; size: number; cell: (info: any) => Element; }' has no properties in common with type 'ColDef<any, any>'.
+src/renderer/views/infrastructure/NetworkTopologyView.tsx(73,9): error TS2322: Type 'ColumnDef<NetworkTopologyData>[]' is not assignable to type 'DataTableColumn<NetworkTopologyData>[]'.
+  Type 'ColumnDef<NetworkTopologyData>' is not assignable to type 'DataTableColumn<NetworkTopologyData>'.
+    Property 'accessor' is missing in type 'ColumnDefBase<NetworkTopologyData, unknown> & StringHeaderIdentifier' but required in type 'DataTableColumn<NetworkTopologyData>'.
+src/renderer/views/infrastructure/SecurityAppliancesView.tsx(73,9): error TS2322: Type 'ColumnDef<SecurityAppliancesData>[]' is not assignable to type 'DataTableColumn<SecurityAppliancesData>[]'.
+  Type 'ColumnDef<SecurityAppliancesData>' is not assignable to type 'DataTableColumn<SecurityAppliancesData>'.
+    Property 'accessor' is missing in type 'ColumnDefBase<SecurityAppliancesData, unknown> & StringHeaderIdentifier' but required in type 'DataTableColumn<SecurityAppliancesData>'.
+src/renderer/views/infrastructure/ServerInventoryView.tsx(115,61): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/infrastructure/ServerInventoryView.tsx(118,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/infrastructure/ServerInventoryView.tsx(130,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/infrastructure/ServerInventoryView.tsx(142,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/infrastructure/ServerInventoryView.tsx(154,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/infrastructure/ServerInventoryView.tsx(186,11): error TS2322: Type '{ rowData: ServerInventoryData[]; columnDefs: ColDef<ServerInventoryData, any>[]; loading: boolean; onSelectionChanged: (selectedRows: any) => void; }' is not assignable to type 'IntrinsicAttributes & VirtualizedDataGridProps<any>'.
+  Property 'rowData' does not exist on type 'IntrinsicAttributes & VirtualizedDataGridProps<any>'.
+src/renderer/views/infrastructure/ServerInventoryView.tsx(189,32): error TS7006: Parameter 'selectedRows' implicitly has an 'any' type.
+src/renderer/views/infrastructure/StorageAnalysisView.tsx(76,9): error TS2322: Type 'ColumnDef<StorageAnalysisData>[]' is not assignable to type 'DataTableColumn<StorageAnalysisData>[]'.
+  Type 'ColumnDef<StorageAnalysisData>' is not assignable to type 'DataTableColumn<StorageAnalysisData>'.
+    Property 'accessor' is missing in type 'ColumnDefBase<StorageAnalysisData, unknown> & StringHeaderIdentifier' but required in type 'DataTableColumn<StorageAnalysisData>'.
+src/renderer/views/infrastructure/VirtualizationView.tsx(76,9): error TS2322: Type 'ColumnDef<VirtualizationData>[]' is not assignable to type 'DataTableColumn<VirtualizationData>[]'.
+  Type 'ColumnDef<VirtualizationData>' is not assignable to type 'DataTableColumn<VirtualizationData>'.
+    Property 'accessor' is missing in type 'ColumnDefBase<VirtualizationData, unknown> & StringHeaderIdentifier' but required in type 'DataTableColumn<VirtualizationData>'.
+src/renderer/views/infrastructure/WebServersView.tsx(77,9): error TS2322: Type 'ColumnDef<WebServersData>[]' is not assignable to type 'DataTableColumn<WebServersData>[]'.
+  Type 'ColumnDef<WebServersData>' is not assignable to type 'DataTableColumn<WebServersData>'.
+    Property 'accessor' is missing in type 'ColumnDefBase<WebServersData, unknown> & StringHeaderIdentifier' but required in type 'DataTableColumn<WebServersData>'.
+src/renderer/views/licensing/LicenseManagementView.tsx(15,5): error TS2339: Property 'licenses' does not exist on type '{ licenseData: LicenseManagementData | null; processedLicenses: LicenseData[]; processedAlerts: LicenseAlert[]; isLoading: boolean; ... 8 more ...; refreshData: () => Promise<...>; }'.
+src/renderer/views/licensing/LicenseManagementView.tsx(17,5): error TS2339: Property 'stats' does not exist on type '{ licenseData: LicenseManagementData | null; processedLicenses: LicenseData[]; processedAlerts: LicenseAlert[]; isLoading: boolean; ... 8 more ...; refreshData: () => Promise<...>; }'.
+src/renderer/views/licensing/LicenseManagementView.tsx(20,5): error TS2339: Property 'handleExport' does not exist on type '{ licenseData: LicenseManagementData | null; processedLicenses: LicenseData[]; processedAlerts: LicenseAlert[]; isLoading: boolean; ... 8 more ...; refreshData: () => Promise<...>; }'.
+src/renderer/views/licensing/LicenseManagementView.tsx(21,5): error TS2339: Property 'handleOptimize' does not exist on type '{ licenseData: LicenseManagementData | null; processedLicenses: LicenseData[]; processedAlerts: LicenseAlert[]; isLoading: boolean; ... 8 more ...; refreshData: () => Promise<...>; }'.
+src/renderer/views/licensing/LicenseManagementView.tsx(22,5): error TS2339: Property 'columnDefs' does not exist on type '{ licenseData: LicenseManagementData | null; processedLicenses: LicenseData[]; processedAlerts: LicenseAlert[]; isLoading: boolean; ... 8 more ...; refreshData: () => Promise<...>; }'.
+src/renderer/views/migration/MigrationMappingView.tsx(42,63): error TS2339: Property 'validated' does not exist on type '{ total: number; pending: number; mapped: number; valid: number; invalid: number; conflicted: number; resolved: number; skipped: number; conflicts: number; }'.
+src/renderer/views/migration/MigrationMappingView.tsx(43,60): error TS2339: Property 'error' does not exist on type '{ total: number; pending: number; mapped: number; valid: number; invalid: number; conflicted: number; resolved: number; skipped: number; conflicts: number; }'.
+src/renderer/views/migration/MigrationPlanningView.tsx(87,7): error TS2322: Type 'ConnectDropTarget' is not assignable to type 'Ref<HTMLDivElement> | undefined'.
+  Type 'ConnectDropTarget' is not assignable to type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)'.
+    Type 'ReactElement<unknown, string | JSXElementConstructor<any>> | null' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+      Type 'null' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+src/renderer/views/migration/MigrationPlanningView.tsx(261,18): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(283,23): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(289,19): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(298,17): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(302,14): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(307,19): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(309,17): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(315,17): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(320,17): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(324,14): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(330,19): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(333,17): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(339,17): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(344,14): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(349,17): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(353,14): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(369,19): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(372,21): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(375,17): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(563,29): error TS2345: Argument of type '{ message: string; }' is not assignable to parameter of type 'string'.
+src/renderer/views/migration/MigrationPlanningView.tsx(660,87): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string | number'.
+src/renderer/views/migration/MigrationPlanningView.tsx(669,85): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string | number'.
+src/renderer/views/migration/MigrationValidationView.tsx(25,40): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/renderer/views/migration/MigrationValidationView.tsx(25,43): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/renderer/views/security/RiskAssessmentView.tsx(79,123): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/security/RiskAssessmentView.tsx(80,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/security/RiskAssessmentView.tsx(84,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/security/RiskAssessmentView.tsx(88,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/security/RiskAssessmentView.tsx(92,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/security/SecurityAuditView.tsx(133,61): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/security/SecurityAuditView.tsx(137,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/security/SecurityAuditView.tsx(147,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/security/SecurityAuditView.tsx(157,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/security/SecurityAuditView.tsx(171,59): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/security/SecurityAuditView.tsx(178,57): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/security/SecurityAuditView.tsx(184,55): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/security/SecurityDashboardView.tsx(8,43): error TS2307: Cannot find module '../../hooks/useSecurityDashboardLogic' or its corresponding type declarations.
+src/renderer/views/security/ThreatAnalysisView.tsx(76,125): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/security/ThreatAnalysisView.tsx(77,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/security/ThreatAnalysisView.tsx(79,70): error TS2322: Type 'string | null' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/renderer/views/security/ThreatAnalysisView.tsx(81,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/security/ThreatAnalysisView.tsx(85,12): error TS2322: Type '{ children: (Element | Element[])[]; value: string; onChange: (value: string) => void; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectProps'.
+src/renderer/views/security/ThreatAnalysisView.tsx(87,67): error TS2322: Type 'string | null' is not assignable to type 'string | number | readonly string[] | undefined'.
+  Type 'null' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/renderer/views/security/VulnerabilityManagementView.tsx(256,61): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/security/VulnerabilityManagementView.tsx(354,11): error TS2322: Type '({ field: string; header: string; sortable: boolean; width: string; } | { render: (value: string) => Element; field: string; header: string; sortable: boolean; width: string; } | { render: (value: boolean) => Element; field: string; header: string; sortable: boolean; width: string; } | { ...; })[]' is not assignable to type 'ColDef<any, any>[]'.
+  Type '{ field: string; header: string; sortable: boolean; width: string; } | { render: (value: string) => Element; field: string; header: string; sortable: boolean; width: string; } | { render: (value: boolean) => Element; field: string; header: string; sortable: boolean; width: string; } | { ...; }' is not assignable to type 'ColDef<any, any>'.
+    Type '{ field: string; header: string; sortable: boolean; width: string; }' is not assignable to type 'ColDef<any, any>'.
+      Types of property 'width' are incompatible.
+        Type 'string' is not assignable to type 'number'.
+src/renderer/views/settings/SettingsView.tsx(91,74): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/settings/SettingsView.tsx(99,80): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/settings/SettingsView.tsx(109,71): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/settings/SettingsView.tsx(130,87): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/settings/SettingsView.tsx(159,82): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'string'.
+src/renderer/views/settings/SettingsView.tsx(177,15): error TS2322: Type '{ label: string; checked: boolean; onChange: (checked: boolean) => void; helpText: string; "data-cy": string; }' is not assignable to type 'IntrinsicAttributes & CheckboxProps'.
+  Property 'helpText' does not exist on type 'IntrinsicAttributes & CheckboxProps'.
+src/renderer/views/users/UsersView.tsx(38,7): error TS2322: Type 'ConnectDragSource' is not assignable to type 'Ref<HTMLDivElement> | undefined'.
+  Type 'ConnectDragSource' is not assignable to type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)'.
+    Type 'ReactElement<unknown, string | JSXElementConstructor<any>> | null' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+      Type 'null' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+src/renderer/views/users/UsersView.tsx(125,11): error TS2322: Type '{ id: string; objectId: string; displayName: string; firstName: string; lastName: string; email: string; userPrincipalName: string; department: string; jobTitle: string; officeLocation: string; ... 9 more ...; riskLevel: string; }[]' is not assignable to type 'UserData[]'.
+  Type '{ id: string; objectId: string; displayName: string; firstName: string; lastName: string; email: string; userPrincipalName: string; department: string; jobTitle: string; officeLocation: string; ... 9 more ...; riskLevel: string; }' is missing the following properties from type 'UserData': mail, accountEnabled, samAccountName, companyName, and 4 more.
+src/renderer/views/users/UsersView.tsx(172,9): error TS18047: 'u.displayName' is possibly 'null'.
+src/renderer/views/users/UsersView.tsx(173,9): error TS18049: 'u.email' is possibly 'null' or 'undefined'.
+src/renderer/views/users/UsersView.tsx(287,6): error TS2448: Block-scoped variable 'handleViewDetails' used before its declaration.
+src/renderer/views/users/UsersView.tsx(287,6): error TS2454: Variable 'handleViewDetails' is used before being assigned.
+src/renderer/views/users/UsersView.tsx(329,48): error TS2345: Argument of type 'ChangeEvent<HTMLInputElement>' is not assignable to parameter of type 'SetStateAction<string>'.

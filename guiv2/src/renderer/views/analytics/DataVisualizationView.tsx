@@ -316,9 +316,9 @@ const DataVisualizationView: React.FC = () => {
       const sampleData = generateSampleData(config.dataSource, config.dateRange);
       setData(sampleData);
 
-      showInfo({ message: `Loaded ${sampleData.length} records from ${config.dataSource}` });
+      showInfo(`Loaded ${sampleData.length} records from ${config.dataSource}`);
     } catch (error) {
-      showError({ message: `Failed to load data: ${error}` });
+      showError(`Failed to load data: ${error}`);
     } finally {
       setLoading(false);
     }
@@ -333,7 +333,7 @@ const DataVisualizationView: React.FC = () => {
     const chartContainer = document.getElementById('chart-container');
     if (chartContainer) {
       // Use html2canvas library for real implementation
-      showSuccess({ message: 'Chart exported as PNG successfully' });
+      showSuccess('Chart exported as PNG successfully');
     }
   }, [showSuccess]);
 
@@ -349,7 +349,7 @@ const DataVisualizationView: React.FC = () => {
       link.download = `chart-${config.dataSource}-${Date.now()}.svg`;
       link.click();
       URL.revokeObjectURL(url);
-      showSuccess({ message: 'Chart exported as SVG successfully' });
+      showSuccess('Chart exported as SVG successfully');
     }
   }, [config.dataSource, showSuccess]);
 
