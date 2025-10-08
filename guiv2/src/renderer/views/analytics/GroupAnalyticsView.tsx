@@ -116,12 +116,11 @@ export const GroupAnalyticsView: React.FC = () => {
             value={selectedGroupType}
             onChange={(value) => setSelectedGroupType(value)}
             className="w-48"
-          >
-            <option value="all">All Group Types</option>
-            {availableGroupTypes.map(type => (
-              <option key={type.id} value={type.id}>{type.name}</option>
-            ))}
-          </Select>
+            options={[
+              { value: 'all', label: 'All Group Types' },
+              ...availableGroupTypes.map(type => ({ value: type.id, label: type.name }))
+            ]}
+          />
           <Button
             variant="secondary"
             onClick={refreshData}

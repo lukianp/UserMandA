@@ -389,7 +389,7 @@ export class DataTransformationService {
    * @param config Join configuration
    * @returns Joined data
    */
-  join<T1 = any, T2 = any, R = any>(config: JoinConfig<T1, T2>): R[] {
+  join<T1 extends Record<string, any> = any, T2 extends Record<string, any> = any, R = any>(config: JoinConfig<T1, T2>): R[] {
     const { left, right, leftKey, rightKey, type, select } = config;
     const result: R[] = [];
 

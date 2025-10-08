@@ -34,14 +34,14 @@ class ValidationService {
    * Validate minimum length
    */
   minLength(value: string, min: number): boolean {
-    return value && value.length >= min;
+    return Boolean(value && value.length >= min);
   }
 
   /**
    * Validate maximum length
    */
   maxLength(value: string, max: number): boolean {
-    return value && value.length <= max;
+    return Boolean(value && value.length <= max);
   }
 
   /**

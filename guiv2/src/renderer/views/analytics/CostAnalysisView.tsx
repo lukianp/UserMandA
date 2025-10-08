@@ -14,19 +14,19 @@ export const CostAnalysisView: React.FC = () => {
   const {
     costData,
     isLoading,
-    stats,
-    timeRange,
-    setTimeRange,
-    handleExport,
-    handleForecast,
-    columnDefs,
+    error,
+    selectedTimeRange,
+    setSelectedTimeRange,
+    filteredProjections,
+    potentialSavings,
+    refreshData,
   } = useCostAnalysisLogic();
 
   const costMetrics = [
-    { label: 'Total Cost', value: `$${stats.totalCost.toLocaleString()}`, icon: DollarSign, color: 'blue', trend: stats.costTrend },
-    { label: 'Infrastructure', value: `$${stats.infrastructureCost.toLocaleString()}`, icon: BarChart3, color: 'purple', trend: stats.infraTrend },
-    { label: 'Licenses', value: `$${stats.licenseCost.toLocaleString()}`, icon: PieChart, color: 'green', trend: stats.licenseTrend },
-    { label: 'Migration', value: `$${stats.migrationCost.toLocaleString()}`, icon: Calculator, color: 'orange', trend: stats.migrationTrend },
+    { label: 'Monthly Cost', value: `$${(costData?.totalMonthlyCost || 0).toLocaleString()}`, icon: DollarSign, color: 'blue' },
+    { label: 'Annual Cost', value: `$${(costData?.totalAnnualCost || 0).toLocaleString()}`, icon: BarChart3, color: 'purple' },
+    { label: 'Optimizations', value: (costData?.optimizations?.length || 0).toString(), icon: PieChart, color: 'green' },
+    { label: 'Potential Savings', value: `$${potentialSavings.toLocaleString()}`, icon: Calculator, color: 'orange' },
   ];
 
   const timeRanges = [
@@ -34,6 +34,13 @@ export const CostAnalysisView: React.FC = () => {
     { id: 'quarter', label: 'This Quarter' },
     { id: 'year', label: 'This Year' },
     { id: 'all', label: 'All Time' },
+  ];
+
+  const columnDefs = [
+    { field: 'category', headerName: 'Category', sortable: true, filter: true },
+    { field: 'cost', headerName: 'Cost', sortable: true },
+    { field: 'trend', headerName: 'Trend', sortable: true },
+    { field: 'projection', headerName: 'Projection', sortable: true },
   ];
 
   return (
@@ -53,19 +60,19 @@ export const CostAnalysisView: React.FC = () => {
             {timeRanges.map((range) => (
               <Button
                 key={range.id}
-                variant={timeRange === range.id ? 'primary' : 'secondary'}
+                variant={selectedTimeRange === range.id ? 'primary' : 'secondary'}
                 size="sm"
-                onClick={() => setTimeRange(range.id)}
+                onClick={() => setSelectedTimeRange(range.id as any)}
                 data-cy={`timerange-${range.id}`}
               >
                 {range.label}
               </Button>
             ))}
           </div>
-          <Button variant="primary" onClick={handleForecast} data-cy="forecast-btn">
-            Generate Forecast
+          <Button variant="primary" onClick={refreshData} data-cy="forecast-btn">
+            Refresh Data
           </Button>
-          <Button variant="secondary" onClick={handleExport} data-cy="export-btn">
+          <Button variant="secondary" onClick={refreshData} data-cy="export-btn">
             Export Report
           </Button>
         </div>
@@ -74,22 +81,14 @@ export const CostAnalysisView: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {costMetrics.map((metric) => {
           const Icon = metric.icon;
-          const TrendIcon = metric.trend >= 0 ? TrendingUp : TrendingDown;
           return (
             <div key={metric.label} className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{metric.label}</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">{metric.value}</p>
                 </div>
                 <Icon className={`w-6 h-6 text-${metric.color}-500`} />
-              </div>
-              <div className="flex items-center gap-1">
-                <TrendIcon className={`w-4 h-4 ${metric.trend >= 0 ? 'text-red-500' : 'text-green-500'}`} />
-                <span className={`text-sm font-medium ${metric.trend >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {Math.abs(metric.trend)}%
-                </span>
-                <span className="text-sm text-gray-500">vs last period</span>
               </div>
             </div>
           );
@@ -101,10 +100,10 @@ export const CostAnalysisView: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Cost Breakdown & Trends</h3>
         </div>
         <VirtualizedDataGrid
-          data={costData}
+          data={filteredProjections}
           columns={columnDefs}
           loading={isLoading}
-         
+
         />
       </div>
     </div>

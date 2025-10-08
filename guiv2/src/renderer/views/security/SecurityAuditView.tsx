@@ -130,58 +130,55 @@ const SecurityAuditView: React.FC = () => {
           <Input
             placeholder="Search events..."
             value={filters.searchText}
-            onChange={(value) => updateFilter('searchText', value)}
+            onChange={(e) => updateFilter('searchText', e.target.value)}
             className="md:col-span-2"
             data-cy="search-input"
           />
           <Select
             value={filters.eventCategory}
             onChange={(value) => updateFilter('eventCategory', value)}
+            options={[
+              { value: '', label: 'All Categories' },
+              ...filterOptions.categories.map(cat => ({ value: cat, label: cat }))
+            ]}
             data-cy="category-select"
-          >
-            <option value="">All Categories</option>
-            {filterOptions.categories.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </Select>
+          />
           <Select
             value={filters.severity}
             onChange={(value) => updateFilter('severity', value)}
+            options={[
+              { value: '', label: 'All Severities' },
+              ...filterOptions.severities.map(sev => ({ value: sev, label: sev }))
+            ]}
             data-cy="severity-select"
-          >
-            <option value="">All Severities</option>
-            {filterOptions.severities.map((sev) => (
-              <option key={sev} value={sev}>{sev}</option>
-            ))}
-          </Select>
+          />
           <Select
             value={filters.result}
             onChange={(value) => updateFilter('result', value)}
+            options={[
+              { value: '', label: 'All Results' },
+              ...filterOptions.results.map(res => ({ value: res, label: res }))
+            ]}
             data-cy="result-select"
-          >
-            <option value="">All Results</option>
-            {filterOptions.results.map((res) => (
-              <option key={res} value={res}>{res}</option>
-            ))}
-          </Select>
+          />
           <Input
             type="date"
             placeholder="From Date"
             value={filters.dateFrom}
-            onChange={(value) => updateFilter('dateFrom', value)}
+            onChange={(e) => updateFilter('dateFrom', e.target.value)}
             data-cy="date-from-input"
           />
           <Input
             type="date"
             placeholder="To Date"
             value={filters.dateTo}
-            onChange={(value) => updateFilter('dateTo', value)}
+            onChange={(e) => updateFilter('dateTo', e.target.value)}
             data-cy="date-to-input"
           />
           <Input
             placeholder="User..."
             value={filters.user}
-            onChange={(value) => updateFilter('user', value)}
+            onChange={(e) => updateFilter('user', e.target.value)}
             data-cy="user-input"
           />
         </div>

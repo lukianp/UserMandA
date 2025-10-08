@@ -153,23 +153,25 @@ export const TrendAnalysisView: React.FC = () => {
             value={selectedMetric}
             onChange={(value) => setSelectedMetric(value as any)}
             className="w-48"
-          >
-            <option value="users">Users</option>
-            <option value="groups">Groups</option>
-            <option value="devices">Devices</option>
-            <option value="mailboxes">Mailboxes</option>
-            <option value="storage">Storage (GB)</option>
-          </Select>
+            options={[
+              { value: 'users', label: 'Users' },
+              { value: 'groups', label: 'Groups' },
+              { value: 'devices', label: 'Devices' },
+              { value: 'mailboxes', label: 'Mailboxes' },
+              { value: 'storage', label: 'Storage (GB)' }
+            ]}
+          />
           <Select
             value={timeRange}
             onChange={(value) => setTimeRange(value as any)}
             className="w-40"
-          >
-            <option value="7days">7 Days</option>
-            <option value="30days">30 Days</option>
-            <option value="90days">90 Days</option>
-            <option value="12months">12 Months</option>
-          </Select>
+            options={[
+              { value: '7days', label: '7 Days' },
+              { value: '30days', label: '30 Days' },
+              { value: '90days', label: '90 Days' },
+              { value: '12months', label: '12 Months' }
+            ]}
+          />
           <Button
             variant="secondary"
             onClick={refreshData}

@@ -73,19 +73,34 @@ const ThreatAnalysisView: React.FC = () => {
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <Input placeholder="Search threats..." value={filters.searchText} onChange={(value) => updateFilter('searchText', value)} data-cy="search-input" />
-          <Select value={filters.threatType} onChange={(value) => updateFilter('threatType', value)} data-cy="threat-type-select">
-            <option value="">All Threat Types</option>
-            {filterOptions.threatTypes.map((tt) => (<option key={tt} value={tt}>{tt}</option>))}
-          </Select>
-          <Select value={filters.severity} onChange={(value) => updateFilter('severity', value)} data-cy="severity-select">
-            <option value="">All Severities</option>
-            {filterOptions.severities.map((sev) => (<option key={sev} value={sev}>{sev}</option>))}
-          </Select>
-          <Select value={filters.status} onChange={(value) => updateFilter('status', value)} data-cy="status-select">
-            <option value="">All Statuses</option>
-            {filterOptions.statuses.map((st) => (<option key={st} value={st}>{st}</option>))}
-          </Select>
+          <Input placeholder="Search threats..." value={filters.searchText} onChange={(e) => updateFilter('searchText', e.target.value)} data-cy="search-input" />
+          <Select
+            value={filters.threatType || ''}
+            onChange={(value) => updateFilter('threatType', value)}
+            data-cy="threat-type-select"
+            options={[
+              { value: '', label: 'All Threat Types' },
+              ...filterOptions.threatTypes.map((tt) => ({ value: tt || '', label: tt || 'Unknown' }))
+            ]}
+          />
+          <Select
+            value={filters.severity}
+            onChange={(value) => updateFilter('severity', value)}
+            data-cy="severity-select"
+            options={[
+              { value: '', label: 'All Severities' },
+              ...filterOptions.severities.map((sev) => ({ value: sev || '', label: sev || 'Unknown' }))
+            ]}
+          />
+          <Select
+            value={filters.status || ''}
+            onChange={(value) => updateFilter('status', value)}
+            data-cy="status-select"
+            options={[
+              { value: '', label: 'All Statuses' },
+              ...filterOptions.statuses.map((st) => ({ value: st || '', label: st || 'Unknown' }))
+            ]}
+          />
         </div>
       </div>
 

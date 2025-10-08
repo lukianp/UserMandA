@@ -708,14 +708,12 @@ const DataVisualizationView: React.FC = () => {
               label="Data Source"
               value={config.dataSource}
               onChange={value => setConfig(prev => ({ ...prev, dataSource: value as DataSource }))}
+              options={Object.keys(dataSourceFields).map(source => ({
+                value: source,
+                label: source.charAt(0).toUpperCase() + source.slice(1)
+              }))}
               data-cy="data-source-select"
-            >
-              {Object.keys(dataSourceFields).map(source => (
-                <option key={source} value={source}>
-                  {source.charAt(0).toUpperCase() + source.slice(1)}
-                </option>
-              ))}
-            </Select>
+            />
           </div>
 
           {/* Chart Type */}
@@ -724,16 +722,17 @@ const DataVisualizationView: React.FC = () => {
               label="Chart Type"
               value={config.type}
               onChange={value => setConfig(prev => ({ ...prev, type: value as ChartType }))}
+              options={[
+                { value: 'bar', label: 'Bar Chart' },
+                { value: 'line', label: 'Line Chart' },
+                { value: 'pie', label: 'Pie Chart' },
+                { value: 'area', label: 'Area Chart' },
+                { value: 'scatter', label: 'Scatter Plot' },
+                { value: 'radar', label: 'Radar Chart' },
+                { value: 'composed', label: 'Composed Chart' },
+              ]}
               data-cy="chart-type-select"
-            >
-              <option value="bar">Bar Chart</option>
-              <option value="line">Line Chart</option>
-              <option value="pie">Pie Chart</option>
-              <option value="area">Area Chart</option>
-              <option value="scatter">Scatter Plot</option>
-              <option value="radar">Radar Chart</option>
-              <option value="composed">Composed Chart</option>
-            </Select>
+            />
           </div>
 
           {/* X Axis */}
@@ -743,14 +742,9 @@ const DataVisualizationView: React.FC = () => {
                 label="X Axis"
                 value={config.xAxis}
                 onChange={value => setConfig(prev => ({ ...prev, xAxis: value }))}
+                options={dataSourceFields[config.dataSource]}
                 data-cy="x-axis-select"
-              >
-                {dataSourceFields[config.dataSource].map(field => (
-                  <option key={field.value} value={field.value}>
-                    {field.label}
-                  </option>
-                ))}
-              </Select>
+              />
             </div>
           )}
 
@@ -759,22 +753,18 @@ const DataVisualizationView: React.FC = () => {
             <Select
               label={config.type === 'pie' ? 'Value Field' : 'Y Axis'}
               value={config.yAxis?.[0] || ''}
-              onChange={value => {
-                const value = value;
+              onChange={yValue => {
                 setConfig(prev => ({
                   ...prev,
-                  yAxis: value ? [value] : []
+                  yAxis: yValue ? [yValue] : []
                 }));
               }}
+              options={[
+                { value: '', label: 'Select field' },
+                ...numericFields
+              ]}
               data-cy="y-axis-select"
-            >
-              <option value="">Select field</option>
-              {numericFields.map(field => (
-                <option key={field.value} value={field.value}>
-                  {field.label}
-                </option>
-              ))}
-            </Select>
+            />
           </div>
 
           {/* Date Range */}
@@ -783,14 +773,15 @@ const DataVisualizationView: React.FC = () => {
               label="Date Range"
               value={config.dateRange?.preset || 'month'}
               onChange={value => handleDateRangeChange(value as DateRange['preset'])}
+              options={[
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'Last 7 Days' },
+                { value: 'month', label: 'Last 30 Days' },
+                { value: 'quarter', label: 'Last 90 Days' },
+                { value: 'year', label: 'Last Year' },
+              ]}
               data-cy="date-range-select"
-            >
-              <option value="today">Today</option>
-              <option value="week">Last 7 Days</option>
-              <option value="month">Last 30 Days</option>
-              <option value="quarter">Last 90 Days</option>
-              <option value="year">Last Year</option>
-            </Select>
+            />
           </div>
 
           {/* Color Palette */}
@@ -803,14 +794,15 @@ const DataVisualizationView: React.FC = () => {
                 setSelectedPalette(palette);
                 setConfig(prev => ({ ...prev, colors: colorPalettes[palette] }));
               }}
+              options={[
+                { value: 'default', label: 'Default' },
+                { value: 'pastel', label: 'Pastel' },
+                { value: 'vibrant', label: 'Vibrant' },
+                { value: 'professional', label: 'Professional' },
+                { value: 'monochrome', label: 'Monochrome' },
+              ]}
               data-cy="color-palette-select"
-            >
-              <option value="default">Default</option>
-              <option value="pastel">Pastel</option>
-              <option value="vibrant">Vibrant</option>
-              <option value="professional">Professional</option>
-              <option value="monochrome">Monochrome</option>
-            </Select>
+            />
           </div>
         </div>
 

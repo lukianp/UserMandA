@@ -79,9 +79,9 @@ const OverviewTab: React.FC<{ data: VMwareDiscoveryResult }> = ({ data }) => {
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
         <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Discovery Summary</h3>
         <div className="space-y-1">
-          <SummaryRow label="Start Time" value={new Date(data.startTime).toLocaleString()} />
-          <SummaryRow label="End Time" value={new Date(data.endTime).toLocaleString()} />
-          <SummaryRow label="Duration" value={`${Math.round((new Date(data.endTime).getTime() - new Date(data.startTime).getTime()) / 60000)} minutes`} />
+          <SummaryRow label="Start Time" value={new Date(data.startTime as any).toLocaleString()} />
+          <SummaryRow label="End Time" value={new Date(data.endTime as any).toLocaleString()} />
+          <SummaryRow label="Duration" value={`${Math.round((new Date(data.endTime as any).getTime() - new Date(data.startTime as any).getTime()) / 60000)} minutes`} />
           <SummaryRow label="Status" value={data.status} />
         </div>
       </div>

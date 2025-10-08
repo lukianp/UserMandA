@@ -88,7 +88,7 @@ const SettingsView: React.FC = () => {
                   label="Accent Color"
                   type="color"
                   value={settings.theme.accentColor}
-                  onChange={(value) => updateThemeSetting('accentColor', value)}
+                  onChange={(e) => updateThemeSetting('accentColor', e.target.value)}
                   data-cy="accent-color-input"
                 />
 
@@ -96,7 +96,7 @@ const SettingsView: React.FC = () => {
                   label="Font Size (px)"
                   type="number"
                   value={settings.theme.fontSize.toString()}
-                  onChange={(value) => updateThemeSetting('fontSize', parseInt(value) || 14)}
+                  onChange={(e) => updateThemeSetting('fontSize', parseInt(e.target.value) || 14)}
                   min={10}
                   max={24}
                   data-cy="font-size-input"
@@ -106,7 +106,7 @@ const SettingsView: React.FC = () => {
               <Input
                 label="Font Family"
                 value={settings.theme.fontFamily}
-                onChange={(value) => updateThemeSetting('fontFamily', value)}
+                onChange={(e) => updateThemeSetting('fontFamily', e.target.value)}
                 data-cy="font-family-input"
               />
 
@@ -127,7 +127,7 @@ const SettingsView: React.FC = () => {
                   max="1.0"
                   step="0.05"
                   value={settings.theme.windowOpacity}
-                  onChange={(value) => updateThemeSetting('windowOpacity', parseFloat(value))}
+                  onChange={(e) => updateThemeSetting('windowOpacity', parseFloat(e.target.value))}
                   className="w-full"
                   data-cy="opacity-slider"
                 />
@@ -156,7 +156,7 @@ const SettingsView: React.FC = () => {
                   label="Refresh Interval (seconds)"
                   type="number"
                   value={settings.refreshInterval.toString()}
-                  onChange={(value) => updateSetting('refreshInterval', parseInt(value) || 30)}
+                  onChange={(e) => updateSetting('refreshInterval', parseInt(e.target.value) || 30)}
                   min={10}
                   max={300}
                   data-cy="refresh-interval-input"
@@ -174,7 +174,7 @@ const SettingsView: React.FC = () => {
               label="Enable Notifications"
               checked={settings.enableNotifications}
               onChange={(checked) => updateSetting('enableNotifications', checked)}
-              helpText="Receive notifications for completed operations and errors"
+              description="Receive notifications for completed operations and errors"
               data-cy="notifications-checkbox"
             />
           </div>

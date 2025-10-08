@@ -108,33 +108,33 @@ const OverviewView: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatisticsCard
           title="Users"
-          value={stats.totalUsers}
-          discovered={stats.discoveredUsers}
-          migrated={stats.migratedUsers}
+          value={stats?.totalUsers || 0}
+          discovered={stats?.discoveredUsers}
+          migrated={stats?.migratedUsers}
           icon={<Users className="w-6 h-6" />}
           onClick={() => navigate('/users')}
           data-cy="stats-users"
         />
         <StatisticsCard
           title="Groups"
-          value={stats.totalGroups}
-          discovered={stats.discoveredGroups}
-          migrated={stats.migratedGroups}
+          value={stats?.totalGroups || 0}
+          discovered={stats?.discoveredGroups}
+          migrated={stats?.migratedGroups}
           icon={<Layers className="w-6 h-6" />}
           onClick={() => navigate('/groups')}
           data-cy="stats-groups"
         />
         <StatisticsCard
           title="Computers"
-          value={stats.totalComputers}
-          discovered={stats.discoveredComputers}
+          value={stats?.totalComputers || 0}
+          discovered={stats?.discoveredComputers}
           icon={<Monitor className="w-6 h-6" />}
           onClick={() => navigate('/computers')}
           data-cy="stats-computers"
         />
         <StatisticsCard
           title="Infrastructure"
-          value={stats.totalInfrastructure}
+          value={stats?.totalInfrastructure || 0}
           icon={<Server className="w-6 h-6" />}
           onClick={() => navigate('/infrastructure')}
           data-cy="stats-infrastructure"

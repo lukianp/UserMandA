@@ -66,7 +66,7 @@ export const StatisticsCard: React.FC<StatisticsCardProps> = ({
             {title}
           </p>
           <p className="text-4xl font-bold text-[var(--text-primary)] mt-2">
-            {value.toLocaleString()}
+            {(value ?? 0).toLocaleString()}
           </p>
         </div>
         {icon && (
@@ -85,7 +85,7 @@ export const StatisticsCard: React.FC<StatisticsCardProps> = ({
                 Discovered
               </p>
               <p className="text-lg font-semibold text-[var(--info)]">
-                {discovered.toLocaleString()}
+                {(discovered ?? 0).toLocaleString()}
               </p>
             </div>
           )}
@@ -95,7 +95,7 @@ export const StatisticsCard: React.FC<StatisticsCardProps> = ({
                 Migrated
               </p>
               <p className="text-lg font-semibold text-[var(--success)]">
-                {migrated.toLocaleString()}
+                {(migrated ?? 0).toLocaleString()}
               </p>
             </div>
           )}

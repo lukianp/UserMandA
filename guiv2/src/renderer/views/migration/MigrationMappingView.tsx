@@ -39,8 +39,8 @@ const MigrationMappingView: React.FC = () => {
               { label: 'Total', value: logic.statusCounts.total, color: 'gray' },
               { label: 'Pending', value: logic.statusCounts.pending, color: 'gray' },
               { label: 'Mapped', value: logic.statusCounts.mapped, color: 'blue' },
-              { label: 'Validated', value: logic.statusCounts.validated, color: 'green' },
-              { label: 'Errors', value: logic.statusCounts.error, color: 'red' },
+              { label: 'Validated', value: (logic.statusCounts as any).validated || logic.statusCounts.valid, color: 'green' },
+              { label: 'Errors', value: (logic.statusCounts as any).error || logic.statusCounts.invalid, color: 'red' },
               { label: 'Conflicts', value: logic.statusCounts.conflicts, color: 'yellow' },
             ].map(stat => (
               <div key={stat.label} className="bg-white dark:bg-gray-900 p-3 rounded-lg shadow-sm border">

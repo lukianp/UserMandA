@@ -70,7 +70,7 @@ const NetworkTopologyView: React.FC = () => {
 
       <DataTable
         data={data}
-        columns={columns}
+        columns={columns as any}
         loading={isLoading}
         emptyMessage="No network topology data available. Run infrastructure discovery to populate this view."
       />

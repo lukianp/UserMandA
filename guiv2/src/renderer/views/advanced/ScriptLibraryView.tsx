@@ -21,7 +21,7 @@ export const ScriptLibraryView: React.FC = () => {
     { field: 'actions', headerName: 'Actions', sortable: false, cellRenderer: () => (
       <div className="flex gap-2">
         <Button size="sm" variant="primary" icon={<Play />}>Run</Button>
-        <Button size="sm" variant="secondary" icon={<Edit2 />} />
+        <Button size="sm" variant="secondary" icon={<Edit2 />}>Edit</Button>
       </div>
     )},
   ];

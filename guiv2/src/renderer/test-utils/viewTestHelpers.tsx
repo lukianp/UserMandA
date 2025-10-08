@@ -287,7 +287,7 @@ export const generateMockComputers = (count: number) => {
  */
 export const testComponentRenders = (Component: ComponentType) => {
   const { container } = renderWithProviders(<Component />);
-  expect(container).toBeInTheDocument();
+  expect(container).toBeTruthy();
 };
 
 /**

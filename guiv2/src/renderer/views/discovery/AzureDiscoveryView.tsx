@@ -56,7 +56,7 @@ const AzureDiscoveryView: React.FC = () => {
             )}
             <StatusIndicator
               status={connectionStatus === 'connected' ? 'success' : connectionStatus === 'error' ? 'error' : 'warning'}
-              label={
+              text={
                 connectionStatus === 'connected' ? 'Connected' :
                 connectionStatus === 'connecting' ? 'Connecting...' :
                 connectionStatus === 'error' ? 'Connection Error' :
@@ -82,10 +82,10 @@ const AzureDiscoveryView: React.FC = () => {
                   label="Tenant ID"
                   placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                   value={formData.tenantId}
-                  onChange={(value) => updateFormField('tenantId', value)}
+                  onChange={(e) => updateFormField('tenantId', e.target.value)}
                   disabled={isRunning}
                   required
-                  helpText="Your Azure AD Tenant ID or domain name"
+                  helperText="Your Azure AD Tenant ID or domain name"
                   data-cy="tenant-id-input"
                 />
 
@@ -173,7 +173,7 @@ const AzureDiscoveryView: React.FC = () => {
                   label="Max Results"
                   type="number"
                   value={formData.maxResults.toString()}
-                  onChange={(value) => updateFormField('maxResults', parseInt(value) || 50000)}
+                  onChange={(e) => updateFormField('maxResults', parseInt(e.target.value) || 50000)}
                   disabled={isRunning}
                   min={1}
                   max={100000}
@@ -184,11 +184,11 @@ const AzureDiscoveryView: React.FC = () => {
                   label="Timeout (seconds)"
                   type="number"
                   value={formData.timeout.toString()}
-                  onChange={(value) => updateFormField('timeout', parseInt(value) || 600)}
+                  onChange={(e) => updateFormField('timeout', parseInt(e.target.value) || 600)}
                   disabled={isRunning}
                   min={60}
                   max={3600}
-                  helpText="Recommended: 600s (10 min) for large tenants"
+                  helperText="Recommended: 600s (10 min) for large tenants"
                   data-cy="timeout-input"
                 />
               </div>

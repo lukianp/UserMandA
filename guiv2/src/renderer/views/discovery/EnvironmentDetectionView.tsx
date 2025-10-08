@@ -108,22 +108,22 @@ const EnvironmentDetectionView: React.FC = () => {
                 <Checkbox
                   label="Detect Azure"
                   checked={config.detectAzure || false}
-                  onChange={(e) => updateConfig({ detectAzure: e.target.checked })}
+                  onChange={(checked) => updateConfig({ detectAzure: checked })}
                 />
                 <Checkbox
                   label="Detect On-Premises"
                   checked={config.detectOnPremises || false}
-                  onChange={(e) => updateConfig({ detectOnPremises: e.target.checked })}
+                  onChange={(checked) => updateConfig({ detectOnPremises: checked })}
                 />
                 <Checkbox
                   label="Detect AWS"
                   checked={config.detectAWS || false}
-                  onChange={(e) => updateConfig({ detectAWS: e.target.checked })}
+                  onChange={(checked) => updateConfig({ detectAWS: checked })}
                 />
                 <Checkbox
                   label="Detect GCP"
                   checked={config.detectGCP || false}
-                  onChange={(e) => updateConfig({ detectGCP: e.target.checked })}
+                  onChange={(checked) => updateConfig({ detectGCP: checked })}
                 />
               </div>
 
@@ -133,7 +133,7 @@ const EnvironmentDetectionView: React.FC = () => {
                   label="Timeout (ms)"
                   type="number"
                   value={config.timeout?.toString() || '300000'}
-                  onChange={(value) => updateConfig({ timeout: parseInt(value) || 300000 })}
+                  onChange={(e) => updateConfig({ timeout: parseInt(e.target.value) || 300000 })}
                   min={60000}
                   max={600000}
                 />
@@ -252,7 +252,7 @@ const EnvironmentDetectionView: React.FC = () => {
           <div className="flex-1">
             <Input
               value={filter.searchText}
-              onChange={(value) => updateFilter({ searchText: value })}
+              onChange={(e) => updateFilter({ searchText: e.target.value })}
               placeholder={`Search ${activeTab}...`}
             />
           </div>
@@ -313,7 +313,7 @@ const EnvironmentDetectionView: React.FC = () => {
               <Checkbox
                 label="Show Only Available"
                 checked={filter.showOnlyAvailable || false}
-                onChange={(e) => updateFilter({ showOnlyAvailable: e.target.checked })}
+                onChange={(checked) => updateFilter({ showOnlyAvailable: checked })}
               />
             </>
           )}

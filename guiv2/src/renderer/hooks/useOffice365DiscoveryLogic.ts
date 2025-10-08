@@ -340,7 +340,7 @@ export const useOffice365DiscoveryLogic = () => {
   /**
    * Column definitions for AG Grid
    */
-  const columnDefs: Record<string, ColDef[]> = useMemo(() => ({
+  const columnDefs: Record<string, any> = useMemo(() => ({
     users: [
       { field: 'displayName', headerName: 'Display Name', sortable: true, filter: true, flex: 2, pinned: 'left' },
       { field: 'userPrincipalName', headerName: 'UPN', sortable: true, filter: true, flex: 2 },
@@ -382,7 +382,7 @@ export const useOffice365DiscoveryLogic = () => {
         filter: true,
         flex: 1,
         cellRenderer: (params: any) => params.value ? '✓ Admin' : '',
-        cellStyle: (params: any) => params.value ? { color: 'orange', fontWeight: 'bold' } : undefined
+        cellStyle: (params: any) => params.value ? { color: 'orange', fontWeight: 'bold' as const } : {}
       },
       { field: 'department', headerName: 'Department', sortable: true, filter: true, flex: 1 },
       { field: 'jobTitle', headerName: 'Job Title', sortable: true, filter: true, flex: 2 },

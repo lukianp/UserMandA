@@ -61,6 +61,10 @@ export const rendererConfig: Configuration = {
       '@lib': require('path').resolve(__dirname, 'src/renderer/lib'),
     },
   },
+  infrastructureLogging: {
+    level: 'error', // Reduce logging to avoid colorette issues
+    colors: false,
+  },
   optimization: isProduction
     ? {
         minimize: true,
@@ -208,16 +212,7 @@ export const rendererConfig: Configuration = {
             // Common vendor libraries
             vendor: {
               test: /[\\/]node_modules[\\/]/,
-              name(module) {
-                // Get the package name
-                const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1];
-                // Group small packages together
-                if (module.size() < 50000) {
-                  return 'vendor-common';
-                }
-                // Keep larger packages separate for better caching
-                return `vendor-${packageName.replace('@', '').replace('/', '-')}`;
-              },
+              name: 'vendor-common', // Simplified naming to avoid stack overflow
               priority: 5,
               reuseExistingChunk: true,
             },
@@ -278,24 +273,13 @@ export const rendererConfig: Configuration = {
   },
   // Better source maps for production
   devtool: isProduction ? 'source-map' : 'inline-source-map',
-  // Externals to reduce bundle size (Electron provides these)
-  externals: {
-    'electron': 'commonjs electron',
-    'fs': 'commonjs fs',
-    'path': 'commonjs path',
-    'os': 'commonjs os',
-    'crypto': 'commonjs crypto',
-    'buffer': 'commonjs buffer',
-    'stream': 'commonjs stream',
-    'util': 'commonjs util',
-    'events': 'commonjs events',
-    'child_process': 'commonjs child_process',
-  },
+  // Renderer runs in browser context - no Node.js externals needed
+  // (preload bridge provides access to main process via window.electronAPI)
   // Stats configuration for better analysis
   stats: isAnalyzing
     ? {
         preset: 'normal',
-        colors: true,
+        colors: false, // Disable colors to prevent colorette stack overflow
         hash: true,
         timings: true,
         chunks: true,
@@ -305,5 +289,8 @@ export const rendererConfig: Configuration = {
         depth: false,
         maxModules: 100, // Limit module output
       }
-    : 'normal',
+    : {
+        preset: 'normal',
+        colors: false, // Disable colors to prevent colorette stack overflow
+      },
 };

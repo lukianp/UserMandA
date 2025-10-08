@@ -3,13 +3,28 @@
   "compilerOptions": {
     "strict": false,
     "noImplicitAny": false,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "types": ["jest", "@testing-library/jest-dom"],
+    "paths": {
+      "@/*": ["src/renderer/*"],
+      "@components/*": ["src/renderer/components/*"],
+      "@views/*": ["src/renderer/views/*"],
+      "@hooks/*": ["src/renderer/hooks/*"],
+      "@store/*": ["src/renderer/store/*"],
+      "@services/*": ["src/renderer/services/*"],
+      "@types/*": ["src/renderer/types/*"],
+      "@lib/*": ["src/renderer/lib/*"],
+      "*": ["node_modules/*"]
+    }
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
     "src/**/*.d.ts",
-    "src/types/**/*.d.ts"
+    "src/types/**/*.d.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx"
   ],
   "exclude": [
     "node_modules",

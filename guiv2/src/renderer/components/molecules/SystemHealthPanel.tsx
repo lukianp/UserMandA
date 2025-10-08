@@ -83,10 +83,10 @@ export const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({ health, cl
             Logic Engine
           </span>
           <StatusIndicator
-            status={getStatusType(health.logicEngineStatus.status)}
-            text={health.logicEngineStatus.status}
+            status={getStatusType(health?.logicEngineStatus?.status || 'unknown')}
+            text={health?.logicEngineStatus?.status || 'unknown'}
             size="sm"
-            animate={health.logicEngineStatus.status === 'online'}
+            animate={health?.logicEngineStatus?.status === 'online'}
           />
         </div>
 
@@ -96,10 +96,10 @@ export const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({ health, cl
             PowerShell
           </span>
           <StatusIndicator
-            status={getStatusType(health.powerShellStatus.status)}
-            text={health.powerShellStatus.status}
+            status={getStatusType(health?.powerShellStatus?.status || 'unknown')}
+            text={health?.powerShellStatus?.status || 'unknown'}
             size="sm"
-            animate={health.powerShellStatus.status === 'online'}
+            animate={health?.powerShellStatus?.status === 'online'}
           />
         </div>
 
@@ -109,10 +109,10 @@ export const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({ health, cl
             File System
           </span>
           <StatusIndicator
-            status={getStatusType(health.fileSystemStatus.status)}
-            text={health.fileSystemStatus.status}
+            status={getStatusType(health?.fileSystemStatus?.status || 'unknown')}
+            text={health?.fileSystemStatus?.status || 'unknown'}
             size="sm"
-            animate={health.fileSystemStatus.status === 'online'}
+            animate={health?.fileSystemStatus?.status === 'online'}
           />
         </div>
 

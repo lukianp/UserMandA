@@ -76,23 +76,43 @@ const RiskAssessmentView: React.FC = () => {
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <Input placeholder="Search risks..." value={filters.searchText} onChange={(value) => updateFilter('searchText', value)} data-cy="search-input" />
-          <Select value={filters.riskLevel} onChange={(value) => updateFilter('riskLevel', value)} data-cy="risk-level-select">
-            <option value="">All Risk Levels</option>
-            {filterOptions.riskLevels.map((rl) => (<option key={rl} value={rl}>{rl}</option>))}
-          </Select>
-          <Select value={filters.category} onChange={(value) => updateFilter('category', value)} data-cy="category-select">
-            <option value="">All Categories</option>
-            {filterOptions.categories.map((cat) => (<option key={cat} value={cat}>{cat}</option>))}
-          </Select>
-          <Select value={filters.status} onChange={(value) => updateFilter('status', value)} data-cy="status-select">
-            <option value="">All Statuses</option>
-            {filterOptions.statuses.map((st) => (<option key={st} value={st}>{st}</option>))}
-          </Select>
-          <Select value={filters.owner} onChange={(value) => updateFilter('owner', value)} data-cy="owner-select">
-            <option value="">All Owners</option>
-            {filterOptions.owners.map((own) => (<option key={own} value={own}>{own}</option>))}
-          </Select>
+          <Input placeholder="Search risks..." value={filters.searchText} onChange={(e) => updateFilter('searchText', e.target.value)} data-cy="search-input" />
+          <Select
+            value={filters.riskLevel}
+            onChange={(value) => updateFilter('riskLevel', value)}
+            data-cy="risk-level-select"
+            options={[
+              { value: '', label: 'All Risk Levels' },
+              ...filterOptions.riskLevels.map((rl) => ({ value: rl, label: rl }))
+            ]}
+          />
+          <Select
+            value={filters.category}
+            onChange={(value) => updateFilter('category', value)}
+            data-cy="category-select"
+            options={[
+              { value: '', label: 'All Categories' },
+              ...filterOptions.categories.map((cat) => ({ value: cat, label: cat }))
+            ]}
+          />
+          <Select
+            value={filters.status}
+            onChange={(value) => updateFilter('status', value)}
+            data-cy="status-select"
+            options={[
+              { value: '', label: 'All Statuses' },
+              ...filterOptions.statuses.map((st) => ({ value: st, label: st }))
+            ]}
+          />
+          <Select
+            value={filters.owner}
+            onChange={(value) => updateFilter('owner', value)}
+            data-cy="owner-select"
+            options={[
+              { value: '', label: 'All Owners' },
+              ...filterOptions.owners.map((own) => ({ value: own, label: own }))
+            ]}
+          />
         </div>
       </div>
 

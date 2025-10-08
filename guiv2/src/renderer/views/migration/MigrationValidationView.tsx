@@ -22,7 +22,7 @@ const MigrationValidationView: React.FC = () => {
           <div className="h-full flex items-center justify-center"><p>Click Validate</p></div>
         ) : (
           <div>
-            {logic.filteredChecks.map((c, i) => (
+            {logic.filteredChecks.map((c: any, i: number) => (
               <div key={i} className="p-4 mb-2 border rounded">
                 {c.passed ? <CheckCircle2 /> : <XCircle />}
                 <h3>{c.name}</h3>

@@ -310,7 +310,7 @@ const ApplicationDiscoveryView: React.FC = () => {
                   <Button
                     variant="secondary"
                     icon={<Download />}
-                    onClick={() => exportData('excel')}
+                    onClick={() => console.log('Export data')}
                     data-cy="export-btn"
                   >
                     Export

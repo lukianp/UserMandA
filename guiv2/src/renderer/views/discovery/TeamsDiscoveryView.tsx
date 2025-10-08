@@ -201,7 +201,7 @@ const TeamsDiscoveryView: React.FC = () => {
               <ProgressBar value={progress.percentComplete} max={100} />
               <div className="mt-2 flex items-center justify-between text-xs text-indigo-600 dark:text-indigo-400">
                 <span>{progress.itemsProcessed} objects processed</span>
-                {progress.estimatedTimeRemaining !== null && (
+                {progress.estimatedTimeRemaining !== null && progress.estimatedTimeRemaining !== undefined && (
                   <span>Estimated time remaining: {Math.ceil(progress.estimatedTimeRemaining / 60)} minutes</span>
                 )}
               </div>
@@ -334,9 +334,9 @@ const TeamsDiscoveryView: React.FC = () => {
             ) : (
               <div className="h-full p-4">
                 <VirtualizedDataGrid
-                  data={selectedTab === 'teams' ? teams :
+                  data={(selectedTab === 'teams' ? teams :
                         selectedTab === 'channels' ? channels :
-                        selectedTab === 'members' ? members : []}
+                        selectedTab === 'members' ? members : []) as any}
                   columns={selectedTab === 'teams' ? teamColumns :
                           selectedTab === 'channels' ? channelColumns :
                           selectedTab === 'members' ? memberColumns : []}

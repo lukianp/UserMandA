@@ -251,14 +251,11 @@ const MigrationReportView: React.FC = () => {
               onChange={(value) => setSelectedWave(value)}
               className="w-48"
               data-cy="wave-filter"
-            >
-              <option value="all">All Waves</option>
-              {availableWaves.map(wave => (
-                <option key={wave.id} value={wave.id}>
-                  {wave.name}
-                </option>
-              ))}
-            </Select>
+              options={[
+                { value: 'all', label: 'All Waves' },
+                ...availableWaves.map(wave => ({ value: wave.id, label: wave.name }))
+              ]}
+            />
           </div>
           <Button
             onClick={handleExportExcel}

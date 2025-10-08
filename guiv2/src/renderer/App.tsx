@@ -102,7 +102,7 @@ const PolicyManagementView = lazy(() => import('./views/security/PolicyManagemen
 const PrivilegedAccessView = lazy(() => import('./views/security/PrivilegedAccessView'));
 const RiskAssessmentView = lazy(() => import('./views/security/RiskAssessmentView'));
 const SecurityAuditView = lazy(() => import('./views/security/SecurityAuditView'));
-const SecurityDashboardView = lazy(() => import('./views/security/SecurityDashboardView'));
+// const SecurityDashboardView = lazy(() => import('./views/security/SecurityDashboardView')); // TODO: Create useSecurityDashboardLogic hook
 const ThreatAnalysisView = lazy(() => import('./views/security/ThreatAnalysisView'));
 const VulnerabilityManagementView = lazy(() => import('./views/security/VulnerabilityManagementView'));
 
@@ -114,30 +114,14 @@ const LoadingFallback = () => (
 );
 
 /**
- * Main Application Component
+ * App Content - Inside Router Context
  */
-export const App: React.FC = () => {
-  const { actualMode } = useThemeStore();
-  const { loadSourceProfiles } = useProfileStore();
-
-  // Enable global keyboard shortcuts
+const AppContent: React.FC = () => {
+  // Enable global keyboard shortcuts (must be inside Router)
   useKeyboardShortcuts();
 
-  // Initialize application
-  useEffect(() => {
-    // Load profiles
-    loadSourceProfiles().catch(console.error);
-
-    // Apply theme to DOM based on current mode
-    const theme = getTheme(actualMode === 'dark' ? 'dark' : 'light');
-    applyTheme(theme);
-  }, [actualMode, loadSourceProfiles]);
-
   return (
-    <ErrorBoundary>
-      <DndProvider backend={HTML5Backend}>
-        <HashRouter>
-          <MainLayout>
+    <MainLayout>
             <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 {/* Home/Overview */}
@@ -229,7 +213,7 @@ export const App: React.FC = () => {
               {/* Security/Compliance Routes - TASK 3 */}
               <Route path="/security">
                 <Route index element={<Navigate to="/security/dashboard" replace />} />
-                <Route path="dashboard" element={<SecurityDashboardView />} />
+                {/* <Route path="dashboard" element={<SecurityDashboardView />} /> TODO: Restore when logic hook is created */}
                 <Route path="compliance" element={<ComplianceDashboardView />} />
                 <Route path="access-review" element={<AccessReviewView />} />
                 <Route path="certification" element={<CertificationView />} />
@@ -252,7 +236,32 @@ export const App: React.FC = () => {
             </Routes>
           </Suspense>
         </MainLayout>
-      </HashRouter>
+  );
+};
+
+/**
+ * Main Application Component
+ */
+export const App: React.FC = () => {
+  const { actualMode } = useThemeStore();
+  const { loadSourceProfiles } = useProfileStore();
+
+  // Initialize application
+  useEffect(() => {
+    // Load profiles
+    loadSourceProfiles().catch(console.error);
+
+    // Apply theme to DOM based on current mode
+    const theme = getTheme(actualMode === 'dark' ? 'dark' : 'light');
+    applyTheme(theme);
+  }, [actualMode, loadSourceProfiles]);
+
+  return (
+    <ErrorBoundary>
+      <DndProvider backend={HTML5Backend}>
+        <HashRouter>
+          <AppContent />
+        </HashRouter>
 
         {/* Global Toast Notifications */}
         <ToastContainer position="top-right" />

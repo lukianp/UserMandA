@@ -112,57 +112,45 @@ const ServerInventoryView: React.FC = () => {
             type="text"
             placeholder="Search servers..."
             value={filters.searchText}
-            onChange={(value) => updateFilter('searchText', value)}
+            onChange={(e) => updateFilter('searchText', e.target.value)}
             className="flex-1 min-w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
           <Select
             value={filters.role}
             onChange={(value) => updateFilter('role', value)}
             className="min-w-[180px]"
-          >
-            <option value="">All Roles</option>
-            {filterOptions.roles.map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: '', label: 'All Roles' },
+              ...filterOptions.roles.map((role) => ({ value: role, label: role }))
+            ]}
+          />
           <Select
             value={filters.osType}
             onChange={(value) => updateFilter('osType', value)}
             className="min-w-[180px]"
-          >
-            <option value="">All OS Types</option>
-            {filterOptions.osTypes.map((os) => (
-              <option key={os} value={os}>
-                {os}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: '', label: 'All OS Types' },
+              ...filterOptions.osTypes.map((os) => ({ value: os, label: os }))
+            ]}
+          />
           <Select
             value={filters.criticality}
             onChange={(value) => updateFilter('criticality', value)}
             className="min-w-[150px]"
-          >
-            <option value="">All Criticality</option>
-            {filterOptions.criticalities.map((criticality) => (
-              <option key={criticality} value={criticality}>
-                {criticality}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: '', label: 'All Criticality' },
+              ...filterOptions.criticalities.map((criticality) => ({ value: criticality, label: criticality }))
+            ]}
+          />
           <Select
             value={filters.clusterMembership}
             onChange={(value) => updateFilter('clusterMembership', value)}
             className="min-w-[150px]"
-          >
-            <option value="">All Clusters</option>
-            {filterOptions.clusters.map((cluster) => (
-              <option key={cluster} value={cluster}>
-                {cluster}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: '', label: 'All Clusters' },
+              ...filterOptions.clusters.map((cluster) => ({ value: cluster, label: cluster }))
+            ]}
+          />
           <Button variant="secondary" onClick={clearFilters} size="sm">
             Clear Filters
           </Button>
@@ -183,10 +171,10 @@ const ServerInventoryView: React.FC = () => {
       {/* Data Grid */}
       <div className="flex-1 px-6 py-4">
         <VirtualizedDataGrid
-          rowData={data}
-          columnDefs={columns}
+          data={data}
+          columns={columns}
           loading={isLoading}
-          onSelectionChanged={(selectedRows) => {
+          onSelectionChange={(selectedRows: any[]) => {
             // Handle selection if needed
           }}
         />

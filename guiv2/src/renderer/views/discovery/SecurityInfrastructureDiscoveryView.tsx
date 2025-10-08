@@ -85,8 +85,8 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
             {/* Template Selector */}
             <select
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500"
-              onChange={(value) => {
-                const template = templates.find(t => t.id === value);
+              onChange={(e) => {
+                const template = templates.find(t => t.id === e.target.value);
                 if (template) loadTemplate(template);
               }}
               disabled={isDiscovering}
@@ -196,8 +196,8 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
             </span>
           </div>
           <ProgressBar
-            progress={progress.overallProgress}
-            variant="primary"
+            value={progress.overallProgress}
+            variant="default"
             showLabel
           />
           <div className="mt-2 grid grid-cols-5 gap-4 text-xs text-blue-800 dark:text-blue-200">
@@ -500,7 +500,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                         </span>
                       </div>
                       <ProgressBar
-                        progress={currentResult.statistics.overallRiskScore}
+                        value={currentResult.statistics.overallRiskScore}
                         variant={currentResult.statistics.overallRiskScore > 70 ? 'danger' : currentResult.statistics.overallRiskScore > 40 ? 'warning' : 'success'}
                         showLabel
                       />

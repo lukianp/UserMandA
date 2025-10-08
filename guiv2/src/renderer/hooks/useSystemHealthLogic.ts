@@ -20,6 +20,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { SystemStatusIndicators } from '../components/molecules/SystemStatus';
+import { getElectronAPI } from '../lib/electron-api-fallback';
 
 /**
  * Health check interval (30 seconds)
@@ -52,8 +53,11 @@ export const useSystemHealthLogic = () => {
     setError(null);
 
     try {
+      // Get electronAPI with fallback
+      const electronAPI = getElectronAPI();
+
       // Call dashboard service to get system health
-      const healthResult = await window.electronAPI.dashboard.getSystemHealth();
+      const healthResult = await electronAPI.dashboard.getSystemHealth();
 
       if (healthResult.success && healthResult.data) {
         const health = healthResult.data;

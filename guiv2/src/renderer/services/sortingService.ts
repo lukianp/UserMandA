@@ -294,9 +294,11 @@ export class SortingService {
 
     indexed.sort((a, b) => {
       let comparison = 0;
+      const aVal = a.computed as any;
+      const bVal = b.computed as any;
 
-      if (a.computed < b.computed) comparison = -1;
-      else if (a.computed > b.computed) comparison = 1;
+      if (aVal < bVal) comparison = -1;
+      else if (aVal > bVal) comparison = 1;
       else comparison = a.index - b.index; // Stable sort
 
       return direction === 'asc' ? comparison : -comparison;

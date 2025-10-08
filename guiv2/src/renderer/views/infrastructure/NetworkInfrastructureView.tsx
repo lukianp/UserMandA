@@ -315,7 +315,7 @@ const NetworkInfrastructureView: React.FC = () => {
       <div className="flex-1">
         <VirtualizedDataGrid
           data={devices}
-          columns={columnDefs}
+          columns={columnDefs as any}
           loading={isLoading}
           height="calc(100vh - 800px)"
         />

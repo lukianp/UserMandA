@@ -19,6 +19,10 @@ export const mainConfig: Configuration = {
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json'],
   },
+  infrastructureLogging: {
+    level: 'error', // Reduce logging to avoid colorette issues
+    colors: false,
+  },
   optimization: {
     minimize: true,
     minimizer: [

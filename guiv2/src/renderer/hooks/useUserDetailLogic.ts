@@ -146,6 +146,7 @@ export function useUserDetailLogic(userId: string): UseUserDetailLogicResult {
     openModal({
       type: 'custom',
       title: 'Add to Migration Wave',
+      dismissable: true,
       data: {
         preSelectedItems: [
           {

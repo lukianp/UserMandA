@@ -168,7 +168,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
    * Update configuration
    */
   const updateConfig = useCallback((updates: any) => {
-    setConfig(prev => ({ ...prev, ...updates }));
+    setConfig((prev: any) => ({ ...prev, ...updates }));
   }, []);
 
   /**

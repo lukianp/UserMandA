@@ -37,7 +37,7 @@ const DragHandleCell: React.FC<{ data: GroupData }> = ({ data }) => {
 
   return (
     <div
-      ref={drag}
+      ref={drag as any}
       className={clsx(
         'flex items-center justify-center cursor-move h-full',
         isDragging && 'opacity-50'

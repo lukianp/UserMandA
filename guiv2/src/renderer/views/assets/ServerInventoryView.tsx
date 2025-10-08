@@ -139,57 +139,45 @@ const ServerInventoryView: React.FC = () => {
           <Input
             placeholder="Search name, IP, role..."
             value={filters.searchText}
-            onChange={(value) => updateFilter('searchText', value)}
+            onChange={(e) => updateFilter('searchText', e.target.value)}
             data-cy="search-input"
           />
           <Select
             value={filters.role}
             onChange={(value) => updateFilter('role', value)}
             data-cy="role-select"
-          >
-            <option value="">All Roles</option>
-            {filterOptions.roles.map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: '', label: 'All Roles' },
+              ...filterOptions.roles.map((role) => ({ value: role, label: role }))
+            ]}
+          />
           <Select
             value={filters.osType}
             onChange={(value) => updateFilter('osType', value)}
             data-cy="os-type-select"
-          >
-            <option value="">All OS Types</option>
-            {filterOptions.osTypes.map((os) => (
-              <option key={os} value={os}>
-                {os}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: '', label: 'All OS Types' },
+              ...filterOptions.osTypes.map((os) => ({ value: os, label: os }))
+            ]}
+          />
           <Select
             value={filters.criticality}
             onChange={(value) => updateFilter('criticality', value)}
             data-cy="criticality-select"
-          >
-            <option value="">All Criticality Levels</option>
-            {filterOptions.criticalities.map((crit) => (
-              <option key={crit} value={crit}>
-                {crit}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: '', label: 'All Criticality Levels' },
+              ...filterOptions.criticalities.map((crit) => ({ value: crit, label: crit }))
+            ]}
+          />
           <Select
             value={filters.clusterMembership}
             onChange={(value) => updateFilter('clusterMembership', value)}
             data-cy="cluster-select"
-          >
-            <option value="">All Clusters</option>
-            {filterOptions.clusters.map((cluster) => (
-              <option key={cluster} value={cluster}>
-                {cluster}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: '', label: 'All Clusters' },
+              ...filterOptions.clusters.map((cluster) => ({ value: cluster, label: cluster }))
+            ]}
+          />
         </div>
       </div>
 

@@ -108,57 +108,45 @@ const ComputerInventoryView: React.FC = () => {
           <Input
             placeholder="Search name, IP, serial..."
             value={filters.searchText}
-            onChange={(value) => updateFilter('searchText', value)}
+            onChange={(e) => updateFilter('searchText', e.target.value)}
             data-cy="search-input"
           />
           <Select
             value={filters.osType}
             onChange={(value) => updateFilter('osType', value)}
             data-cy="os-type-select"
-          >
-            <option value="">All OS Types</option>
-            {filterOptions.osTypes.map((os) => (
-              <option key={os} value={os}>
-                {os}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: '', label: 'All OS Types' },
+              ...filterOptions.osTypes.map((os) => ({ value: os, label: os }))
+            ]}
+          />
           <Select
             value={filters.domain}
             onChange={(value) => updateFilter('domain', value)}
             data-cy="domain-select"
-          >
-            <option value="">All Domains</option>
-            {filterOptions.domains.map((domain) => (
-              <option key={domain} value={domain}>
-                {domain}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: '', label: 'All Domains' },
+              ...filterOptions.domains.map((domain) => ({ value: domain, label: domain }))
+            ]}
+          />
           <Select
             value={filters.ou}
             onChange={(value) => updateFilter('ou', value)}
             data-cy="ou-select"
-          >
-            <option value="">All OUs</option>
-            {filterOptions.ous.map((ou) => (
-              <option key={ou} value={ou}>
-                {ou}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: '', label: 'All OUs' },
+              ...filterOptions.ous.map((ou) => ({ value: ou, label: ou }))
+            ]}
+          />
           <Select
             value={filters.status}
             onChange={(value) => updateFilter('status', value)}
             data-cy="status-select"
-          >
-            <option value="">All Statuses</option>
-            {filterOptions.statuses.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: '', label: 'All Statuses' },
+              ...filterOptions.statuses.map((status) => ({ value: status, label: status }))
+            ]}
+          />
         </div>
       </div>
 

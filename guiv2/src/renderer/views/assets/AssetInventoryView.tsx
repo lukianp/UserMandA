@@ -14,24 +14,36 @@ import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataG
 export const AssetInventoryView: React.FC = () => {
   const {
     assets,
+    statistics,
     isLoading,
-    stats,
+    error,
     searchText,
     setSearchText,
-    selectedAssetType,
-    setSelectedAssetType,
-    handleExport,
-    handleRefresh,
-    columnDefs,
+    typeFilter,
+    setTypeFilter,
+    statusFilter,
+    setStatusFilter,
+    refreshData,
+    exportAssets,
   } = useAssetInventoryLogic();
 
   const assetTypes = [
-    { id: 'all', label: 'All Assets', icon: Package, count: stats.totalAssets },
-    { id: 'servers', label: 'Servers', icon: Server, count: stats.servers },
-    { id: 'workstations', label: 'Workstations', icon: Monitor, count: stats.workstations },
-    { id: 'mobile', label: 'Mobile Devices', icon: Smartphone, count: stats.mobile },
-    { id: 'storage', label: 'Storage', icon: HardDrive, count: stats.storage },
-    { id: 'databases', label: 'Databases', icon: Database, count: stats.databases },
+    { id: 'all', label: 'All Assets', icon: Package, count: statistics?.totalAssets || 0 },
+    { id: 'servers', label: 'Servers', icon: Server, count: statistics?.servers || 0 },
+    { id: 'workstations', label: 'Workstations', icon: Monitor, count: statistics?.workstations || 0 },
+    { id: 'mobile', label: 'Mobile Devices', icon: Smartphone, count: statistics?.mobileDevices || 0 },
+    { id: 'network', label: 'Network Devices', icon: HardDrive, count: statistics?.networkDevices || 0 },
+    { id: 'printers', label: 'Printers', icon: Database, count: statistics?.printers || 0 },
+  ];
+
+  const columnDefs = [
+    { field: 'name', headerName: 'Name', sortable: true, filter: true },
+    { field: 'type', headerName: 'Type', sortable: true, filter: true },
+    { field: 'manufacturer', headerName: 'Manufacturer', sortable: true, filter: true },
+    { field: 'model', headerName: 'Model', sortable: true, filter: true },
+    { field: 'serialNumber', headerName: 'Serial Number', sortable: true },
+    { field: 'location', headerName: 'Location', sortable: true, filter: true },
+    { field: 'status', headerName: 'Status', sortable: true, filter: true },
   ];
 
   return (
@@ -49,10 +61,10 @@ export const AssetInventoryView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="secondary" onClick={handleRefresh} disabled={isLoading} data-cy="refresh-btn">
+          <Button variant="secondary" onClick={refreshData} disabled={isLoading} data-cy="refresh-btn">
             Refresh
           </Button>
-          <Button variant="primary" onClick={handleExport} icon={<Download className="w-4 h-4" />} data-cy="export-btn">
+          <Button variant="primary" onClick={exportAssets} icon={<Download className="w-4 h-4" />} data-cy="export-btn">
             Export Inventory
           </Button>
         </div>
@@ -62,11 +74,11 @@ export const AssetInventoryView: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         {assetTypes.map((type) => {
           const Icon = type.icon;
-          const isSelected = selectedAssetType === type.id;
+          const isSelected = typeFilter === type.id;
           return (
             <button
               key={type.id}
-              onClick={() => setSelectedAssetType(type.id)}
+              onClick={() => setTypeFilter(type.id)}
               className={`
                 p-4 rounded-lg border-2 transition-all
                 ${
@@ -80,7 +92,7 @@ export const AssetInventoryView: React.FC = () => {
               <div className="flex flex-col items-center gap-2">
                 <Icon className={`w-8 h-8 ${isSelected ? 'text-indigo-600' : 'text-gray-400'}`} />
                 <span className="text-sm font-medium text-gray-900 dark:text-white">{type.label}</span>
-                <Badge variant={isSelected ? 'primary' : 'secondary'}>{type.count}</Badge>
+                <Badge variant={isSelected ? 'primary' : 'default'}>{type.count}</Badge>
               </div>
             </button>
           );
@@ -95,7 +107,7 @@ export const AssetInventoryView: React.FC = () => {
             type="text"
             placeholder="Search assets by name, serial number, or location..."
             value={searchText}
-            onChange={(value) => setSearchText(value)}
+            onChange={(e) => setSearchText(e.target.value)}
             className="pl-10"
             data-cy="asset-search"
           />

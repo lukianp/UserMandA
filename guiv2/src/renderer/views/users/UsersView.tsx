@@ -4,7 +4,7 @@
  * User management view with data grid and actions
  */
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDrag } from 'react-dnd';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
@@ -35,7 +35,7 @@ const DragHandleCell: React.FC<{ data: UserData }> = ({ data }) => {
 
   return (
     <div
-      ref={drag}
+      ref={drag as any}
       className={clsx(
         'flex items-center justify-center cursor-move h-full',
         isDragging && 'opacity-50'
@@ -143,7 +143,7 @@ const UsersView: React.FC = () => {
             manager: i > 10 ? `User ${i - 10}` : undefined,
             mfaStatus: i % 3 === 0 ? 'Enabled' : 'Disabled',
             riskLevel: i % 20 === 0 ? 'High' : i % 10 === 0 ? 'Medium' : 'Low',
-          }));
+          } as any));
 
           setWarnings(['PowerShell execution failed. Using mock data.']);
         }
@@ -163,14 +163,21 @@ const UsersView: React.FC = () => {
     }
   };
 
+  // Handle view details
+  const handleViewDetails = useCallback((user: UserData) => {
+    const userId = user.userPrincipalName || user.id || user.email || '';
+    // Navigate to user detail view
+    navigate(`/users/${encodeURIComponent(userId)}`);
+  }, [navigate]);
+
   // Filter users based on search
   const filteredUsers = useMemo(() => {
     if (!searchText) return users;
     const search = searchText.toLowerCase();
     return users.filter(
       (u) =>
-        u.displayName.toLowerCase().includes(search) ||
-        u.email.toLowerCase().includes(search) ||
+        u.displayName?.toLowerCase().includes(search) ||
+        u.email?.toLowerCase().includes(search) ||
         u.department?.toLowerCase().includes(search)
     );
   }, [users, searchText]);
@@ -303,13 +310,6 @@ const UsersView: React.FC = () => {
     }
   };
 
-  // Handle view details
-  const handleViewDetails = (user: UserData) => {
-    const userId = user.userPrincipalName || user.id || user.email || '';
-    // Navigate to user detail view
-    navigate(`/users/${encodeURIComponent(userId)}`);
-  };
-
   return (
     <div className="h-full flex flex-col p-6">
       {/* Header */}
@@ -326,7 +326,7 @@ const UsersView: React.FC = () => {
           <Input
             placeholder="Search users..."
             value={searchText}
-            onChange={(value) => setSearchText(value)}
+            onChange={(e) => setSearchText(e.target.value)}
             className="w-64"
             data-cy="user-search"
           />

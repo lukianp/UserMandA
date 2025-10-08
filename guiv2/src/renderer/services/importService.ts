@@ -256,7 +256,7 @@ class ImportService {
       header: options.header !== false,
       skipEmptyLines: options.skipEmptyLines !== false,
       dynamicTyping: options.dynamicTyping !== false,
-      onProgress: options.onProgress,
+      onProgress: options.onProgress as any,
     });
 
     return {

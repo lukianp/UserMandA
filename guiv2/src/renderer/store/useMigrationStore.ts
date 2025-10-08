@@ -497,7 +497,7 @@ export const useMigrationStore = create<MigrationState>()(
               const result = await window.electronAPI.executeModule({
                 modulePath: `Modules/Migration/${task.type}.psm1`,
                 functionName: `Invoke-${task.type}`,
-                parameters: task.parameters,
+                parameters: task.parameters as any,
                 options: {
                   cancellationToken,
                   streamOutput: true,

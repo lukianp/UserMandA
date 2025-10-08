@@ -19,7 +19,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { useGroupDetailLogic } from '../../hooks/useGroupDetailLogic';
 import { Button } from '../../components/atoms/Button';
-import { LoadingOverlay } from '../../components/molecules/LoadingOverlay';
+import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { ModernCard } from '../../components/atoms/ModernCard';
 import { RefreshCw, UserPlus, Download, X, Edit, Users } from 'lucide-react';
@@ -119,7 +119,7 @@ export const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId }) => 
   return (
     <div className="relative h-full flex flex-col p-6" data-cy="group-detail-view">
       {/* Loading Overlay */}
-      {isLoading && <LoadingOverlay message={loadingMessage} isVisible={isLoading} />}
+      {isLoading && <LoadingOverlay message={loadingMessage} />}
 
       {/* Header Section */}
       <header className="flex items-start justify-between mb-6">
@@ -335,12 +335,12 @@ const OverviewTab: React.FC<{ groupDetail: GroupDetailProjection }> = React.memo
             Sync Status:{' '}
             <span
               className={
-                groupDetail.syncStatus.isSynced
+                groupDetail.syncStatus?.isSynced
                   ? 'text-green-600 dark:text-green-400 font-semibold'
                   : 'text-red-600 dark:text-red-400 font-semibold'
               }
             >
-              {groupDetail.syncStatus.isSynced ? 'Synced' : 'Not Synced'}
+              {groupDetail.syncStatus?.isSynced ? 'Synced' : 'Not Synced'}
             </span>
           </li>
         </ul>

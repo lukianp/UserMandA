@@ -204,7 +204,7 @@ export class PaginationService {
     data: T[],
     cursor: string | null,
     pageSize: number = PaginationService.DEFAULT_PAGE_SIZE,
-    getId: (item: T) => string = (item: T & { id: string }) => item.id
+    getId: (item: T) => string = (item: any) => item.id
   ): CursorPaginatedResult<T> {
     let startIndex = 0;
 

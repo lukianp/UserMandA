@@ -75,7 +75,7 @@ const EndpointDevicesView: React.FC = () => {
 
       <DataTable
         data={data}
-        columns={columns}
+        columns={columns as any}
         loading={isLoading}
         emptyMessage="No endpoint devices data available. Run infrastructure discovery to populate this view."
       />

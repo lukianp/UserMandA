@@ -104,7 +104,7 @@ export const SystemConfigurationView: React.FC = () => {
           <Checkbox
             label="Enable SSL"
             checked={config.email.enableSsl}
-            onChange={(e) => handleChange('email.enableSsl', e.target.checked)}
+            onChange={(checked) => handleChange('email.enableSsl', checked)}
           />
         </div>
       </div>
@@ -133,12 +133,12 @@ export const SystemConfigurationView: React.FC = () => {
           <Checkbox
             label="Require Strong Passwords"
             checked={config.security.requireStrongPassword}
-            onChange={(e) => handleChange('security.requireStrongPassword', e.target.checked)}
+            onChange={(checked) => handleChange('security.requireStrongPassword', checked)}
           />
           <Checkbox
             label="Enable Audit Logging"
             checked={config.security.enableAuditLog}
-            onChange={(e) => handleChange('security.enableAuditLog', e.target.checked)}
+            onChange={(checked) => handleChange('security.enableAuditLog', checked)}
           />
         </div>
       </div>

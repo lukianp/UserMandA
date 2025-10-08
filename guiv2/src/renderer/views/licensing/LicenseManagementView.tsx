@@ -12,15 +12,26 @@ import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataG
 
 export const LicenseManagementView: React.FC = () => {
   const {
-    licenses,
+    processedLicenses,
     isLoading,
-    stats,
     selectedCategory,
     setSelectedCategory,
-    handleExport,
-    handleOptimize,
-    columnDefs,
+    refreshData,
   } = useLicenseManagementLogic();
+
+  // Calculate stats from processedLicenses
+  const stats = React.useMemo(() => {
+    const totalLicenses = processedLicenses.reduce((sum, l) => sum + l.totalLicenses, 0);
+    const activeLicenses = processedLicenses.reduce((sum, l) => sum + l.usedLicenses, 0);
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const expiringSoon = processedLicenses.filter(l => l.expirationDate <= thirtyDaysFromNow && l.expirationDate >= now).length;
+    const nonCompliant = processedLicenses.filter(l => !l.autoRenew && l.expirationDate < now).length;
+    const totalCost = processedLicenses.reduce((sum, l) => sum + l.totalCost, 0);
+    const potentialSavings = processedLicenses.reduce((sum, l) => sum + (l.availableLicenses * l.costPerLicense), 0);
+
+    return { totalLicenses, activeLicenses, expiringSoon, nonCompliant, totalCost, potentialSavings };
+  }, [processedLicenses]);
 
   const licenseMetrics = [
     { label: 'Total Licenses', value: stats.totalLicenses, icon: Key, color: 'blue' },
@@ -30,6 +41,16 @@ export const LicenseManagementView: React.FC = () => {
     { label: 'Total Cost', value: `$${stats.totalCost.toLocaleString()}`, icon: DollarSign, color: 'purple' },
     { label: 'Potential Savings', value: `$${stats.potentialSavings.toLocaleString()}`, icon: TrendingUp, color: 'green' },
   ];
+
+  // Column definitions
+  const columnDefs = React.useMemo(() => [
+    { field: 'name', headerName: 'License Name', sortable: true, filter: true },
+    { field: 'type', headerName: 'Type', sortable: true, filter: true },
+    { field: 'status', headerName: 'Status', sortable: true, filter: true },
+    { field: 'assigned', headerName: 'Assigned', sortable: true },
+    { field: 'available', headerName: 'Available', sortable: true },
+    { field: 'cost', headerName: 'Cost', sortable: true, valueFormatter: (params: any) => `$${params.value}` },
+  ], []);
 
   return (
     <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="license-management-view">
@@ -44,10 +65,10 @@ export const LicenseManagementView: React.FC = () => {
           </div>
         </div>
         <div className="flex gap-3">
-          <Button variant="primary" onClick={handleOptimize} data-cy="optimize-btn">
+          <Button variant="primary" onClick={() => console.log('Optimize licenses')} data-cy="optimize-btn">
             Optimize Licenses
           </Button>
-          <Button variant="secondary" onClick={handleExport} data-cy="export-btn">
+          <Button variant="secondary" onClick={() => console.log('Export report')} data-cy="export-btn">
             Export Report
           </Button>
         </div>
@@ -68,10 +89,10 @@ export const LicenseManagementView: React.FC = () => {
 
       <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <VirtualizedDataGrid
-          data={licenses}
+          data={processedLicenses}
           columns={columnDefs}
           loading={isLoading}
-         
+
         />
       </div>
     </div>

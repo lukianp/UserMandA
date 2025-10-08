@@ -84,7 +84,7 @@ const WaveDropZone: React.FC<WaveDropZoneProps> = ({
 
   return (
     <div
-      ref={drop}
+      ref={drop as any}
       onClick={onSelect}
       className={clsx(
         'p-4 border rounded-lg cursor-pointer transition-all duration-200',
@@ -657,7 +657,7 @@ const MigrationPlanningView: React.FC = () => {
                   label="Start Date & Time"
                   type="datetime-local"
                   value={formatDateForInput(formData.plannedStartDate)}
-                  onChange={(value) => handleFieldChange('plannedStartDate', new Date(value).toISOString())
+                  onChange={(e) => handleFieldChange('plannedStartDate', new Date(e.target.value).toISOString())
                   }
                   fullWidth
                   data-cy="wave-start-input"
@@ -666,7 +666,7 @@ const MigrationPlanningView: React.FC = () => {
                   label="End Date & Time"
                   type="datetime-local"
                   value={formatDateForInput(formData.plannedEndDate)}
-                  onChange={(value) => handleFieldChange('plannedEndDate', new Date(value).toISOString())
+                  onChange={(e) => handleFieldChange('plannedEndDate', new Date(e.target.value).toISOString())
                   }
                   fullWidth
                   data-cy="wave-end-input"

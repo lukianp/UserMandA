@@ -128,7 +128,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
                 <Input
                   label="Tenant ID"
                   value={config.tenantId || ''}
-                  onChange={(value) => updateConfig({ tenantId: value })}
+                  onChange={(e) => updateConfig({ tenantId: e.target.value })}
                   placeholder="e.g., contoso.onmicrosoft.com or tenant GUID"
                   error={validationErrors.includes('Tenant ID is required') ? 'Tenant ID is required' : undefined}
                   data-cy="tenant-id-input"
@@ -141,19 +141,19 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
                 <Checkbox
                   label="Include policy assignments"
                   checked={config.includeAssignments || false}
-                  onChange={(e) => updateConfig({ includeAssignments: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includeAssignments: checked })}
                   data-cy="include-assignments-checkbox"
                 />
                 <Checkbox
                   label="Include policy conditions"
                   checked={config.includeConditions || false}
-                  onChange={(e) => updateConfig({ includeConditions: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includeConditions: checked })}
                   data-cy="include-conditions-checkbox"
                 />
                 <Checkbox
                   label="Include policy controls"
                   checked={config.includeControls || false}
-                  onChange={(e) => updateConfig({ includeControls: e.target.checked })}
+                  onChange={(checked) => updateConfig({ includeControls: checked })}
                   data-cy="include-controls-checkbox"
                 />
               </div>
@@ -165,7 +165,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
                   label="Timeout (seconds)"
                   type="number"
                   value={((config.timeout || 300000) / 1000).toString()}
-                  onChange={(value) => updateConfig({ timeout: parseInt(value) * 1000 })}
+                  onChange={(e) => updateConfig({ timeout: parseInt(e.target.value) * 1000 })}
                   data-cy="timeout-input"
                 />
               </div>
@@ -285,7 +285,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
       <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900">
         <Input
           value={filter.searchText}
-          onChange={(value) => updateFilter({ searchText: value })}
+          onChange={(e) => updateFilter({ searchText: e.target.value })}
           placeholder={`Search ${activeTab}...`}
           data-cy="search-input"
         />

@@ -68,7 +68,7 @@ const DomainDiscoveryView: React.FC = () => {
                   label="Domain Controller"
                   placeholder="dc.contoso.com"
                   value={formData.domainController}
-                  onChange={(value) => updateFormField('domainController', value)}
+                  onChange={(e) => updateFormField('domainController', e.target.value)}
                   disabled={isRunning}
                   required
                   data-cy="domain-controller-input"
@@ -79,9 +79,9 @@ const DomainDiscoveryView: React.FC = () => {
                   label="Search Base (Optional)"
                   placeholder="OU=Users,DC=contoso,DC=com"
                   value={formData.searchBase}
-                  onChange={(value) => updateFormField('searchBase', value)}
+                  onChange={(e) => updateFormField('searchBase', e.target.value)}
                   disabled={isRunning}
-                  helpText="Leave empty to search from root"
+                  helperText="Leave empty to search from root"
                   data-cy="search-base-input"
                 />
 
@@ -125,7 +125,7 @@ const DomainDiscoveryView: React.FC = () => {
                   label="Max Results"
                   type="number"
                   value={formData.maxResults.toString()}
-                  onChange={(value) => updateFormField('maxResults', parseInt(value) || 10000)}
+                  onChange={(e) => updateFormField('maxResults', parseInt(e.target.value) || 10000)}
                   disabled={isRunning}
                   min={1}
                   max={100000}
@@ -136,7 +136,7 @@ const DomainDiscoveryView: React.FC = () => {
                   label="Timeout (seconds)"
                   type="number"
                   value={formData.timeout.toString()}
-                  onChange={(value) => updateFormField('timeout', parseInt(value) || 300)}
+                  onChange={(e) => updateFormField('timeout', parseInt(e.target.value) || 300)}
                   disabled={isRunning}
                   min={10}
                   max={3600}

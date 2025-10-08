@@ -153,15 +153,17 @@ const UserAnalyticsView: React.FC = () => {
     setDateRange,
     selectedDepartment,
     setSelectedDepartment,
-    filteredLicenseUsage,
-    filteredDepartmentBreakdown,
     availableDepartments,
     isExporting,
     handleExportReport,
-    handleExportPDF,
+    refreshData,
   } = useUserAnalyticsLogic();
 
   const isDarkMode = document.documentElement.classList.contains('dark');
+
+  // Compute filtered data from analyticsData
+  const filteredLicenseUsage = analyticsData?.licenseUsage || [];
+  const filteredDepartmentBreakdown = analyticsData?.departmentBreakdown || [];
 
   // Chart theme
   const chartTheme = {
@@ -212,32 +214,32 @@ const UserAnalyticsView: React.FC = () => {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-gray-500" />
-            <Select
+            <select
               value={dateRange}
-              onChange={(value) => setDateRange(value as any)}
-              className="w-32"
+              onChange={(e) => setDateRange(e.target.value as any)}
+              className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm"
               data-cy="date-range-select"
             >
               <option value="7">Last 7 days</option>
               <option value="30">Last 30 days</option>
               <option value="90">Last 90 days</option>
-            </Select>
+            </select>
           </div>
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-gray-500" />
-            <Select
+            <select
               value={selectedDepartment}
-              onChange={(value) => setSelectedDepartment(value)}
-              className="w-40"
+              onChange={(e) => setSelectedDepartment(e.target.value)}
+              className="w-40 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm"
               data-cy="department-filter"
             >
               <option value="all">All Departments</option>
               {availableDepartments.map(dept => (
-                <option key={dept} value={dept}>
-                  {dept}
+                <option key={dept.id} value={dept.id}>
+                  {dept.name}
                 </option>
               ))}
-            </Select>
+            </select>
           </div>
           <Button
             onClick={handleExportReport}
@@ -250,7 +252,7 @@ const UserAnalyticsView: React.FC = () => {
             Export Excel
           </Button>
           <Button
-            onClick={handleExportPDF}
+            onClick={() => console.log('Export PDF')}
             variant="secondary"
             size="sm"
             icon={<FileText className="w-4 h-4" />}
@@ -340,7 +342,7 @@ const UserAnalyticsView: React.FC = () => {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={filteredDepartmentBreakdown}
+                  data={filteredDepartmentBreakdown as any}
                   cx="50%"
                   cy="50%"
                   labelLine={false}

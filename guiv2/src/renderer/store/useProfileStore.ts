@@ -9,6 +9,7 @@
 import { create } from 'zustand';
 import { devtools, persist, subscribeWithSelector } from 'zustand/middleware';
 import { Profile, ConnectionStatus } from '../types/models/profile';
+import { getElectronAPI } from '../lib/electron-api-fallback';
 
 // Debug logging to validate type fixes
 console.log('Profile store initialized - ConnectionStatus type imported successfully');
@@ -78,7 +79,8 @@ export const useProfileStore = create<ProfileState>()(
     loadSourceProfiles: async () => {
       set({ isLoading: true, error: null });
       try {
-        const profiles = await window.electronAPI.loadProfiles();
+        const electronAPI = getElectronAPI();
+        const profiles = await electronAPI.loadProfiles();
         set({
           sourceProfiles: profiles as CompanyProfile[],
           isLoading: false,
@@ -126,7 +128,8 @@ export const useProfileStore = create<ProfileState>()(
         configuration: profileData.configuration || {},
       } as CompanyProfile;
 
-      await window.electronAPI.saveProfile(newProfile);
+      const electronAPI = getElectronAPI();
+      await electronAPI.saveProfile(newProfile);
 
       const updatedProfiles = [...get().sourceProfiles, newProfile];
       set({ sourceProfiles: updatedProfiles });
@@ -139,7 +142,8 @@ export const useProfileStore = create<ProfileState>()(
      * Mirrors C# ProfileService.UpdateProfileAsync
      */
     updateSourceProfile: async (id, updates) => {
-      await window.electronAPI.saveProfile({ id, ...updates } as any);
+      const electronAPI = getElectronAPI();
+      await electronAPI.saveProfile({ id, ...updates } as any);
 
       const updatedProfiles = get().sourceProfiles.map((p) =>
         p.id === id ? { ...p, ...updates, lastModified: new Date().toISOString() } : p
@@ -153,7 +157,8 @@ export const useProfileStore = create<ProfileState>()(
      * Mirrors C# ProfileService.DeleteProfileAsync
      */
     deleteSourceProfile: async (id) => {
-      await window.electronAPI.deleteProfile(id);
+      const electronAPI = getElectronAPI();
+      await electronAPI.deleteProfile(id);
 
       const updatedProfiles = get().sourceProfiles.filter((p) => p.id !== id);
       set({
@@ -193,8 +198,10 @@ export const useProfileStore = create<ProfileState>()(
     testConnection: async (profile) => {
       set({ connectionStatus: 'connecting' });
       try {
+        const electronAPI = getElectronAPI();
+
         // Execute PowerShell connection test
-        const result = await window.electronAPI.executeModule({
+        const result = await electronAPI.executeModule({
           modulePath: 'Modules/Connection/Test-Connection.psm1',
           functionName: 'Test-ProfileConnection',
           parameters: { profileId: profile.id },
@@ -202,7 +209,7 @@ export const useProfileStore = create<ProfileState>()(
 
         if (result.success) {
           set({ connectionStatus: 'connected' });
-          return result.data;
+          return (result as any).data;
         } else {
           set({ connectionStatus: 'error', error: result.error || 'Connection test failed' });
           throw new Error(result.error || 'Connection test failed');

@@ -749,7 +749,7 @@ class DiscoveryService {
       return {
         success: result.status === 'completed',
         message: result.status === 'completed' ? 'Connection successful' : 'Connection failed',
-        details: result.errors.length > 0 ? { error: result.errors[0] } : undefined,
+        details: result.errors && result.errors.length > 0 ? { error: result.errors[0] } : undefined,
         timestamp: new Date(),
         latency: result.endTime && result.startTime ? (typeof result.endTime === 'string' ? new Date(result.endTime).getTime() : result.endTime.getTime()) - (typeof result.startTime === 'string' ? new Date(result.startTime).getTime() : result.startTime.getTime()) : 0,
       };

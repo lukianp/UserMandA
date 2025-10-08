@@ -4,6 +4,10 @@
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 
+// Polyfills for Jest environment
+const { TextEncoder, TextDecoder } = require('util');
+Object.assign(global, { TextEncoder, TextDecoder });
+
 // Mock window.electronAPI for testing
 global.window.electronAPI = {
   executeScript: jest.fn(),
@@ -16,3 +20,19 @@ global.window.electronAPI = {
   onProgress: jest.fn(() => () => {}),
   onOutput: jest.fn(() => () => {}),
 } as any;
+
+// Mock IntersectionObserver
+global.IntersectionObserver = class IntersectionObserver {
+  constructor() {}
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
+// Mock ResizeObserver
+global.ResizeObserver = class ResizeObserver {
+  constructor() {}
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};

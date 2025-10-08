@@ -103,16 +103,16 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
               <Input
                 label="Tenant ID"
                 value={config.tenantId || ''}
-                onChange={(value) => updateConfig({ tenantId: value })}
+                onChange={(e) => updateConfig({ tenantId: e.target.value })}
                 placeholder="contoso.onmicrosoft.com"
                 error={validationErrors.includes('Tenant ID is required') ? 'Required' : undefined}
               />
 
               <div className="space-y-3">
                 <h3 className="text-sm font-medium mb-2">Discovery Options</h3>
-                <Checkbox label="Include policies" checked={config.includePolicies || false} onChange={(e) => updateConfig({ includePolicies: e.target.checked })} />
-                <Checkbox label="Include rules" checked={config.includeRules || false} onChange={(e) => updateConfig({ includeRules: e.target.checked })} />
-                <Checkbox label="Include incidents" checked={config.includeIncidents || false} onChange={(e) => updateConfig({ includeIncidents: e.target.checked })} />
+                <Checkbox label="Include policies" checked={config.includePolicies || false} onChange={(checked) => updateConfig({ includePolicies: checked })} />
+                <Checkbox label="Include rules" checked={config.includeRules || false} onChange={(checked) => updateConfig({ includeRules: checked })} />
+                <Checkbox label="Include incidents" checked={config.includeIncidents || false} onChange={(checked) => updateConfig({ includeIncidents: checked })} />
               </div>
             </div>
 
@@ -173,7 +173,7 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
       <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900">
         <Input
           value={filter.searchText}
-          onChange={(value) => updateFilter({ searchText: value })}
+          onChange={(e) => updateFilter({ searchText: e.target.value })}
           placeholder={`Search ${activeTab}...`}
         />
       </div>

@@ -530,7 +530,7 @@ export class WebhookService {
       loggingService.error(
         'Failed to import webhooks',
         'WebhookService',
-        error
+        error as any
       );
       throw error;
     }

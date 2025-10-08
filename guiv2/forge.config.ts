@@ -31,7 +31,7 @@ const config: ForgeConfig = {
         entryPoints: [
           {
             html: './src/index.html',
-            js: './src/renderer.ts',
+            js: './src/renderer.tsx',
             name: 'main_window',
             preload: {
               js: './src/preload.ts',
@@ -39,6 +39,7 @@ const config: ForgeConfig = {
           },
         ],
       },
+      loggerPort: 9000, // Specify logger port to avoid colorette issues
     }),
     // Fuses are used to enable/disable various Electron functionality
     // at package time, before code signing the application

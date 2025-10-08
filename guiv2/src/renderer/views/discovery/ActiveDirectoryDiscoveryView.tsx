@@ -127,8 +127,8 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
                   {progress.progress}% complete
                 </span>
               </div>
-              <ProgressBar value={progress.progress} max={100} />
-              {progress.estimatedTimeRemaining !== null && (
+              <ProgressBar value={progress.progress || 0} max={100} />
+              {progress.estimatedTimeRemaining !== null && progress.estimatedTimeRemaining !== undefined && typeof progress.estimatedTimeRemaining === 'number' && (
                 <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
                   Estimated time remaining: {Math.ceil(progress.estimatedTimeRemaining / 60)} minutes
                 </div>
@@ -267,7 +267,7 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
                   <Button
                     variant="secondary"
                     icon={<Download />}
-                    onClick={() => exportResults('excel')}
+                    onClick={exportResults}
                     data-cy="export-btn"
                   >
                     Export

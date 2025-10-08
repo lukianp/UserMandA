@@ -12,16 +12,14 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
+import type { ElectronAPI } from './types/electron';
 import {
   ScriptExecutionParams,
   ModuleExecutionParams,
-  ExecutionOptions,
   ProgressData,
   OutputData,
   ScriptTask,
-  ModuleInfo,
 } from './types/shared';
-import type { ElectronAPI } from './renderer/types/electron';
 
 /**
  * Expose secure Electron API to renderer process
@@ -618,4 +616,8 @@ const electronAPI: ElectronAPI = {
 // Expose the API to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
 
-console.log('Preload script loaded successfully - Secure bridge established')
+console.log('Preload script loaded successfully - Secure bridge established');
+console.log('electronAPI keys:', Object.keys(electronAPI));
+console.log('dashboard methods:', electronAPI.dashboard ? Object.keys(electronAPI.dashboard) : 'UNDEFINED');
+console.log('logicEngine methods:', electronAPI.logicEngine ? Object.keys(electronAPI.logicEngine) : 'UNDEFINED');
+console.log('project methods:', electronAPI.project ? Object.keys(electronAPI.project) : 'UNDEFINED');

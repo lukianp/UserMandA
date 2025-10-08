@@ -73,23 +73,23 @@ const ComplianceReportView: React.FC = () => {
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <Input placeholder="Search controls..." value={filters.searchText} onChange={(value) => updateFilter('searchText', value)} data-cy="search-input" />
-          <Select value={filters.framework} onChange={(value) => updateFilter('framework', value)} data-cy="framework-select">
+          <Input placeholder="Search controls..." value={filters.searchText} onChange={(e) => updateFilter('searchText', e.target.value)} data-cy="search-input" />
+          <select value={filters.framework || ''} onChange={(e) => updateFilter('framework', e.target.value)} data-cy="framework-select" className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm">
             <option value="">All Frameworks</option>
-            {filterOptions.frameworks.map((fw) => (<option key={fw} value={fw}>{fw}</option>))}
-          </Select>
-          <Select value={filters.status} onChange={(value) => updateFilter('status', value)} data-cy="status-select">
+            {filterOptions.frameworks.map((fw) => (<option key={fw || 'unknown'} value={fw || ''}>{fw}</option>))}
+          </select>
+          <select value={filters.status || ''} onChange={(e) => updateFilter('status', e.target.value)} data-cy="status-select" className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm">
             <option value="">All Statuses</option>
-            {filterOptions.statuses.map((st) => (<option key={st} value={st}>{st}</option>))}
-          </Select>
-          <Select value={filters.riskLevel} onChange={(value) => updateFilter('riskLevel', value)} data-cy="risk-level-select">
+            {filterOptions.statuses.map((st) => (<option key={st || 'unknown'} value={st || ''}>{st}</option>))}
+          </select>
+          <select value={filters.riskLevel || ''} onChange={(e) => updateFilter('riskLevel', e.target.value)} data-cy="risk-level-select" className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm">
             <option value="">All Risk Levels</option>
-            {filterOptions.riskLevels.map((rl) => (<option key={rl} value={rl}>{rl}</option>))}
-          </Select>
-          <Select value={filters.owner} onChange={(value) => updateFilter('owner', value)} data-cy="owner-select">
+            {filterOptions.riskLevels.map((rl) => (<option key={rl || 'unknown'} value={rl || ''}>{rl}</option>))}
+          </select>
+          <select value={filters.owner || ''} onChange={(e) => updateFilter('owner', e.target.value)} data-cy="owner-select" className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm">
             <option value="">All Owners</option>
-            {filterOptions.owners.map((own) => (<option key={own} value={own}>{own}</option>))}
-          </Select>
+            {filterOptions.owners.map((own) => (<option key={own || 'unknown'} value={own || ''}>{own}</option>))}
+          </select>
         </div>
       </div>
 
