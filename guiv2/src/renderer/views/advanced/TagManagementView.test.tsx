@@ -345,3 +345,6 @@ describe('TagManagementView', () => {
     });
   });
 });
+
+
+export default TagManagementView.test;

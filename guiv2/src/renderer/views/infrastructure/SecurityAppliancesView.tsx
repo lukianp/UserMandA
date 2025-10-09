@@ -3,44 +3,44 @@ import DataTable from '../../components/organisms/DataTable';
 import { useSecurityAppliancesLogic } from '../../hooks/infrastructure/useSecurityAppliancesLogic';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw } from 'lucide-react';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColDef } from 'ag-grid-community';
 import type { SecurityAppliancesData } from '../../hooks/infrastructure/useSecurityAppliancesLogic';
 
 const SecurityAppliancesView: React.FC = () => {
   const { data, isLoading, error, reload } = useSecurityAppliancesLogic();
 
-  const columns: ColumnDef<SecurityAppliancesData>[] = [
+  const columns: ColDef<SecurityAppliancesData>[] = [
     {
-      accessorKey: 'applianceName',
-      header: 'Appliance Name',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'applianceName',
+      headerName: 'Appliance Name',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'type',
-      header: 'Type',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'type',
+      headerName: 'Type',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'model',
-      header: 'Model',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'model',
+      headerName: 'Model',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'version',
-      header: 'Version',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'version',
+      headerName: 'Version',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
-      enableSorting: true,
-      enableColumnFilter: true,
-      cell: ({ getValue }) => {
-        const status = getValue() as string;
+      field: 'status',
+      headerName: 'Status',
+      sortable: true,
+      filter: true,
+      cellRenderer: ({ value }: any) => {
+        const status = value as string;
         const statusClass =
           status === 'Active'
             ? 'text-success'

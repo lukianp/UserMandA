@@ -3,47 +3,47 @@ import DataTable from '../../components/organisms/DataTable';
 import { useStorageAnalysisLogic } from '../../hooks/infrastructure/useStorageAnalysisLogic';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw } from 'lucide-react';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColDef } from 'ag-grid-community';
 import type { StorageAnalysisData } from '../../hooks/infrastructure/useStorageAnalysisLogic';
 
 const StorageAnalysisView: React.FC = () => {
   const { data, isLoading, error, reload } = useStorageAnalysisLogic();
 
-  const columns: ColumnDef<StorageAnalysisData>[] = [
+  const columns: ColDef<StorageAnalysisData>[] = [
     {
-      accessorKey: 'storageSystem',
-      header: 'Storage System',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'storageSystem',
+      headerName: 'Storage System',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'type',
-      header: 'Type',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'type',
+      headerName: 'Type',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'capacity',
-      header: 'Capacity',
-      enableSorting: true,
+      field: 'capacity',
+      headerName: 'Capacity',
+      sortable: true,
     },
     {
-      accessorKey: 'used',
-      header: 'Used',
-      enableSorting: true,
+      field: 'used',
+      headerName: 'Used',
+      sortable: true,
     },
     {
-      accessorKey: 'available',
-      header: 'Available',
-      enableSorting: true,
+      field: 'available',
+      headerName: 'Available',
+      sortable: true,
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
-      enableSorting: true,
-      enableColumnFilter: true,
-      cell: ({ getValue }) => {
-        const status = getValue() as string;
+      field: 'status',
+      headerName: 'Status',
+      sortable: true,
+      filter: true,
+      cellRenderer: ({ value }: any) => {
+        const status = value as string;
         const statusClass =
           status === 'Healthy'
             ? 'text-success'

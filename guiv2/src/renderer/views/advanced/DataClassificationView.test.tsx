@@ -346,3 +346,6 @@ describe('DataClassificationView', () => {
     });
   });
 });
+
+
+export default DataClassificationView.test;

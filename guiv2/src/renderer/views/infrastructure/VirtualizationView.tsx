@@ -3,47 +3,47 @@ import DataTable from '../../components/organisms/DataTable';
 import { useVirtualizationLogic } from '../../hooks/infrastructure/useVirtualizationLogic';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw } from 'lucide-react';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColDef } from 'ag-grid-community';
 import type { VirtualizationData } from '../../hooks/infrastructure/useVirtualizationLogic';
 
 const VirtualizationView: React.FC = () => {
   const { data, isLoading, error, reload } = useVirtualizationLogic();
 
-  const columns: ColumnDef<VirtualizationData>[] = [
+  const columns: ColDef<VirtualizationData>[] = [
     {
-      accessorKey: 'vmName',
-      header: 'VM Name',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'vmName',
+      headerName: 'VM Name',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'host',
-      header: 'Host',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'host',
+      headerName: 'Host',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'vCPU',
-      header: 'vCPU',
-      enableSorting: true,
+      field: 'vCPU',
+      headerName: 'vCPU',
+      sortable: true,
     },
     {
-      accessorKey: 'memory',
-      header: 'Memory',
-      enableSorting: true,
+      field: 'memory',
+      headerName: 'Memory',
+      sortable: true,
     },
     {
-      accessorKey: 'storage',
-      header: 'Storage',
-      enableSorting: true,
+      field: 'storage',
+      headerName: 'Storage',
+      sortable: true,
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
-      enableSorting: true,
-      enableColumnFilter: true,
-      cell: ({ getValue }) => {
-        const status = getValue() as string;
+      field: 'status',
+      headerName: 'Status',
+      sortable: true,
+      filter: true,
+      cellRenderer: ({ value }: any) => {
+        const status = value as string;
         const statusClass =
           status === 'Running'
             ? 'text-success'

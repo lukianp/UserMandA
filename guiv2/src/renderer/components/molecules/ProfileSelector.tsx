@@ -89,7 +89,14 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
   const handleDeleteProfile = async () => {
     if (!selectedProfile) return;
 
-    if (confirm(`Are you sure you want to delete profile "${selectedProfile.name}"?`)) {
+    // Get profile name - CompanyProfile uses companyName, TargetProfile uses name
+    const profileName = 'companyName' in selectedProfile
+      ? (selectedProfile as CompanyProfile).companyName
+      : 'name' in selectedProfile
+        ? (selectedProfile as TargetProfile).name
+        : selectedProfile.id;
+
+    if (confirm(`Are you sure you want to delete profile "${profileName}"?`)) {
       try {
         await deleteSourceProfile(selectedProfile.id);
       } catch (error) {
@@ -145,7 +152,7 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
     <div className={clsx('flex flex-col gap-3', className)} data-cy={dataCy}>
       {/* Header with label and status */}
       <div className="flex items-center justify-between">
-        {label && <span className="text-sm font-semibold text-gray-700">{label}</span>}
+        {label && <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</span>}
         {selectedProfile && (
           <StatusIndicator
             status={getConnectionStatus()}
@@ -161,17 +168,21 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
         value={selectedProfile?.id || ''}
         onChange={handleProfileChange}
         options={profiles.map(profile => {
-          // CompanyProfile uses companyName, Profile uses name
-          const profileName = 'companyName' in profile ? profile.companyName : profile.name;
-          // Only Profile has environment property
-          const envLabel = 'environment' in profile ? ` (${profile.environment})` : '';
+          // CompanyProfile uses companyName, TargetProfile uses name
+          const profileName = 'companyName' in profile
+            ? (profile as CompanyProfile).companyName
+            : 'name' in profile
+              ? (profile as TargetProfile).name
+              : profile.id;
+          // Both types have environment property
+          const envLabel = profile.environment ? ` (${profile.environment})` : '';
           return {
             value: profile.id,
             label: `${profileName}${envLabel}`,
           };
         })}
-        placeholder="Select a profile..."
-        disabled={isLoading}
+        placeholder={profiles.length > 0 ? "Select a profile..." : "No profiles found - click Refresh"}
+        disabled={isLoading || profiles.length === 0}
         error={error || undefined}
         data-cy={`profile-select-${type}`}
       />
@@ -232,24 +243,24 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
 
       {/* Selected profile details */}
       {selectedProfile && (
-        <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-200 text-sm">
-          <div className="grid grid-cols-2 gap-2">
-            {'environment' in selectedProfile && (
-              <div>
-                <span className="font-medium text-gray-700">Environment:</span>
-                <span className="ml-2 text-gray-600">{selectedProfile.environment}</span>
+        <div className="px-3 py-2 bg-gray-800 rounded-md border border-gray-700 text-sm">
+          <div className="grid grid-cols-1 gap-1">
+            {'environment' in selectedProfile && selectedProfile.environment && (
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-400">Environment:</span>
+                <span className="text-gray-300">{selectedProfile.environment}</span>
               </div>
             )}
             {'companyName' in selectedProfile && (
-              <div>
-                <span className="font-medium text-gray-700">Company:</span>
-                <span className="ml-2 text-gray-600">{selectedProfile.companyName}</span>
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-400">Company:</span>
+                <span className="text-gray-300">{selectedProfile.companyName}</span>
               </div>
             )}
             {selectedProfile.tenantId && (
               <div className="col-span-2">
-                <span className="font-medium text-gray-700">Tenant:</span>
-                <span className="ml-2 text-gray-600 font-mono text-xs">{selectedProfile.tenantId}</span>
+                <span className="font-medium text-gray-400">Tenant:</span>
+                <div className="mt-1 text-gray-300 font-mono text-xs break-all">{selectedProfile.tenantId}</div>
               </div>
             )}
           </div>

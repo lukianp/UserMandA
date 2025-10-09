@@ -345,3 +345,6 @@ describe('DataImportExportView', () => {
     });
   });
 });
+
+
+export default DataImportExportView.test;

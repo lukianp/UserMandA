@@ -345,3 +345,6 @@ describe('DiagnosticsView', () => {
     });
   });
 });
+
+
+export default DiagnosticsView.test;

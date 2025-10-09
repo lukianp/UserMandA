@@ -25,3 +25,6 @@ export const WebhooksView: React.FC = () => {
     </div>
   );
 };
+
+
+export default WebhooksView;

@@ -17,6 +17,7 @@ import { MockLogicEngineService } from './services/mockLogicEngineService';
 import { LogicEngineService } from './services/logicEngineService';
 import { ProjectService } from './services/projectService';
 import { DashboardService } from './services/dashboardService';
+import { initializeProfileService, getProfileService } from './services/profileService';
 import type { UserDetailProjection } from '../renderer/types/models/userDetail';
 
 // Service instances
@@ -84,6 +85,14 @@ async function initializeServices(): Promise<void> {
   // Initialize Dashboard Service (depends on LogicEngine and Project Service)
   dashboardService = new DashboardService(logicEngineService, projectService);
   console.log('Dashboard Service initialized');
+
+  // Initialize Profile Service with auto-discovery
+  await initializeProfileService({
+    profilesDir: path.join(process.cwd(), 'config', 'profiles'),
+    discoveryDataRoot: 'C:\\DiscoveryData',
+    enableAutoDiscovery: true,
+  });
+  console.log('Profile Service initialized');
 
   // Load application configuration
   try {
@@ -495,50 +504,250 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   // Profile Management Handlers
   // ========================================
 
-  const profilesDir = path.join(process.cwd(), 'config', 'profiles');
-
-  ipcMain.handle('profile:loadAll', async () => {
+  /**
+   * Load all source profiles (includes auto-discovered profiles from C:\DiscoveryData)
+   */
+  ipcMain.handle('profile:loadSourceProfiles', async () => {
     try {
-      await fs.mkdir(profilesDir, { recursive: true });
-      const files = await fs.readdir(profilesDir);
-      const profiles = [];
-
-      for (const file of files) {
-        if (file.endsWith('.json')) {
-          const filePath = path.join(profilesDir, file);
-          const data = await fs.readFile(filePath, 'utf-8');
-          profiles.push(JSON.parse(data));
-        }
-      }
-
-      console.log(`Loaded ${profiles.length} profiles`);
+      const profileService = getProfileService();
+      const profiles = profileService.getSourceProfiles();
+      console.log(`Loaded ${profiles.length} source profiles`);
       return profiles;
     } catch (error: unknown) {
-      console.error(`loadProfiles error: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`loadSourceProfiles error: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   });
 
-  ipcMain.handle('profile:save', async (_, profile: any) => {
+  /**
+   * Load all target profiles
+   */
+  ipcMain.handle('profile:loadTargetProfiles', async () => {
     try {
-      await fs.mkdir(profilesDir, { recursive: true });
-      const filePath = path.join(profilesDir, `${profile.id}.json`);
-      await fs.writeFile(filePath, JSON.stringify(profile, null, 2), 'utf-8');
-      console.log(`Saved profile: ${profile.id}`);
+      const profileService = getProfileService();
+      const profiles = profileService.getTargetProfiles();
+      console.log(`Loaded ${profiles.length} target profiles`);
+      return profiles;
     } catch (error: unknown) {
-      console.error(`saveProfile error: ${error instanceof Error ? error.message : String(error)}`);
-      throw new Error(`Failed to save profile: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`loadTargetProfiles error: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
     }
   });
 
-  ipcMain.handle('profile:delete', async (_, profileId: string) => {
+  /**
+   * Get active source profile
+   */
+  ipcMain.handle('profile:getActiveSource', async () => {
     try {
-      const filePath = path.join(profilesDir, `${profileId}.json`);
-      await fs.unlink(filePath);
-      console.log(`Deleted profile: ${profileId}`);
+      const profileService = getProfileService();
+      const profile = profileService.getActiveSourceProfile();
+      return profile;
     } catch (error: unknown) {
-      console.error(`deleteProfile error: ${error instanceof Error ? error.message : String(error)}`);
-      throw new Error(`Failed to delete profile: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`getActiveSource error: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
+    }
+  });
+
+  /**
+   * Get active target profile
+   */
+  ipcMain.handle('profile:getActiveTarget', async () => {
+    try {
+      const profileService = getProfileService();
+      const profile = profileService.getActiveTargetProfile();
+      return profile;
+    } catch (error: unknown) {
+      console.error(`getActiveTarget error: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
+    }
+  });
+
+  /**
+   * Create a new source profile
+   */
+  ipcMain.handle('profile:createSource', async (_, profile: any) => {
+    try {
+      const profileService = getProfileService();
+      const newProfile = await profileService.createSourceProfile(profile);
+      console.log(`Created source profile: ${newProfile.id}`);
+      return { success: true, profile: newProfile };
+    } catch (error: unknown) {
+      console.error(`createSource error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Create a new target profile
+   */
+  ipcMain.handle('profile:createTarget', async (_, profile: any) => {
+    try {
+      const profileService = getProfileService();
+      const newProfile = await profileService.createTargetProfile(profile);
+      console.log(`Created target profile: ${newProfile.id}`);
+      return { success: true, profile: newProfile };
+    } catch (error: unknown) {
+      console.error(`createTarget error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Update a source profile
+   */
+  ipcMain.handle('profile:updateSource', async (_, id: string, updates: any) => {
+    try {
+      const profileService = getProfileService();
+      const profile = await profileService.updateSourceProfile(id, updates);
+      console.log(`Updated source profile: ${id}`);
+      return { success: true, profile };
+    } catch (error: unknown) {
+      console.error(`updateSource error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Update a target profile
+   */
+  ipcMain.handle('profile:updateTarget', async (_, id: string, updates: any) => {
+    try {
+      const profileService = getProfileService();
+      const profile = await profileService.updateTargetProfile(id, updates);
+      console.log(`Updated target profile: ${id}`);
+      return { success: true, profile };
+    } catch (error: unknown) {
+      console.error(`updateTarget error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Delete a source profile
+   */
+  ipcMain.handle('profile:deleteSource', async (_, profileId: string) => {
+    try {
+      const profileService = getProfileService();
+      await profileService.deleteSourceProfile(profileId);
+      console.log(`Deleted source profile: ${profileId}`);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error(`deleteSource error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Delete a target profile
+   */
+  ipcMain.handle('profile:deleteTarget', async (_, profileId: string) => {
+    try {
+      const profileService = getProfileService();
+      await profileService.deleteTargetProfile(profileId);
+      console.log(`Deleted target profile: ${profileId}`);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error(`deleteTarget error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Set active source profile
+   */
+  ipcMain.handle('profile:setActiveSource', async (_, profileId: string) => {
+    try {
+      const profileService = getProfileService();
+      await profileService.setActiveSourceProfile(profileId);
+      console.log(`Set active source profile: ${profileId}`);
+
+      // Update Logic Engine data path to use this profile's data
+      const dataPath = profileService.getProfileDataPath(profileId);
+      const rawPath = path.join(dataPath, 'Raw');
+      console.log(`Updating Logic Engine data path to: ${rawPath}`);
+
+      // Reinitialize Logic Engine with new data path
+      logicEngineService = LogicEngineService.getInstance(rawPath);
+
+      return { success: true, dataPath: rawPath };
+    } catch (error: unknown) {
+      console.error(`setActiveSource error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Set active target profile
+   */
+  ipcMain.handle('profile:setActiveTarget', async (_, profileId: string) => {
+    try {
+      const profileService = getProfileService();
+      await profileService.setActiveTargetProfile(profileId);
+      console.log(`Set active target profile: ${profileId}`);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error(`setActiveTarget error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Refresh profiles (re-run auto-discovery)
+   */
+  ipcMain.handle('profile:refresh', async () => {
+    try {
+      const profileService = getProfileService();
+      await profileService.refreshProfiles();
+      const sourceProfiles = profileService.getSourceProfiles();
+      console.log(`Refreshed profiles: ${sourceProfiles.length} source profiles found`);
+      return { success: true, profiles: sourceProfiles };
+    } catch (error: unknown) {
+      console.error(`refresh profiles error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Get profile data path for a source profile
+   */
+  ipcMain.handle('profile:getDataPath', async (_, profileId: string) => {
+    try {
+      const profileService = getProfileService();
+      const dataPath = profileService.getProfileDataPath(profileId);
+      return { success: true, dataPath };
+    } catch (error: unknown) {
+      console.error(`getDataPath error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
     }
   });
 

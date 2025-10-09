@@ -137,7 +137,7 @@ $RequiredFiles = @(
     'webpack.renderer.config.ts',
     'webpack.main.config.ts',
     'src/index.ts',
-    'src/renderer.ts',
+    'src/renderer.tsx',
     'src/preload.ts'
 )
 

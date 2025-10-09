@@ -161,41 +161,41 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<Users className="w-5 h-5" />}
                 label="Users"
-                value={currentResult.stats.totalUsers}
-                subValue={`${currentResult.stats.enabledUsers} enabled`}
+                value={currentResult.stats?.totalUsers ?? 0}
+                subValue={`${currentResult.stats?.enabledUsers ?? 0} enabled`}
                 color="blue"
               />
               <StatCard
                 icon={<Shield className="w-5 h-5" />}
                 label="Groups"
-                value={currentResult.stats.totalGroups}
-                subValue={`${currentResult.stats.securityGroups} security`}
+                value={currentResult.stats?.totalGroups ?? 0}
+                subValue={`${currentResult.stats?.securityGroups ?? 0} security`}
                 color="green"
               />
               <StatCard
                 icon={<Server className="w-5 h-5" />}
                 label="Computers"
-                value={currentResult.stats.totalComputers}
-                subValue={`${currentResult.stats.enabledComputers} enabled`}
+                value={currentResult.stats?.totalComputers ?? 0}
+                subValue={`${currentResult.stats?.enabledComputers ?? 0} enabled`}
                 color="purple"
               />
               <StatCard
                 icon={<FolderTree className="w-5 h-5" />}
                 label="OUs"
-                value={currentResult.stats.totalOUs}
+                value={currentResult.stats?.totalOUs ?? 0}
                 color="orange"
               />
               <StatCard
                 icon={<Settings className="w-5 h-5" />}
                 label="GPOs"
-                value={currentResult.stats.totalGPOs}
+                value={currentResult.stats?.totalGPOs ?? 0}
                 color="red"
               />
               <StatCard
                 icon={<Network className="w-5 h-5" />}
                 label="Duration"
-                value={`${Math.round(currentResult.duration / 1000)}s`}
-                subValue={`${currentResult.objectsPerSecond.toFixed(1)} obj/s`}
+                value={`${Math.round((currentResult.duration ?? 0) / 1000)}s`}
+                subValue={`${(currentResult.objectsPerSecond ?? 0).toFixed(1)} obj/s`}
                 color="gray"
               />
             </div>

@@ -45,3 +45,6 @@ export const MFAManagementView: React.FC = () => {
     </div>
   );
 };
+
+
+export default MFAManagementView;

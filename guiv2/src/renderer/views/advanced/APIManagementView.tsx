@@ -25,3 +25,6 @@ export const APIManagementView: React.FC = () => {
     </div>
   );
 };
+
+
+export default APIManagementView;

@@ -345,3 +345,6 @@ describe('HealthMonitoringView', () => {
     });
   });
 });
+
+
+export default HealthMonitoringView.test;

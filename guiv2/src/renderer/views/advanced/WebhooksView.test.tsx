@@ -345,3 +345,6 @@ describe('WebhooksView', () => {
     });
   });
 });
+
+
+export default WebhooksView.test;

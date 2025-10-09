@@ -3,48 +3,48 @@ import DataTable from '../../components/organisms/DataTable';
 import { useWebServersLogic } from '../../hooks/infrastructure/useWebServersLogic';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw } from 'lucide-react';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColDef } from 'ag-grid-community';
 import type { WebServersData } from '../../hooks/infrastructure/useWebServersLogic';
 
 const WebServersView: React.FC = () => {
   const { data, isLoading, error, reload } = useWebServersLogic();
 
-  const columns: ColumnDef<WebServersData>[] = [
+  const columns: ColDef<WebServersData>[] = [
     {
-      accessorKey: 'serverName',
-      header: 'Server Name',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'serverName',
+      headerName: 'Server Name',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'webServer',
-      header: 'Web Server',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'webServer',
+      headerName: 'Web Server',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'sites',
-      header: 'Sites',
-      enableSorting: true,
+      field: 'sites',
+      headerName: 'Sites',
+      sortable: true,
     },
     {
-      accessorKey: 'port',
-      header: 'Port',
-      enableSorting: true,
+      field: 'port',
+      headerName: 'Port',
+      sortable: true,
     },
     {
-      accessorKey: 'ssl',
-      header: 'SSL',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'ssl',
+      headerName: 'SSL',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
-      enableSorting: true,
-      enableColumnFilter: true,
-      cell: ({ getValue }) => {
-        const status = getValue() as string;
+      field: 'status',
+      headerName: 'Status',
+      sortable: true,
+      filter: true,
+      cellRenderer: ({ value }: any) => {
+        const status = value as string;
         const statusClass =
           status === 'Running'
             ? 'text-success'

@@ -38,3 +38,6 @@ export const TicketingSystemView: React.FC = () => {
     </div>
   );
 };
+
+
+export default TicketingSystemView;

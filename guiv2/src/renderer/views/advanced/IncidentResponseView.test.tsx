@@ -345,3 +345,6 @@ describe('IncidentResponseView', () => {
     });
   });
 });
+
+
+export default IncidentResponseView.test;

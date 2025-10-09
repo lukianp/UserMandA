@@ -345,3 +345,6 @@ describe('WorkflowAutomationView', () => {
     });
   });
 });
+
+
+export default WorkflowAutomationView.test;

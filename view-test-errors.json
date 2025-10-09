@@ -1,0 +1,272 @@
+[
+  {
+    "file": "analytics/BenchmarkingView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "admin/AboutView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "admin/AuditLogView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "admin/BackupRestoreView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "admin/LicenseActivationView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "admin/PermissionsView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "admin/RoleManagementView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "admin/SystemConfigurationView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "admin/UserManagementView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/APIManagementView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/AssetLifecycleView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/BulkOperationsView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/CapacityPlanningView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/ChangeManagementView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/CloudMigrationPlannerView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/CostOptimizationView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/CustomFieldsView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/DataClassificationView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/DataGovernanceView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/DataImportExportView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/DiagnosticsView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/DisasterRecoveryView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/eDiscoveryView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/EndpointProtectionView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/HardwareRefreshPlanningView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/HealthMonitoringView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/HybridIdentityView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/IncidentResponseView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/KnowledgeBaseView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/LicenseOptimizationView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/MFAManagementView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/NotificationRulesView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/PerformanceDashboardView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/PrivilegedAccessView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/ResourceOptimizationView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/RetentionPolicyView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/ScriptLibraryView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/SecurityPostureView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/ServiceCatalogView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/SoftwareLicenseComplianceView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/SSOConfigurationView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/TagManagementView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/TicketingSystemView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/WebhooksView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  },
+  {
+    "file": "advanced/WorkflowAutomationView.tsx",
+    "issues": [
+      "Missing default export"
+    ]
+  }
+]

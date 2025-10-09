@@ -345,3 +345,6 @@ describe('DataGovernanceView', () => {
     });
   });
 });
+
+
+export default DataGovernanceView.test;

@@ -38,3 +38,6 @@ export const DisasterRecoveryView: React.FC = () => {
     </div>
   );
 };
+
+
+export default DisasterRecoveryView;

@@ -3,47 +3,47 @@ import DataTable from '../../components/organisms/DataTable';
 import { useMonitoringSystemsLogic } from '../../hooks/infrastructure/useMonitoringSystemsLogic';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw } from 'lucide-react';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColDef } from 'ag-grid-community';
 import type { MonitoringSystemsData } from '../../hooks/infrastructure/useMonitoringSystemsLogic';
 
 const MonitoringSystemsView: React.FC = () => {
   const { data, isLoading, error, reload } = useMonitoringSystemsLogic();
 
-  const columns: ColumnDef<MonitoringSystemsData>[] = [
+  const columns: ColDef<MonitoringSystemsData>[] = [
     {
-      accessorKey: 'systemName',
-      header: 'System Name',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'systemName',
+      headerName: 'System Name',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'type',
-      header: 'Type',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'type',
+      headerName: 'Type',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'monitoredItems',
-      header: 'Monitored Items',
-      enableSorting: true,
+      field: 'monitoredItems',
+      headerName: 'Monitored Items',
+      sortable: true,
     },
     {
-      accessorKey: 'alerts',
-      header: 'Alerts',
-      enableSorting: true,
-      cell: ({ getValue }) => {
-        const alerts = getValue() as number;
+      field: 'alerts',
+      headerName: 'Alerts',
+      sortable: true,
+      cellRenderer: ({ value }: any) => {
+        const alerts = value as number;
         const alertClass = alerts > 0 ? 'text-warning font-semibold' : 'text-success';
         return <span className={alertClass}>{alerts}</span>;
       },
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
-      enableSorting: true,
-      enableColumnFilter: true,
-      cell: ({ getValue }) => {
-        const status = getValue() as string;
+      field: 'status',
+      headerName: 'Status',
+      sortable: true,
+      filter: true,
+      cellRenderer: ({ value }: any) => {
+        const status = value as string;
         const statusClass =
           status === 'Active'
             ? 'text-success'

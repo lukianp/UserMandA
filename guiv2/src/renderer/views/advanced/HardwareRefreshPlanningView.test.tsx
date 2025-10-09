@@ -345,3 +345,6 @@ describe('HardwareRefreshPlanningView', () => {
     });
   });
 });
+
+
+export default HardwareRefreshPlanningView.test;

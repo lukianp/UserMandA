@@ -45,3 +45,6 @@ export const EDiscoveryView: React.FC = () => {
     </div>
   );
 };
+
+
+export default EDiscoveryView;

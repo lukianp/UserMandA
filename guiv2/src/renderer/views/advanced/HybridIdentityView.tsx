@@ -45,3 +45,6 @@ export const HybridIdentityView: React.FC = () => {
     </div>
   );
 };
+
+
+export default HybridIdentityView;

@@ -345,3 +345,6 @@ describe('KnowledgeBaseView', () => {
     });
   });
 });
+
+
+export default KnowledgeBaseView.test;

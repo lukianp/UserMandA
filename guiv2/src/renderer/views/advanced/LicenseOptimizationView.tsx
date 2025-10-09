@@ -38,3 +38,6 @@ export const LicenseOptimizationView: React.FC = () => {
     </div>
   );
 };
+
+
+export default LicenseOptimizationView;

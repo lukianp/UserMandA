@@ -346,3 +346,6 @@ describe('CapacityPlanningView', () => {
     });
   });
 });
+
+
+export default CapacityPlanningView.test;

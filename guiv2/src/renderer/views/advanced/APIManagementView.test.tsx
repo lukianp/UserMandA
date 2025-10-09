@@ -357,3 +357,6 @@ describe('APIManagementView', () => {
     });
   });
 });
+
+
+export default APIManagementView.test;

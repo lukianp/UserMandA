@@ -25,3 +25,6 @@ export const TagManagementView: React.FC = () => {
     </div>
   );
 };
+
+
+export default TagManagementView;

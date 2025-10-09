@@ -377,7 +377,7 @@ export const useMigrationStore = create<MigrationState>()(
           },
 
           // Validation hook compatibility
-          selectedWave: get().waves.find(w => w.id === get().selectedWaveId) || null,
+          selectedWave: null as MigrationWave | null,
           validateWave: async (waveId: string) => {
             await get().runPreFlightChecks(waveId);
           },
@@ -681,10 +681,12 @@ export const useMigrationStore = create<MigrationState>()(
           // In production, this would call window.electronAPI to load from file system
           const savedWaves = localStorage.getItem('migration-waves');
           const waves = savedWaves ? JSON.parse(savedWaves) : [];
-          set({ waves, isLoading: false });
+          const currentSelectedId = get().selectedWaveId;
+          const selectedWave = currentSelectedId ? waves.find((w: MigrationWave) => w.id === currentSelectedId) || null : null;
+          set({ waves, selectedWave, isLoading: false });
         } catch (error: any) {
           console.error('Failed to load waves:', error);
-          set({ error: error.message || 'Failed to load waves', isLoading: false, waves: [] });
+          set({ error: error.message || 'Failed to load waves', isLoading: false, waves: [], selectedWave: null });
         }
       },
 
@@ -802,7 +804,11 @@ export const useMigrationStore = create<MigrationState>()(
        * Set the selected wave
        */
       setSelectedWave: (waveId) => {
-        set({ selectedWaveId: waveId });
+        set((state) => {
+          const wave = state.waves.find(w => w.id === waveId) || null;
+          state.selectedWaveId = waveId;
+          state.selectedWave = wave;
+        });
       },
 
       /**

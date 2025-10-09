@@ -38,3 +38,6 @@ export const CostOptimizationView: React.FC = () => {
     </div>
   );
 };
+
+
+export default CostOptimizationView;

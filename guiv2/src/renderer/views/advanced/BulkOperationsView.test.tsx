@@ -346,3 +346,6 @@ describe('BulkOperationsView', () => {
     });
   });
 });
+
+
+export default BulkOperationsView.test;

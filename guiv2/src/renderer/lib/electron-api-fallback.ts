@@ -9,17 +9,19 @@ export const electronAPIFallback = {
   // ========================================
 
   executeScript: async () => ({
-    success: false,
-    error: 'Electron API not available',
+    success: true,
+    data: [],
     duration: 0,
-    warnings: [],
+    warnings: ['Running in development mode - returning mock data'],
+    error: undefined,
   }),
 
   executeModule: async () => ({
-    success: false,
-    error: 'Electron API not available',
+    success: true,
+    data: [],
     duration: 0,
-    warnings: [],
+    warnings: ['Running in development mode - returning mock data'],
+    error: undefined,
   }),
 
   cancelExecution: async () => false,
@@ -75,11 +77,33 @@ export const electronAPIFallback = {
   // Profile Management
   // ========================================
 
-  loadProfiles: async () => [],
+  loadSourceProfiles: async () => [],
 
-  saveProfile: async () => {},
+  loadTargetProfiles: async () => [],
 
-  deleteProfile: async () => {},
+  getActiveSourceProfile: async () => null,
+
+  getActiveTargetProfile: async () => null,
+
+  createSourceProfile: async () => ({ success: false, error: 'Electron API not available', profile: null }),
+
+  createTargetProfile: async () => ({ success: false, error: 'Electron API not available', profile: null }),
+
+  updateSourceProfile: async () => ({ success: false, error: 'Electron API not available', profile: null }),
+
+  updateTargetProfile: async () => ({ success: false, error: 'Electron API not available', profile: null }),
+
+  deleteSourceProfile: async () => ({ success: false, error: 'Electron API not available' }),
+
+  deleteTargetProfile: async () => ({ success: false, error: 'Electron API not available' }),
+
+  setActiveSourceProfile: async () => ({ success: false, error: 'Electron API not available', dataPath: '' }),
+
+  setActiveTargetProfile: async () => ({ success: false, error: 'Electron API not available' }),
+
+  refreshProfiles: async () => ({ success: false, error: 'Electron API not available', profiles: [] }),
+
+  getProfileDataPath: async () => ({ success: false, error: 'Electron API not available', path: '' }),
 
   // ========================================
   // Event Listeners (for streaming)
@@ -274,24 +298,46 @@ export const electronAPIFallback = {
 
   dashboard: {
     getStats: async () => ({
-      success: false,
-      error: 'Electron API not available'
+      success: true,
+      data: {
+        totalUsers: 0,
+        totalGroups: 0,
+        totalComputers: 0,
+        totalApplications: 0,
+        migrationReadiness: {
+          ready: 0,
+          needsReview: 0,
+          notReady: 0,
+        },
+      },
     }),
 
     getProjectTimeline: async () => ({
-      success: false,
-      error: 'Electron API not available'
+      success: true,
+      data: {
+        projectName: 'Development Mode',
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+        currentPhase: 'Planning',
+        phases: [],
+        waves: [],
+      },
     }),
 
     getSystemHealth: async () => ({
-      success: false,
-      error: 'Electron API not available'
+      success: true,
+      data: {
+        logicEngineStatus: 'offline',
+        powerShellStatus: 'offline',
+        dataConnectionStatus: 'offline',
+        lastHealthCheck: new Date().toISOString(),
+        warnings: ['Running in development mode without Electron'],
+      },
     }),
 
     getRecentActivity: async () => ({
-      success: false,
+      success: true,
       data: [],
-      error: 'Electron API not available'
     }),
 
     acknowledgeAlert: async () => {

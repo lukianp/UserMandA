@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import { getElectronAPI } from '../lib/electron-api-fallback';
 import {
   DiscoveryResult,
   DiscoveryProgress,
@@ -87,9 +88,10 @@ export const useAzureDiscoveryLogic = () => {
 
   // Progress streaming handler
   useEffect(() => {
-    if (!window.electronAPI.onProgress) return;
+    const api = getElectronAPI();
+    if (!api || !api.onProgress) return () => {};
 
-    const unsubscribe = window.electronAPI.onProgress((data) => {
+    const unsubscribe = api.onProgress((data) => {
       // Convert ProgressData to DiscoveryProgress
       const progressData: DiscoveryProgress = {
         percentage: data.percentage,
@@ -117,9 +119,10 @@ export const useAzureDiscoveryLogic = () => {
 
   // Output streaming handler
   useEffect(() => {
-    if (!window.electronAPI.onOutput) return;
+    const api = getElectronAPI();
+    if (!api || !api.onOutput) return () => {};
 
-    const unsubscribe = window.electronAPI.onOutput((data) => {
+    const unsubscribe = api.onOutput((data) => {
       // Convert OutputData to expected format
       if (data.type === 'error' && data.data) {
         addLog(`[ERROR] ${data.data}`);
@@ -139,7 +142,8 @@ export const useAzureDiscoveryLogic = () => {
     addLog('Testing connection to Azure AD...');
 
     try {
-      const result = await window.electronAPI.executeModule({
+      const api = getElectronAPI();
+      const result = await api.executeModule({
         modulePath: 'Modules/Discovery/AzureDiscovery.psm1',
         functionName: 'Test-AzureConnection',
         parameters: {
@@ -201,7 +205,8 @@ export const useAzureDiscoveryLogic = () => {
     addLog(`Services: ${services.join(', ')}`);
 
     try {
-      const result = await window.electronAPI.executeModule({
+      const api = getElectronAPI();
+      const result = await api.executeModule({
         modulePath: 'Modules/Discovery/AzureDiscovery.psm1',
         functionName: 'Invoke-AzureDiscovery',
         parameters: {
@@ -274,7 +279,8 @@ export const useAzureDiscoveryLogic = () => {
     addLog('Cancelling discovery...');
 
     try {
-      const cancelled = await window.electronAPI.cancelExecution(currentToken);
+      const api = getElectronAPI();
+      const cancelled = await api.cancelExecution(currentToken);
       if (cancelled) {
         addLog('Discovery cancelled successfully');
         setIsRunning(false);
@@ -294,7 +300,8 @@ export const useAzureDiscoveryLogic = () => {
   const exportResults = useCallback(() => {
     if (results.length === 0) return;
 
-    window.electronAPI.writeFile(
+    const api = getElectronAPI();
+    api.writeFile(
       `azure-discovery-${Date.now()}.json`,
       JSON.stringify(results, null, 2)
     );

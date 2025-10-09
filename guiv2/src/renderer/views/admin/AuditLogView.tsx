@@ -238,3 +238,6 @@ export const AuditLogView: React.FC = () => {
     </div>
   );
 };
+
+
+export default AuditLogView;

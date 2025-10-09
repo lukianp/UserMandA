@@ -78,3 +78,6 @@ export const PermissionsView: React.FC = () => {
     </div>
   );
 };
+
+
+export default PermissionsView;

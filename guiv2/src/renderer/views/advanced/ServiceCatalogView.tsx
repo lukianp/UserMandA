@@ -38,3 +38,6 @@ export const ServiceCatalogView: React.FC = () => {
     </div>
   );
 };
+
+
+export default ServiceCatalogView;

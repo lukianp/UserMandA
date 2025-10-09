@@ -3,49 +3,49 @@ import DataTable from '../../components/organisms/DataTable';
 import { useEndpointDevicesLogic } from '../../hooks/infrastructure/useEndpointDevicesLogic';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw } from 'lucide-react';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColDef } from 'ag-grid-community';
 import type { EndpointDevicesData } from '../../hooks/infrastructure/useEndpointDevicesLogic';
 
 const EndpointDevicesView: React.FC = () => {
   const { data, isLoading, error, reload } = useEndpointDevicesLogic();
 
-  const columns: ColumnDef<EndpointDevicesData>[] = [
+  const columns: ColDef<EndpointDevicesData>[] = [
     {
-      accessorKey: 'deviceName',
-      header: 'Device Name',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'deviceName',
+      headerName: 'Device Name',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'type',
-      header: 'Type',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'type',
+      headerName: 'Type',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'user',
-      header: 'User',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'user',
+      headerName: 'User',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'os',
-      header: 'OS',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'os',
+      headerName: 'OS',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'lastSeen',
-      header: 'Last Seen',
-      enableSorting: true,
+      field: 'lastSeen',
+      headerName: 'Last Seen',
+      sortable: true,
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
-      enableSorting: true,
-      enableColumnFilter: true,
-      cell: ({ getValue }) => {
-        const status = getValue() as string;
+      field: 'status',
+      headerName: 'Status',
+      sortable: true,
+      filter: true,
+      cellRenderer: ({ value }: any) => {
+        const status = value as string;
         const statusClass =
           status === 'Active'
             ? 'text-success'

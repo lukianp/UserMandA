@@ -45,3 +45,6 @@ export const CloudMigrationPlannerView: React.FC = () => {
     </div>
   );
 };
+
+
+export default CloudMigrationPlannerView;

@@ -345,3 +345,6 @@ describe('MFAManagementView', () => {
     });
   });
 });
+
+
+export default MFAManagementView.test;

@@ -25,3 +25,6 @@ export const NotificationRulesView: React.FC = () => {
     </div>
   );
 };
+
+
+export default NotificationRulesView;

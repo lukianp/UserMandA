@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { DiscoveryResult } from '../types/models/discovery';
+import { getElectronAPI } from '../lib/electron-api-fallback';
 
 export interface InfrastructureData {
   id: string;
@@ -30,7 +31,8 @@ export const useInfrastructureLogic = () => {
   const loadInfrastructure = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await window.electronAPI.executeModule({
+      const electronAPI = getElectronAPI();
+      const result = await electronAPI.executeModule({
         modulePath: 'Modules/Discovery/InfrastructureDiscovery.psm1',
         functionName: 'Get-InfrastructureInventory',
         parameters: {},
@@ -73,7 +75,8 @@ export const useInfrastructureLogic = () => {
   });
 
   const handleExport = useCallback(() => {
-    window.electronAPI.writeFile(
+    const electronAPI = getElectronAPI();
+    electronAPI.writeFile(
       `infrastructure-${Date.now()}.json`,
       JSON.stringify(filteredInfrastructure, null, 2)
     );

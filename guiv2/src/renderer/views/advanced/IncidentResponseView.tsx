@@ -38,3 +38,6 @@ export const IncidentResponseView: React.FC = () => {
     </div>
   );
 };
+
+
+export default IncidentResponseView;

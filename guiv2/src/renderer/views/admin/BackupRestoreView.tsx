@@ -84,3 +84,6 @@ export const BackupRestoreView: React.FC = () => {
     </div>
   );
 };
+
+
+export default BackupRestoreView;

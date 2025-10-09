@@ -345,3 +345,6 @@ describe('PerformanceDashboardView', () => {
     });
   });
 });
+
+
+export default PerformanceDashboardView.test;

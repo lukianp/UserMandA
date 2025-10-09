@@ -345,3 +345,6 @@ describe('LicenseOptimizationView', () => {
     });
   });
 });
+
+
+export default LicenseOptimizationView.test;

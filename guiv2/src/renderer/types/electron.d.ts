@@ -303,24 +303,99 @@ export interface ElectronAPI {
   // ========================================
 
   /**
-   * Load all profiles from disk
-   * @returns Promise resolving to array of profiles
+   * Load all source profiles from disk
+   * @returns Promise resolving to array of source profiles
    */
-  loadProfiles: () => Promise<any[]>;
+  loadSourceProfiles: () => Promise<any[]>;
 
   /**
-   * Save a profile to disk
+   * Load all target profiles from disk
+   * @returns Promise resolving to array of target profiles
+   */
+  loadTargetProfiles: () => Promise<any[]>;
+
+  /**
+   * Get the active source profile
+   * @returns Promise resolving to active source profile or null
+   */
+  getActiveSourceProfile: () => Promise<any | null>;
+
+  /**
+   * Get the active target profile
+   * @returns Promise resolving to active target profile or null
+   */
+  getActiveTargetProfile: () => Promise<any | null>;
+
+  /**
+   * Create a new source profile
    * @param profile Profile data
-   * @returns Promise resolving when profile is saved
+   * @returns Promise resolving to operation result
    */
-  saveProfile: (profile: any) => Promise<void>;
+  createSourceProfile: (profile: any) => Promise<{ success: boolean; error?: string; profile?: any }>;
 
   /**
-   * Delete a profile from disk
-   * @param profileId Profile ID
-   * @returns Promise resolving when profile is deleted
+   * Create a new target profile
+   * @param profile Profile data
+   * @returns Promise resolving to operation result
    */
-  deleteProfile: (profileId: string) => Promise<void>;
+  createTargetProfile: (profile: any) => Promise<{ success: boolean; error?: string; profile?: any }>;
+
+  /**
+   * Update an existing source profile
+   * @param profileId Profile ID
+   * @param updates Profile updates
+   * @returns Promise resolving to operation result
+   */
+  updateSourceProfile: (profileId: string, updates: any) => Promise<{ success: boolean; error?: string; profile?: any }>;
+
+  /**
+   * Update an existing target profile
+   * @param profileId Profile ID
+   * @param updates Profile updates
+   * @returns Promise resolving to operation result
+   */
+  updateTargetProfile: (profileId: string, updates: any) => Promise<{ success: boolean; error?: string; profile?: any }>;
+
+  /**
+   * Delete a source profile
+   * @param profileId Profile ID
+   * @returns Promise resolving to operation result
+   */
+  deleteSourceProfile: (profileId: string) => Promise<{ success: boolean; error?: string }>;
+
+  /**
+   * Delete a target profile
+   * @param profileId Profile ID
+   * @returns Promise resolving to operation result
+   */
+  deleteTargetProfile: (profileId: string) => Promise<{ success: boolean; error?: string }>;
+
+  /**
+   * Set the active source profile
+   * @param profileId Profile ID
+   * @returns Promise resolving to operation result
+   */
+  setActiveSourceProfile: (profileId: string) => Promise<{ success: boolean; error?: string; dataPath?: string }>;
+
+  /**
+   * Set the active target profile
+   * @param profileId Profile ID
+   * @returns Promise resolving to operation result
+   */
+  setActiveTargetProfile: (profileId: string) => Promise<{ success: boolean; error?: string }>;
+
+  /**
+   * Refresh profile list from disk
+   * @returns Promise resolving to operation result with updated profiles
+   */
+  refreshProfiles: () => Promise<{ success: boolean; error?: string; profiles: any[] }>;
+
+  /**
+   * Get the data path for a profile
+   * @param profileName Profile name
+   * @returns Promise resolving to profile data path
+   */
+  getProfileDataPath: (profileName: string) => Promise<{ success: boolean; path?: string; error?: string }>;
 
   // ========================================
   // Event Listeners (for progress/output streaming)

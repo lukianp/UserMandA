@@ -38,3 +38,6 @@ export const CapacityPlanningView: React.FC = () => {
     </div>
   );
 };
+
+
+export default CapacityPlanningView;

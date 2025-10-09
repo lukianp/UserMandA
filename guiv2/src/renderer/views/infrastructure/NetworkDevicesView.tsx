@@ -3,49 +3,49 @@ import DataTable from '../../components/organisms/DataTable';
 import { useNetworkDevicesLogic } from '../../hooks/infrastructure/useNetworkDevicesLogic';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw } from 'lucide-react';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColDef } from 'ag-grid-community';
 import type { NetworkDevicesData } from '../../hooks/infrastructure/useNetworkDevicesLogic';
 
 const NetworkDevicesView: React.FC = () => {
   const { data, isLoading, error, reload } = useNetworkDevicesLogic();
 
-  const columns: ColumnDef<NetworkDevicesData>[] = [
+  const columns: ColDef<NetworkDevicesData>[] = [
     {
-      accessorKey: 'deviceName',
-      header: 'Device Name',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'deviceName',
+      headerName: 'Device Name',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'type',
-      header: 'Type',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'type',
+      headerName: 'Type',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'model',
-      header: 'Model',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'model',
+      headerName: 'Model',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'ports',
-      header: 'Ports',
-      enableSorting: true,
+      field: 'ports',
+      headerName: 'Ports',
+      sortable: true,
     },
     {
-      accessorKey: 'management',
-      header: 'Management',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'management',
+      headerName: 'Management',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
-      enableSorting: true,
-      enableColumnFilter: true,
-      cell: ({ getValue }) => {
-        const status = getValue() as string;
+      field: 'status',
+      headerName: 'Status',
+      sortable: true,
+      filter: true,
+      cellRenderer: ({ value }: any) => {
+        const status = value as string;
         const statusClass =
           status === 'Online'
             ? 'text-success'

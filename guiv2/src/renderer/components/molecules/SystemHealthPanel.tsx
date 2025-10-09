@@ -122,10 +122,10 @@ export const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({ health, cl
             Network
           </span>
           <StatusIndicator
-            status={getStatusType(health.networkStatus.status)}
-            text={health.networkStatus.status}
+            status={getStatusType(health?.networkStatus?.status || 'unknown')}
+            text={health?.networkStatus?.status || 'unknown'}
             size="sm"
-            animate={health.networkStatus.status === 'online'}
+            animate={health?.networkStatus?.status === 'online'}
           />
         </div>
 
@@ -138,12 +138,12 @@ export const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({ health, cl
             </span>
           </div>
           <span className="text-sm font-medium text-[var(--text-primary)]">
-            {formatFreshness(health.dataFreshnessMinutes)}
+            {formatFreshness(health?.dataFreshnessMinutes || 0)}
           </span>
         </div>
 
         {/* Error Count */}
-        {health.lastErrorCount > 0 && (
+        {(health?.lastErrorCount || 0) > 0 && (
           <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--danger)]/10 border border-[var(--danger)]/20">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-[var(--danger)]" />
@@ -152,13 +152,13 @@ export const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({ health, cl
               </span>
             </div>
             <span className="text-sm font-bold text-[var(--danger)]">
-              {health.lastErrorCount}
+              {health?.lastErrorCount || 0}
             </span>
           </div>
         )}
 
         {/* Performance Metrics (Optional) */}
-        {health.memoryUsageMB && (
+        {health?.memoryUsageMB && (
           <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-2">
             <div className="flex justify-between text-xs">
               <span className="text-[var(--text-secondary)]">Memory Usage</span>
@@ -166,7 +166,7 @@ export const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({ health, cl
                 {health.memoryUsageMB.toFixed(0)} MB
               </span>
             </div>
-            {health.cpuUsagePercent !== undefined && (
+            {health?.cpuUsagePercent !== undefined && (
               <div className="flex justify-between text-xs">
                 <span className="text-[var(--text-secondary)]">CPU Usage</span>
                 <span className="font-medium text-[var(--text-primary)]">

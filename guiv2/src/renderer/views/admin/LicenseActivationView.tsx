@@ -100,3 +100,6 @@ export const LicenseActivationView: React.FC = () => {
     </div>
   );
 };
+
+
+export default LicenseActivationView;

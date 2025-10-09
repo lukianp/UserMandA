@@ -20,6 +20,7 @@ import type {
   ProgressData,
   OutputData,
 } from '../types/electron';
+import { getElectronAPI } from '../lib/electron-api-fallback';
 
 /**
  * Cached result with metadata
@@ -81,56 +82,73 @@ export class PowerShellService {
    * Mirrors C# event handling patterns
    */
   private setupEventListeners(): void {
+    const api = getElectronAPI();
+    if (!api) return;
+
     // Progress events
-    window.electronAPI.onProgress((data: ProgressData) => {
-      const callback = this.progressCallbacks.get(data.executionId);
-      if (callback) {
-        callback(data);
-      }
-    });
+    if (api.onProgress) {
+      api.onProgress((data: ProgressData) => {
+        const callback = this.progressCallbacks.get(data.executionId);
+        if (callback) {
+          callback(data);
+        }
+      });
+    }
 
     // Output events - handle all 6 PowerShell streams
-    window.electronAPI.onOutputStream((data: OutputData) => {
-      const callback = this.outputCallbacks.get(data.executionId);
-      if (callback) {
-        callback(data);
-      }
-    });
+    if (api.onOutputStream) {
+      api.onOutputStream((data: OutputData) => {
+        const callback = this.outputCallbacks.get(data.executionId);
+        if (callback) {
+          callback(data);
+        }
+      });
+    }
 
-    window.electronAPI.onErrorStream((data: OutputData) => {
-      const callback = this.outputCallbacks.get(data.executionId);
-      if (callback) {
-        callback(data);
-      }
-    });
+    if (api.onErrorStream) {
+      api.onErrorStream((data: OutputData) => {
+        const callback = this.outputCallbacks.get(data.executionId);
+        if (callback) {
+          callback(data);
+        }
+      });
+    }
 
-    window.electronAPI.onWarningStream((data: OutputData) => {
-      const callback = this.outputCallbacks.get(data.executionId);
-      if (callback) {
-        callback(data);
-      }
-    });
+    if (api.onWarningStream) {
+      api.onWarningStream((data: OutputData) => {
+        const callback = this.outputCallbacks.get(data.executionId);
+        if (callback) {
+          callback(data);
+        }
+      });
+    }
 
-    window.electronAPI.onVerboseStream((data: OutputData) => {
-      const callback = this.outputCallbacks.get(data.executionId);
-      if (callback) {
-        callback(data);
-      }
-    });
+    if (api.onVerboseStream) {
+      api.onVerboseStream((data: OutputData) => {
+        const callback = this.outputCallbacks.get(data.executionId);
+        if (callback) {
+          callback(data);
+        }
+      });
+    }
 
-    window.electronAPI.onDebugStream((data: OutputData) => {
-      const callback = this.outputCallbacks.get(data.executionId);
-      if (callback) {
-        callback(data);
-      }
-    });
+    if (api.onDebugStream) {
+      api.onDebugStream((data: OutputData) => {
+        const callback = this.outputCallbacks.get(data.executionId);
+        if (callback) {
+          callback(data);
+        }
+      });
+    }
 
-    window.electronAPI.onInformationStream((data: OutputData) => {
-      const callback = this.outputCallbacks.get(data.executionId);
-      if (callback) {
-        callback(data);
-      }
-    });
+    if (api.onInformationStream) {
+      api.onInformationStream((data: OutputData) => {
+        const callback = this.outputCallbacks.get(data.executionId);
+        if (callback) {
+          callback(data);
+        }
+      });
+    }
   }
 
   /**
@@ -147,6 +165,8 @@ export class PowerShellService {
     parameters: Record<string, any> = {},
     options: ExecutionOptions = {}
   ): Promise<ExecutionResult<T>> {
+    const api = getElectronAPI();
+
     // Build script arguments from parameters (mirrors C# parameter building)
     const args = Object.entries(parameters).map(([key, value]) => {
       if (typeof value === 'boolean') {
@@ -174,14 +194,14 @@ export class PowerShellService {
     };
 
     try {
-      const result = await window.electronAPI.executeScript<T>(params);
+      const result = await api.executeScript<T>(params);
 
       // Validate result structure like C# does
       if (!result.success) {
         throw new Error(result.error || 'PowerShell execution failed');
       }
 
-      return result;
+      return result as ExecutionResult<T>;
     } catch (error: any) {
       console.error(`PowerShell script execution failed: ${scriptPath}`, error);
       throw error;
@@ -204,6 +224,8 @@ export class PowerShellService {
     parameters: Record<string, any> = {},
     options: ExecutionOptions = {}
   ): Promise<ExecutionResult<T>> {
+    const api = getElectronAPI();
+
     const params: ModuleExecutionParams = {
       modulePath,
       functionName,
@@ -217,14 +239,14 @@ export class PowerShellService {
     };
 
     try {
-      const result = await window.electronAPI.executeModule<T>(params);
+      const result = await api.executeModule<T>(params);
 
       // Validate result structure like C# does
       if (!result.success) {
         throw new Error(result.error || 'PowerShell module execution failed');
       }
 
-      return result;
+      return result as ExecutionResult<T>;
     } catch (error: any) {
       console.error(`PowerShell module execution failed: ${modulePath}:${functionName}`, error);
       throw error;
@@ -348,8 +370,10 @@ export class PowerShellService {
    * @returns Promise resolving to true if cancelled successfully
    */
   async cancelExecution(cancellationToken: string): Promise<boolean> {
+    const api = getElectronAPI();
+
     try {
-      const cancelled = await window.electronAPI.cancelExecution(cancellationToken);
+      const cancelled = await api.cancelExecution(cancellationToken);
       if (cancelled) {
         console.log(`[PowerShellService] Execution cancelled: ${cancellationToken}`);
         // Clean up callbacks

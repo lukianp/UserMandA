@@ -45,3 +45,6 @@ export const DataGovernanceView: React.FC = () => {
     </div>
   );
 };
+
+
+export default DataGovernanceView;

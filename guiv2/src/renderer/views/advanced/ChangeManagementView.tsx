@@ -38,3 +38,6 @@ export const ChangeManagementView: React.FC = () => {
     </div>
   );
 };
+
+
+export default ChangeManagementView;

@@ -46,3 +46,6 @@ export const ScriptLibraryView: React.FC = () => {
     </div>
   );
 };
+
+
+export default ScriptLibraryView;

@@ -45,3 +45,6 @@ export const SoftwareLicenseComplianceView: React.FC = () => {
     </div>
   );
 };
+
+
+export default SoftwareLicenseComplianceView;

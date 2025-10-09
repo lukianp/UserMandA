@@ -345,3 +345,6 @@ describe('AssetLifecycleView', () => {
     });
   });
 });
+
+
+export default AssetLifecycleView.test;

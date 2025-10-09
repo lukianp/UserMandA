@@ -25,3 +25,6 @@ export const CustomFieldsView: React.FC = () => {
     </div>
   );
 };
+
+
+export default CustomFieldsView;

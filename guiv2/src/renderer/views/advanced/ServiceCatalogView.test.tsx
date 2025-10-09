@@ -345,3 +345,6 @@ describe('ServiceCatalogView', () => {
     });
   });
 });
+
+
+export default ServiceCatalogView.test;

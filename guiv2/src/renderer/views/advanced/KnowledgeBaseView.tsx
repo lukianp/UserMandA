@@ -38,3 +38,6 @@ export const KnowledgeBaseView: React.FC = () => {
     </div>
   );
 };
+
+
+export default KnowledgeBaseView;

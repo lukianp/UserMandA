@@ -233,3 +233,6 @@ export const UserManagementView: React.FC = () => {
     </div>
   );
 };
+
+
+export default UserManagementView;

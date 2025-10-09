@@ -345,3 +345,6 @@ describe('SSOConfigurationView', () => {
     });
   });
 });
+
+
+export default SSOConfigurationView.test;

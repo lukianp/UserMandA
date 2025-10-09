@@ -45,3 +45,6 @@ export const EndpointProtectionView: React.FC = () => {
     </div>
   );
 };
+
+
+export default EndpointProtectionView;

@@ -345,3 +345,6 @@ describe('SoftwareLicenseComplianceView', () => {
     });
   });
 });
+
+
+export default SoftwareLicenseComplianceView.test;

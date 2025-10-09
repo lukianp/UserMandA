@@ -181,3 +181,6 @@ export const SystemConfigurationView: React.FC = () => {
     </div>
   );
 };
+
+
+export default SystemConfigurationView;

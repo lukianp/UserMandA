@@ -45,3 +45,6 @@ export const SSOConfigurationView: React.FC = () => {
     </div>
   );
 };
+
+
+export default SSOConfigurationView;

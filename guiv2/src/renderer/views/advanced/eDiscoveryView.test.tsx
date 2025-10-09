@@ -352,3 +352,6 @@ describe('EDiscoveryView', () => {
     });
   });
 });
+
+
+export default eDiscoveryView.test;

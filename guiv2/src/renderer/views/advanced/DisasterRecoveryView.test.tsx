@@ -345,3 +345,6 @@ describe('DisasterRecoveryView', () => {
     });
   });
 });
+
+
+export default DisasterRecoveryView.test;

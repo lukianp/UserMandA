@@ -188,3 +188,6 @@ export const RoleManagementView: React.FC = () => {
     </div>
   );
 };
+
+
+export default RoleManagementView;

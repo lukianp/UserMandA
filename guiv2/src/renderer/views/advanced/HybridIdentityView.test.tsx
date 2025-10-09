@@ -345,3 +345,6 @@ describe('HybridIdentityView', () => {
     });
   });
 });
+
+
+export default HybridIdentityView.test;

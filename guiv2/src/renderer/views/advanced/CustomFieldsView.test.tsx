@@ -345,3 +345,6 @@ describe('CustomFieldsView', () => {
     });
   });
 });
+
+
+export default CustomFieldsView.test;

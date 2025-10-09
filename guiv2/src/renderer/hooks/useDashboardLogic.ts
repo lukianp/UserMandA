@@ -95,25 +95,22 @@ export const useDashboardLogic = (): UseDashboardLogicReturn => {
     } catch (err: any) {
       console.error('Failed to acknowledge alert:', err);
     }
-  }, [loadDashboardData]);
+  }, []); // loadDashboardData is stable, no need to include
 
   /**
-   * Initial load on mount
+   * Initial load and auto-refresh setup
    */
   useEffect(() => {
+    // Initial load
     loadDashboardData();
-  }, [loadDashboardData]);
 
-  /**
-   * Auto-refresh every 30 seconds
-   */
-  useEffect(() => {
+    // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
       loadDashboardData();
-    }, 30000); // 30 seconds
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, [loadDashboardData]);
+  }, []); // Empty dependency array - only run on mount
 
   return {
     stats,

@@ -345,3 +345,6 @@ describe('EndpointProtectionView', () => {
     });
   });
 });
+
+
+export default EndpointProtectionView.test;

@@ -72,28 +72,28 @@ export const useSystemHealthLogic = () => {
       } else {
         // Health check failed, set degraded status
         console.warn('Health check returned no data:', healthResult.error);
-        setSystemStatus({
+        setSystemStatus((prev) => ({
           logicEngine: 'degraded',
           powerShell: 'degraded',
           dataConnection: 'degraded',
-          lastSync: systemStatus.lastSync, // Keep previous sync time
-        });
+          lastSync: prev.lastSync, // Keep previous sync time
+        }));
         setError(healthResult.error || 'Health check failed');
       }
     } catch (err) {
       // Exception during health check
       console.error('Health check exception:', err);
-      setSystemStatus({
+      setSystemStatus((prev) => ({
         logicEngine: 'degraded',
         powerShell: 'degraded',
         dataConnection: 'degraded',
-        lastSync: systemStatus.lastSync, // Keep previous sync time
-      });
+        lastSync: prev.lastSync, // Keep previous sync time
+      }));
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setIsChecking(false);
     }
-  }, [systemStatus.lastSync]);
+  }, []); // No dependencies - use functional updates for state
 
   /**
    * Determine data connection status based on Logic Engine and PowerShell
@@ -128,7 +128,7 @@ export const useSystemHealthLogic = () => {
 
     // Cleanup on unmount
     return () => clearInterval(interval);
-  }, [checkHealth]);
+  }, []); // Empty deps - checkHealth is stable now
 
   return {
     systemStatus,

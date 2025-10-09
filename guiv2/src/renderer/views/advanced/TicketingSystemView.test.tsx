@@ -345,3 +345,6 @@ describe('TicketingSystemView', () => {
     });
   });
 });
+
+
+export default TicketingSystemView.test;

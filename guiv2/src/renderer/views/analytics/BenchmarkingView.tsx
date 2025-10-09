@@ -56,3 +56,6 @@ export const BenchmarkingView: React.FC = () => {
     </div>
   );
 };
+
+
+export default BenchmarkingView;

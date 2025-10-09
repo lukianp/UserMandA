@@ -105,16 +105,60 @@ const electronAPI: ElectronAPI = {
   // Profile Management
   // ========================================
 
-  loadProfiles: () => {
-    return ipcRenderer.invoke('profile:loadAll');
+  loadSourceProfiles: () => {
+    return ipcRenderer.invoke('profile:loadSourceProfiles');
   },
 
-  saveProfile: (profile: unknown) => {
-    return ipcRenderer.invoke('profile:save', profile);
+  loadTargetProfiles: () => {
+    return ipcRenderer.invoke('profile:loadTargetProfiles');
   },
 
-  deleteProfile: (profileId: string) => {
-    return ipcRenderer.invoke('profile:delete', profileId);
+  getActiveSourceProfile: () => {
+    return ipcRenderer.invoke('profile:getActiveSource');
+  },
+
+  getActiveTargetProfile: () => {
+    return ipcRenderer.invoke('profile:getActiveTarget');
+  },
+
+  createSourceProfile: (profile: unknown) => {
+    return ipcRenderer.invoke('profile:createSource', profile);
+  },
+
+  createTargetProfile: (profile: unknown) => {
+    return ipcRenderer.invoke('profile:createTarget', profile);
+  },
+
+  updateSourceProfile: (id: string, updates: unknown) => {
+    return ipcRenderer.invoke('profile:updateSource', id, updates);
+  },
+
+  updateTargetProfile: (id: string, updates: unknown) => {
+    return ipcRenderer.invoke('profile:updateTarget', id, updates);
+  },
+
+  deleteSourceProfile: (profileId: string) => {
+    return ipcRenderer.invoke('profile:deleteSource', profileId);
+  },
+
+  deleteTargetProfile: (profileId: string) => {
+    return ipcRenderer.invoke('profile:deleteTarget', profileId);
+  },
+
+  setActiveSourceProfile: (profileId: string) => {
+    return ipcRenderer.invoke('profile:setActiveSource', profileId);
+  },
+
+  setActiveTargetProfile: (profileId: string) => {
+    return ipcRenderer.invoke('profile:setActiveTarget', profileId);
+  },
+
+  refreshProfiles: () => {
+    return ipcRenderer.invoke('profile:refresh');
+  },
+
+  getProfileDataPath: (profileId: string) => {
+    return ipcRenderer.invoke('profile:getDataPath', profileId);
   },
 
   // ========================================

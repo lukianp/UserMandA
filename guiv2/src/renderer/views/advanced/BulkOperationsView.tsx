@@ -25,3 +25,6 @@ export const BulkOperationsView: React.FC = () => {
     </div>
   );
 };
+
+
+export default BulkOperationsView;

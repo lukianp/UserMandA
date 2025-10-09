@@ -46,7 +46,7 @@ interface ProfileState {
   createSourceProfile: (profile: Omit<CompanyProfile, 'id' | 'createdAt'>) => Promise<string>;
   updateSourceProfile: (id: string, updates: Partial<CompanyProfile>) => Promise<void>;
   deleteSourceProfile: (id: string) => Promise<void>;
-  setSelectedSourceProfile: (profile: CompanyProfile | null) => void;
+  setSelectedSourceProfile: (profile: CompanyProfile | null) => Promise<void>;
   setSelectedTargetProfile: (profile: TargetProfile | null) => void;
   testConnection: (profile: CompanyProfile) => Promise<any>;
   clearError: () => void;
@@ -73,14 +73,14 @@ export const useProfileStore = create<ProfileState>()(
     // Actions
 
     /**
-     * Load source profiles from disk
+     * Load source profiles from disk (includes auto-discovered profiles from C:\DiscoveryData)
      * Mirrors C# ProfileService.GetProfilesAsync
      */
     loadSourceProfiles: async () => {
       set({ isLoading: true, error: null });
       try {
         const electronAPI = getElectronAPI();
-        const profiles = await electronAPI.loadProfiles();
+        const profiles = await electronAPI.loadSourceProfiles();
         set({
           sourceProfiles: profiles as CompanyProfile[],
           isLoading: false,
@@ -98,16 +98,18 @@ export const useProfileStore = create<ProfileState>()(
      * Mirrors C# TargetProfileService.GetProfilesAsync
      */
     loadTargetProfiles: async () => {
+      set({ isLoading: true, error: null });
       try {
-        const currentSource = get().getCurrentSourceProfile();
-        if (!currentSource) return;
-
-        // In real implementation, this would call an IPC handler
-        // For now, return empty array
-        set({ targetProfiles: [] });
+        const electronAPI = getElectronAPI();
+        const profiles = await electronAPI.loadTargetProfiles();
+        set({
+          targetProfiles: profiles as TargetProfile[],
+          isLoading: false,
+          selectedTargetProfile: profiles.find((p: any) => p.isActive) || profiles[0] || null,
+        });
       } catch (error: any) {
         console.error('Failed to load target profiles:', error);
-        set({ error: error.message });
+        set({ error: error.message || 'Failed to load target profiles', isLoading: false });
       }
     },
 
@@ -116,25 +118,24 @@ export const useProfileStore = create<ProfileState>()(
      * Mirrors C# ProfileService.CreateProfileAsync
      */
     createSourceProfile: async (profileData) => {
-      const newProfile: CompanyProfile = {
+      const electronAPI = getElectronAPI();
+
+      const result = await electronAPI.createSourceProfile({
         ...profileData,
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        lastModified: new Date().toISOString(),
         isActive: false,
         // Mirror C# default values
         domainController: profileData.domainController || `dc.${profileData.companyName.toLowerCase()}.com`,
         tenantId: profileData.tenantId || crypto.randomUUID(),
         configuration: profileData.configuration || {},
-      } as CompanyProfile;
+      });
 
-      const electronAPI = getElectronAPI();
-      await electronAPI.saveProfile(newProfile);
-
-      const updatedProfiles = [...get().sourceProfiles, newProfile];
-      set({ sourceProfiles: updatedProfiles });
-
-      return newProfile.id;
+      if (result.success && result.profile) {
+        const updatedProfiles = [...get().sourceProfiles, result.profile as CompanyProfile];
+        set({ sourceProfiles: updatedProfiles });
+        return result.profile.id;
+      } else {
+        throw new Error(result.error || 'Failed to create profile');
+      }
     },
 
     /**
@@ -143,13 +144,16 @@ export const useProfileStore = create<ProfileState>()(
      */
     updateSourceProfile: async (id, updates) => {
       const electronAPI = getElectronAPI();
-      await electronAPI.saveProfile({ id, ...updates } as any);
+      const result = await electronAPI.updateSourceProfile(id, updates);
 
-      const updatedProfiles = get().sourceProfiles.map((p) =>
-        p.id === id ? { ...p, ...updates, lastModified: new Date().toISOString() } : p
-      );
-
-      set({ sourceProfiles: updatedProfiles });
+      if (result.success && result.profile) {
+        const updatedProfiles = get().sourceProfiles.map((p) =>
+          p.id === id ? (result.profile as CompanyProfile) : p
+        );
+        set({ sourceProfiles: updatedProfiles });
+      } else {
+        throw new Error(result.error || 'Failed to update profile');
+      }
     },
 
     /**
@@ -158,29 +162,46 @@ export const useProfileStore = create<ProfileState>()(
      */
     deleteSourceProfile: async (id) => {
       const electronAPI = getElectronAPI();
-      await electronAPI.deleteProfile(id);
+      const result = await electronAPI.deleteSourceProfile(id);
 
-      const updatedProfiles = get().sourceProfiles.filter((p) => p.id !== id);
-      set({
-        sourceProfiles: updatedProfiles,
-        selectedSourceProfile: get().selectedSourceProfile?.id === id ? null : get().selectedSourceProfile,
-      });
+      if (result.success) {
+        const updatedProfiles = get().sourceProfiles.filter((p) => p.id !== id);
+        set({
+          sourceProfiles: updatedProfiles,
+          selectedSourceProfile: get().selectedSourceProfile?.id === id ? null : get().selectedSourceProfile,
+        });
+      } else {
+        throw new Error(result.error || 'Failed to delete profile');
+      }
     },
 
     /**
      * Set selected source profile
      * Mirrors C# ProfileService.SetCurrentProfileAsync
      */
-    setSelectedSourceProfile: (profile) => {
-      set({ selectedSourceProfile: profile });
+    setSelectedSourceProfile: async (profile) => {
+      if (!profile) {
+        set({ selectedSourceProfile: null });
+        return;
+      }
 
-      // Mirror C# CurrentProfile property update
-      if (profile) {
+      const electronAPI = getElectronAPI();
+      const result = await electronAPI.setActiveSourceProfile(profile.id);
+
+      if (result.success) {
+        // Update local state
         const updatedProfiles = get().sourceProfiles.map((p) => ({
           ...p,
           isActive: p.id === profile.id,
         }));
-        set({ sourceProfiles: updatedProfiles });
+        set({
+          sourceProfiles: updatedProfiles,
+          selectedSourceProfile: profile
+        });
+
+        console.log(`[ProfileStore] Active source profile changed: ${profile.companyName}, data path: ${result.dataPath}`);
+      } else {
+        throw new Error(result.error || 'Failed to set active profile');
       }
     },
 

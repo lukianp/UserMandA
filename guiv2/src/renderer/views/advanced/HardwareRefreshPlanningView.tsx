@@ -45,3 +45,6 @@ export const HardwareRefreshPlanningView: React.FC = () => {
     </div>
   );
 };
+
+
+export default HardwareRefreshPlanningView;

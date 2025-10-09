@@ -345,3 +345,6 @@ describe('PrivilegedAccessView', () => {
     });
   });
 });
+
+
+export default PrivilegedAccessView.test;

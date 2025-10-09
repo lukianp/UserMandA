@@ -3,44 +3,44 @@ import DataTable from '../../components/organisms/DataTable';
 import { useNetworkTopologyLogic } from '../../hooks/infrastructure/useNetworkTopologyLogic';
 import { Button } from '../../components/atoms/Button';
 import { RefreshCw } from 'lucide-react';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColDef } from 'ag-grid-community';
 import type { NetworkTopologyData } from '../../hooks/infrastructure/useNetworkTopologyLogic';
 
 const NetworkTopologyView: React.FC = () => {
   const { data, isLoading, error, reload } = useNetworkTopologyLogic();
 
-  const columns: ColumnDef<NetworkTopologyData>[] = [
+  const columns: ColDef<NetworkTopologyData>[] = [
     {
-      accessorKey: 'deviceName',
-      header: 'Device Name',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'deviceName',
+      headerName: 'Device Name',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'ipAddress',
-      header: 'IP Address',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'ipAddress',
+      headerName: 'IP Address',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'deviceType',
-      header: 'Device Type',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'deviceType',
+      headerName: 'Device Type',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'location',
-      header: 'Location',
-      enableSorting: true,
-      enableColumnFilter: true,
+      field: 'location',
+      headerName: 'Location',
+      sortable: true,
+      filter: true,
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
-      enableSorting: true,
-      enableColumnFilter: true,
-      cell: ({ getValue }) => {
-        const status = getValue() as string;
+      field: 'status',
+      headerName: 'Status',
+      sortable: true,
+      filter: true,
+      cellRenderer: ({ value }: any) => {
+        const status = value as string;
         const statusClass =
           status === 'Online'
             ? 'text-success'

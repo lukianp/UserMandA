@@ -174,3 +174,6 @@ export const AboutView: React.FC = () => {
     </div>
   );
 };
+
+
+export default AboutView;

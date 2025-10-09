@@ -25,3 +25,6 @@ export const PerformanceDashboardView: React.FC = () => {
     </div>
   );
 };
+
+
+export default PerformanceDashboardView;

@@ -38,3 +38,6 @@ export const ResourceOptimizationView: React.FC = () => {
     </div>
   );
 };
+
+
+export default ResourceOptimizationView;

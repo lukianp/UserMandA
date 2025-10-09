@@ -25,3 +25,6 @@ export const DiagnosticsView: React.FC = () => {
     </div>
   );
 };
+
+
+export default DiagnosticsView;

@@ -45,3 +45,6 @@ export const RetentionPolicyView: React.FC = () => {
     </div>
   );
 };
+
+
+export default RetentionPolicyView;

@@ -345,3 +345,6 @@ describe('ResourceOptimizationView', () => {
     });
   });
 });
+
+
+export default ResourceOptimizationView.test;

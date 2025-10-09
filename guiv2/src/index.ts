@@ -34,6 +34,22 @@ const createWindow = (): void => {
     mainWindow.show();
   });
 
+  // Set CSP headers to allow data URIs for images (Tailwind CSS uses them)
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'; " +
+          "img-src 'self' data: blob:; " +
+          "style-src 'self' 'unsafe-inline'; " +
+          "script-src 'self' 'unsafe-eval'; " +
+          "connect-src 'self' ws: wss:;"
+        ]
+      }
+    });
+  });
+
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 

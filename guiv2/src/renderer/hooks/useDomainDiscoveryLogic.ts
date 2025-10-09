@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import { getElectronAPI } from '../lib/electron-api-fallback';
 import {
   DiscoveryResult,
   DiscoveryProgress,
@@ -87,9 +88,10 @@ export const useDomainDiscoveryLogic = () => {
 
   // Progress streaming handler
   useEffect(() => {
-    if (!window.electronAPI.onProgress) return;
+    const api = getElectronAPI();
+    if (!api || !api.onProgress) return () => {};
 
-    const unsubscribe = window.electronAPI.onProgress((data) => {
+    const unsubscribe = api.onProgress((data) => {
       // Convert ProgressData to DiscoveryProgress
       const progressData: DiscoveryProgress = {
         percentage: data.percentage,
@@ -117,9 +119,10 @@ export const useDomainDiscoveryLogic = () => {
 
   // Output streaming handler
   useEffect(() => {
-    if (!window.electronAPI.onOutput) return;
+    const api = getElectronAPI();
+    if (!api || !api.onOutput) return () => {};
 
-    const unsubscribe = window.electronAPI.onOutput((data) => {
+    const unsubscribe = api.onOutput((data) => {
       // Convert OutputData to expected format
       if (data.type === 'error' && data.data) {
         addLog(`[ERROR] ${data.data}`);
@@ -154,7 +157,8 @@ export const useDomainDiscoveryLogic = () => {
     addLog(`Search Base: ${formData.searchBase || 'Root'}`);
 
     try {
-      const result = await window.electronAPI.executeModule({
+      const api = getElectronAPI();
+      const result = await api.executeModule({
         modulePath: 'Modules/Discovery/ActiveDirectoryDiscovery.psm1',
         functionName: 'Invoke-DomainDiscovery',
         parameters: {
@@ -223,7 +227,8 @@ export const useDomainDiscoveryLogic = () => {
     addLog('Cancelling discovery...');
 
     try {
-      const cancelled = await window.electronAPI.cancelExecution(currentToken);
+      const api = getElectronAPI();
+      const cancelled = await api.cancelExecution(currentToken);
       if (cancelled) {
         addLog('Discovery cancelled successfully');
         setIsRunning(false);
@@ -244,7 +249,8 @@ export const useDomainDiscoveryLogic = () => {
     if (results.length === 0) return;
 
     // This will be handled by ExportDialog
-    window.electronAPI.writeFile(
+    const api = getElectronAPI();
+    api.writeFile(
       `discovery-${Date.now()}.json`,
       JSON.stringify(results, null, 2)
     );

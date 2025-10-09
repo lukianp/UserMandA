@@ -28,6 +28,7 @@ import { useProfileStore } from '../../store/useProfileStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { Button } from '../atoms/Button';
 import { SystemStatus } from '../molecules/SystemStatus';
+import { ProfileSelector } from '../molecules/ProfileSelector';
 import { useSystemHealthLogic } from '../../hooks/useSystemHealthLogic';
 
 /**
@@ -144,28 +145,13 @@ export const Sidebar: React.FC = () => {
 
       {/* Profile Section */}
       <div className="p-4 border-b border-gray-800">
-        <div className="space-y-2">
-          <div>
-            <label className="text-xs text-gray-400">Source Environment</label>
-            <div className="mt-1 p-2 bg-gray-800 rounded text-sm">
-              {selectedSourceProfile ? (
-                <span>{selectedSourceProfile.name}</span>
-              ) : (
-                <span className="text-gray-500">Not selected</span>
-              )}
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-gray-400">Target Environment</label>
-            <div className="mt-1 p-2 bg-gray-800 rounded text-sm">
-              {selectedTargetProfile ? (
-                <span>{selectedTargetProfile.name}</span>
-              ) : (
-                <span className="text-gray-500">Not selected</span>
-              )}
-            </div>
-          </div>
-        </div>
+        <ProfileSelector
+          type="source"
+          label="Source Profile"
+          showActions={true}
+          className="mb-3"
+          data-cy="sidebar-source-profile"
+        />
       </div>
 
       {/* Navigation */}

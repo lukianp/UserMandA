@@ -38,3 +38,6 @@ export const SecurityPostureView: React.FC = () => {
     </div>
   );
 };
+
+
+export default SecurityPostureView;

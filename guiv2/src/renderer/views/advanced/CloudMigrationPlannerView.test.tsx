@@ -348,3 +348,6 @@ describe('CloudMigrationPlannerView', () => {
     });
   });
 });
+
+
+export default CloudMigrationPlannerView.test;

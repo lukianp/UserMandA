@@ -345,3 +345,6 @@ describe('ScriptLibraryView', () => {
     });
   });
 });
+
+
+export default ScriptLibraryView.test;

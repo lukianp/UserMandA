@@ -25,3 +25,6 @@ export const HealthMonitoringView: React.FC = () => {
     </div>
   );
 };
+
+
+export default HealthMonitoringView;

@@ -345,3 +345,6 @@ describe('RetentionPolicyView', () => {
     });
   });
 });
+
+
+export default RetentionPolicyView.test;

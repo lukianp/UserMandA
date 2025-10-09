@@ -38,3 +38,6 @@ export const AssetLifecycleView: React.FC = () => {
     </div>
   );
 };
+
+
+export default AssetLifecycleView;
