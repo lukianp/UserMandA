@@ -8,6 +8,7 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as Papa from 'papaparse';
+import { glob } from 'glob';
 import {
   UserDto, GroupDto, DeviceDto, AppDto, GpoDto, AclEntry,
   MappedDriveDto, MailboxDto, AzureRoleAssignment, SqlDbDto,
@@ -382,14 +383,27 @@ export class LogicEngineService extends EventEmitter {
   // CSV Loading Methods
 
   private async loadUsersStreamingAsync(dataPath: string): Promise<void> {
-    const filePaths = [
-      path.join(dataPath, 'Users.csv'),
-      path.join(dataPath, 'ADUsers.csv'),
-      path.join(dataPath, 'AzureADUsers.csv'),
-      path.join(dataPath, 'ExchangeUsers.csv')
+    // Use glob patterns to match all user-related CSV files (matching old C# GUI behavior)
+    const patterns = [
+      path.join(dataPath, '*Users*.csv'),
+      path.join(dataPath, 'AzureUsers.csv'),
+      path.join(dataPath, 'ActiveDirectoryUsers.csv')
     ];
 
-    for (const filePath of filePaths) {
+    const filePaths: string[] = [];
+    for (const pattern of patterns) {
+      try {
+        const matches = await glob(pattern);
+        filePaths.push(...matches);
+      } catch (err) {
+        console.debug(`No files matched pattern: ${pattern}`);
+      }
+    }
+
+    // Remove duplicates
+    const uniqueFilePaths = [...new Set(filePaths)];
+
+    for (const filePath of uniqueFilePaths) {
       try {
         await fs.access(filePath);
         const content = await fs.readFile(filePath, 'utf-8');
@@ -457,13 +471,27 @@ export class LogicEngineService extends EventEmitter {
   }
 
   private async loadGroupsStreamingAsync(dataPath: string): Promise<void> {
-    const filePaths = [
-      path.join(dataPath, 'Groups.csv'),
-      path.join(dataPath, 'ADGroups.csv'),
-      path.join(dataPath, 'AzureADGroups.csv')
+    // Use glob patterns to match all group-related CSV files (matching old C# GUI behavior)
+    const patterns = [
+      path.join(dataPath, '*Groups*.csv'),
+      path.join(dataPath, 'AzureGroups.csv'),
+      path.join(dataPath, 'ActiveDirectoryGroups.csv')
     ];
 
-    for (const filePath of filePaths) {
+    const filePaths: string[] = [];
+    for (const pattern of patterns) {
+      try {
+        const matches = await glob(pattern);
+        filePaths.push(...matches);
+      } catch (err) {
+        console.debug(`No files matched pattern: ${pattern}`);
+      }
+    }
+
+    // Remove duplicates
+    const uniqueFilePaths = [...new Set(filePaths)];
+
+    for (const filePath of uniqueFilePaths) {
       try {
         await fs.access(filePath);
         const content = await fs.readFile(filePath, 'utf-8');
@@ -527,13 +555,29 @@ export class LogicEngineService extends EventEmitter {
    * Load devices/computers from CSV
    */
   private async loadDevicesStreamingAsync(dataPath: string): Promise<void> {
-    const filePaths = [
-      path.join(dataPath, 'Computers.csv'),
-      path.join(dataPath, 'Devices.csv'),
-      path.join(dataPath, 'ADComputers.csv')
+    // Use glob patterns to match all device/computer-related CSV files (matching old C# GUI behavior)
+    const patterns = [
+      path.join(dataPath, '*Computer*.csv'),
+      path.join(dataPath, '*VM*.csv'),
+      path.join(dataPath, '*Server*.csv'),
+      path.join(dataPath, 'NetworkInfrastructure*.csv'),
+      path.join(dataPath, 'Infrastructure.csv')
     ];
 
-    for (const filePath of filePaths) {
+    const filePaths: string[] = [];
+    for (const pattern of patterns) {
+      try {
+        const matches = await glob(pattern);
+        filePaths.push(...matches);
+      } catch (err) {
+        console.debug(`No files matched pattern: ${pattern}`);
+      }
+    }
+
+    // Remove duplicates
+    const uniqueFilePaths = [...new Set(filePaths)];
+
+    for (const filePath of uniqueFilePaths) {
       try {
         await fs.access(filePath);
         const content = await fs.readFile(filePath, 'utf-8');

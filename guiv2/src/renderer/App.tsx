@@ -21,10 +21,6 @@ import { applyTheme, getTheme } from './styles/themes';
 // Import CSS
 import './index.css';
 
-// Register AG Grid modules globally to avoid warnings
-import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
-ModuleRegistry.registerModules([AllCommunityModule]);
-
 // Lazy load AG Grid CSS only when needed
 // This reduces initial bundle size significantly
 if (typeof window !== 'undefined') {
@@ -66,6 +62,7 @@ const PowerPlatformDiscoveryView = lazy(() => import('./views/discovery/PowerPla
 const WebServerConfigurationDiscoveryView = lazy(() => import('./views/discovery/WebServerConfigurationDiscoveryView'));
 const HyperVDiscoveryView = lazy(() => import('./views/discovery/HyperVDiscoveryView'));
 const EnvironmentDetectionView = lazy(() => import('./views/discovery/EnvironmentDetectionView'));
+const TestDLPDiscoveryView = lazy(() => import('./views/discovery/TestDLPDiscoveryView'));
 const InfrastructureView = lazy(() => import('./views/infrastructure/InfrastructureView'));
 // TASK 4: Infrastructure views (13 new views)
 const NetworkTopologyView = lazy(() => import('./views/infrastructure/NetworkTopologyView'));
@@ -159,6 +156,7 @@ const AppContent: React.FC = () => {
                 <Route path="web-servers" element={<WebServerConfigurationDiscoveryView />} />
                 <Route path="hyperv" element={<HyperVDiscoveryView />} />
                 <Route path="environment-detection" element={<EnvironmentDetectionView />} />
+                <Route path="testdlp" element={<TestDLPDiscoveryView />} />
               </Route>
 
               {/* User Management */}
@@ -252,8 +250,17 @@ export const App: React.FC = () => {
 
   // Initialize application
   useEffect(() => {
+    console.log('[App] Initializing application...');
+    console.log('[App] window.electronAPI available:', !!window.electronAPI);
+
     // Load profiles
-    loadSourceProfiles().catch(console.error);
+    loadSourceProfiles()
+      .then(() => {
+        console.log('[App] Profiles loaded successfully');
+      })
+      .catch((error) => {
+        console.error('[App] Failed to load profiles:', error);
+      });
 
     // Apply theme to DOM based on current mode
     const theme = getTheme(actualMode === 'dark' ? 'dark' : 'light');

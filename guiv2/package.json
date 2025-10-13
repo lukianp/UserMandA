@@ -37,7 +37,8 @@
     "docs:clean": "rimraf docs/api",
     "debug:logs": "node scripts/view-debug-logs.js",
     "debug:analyze": "node scripts/analyze-debug-logs.js",
-    "debug:clean": "node scripts/clean-debug-logs.js"
+    "debug:clean": "node scripts/clean-debug-logs.js",
+    "gen:modules": "node scripts/gen-modules.cjs"
   },
   "keywords": [],
   "author": {
@@ -45,6 +46,10 @@
     "email": "lukianp@hotmail.com"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=20.17.0 <21"
+  },
+  "packageManager": "npm@10.8.2",
   "devDependencies": {
     "@electron-forge/cli": "^7.9.0",
     "@electron-forge/maker-deb": "^7.9.0",
@@ -67,7 +72,7 @@
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "@vercel/webpack-asset-relocator-loader": "^1.7.3",
-    "autoprefixer": "^10.4.21",
+    "autoprefixer": "^10.4.20",
     "bundlewatch": "^0.4.1",
     "compression-webpack-plugin": "^11.1.0",
     "cross-env": "^10.1.0",
@@ -84,11 +89,12 @@
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
     "node-loader": "^2.1.0",
-    "postcss": "^8.5.6",
+    "postcss": "^8.4.47",
     "postcss-loader": "^8.2.0",
     "rimraf": "^6.0.1",
     "source-map-explorer": "^2.5.3",
     "style-loader": "^3.3.4",
+    "tailwindcss": "^3.4.14",
     "terser-webpack-plugin": "^5.3.14",
     "ts-jest": "^29.4.4",
     "ts-loader": "^9.5.4",
@@ -99,6 +105,7 @@
   "dependencies": {
     "@headlessui/react": "^2.2.9",
     "@testing-library/dom": "^10.4.1",
+    "@types/glob": "^8.1.0",
     "@types/node-cron": "^3.0.11",
     "@types/react-window": "^1.8.8",
     "ag-grid-community": "^34.2.0",
@@ -108,6 +115,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "electron-squirrel-startup": "^1.0.1",
+    "glob": "^11.0.3",
     "immer": "^10.1.3",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
@@ -125,7 +133,6 @@
     "react-window": "^2.2.0",
     "recharts": "^3.2.1",
     "tailwind-merge": "^3.3.1",
-    "tailwindcss": "^3.4.18",
     "web-vitals": "^5.1.0",
     "xlsx": "^0.18.5",
     "zustand": "^5.0.8"
