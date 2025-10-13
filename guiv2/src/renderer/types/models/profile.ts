@@ -113,19 +113,25 @@ export interface ProfileValidationResult {
 /**
  * Company profile for discovery operations
  */
-export interface CompanyProfile extends Identifiable, Named, TimestampMetadata {
+export interface CompanyProfile extends Identifiable, TimestampMetadata {
   id: string;
-  companyName: string;
-  description: string;
-  domainController: string;
+  companyName: string; // Primary name field for company profiles
+  name?: string; // Optional alias, computed from companyName
+  description?: string;
+  domainController?: string;
+  domainName?: string;
   tenantId?: string; // Optional for company profiles
+  clientId?: string; // Azure AD App Registration Client ID
+  clientSecret?: string; // Azure AD App Registration Client Secret (plain text for now)
   isActive: boolean;
-  created: Date | string;
-  lastModified: Date | string;
+  created?: Date | string;
+  lastModified?: Date | string;
+  environment?: string; // e.g., 'Production', 'Test'
+  dataPath?: string; // Path to discovery data directory
 
   // Discovery metadata
-  recordCount: number;
-  lastDiscovery: Date | string | null;
+  recordCount?: number;
+  lastDiscovery?: Date | string | null;
 
   // Legacy compatibility properties
   displayName?: string;
@@ -140,8 +146,8 @@ export interface CompanyProfile extends Identifiable, Named, TimestampMetadata {
   estimatedDataSize?: number; // bytes
   locations?: string[];
 
-  configuration: Dictionary<any>;
-  isDefault: boolean;
+  configuration?: Dictionary<any>;
+  isDefault?: boolean;
   canDelete?: boolean;
 }
 

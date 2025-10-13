@@ -21,6 +21,10 @@ import { applyTheme, getTheme } from './styles/themes';
 // Import CSS
 import './index.css';
 
+// Register AG Grid modules globally to avoid warnings
+import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
+ModuleRegistry.registerModules([AllCommunityModule]);
+
 // Lazy load AG Grid CSS only when needed
 // This reduces initial bundle size significantly
 if (typeof window !== 'undefined') {

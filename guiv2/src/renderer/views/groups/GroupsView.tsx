@@ -182,13 +182,13 @@ export const GroupsView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50" data-cy="groups-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="groups-view">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Groups</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Groups</h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Manage Active Directory and Azure AD groups
             </p>
           </div>
@@ -247,7 +247,7 @@ export const GroupsView: React.FC = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 space-y-4">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 space-y-4">
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <SearchBar
@@ -279,7 +279,7 @@ export const GroupsView: React.FC = () => {
 
       {/* Data Grid */}
       <div className="flex-1 px-6 py-4 overflow-hidden">
-        <div className="h-full bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
           <VirtualizedDataGrid
             data={groups}
             columns={extendedColumnDefs}

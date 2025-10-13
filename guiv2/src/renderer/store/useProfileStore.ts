@@ -79,16 +79,26 @@ export const useProfileStore = create<ProfileState>()(
     loadSourceProfiles: async () => {
       set({ isLoading: true, error: null });
       try {
+        console.log('[ProfileStore] Loading source profiles...');
         const electronAPI = getElectronAPI();
         const profiles = await electronAPI.loadSourceProfiles();
+        console.log('[ProfileStore] Loaded profiles:', profiles);
+        console.log('[ProfileStore] Profile count:', profiles?.length || 0);
+
+        if (profiles && profiles.length > 0) {
+          console.log('[ProfileStore] First profile:', profiles[0]);
+        }
+
         set({
           sourceProfiles: profiles as CompanyProfile[],
           isLoading: false,
           // Mirror C# SelectedProfile restoration
           selectedSourceProfile: profiles.find((p: any) => p.isActive) || profiles[0] || null,
         });
+
+        console.log('[ProfileStore] Source profiles loaded successfully:', profiles.length);
       } catch (error: any) {
-        console.error('Failed to load source profiles:', error);
+        console.error('[ProfileStore] Failed to load source profiles:', error);
         set({ error: error.message || 'Failed to load source profiles', isLoading: false });
       }
     },

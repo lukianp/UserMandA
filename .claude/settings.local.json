@@ -74,7 +74,17 @@
       "Bash(then echo \"Fixing: $view\")",
       "Bash(robocopy:*)",
       "Bash(timeout 90 npm start)",
-      "Bash(Select-String \"ERROR|✔ Packaging|✔ Making\")"
+      "Bash(Select-String \"ERROR|✔ Packaging|✔ Making\")",
+      "Bash(Select-Object -First 100)",
+      "Bash(powershell.exe:*)",
+      "Bash(tasklist)",
+      "Bash(Select-String \"Building|Packaging|✔|✖|ERROR\")",
+      "Bash(Select-Object -First 50)",
+      "Bash(timeout 120 npm run package)",
+      "Bash(timeout 120 npm start)",
+      "Bash(start ./guiv2.exe)",
+      "Bash(tasklist:*)",
+      "Bash(Select-String -Pattern \"(OK|FAILED|ERROR|WARNING|Build|Package|Completed)\")"
     ],
     "deny": [],
     "ask": [],

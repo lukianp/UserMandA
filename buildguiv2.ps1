@@ -98,32 +98,11 @@ Error: $($_.Exception.Message)
 
 # Check if npm is installed
 try {
-    # Try to find npm in PATH
-    $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
-    if (-not $npmCmd) {
-        # Try common Node.js installation paths
-        $commonPaths = @(
-            "$env:ProgramFiles\nodejs\npm.cmd",
-            "$env:APPDATA\npm\npm.cmd",
-            "$env:ProgramFiles\nodejs\npm"
-        )
-        foreach ($path in $commonPaths) {
-            if (Test-Path $path) {
-                $npmCmd = $path
-                break
-            }
-        }
-    }
-
-    if ($npmCmd) {
-        $npmVersion = & $npmCmd --version 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "  [OK] Found npm version: $npmVersion" -ForegroundColor Green
-        } else {
-            throw "npm command exists but failed to run"
-        }
+    $npmVersion = & npm --version 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  [OK] Found npm version: $npmVersion" -ForegroundColor Green
     } else {
-        throw "npm command not found"
+        throw "npm command failed with exit code $LASTEXITCODE"
     }
 }
 catch {
@@ -186,12 +165,18 @@ if ($needsInstall) {
 
 # Run TypeScript compilation check
 Write-Host "Checking TypeScript compilation..." -ForegroundColor Yellow
-& npx tsc --noEmit
-if ($LASTEXITCODE -ne 0) {
-    Write-Warning "TypeScript compilation has errors. Continuing anyway..."
-    Write-Host "  [WARNING] TypeScript errors detected (non-blocking)" -ForegroundColor Yellow
-} else {
-    Write-Host "  [OK] TypeScript compilation successful" -ForegroundColor Green
+try {
+    $tscOutput = & npx tsc --noEmit 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "TypeScript compilation has errors. Continuing anyway..."
+        Write-Host "  [WARNING] TypeScript errors detected (non-blocking)" -ForegroundColor Yellow
+    } else {
+        Write-Host "  [OK] TypeScript compilation successful" -ForegroundColor Green
+    }
+}
+catch {
+    Write-Warning "TypeScript check failed: $($_.Exception.Message)"
+    Write-Host "  [WARNING] TypeScript check skipped" -ForegroundColor Yellow
 }
 
 # Run tests unless skipped
@@ -222,25 +207,21 @@ if (Test-Path ".webpack") {
 # Build the application
 if ($Configuration -eq 'Production') {
     Write-Host "  Building optimized production bundle..." -ForegroundColor Cyan
-    & npm run build:prod 2>&1 | ForEach-Object {
-        if ($_ -match "error|failed") {
-            Write-Host "  $_" -ForegroundColor Red
-        } elseif ($_ -match "warning") {
-            Write-Host "  $_" -ForegroundColor Yellow
-        } else {
-            Write-Host "  $_" -ForegroundColor Gray
-        }
+    try {
+        $buildOutput = & npm run build:prod 2>&1
+        $buildOutput | Out-Host
+    }
+    catch {
+        Write-Warning "Build command failed: $($_.Exception.Message)"
     }
 } else {
     Write-Host "  Building development bundle..." -ForegroundColor Cyan
-    & npm run package 2>&1 | ForEach-Object {
-        if ($_ -match "error|failed") {
-            Write-Host "  $_" -ForegroundColor Red
-        } elseif ($_ -match "warning") {
-            Write-Host "  $_" -ForegroundColor Yellow
-        } else {
-            Write-Host "  $_" -ForegroundColor Gray
-        }
+    try {
+        $buildOutput = & npm run package 2>&1
+        $buildOutput | Out-Host
+    }
+    catch {
+        Write-Warning "Build command failed: $($_.Exception.Message)"
     }
 }
 

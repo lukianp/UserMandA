@@ -152,6 +152,13 @@ export const Sidebar: React.FC = () => {
           className="mb-3"
           data-cy="sidebar-source-profile"
         />
+        <div className="h-px bg-gray-800 my-3" />
+        <ProfileSelector
+          type="target"
+          label="Target Profile"
+          showActions={true}
+          data-cy="sidebar-target-profile"
+        />
       </div>
 
       {/* Navigation */}

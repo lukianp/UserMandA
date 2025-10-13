@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { clsx } from 'clsx';
 import { Plus, Trash2, TestTube, RefreshCw } from 'lucide-react';
 import { useProfileStore } from '../../store/useProfileStore';
+import { useModalStore } from '../../store/useModalStore';
 import { Select } from '../atoms/Select';
 import { Button } from '../atoms/Button';
 import { StatusIndicator } from '../atoms/StatusIndicator';
@@ -60,9 +61,10 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
 
   const profiles = type === 'source' ? sourceProfiles : targetProfiles;
   const selectedProfile = type === 'source' ? selectedSourceProfile : selectedTargetProfile;
-  const setProfile = type === 'source' ? setSelectedSourceProfile : setSelectedTargetProfile;
 
   const handleProfileChange = (profileId: string) => {
+    if (!profileId) return;
+
     const profile = profiles.find(p => p.id === profileId);
     if (!profile) return;
 
@@ -89,20 +91,35 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
   const handleDeleteProfile = async () => {
     if (!selectedProfile) return;
 
-    // Get profile name - CompanyProfile uses companyName, TargetProfile uses name
-    const profileName = 'companyName' in selectedProfile
-      ? (selectedProfile as CompanyProfile).companyName
-      : 'name' in selectedProfile
-        ? (selectedProfile as TargetProfile).name
-        : selectedProfile.id;
+    // Get profile display name
+    const profileName = getProfileDisplayName(selectedProfile);
 
     if (confirm(`Are you sure you want to delete profile "${profileName}"?`)) {
       try {
-        await deleteSourceProfile(selectedProfile.id);
+        if (type === 'source') {
+          await deleteSourceProfile(selectedProfile.id);
+        } else {
+          // TODO: Add deleteTargetProfile action to store
+          console.warn('Target profile deletion not yet implemented');
+        }
       } catch (error) {
         console.error('Failed to delete profile:', error);
       }
     }
+  };
+
+  // Helper function to get profile display name
+  const getProfileDisplayName = (profile: CompanyProfile | TargetProfile): string => {
+    if ('companyName' in profile && profile.companyName) {
+      return profile.companyName;
+    }
+    if ('name' in profile && profile.name) {
+      return profile.name;
+    }
+    if ('id' in profile) {
+      return profile.id;
+    }
+    return 'Unknown Profile';
   };
 
   const handleRefreshProfiles = async () => {
@@ -116,6 +133,15 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
   const handleCreateProfile = () => {
     if (onCreateProfile) {
       onCreateProfile();
+    } else {
+      // Open the create profile modal
+      const { openModal } = useModalStore.getState();
+      openModal({
+        type: 'createProfile',
+        title: 'Create New Profile',
+        dismissable: true,
+        size: 'lg',
+      });
     }
   };
 
@@ -168,12 +194,8 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
         value={selectedProfile?.id || ''}
         onChange={handleProfileChange}
         options={profiles.map(profile => {
-          // CompanyProfile uses companyName, TargetProfile uses name
-          const profileName = 'companyName' in profile
-            ? (profile as CompanyProfile).companyName
-            : 'name' in profile
-              ? (profile as TargetProfile).name
-              : profile.id;
+          // Get profile display name
+          const profileName = getProfileDisplayName(profile);
           // Both types have environment property
           const envLabel = profile.environment ? ` (${profile.environment})` : '';
           return {
@@ -182,7 +204,7 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
           };
         })}
         placeholder={profiles.length > 0 ? "Select a profile..." : "No profiles found - click Refresh"}
-        disabled={isLoading || profiles.length === 0}
+        disabled={isLoading}
         error={error || undefined}
         data-cy={`profile-select-${type}`}
       />
@@ -245,16 +267,22 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
       {selectedProfile && (
         <div className="px-3 py-2 bg-gray-800 rounded-md border border-gray-700 text-sm">
           <div className="grid grid-cols-1 gap-1">
-            {'environment' in selectedProfile && selectedProfile.environment && (
+            {'companyName' in selectedProfile && selectedProfile.companyName && (
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-400">Company:</span>
+                <span className="text-gray-300">{selectedProfile.companyName}</span>
+              </div>
+            )}
+            {selectedProfile.environment && (
               <div className="flex justify-between">
                 <span className="font-medium text-gray-400">Environment:</span>
                 <span className="text-gray-300">{selectedProfile.environment}</span>
               </div>
             )}
-            {'companyName' in selectedProfile && (
+            {'domainController' in selectedProfile && selectedProfile.domainController && (
               <div className="flex justify-between">
-                <span className="font-medium text-gray-400">Company:</span>
-                <span className="text-gray-300">{selectedProfile.companyName}</span>
+                <span className="font-medium text-gray-400">Domain:</span>
+                <span className="text-gray-300">{selectedProfile.domainController}</span>
               </div>
             )}
             {selectedProfile.tenantId && (

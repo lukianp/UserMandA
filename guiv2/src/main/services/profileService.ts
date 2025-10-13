@@ -103,6 +103,9 @@ export class ProfileService {
         if (hasRawData) {
           console.log(`[ProfileService] Auto-discovered profile: ${companyName}`);
 
+          // Try to load credentials config
+          const credentials = await this.loadCredentialsConfig(companyName);
+
           // Create a source profile for this company
           const profile: CompanyProfile = {
             id: this.generateId(),
@@ -110,7 +113,9 @@ export class ProfileService {
             description: `Auto-discovered profile for ${companyName}`,
             domainController: `dc.${companyName.toLowerCase()}.com`,
             domainName: `${companyName.toLowerCase()}.com`,
-            tenantId: '',
+            tenantId: credentials?.tenantId || '',
+            clientId: credentials?.clientId || '',
+            clientSecret: credentials?.clientSecret || '',
             environment: 'Production',
             isActive: !foundProfiles, // First profile is active
             createdDate: new Date().toISOString(),
@@ -128,6 +133,45 @@ export class ProfileService {
       }
     } catch (error: unknown) {
       console.error('[ProfileService] Auto-discovery failed:', error);
+    }
+  }
+
+  /**
+   * Load credentials config from profile directory
+   * Reads discoverycredentials.config for Azure AD connection details
+   */
+  private async loadCredentialsConfig(companyName: string): Promise<{
+    tenantId: string;
+    clientId: string;
+    clientSecret: string;
+  } | null> {
+    try {
+      const credentialsPath = path.join(
+        this.config.discoveryDataRoot,
+        companyName,
+        'Credentials',
+        'discoverycredentials.config'
+      );
+
+      const fileExists = await this.fileExists(credentialsPath);
+      if (!fileExists) {
+        console.log(`[ProfileService] No credentials config found for ${companyName}`);
+        return null;
+      }
+
+      const data = await fs.readFile(credentialsPath, 'utf-8');
+      const config = JSON.parse(data);
+
+      console.log(`[ProfileService] Loaded credentials for ${companyName} (TenantId: ${config.TenantId})`);
+
+      return {
+        tenantId: config.TenantId || '',
+        clientId: config.ClientId || '',
+        clientSecret: config.ClientSecret || '',
+      };
+    } catch (error: unknown) {
+      console.error(`[ProfileService] Failed to load credentials for ${companyName}:`, error);
+      return null;
     }
   }
 

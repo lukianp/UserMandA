@@ -13,6 +13,13 @@ if (require('electron-squirrel-startup')) {
 }
 
 const createWindow = (): void => {
+  // Debug: Log webpack entry points
+  console.log('[MAIN] ========================================');
+  console.log('[MAIN] Webpack Entry Points:');
+  console.log('[MAIN] MAIN_WINDOW_WEBPACK_ENTRY:', MAIN_WINDOW_WEBPACK_ENTRY);
+  console.log('[MAIN] MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY:', MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY);
+  console.log('[MAIN] ========================================');
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     height: 900,
@@ -34,7 +41,7 @@ const createWindow = (): void => {
     mainWindow.show();
   });
 
-  // Set CSP headers to allow data URIs for images (Tailwind CSS uses them)
+  // Set CSP headers to allow data URIs for images and fonts (Tailwind CSS and AG Grid use them)
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -42,6 +49,7 @@ const createWindow = (): void => {
         'Content-Security-Policy': [
           "default-src 'self'; " +
           "img-src 'self' data: blob:; " +
+          "font-src 'self' data: blob:; " +
           "style-src 'self' 'unsafe-inline'; " +
           "script-src 'self' 'unsafe-eval'; " +
           "connect-src 'self' ws: wss:;"

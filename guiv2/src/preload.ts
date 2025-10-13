@@ -12,7 +12,7 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ElectronAPI } from './types/electron';
+import type { ElectronAPI } from './renderer/types/electron';
 import {
   ScriptExecutionParams,
   ModuleExecutionParams,
@@ -660,8 +660,13 @@ const electronAPI: ElectronAPI = {
 // Expose the API to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
 
-console.log('Preload script loaded successfully - Secure bridge established');
-console.log('electronAPI keys:', Object.keys(electronAPI));
-console.log('dashboard methods:', electronAPI.dashboard ? Object.keys(electronAPI.dashboard) : 'UNDEFINED');
-console.log('logicEngine methods:', electronAPI.logicEngine ? Object.keys(electronAPI.logicEngine) : 'UNDEFINED');
-console.log('project methods:', electronAPI.project ? Object.keys(electronAPI.project) : 'UNDEFINED');
+console.log('========================================');
+console.log('[PRELOAD] ✅ Preload script loaded successfully - Secure bridge established');
+console.log('[PRELOAD] electronAPI exposed to window.electronAPI');
+console.log('[PRELOAD] electronAPI keys:', Object.keys(electronAPI).slice(0, 10).join(', '), '...');
+console.log('[PRELOAD] Total API methods:', Object.keys(electronAPI).length);
+console.log('[PRELOAD] dashboard methods:', electronAPI.dashboard ? Object.keys(electronAPI.dashboard).length : 'UNDEFINED');
+console.log('[PRELOAD] logicEngine methods:', electronAPI.logicEngine ? Object.keys(electronAPI.logicEngine).length : 'UNDEFINED');
+console.log('[PRELOAD] project methods:', electronAPI.project ? Object.keys(electronAPI.project).length : 'UNDEFINED');
+console.log('[PRELOAD] Context isolation:', true);
+console.log('========================================');
