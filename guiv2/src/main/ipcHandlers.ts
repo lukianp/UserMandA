@@ -94,6 +94,32 @@ async function initializeServices(): Promise<void> {
   });
   console.log('Profile Service initialized');
 
+  // Get active profile and load its data into Logic Engine
+  const profileService = getProfileService();
+  const activeProfile = profileService.getActiveSourceProfile();
+  if (activeProfile) {
+    console.log(`[ProfileService] Active profile found: ${activeProfile.companyName}`);
+    const dataPath = profileService.getProfileDataPath(activeProfile.id);
+    const rawPath = path.join(dataPath, 'Raw');
+    console.log(`[ProfileService] Loading data from: ${rawPath}`);
+
+    // Update Logic Engine to use active profile's data path
+    logicEngineService = LogicEngineService.getInstance(rawPath);
+
+    // Load all CSV data asynchronously (don't block startup)
+    logicEngineService.loadAllAsync(rawPath).then((success) => {
+      if (success) {
+        console.log(`[LogicEngine] Successfully loaded data for profile: ${activeProfile.companyName}`);
+      } else {
+        console.warn(`[LogicEngine] Failed to load data for profile: ${activeProfile.companyName}`);
+      }
+    }).catch((error) => {
+      console.error(`[LogicEngine] Error loading data: ${error}`);
+    });
+  } else {
+    console.warn('[ProfileService] No active profile found - Logic Engine will use default hardcoded path');
+  }
+
   // Load application configuration
   try {
     const configData = await fs.readFile(configPath, 'utf-8');
@@ -1259,6 +1285,98 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       };
     } catch (error: unknown) {
       console.error('logicEngine:getComplexityStatistics error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: logicEngine:getAllUsers
+   *
+   * Get all users from the Logic Engine
+   */
+  ipcMain.handle('logicEngine:getAllUsers', async () => {
+    try {
+      const users = logicEngineService.getAllUsers();
+      console.log(`[LogicEngine] Retrieved ${users.length} users`);
+
+      return {
+        success: true,
+        data: users
+      };
+    } catch (error: unknown) {
+      console.error('logicEngine:getAllUsers error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: logicEngine:getAllGroups
+   *
+   * Get all groups from the Logic Engine
+   */
+  ipcMain.handle('logicEngine:getAllGroups', async () => {
+    try {
+      const groups = logicEngineService.getAllGroups();
+      console.log(`[LogicEngine] Retrieved ${groups.length} groups`);
+
+      return {
+        success: true,
+        data: groups
+      };
+    } catch (error: unknown) {
+      console.error('logicEngine:getAllGroups error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: logicEngine:getAllDevices
+   *
+   * Get all devices from the Logic Engine
+   */
+  ipcMain.handle('logicEngine:getAllDevices', async () => {
+    try {
+      const devices = logicEngineService.getAllDevices();
+      console.log(`[LogicEngine] Retrieved ${devices.length} devices`);
+
+      return {
+        success: true,
+        data: devices
+      };
+    } catch (error: unknown) {
+      console.error('logicEngine:getAllDevices error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: logicEngine:getAllApplications
+   *
+   * Get all applications from the Logic Engine
+   */
+  ipcMain.handle('logicEngine:getAllApplications', async () => {
+    try {
+      const apps = logicEngineService.getAllApplications();
+      console.log(`[LogicEngine] Retrieved ${apps.length} applications`);
+
+      return {
+        success: true,
+        data: apps
+      };
+    } catch (error: unknown) {
+      console.error('logicEngine:getAllApplications error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)

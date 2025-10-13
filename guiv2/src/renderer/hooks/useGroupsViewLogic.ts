@@ -35,8 +35,41 @@ export const useGroupsViewLogic = () => {
   const debouncedSearch = useDebounce(searchText, 300);
 
   /**
-   * Load groups from PowerShell
-   * Mirrors C# GroupsViewModel.LoadAsync pattern
+   * Map GroupDto from Logic Engine to GroupData for the view
+   */
+  const mapGroupDtoToGroupData = (dto: any): GroupData => {
+    // Parse group type from Type string
+    let groupType: GroupType = GroupType.Security;
+    const typeStr = (dto.Type || '').toLowerCase();
+    if (typeStr.includes('distribution')) groupType = GroupType.Distribution;
+    else if (typeStr.includes('mail')) groupType = GroupType.MailEnabled;
+    else if (typeStr.includes('dynamic')) groupType = GroupType.Dynamic;
+
+    return {
+      id: dto.Sid || dto.Name,
+      objectId: dto.Sid || '',
+      name: dto.Name || 'Unknown',
+      displayName: dto.Name || 'Unknown',
+      description: dto.Dn || undefined,
+      email: undefined, // Not available in GroupDto
+      groupType,
+      scope: GroupScope.Universal, // Default scope
+      membershipType: MembershipType.Static, // Default membership type
+      memberCount: dto.Members?.length || 0,
+      owners: dto.ManagedBy ? [dto.ManagedBy] : [],
+      createdDate: dto.DiscoveryTimestamp || new Date().toISOString(),
+      lastModified: dto.DiscoveryTimestamp || new Date().toISOString(),
+      source: 'ActiveDirectory', // Default source
+      isSecurityEnabled: groupType === GroupType.Security,
+      isMailEnabled: groupType === GroupType.MailEnabled,
+      distinguishedName: dto.Dn,
+      managedBy: dto.ManagedBy,
+    };
+  };
+
+  /**
+   * Load groups from Logic Engine (CSV data)
+   * Replaced PowerShell execution with direct Logic Engine access
    */
   const loadGroups = async () => {
     setIsLoading(true);
@@ -44,85 +77,25 @@ export const useGroupsViewLogic = () => {
     setWarnings([]);
 
     try {
-      setLoadingMessage('Checking cache and data sources...');
+      setLoadingMessage('Loading groups from Logic Engine...');
 
-      const selectedProfile = getCurrentSourceProfile();
+      // Get groups from Logic Engine
+      const result = await window.electronAPI.invoke('logicEngine:getAllGroups');
 
-      // First try cached data (mirror LogicEngineService pattern)
-      let groupsData: GroupData[];
-      try {
-        groupsData = await powerShellService.getCachedResult(
-          `groups_${selectedProfile?.id || 'default'}`,
-          async () => {
-            setLoadingMessage('Loading groups from discovery modules...');
-
-            // Try to execute Get-AllGroups module
-            const result = await powerShellService.executeModule<{ groups: GroupData[] }>(
-              'Modules/Discovery/Get-AllGroups.psm1',
-              'Get-AllGroups',
-              {
-                ProfileName: selectedProfile?.companyName || 'Default',
-                IncludeMembers: true,
-                IncludeOwners: true
-              }
-            );
-
-            return result.data?.groups || [];
-          }
-        );
-      } catch (moduleError) {
-        // Fallback to CSV service (mirror C# fallback pattern)
-        console.warn('Module execution failed, falling back to CSV:', moduleError);
-        setLoadingMessage('Loading groups from CSV files...');
-
-        try {
-          const csvResult = await powerShellService.executeScript<{ groups: GroupData[]; warnings?: string[] }>(
-            'Scripts/Get-GroupsFromCsv.ps1',
-            { ProfilePath: selectedProfile?.dataPath || 'C:\\discoverydata' }
-          );
-
-          groupsData = csvResult.data?.groups || [];
-
-          // Mirror C# header warnings
-          if (csvResult.warnings && csvResult.warnings.length > 0) {
-            setWarnings(csvResult.warnings);
-          }
-        } catch (csvError) {
-          console.error('CSV fallback also failed:', csvError);
-          // Use mock data as last resort
-          groupsData = Array.from({ length: 50 }, (_, i) => ({
-            id: `group-${i}`,
-            objectId: `obj-${i}`,
-            name: `Group${i + 1}`,
-            displayName: `Group ${i + 1}`,
-            description: `Description for Group ${i + 1}`,
-            groupType: [GroupType.Security, GroupType.Distribution, GroupType.MailEnabled][i % 3],
-            scope: [GroupScope.Universal, GroupScope.Global, GroupScope.DomainLocal][i % 3],
-            membershipType: [MembershipType.Static, MembershipType.Dynamic, MembershipType.RuleBased][i % 3],
-            email: i % 2 === 0 ? `group${i}@company.com` : undefined,
-            memberCount: Math.floor(Math.random() * 100),
-            owners: i % 3 === 0 ? [`User ${i}`] : [],
-            source: i % 3 === 0 ? 'AzureAD' : 'ActiveDirectory',
-            createdDate: new Date(2020, 0, i + 1).toISOString(),
-            lastModified: new Date(2024, 9, i % 30 + 1).toISOString(),
-            isSecurityEnabled: i % 2 === 1,
-            isMailEnabled: i % 2 === 0,
-            syncStatus: i % 10 === 0
-              ? { isSynced: false, lastSyncTime: '', syncErrors: ['Error'] }
-              : { isSynced: true, lastSyncTime: new Date().toISOString() },
-          } as GroupData));
-
-          setWarnings(['PowerShell execution failed. Using mock data.']);
-        }
+      if (result.success && Array.isArray(result.data)) {
+        // Map GroupDto[] to GroupData[]
+        const mappedGroups = result.data.map(mapGroupDtoToGroupData);
+        setGroups(mappedGroups);
+        console.log(`Loaded ${mappedGroups.length} groups from Logic Engine`);
+      } else {
+        throw new Error(result.error || 'Failed to load groups from Logic Engine');
       }
 
-      // Mirror C# UI thread update pattern
-      setGroups(groupsData);
       setLoadingMessage('');
-
     } catch (err: any) {
       console.error('Failed to load groups:', err);
-      setError(err.message || 'Failed to load groups');
+      setError('Failed to load groups from Logic Engine. Ensure data has been loaded.');
+      setGroups([]); // Set empty array instead of mock data
     } finally {
       setIsLoading(false);
       setLoadingMessage('');

@@ -41,7 +41,7 @@ export class ProfileService {
   constructor(config?: Partial<ProfileServiceConfig>) {
     this.config = {
       profilesDir: path.join(process.cwd(), 'config', 'profiles'),
-      discoveryDataRoot: 'C:\\DiscoveryData',
+      discoveryDataRoot: 'C:\\discoverydata', // lowercase to match actual directory
       enableAutoDiscovery: true,
       ...config,
     };

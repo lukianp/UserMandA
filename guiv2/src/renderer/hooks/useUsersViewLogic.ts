@@ -20,62 +20,61 @@ export const useUsersViewLogic = () => {
   }, []);
 
   /**
-   * Load users from PowerShell
+   * Map UserDto from Logic Engine to UserData for the view
+   */
+  const mapUserDtoToUserData = (dto: any): UserData => {
+    return {
+      // Core UserData properties
+      id: dto.UPN || dto.Sid,
+      name: dto.DisplayName || dto.Sam || 'Unknown',
+      displayName: dto.DisplayName || dto.Sam || null,
+      userPrincipalName: dto.UPN || null,
+      mail: dto.Mail || null,
+      email: dto.Mail || null,
+      accountEnabled: dto.Enabled !== undefined ? dto.Enabled : true,
+      samAccountName: dto.Sam || null,
+      department: dto.Dept || null,
+      jobTitle: null, // Not available in UserDto
+      officeLocation: null, // Not available in UserDto
+      companyName: null,
+      managerDisplayName: null,
+      createdDateTime: dto.DiscoveryTimestamp || null,
+      userSource: dto.AzureObjectId ? 'AzureAD' : 'ActiveDirectory',
+
+      // Additional properties
+      firstName: null,
+      lastName: null,
+      groups: dto.Groups?.join(', ') || null,
+      manager: dto.Manager || null,
+      status: dto.Enabled ? 'active' : 'disabled',
+
+      // Required by TimestampMetadata interface
+      createdAt: dto.DiscoveryTimestamp || new Date().toISOString(),
+    };
+  };
+
+  /**
+   * Load users from Logic Engine (CSV data)
    */
   const loadUsers = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Execute PowerShell module to get users
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/Get-AllUsers.psm1',
-        functionName: 'Get-AllUsers',
-        parameters: {},
-      });
+      // Get users from Logic Engine
+      const result = await window.electronAPI.invoke('logicEngine:getAllUsers');
 
-      if (result.success) {
-        setUsers(result.data.users || []);
+      if (result.success && Array.isArray(result.data)) {
+        // Map UserDto[] to UserData[]
+        const mappedUsers = result.data.map(mapUserDtoToUserData);
+        setUsers(mappedUsers);
+        console.log(`Loaded ${mappedUsers.length} users from Logic Engine`);
       } else {
-        throw new Error(result.error || 'Failed to load users');
+        throw new Error(result.error || 'Failed to load users from Logic Engine');
       }
     } catch (err) {
       console.error('Failed to load users:', err);
-      setError('Failed to load users. Please try again.');
-
-      // Fallback to mock data in development
-      if (process.env.NODE_ENV === 'development') {
-        const mockUsers: UserData[] = Array.from({ length: 100 }, (_, i) => ({
-          id: `user-${i}`,
-          name: `User ${i + 1}`,
-          displayName: `User ${i + 1}`,
-          userPrincipalName: `user${i}@company.com`,
-          mail: `user${i}@company.com`,
-          accountEnabled: i % 5 !== 0,
-          samAccountName: `user${i}`,
-          companyName: 'Company Inc.',
-          department: ['IT', 'Sales', 'HR', 'Finance'][i % 4],
-          jobTitle: ['Manager', 'Developer', 'Analyst', 'Director'][i % 4],
-          officeLocation: ['New York', 'London', 'Tokyo', 'Sydney'][i % 4],
-          firstName: `First${i}`,
-          lastName: `Last${i}`,
-          createdAt: new Date(2020, 0, i + 1).toISOString(),
-          createdDateTime: new Date(2020, 0, i + 1).toISOString(),
-          lastSignInDateTime: new Date(2024, 9, (i % 30) + 1).toISOString(),
-          managerDisplayName: i > 10 ? `User ${i - 10}` : null,
-          userSource: i % 3 === 0 ? 'AzureAD' : 'ActiveDirectory',
-          status: i % 5 !== 0 ? 'active' : 'disabled',
-          syncStatus:
-            i % 10 === 0
-              ? { isSynced: false, lastSyncTime: '', syncErrors: ['Error'] }
-              : { isSynced: true, lastSyncTime: new Date().toISOString() },
-          licenses: i % 2 === 0 ? ['Office 365 E3'] : [],
-          groups: `Group${i % 5}`,
-          manager: i > 10 ? `User ${i - 10}` : undefined,
-          mfaStatus: i % 3 === 0 ? 'Enabled' : 'Disabled',
-          riskLevel: i % 20 === 0 ? 'High' : i % 10 === 0 ? 'Medium' : 'Low',
-        }));
-        setUsers(mockUsers);
-      }
+      setError('Failed to load users from Logic Engine. Ensure data has been loaded.');
+      setUsers([]); // Set empty array instead of mock data
     } finally {
       setIsLoading(false);
     }
