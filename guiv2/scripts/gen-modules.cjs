@@ -127,8 +127,8 @@ import { ${hookName} } from "../../hooks/${hookName}";
 import DataTable from "../../components/DataTable";
 
 export default function ${viewName}(){
-  const { source } = useProfileStore();
-  const { start, progress, rows } = ${hookName}(source || "");
+  const { selectedSourceProfile } = useProfileStore();
+  const { start, progress, rows } = ${hookName}(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 
   return (
@@ -136,7 +136,7 @@ export default function ${viewName}(){
       <h1 className="text-xl font-semibold">${Provider} Discovery</h1>
       <form className="grid grid-cols-3 gap-2" onSubmit={(e)=>{ e.preventDefault(); start(config); }}>
         ${fields || `<div className="col-span-3 text-sm text-neutral-600">No parameters</div>`}
-        <div className="col-span-3"><button className="border rounded p-2" type="submit" disabled={!source}>Start</button></div>
+        <div className="col-span-3"><button className="border rounded p-2" type="submit" disabled={!selectedSourceProfile}>Start</button></div>
       </form>
       <div className="h-2 bg-neutral-200 rounded"><div className="h-2 bg-blue-500 rounded" style={{ width: \`\${progress||0}%\` }} /></div>
       <DataTable rows={rows} />
@@ -220,8 +220,8 @@ import { ${hookName} } from "../../hooks/${hookName}";
 import DataTable from "../../components/DataTable";
 
 export default function ${viewName}(){
-  const { source, target } = useProfileStore();
-  const { plan, execute, progress, rows } = ${hookName}(target || source || "");
+  const { selectedSourceProfile, selectedTargetProfile } = useProfileStore();
+  const { plan, execute, progress, rows } = ${hookName}(selectedTargetProfile?.id || selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 
   return (
@@ -230,8 +230,8 @@ export default function ${viewName}(){
       <form className="grid grid-cols-3 gap-2" onSubmit={(e)=>{ e.preventDefault(); }}>
         ${fields || `<div className="col-span-3 text-sm text-neutral-600">No parameters</div>`}
         <div className="col-span-3 flex gap-2">
-          <button className="border rounded p-2" type="button" disabled={!source} onClick={()=>plan(config)}>Plan</button>
-          <button className="border rounded p-2" type="button" disabled={!target && !source} onClick={()=>execute(config)}>Execute</button>
+          <button className="border rounded p-2" type="button" disabled={!selectedSourceProfile} onClick={()=>plan(config)}>Plan</button>
+          <button className="border rounded p-2" type="button" disabled={!selectedTargetProfile && !selectedSourceProfile} onClick={()=>execute(config)}>Execute</button>
         </div>
       </form>
       <div className="h-2 bg-neutral-200 rounded"><div className="h-2 bg-blue-500 rounded" style={{ width: \`\${progress||0}%\` }} /></div>

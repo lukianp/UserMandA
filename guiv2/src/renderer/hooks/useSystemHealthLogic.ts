@@ -62,10 +62,19 @@ export const useSystemHealthLogic = () => {
       if (healthResult.success && healthResult.data) {
         const health = healthResult.data;
 
+        // Extract status from health objects (they may be objects with {status, lastCheck, responseTimeMs})
+        const extractStatus = (statusObj: any): 'online' | 'offline' | 'degraded' => {
+          if (typeof statusObj === 'string') return statusObj as any;
+          if (statusObj && typeof statusObj === 'object' && statusObj.status) {
+            return statusObj.status;
+          }
+          return 'offline';
+        };
+
         // Map health data to status indicators
         setSystemStatus({
-          logicEngine: health.logicEngineStatus || 'offline',
-          powerShell: health.powerShellStatus || 'offline',
+          logicEngine: extractStatus(health.logicEngineStatus),
+          powerShell: extractStatus(health.powerShellStatus),
           dataConnection: determineDataConnectionStatus(health),
           lastSync: new Date().toISOString(),
         });
@@ -99,8 +108,17 @@ export const useSystemHealthLogic = () => {
    * Determine data connection status based on Logic Engine and PowerShell
    */
   const determineDataConnectionStatus = (health: any): 'online' | 'offline' | 'degraded' => {
-    const logicStatus = health.logicEngineStatus;
-    const psStatus = health.powerShellStatus;
+    // Extract status from objects
+    const extractStatus = (statusObj: any): string => {
+      if (typeof statusObj === 'string') return statusObj;
+      if (statusObj && typeof statusObj === 'object' && statusObj.status) {
+        return statusObj.status;
+      }
+      return 'offline';
+    };
+
+    const logicStatus = extractStatus(health.logicEngineStatus);
+    const psStatus = extractStatus(health.powerShellStatus);
 
     // Both online = data connection online
     if (logicStatus === 'online' && psStatus === 'online') {

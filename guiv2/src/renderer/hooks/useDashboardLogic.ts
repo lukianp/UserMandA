@@ -5,11 +5,13 @@
  * Integrates with Logic Engine via dashboard service APIs.
  *
  * Phase 5: Dashboard Frontend Implementation
+ * Fixed: Added profileName parameter to dashboard method calls
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import type { DashboardStats, ProjectTimeline, SystemHealth, ActivityItem } from '../types/dashboard';
 import { getElectronAPI } from '../lib/electron-api-fallback';
+import { useProfileStore } from '../store/useProfileStore';
 
 interface UseDashboardLogicReturn {
   stats: DashboardStats | null;
@@ -50,15 +52,26 @@ export const useDashboardLogic = (): UseDashboardLogicReturn => {
       setIsLoading(true);
       setError(null);
 
+      // Get current profile name
+      const currentProfile = useProfileStore.getState().getCurrentSourceProfile();
+      console.log('[useDashboardLogic] currentProfile:', currentProfile);
+      if (!currentProfile) {
+        setError('No active profile selected');
+        setIsLoading(false);
+        return;
+      }
+      const profileName = currentProfile.name;
+      console.log('[useDashboardLogic] profileName extracted:', profileName);
+
       // Get electronAPI with fallback
       const electronAPI = getElectronAPI();
 
-      // Parallel fetch all dashboard components
+      // Parallel fetch all dashboard components (pass profileName to methods that require it)
       const [statsResult, projectResult, healthResult, activityResult] = await Promise.all([
-        electronAPI.dashboard.getStats(),
-        electronAPI.dashboard.getProjectTimeline(),
+        electronAPI.dashboard.getStats(profileName),
+        electronAPI.dashboard.getProjectTimeline(profileName),
         electronAPI.dashboard.getSystemHealth(),
-        electronAPI.dashboard.getRecentActivity(10)
+        electronAPI.dashboard.getRecentActivity(profileName, 10)
       ]);
 
       // Update state with fetched data

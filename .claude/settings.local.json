@@ -2,7 +2,17 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "Bash(Copy-Item \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useDashboardLogic.ts\" \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useDashboardLogic.ts\" -Force)",
+      "Bash(Get-ChildItem -Path \"C:\\discoverydata\" -Directory)",
+      "Bash(Select-Object Name -First 5)",
+      "Bash(dir:*)",
+      "Bash(cat:*)",
+      "Bash(node:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(npm run dev)",
+      "Bash(npm run:*)",
+      "Bash(npm start)"
     ],
     "deny": [],
     "ask": [],

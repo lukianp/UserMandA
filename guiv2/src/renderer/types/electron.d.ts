@@ -833,15 +833,17 @@ export interface ElectronAPI {
   dashboard: {
     /**
      * Get aggregated dashboard statistics from Logic Engine
+     * @param profileName - Profile name to get statistics for
      * @returns Promise with DashboardStats
      */
-    getStats: () => Promise<any>;
+    getStats: (profileName: string) => Promise<any>;
 
     /**
      * Get project timeline information
+     * @param profileName - Profile name to get timeline for
      * @returns Promise with ProjectTimeline
      */
-    getProjectTimeline: () => Promise<any>;
+    getProjectTimeline: (profileName: string) => Promise<any>;
 
     /**
      * Get system health status
@@ -851,10 +853,11 @@ export interface ElectronAPI {
 
     /**
      * Get recent activity from logs
+     * @param profileName - Profile name to get activity for
      * @param limit - Maximum number of items to return (default: 10)
      * @returns Promise with ActivityItem array
      */
-    getRecentActivity: (limit?: number) => Promise<any[]>;
+    getRecentActivity: (profileName: string, limit?: number) => Promise<any[]>;
 
     /**
      * Acknowledge a system alert
