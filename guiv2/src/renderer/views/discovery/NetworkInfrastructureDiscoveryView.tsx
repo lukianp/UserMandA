@@ -4,7 +4,7 @@ import { useNetworkInfrastructureDiscovery } from "../../hooks/useNetworkInfrast
 import DataTable from "../../components/DataTable";
 
 export default function NetworkInfrastructureDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useNetworkInfrastructureDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

@@ -4,7 +4,7 @@ import { useLicensingDiscoveryDiscovery } from "../../hooks/useLicensingDiscover
 import DataTable from "../../components/DataTable";
 
 export default function LicensingDiscoveryDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useLicensingDiscoveryDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

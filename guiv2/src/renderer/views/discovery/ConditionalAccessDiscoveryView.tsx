@@ -4,7 +4,7 @@ import { useConditionalAccessDiscovery } from "../../hooks/useConditionalAccessD
 import DataTable from "../../components/DataTable";
 
 export default function ConditionalAccessDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useConditionalAccessDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

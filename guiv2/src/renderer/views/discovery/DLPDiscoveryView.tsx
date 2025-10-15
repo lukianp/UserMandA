@@ -4,7 +4,7 @@ import { useDLPDiscovery } from "../../hooks/useDLPDiscovery";
 import DataTable from "../../components/DataTable";
 
 export default function DLPDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useDLPDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

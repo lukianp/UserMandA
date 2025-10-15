@@ -4,7 +4,7 @@ import { useDataClassificationDiscoveryDiscovery } from "../../hooks/useDataClas
 import DataTable from "../../components/DataTable";
 
 export default function DataClassificationDiscoveryDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useDataClassificationDiscoveryDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

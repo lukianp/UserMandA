@@ -4,7 +4,7 @@ import { useExternalIdentityDiscoveryDiscovery } from "../../hooks/useExternalId
 import DataTable from "../../components/DataTable";
 
 export default function ExternalIdentityDiscoveryDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useExternalIdentityDiscoveryDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

@@ -4,7 +4,7 @@ import { useDNSDHCPDiscovery } from "../../hooks/useDNSDHCPDiscovery";
 import DataTable from "../../components/DataTable";
 
 export default function DNSDHCPDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useDNSDHCPDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

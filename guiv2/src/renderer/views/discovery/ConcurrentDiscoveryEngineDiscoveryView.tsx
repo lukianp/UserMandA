@@ -4,7 +4,7 @@ import { useConcurrentDiscoveryEngineDiscovery } from "../../hooks/useConcurrent
 import DataTable from "../../components/DataTable";
 
 export default function ConcurrentDiscoveryEngineDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useConcurrentDiscoveryEngineDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

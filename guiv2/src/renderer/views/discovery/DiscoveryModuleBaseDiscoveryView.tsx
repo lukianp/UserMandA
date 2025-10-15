@@ -4,7 +4,7 @@ import { useDiscoveryModuleBaseDiscovery } from "../../hooks/useDiscoveryModuleB
 import DataTable from "../../components/DataTable";
 
 export default function DiscoveryModuleBaseDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useDiscoveryModuleBaseDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

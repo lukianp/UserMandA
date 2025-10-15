@@ -4,7 +4,7 @@ import { usePhysicalServerDiscoveryDiscovery } from "../../hooks/usePhysicalServ
 import DataTable from "../../components/DataTable";
 
 export default function PhysicalServerDiscoveryDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = usePhysicalServerDiscoveryDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

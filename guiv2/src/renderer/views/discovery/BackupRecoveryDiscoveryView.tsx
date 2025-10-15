@@ -4,7 +4,7 @@ import { useBackupRecoveryDiscovery } from "../../hooks/useBackupRecoveryDiscove
 import DataTable from "../../components/DataTable";
 
 export default function BackupRecoveryDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useBackupRecoveryDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

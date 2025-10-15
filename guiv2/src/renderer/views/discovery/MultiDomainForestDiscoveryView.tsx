@@ -4,7 +4,7 @@ import { useMultiDomainForestDiscovery } from "../../hooks/useMultiDomainForestD
 import DataTable from "../../components/DataTable";
 
 export default function MultiDomainForestDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useMultiDomainForestDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

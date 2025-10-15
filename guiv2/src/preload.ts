@@ -12,7 +12,14 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ElectronAPI } from './renderer/types/electron';
+import type {
+  ElectronAPI,
+  ScriptExecutionParams,
+  ModuleExecutionParams,
+  ScriptTask,
+  ProgressData,
+  OutputData
+} from './renderer/types/electron';
 
 /**
  * Expose secure Electron API to renderer process

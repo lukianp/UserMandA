@@ -4,7 +4,7 @@ import { usePanoramaInterrogationDiscovery } from "../../hooks/usePanoramaInterr
 import DataTable from "../../components/DataTable";
 
 export default function PanoramaInterrogationDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = usePanoramaInterrogationDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

@@ -4,7 +4,7 @@ import { useGCPDiscovery } from "../../hooks/useGCPDiscovery";
 import DataTable from "../../components/DataTable";
 
 export default function GCPDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useGCPDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

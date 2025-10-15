@@ -4,7 +4,7 @@ import { useApplicationDependencyMappingDiscovery } from "../../hooks/useApplica
 import DataTable from "../../components/DataTable";
 
 export default function ApplicationDependencyMappingDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useApplicationDependencyMappingDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

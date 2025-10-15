@@ -4,7 +4,7 @@ import { useStorageArrayDiscovery } from "../../hooks/useStorageArrayDiscovery";
 import DataTable from "../../components/DataTable";
 
 export default function StorageArrayDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useStorageArrayDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

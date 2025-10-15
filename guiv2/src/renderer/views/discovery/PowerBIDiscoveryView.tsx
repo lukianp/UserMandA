@@ -4,7 +4,7 @@ import { usePowerBIDiscovery } from "../../hooks/usePowerBIDiscovery";
 import DataTable from "../../components/DataTable";
 
 export default function PowerBIDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = usePowerBIDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

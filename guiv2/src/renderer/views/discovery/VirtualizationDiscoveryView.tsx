@@ -4,7 +4,7 @@ import { useVirtualizationDiscovery } from "../../hooks/useVirtualizationDiscove
 import DataTable from "../../components/DataTable";
 
 export default function VirtualizationDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useVirtualizationDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

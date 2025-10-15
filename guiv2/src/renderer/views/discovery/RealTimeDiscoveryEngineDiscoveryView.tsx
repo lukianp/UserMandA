@@ -4,7 +4,7 @@ import { useRealTimeDiscoveryEngineDiscovery } from "../../hooks/useRealTimeDisc
 import DataTable from "../../components/DataTable";
 
 export default function RealTimeDiscoveryEngineDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useRealTimeDiscoveryEngineDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

@@ -4,7 +4,7 @@ import { useFileServerDiscoveryDiscovery } from "../../hooks/useFileServerDiscov
 import DataTable from "../../components/DataTable";
 
 export default function FileServerDiscoveryDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useFileServerDiscoveryDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

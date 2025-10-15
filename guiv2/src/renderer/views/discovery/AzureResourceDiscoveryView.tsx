@@ -4,7 +4,7 @@ import { useAzureResourceDiscovery } from "../../hooks/useAzureResourceDiscovery
 import DataTable from "../../components/DataTable";
 
 export default function AzureResourceDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useAzureResourceDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

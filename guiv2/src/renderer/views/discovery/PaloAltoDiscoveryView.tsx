@@ -4,7 +4,7 @@ import { usePaloAltoDiscovery } from "../../hooks/usePaloAltoDiscovery";
 import DataTable from "../../components/DataTable";
 
 export default function PaloAltoDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = usePaloAltoDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

@@ -4,7 +4,7 @@ import { useEnvironmentDetectionDiscovery } from "../../hooks/useEnvironmentDete
 import DataTable from "../../components/DataTable";
 
 export default function EnvironmentDetectionDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useEnvironmentDetectionDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

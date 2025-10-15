@@ -4,7 +4,7 @@ import { useEntraIDAppDiscovery } from "../../hooks/useEntraIDAppDiscovery";
 import DataTable from "../../components/DataTable";
 
 export default function EntraIDAppDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useEntraIDAppDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

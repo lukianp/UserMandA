@@ -4,7 +4,7 @@ import { useSecurityGroupAnalysisDiscovery } from "../../hooks/useSecurityGroupA
 import DataTable from "../../components/DataTable";
 
 export default function SecurityGroupAnalysisDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useSecurityGroupAnalysisDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 

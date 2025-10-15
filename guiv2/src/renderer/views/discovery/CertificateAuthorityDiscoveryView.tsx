@@ -4,7 +4,7 @@ import { useCertificateAuthorityDiscovery } from "../../hooks/useCertificateAuth
 import DataTable from "../../components/DataTable";
 
 export default function CertificateAuthorityDiscoveryView(){
-  const { source } = useProfileStore();
+  const { selectedSourceProfile } = useProfileStore();
   const { start, progress, rows } = useCertificateAuthorityDiscovery(selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 
