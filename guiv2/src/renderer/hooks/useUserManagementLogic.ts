@@ -52,7 +52,7 @@ export const useUserManagementLogic = () => {
             setLoadingMessage('Loading application users from PowerShell modules...');
 
             // Try to execute Get-ApplicationUsers module
-            const result = await powerShellService.executeModule<{ users: User[] }>(
+            const result = await powerShellService.executeModule(
               'Modules/Admin/UserManagement.psm1',
               'Get-ApplicationUsers',
               {
@@ -69,7 +69,7 @@ export const useUserManagementLogic = () => {
         setLoadingMessage('Loading users from CSV files...');
 
         try {
-          const csvResult = await powerShellService.executeScript<{ users: User[]; warnings?: string[] }>(
+          const csvResult = await powerShellService.executeScript(
             'Scripts/Get-AppUsersFromCsv.ps1',
             { ProfilePath: selectedProfile?.dataPath || 'C:\\discoverydata' }
           );

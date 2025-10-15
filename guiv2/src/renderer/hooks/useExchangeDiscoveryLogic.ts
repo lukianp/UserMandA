@@ -19,6 +19,7 @@ import {
   ExchangeExportOptions,
   DEFAULT_EXCHANGE_CONFIG,
 } from '../types/models/exchange';
+import type { ProgressData } from '../../shared/types';
 
 export function useExchangeDiscoveryLogic() {
   // ============================================================================
@@ -83,7 +84,7 @@ export function useExchangeDiscoveryLogic() {
 
     try {
       // Set up progress listener
-      const unsubscribe = window.electronAPI.onProgress((data) => {
+      const unsubscribe = window.electronAPI.onProgress((data: ProgressData) => {
         setProgress(data as unknown as ExchangeDiscoveryProgress);
       });
 

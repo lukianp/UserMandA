@@ -64,6 +64,7 @@ const UsersView: React.FC = () => {
     loadUsers,
     handleExport,
     handleDelete,
+    handleAddUser,
     error,
     columnDefs,
   } = useUsersViewLogic();
@@ -111,7 +112,7 @@ const UsersView: React.FC = () => {
             Refresh
           </Button>
           <Button
-            onClick={() => console.log('Add user')}
+            onClick={handleAddUser}
             variant="primary"
             icon={<UserPlus size={18} />}
             data-cy="add-user"

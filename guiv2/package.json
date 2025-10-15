@@ -13,7 +13,7 @@
   "scripts": {
     "start": "cross-env DEBUG=true electron-forge start",
     "start:prod": "cross-env NODE_ENV=production electron-forge start",
-    "package": "cross-env NODE_ENV=production electron-forge package",
+    "package": "cross-env NODE_ENV=production NO_COLOR=1 FORCE_COLOR=0 electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
@@ -138,6 +138,7 @@
     "zustand": "^5.0.8"
   },
   "overrides": {
-    "colorette": "2.0.19"
+    "colorette": "2.0.19",
+    "listr2": "6.6.1"
   }
 }

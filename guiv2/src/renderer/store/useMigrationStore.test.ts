@@ -187,11 +187,7 @@ describe('useMigrationStore', () => {
 
   describe('Wave Execution', () => {
     it('should execute a wave successfully', async () => {
-      mockExecuteModule.mockResolvedValueOnce({
-        success: true,
-        data: { completed: true },
-      });
-
+      // Set up wave to be in correct state for execution
       const { result } = renderHook(() => useMigrationStore());
 
       let waveId = '';
@@ -202,7 +198,15 @@ describe('useMigrationStore', () => {
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
           priority: 'Normal',
+          users: ['user1', 'user2'],
         } as any);
+      });
+
+      // Mock successful execution response - ensure proper structure
+      mockExecuteModule.mockResolvedValueOnce({
+        success: true,
+        data: { completed: true, executionId: 'test-execution-id' },
+        error: null,
       });
 
       await act(async () => {
@@ -256,37 +260,39 @@ describe('useMigrationStore', () => {
     });
 
     it('should pause a running wave', async () => {
-      mockExecuteModule.mockResolvedValueOnce({ success: true });
-
+      // Set up wave to be in correct state for pausing
       const { result } = renderHook(() => useMigrationStore());
 
-      let waveId = '';
+      let pauseWaveId = '';
       await act(async () => {
-        waveId = await result.current.planWave({
+        pauseWaveId = await result.current.planWave({
           name: 'Pausable Wave',
           description: 'Can be paused',
           plannedStartDate: new Date().toISOString(),
           plannedEndDate: new Date().toISOString(),
           priority: 'Normal',
+          users: ['user1', 'user2'],
         } as any);
       });
 
       // Set wave to in-progress state
       await act(async () => {
-        await result.current.updateWave(waveId, { status: 'InProgress' });
+        await result.current.updateWave(pauseWaveId, { status: 'InProgress' });
       });
 
+      mockExecuteModule.mockResolvedValueOnce({ success: true });
+
       await act(async () => {
-        await result.current.pauseWave(waveId);
+        await result.current.pauseWave(pauseWaveId);
       });
 
       expect(mockExecuteModule).toHaveBeenCalledWith({
         modulePath: 'Modules/Migration/MigrationOrchestrator.psm1',
         functionName: 'Pause-MigrationWave',
-        parameters: { WaveId: waveId },
+        parameters: { WaveId: pauseWaveId },
       });
 
-      const wave = result.current.waves.find(w => w.id === waveId);
+      const wave = result.current.waves.find(w => w.id === pauseWaveId);
       expect(wave?.status).toBe('Paused');
     });
 
@@ -425,6 +431,7 @@ describe('useMigrationStore', () => {
       mockExecuteModule.mockResolvedValueOnce({
         success: true,
         data: { conflicts: mockConflicts },
+        error: null,
       });
 
       const { result } = renderHook(() => useMigrationStore());
@@ -440,23 +447,25 @@ describe('useMigrationStore', () => {
     });
 
     it('should resolve a conflict', async () => {
-      mockExecuteModule.mockResolvedValueOnce({ success: true });
+      mockExecuteModule.mockResolvedValueOnce({ success: true, error: null });
 
       const { result } = renderHook(() => useMigrationStore());
 
-      // Add conflict to state
-      const mockConflict: MigrationConflict = {
+      // Add conflict to state using a proper mutable array
+      const mockConflict = {
         id: 'conflict-1',
-        type: 'duplicate_user',
-        severity: 'High',
+        type: 'duplicate_user' as const,
+        severity: 'High' as const,
         sourceResource: { id: 'src-1', name: 'User1', type: 'User', properties: {} },
-        status: 'pending',
-        suggestedResolution: { conflictId: 'conflict-1', strategy: 'merge', notes: '' },
+        status: 'pending' as const,
+        suggestedResolution: { conflictId: 'conflict-1', strategy: 'merge' as const, notes: '' },
         metadata: {},
       };
 
       act(() => {
-        result.current.conflicts.push(mockConflict as any);
+        // Use array replacement instead of push to avoid mutability issues
+        result.current.conflicts.length = 0; // Clear array
+        result.current.conflicts.push(mockConflict);
       });
 
       await act(async () => {
@@ -482,38 +491,40 @@ describe('useMigrationStore', () => {
     it('should get conflicts by type', async () => {
       const { result } = renderHook(() => useMigrationStore());
 
-      const conflicts: MigrationConflict[] = [
+      const conflicts = [
         {
           id: 'c1',
-          type: 'duplicate_user',
-          severity: 'High',
+          type: 'duplicate_user' as const,
+          severity: 'High' as const,
           sourceResource: { id: 's1', name: 'User1', type: 'User', properties: {} },
-          status: 'pending',
-          suggestedResolution: { conflictId: 'c1', strategy: 'merge', notes: '' },
+          status: 'pending' as const,
+          suggestedResolution: { conflictId: 'c1', strategy: 'merge' as const, notes: '' },
           metadata: {},
         },
         {
           id: 'c2',
-          type: 'duplicate_group',
-          severity: 'Medium',
+          type: 'duplicate_group' as const,
+          severity: 'Medium' as const,
           sourceResource: { id: 's2', name: 'Group1', type: 'Group', properties: {} },
-          status: 'pending',
-          suggestedResolution: { conflictId: 'c2', strategy: 'merge', notes: '' },
+          status: 'pending' as const,
+          suggestedResolution: { conflictId: 'c2', strategy: 'merge' as const, notes: '' },
           metadata: {},
         },
         {
           id: 'c3',
-          type: 'duplicate_user',
-          severity: 'Low',
+          type: 'duplicate_user' as const,
+          severity: 'Low' as const,
           sourceResource: { id: 's3', name: 'User2', type: 'User', properties: {} },
-          status: 'pending',
-          suggestedResolution: { conflictId: 'c3', strategy: 'skip', notes: '' },
+          status: 'pending' as const,
+          suggestedResolution: { conflictId: 'c3', strategy: 'skip' as const, notes: '' },
           metadata: {},
         },
       ];
 
       act(() => {
-        result.current.conflicts.push(...(conflicts as any));
+        // Use array replacement instead of push to avoid mutability issues
+        result.current.conflicts.length = 0; // Clear array
+        result.current.conflicts.push(...conflicts);
       });
 
       const userConflicts = result.current.getConflictsByType('duplicate_user');
@@ -551,6 +562,7 @@ describe('useMigrationStore', () => {
       mockExecuteModule.mockResolvedValueOnce({
         success: true,
         data: { errors: [], warnings: ['Warning: Some mappings are incomplete'] },
+        error: null,
       });
 
       const { result } = renderHook(() => useMigrationStore());
@@ -623,6 +635,7 @@ describe('useMigrationStore', () => {
           errors: [],
           warnings: ['Network latency detected'],
         },
+        error: null,
       });
 
       const { result } = renderHook(() => useMigrationStore());
@@ -651,6 +664,7 @@ describe('useMigrationStore', () => {
           errors: [],
           warnings: [],
         },
+        error: null,
       });
 
       const { result } = renderHook(() => useMigrationStore());
@@ -673,6 +687,7 @@ describe('useMigrationStore', () => {
           errors: [{ field: 'permissions', message: 'Missing permissions', code: 'MISSING_PERMS', severity: 'error' }],
           warnings: [],
         },
+        error: null,
       });
 
       const { result } = renderHook(() => useMigrationStore());

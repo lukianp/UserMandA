@@ -19,6 +19,7 @@ import {
   SharePointExportOptions,
   DEFAULT_SHAREPOINT_CONFIG,
 } from '../types/models/sharepoint';
+import type { ProgressData } from '../../shared/types';
 
 export function useSharePointDiscoveryLogic() {
   // ============================================================================
@@ -82,11 +83,11 @@ export function useSharePointDiscoveryLogic() {
     });
 
     try {
-      const unsubscribe = window.electronAPI.onProgress((data) => {
+      const unsubscribe = window.electronAPI.onProgress((data: ProgressData) => {
         // Convert ProgressData to SharePointDiscoveryProgress
         const progressData: SharePointDiscoveryProgress = {
           phase: 'initializing',
-          phaseLabel: data.message,
+          phaseLabel: data.message || 'Processing...',
           percentComplete: data.percentage,
           itemsProcessed: data.itemsProcessed || 0,
           totalItems: data.totalItems || 0,

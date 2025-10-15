@@ -14,6 +14,7 @@ import {
   FILESYSTEM_TEMPLATES,
   FileSystemProgress,
 } from '../types/models/filesystem';
+import type { ProgressData } from '../../shared/types';
 
 export interface UseFileSystemDiscoveryLogicReturn {
   // Discovery state
@@ -116,7 +117,7 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     });
 
     try {
-      const unsubscribe = window.electronAPI.onProgress((data) => {
+      const unsubscribe = window.electronAPI.onProgress((data: ProgressData) => {
         // Convert ProgressData to FileSystemProgress
         const progressData: FileSystemProgress = {
           phase: 'discovering_shares',
@@ -125,7 +126,7 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
           sharesCompleted: 0,
           totalShares: 0,
           percentComplete: data.percentage,
-          message: data.message,
+          message: data.message || 'Processing...',
         };
         setProgress(progressData);
       });

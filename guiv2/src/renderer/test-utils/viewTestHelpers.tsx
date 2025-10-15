@@ -223,18 +223,34 @@ export const hasEmptyState = (container: HTMLElement): boolean => {
  * Reset all mocks between tests
  */
 export const resetAllMocks = () => {
-  jest.clearAllMocks();
-
   // Reset window.electronAPI mocks
-  (window.electronAPI.executeScript as jest.Mock).mockReset();
-  (window.electronAPI.executeModule as jest.Mock).mockReset();
-  (window.electronAPI.cancelExecution as jest.Mock).mockReset();
-  (window.electronAPI.readFile as jest.Mock).mockReset();
-  (window.electronAPI.writeFile as jest.Mock).mockReset();
-  (window.electronAPI.getConfig as jest.Mock).mockReset();
-  (window.electronAPI.setConfig as jest.Mock).mockReset();
-  (window.electronAPI.onProgress as jest.Mock).mockReset();
-  (window.electronAPI.onOutput as jest.Mock).mockReset();
+  if (window.electronAPI.executeScript && typeof window.electronAPI.executeScript.mockReset === 'function') {
+    window.electronAPI.executeScript.mockReset();
+  }
+  if (window.electronAPI.executeModule && typeof window.electronAPI.executeModule.mockReset === 'function') {
+    window.electronAPI.executeModule.mockReset();
+  }
+  if (window.electronAPI.cancelExecution && typeof window.electronAPI.cancelExecution.mockReset === 'function') {
+    window.electronAPI.cancelExecution.mockReset();
+  }
+  if (window.electronAPI.readFile && typeof window.electronAPI.readFile.mockReset === 'function') {
+    window.electronAPI.readFile.mockReset();
+  }
+  if (window.electronAPI.writeFile && typeof window.electronAPI.writeFile.mockReset === 'function') {
+    window.electronAPI.writeFile.mockReset();
+  }
+  if (window.electronAPI.getConfig && typeof window.electronAPI.getConfig.mockReset === 'function') {
+    window.electronAPI.getConfig.mockReset();
+  }
+  if (window.electronAPI.setConfig && typeof window.electronAPI.setConfig.mockReset === 'function') {
+    window.electronAPI.setConfig.mockReset();
+  }
+  if (window.electronAPI.onProgress && typeof window.electronAPI.onProgress.mockReset === 'function') {
+    window.electronAPI.onProgress.mockReset();
+  }
+  if (window.electronAPI.onOutput && typeof window.electronAPI.onOutput.mockReset === 'function') {
+    window.electronAPI.onOutput.mockReset();
+  }
 };
 
 // ============================================================================

@@ -282,7 +282,7 @@ export const useComputerInventoryLogic = () => {
     setError(null);
 
     try {
-      const result = await window.electronAPI.executeModule<{ computers: ComputerInventoryData[] }>(
+      const result = await window.electronAPI.executeModule(
         {
           modulePath: 'Modules/Discovery/ComputerInventory.psm1',
           functionName: 'Get-ComputerInventory',

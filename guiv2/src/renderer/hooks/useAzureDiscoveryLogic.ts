@@ -11,6 +11,7 @@ import {
   DiscoveryResult,
   DiscoveryProgress,
 } from '../types/models/discovery';
+import type { ProgressData, OutputData } from '../../shared/types';
 
 export interface AzureDiscoveryFormData {
   tenantId: string;
@@ -91,11 +92,11 @@ export const useAzureDiscoveryLogic = () => {
     const api = getElectronAPI();
     if (!api || !api.onProgress) return () => {};
 
-    const unsubscribe = api.onProgress((data) => {
+    const unsubscribe = api.onProgress((data: ProgressData) => {
       // Convert ProgressData to DiscoveryProgress
       const progressData: DiscoveryProgress = {
         percentage: data.percentage,
-        message: data.message,
+        message: data.message || 'Processing...',
         currentItem: data.currentItem,
         itemsProcessed: data.itemsProcessed,
         totalItems: data.totalItems,
@@ -122,7 +123,7 @@ export const useAzureDiscoveryLogic = () => {
     const api = getElectronAPI();
     if (!api || !api.onOutput) return () => {};
 
-    const unsubscribe = api.onOutput((data) => {
+    const unsubscribe = api.onOutput((data: OutputData) => {
       // Convert OutputData to expected format
       if (data.type === 'error' && data.data) {
         addLog(`[ERROR] ${data.data}`);

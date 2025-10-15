@@ -234,7 +234,7 @@ export const useSecurityAuditLogic = () => {
     setError(null);
 
     try {
-      const result = await window.electronAPI.executeModule<{ events: SecurityAuditEvent[] }>({
+      const result = await window.electronAPI.executeModule({
         modulePath: 'Modules/Security/AuditLog.psm1',
         functionName: 'Get-SecurityAuditEvents',
         parameters: {

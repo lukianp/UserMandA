@@ -188,6 +188,14 @@ export const useProfileStore = create<ProfileState>()(
     /**
      * Set selected source profile
      * Mirrors C# ProfileService.SetCurrentProfileAsync
+     *
+     * When profile changes:
+     * 1. Calls IPC to set active profile (reinitializes LogicEngine with new data path)
+     * 2. Triggers LogicEngine to reload ALL CSV data for the new profile
+     * 3. Updates local state (triggers all views subscribed to selectedSourceProfile to reload)
+     *
+     * This replicates /gui/ behavior where ProfileService.CurrentProfile setter
+     * triggers CsvDataService reload and raises ProfilesChanged event.
      */
     setSelectedSourceProfile: async (profile) => {
       if (!profile) {
@@ -195,24 +203,50 @@ export const useProfileStore = create<ProfileState>()(
         return;
       }
 
+      console.log(`[ProfileStore] Changing active source profile to: ${profile.companyName}`);
       const electronAPI = getElectronAPI();
+
+      // Step 1: Set active profile (this reinitializes LogicEngine with new data path)
       const result = await electronAPI.setActiveSourceProfile(profile.id);
 
-      if (result.success) {
-        // Update local state
-        const updatedProfiles = get().sourceProfiles.map((p) => ({
-          ...p,
-          isActive: p.id === profile.id,
-        }));
-        set({
-          sourceProfiles: updatedProfiles,
-          selectedSourceProfile: profile
-        });
-
-        console.log(`[ProfileStore] Active source profile changed: ${profile.companyName}, data path: ${result.dataPath}`);
-      } else {
+      if (!result.success) {
         throw new Error(result.error || 'Failed to set active profile');
       }
+
+      console.log(`[ProfileStore] Active profile set, data path: ${result.dataPath}`);
+
+      // Step 2: Trigger LogicEngine to load all CSV data for this profile
+      // This replicates /gui/ pattern where changing profile triggers data reload
+      try {
+        console.log('[ProfileStore] Triggering LogicEngine data reload for new profile...');
+        const loadResult = await electronAPI.invoke('logic-engine:load-all', {
+          profilePath: result.dataPath,
+        });
+
+        if (loadResult.success) {
+          console.log('[ProfileStore] LogicEngine data loaded successfully:', loadResult.statistics);
+        } else {
+          console.warn('[ProfileStore] LogicEngine data load failed:', loadResult.error);
+        }
+      } catch (error: any) {
+        console.error('[ProfileStore] Failed to load LogicEngine data:', error);
+        // Don't throw - profile is still set, just data might not be loaded
+      }
+
+      // Step 3: Update local state
+      // This triggers all views subscribed to selectedSourceProfile to reload
+      const updatedProfiles = get().sourceProfiles.map((p) => ({
+        ...p,
+        isActive: p.id === profile.id,
+      }));
+
+      set({
+        sourceProfiles: updatedProfiles,
+        selectedSourceProfile: profile,
+      });
+
+      console.log(`[ProfileStore] Profile change complete: ${profile.companyName}`);
+      console.log('[ProfileStore] All views subscribed to selectedSourceProfile will now auto-reload');
     },
 
     /**

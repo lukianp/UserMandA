@@ -233,7 +233,26 @@ export const GroupsView: React.FC = () => {
             </Button>
 
             <Button
-              onClick={() => alert('Create Group - Coming Soon')}
+              onClick={() => {
+                // Dynamically import and open CreateGroupDialog
+                import('../../components/dialogs/CreateGroupDialog').then(({ CreateGroupDialog }) => {
+                  const { openModal } = require('../../store/useModalStore').useModalStore.getState();
+
+                  openModal({
+                    type: 'custom',
+                    title: 'Create New Group',
+                    component: CreateGroupDialog,
+                    props: {
+                      onGroupCreated: (group: any) => {
+                        console.log('[GroupsView] Group created, refreshing...', group);
+                        handleRefresh(); // Reload groups after creation
+                      },
+                    },
+                    dismissable: true,
+                    size: 'lg',
+                  });
+                });
+              }}
               variant="primary"
               size="md"
               icon={<Plus className="h-4 w-4" />}

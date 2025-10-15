@@ -56,9 +56,11 @@ export interface ProgressData {
   /** Progress percentage (0-100) */
   percentage: number;
   /** Human-readable progress message */
-  message: string;
+  message?: string;
+  /** Current phase of execution */
+  currentPhase?: string;
   /** Current item being processed */
-  currentItem: string;
+  currentItem?: string;
   /** Number of items processed */
   itemsProcessed?: number;
   /** Total number of items */
@@ -133,14 +135,23 @@ export interface ScriptExecutionParams {
  * Module execution parameters
  */
 export interface ModuleExecutionParams {
-  /** Path to PowerShell module */
+  /** Path to PowerShell module file */
   modulePath: string;
-  /** Function name to invoke */
+  /** Function name to invoke within the module */
   functionName: string;
   /** Named parameters to pass to function */
-  parameters: Dictionary<any>;
+  parameters?: Record<string, any>;
   /** Execution options */
-  options?: ExecutionOptions;
+  options?: {
+    /** Maximum execution time in milliseconds */
+    timeout?: number;
+    /** Unique cancellation token */
+    cancellationToken?: string;
+    /** Enable output streaming */
+    streamOutput?: boolean;
+    /** Working directory */
+    workingDirectory?: string;
+  };
 }
 
 /**

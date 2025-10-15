@@ -61,8 +61,14 @@ const createWindow = (): void => {
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
-  // Open the DevTools in development
-  if (process.env.NODE_ENV === 'development') {
+  // Open the DevTools in development or when explicitly requested
+  const shouldOpenDevTools =
+    process.env.NODE_ENV === 'development' ||
+    process.env.DEBUG === 'true' ||
+    process.env.OPEN_DEVTOOLS === 'true';
+
+  if (shouldOpenDevTools) {
+    console.log('[MAIN] Opening DevTools (debug mode enabled)');
     mainWindow.webContents.openDevTools();
   }
 };

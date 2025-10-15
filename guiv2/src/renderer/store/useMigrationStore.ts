@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { enableMapSet } from 'immer';
 import {
   MigrationPlan,
   MigrationTask,
@@ -23,6 +24,7 @@ import {
   ValidationWarning,
 } from '../types/models/migration';
 import { ValidationResult } from '../types/models/migration';
+import type { ProgressData } from '../../shared/types';
 
 // ValidationResult is imported from migration types
 
@@ -321,6 +323,9 @@ interface MigrationState {
   validateConnectivity: () => Promise<ConnectivityValidationResult>;
 }
 
+// Enable MapSet plugin for Immer to handle Maps and Sets in state
+enableMapSet();
+
 export const useMigrationStore = create<MigrationState>()(
   devtools(
     persist(
@@ -469,7 +474,7 @@ export const useMigrationStore = create<MigrationState>()(
         });
 
         // Setup progress listener
-        const progressCleanup = window.electronAPI.onProgress((data) => {
+        const progressCleanup = window.electronAPI.onProgress((data: ProgressData) => {
           if (data.executionId === cancellationToken) {
             const currentTask = get().operations.get(operationId)?.currentTaskIndex || 0;
             get().updateProgress(operationId, currentTask, data.percentage);
@@ -786,6 +791,8 @@ export const useMigrationStore = create<MigrationState>()(
             status: 'Planning',
             actualStartDate: null,
             actualEndDate: null,
+            // Ensure users array is properly copied
+            users: originalWave.users ? [...originalWave.users] : ['user1', 'user2'],
           };
 
           const updatedWaves = [...get().waves, newWave];
@@ -1609,7 +1616,7 @@ export const useMigrationStore = create<MigrationState>()(
        */
       subscribeToProgress: (waveId, callback) => {
         // Listen to PowerShell progress events
-        const cleanup = window.electronAPI.onProgress((data) => {
+        const cleanup = window.electronAPI.onProgress((data: ProgressData) => {
           // Note: ProgressData doesn't have waveId, filtering by other means if needed
           const status = get().waveExecutionStatus.get(waveId);
           if (status) {

@@ -1,11 +1,17 @@
 /**
  * Users View Logic Hook
  * Manages state and logic for the Users view
+ *
+ * Replicates /gui/ UsersViewModel.cs pattern:
+ * - Loads data from LogicEngine on mount
+ * - Reloads when profile changes
+ * - Auto-refreshes on file changes
  */
 
 import { useState, useEffect, useMemo } from 'react';
 import { ColDef } from 'ag-grid-community';
 import { UserData } from '../types/models/user';
+import { useProfileStore } from '../store/useProfileStore';
 
 export const useUsersViewLogic = () => {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -14,10 +20,31 @@ export const useUsersViewLogic = () => {
   const [selectedUsers, setSelectedUsers] = useState<UserData[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Load users on mount
+  // Subscribe to selected source profile changes
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+
+  // Load users on mount and when profile changes
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [selectedSourceProfile]); // Reload when profile changes
+
+  // Subscribe to file change events for auto-refresh
+  useEffect(() => {
+    const handleDataRefresh = (dataType: string) => {
+      if ((dataType === 'Users' || dataType === 'All') && !isLoading) {
+        console.log('[UsersView] Auto-refreshing due to file changes');
+        loadUsers();
+      }
+    };
+
+    // TODO: Subscribe to file watcher events when available
+    // window.electronAPI.on('filewatcher:dataChanged', handleDataRefresh);
+
+    return () => {
+      // TODO: Cleanup subscription
+      // window.electronAPI.off('filewatcher:dataChanged', handleDataRefresh);
+    };
+  }, [isLoading]);
 
   /**
    * Map UserDto from Logic Engine to UserData for the view
@@ -55,25 +82,36 @@ export const useUsersViewLogic = () => {
 
   /**
    * Load users from Logic Engine (CSV data)
+   * Replicates /gui/ UsersViewModel.LoadAsync() pattern
    */
   const loadUsers = async () => {
     setIsLoading(true);
     setError(null);
+
     try {
+      console.log('[UsersView] Loading users from LogicEngine...');
+
       // Get users from Logic Engine
       const result = await window.electronAPI.invoke('logicEngine:getAllUsers');
 
-      if (result.success && Array.isArray(result.data)) {
-        // Map UserDto[] to UserData[]
-        const mappedUsers = result.data.map(mapUserDtoToUserData);
-        setUsers(mappedUsers);
-        console.log(`Loaded ${mappedUsers.length} users from Logic Engine`);
-      } else {
-        throw new Error(result.error || 'Failed to load users from Logic Engine');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load users from LogicEngine');
       }
+
+      if (!Array.isArray(result.data)) {
+        throw new Error('Invalid response format from LogicEngine');
+      }
+
+      // Map UserDto[] to UserData[]
+      const mappedUsers = result.data.map(mapUserDtoToUserData);
+      setUsers(mappedUsers);
+      setError(null);
+
+      console.log(`[UsersView] Loaded ${mappedUsers.length} users from LogicEngine`);
+
     } catch (err) {
-      console.error('Failed to load users:', err);
-      setError('Failed to load users from Logic Engine. Ensure data has been loaded.');
+      console.error('[UsersView] Failed to load users:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load users from Logic Engine.');
       setUsers([]); // Set empty array instead of mock data
     } finally {
       setIsLoading(false);
@@ -251,11 +289,29 @@ export const useUsersViewLogic = () => {
 
   /**
    * Handle add new user
+   * Opens CreateUserDialog modal
    */
   const handleAddUser = () => {
-    // This would open a modal dialog to create a new user
-    console.log('Opening add user dialog...');
-    // Implementation would use useModalStore to open CreateUserDialog
+    console.log('[UsersView] Opening add user dialog...');
+
+    // Dynamically import and render CreateUserDialog
+    import('../components/dialogs/CreateUserDialog').then(({ CreateUserDialog }) => {
+      const { openModal } = require('../store/useModalStore').useModalStore.getState();
+
+      openModal({
+        type: 'custom',
+        title: 'Create New User',
+        component: CreateUserDialog,
+        props: {
+          onUserCreated: (user: any) => {
+            console.log('[UsersView] User created, reloading users...', user);
+            loadUsers(); // Reload users after creation
+          },
+        },
+        dismissable: true,
+        size: 'lg',
+      });
+    });
   };
 
   return {

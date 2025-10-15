@@ -194,7 +194,7 @@ export class PowerShellService {
     };
 
     try {
-      const result = await api.executeScript<T>(params);
+      const result = await api.executeScript(params);
 
       // Validate result structure like C# does
       if (!result.success) {
@@ -239,7 +239,7 @@ export class PowerShellService {
     };
 
     try {
-      const result = await api.executeModule<T>(params);
+      const result = await api.executeModule(params);
 
       // Validate result structure like C# does
       if (!result.success) {

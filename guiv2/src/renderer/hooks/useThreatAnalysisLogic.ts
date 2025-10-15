@@ -80,7 +80,7 @@ export const useThreatAnalysisLogic = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await window.electronAPI.executeModule<{ threats: ThreatIndicator[] }>({
+      const result = await window.electronAPI.executeModule({
         modulePath: 'Modules/Security/ThreatAnalysis.psm1',
         functionName: 'Get-ThreatIndicators',
         parameters: { Domain: selectedSourceProfile.domain, Credential: selectedSourceProfile.credential },

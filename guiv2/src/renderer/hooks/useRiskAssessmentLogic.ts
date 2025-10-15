@@ -88,7 +88,7 @@ export const useRiskAssessmentLogic = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await window.electronAPI.executeModule<{ risks: SecurityRiskData[] }>({
+      const result = await window.electronAPI.executeModule({
         modulePath: 'Modules/Security/RiskAssessment.psm1',
         functionName: 'Get-SecurityRisks',
         parameters: { Domain: selectedSourceProfile.domain, Credential: selectedSourceProfile.credential },

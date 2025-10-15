@@ -170,7 +170,7 @@ export const useComplianceReportLogic = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await window.electronAPI.executeModule<{ controls: ComplianceItem[] }>({
+      const result = await window.electronAPI.executeModule({
         modulePath: 'Modules/Compliance/ComplianceReport.psm1',
         functionName: 'Get-ComplianceControls',
         parameters: {

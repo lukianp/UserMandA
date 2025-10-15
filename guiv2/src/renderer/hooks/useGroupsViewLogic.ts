@@ -69,32 +69,38 @@ export const useGroupsViewLogic = () => {
 
   /**
    * Load groups from Logic Engine (CSV data)
-   * Replaced PowerShell execution with direct Logic Engine access
+   * Replicates /gui/ GroupsViewModel.LoadAsync() pattern
    */
   const loadGroups = async () => {
     setIsLoading(true);
     setError(null);
     setWarnings([]);
+    setLoadingMessage('Loading groups from Logic Engine...');
 
     try {
-      setLoadingMessage('Loading groups from Logic Engine...');
+      console.log('[GroupsView] Loading groups from LogicEngine...');
 
       // Get groups from Logic Engine
       const result = await window.electronAPI.invoke('logicEngine:getAllGroups');
 
-      if (result.success && Array.isArray(result.data)) {
-        // Map GroupDto[] to GroupData[]
-        const mappedGroups = result.data.map(mapGroupDtoToGroupData);
-        setGroups(mappedGroups);
-        console.log(`Loaded ${mappedGroups.length} groups from Logic Engine`);
-      } else {
-        throw new Error(result.error || 'Failed to load groups from Logic Engine');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load groups from LogicEngine');
       }
 
-      setLoadingMessage('');
+      if (!Array.isArray(result.data)) {
+        throw new Error('Invalid response format from LogicEngine');
+      }
+
+      // Map GroupDto[] to GroupData[]
+      const mappedGroups = result.data.map(mapGroupDtoToGroupData);
+      setGroups(mappedGroups);
+      setError(null);
+
+      console.log(`[GroupsView] Loaded ${mappedGroups.length} groups from LogicEngine`);
+
     } catch (err: any) {
-      console.error('Failed to load groups:', err);
-      setError('Failed to load groups from Logic Engine. Ensure data has been loaded.');
+      console.error('[GroupsView] Failed to load groups:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load groups from Logic Engine.');
       setGroups([]); // Set empty array instead of mock data
     } finally {
       setIsLoading(false);
@@ -163,10 +169,27 @@ export const useGroupsViewLogic = () => {
 
   /**
    * View group members
+   * Opens GroupMembersModal
    */
   const handleViewMembers = (group: GroupData) => {
-    // TODO: Open modal or navigate to members view
-    console.log('View members for group:', group.name);
+    console.log('[GroupsView] Opening members modal for group:', group.name);
+
+    // Dynamically import and render GroupMembersModal
+    import('../components/dialogs/GroupMembersModal').then(({ GroupMembersModal }) => {
+      const { openModal } = require('../store/useModalStore').useModalStore.getState();
+
+      openModal({
+        type: 'custom',
+        title: `Members of ${group.name}`,
+        component: GroupMembersModal,
+        props: {
+          groupId: group.id,
+          groupName: group.name,
+        },
+        dismissable: true,
+        size: 'xl',
+      });
+    });
   };
 
   /**
@@ -176,10 +199,31 @@ export const useGroupsViewLogic = () => {
     loadGroups();
   };
 
-  // Load groups on mount
+  // Subscribe to selected source profile changes
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+
+  // Load groups on mount and when profile changes
   useEffect(() => {
     loadGroups();
-  }, []);
+  }, [selectedSourceProfile]); // Reload when profile changes
+
+  // Subscribe to file change events for auto-refresh
+  useEffect(() => {
+    const handleDataRefresh = (dataType: string) => {
+      if ((dataType === 'Groups' || dataType === 'All') && !isLoading) {
+        console.log('[GroupsView] Auto-refreshing due to file changes');
+        loadGroups();
+      }
+    };
+
+    // TODO: Subscribe to file watcher events when available
+    // window.electronAPI.on('filewatcher:dataChanged', handleDataRefresh);
+
+    return () => {
+      // TODO: Cleanup subscription
+      // window.electronAPI.off('filewatcher:dataChanged', handleDataRefresh);
+    };
+  }, [isLoading]);
 
   /**
    * Filtered groups based on search and filters

@@ -292,7 +292,7 @@ export const useServerInventoryLogic = () => {
     setError(null);
 
     try {
-      const result = await window.electronAPI.executeModule<{ servers: ServerInventoryData[] }>({
+      const result = await window.electronAPI.executeModule({
         modulePath: 'Modules/Discovery/ServerInventory.psm1',
         functionName: 'Get-ServerInventory',
         parameters: {

@@ -102,7 +102,7 @@ export const usePolicyManagementLogic = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await window.electronAPI.executeModule<{ policies: SecurityPolicy[] }>({
+      const result = await window.electronAPI.executeModule({
         modulePath: 'Modules/Security/PolicyManagement.psm1',
         functionName: 'Get-SecurityPolicies',
         parameters: { Domain: selectedSourceProfile.domain, Credential: selectedSourceProfile.credential },

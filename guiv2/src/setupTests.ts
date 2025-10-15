@@ -3,14 +3,25 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
-import { jest } from '@jest/globals';
 
 // Polyfills for Jest environment
 const { TextEncoder, TextDecoder } = require('util');
-Object.assign(global, { TextEncoder, TextDecoder });
+Object.assign(globalThis, { TextEncoder, TextDecoder });
+
+// Mock URL.createObjectURL for testing
+Object.defineProperty(window.URL, 'createObjectURL', {
+  writable: true,
+  value: jest.fn(() => 'mock-url'),
+});
+
+// Mock URL.revokeObjectURL for testing
+Object.defineProperty(window.URL, 'revokeObjectURL', {
+  writable: true,
+  value: jest.fn(),
+});
 
 // Mock window.electronAPI for testing
-global.window.electronAPI = {
+globalThis.window.electronAPI = {
   executeScript: jest.fn(),
   executeModule: jest.fn(),
   cancelExecution: jest.fn(),
@@ -18,12 +29,12 @@ global.window.electronAPI = {
   writeFile: jest.fn(),
   getConfig: jest.fn(),
   setConfig: jest.fn(),
-  onProgress: jest.fn(() => () => {}),
-  onOutput: jest.fn(() => () => {}),
+  onProgress: jest.fn(() => jest.fn()),
+  onOutput: jest.fn(() => jest.fn()),
 } as any;
 
 // Mock IntersectionObserver
-global.IntersectionObserver = class IntersectionObserver implements globalThis.IntersectionObserver {
+globalThis.IntersectionObserver = class IntersectionObserver implements globalThis.IntersectionObserver {
   root: Element | null = null;
   rootMargin: string = '';
   thresholds: ReadonlyArray<number> = [];
@@ -39,7 +50,7 @@ global.IntersectionObserver = class IntersectionObserver implements globalThis.I
 };
 
 // Mock ResizeObserver
-global.ResizeObserver = class ResizeObserver {
+globalThis.ResizeObserver = class ResizeObserver {
   constructor() {}
   observe() {}
   unobserve() {}

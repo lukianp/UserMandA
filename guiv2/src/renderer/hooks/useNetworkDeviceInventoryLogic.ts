@@ -254,7 +254,7 @@ export const useNetworkDeviceInventoryLogic = () => {
     setError(null);
 
     try {
-      const result = await window.electronAPI.executeModule<{ devices: NetworkDeviceData[] }>({
+      const result = await window.electronAPI.executeModule({
         modulePath: 'Modules/Discovery/NetworkDeviceInventory.psm1',
         functionName: 'Get-NetworkDeviceInventory',
         parameters: {

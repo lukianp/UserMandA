@@ -12,14 +12,14 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
+import type { ElectronAPI } from './renderer/types/electron';
 import type {
-  ElectronAPI,
   ScriptExecutionParams,
   ModuleExecutionParams,
   ScriptTask,
   ProgressData,
   OutputData
-} from './renderer/types/electron';
+} from './shared/types';
 
 /**
  * Expose secure Electron API to renderer process
@@ -622,11 +622,12 @@ const electronAPI: ElectronAPI = {
 
     /**
      * Get recent activity feed
+     * @param profileName - Profile name to get activity for
      * @param limit - Maximum number of activities to return
      * @returns Promise with ActivityItem array
      */
-    getRecentActivity: (limit?: number) =>
-      ipcRenderer.invoke('dashboard:getRecentActivity', limit),
+    getRecentActivity: (profileName: string, limit?: number) =>
+      ipcRenderer.invoke('dashboard:getRecentActivity', profileName, limit),
 
     /**
      * Acknowledge a system alert

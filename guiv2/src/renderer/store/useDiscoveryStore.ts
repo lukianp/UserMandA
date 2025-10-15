@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { DiscoveryResult, DiscoveryProgress, DiscoveryType, DiscoveryStatus } from '../types/models/discovery';
+import type { ProgressData } from '../../shared/types';
 
 export interface DiscoveryOperation {
   /** Unique operation identifier */
@@ -96,9 +97,9 @@ export const useDiscoveryStore = create<DiscoveryState>()(
         });
 
         // Setup progress listener
-        const progressCleanup = window.electronAPI.onProgress((data) => {
+        const progressCleanup = window.electronAPI.onProgress((data: ProgressData) => {
           if (data.executionId === cancellationToken) {
-            get().updateProgress(operationId, data.percentage, data.message);
+            get().updateProgress(operationId, data.percentage, data.message || 'Processing...');
           }
         });
 

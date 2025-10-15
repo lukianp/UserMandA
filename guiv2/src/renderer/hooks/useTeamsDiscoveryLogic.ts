@@ -21,6 +21,7 @@ import {
   TeamsExportOptions,
   DEFAULT_TEAMS_CONFIG,
 } from '../types/models/teams';
+import type { ProgressData } from '../../shared/types';
 
 export function useTeamsDiscoveryLogic() {
   // ============================================================================
@@ -85,11 +86,11 @@ export function useTeamsDiscoveryLogic() {
     });
 
     try {
-      const unsubscribe = window.electronAPI.onProgress((data) => {
+      const unsubscribe = window.electronAPI.onProgress((data: ProgressData) => {
         // Convert ProgressData to TeamsDiscoveryProgress
         const progressData: TeamsDiscoveryProgress = {
           phase: 'initializing',
-          phaseLabel: data.message,
+          phaseLabel: data.message || 'Processing...',
           percentComplete: data.percentage,
           itemsProcessed: data.itemsProcessed || 0,
           totalItems: data.totalItems || 0,
