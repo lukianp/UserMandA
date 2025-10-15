@@ -110,10 +110,21 @@ export const useDashboardLogic = (): UseDashboardLogicReturn => {
     }
   }, []); // loadDashboardData is stable, no need to include
 
+  // Subscribe to profile changes
+  const selectedSourceProfile = useProfileStore(state => state.selectedSourceProfile);
+
   /**
    * Initial load and auto-refresh setup
+   * Wait for profile to be available before loading dashboard data
    */
   useEffect(() => {
+    // Only load if we have a profile
+    if (!selectedSourceProfile) {
+      console.log('[useDashboardLogic] Waiting for profile to be selected...');
+      return;
+    }
+
+    console.log('[useDashboardLogic] Profile available, loading dashboard data...');
     // Initial load
     loadDashboardData();
 
@@ -123,7 +134,7 @@ export const useDashboardLogic = (): UseDashboardLogicReturn => {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, []); // Empty dependency array - only run on mount
+  }, [selectedSourceProfile, loadDashboardData]); // Reload when profile changes
 
   return {
     stats,

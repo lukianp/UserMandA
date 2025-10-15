@@ -398,6 +398,60 @@ export interface ElectronAPI {
   getProfileDataPath: (profileName: string) => Promise<{ success: boolean; path?: string; error?: string }>;
 
   // ========================================
+  // Credential Management
+  // ========================================
+
+  /**
+   * Load credentials for a profile
+   * Uses precedence: ENV > safeStorage > Legacy File
+   * @param profileId Profile ID
+   * @returns Promise resolving to sanitized credentials (no secrets)
+   */
+  loadCredentials: (profileId: string) => Promise<{
+    ok: boolean;
+    credentials?: {
+      tenantId?: string;
+      clientId?: string;
+      hasSecret: boolean;
+      connectionType?: string;
+      username?: string;
+    };
+    error?: string;
+  }>;
+
+  /**
+   * Save credentials for a profile
+   * Stores credentials securely using Electron safeStorage
+   * @param profileId Profile ID
+   * @param username Username or Client ID
+   * @param password Password or Client Secret
+   * @param connectionType Connection type
+   * @param domain Optional domain
+   * @returns Promise resolving to operation result
+   */
+  saveCredentials: (
+    profileId: string,
+    username: string,
+    password: string,
+    connectionType: 'ActiveDirectory' | 'AzureAD' | 'Exchange' | 'SharePoint',
+    domain?: string
+  ) => Promise<{ ok: boolean; error?: string }>;
+
+  /**
+   * Delete credentials for a profile
+   * @param profileId Profile ID
+   * @returns Promise resolving to operation result
+   */
+  deleteCredentials: (profileId: string) => Promise<{ ok: boolean; error?: string }>;
+
+  /**
+   * Check if credentials exist for a profile
+   * @param profileId Profile ID
+   * @returns Promise resolving to exists status
+   */
+  credentialsExist: (profileId: string) => Promise<{ ok: boolean; exists?: boolean; error?: string }>;
+
+  // ========================================
   // Event Listeners (for progress/output streaming)
   // ========================================
 

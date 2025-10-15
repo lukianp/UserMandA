@@ -13,13 +13,6 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 import type { ElectronAPI } from './renderer/types/electron';
-import {
-  ScriptExecutionParams,
-  ModuleExecutionParams,
-  ProgressData,
-  OutputData,
-  ScriptTask,
-} from './types/shared';
 
 /**
  * Expose secure Electron API to renderer process
@@ -159,6 +152,38 @@ const electronAPI: ElectronAPI = {
 
   getProfileDataPath: (profileId: string) => {
     return ipcRenderer.invoke('profile:getDataPath', profileId);
+  },
+
+  // ========================================
+  // Credential Management
+  // ========================================
+
+  loadCredentials: (profileId: string) => {
+    return ipcRenderer.invoke('credentials:load', { profileId });
+  },
+
+  saveCredentials: (
+    profileId: string,
+    username: string,
+    password: string,
+    connectionType: 'ActiveDirectory' | 'AzureAD' | 'Exchange' | 'SharePoint',
+    domain?: string
+  ) => {
+    return ipcRenderer.invoke('credentials:save', {
+      profileId,
+      username,
+      password,
+      connectionType,
+      domain
+    });
+  },
+
+  deleteCredentials: (profileId: string) => {
+    return ipcRenderer.invoke('credentials:delete', { profileId });
+  },
+
+  credentialsExist: (profileId: string) => {
+    return ipcRenderer.invoke('credentials:exists', { profileId });
   },
 
   // ========================================

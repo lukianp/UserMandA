@@ -778,6 +778,122 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   });
 
   // ========================================
+  // Credential Management Handlers
+  // ========================================
+
+  /**
+   * Load credentials for a profile
+   * Uses precedence: ENV > safeStorage > Legacy File
+   */
+  ipcMain.handle('credentials:load', async (_, args: { profileId: string }) => {
+    const { profileId } = args;
+    try {
+      console.log(`IPC: credentials:load - ${profileId}`);
+      const { CredentialService } = await import('./services/credentialService');
+      const credService = new CredentialService();
+      await credService.initialize();
+
+      const creds = await credService.getCredential(profileId);
+
+      if (creds) {
+        // Return sanitized credentials (no secrets to renderer)
+        return {
+          ok: true,
+          credentials: {
+            tenantId: creds.tenantId,
+            clientId: creds.clientId,
+            hasSecret: !!(creds.clientSecret || creds.password),
+            connectionType: creds.connectionType,
+            username: creds.username,
+          }
+        };
+      }
+
+      return { ok: false, error: 'No credentials found for profile' };
+    } catch (error: unknown) {
+      console.error(`credentials:load error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Save credentials for a profile
+   */
+  ipcMain.handle('credentials:save', async (_, args: {
+    profileId: string;
+    username: string;
+    password: string;
+    connectionType: 'ActiveDirectory' | 'AzureAD' | 'Exchange' | 'SharePoint';
+    domain?: string;
+  }) => {
+    const { profileId, username, password, connectionType, domain } = args;
+    try {
+      console.log(`IPC: credentials:save - ${profileId}`);
+      const { CredentialService } = await import('./services/credentialService');
+      const credService = new CredentialService();
+      await credService.initialize();
+
+      await credService.storeCredential(profileId, username, password, connectionType, domain);
+
+      return { ok: true };
+    } catch (error: unknown) {
+      console.error(`credentials:save error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Delete credentials for a profile
+   */
+  ipcMain.handle('credentials:delete', async (_, args: { profileId: string }) => {
+    const { profileId } = args;
+    try {
+      console.log(`IPC: credentials:delete - ${profileId}`);
+      const { CredentialService } = await import('./services/credentialService');
+      const credService = new CredentialService();
+      await credService.initialize();
+
+      await credService.deleteCredential(profileId);
+
+      return { ok: true };
+    } catch (error: unknown) {
+      console.error(`credentials:delete error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Check if credentials exist for a profile
+   */
+  ipcMain.handle('credentials:exists', async (_, args: { profileId: string }) => {
+    const { profileId } = args;
+    try {
+      const { CredentialService } = await import('./services/credentialService');
+      const credService = new CredentialService();
+      await credService.initialize();
+
+      const exists = await credService.hasCredential(profileId);
+
+      return { ok: true, exists };
+    } catch (error: unknown) {
+      console.error(`credentials:exists error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  // ========================================
   // System / App Handlers
   // ========================================
 

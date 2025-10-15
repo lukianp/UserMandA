@@ -3,7 +3,8 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
-const MODULES_ROOT = "D:\\Scripts\\UserMandA\\modules";
+// Use dynamic path resolution instead of hardcoded path
+const MODULES_ROOT = path.resolve(ROOT, "..", "modules");
 const DISC_DIR = path.join(MODULES_ROOT, "Discovery");
 const MIG_DIR = path.join(MODULES_ROOT, "Migration");
 
@@ -251,7 +252,10 @@ export default function ${viewName}(){
 const registryHeader = `import * as path from "path";
 export type JsType = "string" | "number" | "boolean";
 export interface ModuleSpec { script: string; argsSchema: Record<string, JsType>; timeoutSec?: number; }
-const ROOT = "D:\\\\Scripts\\\\UserMandA\\\\modules";
+
+// Use dynamic path resolution instead of hardcoded path
+// Assumes modules directory is one level up from the project root
+const ROOT = path.resolve(process.cwd(), "..", "modules");
 `;
 
 let discMap = "export const DiscoveryModules: Record<string, ModuleSpec> = {\n";

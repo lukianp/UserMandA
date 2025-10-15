@@ -2,17 +2,15 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(Select-Object Name)",
-      "Bash(Copy-Item \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useDashboardLogic.ts\" \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useDashboardLogic.ts\" -Force)",
-      "Bash(Get-ChildItem -Path \"C:\\discoverydata\" -Directory)",
-      "Bash(Select-Object Name -First 5)",
-      "Bash(dir:*)",
-      "Bash(cat:*)",
-      "Bash(node:*)",
-      "Bash(git check-ignore:*)",
-      "Bash(npm run dev)",
-      "Bash(npm run:*)",
-      "Bash(npm start)"
+      "Bash(Select-Object ProcessName, Id, StartTime)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(for file in src/renderer/views/migration/*.tsx src/renderer/views/discovery/*.tsx)",
+      "Bash(do)",
+      "Bash(if grep -q \"const { source\" \"$file\")",
+      "Bash(then)",
+      "Bash(echo \"Fixed: $file\")",
+      "Bash(fi)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": [],

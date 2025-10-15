@@ -4,8 +4,8 @@ import { useApplicationMigration } from "../../hooks/useApplicationMigration";
 import DataTable from "../../components/DataTable";
 
 export default function ApplicationMigrationView(){
-  const { source, target } = useProfileStore();
-  const { plan, execute, progress, rows } = useApplicationMigration(target || source || "");
+  const { selectedSourceProfile, selectedTargetProfile } = useProfileStore();
+  const { plan, execute, progress, rows } = useApplicationMigration(selectedTargetProfile?.id || selectedSourceProfile?.id || "");
   const [config, setConfig] = useState<Record<string, any>>({});
 
   return (
@@ -14,8 +14,8 @@ export default function ApplicationMigrationView(){
       <form className="grid grid-cols-3 gap-2" onSubmit={(e)=>{ e.preventDefault(); }}>
         <div className="col-span-3 text-sm text-neutral-600">No parameters</div>
         <div className="col-span-3 flex gap-2">
-          <button className="border rounded p-2" type="button" disabled={!source} onClick={()=>plan(config)}>Plan</button>
-          <button className="border rounded p-2" type="button" disabled={!target && !source} onClick={()=>execute(config)}>Execute</button>
+          <button className="border rounded p-2" type="button" disabled={!selectedSourceProfile} onClick={()=>plan(config)}>Plan</button>
+          <button className="border rounded p-2" type="button" disabled={!selectedTargetProfile && !selectedSourceProfile} onClick={()=>execute(config)}>Execute</button>
         </div>
       </form>
       <div className="h-2 bg-neutral-200 rounded"><div className="h-2 bg-blue-500 rounded" style={{ width: `${progress||0}%` }} /></div>

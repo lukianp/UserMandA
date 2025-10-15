@@ -244,17 +244,26 @@ const AppContent: React.FC = () => {
  */
 export const App: React.FC = () => {
   const { actualMode } = useThemeStore();
-  const { loadSourceProfiles } = useProfileStore();
+  const { loadSourceProfiles, sourceProfiles, setSelectedSourceProfile } = useProfileStore();
 
   // Initialize application
   useEffect(() => {
     console.log('[App] Initializing application...');
     console.log('[App] window.electronAPI available:', !!window.electronAPI);
 
-    // Load profiles
+    // Load profiles and auto-select first one
     loadSourceProfiles()
       .then(() => {
-        console.log('[App] Profiles loaded successfully');
+        const profiles = useProfileStore.getState().sourceProfiles;
+        console.log('[App] Profiles loaded successfully:', profiles.length);
+
+        // Auto-select the first profile if none selected
+        const currentProfile = useProfileStore.getState().selectedSourceProfile;
+        if (!currentProfile && profiles.length > 0) {
+          const firstProfile = profiles.find(p => p.isActive) || profiles[0];
+          console.log('[App] Auto-selecting profile:', firstProfile.companyName || firstProfile.name || firstProfile.id);
+          setSelectedSourceProfile(firstProfile);
+        }
       })
       .catch((error) => {
         console.error('[App] Failed to load profiles:', error);
@@ -263,7 +272,7 @@ export const App: React.FC = () => {
     // Apply theme to DOM based on current mode
     const theme = getTheme(actualMode === 'dark' ? 'dark' : 'light');
     applyTheme(theme);
-  }, [actualMode, loadSourceProfiles]);
+  }, [actualMode, loadSourceProfiles, setSelectedSourceProfile]);
 
   return (
     <ErrorBoundary>
