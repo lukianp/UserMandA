@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { InfrastructureDiscoveryHubView } from './InfrastructureDiscoveryHubView';
+import InfrastructureDiscoveryHubView from './InfrastructureDiscoveryHubView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -33,6 +33,17 @@ describe('InfrastructureDiscoveryHubView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null,
+  
+    discoveryModules: [],
+    recentActivity: [],
+    activeDiscoveries: [],
+    isLoading: false,
+    filter: { searchText: '', category: '', status: '', severity: '' },
+    sortBy: 'name',
+    launchDiscovery: null,
+    setFilter: jest.fn(),
+    setSortBy: jest.fn(),
+    refresh: jest.fn(),
   };
 
   beforeEach(() => {

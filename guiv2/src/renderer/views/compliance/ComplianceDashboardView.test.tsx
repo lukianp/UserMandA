@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ComplianceDashboardView } from './ComplianceDashboardView';
+import ComplianceDashboardView from './ComplianceDashboardView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -19,18 +19,30 @@ jest.mock('../../hooks/useComplianceDashboardLogic', () => ({
 const { useComplianceDashboardLogic } = require('../../hooks/useComplianceDashboardLogic');
 
 describe('ComplianceDashboardView', () => {
+  const mockComplianceData = {
+  totalPolicies: 25,
+  compliantPolicies: 20,
+  violations: 5,
+  resolvedViolations: 15,
+  pendingViolations: 5,
+  policies: [
+    { id: 'pol-1', name: 'Password Policy', status: 'Compliant' },
+  ],
+};
+
   const mockHookDefaults = {
-    data: [],
-    
-    
-    
-    complianceStatus: null,
-    selectedItems: [],
-    searchText: '',
+    complianceData: mockComplianceData,
     isLoading: false,
     error: null,
-    exportData: jest.fn(),
     refreshData: jest.fn(),
+    loadData: jest.fn(),
+    exportData: jest.fn(),
+  
+    dashboardData: { widgets: [], lastRefresh: new Date(), summary: {} },
+    lastRefresh: null,
+    stats: { total: 0, active: 0, inactive: 0, critical: 0, warning: 0, info: 0 , online: 0, offline: 0, onlinePercentage: '0', warrantyExpiring: 0, warrantyExpired: 0, highUtilization: 0, compliant: 0, nonCompliant: 0, pending: 0, resolved: 0, unresolved: 0},
+    handleExport: null,
+    handleRefresh: null,
   };
 
   beforeEach(() => {

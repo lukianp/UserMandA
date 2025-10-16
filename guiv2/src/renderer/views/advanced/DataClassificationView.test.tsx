@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { DataClassificationView } from './DataClassificationView';
+import DataClassificationView from './DataClassificationView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -30,6 +30,7 @@ describe('DataClassificationView', () => {
     searchText: '',
     isLoading: false,
     error: null as string | null,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

@@ -639,6 +639,170 @@ const electronAPI: ElectronAPI = {
   },
 
   // ========================================
+  // Azure App Registration API
+  // ========================================
+
+  appRegistration: {
+    /**
+     * Launch Azure App Registration PowerShell script
+     * @param options - App registration options
+     * @returns Promise with launch result
+     */
+    launch: (options: {
+      companyName: string;
+      showWindow?: boolean;
+      autoInstallModules?: boolean;
+      secretValidityYears?: number;
+      skipAzureRoles?: boolean;
+    }) =>
+      ipcRenderer.invoke('app-registration:launch', options),
+
+    /**
+     * Check if app registration credentials exist for a company
+     * @param companyName - Company name
+     * @returns Promise with boolean indicating if credentials exist
+     */
+    hasCredentials: (companyName: string) =>
+      ipcRenderer.invoke('app-registration:has-credentials', companyName),
+
+    /**
+     * Read app registration credential summary
+     * @param companyName - Company name
+     * @returns Promise with credential summary or null
+     */
+    readSummary: (companyName: string) =>
+      ipcRenderer.invoke('app-registration:read-summary', companyName),
+
+    /**
+     * Decrypt app registration credential file
+     * @param credentialFilePath - Path to encrypted credential file
+     * @returns Promise with decrypted client secret or null
+     */
+    decryptCredential: (credentialFilePath: string) =>
+      ipcRenderer.invoke('app-registration:decrypt-credential', credentialFilePath),
+  },
+
+  // ========================================
+  // Connection Testing API (Task 5)
+  // ========================================
+
+  connectionTest: {
+    /**
+     * Test Active Directory connection
+     * @param domainController - Domain controller hostname
+     * @param credential - Optional credentials
+     * @returns Promise with test result
+     */
+    testActiveDirectory: (domainController: string, credential?: { username: string; password: string }) =>
+      ipcRenderer.invoke('connection-test:active-directory', domainController, credential),
+
+    /**
+     * Test Exchange Server connection
+     * @param serverUrl - Exchange server URL
+     * @param credential - Optional credentials
+     * @returns Promise with test result
+     */
+    testExchange: (serverUrl: string, credential?: { username: string; password: string }) =>
+      ipcRenderer.invoke('connection-test:exchange', serverUrl, credential),
+
+    /**
+     * Test Azure AD connection
+     * @param tenantId - Azure AD tenant ID
+     * @param clientId - Application client ID
+     * @param clientSecret - Application client secret
+     * @returns Promise with test result
+     */
+    testAzureAD: (tenantId: string, clientId: string, clientSecret: string) =>
+      ipcRenderer.invoke('connection-test:azure-ad', tenantId, clientId, clientSecret),
+
+    /**
+     * Test comprehensive environment (T-000)
+     * @param config - Environment configuration
+     * @returns Promise with environment test result
+     */
+    testEnvironment: (config: {
+      profileName: string;
+      domainController?: string;
+      exchangeServer?: string;
+      tenantId?: string;
+      clientId?: string;
+      clientSecret?: string;
+      credential?: { username: string; password: string };
+    }) =>
+      ipcRenderer.invoke('connection-test:environment', config),
+
+    /**
+     * Cancel active connection test
+     * @param testId - Test ID to cancel
+     * @returns Promise with success status
+     */
+    cancel: (testId: string) =>
+      ipcRenderer.invoke('connection-test:cancel', testId),
+
+    /**
+     * Get connection test statistics
+     * @returns Promise with statistics
+     */
+    getStatistics: () =>
+      ipcRenderer.invoke('connection-test:statistics'),
+
+    /**
+     * Listen for test started events
+     * @param callback - Called when test starts
+     * @returns Cleanup function
+     */
+    onTestStarted: (callback: (data: any) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('connection-test:started', handler);
+      return () => ipcRenderer.removeListener('connection-test:started', handler);
+    },
+
+    /**
+     * Listen for test progress events
+     * @param callback - Called during test progress
+     * @returns Cleanup function
+     */
+    onTestProgress: (callback: (data: any) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('connection-test:progress', handler);
+      return () => ipcRenderer.removeListener('connection-test:progress', handler);
+    },
+
+    /**
+     * Listen for test completed events
+     * @param callback - Called when test completes
+     * @returns Cleanup function
+     */
+    onTestCompleted: (callback: (data: any) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('connection-test:completed', handler);
+      return () => ipcRenderer.removeListener('connection-test:completed', handler);
+    },
+
+    /**
+     * Listen for test failed events
+     * @param callback - Called when test fails
+     * @returns Cleanup function
+     */
+    onTestFailed: (callback: (data: any) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('connection-test:failed', handler);
+      return () => ipcRenderer.removeListener('connection-test:failed', handler);
+    },
+
+    /**
+     * Listen for test cancelled events
+     * @param callback - Called when test is cancelled
+     * @returns Cleanup function
+     */
+    onTestCancelled: (callback: (data: any) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('connection-test:cancelled', handler);
+      return () => ipcRenderer.removeListener('connection-test:cancelled', handler);
+    },
+  },
+
+  // ========================================
   // Project Management API
   // ========================================
 

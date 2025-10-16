@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { SettingsView } from './SettingsView';
+import SettingsView from './SettingsView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -24,16 +24,27 @@ const { useSettingsLogic } = require('../../hooks/useSettingsLogic');
 
 describe('SettingsView', () => {
   const mockHookDefaults = {
-    
-    
-    
-    data: [],
-    selectedItems: [],
-    searchText: '',
-    isLoading: false,
-    error: null,
-    exportData: jest.fn(),
-    refreshData: jest.fn(),
+    settings: {
+      theme: {
+        isDarkTheme: false,
+        accentColor: '#3B82F6',
+        fontSize: 14,
+        fontFamily: 'Inter, sans-serif',
+        useAnimations: true,
+        windowOpacity: 1.0,
+      },
+      autoRefreshDashboard: true,
+      refreshInterval: 30,
+      enableNotifications: true,
+      defaultExportFormat: 'CSV' as const,
+    },
+    updateSetting: jest.fn(),
+    updateThemeSetting: jest.fn(),
+    saveSettings: jest.fn(),
+    resetSettings: jest.fn(),
+    isSaving: false,
+    hasChanges: false,
+    saveSuccess: false,
   };
 
   beforeEach(() => {

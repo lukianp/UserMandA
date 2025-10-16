@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { BenchmarkingView } from './BenchmarkingView';
+import BenchmarkingView from './BenchmarkingView';
 import { useBenchmarkingLogic } from '../../hooks/useBenchmarkingLogic';
 import {
   mockSuccessfulExecution,
@@ -31,6 +31,7 @@ describe('BenchmarkingView', () => {
     isLoading: false,
 
     error: null as any,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

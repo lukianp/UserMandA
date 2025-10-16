@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { FileSystemDiscoveryView } from './FileSystemDiscoveryView';
+import FileSystemDiscoveryView from './FileSystemDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -33,6 +33,26 @@ describe('FileSystemDiscoveryView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null,
+  
+    result: null,
+    config: {},
+    setConfig: jest.fn(),
+    activeTab: 'overview',
+    setActiveTab: jest.fn(),
+    filteredShares: null,
+    shareColumnDefs: null,
+    selectedShares: null,
+    setSelectedShares: jest.fn(),
+    filteredPermissions: null,
+    permissionColumnDefs: null,
+    selectedPermissions: null,
+    setSelectedPermissions: jest.fn(),
+    filteredLargeFiles: null,
+    largeFileColumnDefs: null,
+    selectedLargeFiles: null,
+    setSelectedLargeFiles: jest.fn(),
+    searchText: '',
+    setSearchText: jest.fn(),
   };
 
   beforeEach(() => {

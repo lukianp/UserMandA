@@ -23,17 +23,25 @@ jest.mock('../../hooks/useInfrastructureLogic', () => ({
 import { useInfrastructureLogic } from '../../hooks/useInfrastructureLogic';
 
 describe('InfrastructureView', () => {
+  const mockInfrastructure = {
+  servers: [
+    { name: 'SRV-DC-01', role: 'Domain Controller', status: 'Online', cpu: 45, memory: 60 },
+    { name: 'SRV-SQL-01', role: 'Database', status: 'Online', cpu: 70, memory: 85 },
+  ],
+  networkDevices: [
+    { name: 'RTR-CORE-01', type: 'Router', status: 'Online', uptime: 99.9 },
+  ],
+  storage: [],
+};
+
   const mockHookDefaults = {
-    
-    
-    
-    data: [] as any[],
-    selectedItems: [] as any[],
-    searchText: '',
+    infrastructure: mockInfrastructure,
+    statistics: { servers: 2, networkDevices: 1, storage: 0 },
     isLoading: false,
-    error: null as string | null,
-    exportData: jest.fn(),
+    error: null,
     refreshData: jest.fn(),
+    loadData: jest.fn(),
+    exportData: jest.fn(),
   };
 
   beforeEach(() => {

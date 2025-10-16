@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { CapacityPlanningView } from './CapacityPlanningView';
+import CapacityPlanningView from './CapacityPlanningView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -31,6 +31,7 @@ describe('CapacityPlanningView', () => {
     searchText: '',
     isLoading: false,
     error: {} as any,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

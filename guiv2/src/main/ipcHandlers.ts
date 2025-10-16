@@ -6,7 +6,7 @@
  */
 
 import { ipcMain, dialog, shell, BrowserWindow } from 'electron';
-import PowerShellExecutionService from './services/powerShellService';
+import { PowerShellExecutionService } from './services/powerShellService';
 import ModuleRegistry from './services/moduleRegistry';
 import EnvironmentDetectionService from './services/environmentDetectionService';
 import * as fs from 'fs/promises';
@@ -1286,7 +1286,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    *
    * Get recent activity from logs
    */
-  ipcMain.handle('dashboard:getRecentActivity', async (_, profileName: string, limit: number = 10) => {
+  ipcMain.handle('dashboard:getRecentActivity', async (_, profileName: string, limit = 10) => {
     try {
       const activities = await dashboardService.getRecentActivity(profileName, limit);
       return { success: true, data: activities };
@@ -2206,6 +2206,48 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   // ========================================
   const { registerMigrationHandlers } = await import('./ipcHandlers.migration');
   registerMigrationHandlers();
+
+  // ========================================
+  // Azure App Registration (Task 3)
+  // ========================================
+  const { registerAppRegistrationHandlers } = await import('./ipc/appRegistrationHandlers');
+  registerAppRegistrationHandlers();
+
+  // ========================================
+  // Target Profile Management (Task 4)
+  // ========================================
+  const { registerTargetProfileHandlers } = await import('./ipc/targetProfileHandlers');
+  registerTargetProfileHandlers();
+
+  // ========================================
+  // Connection Testing (Task 5)
+  // ========================================
+  const { registerConnectionTestHandlers } = await import('./ipc/connectionTestHandlers');
+  registerConnectionTestHandlers(mainWindow || undefined);
+
+  // ========================================
+  // Migration Planning (Task 7)
+  // ========================================
+  const { registerMigrationPlanningHandlers } = await import('./ipc/migrationPlanningHandlers');
+  registerMigrationPlanningHandlers();
+
+  // ========================================
+  // Module Discovery (Task 6)
+  // ========================================
+  const { registerModuleDiscoveryHandlers } = await import('./ipc/moduleDiscoveryHandlers');
+  registerModuleDiscoveryHandlers();
+
+  // ========================================
+  // Data Export/Import (Task 8)
+  // ========================================
+  const { registerDataExportImportHandlers } = await import('./ipc/dataExportImportHandlers');
+  registerDataExportImportHandlers();
+
+  // ========================================
+  // Error Monitoring (Task 9)
+  // ========================================
+  const { registerErrorMonitoringHandlers } = await import('./ipc/errorMonitoringHandlers');
+  registerErrorMonitoringHandlers(mainWindow || undefined);
 
   console.log('All IPC handlers registered successfully');
 }

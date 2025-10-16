@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { SharePointDiscoveryView } from './SharePointDiscoveryView';
+import SharePointDiscoveryView from './SharePointDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -33,6 +33,32 @@ describe('SharePointDiscoveryView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null,
+  
+    config: {},
+    setConfig: jest.fn(),
+    result: null,
+    isDiscovering: false,
+    templates: [],
+    selectedTemplate: null,
+    loadTemplate: jest.fn(),
+    saveAsTemplate: jest.fn(),
+    sites: [],
+    lists: null,
+    permissions: null,
+    siteFilter: null,
+    setSiteFilter: jest.fn(),
+    listFilter: null,
+    setListFilter: jest.fn(),
+    permissionFilter: null,
+    setPermissionFilter: jest.fn(),
+    siteColumns: null,
+    listColumns: null,
+    permissionColumns: null,
+    loadData: jest.fn(),
+    exportData: jest.fn(),
+    selectedTab: 'overview',
+    setSelectedTab: jest.fn(),
+    statistics: { total: 0, active: 0, inactive: 0, critical: 0, warning: 0, info: 0 },
   };
 
   beforeEach(() => {

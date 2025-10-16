@@ -39,6 +39,8 @@ export interface ExecutionResult<T = any> {
   duration: number;
   /** Non-fatal warnings from execution */
   warnings: string[];
+  /** Back-compat convenience property for stdout (some code expects 'output') */
+  output?: string;
   /** Raw stdout output */
   stdout?: string;
   /** Raw stderr output */
@@ -932,6 +934,64 @@ export interface ElectronAPI {
     acknowledgeAlert: (alertId: string) => Promise<void>;
   };
 
+  // ========================================
+  // Azure App Registration API
+  // ========================================
+
+  /**
+   * Azure App Registration API for setting up Azure AD app registrations
+   */
+  appRegistration: {
+    /**
+     * Launch Azure App Registration PowerShell script
+     * @param options App registration options
+     * @returns Promise with launch result
+     */
+    launch: (options: {
+      companyName: string;
+      showWindow?: boolean;
+      autoInstallModules?: boolean;
+      secretValidityYears?: number;
+      skipAzureRoles?: boolean;
+    }) => Promise<{
+      success: boolean;
+      message?: string;
+      error?: string;
+      processId?: number;
+    }>;
+
+    /**
+     * Check if app registration credentials exist for a company
+     * @param companyName Company name
+     * @returns Promise with boolean indicating if credentials exist
+     */
+    hasCredentials: (companyName: string) => Promise<boolean>;
+
+    /**
+     * Read app registration credential summary
+     * @param companyName Company name
+     * @returns Promise with credential summary or null
+     */
+    readSummary: (companyName: string) => Promise<{
+      TenantId: string;
+      ClientId: string;
+      CredentialFile: string;
+      Created: string;
+      Domain?: string;
+    } | null>;
+
+    /**
+     * Decrypt app registration credential file
+     * @param credentialFilePath Path to encrypted credential file
+     * @returns Promise with decrypted client secret or null
+     */
+    decryptCredential: (credentialFilePath: string) => Promise<string | null>;
+  };
+
+  // ========================================
+  // Project Management API
+  // ========================================
+
   /**
    * Project Management API
    */
@@ -1105,6 +1165,8 @@ export interface ElectronAPI {
 declare global {
   interface Window {
     electronAPI: ElectronAPI;
+    /** Back-compat alias: some code references window.electron */
+    electron: ElectronAPI;
   }
 }
 

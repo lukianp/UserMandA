@@ -32,7 +32,14 @@ describe('AzureDiscoveryView', () => {
     cancelDiscovery: jest.fn(),
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
-    selectedProfile: null,
+    selectedProfile: { tenantId: '12345678-1234-1234-1234-123456789012', clientId: '87654321-4321-4321-4321-210987654321', isValid: true },
+  
+    formData: { domain: '', username: '', password: '', server: '' },
+    updateFormField: jest.fn(),
+    resetForm: null,
+    isFormValid: false,
+    connectionStatus: { connected: false, message: '', lastChecked: null },
+    testConnection: null,
   };
 
   beforeEach(() => {

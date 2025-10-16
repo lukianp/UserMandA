@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { SQLServerDiscoveryView } from './SQLServerDiscoveryView';
+import SQLServerDiscoveryView from './SQLServerDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -33,6 +33,24 @@ describe('SQLServerDiscoveryView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null,
+  
+    config: {},
+    setConfig: jest.fn(),
+    result: null,
+    isLoading: false,
+    searchText: '',
+    setSearchText: jest.fn(),
+    activeTab: 'overview',
+    setActiveTab: jest.fn(),
+    templates: [],
+    handleStartDiscovery: null,
+    handleApplyTemplate: null,
+    handleExport: null,
+    filteredInstances: null,
+    filteredDatabases: null,
+    instanceColumns: null,
+    databaseColumns: null,
+    stats: null,
   };
 
   beforeEach(() => {

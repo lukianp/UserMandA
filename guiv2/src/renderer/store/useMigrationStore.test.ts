@@ -14,6 +14,7 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { useMigrationStore } from './useMigrationStore';
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import type {
   MigrationWave,
   MigrationConflict,
@@ -27,7 +28,7 @@ const mockExecuteModule = jest.fn();
 const mockCancelExecution = jest.fn();
 const mockOnProgress = jest.fn(() => jest.fn()); // Returns cleanup function
 
-global.window = {
+(globalThis as any).window = {
   electronAPI: {
     executeModule: mockExecuteModule,
     cancelExecution: mockCancelExecution,
@@ -277,10 +278,10 @@ describe('useMigrationStore', () => {
 
       // Set wave to in-progress state
       await act(async () => {
-        await result.current.updateWave(pauseWaveId, { status: 'InProgress' });
+        await result.current.updateWave(pauseWaveId, { status: 'InProgress' as const });
       });
 
-      mockExecuteModule.mockResolvedValueOnce({ success: true });
+      mockExecuteModule.mockResolvedValueOnce({ success: true, error: null });
 
       await act(async () => {
         await result.current.pauseWave(pauseWaveId);
@@ -297,7 +298,7 @@ describe('useMigrationStore', () => {
     });
 
     it('should resume a paused wave', async () => {
-      mockExecuteModule.mockResolvedValueOnce({ success: true });
+      mockExecuteModule.mockResolvedValueOnce({ success: true, error: null });
 
       const { result } = renderHook(() => useMigrationStore());
 
@@ -314,7 +315,7 @@ describe('useMigrationStore', () => {
 
       // Set wave to paused state
       await act(async () => {
-        await result.current.updateWave(waveId, { status: 'Paused' });
+        await result.current.updateWave(waveId, { status: 'Paused' as const });
       });
 
       await act(async () => {
@@ -342,14 +343,15 @@ describe('useMigrationStore', () => {
       });
 
       expect(rollbackPoint).toBeDefined();
-      expect(rollbackPoint!.name).toBe('Test Rollback Point');
-      expect(rollbackPoint!.canRestore).toBe(true);
+      if (!rollbackPoint) { throw new Error('Failed to create rollback point'); }
+      expect(rollbackPoint.name).toBe('Test Rollback Point');
+      expect(rollbackPoint.canRestore).toBe(true);
       expect(result.current.rollbackPoints).toHaveLength(1);
       expect(result.current.canRollback).toBe(true);
     });
 
     it('should rollback to a previous point', async () => {
-      mockExecuteModule.mockResolvedValueOnce({ success: true });
+      mockExecuteModule.mockResolvedValueOnce({ success: true, error: null });
 
       const { result } = renderHook(() => useMigrationStore());
 
@@ -380,14 +382,15 @@ describe('useMigrationStore', () => {
 
       // Rollback
       await act(async () => {
-        await result.current.rollbackToPoint(rollbackPoint!.id);
+        if (!rollbackPoint) { throw new Error('Missing rollback point'); }
+        await result.current.rollbackToPoint(rollbackPoint.id);
       });
 
       expect(mockExecuteModule).toHaveBeenCalledWith({
         modulePath: 'Modules/Migration/MigrationOrchestrator.psm1',
         functionName: 'Invoke-MigrationRollback',
         parameters: expect.objectContaining({
-          RollbackPointId: rollbackPoint!.id,
+          RollbackPointId: rollbackPoint.id,
         }),
       });
 
@@ -405,7 +408,8 @@ describe('useMigrationStore', () => {
       expect(result.current.rollbackPoints).toHaveLength(1);
 
       await act(async () => {
-        await result.current.deleteRollbackPoint(rollbackPoint!.id);
+        if (!rollbackPoint) { throw new Error('Missing rollback point'); }
+        await result.current.deleteRollbackPoint(rollbackPoint.id);
       });
 
       expect(result.current.rollbackPoints).toHaveLength(0);
@@ -463,9 +467,9 @@ describe('useMigrationStore', () => {
       };
 
       act(() => {
-        // Use array replacement instead of push to avoid mutability issues
-        result.current.conflicts.length = 0; // Clear array
-        result.current.conflicts.push(mockConflict);
+        // Create a new array instead of modifying the existing one
+        const newConflicts = [...result.current.conflicts, mockConflict];
+        result.current.conflicts = newConflicts;
       });
 
       await act(async () => {
@@ -522,9 +526,8 @@ describe('useMigrationStore', () => {
       ];
 
       act(() => {
-        // Use array replacement instead of push to avoid mutability issues
-        result.current.conflicts.length = 0; // Clear array
-        result.current.conflicts.push(...conflicts);
+        // Create a new array instead of modifying the existing one
+        result.current.conflicts = [...conflicts];
       });
 
       const userConflicts = result.current.getConflictsByType('duplicate_user');
@@ -572,9 +575,10 @@ describe('useMigrationStore', () => {
         validationResult = await result.current.validateMappings('wave-id');
       });
 
-      expect(validationResult!.isValid).toBe(true);
-      expect(validationResult!.errors).toHaveLength(0);
-      expect(validationResult!.warnings).toHaveLength(1);
+      if (!validationResult) { throw new Error('Missing validation result'); }
+      expect(validationResult.isValid).toBe(true);
+      expect(validationResult.errors).toHaveLength(0);
+      expect(validationResult.warnings).toHaveLength(1);
     });
 
     it('should export mappings', async () => {
@@ -651,8 +655,9 @@ describe('useMigrationStore', () => {
         parameters: { WaveId: 'wave-id' },
       });
 
-      expect(validationResult!.isValid).toBe(true);
-      expect(validationResult!.warnings).toContain('Network latency detected');
+      if (!validationResult) { throw new Error('Missing validation result'); }
+      expect(validationResult.isValid).toBe(true);
+      expect(validationResult.warnings).toContain('Network latency detected');
     });
 
     it('should validate licenses', async () => {
@@ -710,6 +715,7 @@ describe('useMigrationStore', () => {
           errors: [],
           warnings: [],
         },
+        error: null,
       });
 
       const { result } = renderHook(() => useMigrationStore());
@@ -734,6 +740,7 @@ describe('useMigrationStore', () => {
           changesApplied: 23,
           conflicts: 2,
         },
+        error: null,
       });
 
       const { result } = renderHook(() => useMigrationStore());
@@ -840,7 +847,8 @@ describe('useMigrationStore', () => {
       const saved = localStorage.getItem('migration-waves');
       expect(saved).toBeTruthy();
 
-      const waves = JSON.parse(saved!);
+      if (!saved) { throw new Error('Expected saved waves in localStorage'); }
+      const waves = JSON.parse(saved);
       expect(waves).toHaveLength(1);
       expect(waves[0].name).toBe('Persistent Wave');
     });

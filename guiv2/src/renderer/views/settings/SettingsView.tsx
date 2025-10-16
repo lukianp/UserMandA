@@ -3,13 +3,15 @@
  * Application settings and preferences
  */
 
-import React from 'react';
+import * as React from 'react';
+import { useState } from 'react';
 import { useSettingsLogic } from '../../hooks/useSettingsLogic';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { Select } from '../../components/atoms/Select';
-import Checkbox from '../../components/atoms/Checkbox';
-import { Save, RotateCcw, Settings as SettingsIcon, CheckCircle } from 'lucide-react';
+import { Checkbox } from '../../components/atoms/Checkbox';
+import { Save, RotateCcw, Settings as SettingsIcon, CheckCircle, Cloud } from 'lucide-react';
+import { AppRegistrationDialog } from '../../components/organisms/AppRegistrationDialog';
 
 const SettingsView: React.FC = () => {
   const {
@@ -22,6 +24,8 @@ const SettingsView: React.FC = () => {
     hasChanges,
     saveSuccess,
   } = useSettingsLogic();
+
+  const [isAppRegistrationDialogOpen, setIsAppRegistrationDialogOpen] = useState(false);
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="settings-view">
@@ -197,6 +201,33 @@ const SettingsView: React.FC = () => {
             />
           </div>
 
+          {/* Azure/Cloud Integration */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Cloud className="w-5 h-5" />
+              Azure & Cloud Integration
+            </h2>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Configure Azure AD app registrations for cloud discovery and migration tasks.
+              </p>
+              <Button
+                variant="primary"
+                onClick={() => setIsAppRegistrationDialogOpen(true)}
+                icon={<Cloud className="w-4 h-4" />}
+                data-cy="setup-app-registration-btn"
+              >
+                Setup Azure App Registration
+              </Button>
+              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p className="text-xs text-blue-800 dark:text-blue-300">
+                  <strong>Note:</strong> You need Global Administrator rights in Azure AD to complete this setup.
+                  The script will create an app registration with the necessary Microsoft Graph API permissions.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* About Section */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -211,6 +242,12 @@ const SettingsView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* App Registration Dialog */}
+      <AppRegistrationDialog
+        isOpen={isAppRegistrationDialogOpen}
+        onClose={() => setIsAppRegistrationDialogOpen(false)}
+      />
     </div>
   );
 };

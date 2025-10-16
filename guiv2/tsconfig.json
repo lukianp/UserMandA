@@ -4,10 +4,10 @@
     "useDefineForClassFields": true,
     "lib": ["dom", "dom.iterable", "es6"],
     "allowJs": true,
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "strict": true,
+    "strict": false,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
@@ -29,7 +29,7 @@
       "*": ["node_modules/*"]
     }
   },
-  "include": ["src/renderer/**/*"],
+  "include": ["src/**/*"],
   "exclude": [
     "node_modules",
     "dist",

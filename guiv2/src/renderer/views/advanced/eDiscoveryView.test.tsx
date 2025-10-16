@@ -12,7 +12,7 @@ import '@testing-library/jest-dom';
 
 
 
-import { EDiscoveryView } from './eDiscoveryView';
+import EDiscoveryView from './eDiscoveryView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -36,6 +36,7 @@ describe('EDiscoveryView', () => {
     searchText: '',
     isLoading: false,
     error: null,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

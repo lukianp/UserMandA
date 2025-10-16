@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { TagManagementView } from './TagManagementView';
+import TagManagementView from './TagManagementView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -29,6 +29,7 @@ describe('TagManagementView', () => {
     searchText: '',
     isLoading: false,
     error: null,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

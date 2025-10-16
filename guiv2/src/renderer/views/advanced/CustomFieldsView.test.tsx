@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { CustomFieldsView } from './CustomFieldsView';
+import CustomFieldsView from './CustomFieldsView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -29,6 +29,7 @@ describe('CustomFieldsView', () => {
     searchText: '',
     isLoading: false,
     error: {} as any,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

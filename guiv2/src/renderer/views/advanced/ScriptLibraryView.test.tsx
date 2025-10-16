@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ScriptLibraryView } from './ScriptLibraryView';
+import ScriptLibraryView from './ScriptLibraryView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -29,6 +29,7 @@ describe('ScriptLibraryView', () => {
     searchText: '',
     isLoading: false,
     error: null,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

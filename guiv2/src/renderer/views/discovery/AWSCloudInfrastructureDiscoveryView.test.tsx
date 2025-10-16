@@ -35,6 +35,20 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null as any,
+  
+    config: {},
+    setConfig: jest.fn(),
+    result: null,
+    isDiscovering: false,
+    filter: null,
+    setFilter: jest.fn(),
+    exportToCSV: jest.fn(),
+    exportToExcel: jest.fn(),
+    activeTab: 'overview',
+    setActiveTab: jest.fn(),
+    columns: [],
+    filteredData: [],
+    stats: null,
   };
 
   beforeEach(() => {

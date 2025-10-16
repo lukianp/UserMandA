@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { OneDriveDiscoveryView } from './OneDriveDiscoveryView';
+import OneDriveDiscoveryView from './OneDriveDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -22,17 +22,24 @@ const { useOneDriveDiscoveryLogic } = require('../../hooks/useOneDriveDiscoveryL
 
 describe('OneDriveDiscoveryView', () => {
   const mockHookDefaults = {
-    isRunning: false,
-    isCancelling: false,
+    config: {},
+    templates: [],
+    currentResult: null,
+    isDiscovering: false,
     progress: null,
-    results: null,
-    error: null,
-    logs: [],
+    selectedTab: 'overview',
+    searchText: '',
+    filteredData: [],
+    columnDefs: [],
+    errors: [],
     startDiscovery: jest.fn(),
     cancelDiscovery: jest.fn(),
+    updateConfig: jest.fn(),
+    loadTemplate: jest.fn(),
+    saveAsTemplate: jest.fn(),
     exportResults: jest.fn(),
-    clearLogs: jest.fn(),
-    selectedProfile: null,
+    setSelectedTab: jest.fn(),
+    setSearchText: jest.fn(),
   };
 
   beforeEach(() => {

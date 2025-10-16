@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { VMwareDiscoveryView } from './VMwareDiscoveryView';
+import VMwareDiscoveryView from './VMwareDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -33,6 +33,26 @@ describe('VMwareDiscoveryView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null,
+  
+    config: {},
+    setConfig: jest.fn(),
+    result: null,
+    isLoading: false,
+    searchText: '',
+    setSearchText: jest.fn(),
+    activeTab: 'overview',
+    setActiveTab: jest.fn(),
+    templates: [],
+    handleStartDiscovery: null,
+    handleApplyTemplate: null,
+    handleExport: null,
+    filteredHosts: null,
+    filteredVMs: null,
+    filteredClusters: null,
+    hostColumns: null,
+    vmColumns: null,
+    clusterColumns: null,
+    stats: null,
   };
 
   beforeEach(() => {

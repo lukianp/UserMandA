@@ -5,7 +5,7 @@
     "noImplicitAny": false,
     "jsx": "react-jsx",
     "baseUrl": ".",
-    "types": ["jest", "node", "@testing-library/jest-dom"],
+    "types": ["jest", "node", "@testing-library/jest-dom", "@jest/globals"],
     "typeRoots": ["./node_modules/@types"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

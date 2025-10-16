@@ -1,23 +1,12 @@
-/**
- * Simple Test App to verify React rendering
- */
-
 import React from 'react';
+import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import App from './App';
 
-export const App: React.FC = () => {
-  return (
-    <div style={{
-      padding: '20px',
-      backgroundColor: 'white',
-      color: 'black',
-      fontSize: '24px',
-      fontFamily: 'Arial'
-    }}>
-      <h1>M&A Discovery Suite v2</h1>
-      <p>React app is working!</p>
-      <p>If you can see this, React is rendering successfully.</p>
-    </div>
-  );
-};
-
-export default App;
+describe('App', () => {
+  it('renders headline and message', () => {
+    render(<App />);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent("M&A Discovery Suite v2");
+    expect(screen.getByText('React app is working!')).toBeInTheDocument();
+  });
+});

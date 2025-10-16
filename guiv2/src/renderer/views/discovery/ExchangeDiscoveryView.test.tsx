@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ExchangeDiscoveryView } from './ExchangeDiscoveryView';
+import ExchangeDiscoveryView from './ExchangeDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -33,6 +33,32 @@ describe('ExchangeDiscoveryView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null,
+  
+    config: {},
+    setConfig: jest.fn(),
+    result: null,
+    isDiscovering: false,
+    templates: [],
+    selectedTemplate: null,
+    loadTemplate: jest.fn(),
+    saveAsTemplate: jest.fn(),
+    mailboxes: [],
+    groups: [],
+    rules: null,
+    mailboxFilter: null,
+    setMailboxFilter: jest.fn(),
+    groupFilter: null,
+    setGroupFilter: jest.fn(),
+    ruleFilter: null,
+    setRuleFilter: jest.fn(),
+    mailboxColumns: null,
+    groupColumns: null,
+    ruleColumns: null,
+    loadData: jest.fn(),
+    exportData: jest.fn(),
+    selectedTab: 'overview',
+    setSelectedTab: jest.fn(),
+    statistics: { total: 0, active: 0, inactive: 0, critical: 0, warning: 0, info: 0 },
   };
 
   beforeEach(() => {

@@ -3,17 +3,18 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import OverviewView from './OverviewView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
-  
-  
+
+
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+import { renderWithRouter } from '../../test-utils/testWrappers';
 
 // Mock the hook
 jest.mock('../../hooks/useOverviewLogic', () => ({
@@ -32,6 +33,7 @@ describe('OverviewView', () => {
     searchText: '',
     isLoading: false,
     error: null as string | null,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };
@@ -51,24 +53,24 @@ describe('OverviewView', () => {
 
   describe('Rendering', () => {
     it('renders without crashing', () => {
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       expect(screen.getByTestId('overview-view')).toBeInTheDocument();
     });
 
     it('displays the view title', () => {
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       expect(screen.getByText('Overview')).toBeInTheDocument();
     });
 
     it('displays the view description', () => {
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       expect(
         screen.getByText(/System overview/i)
       ).toBeInTheDocument();
     });
 
     it('displays the icon', () => {
-      const { container } = render(<OverviewView />);
+      const { container } = renderWithRouter(<OverviewView />);
       const icon = container.querySelector('svg');
       expect(icon).toBeInTheDocument();
     });
@@ -85,12 +87,12 @@ describe('OverviewView', () => {
         isLoading: true,
       });
 
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       expect(screen.getByRole('status') || screen.getByText(/loading/i)).toBeInTheDocument();
     });
 
     it('does not show loading state when data is loaded', () => {
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
   });
@@ -107,7 +109,7 @@ describe('OverviewView', () => {
         data: mockDiscoveryData().users,
       });
 
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       expect(screen.queryByText(/no.*data/i)).not.toBeInTheDocument();
     });
 
@@ -117,7 +119,7 @@ describe('OverviewView', () => {
         data: [],
       });
 
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       expect(
         screen.queryByText(/no.*data/i) ||
         screen.queryByText(/no.*results/i) ||
@@ -132,7 +134,7 @@ describe('OverviewView', () => {
 
   describe('Search and Filtering', () => {
     it('renders search input', () => {
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       const searchInput = screen.queryByPlaceholderText(/search/i);
       expect(searchInput).toBeInTheDocument();
     });
@@ -144,7 +146,7 @@ describe('OverviewView', () => {
         setSearchText,
       });
 
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       const searchInput = screen.getByPlaceholderText(/search/i);
       fireEvent.change(searchInput, { target: { value: 'test' } });
 
@@ -164,7 +166,7 @@ describe('OverviewView', () => {
         data: mockDiscoveryData().users,
       });
 
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       const checkboxes = screen.queryAllByRole('checkbox');
       expect(checkboxes.length).toBeGreaterThan(0);
     });
@@ -175,7 +177,7 @@ describe('OverviewView', () => {
         selectedItems: mockDiscoveryData().users.slice(0, 2),
       });
 
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       expect(screen.queryByText(/2.*selected/i) || screen.queryByText(/selected.*2/i)).toBeTruthy();
     });
   });
@@ -191,7 +193,7 @@ describe('OverviewView', () => {
 
   describe('Button Actions', () => {
     it('renders action buttons', () => {
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       const buttons = screen.getAllByRole('button');
       expect(buttons.length).toBeGreaterThan(0);
     });
@@ -205,7 +207,7 @@ describe('OverviewView', () => {
         data: mockDiscoveryData().users,
       });
 
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       const exportButton = screen.queryByText(/Export/i);
       if (exportButton) {
         fireEvent.click(exportButton);
@@ -220,7 +222,7 @@ describe('OverviewView', () => {
         refreshData,
       });
 
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       const refreshButton = screen.queryByText(/Refresh/i) || screen.queryByRole('button', { name: /refresh/i });
       if (refreshButton) {
         fireEvent.click(refreshButton);
@@ -241,12 +243,12 @@ describe('OverviewView', () => {
         error: 'Test error message',
       });
 
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       expect(screen.getByText(/Test error message/i)).toBeInTheDocument();
     });
 
     it('does not display error when no error', () => {
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
@@ -256,7 +258,7 @@ describe('OverviewView', () => {
         error: 'Test error',
       });
 
-      const { container } = render(<OverviewView />);
+      const { container } = renderWithRouter(<OverviewView />);
       const alert = container.querySelector('[role="alert"]');
       expect(alert).toBeInTheDocument();
     });
@@ -268,12 +270,12 @@ describe('OverviewView', () => {
 
   describe('Accessibility', () => {
     it('has accessible data-cy attributes', () => {
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       expect(screen.getByTestId('overview-view')).toBeInTheDocument();
     });
 
     it('has accessible button labels', () => {
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       const buttons = screen.getAllByRole('button');
       buttons.forEach(button => {
         // Each button should have accessible text or aria-label
@@ -284,7 +286,7 @@ describe('OverviewView', () => {
     });
 
     it('has proper heading structure', () => {
-      render(<OverviewView />);
+      renderWithRouter(<OverviewView />);
       const headings = screen.getAllByRole('heading');
       expect(headings.length).toBeGreaterThan(0);
     });
@@ -306,7 +308,7 @@ describe('OverviewView', () => {
         isLoading: true,
       });
 
-      const { rerender } = render(<OverviewView />);
+      const { rerender } = renderWithRouter(<OverviewView />);
       expect(screen.getByRole('status') || screen.getByText(/loading/i)).toBeInTheDocument();
 
       // Data loaded
@@ -317,7 +319,7 @@ describe('OverviewView', () => {
         exportData,
       });
 
-      rerender(<OverviewView />);
+      rerenderWithRouter(<OverviewView />);
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
 
       // Refresh data

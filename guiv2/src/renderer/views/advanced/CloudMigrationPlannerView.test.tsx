@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { CloudMigrationPlannerView } from './CloudMigrationPlannerView';
+import CloudMigrationPlannerView from './CloudMigrationPlannerView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -33,6 +33,7 @@ describe('CloudMigrationPlannerView', () => {
     searchText: '',
     isLoading: false,
     error: {} as any,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { CostAnalysisView } from './CostAnalysisView';
+import CostAnalysisView from './CostAnalysisView';
 import { useCostAnalysisLogic } from '../../hooks/useCostAnalysisLogic';
 import {
   mockSuccessfulExecution,
@@ -22,17 +22,23 @@ jest.mock('../../hooks/useCostAnalysisLogic', () => ({
 }));
 
 describe('CostAnalysisView', () => {
+  const mockCostData = {
+  totalCost: 125000,
+  monthlyCost: 10416.67,
+  costByCategory: [
+    { category: 'Licensing', amount: 75000 },
+    { category: 'Infrastructure', amount: 35000 },
+  ],
+};
+
   const mockHookDefaults = {
-
-
-    data: null as any,
-    chartData: [] as any[],
-    kpis: [] as any[],
+    costData: mockCostData,
+    chartData: [{ name: 'Jan', value: 400 }],
     isLoading: false,
-
-    error: null as any,
-    exportData: jest.fn(),
+    error: null,
     refreshData: jest.fn(),
+    loadData: jest.fn(),
+    exportData: jest.fn(),
   };
 
   beforeEach(() => {

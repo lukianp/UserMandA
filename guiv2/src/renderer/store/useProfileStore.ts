@@ -26,8 +26,19 @@ export interface CompanyProfile extends Profile {
 }
 
 export interface TargetProfile extends Profile {
-  sourceProfileId: string;
-  targetEnvironment: string;
+  companyName: string;
+  profileType: 'Azure' | 'Google' | 'AWS' | 'OnPrem';
+  sourceProfileId?: string;
+  targetEnvironment?: string;
+  // Azure-specific fields
+  tenantId?: string;
+  clientId?: string;
+  clientSecret?: string;
+  domain?: string;
+  // Connection state
+  isConnected?: boolean;
+  created?: string;
+  lastModified?: string;
 }
 
 interface ProfileState {
@@ -46,6 +57,9 @@ interface ProfileState {
   createSourceProfile: (profile: Omit<CompanyProfile, 'id' | 'createdAt'>) => Promise<string>;
   updateSourceProfile: (id: string, updates: Partial<CompanyProfile>) => Promise<void>;
   deleteSourceProfile: (id: string) => Promise<void>;
+  addTargetProfile: (profile: TargetProfile) => void;
+  updateTargetProfile: (id: string, updates: Partial<TargetProfile>) => void;
+  deleteTargetProfile: (id: string) => void;
   setSelectedSourceProfile: (profile: CompanyProfile | null) => Promise<void>;
   setSelectedTargetProfile: (profile: TargetProfile | null) => void;
   testConnection: (profile: CompanyProfile) => Promise<any>;
@@ -254,6 +268,41 @@ export const useProfileStore = create<ProfileState>()(
      */
     setSelectedTargetProfile: (profile) => {
       set({ selectedTargetProfile: profile });
+    },
+
+    /**
+     * Add a new target profile
+     * Mirrors C# TargetProfileService.AddProfileAsync
+     */
+    addTargetProfile: (profile) => {
+      const updatedProfiles = [...get().targetProfiles, profile];
+      set({ targetProfiles: updatedProfiles });
+      console.log(`[ProfileStore] Added target profile: ${profile.name}`);
+    },
+
+    /**
+     * Update an existing target profile
+     * Mirrors C# TargetProfileService.UpdateProfileAsync
+     */
+    updateTargetProfile: (id, updates) => {
+      const updatedProfiles = get().targetProfiles.map((p) =>
+        p.id === id ? { ...p, ...updates } : p
+      );
+      set({ targetProfiles: updatedProfiles });
+      console.log(`[ProfileStore] Updated target profile: ${id}`);
+    },
+
+    /**
+     * Delete a target profile
+     * Mirrors C# TargetProfileService.DeleteProfileAsync
+     */
+    deleteTargetProfile: (id) => {
+      const updatedProfiles = get().targetProfiles.filter((p) => p.id !== id);
+      set({
+        targetProfiles: updatedProfiles,
+        selectedTargetProfile: get().selectedTargetProfile?.id === id ? null : get().selectedTargetProfile,
+      });
+      console.log(`[ProfileStore] Deleted target profile: ${id}`);
     },
 
     /**

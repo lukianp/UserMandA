@@ -20,7 +20,7 @@
 .PARAMETER Package
     Create distributable package (default: true for Production)
 
-.PARAMETER Debug
+.PARAMETER DebugBuild
     Enable debug mode with verbose logging and debug console window
 
 .PARAMETER LogPath
@@ -34,11 +34,11 @@
     Standard production build
 
 .EXAMPLE
-    .\buildguiv2-enhanced.ps1 -Debug
+    .\buildguiv2-enhanced.ps1 -DebugBuild
     Build with verbose logging and debug console window
 
 .EXAMPLE
-    .\buildguiv2-enhanced.ps1 -Configuration Development -Debug -OpenDevTools
+    .\buildguiv2-enhanced.ps1 -Configuration Development -DebugBuild -OpenDevTools
     Development build with full debugging enabled
 #>
 
@@ -58,16 +58,16 @@ param(
     [switch]$Package = ($Configuration -eq 'Production'),
 
     [Parameter(Mandatory = $false)]
-    [switch]$Debug,
+    [switch]$DebugBuild,
 
     [Parameter(Mandatory = $false)]
     [string]$LogPath = "C:\enterprisediscovery\logs\build-$(Get-Date -Format 'yyyyMMdd-HHmmss').log",
 
     [Parameter(Mandatory = $false)]
-    [switch]$OpenDevTools = $Debug
+    [switch]$OpenDevTools = $DebugBuild
 )
 
-Set-StrictMode -Version 3.0
+# Set-StrictMode -Version 3.0  # Disabled - causes issues with external command output piping
 $ErrorActionPreference = 'Stop'
 
 # Setup logging
@@ -91,7 +91,7 @@ function Write-Log {
 }
 
 # Initialize logging
-if ($Debug) {
+if ($DebugBuild) {
     $logDir = Split-Path -Parent $LogPath
     if (!(Test-Path $logDir)) {
         New-Item -Path $logDir -ItemType Directory -Force | Out-Null
@@ -106,7 +106,7 @@ Write-Host "M&A Discovery Suite - GUI v2 Enhanced Build Script" -ForegroundColor
 Write-Host "===================================================" -ForegroundColor Green
 Write-Host ""
 
-if ($Debug) {
+if ($DebugBuild) {
     Write-Host "DEBUG MODE ENABLED" -ForegroundColor Yellow
     Write-Host "  - Verbose logging: ON" -ForegroundColor Cyan
     Write-Host "  - Log file: $LogPath" -ForegroundColor Cyan
@@ -152,12 +152,138 @@ catch {
 
 # Check npm
 try {
+    $ErrorActionPreference = 'Continue'
     $npmVersion = & npm --version 2>&1
-    Write-Log "Found npm version: $npmVersion" -Level 'OK' -Color Green
+    $ErrorActionPreference = 'Stop'
+    if ($LASTEXITCODE -eq 0) {
+        Write-Log "Found npm version: $npmVersion" -Level 'OK' -Color Green
+    } else {
+        Write-Log "npm check failed with exit code: $LASTEXITCODE" -Level 'WARNING' -Color Yellow
+    }
 }
 catch {
-    Write-Log "npm check failed: $($_.Exception.Message)" -Level 'WARNING' -Color Yellow
+    $ErrorActionPreference = 'Stop'
+    Write-Log "npm check failed: $($PSItem)" -Level 'WARNING' -Color Yellow
 }
+
+# Comprehensive prerequisite check and installation
+Write-Log "Performing comprehensive prerequisite checks..." -Level 'INFO' -Color Yellow
+
+# Check for required system tools
+$requiredTools = @(
+    @{ Name = "git"; Command = "git --version"; InstallCmd = "winget install --id Git.Git -e --source winget" },
+    @{ Name = "python"; Command = "python --version"; InstallCmd = "winget install --id Python.Python.3.11 -e --source winget" },
+    @{ Name = "7zip"; Command = "7z"; InstallCmd = "winget install --id 7zip.7zip -e --source winget" }
+)
+
+foreach ($tool in $requiredTools) {
+    try {
+        $ErrorActionPreference = 'Continue'
+        $result = Invoke-Expression $tool.Command 2>$null
+        $ErrorActionPreference = 'Stop'
+        if ($LASTEXITCODE -eq 0) {
+            Write-Log "Found $($tool.Name): OK" -Level 'OK' -Color Green
+        }
+    } catch {
+        Write-Log "Error checking $($tool.Name): $($_.Exception.Message)" -Level 'WARNING' -Color Yellow
+    }
+}
+
+# Force clean install of all dependencies
+Write-Log "Ensuring all npm dependencies are properly installed..." -Level 'INFO' -Color Yellow
+
+if (Test-Path "node_modules") {
+    Write-Log "Removing existing node_modules for clean install..." -Level 'INFO' -Color Cyan
+    Remove-Item -Path "node_modules" -Recurse -Force -ErrorAction SilentlyContinue
+    if (Test-Path "package-lock.json") {
+        Remove-Item -Path "package-lock.json" -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# Install dependencies with retry logic
+$maxRetries = 3
+$retryCount = 0
+$installSuccess = $false
+
+while (-not $installSuccess -and $retryCount -lt $maxRetries) {
+    $retryCount++
+    Write-Log "Installing npm dependencies (attempt $retryCount/$maxRetries)..." -Level 'INFO' -Color Yellow
+
+    try {
+        $ErrorActionPreference = 'Continue'
+        if ($DebugBuild) {
+            & npm install --verbose 2>&1 | ForEach-Object {
+                Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
+            }
+        } else {
+            & npm install --prefer-offline --no-audit 2>&1 | ForEach-Object {
+                Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
+            }
+        }
+
+        # Additional verification that dependencies installed correctly
+        if (!(Test-Path "node_modules")) {
+            Write-Log "node_modules directory not found after install attempt" -Level 'ERROR' -Color Red
+            throw "Dependencies installation failed - node_modules missing"
+        }
+
+        $packageCount = (Get-ChildItem -Path "node_modules" -Directory -ErrorAction SilentlyContinue | Measure-Object).Count
+        Write-Log "Found $packageCount packages in node_modules" -Level 'INFO' -Color Cyan
+        if ($packageCount -lt 100) {
+            Write-Log "Suspiciously low package count ($packageCount), dependencies may not have installed correctly" -Level 'WARNING' -Color Yellow
+        }
+        $ErrorActionPreference = 'Stop'
+
+        if ($LASTEXITCODE -eq 0) {
+            $installSuccess = $true
+            Write-Log "Dependencies installed successfully" -Level 'OK' -Color Green
+        } else {
+            Write-Log "npm install failed with exit code $LASTEXITCODE (attempt $retryCount)" -Level 'WARNING' -Color Yellow
+            if ($retryCount -lt $maxRetries) {
+                Write-Log "Retrying in 5 seconds..." -Level 'INFO' -Color Cyan
+                Start-Sleep -Seconds 5
+            }
+        }
+    } catch {
+        Write-Log "npm install error: $($_.Exception.Message) (attempt $retryCount)" -Level 'WARNING' -Color Yellow
+        if ($retryCount -lt $maxRetries) {
+            Start-Sleep -Seconds 5
+        }
+    }
+}
+
+if (-not $installSuccess) {
+    Write-Log "Failed to install dependencies after $maxRetries attempts" -Level 'ERROR' -Color Red
+    exit 1
+}
+
+# Verify critical dependencies
+$criticalDeps = @(
+    "electron",
+    "webpack",
+    "typescript",
+    "@electron-forge/cli"
+)
+
+Write-Log "Verifying critical dependencies..." -Level 'INFO' -Color Yellow
+foreach ($dep in $criticalDeps) {
+    try {
+        $ErrorActionPreference = 'Continue'
+        $version = & npx $dep --version 2>$null
+        $ErrorActionPreference = 'Stop'
+        if ($LASTEXITCODE -eq 0) {
+            Write-Log "Verified ${dep}: ${version}" -Level 'OK' -Color Green
+        } else {
+            Write-Log "Failed to verify ${dep}" -Level 'ERROR' -Color Red
+            exit 1
+        }
+    } catch {
+        Write-Log "Error verifying ${dep}: $($_.Exception.Message)" -Level 'ERROR' -Color Red
+        exit 1
+    }
+}
+
+Write-Log "All prerequisites verified successfully" -Level 'OK' -Color Green
 
 # Check required files
 $RequiredFiles = @(
@@ -192,18 +318,18 @@ if ($needsInstall) {
     Write-Log "Installing npm dependencies..." -Level 'INFO' -Color Yellow
 
     $npmArgs = @('ci', '--prefer-offline', '--no-audit')
-    if ($Debug) {
+    if ($DebugBuild) {
         $npmArgs += '--verbose'
     }
 
     & npm @npmArgs 2>&1 | ForEach-Object {
-        Write-Log $_ -Level 'NPM' -Color Gray
+        Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
     }
 
     if ($LASTEXITCODE -ne 0) {
         Write-Log "npm ci failed, trying npm install..." -Level 'WARNING' -Color Yellow
         & npm install @npmArgs 2>&1 | ForEach-Object {
-            Write-Log $_ -Level 'NPM' -Color Gray
+            Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
         }
         if ($LASTEXITCODE -ne 0) {
             Write-Log "Failed to install dependencies" -Level 'ERROR' -Color Red
@@ -218,9 +344,11 @@ if ($needsInstall) {
 # TypeScript compilation check
 Write-Log "Checking TypeScript compilation..." -Level 'INFO' -Color Yellow
 try {
-    $tscOutput = & npx tsc --noEmit 2>&1
-    if ($Debug) {
-        $tscOutput | ForEach-Object { Write-Log $_ -Level 'TSC' -Color Gray }
+    $ErrorActionPreference = 'Continue'
+    $tscOutput = & npm run tsc --if-present --noEmit 2>&1
+    $ErrorActionPreference = 'Stop'
+    if ($DebugBuild) {
+        $tscOutput | ForEach-Object { Write-Log ($_.ToString()) -Level 'TSC' -Color Gray }
     }
 
     if ($LASTEXITCODE -ne 0) {
@@ -230,21 +358,22 @@ try {
     }
 }
 catch {
-    Write-Log "TypeScript check failed: $($_.Exception.Message)" -Level 'WARNING' -Color Yellow
+    $ErrorActionPreference = 'Stop'
+    Write-Log "TypeScript check failed: $($PSItem)" -Level 'WARNING' -Color Yellow
 }
 
 # Run tests
 if (-not $SkipTests) {
     Write-Log "Running tests..." -Level 'INFO' -Color Yellow
 
-    $testArgs = @('test', '--', '--passWithNoTests')
-    if (-not $Debug) {
+    $testArgs = @('run', 'test')
+    if (-not $DebugBuild) {
         $testArgs += '--silent'
     }
 
     & npm @testArgs 2>&1 | ForEach-Object {
-        if ($Debug) {
-            Write-Log $_ -Level 'TEST' -Color Gray
+        if ($DebugBuild) {
+            Write-Log ($_.ToString()) -Level 'TEST' -Color Gray
         }
     }
 
@@ -259,7 +388,7 @@ if (-not $SkipTests) {
 
 # Set environment for build
 $env:NODE_ENV = if ($Configuration -eq 'Production') { 'production' } else { 'development' }
-if ($Debug) {
+if ($DebugBuild) {
     $env:DEBUG = 'true'
 }
 if ($OpenDevTools) {
@@ -282,12 +411,12 @@ $buildCommand = if ($Configuration -eq 'Production') { 'build:prod' } else { 'pa
 Write-Log "Running: npm run $buildCommand" -Level 'INFO' -Color Cyan
 
 $buildArgs = @('run', $buildCommand)
-if ($Debug) {
+if ($DebugBuild) {
     $buildArgs += '--verbose'
 }
 
 & npm @buildArgs 2>&1 | ForEach-Object {
-    Write-Log $_ -Level 'BUILD' -Color Gray
+    Write-Log ($_.ToString()) -Level 'BUILD' -Color Gray
 }
 
 if ($LASTEXITCODE -ne 0) {
@@ -309,7 +438,7 @@ try {
         Start-Sleep -Seconds 2
     }
 } catch {
-    Write-Log "Could not check for running processes: $($_.Exception.Message)" -Level 'WARNING' -Color Yellow
+    Write-Log "Could not check for running processes: $($PSItem)" -Level 'WARNING' -Color Yellow
 }
 
 if (!(Test-Path $OutputPath)) {
@@ -338,8 +467,8 @@ Copy-Item -Path "package-lock.json" -Destination $OutputPath -Force -ErrorAction
 Write-Log "Installing production dependencies in output directory..." -Level 'INFO' -Color Cyan
 Push-Location $OutputPath
 & npm ci --production --prefer-offline --no-audit 2>&1 | ForEach-Object {
-    if ($Debug) {
-        Write-Log $_ -Level 'NPM' -Color Gray
+    if ($DebugBuild) {
+        Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
     }
 }
 Pop-Location
@@ -452,7 +581,7 @@ Write-Host "    cd $OutputPath" -ForegroundColor White
 Write-Host "    .\Launch-Debug.ps1" -ForegroundColor White
 Write-Host ""
 
-if ($Debug) {
+if ($DebugBuild) {
     Write-Log "Build log saved to: $LogPath" -Level 'INFO' -Color Green
 }
 

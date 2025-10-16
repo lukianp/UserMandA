@@ -38,7 +38,7 @@ export type DataType =
 export function useFileWatcher(
   dataType: DataType,
   onFileChanged: () => void,
-  enabled: boolean = true
+  enabled = true
 ): void {
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const callbackRef = useRef(onFileChanged);
@@ -68,14 +68,14 @@ export function useFileWatcher(
 
     // Start file watcher for current profile
     window.electronAPI.startFileWatcher(selectedSourceProfile.id)
-      .then((result) => {
+      .then((result: { success: boolean; error?: string }) => {
         if (result.success) {
           console.log(`[FileWatcher] Successfully started monitoring ${selectedSourceProfile.companyName}`);
         } else {
           console.warn('[FileWatcher] Failed to start file watcher:', result.error);
         }
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         console.error('[FileWatcher] Error starting file watcher:', error);
       });
 

@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { LicenseManagementView } from './LicenseManagementView';
+import LicenseManagementView from './LicenseManagementView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -19,16 +19,44 @@ jest.mock('../../hooks/useLicenseManagementLogic', () => ({
 const { useLicenseManagementLogic } = require('../../hooks/useLicenseManagementLogic');
 
 describe('LicenseManagementView', () => {
+  const mockLicenses = [
+    {
+      id: 'lic-1',
+      skuId: 'O365_BUSINESS_PREMIUM',
+      skuPartNumber: 'O365_BUSINESS_PREMIUM',
+      servicePlanName: 'Microsoft 365 Business Premium',
+      totalLicenses: 100,
+      usedLicenses: 85,
+      availableLicenses: 15,
+      expirationDate: new Date('2025-12-31'),
+      autoRenew: true,
+      totalCost: 15000,
+      monthlyCost: 1250,
+    },
+    {
+      id: 'lic-2',
+      skuId: 'ENTERPRISEPACK',
+      skuPartNumber: 'ENTERPRISEPACK',
+      servicePlanName: 'Office 365 E3',
+      totalLicenses: 50,
+      usedLicenses: 48,
+      availableLicenses: 2,
+      expirationDate: new Date('2025-06-30'),
+      autoRenew: false,
+      totalCost: 10000,
+      monthlyCost: 833.33,
+    },
+  ];
+
   const mockHookDefaults = {
-    data: [],
-    
-    
-    
-    
+    licenses: [],
+    processedLicenses: mockLicenses,
+    searchTerm: '',
+    setSearchTerm: jest.fn(),
     selectedItems: [],
-    searchText: '',
     isLoading: false,
     error: null,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

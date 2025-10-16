@@ -13,10 +13,11 @@ import { useModalStore } from '../../store/useModalStore';
 import { useProfileStore } from '../../store/useProfileStore';
 
 export interface CreateUserDialogProps {
+  modalId: string;
   onUserCreated?: (user: any) => void;
 }
 
-export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ onUserCreated }) => {
+export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ modalId, onUserCreated }) => {
   const { closeModal } = useModalStore();
   const { selectedSourceProfile } = useProfileStore();
 
@@ -118,7 +119,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ onUserCreate
         }
 
         // Close modal
-        closeModal();
+        closeModal(modalId);
       } else {
         throw new Error(result.error || 'Failed to create user');
       }
@@ -137,7 +138,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ onUserCreate
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Create New User</h2>
           <button
-            onClick={closeModal}
+            onClick={() => closeModal(modalId)}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             disabled={isSubmitting}
           >
@@ -283,7 +284,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ onUserCreate
         <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
           <Button
             variant="secondary"
-            onClick={closeModal}
+            onClick={() => closeModal(modalId)}
             disabled={isSubmitting}
           >
             Cancel

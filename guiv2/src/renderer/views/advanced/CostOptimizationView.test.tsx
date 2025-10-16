@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { CostOptimizationView } from './CostOptimizationView';
+import CostOptimizationView from './CostOptimizationView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -30,6 +30,7 @@ describe('CostOptimizationView', () => {
     searchText: '',
     isLoading: false,
     error: null as string | null,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { NetworkDiscoveryView } from './NetworkDiscoveryView';
+import NetworkDiscoveryView from './NetworkDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -33,6 +33,26 @@ describe('NetworkDiscoveryView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null,
+  
+    config: {},
+    setConfig: jest.fn(),
+    result: null,
+    isLoading: false,
+    searchText: '',
+    setSearchText: jest.fn(),
+    activeTab: 'overview',
+    setActiveTab: jest.fn(),
+    templates: [],
+    handleStartDiscovery: null,
+    handleApplyTemplate: null,
+    handleExport: null,
+    filteredDevices: null,
+    filteredSubnets: null,
+    filteredPorts: null,
+    deviceColumns: null,
+    subnetColumns: null,
+    portColumns: null,
+    stats: null,
   };
 
   beforeEach(() => {

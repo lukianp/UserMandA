@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { MigrationValidationView } from './MigrationValidationView';
+import MigrationValidationView from './MigrationValidationView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -33,6 +33,7 @@ describe('MigrationValidationView', () => {
 
 
     error: null as string | null,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

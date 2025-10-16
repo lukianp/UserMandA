@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { RoleManagementView } from './RoleManagementView';
+import RoleManagementView from './RoleManagementView';
 import {
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';

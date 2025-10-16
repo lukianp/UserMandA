@@ -176,18 +176,28 @@ export const useGroupsViewLogic = () => {
 
     // Dynamically import and render GroupMembersModal
     import('../components/dialogs/GroupMembersModal').then(({ GroupMembersModal }) => {
-      const { openModal } = require('../store/useModalStore').useModalStore.getState();
+      const { openModal, updateModal } = require('../store/useModalStore').useModalStore.getState();
 
-      openModal({
+      const modalId = openModal({
         type: 'custom',
         title: `Members of ${group.name}`,
         component: GroupMembersModal,
         props: {
+          modalId: '', // Will be updated below
           groupId: group.id,
           groupName: group.name,
         },
         dismissable: true,
         size: 'xl',
+      });
+
+      // Update modal props with actual modalId
+      updateModal(modalId, {
+        props: {
+          modalId,
+          groupId: group.id,
+          groupName: group.name,
+        },
       });
     });
   };

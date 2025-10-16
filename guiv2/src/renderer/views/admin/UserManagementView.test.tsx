@@ -6,7 +6,7 @@ import React from 'react';
 
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { UserManagementView } from './UserManagementView';
+import UserManagementView from './UserManagementView';
 import {
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';

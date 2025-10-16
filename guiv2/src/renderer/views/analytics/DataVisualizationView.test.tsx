@@ -31,6 +31,7 @@ describe('DataVisualizationView', () => {
     isLoading: false,
 
     error: null as any,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

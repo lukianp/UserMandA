@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { TeamsDiscoveryView } from './TeamsDiscoveryView';
+import TeamsDiscoveryView from './TeamsDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -33,6 +33,32 @@ describe('TeamsDiscoveryView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null,
+  
+    config: {},
+    templates: [],
+    result: null,
+    isDiscovering: false,
+    selectedTab: 'overview',
+    teamFilter: null,
+    setTeamFilter: jest.fn(),
+    channelFilter: null,
+    setChannelFilter: jest.fn(),
+    memberFilter: null,
+    setMemberFilter: jest.fn(),
+    teams: [],
+    channels: null,
+    members: null,
+    apps: [],
+    teamColumns: null,
+    channelColumns: null,
+    memberColumns: null,
+    appColumns: null,
+    loadTemplate: jest.fn(),
+    saveAsTemplate: jest.fn(),
+    loadData: jest.fn(),
+    exportData: jest.fn(),
+    setSelectedTab: jest.fn(),
+    statistics: { total: 0, active: 0, inactive: 0, critical: 0, warning: 0, info: 0 },
   };
 
   beforeEach(() => {

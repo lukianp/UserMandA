@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { EnvironmentDetectionView } from './EnvironmentDetectionView';
+import EnvironmentDetectionView from './EnvironmentDetectionView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -33,6 +33,22 @@ describe('EnvironmentDetectionView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null,
+  
+    config: {},
+    result: null,
+    isDetecting: false,
+    activeTab: 'overview',
+    filter: { searchText: '', category: '', status: '', severity: '' },
+    columns: [],
+    filteredData: [],
+    stats: { total: 0, active: 0, inactive: 0, critical: 0, warning: 0, info: 0 , online: 0, offline: 0, onlinePercentage: '0', warrantyExpiring: 0, warrantyExpired: 0, highUtilization: 0, compliant: 0, nonCompliant: 0, pending: 0, resolved: 0, unresolved: 0},
+    updateConfig: jest.fn(),
+    updateFilter: jest.fn(),
+    setActiveTab: jest.fn(),
+    startDetection: jest.fn(),
+    cancelDetection: jest.fn(),
+    exportToCSV: jest.fn(),
+    exportToExcel: jest.fn(),
   };
 
   beforeEach(() => {

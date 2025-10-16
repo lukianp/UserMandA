@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { AboutView } from './AboutView';
+import AboutView from './AboutView';
 import {
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';

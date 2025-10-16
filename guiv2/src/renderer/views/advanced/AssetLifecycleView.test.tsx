@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { AssetLifecycleView } from './AssetLifecycleView';
+import AssetLifecycleView from './AssetLifecycleView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -30,6 +30,7 @@ describe('AssetLifecycleView', () => {
     searchText: '',
     isLoading: false,
     error: {} as any,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

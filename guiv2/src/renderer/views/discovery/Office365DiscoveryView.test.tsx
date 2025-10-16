@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { Office365DiscoveryView } from './Office365DiscoveryView';
+import Office365DiscoveryView from './Office365DiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -33,6 +33,21 @@ describe('Office365DiscoveryView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null,
+  
+    config: {},
+    templates: [],
+    currentResult: null,
+    isDiscovering: false,
+    selectedTab: 'overview',
+    searchText: '',
+    filteredData: [],
+    columnDefs: [],
+    errors: [],
+    updateConfig: jest.fn(),
+    loadTemplate: jest.fn(),
+    saveAsTemplate: jest.fn(),
+    setSelectedTab: jest.fn(),
+    setSearchText: jest.fn(),
   };
 
   beforeEach(() => {

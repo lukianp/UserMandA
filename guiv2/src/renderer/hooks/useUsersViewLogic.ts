@@ -296,13 +296,14 @@ export const useUsersViewLogic = () => {
 
     // Dynamically import and render CreateUserDialog
     import('../components/dialogs/CreateUserDialog').then(({ CreateUserDialog }) => {
-      const { openModal } = require('../store/useModalStore').useModalStore.getState();
+      const { openModal, updateModal } = require('../store/useModalStore').useModalStore.getState();
 
-      openModal({
+      const modalId = openModal({
         type: 'custom',
         title: 'Create New User',
         component: CreateUserDialog,
         props: {
+          modalId: '', // Will be updated below
           onUserCreated: (user: any) => {
             console.log('[UsersView] User created, reloading users...', user);
             loadUsers(); // Reload users after creation
@@ -310,6 +311,17 @@ export const useUsersViewLogic = () => {
         },
         dismissable: true,
         size: 'lg',
+      });
+
+      // Update modal props with actual modalId
+      updateModal(modalId, {
+        props: {
+          modalId,
+          onUserCreated: (user: any) => {
+            console.log('[UsersView] User created, reloading users...', user);
+            loadUsers();
+          },
+        },
       });
     });
   };

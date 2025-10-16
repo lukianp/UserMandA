@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { SecurityAuditView } from './SecurityAuditView';
+import SecurityAuditView from './SecurityAuditView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -31,6 +31,20 @@ describe('SecurityAuditView', () => {
     error: null,
     exportData: jest.fn(),
     refreshData: jest.fn(),
+  
+    columns: [],
+    isLiveMode: false,
+    filters: { searchText: '', deviceType: '', vendor: '', status: '', location: '' },
+    filterOptions: { deviceTypes: [], vendors: [], statuses: [], locations: [], categories: [] , departments: [], roles: [], types: []},
+    updateFilter: jest.fn(),
+    clearFilters: jest.fn(),
+    selectedEvents: null,
+    setSelectedEvents: jest.fn(),
+    loadData: jest.fn(),
+    toggleLiveMode: null,
+    stats: { total: 0, active: 0, inactive: 0, critical: 0, warning: 0, info: 0 , online: 0, offline: 0, onlinePercentage: '0', warrantyExpiring: 0, warrantyExpired: 0, highUtilization: 0, compliant: 0, nonCompliant: 0, pending: 0, resolved: 0, unresolved: 0},
+    timelineData: null,
+    selectedProfile: { tenantId: '12345678-1234-1234-1234-123456789012', clientId: '87654321-4321-4321-4321-210987654321', isValid: true },
   };
 
   beforeEach(() => {

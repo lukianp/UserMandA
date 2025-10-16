@@ -35,6 +35,21 @@ describe('ApplicationDiscoveryView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null as any,
+  
+    config: {},
+    templates: [],
+    currentResult: null,
+    isDiscovering: false,
+    selectedTab: 'overview',
+    searchText: '',
+    filteredData: [],
+    columnDefs: [],
+    errors: [],
+    updateConfig: jest.fn(),
+    loadTemplate: jest.fn(),
+    saveAsTemplate: jest.fn(),
+    setSelectedTab: jest.fn(),
+    setSearchText: jest.fn(),
   };
 
   beforeEach(() => {

@@ -14,10 +14,11 @@ import { useProfileStore } from '../../store/useProfileStore';
 import { GroupType, GroupScope } from '../../types/models/group';
 
 export interface CreateGroupDialogProps {
+  modalId: string;
   onGroupCreated?: (group: any) => void;
 }
 
-export const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({ onGroupCreated }) => {
+export const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({ modalId, onGroupCreated }) => {
   const { closeModal } = useModalStore();
   const { selectedSourceProfile } = useProfileStore();
 
@@ -96,7 +97,7 @@ export const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({ onGroupCre
         }
 
         // Close modal
-        closeModal();
+        closeModal(modalId);
       } else {
         throw new Error(result.error || 'Failed to create group');
       }
@@ -115,7 +116,7 @@ export const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({ onGroupCre
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Create New Group</h2>
           <button
-            onClick={closeModal}
+            onClick={() => closeModal(modalId)}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             disabled={isSubmitting}
           >
@@ -234,7 +235,7 @@ export const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({ onGroupCre
         <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
           <Button
             variant="secondary"
-            onClick={closeModal}
+            onClick={() => closeModal(modalId)}
             disabled={isSubmitting}
           >
             Cancel

@@ -261,25 +261,25 @@ export const useDiscoveryExecution = (
     if (!state.executionId) return;
 
     // Listen for output streams (using real IPC)
-    const cleanupOutput = window.electronAPI.onDiscoveryOutput((data) => {
+    const cleanupOutput = window.electronAPI.onDiscoveryOutput((data: any) => {
       handleOutput(data);
     });
     cleanupFunctions.current.push(cleanupOutput);
 
     // Listen for progress updates
-    const cleanupProgress = window.electronAPI.onDiscoveryProgress((data) => {
+    const cleanupProgress = window.electronAPI.onDiscoveryProgress((data: any) => {
       handleProgress(data);
     });
     cleanupFunctions.current.push(cleanupProgress);
 
     // Listen for completion
-    const cleanupComplete = window.electronAPI.onDiscoveryComplete((data) => {
+    const cleanupComplete = window.electronAPI.onDiscoveryComplete((data: any) => {
       handleComplete(data);
     });
     cleanupFunctions.current.push(cleanupComplete);
 
     // Listen for errors
-    const cleanupError = window.electronAPI.onDiscoveryError((data) => {
+    const cleanupError = window.electronAPI.onDiscoveryError((data: any) => {
       if (data.executionId !== state.executionId) return;
 
       setState(prev => ({
@@ -297,7 +297,7 @@ export const useDiscoveryExecution = (
     cleanupFunctions.current.push(cleanupError);
 
     // Listen for cancellation
-    const cleanupCancelled = window.electronAPI.onDiscoveryCancelled((data) => {
+    const cleanupCancelled = window.electronAPI.onDiscoveryCancelled((data: any) => {
       if (data.executionId !== state.executionId) return;
 
       setState(prev => ({
@@ -437,7 +437,7 @@ export const useDiscoveryExecution = (
     setState(prev => ({ ...prev, isCancelling: true }));
 
     // Use real IPC call
-    window.electronAPI.cancelDiscovery(state.executionId).then((response) => {
+    window.electronAPI.cancelDiscovery(state.executionId).then((response: any) => {
       if (response?.success) {
         // Cancellation event will be handled by the listener
         console.log(`Cancellation request sent for execution: ${state.executionId}`);

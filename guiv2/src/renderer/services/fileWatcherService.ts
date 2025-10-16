@@ -42,7 +42,7 @@ export class FileWatcherService {
    */
   private setupEventListeners(): void {
     // Listen for file change events
-    const cleanup = window.electronAPI.onFileChanged((data) => {
+    const cleanup = window.electronAPI.onFileChanged((data: any) => {
       const event: FileChangeEvent = {
         type: data.type,
         filePath: data.filePath,
@@ -103,7 +103,7 @@ export class FileWatcherService {
     // Notify all data refresh listeners
     if (dataType) {
       this.dataRefreshCallbacks.forEach((callback) => {
-        callback(dataType!);
+        callback(dataType);
       });
     }
   }

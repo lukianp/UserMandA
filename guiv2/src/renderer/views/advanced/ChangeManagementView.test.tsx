@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ChangeManagementView } from './ChangeManagementView';
+import ChangeManagementView from './ChangeManagementView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -31,6 +31,7 @@ describe('ChangeManagementView', () => {
     searchText: '',
     isLoading: false,
     error: {} as any,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

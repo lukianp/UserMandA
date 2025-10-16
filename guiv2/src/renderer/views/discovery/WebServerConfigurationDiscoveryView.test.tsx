@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { WebServerConfigurationDiscoveryView } from './WebServerConfigurationDiscoveryView';
+import WebServerConfigurationDiscoveryView from './WebServerConfigurationDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -33,6 +33,25 @@ describe('WebServerConfigurationDiscoveryView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null,
+  
+    config: {},
+    updateConfig: jest.fn(),
+    isDiscovering: false,
+    filter: null,
+    updateFilter: jest.fn(),
+    serverColumns: null,
+    siteColumns: null,
+    bindingColumns: null,
+    appPoolColumns: null,
+    certificateColumns: null,
+    filteredServers: null,
+    filteredSites: null,
+    filteredBindings: null,
+    filteredAppPools: null,
+    filteredCertificates: null,
+    stats: null,
+    exportToCSV: jest.fn(),
+    exportToExcel: jest.fn(),
   };
 
   beforeEach(() => {

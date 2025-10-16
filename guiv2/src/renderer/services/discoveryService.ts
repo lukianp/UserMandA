@@ -220,7 +220,7 @@ class DiscoveryService {
           additionalData: {},
           data: [],
           errors: [psResult.error || 'Discovery execution failed'],
-          warnings: psResult.warnings?.map(w => w) || [],
+          warnings: psResult.warnings?.map((w: any) => w) || [],
         };
       }
 
@@ -244,7 +244,7 @@ class DiscoveryService {
         additionalData: {},
         data,
         errors: [],
-        warnings: psResult.warnings?.map(w => w) || [],
+        warnings: psResult.warnings?.map((w: any) => w) || [],
       };
     } catch (error: any) {
       throw new Error(`Discovery execution failed: ${error.message}`);
@@ -539,10 +539,10 @@ class DiscoveryService {
 
       // Filter by date range
       if (filter.startDate) {
-        runs = runs.filter(r => r.startTime && r.startTime >= filter.startDate!);
+        runs = runs.filter(r => r.startTime && r.startTime >= filter.startDate);
       }
       if (filter.endDate) {
-        runs = runs.filter(r => r.startTime && r.startTime <= filter.endDate!);
+        runs = runs.filter(r => r.startTime && r.startTime <= filter.endDate);
       }
 
       // Limit results

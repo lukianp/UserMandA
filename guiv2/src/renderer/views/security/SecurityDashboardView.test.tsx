@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { SecurityDashboardView } from './SecurityDashboardView';
+import SecurityDashboardView from './SecurityDashboardView';
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -29,8 +29,18 @@ describe('SecurityDashboardView', () => {
     searchText: '',
     isLoading: false,
     error: null,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
+  
+    securityData: { criticalVulnerabilities: 0, highVulnerabilities: 0, mediumVulnerabilities: 0, lowVulnerabilities: 0, totalVulnerabilities: 0 },
+    stats: { total: 0, active: 0, inactive: 0, critical: 0, warning: 0, info: 0 , online: 0, offline: 0, onlinePercentage: '0', warrantyExpiring: 0, warrantyExpired: 0, highUtilization: 0, compliant: 0, nonCompliant: 0, pending: 0, resolved: 0, unresolved: 0},
+    selectedCategory: null,
+    setSelectedCategory: jest.fn(),
+    handleExport: null,
+    handleRefresh: null,
+    handleRunScan: null,
+    columnDefs: [],
   };
 
   beforeEach(() => {

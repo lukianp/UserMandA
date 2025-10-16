@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { DomainDiscoveryView } from './DomainDiscoveryView';
+import DomainDiscoveryView from './DomainDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -29,7 +29,22 @@ describe('DomainDiscoveryView', () => {
       includeGroups: true,
       includeComputers: true,
       includeOUs: false,
-    },
+    
+    updateFormField: jest.fn(),
+    resetForm: null,
+    isFormValid: false,
+    isRunning: false,
+    isCancelling: false,
+    progress: null,
+    results: null,
+    error: null,
+    logs: null,
+    startDiscovery: jest.fn(),
+    cancelDiscovery: jest.fn(),
+    exportResults: jest.fn(),
+    clearLogs: jest.fn(),
+    selectedProfile: { tenantId: '12345678-1234-1234-1234-123456789012', clientId: '87654321-4321-4321-4321-210987654321', isValid: true },
+  },
     updateFormField: jest.fn(),
     resetForm: jest.fn(),
     isFormValid: false,

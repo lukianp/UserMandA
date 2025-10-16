@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { TrendAnalysisView } from './TrendAnalysisView';
+import TrendAnalysisView from './TrendAnalysisView';
 import { useTrendAnalysisLogic } from '../../hooks/useTrendAnalysisLogic';
 import {
   mockSuccessfulExecution,
@@ -31,6 +31,7 @@ describe('TrendAnalysisView', () => {
     isLoading: false,
 
     error: null as any,
+    loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
   };

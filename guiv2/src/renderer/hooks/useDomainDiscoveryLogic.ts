@@ -90,7 +90,7 @@ export const useDomainDiscoveryLogic = () => {
   // Progress streaming handler
   useEffect(() => {
     const api = getElectronAPI();
-    if (!api || !api.onProgress) return () => {};
+    if (!api || !api.onProgress) return;
 
     const unsubscribe = api.onProgress((data: ProgressData) => {
       // Convert ProgressData to DiscoveryProgress
@@ -121,7 +121,7 @@ export const useDomainDiscoveryLogic = () => {
   // Output streaming handler
   useEffect(() => {
     const api = getElectronAPI();
-    if (!api || !api.onOutput) return () => {};
+    if (!api || !api.onOutput) return;
 
     const unsubscribe = api.onOutput((data: OutputData) => {
       // Convert OutputData to expected format

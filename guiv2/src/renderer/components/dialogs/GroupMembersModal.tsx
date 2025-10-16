@@ -8,12 +8,13 @@ import React, { useState, useEffect } from 'react';
 import { X, UserPlus, Trash2, RefreshCw } from 'lucide-react';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
-import { LoadingSpinner } from '../atoms/LoadingSpinner';
+import LoadingSpinner from '../atoms/LoadingSpinner';
 import { useModalStore } from '../../store/useModalStore';
 import { VirtualizedDataGrid } from '../organisms/VirtualizedDataGrid';
 import type { ColDef } from 'ag-grid-community';
 
 export interface GroupMembersModalProps {
+  modalId: string;
   groupId: string;
   groupName: string;
 }
@@ -27,7 +28,7 @@ interface GroupMember {
   accountEnabled: boolean;
 }
 
-export const GroupMembersModal: React.FC<GroupMembersModalProps> = ({ groupId, groupName }) => {
+export const GroupMembersModal: React.FC<GroupMembersModalProps> = ({ modalId, groupId, groupName }) => {
   const { closeModal } = useModalStore();
 
   const [members, setMembers] = useState<GroupMember[]>([]);
@@ -176,7 +177,7 @@ export const GroupMembersModal: React.FC<GroupMembersModalProps> = ({ groupId, g
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{groupName}</p>
           </div>
           <button
-            onClick={closeModal}
+            onClick={() => closeModal(modalId)}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             disabled={isLoading}
           >
@@ -255,7 +256,7 @@ export const GroupMembersModal: React.FC<GroupMembersModalProps> = ({ groupId, g
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
-          <Button variant="secondary" onClick={closeModal}>
+          <Button variant="secondary" onClick={() => closeModal(modalId)}>
             Close
           </Button>
         </div>
