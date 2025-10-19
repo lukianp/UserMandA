@@ -1,16 +1,22 @@
 /**
  * Unit Tests for useOffice365DiscoveryLogic Hook
- * Tests all business logic for Office365 discovery functionality
+ * Validates exposed API and core state transitions
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 import { useOffice365DiscoveryLogic } from './useOffice365DiscoveryLogic';
 
-// Mock electron API
+type ProgressCallback = (data: any) => void;
+
+const mockExecuteModule = jest.fn<(args?: any) => Promise<any>>();
+const mockCancelExecution = jest.fn<(token?: string) => Promise<void>>();
+const mockOnProgress = jest.fn<(cb: ProgressCallback) => () => void>();
+
 const mockElectronAPI = {
-  executeModule: jest.fn(),
-  cancelExecution: jest.fn(),
-  onProgress: jest.fn(() => jest.fn()),
+  executeModule: mockExecuteModule,
+  cancelExecution: mockCancelExecution,
+  onProgress: mockOnProgress,
 };
 
 beforeAll(() => {
@@ -23,152 +29,151 @@ beforeAll(() => {
 describe('useOffice365DiscoveryLogic', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockElectronAPI.executeModule.mockResolvedValue({
-      success: true,
-      data: {},
+    mockExecuteModule.mockImplementation(async (args: any) => {
+      const fn = args?.functionName;
+      if (fn === 'Get-Office365DiscoveryTemplates') {
+        return { success: true, data: { templates: [] } };
+      }
+
+      if (fn === 'Get-Office365DiscoveryHistory') {
+        return { success: true, data: { results: [] } };
+      }
+
+      return { success: true, data: {} };
     });
   });
 
-  describe('Initial State', () => {
-    it('should initialize with default state', () => {
-      const { result } = renderHook(() => useOffice365DiscoveryLogic());
+  it('should initialize with expected defaults', () => {
+    const { result } = renderHook(() => useOffice365DiscoveryLogic());
 
-      expect(result.current).toBeDefined();
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
-    });
-
-    it('should initialize with null or empty result', () => {
-      const { result } = renderHook(() => useOffice365DiscoveryLogic());
-
-      expect(result.current.currentResult || result.current.currentResult).toBeNull();
-    });
-
-    it('should initialize with null error', () => {
-      const { result } = renderHook(() => useOffice365DiscoveryLogic());
-
-      expect(result.current.error || result.current.error).toBeFalsy();
-    });
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.currentResult).toBeNull();
+    expect(result.current.errors).toEqual([]);
+    expect(result.current.selectedTab).toBe('overview');
   });
 
-  describe('Discovery Execution', () => {
-    it('should start discovery successfully', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
+  it('should start discovery and store result', async () => {
+    const discoveryPayload = { summary: { totalUsers: 10 } };
+    mockExecuteModule.mockImplementation(async (args: any) => {
+      const functionName = args?.functionName;
+      if (functionName === 'Invoke-Office365Discovery') {
+        return { success: true, data: discoveryPayload };
+      }
 
-      const { result } = renderHook(() => useOffice365DiscoveryLogic());
+      if (functionName === 'Get-Office365DiscoveryTemplates') {
+        return { success: true, data: { templates: [] } };
+      }
 
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
+      if (functionName === 'Get-Office365DiscoveryHistory') {
+        return { success: true, data: { results: [] } };
+      }
 
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
+      return { success: true, data: {} };
     });
 
-    it('should handle discovery failure', async () => {
-      const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
+    const { result } = renderHook(() => useOffice365DiscoveryLogic());
 
-      const { result } = renderHook(() => useOffice365DiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
+    await act(async () => {
+      await result.current.startDiscovery();
     });
 
-    it('should set progress during discovery', async () => {
-      let progressCallback;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
-        progressCallback = cb;
-        return jest.fn();
-      });
-
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockImplementation(() => {
-          if (progressCallback) {
-            progressCallback({ message: 'Processing...', percentage: 50 });
-          }
-          return Promise.resolve({ success: true, data: {} });
-        });
-
-      const { result } = renderHook(() => useOffice365DiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
-    });
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.currentResult).toEqual(discoveryPayload);
   });
 
-  describe('Cancellation', () => {
-    it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+  it('should capture errors when discovery fails', async () => {
+    const errorMessage = 'Discovery failed';
+    mockExecuteModule.mockImplementation(async (args: any) => {
+      const functionName = args?.functionName;
+      if (functionName === 'Invoke-Office365Discovery') {
+        throw new Error(errorMessage);
+      }
 
-      const { result } = renderHook(() => useOffice365DiscoveryLogic());
+      if (functionName === 'Get-Office365DiscoveryTemplates') {
+        return { success: true, data: { templates: [] } };
+      }
 
-      await act(async () => {
-        await result.current.cancelDiscovery();
-      });
+      if (functionName === 'Get-Office365DiscoveryHistory') {
+        return { success: true, data: { results: [] } };
+      }
 
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
+      return { success: true, data: {} };
     });
+
+    const { result } = renderHook(() => useOffice365DiscoveryLogic());
+
+    await act(async () => {
+      await result.current.startDiscovery();
+    });
+
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.errors).toContain(errorMessage);
   });
 
-  describe('Configuration', () => {
-    it('should allow config updates', () => {
-      const { result } = renderHook(() => useOffice365DiscoveryLogic());
+  it('should react to progress updates', async () => {
+    let progressHandler: ProgressCallback | undefined;
+    mockOnProgress.mockImplementation((cb: ProgressCallback) => {
+      progressHandler = cb;
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => useOffice365DiscoveryLogic());
+
+    if (progressHandler) {
+      const handler = progressHandler;
 
       act(() => {
-        if (result.current.updateConfig) {
-          result.current.updateConfig({ test: true });
-        } else if (result.current.setConfig) {
-          result.current.setConfig({ ...currentResult.current.config, test: true });
-        }
+        handler({
+          type: 'office365-discovery',
+          resultId: 'result-1',
+          phase: 'users',
+          currentOperation: 'Fetching users',
+          progress: 50,
+          objectsProcessed: 100,
+          estimatedTimeRemaining: 120,
+          message: 'Halfway there',
+        });
       });
 
-      expect(result.current.config).toBeDefined();
-    });
+      expect(result.current.progress?.progress).toBe(50);
+    }
   });
 
-  describe('Export', () => {
-    it('should handle export when no results', async () => {
-      const { result } = renderHook(() => useOffice365DiscoveryLogic());
+  it('should cancel discovery when requested', async () => {
+    mockCancelExecution.mockResolvedValueOnce(undefined);
 
-      await act(async () => {
-        if (result.current.exportResults) {
-          await result.current.exportResults('csv');
-        } else if (result.current.exportData) {
-          await result.current.exportData({ format: 'csv' });
-        }
-      });
+    const { result } = renderHook(() => useOffice365DiscoveryLogic());
 
-      // Should not crash when no results
-      expect(true).toBe(true);
+    await act(async () => {
+      await result.current.cancelDiscovery();
     });
+
+    expect(mockCancelExecution).toHaveBeenCalled();
   });
 
-  describe('UI State', () => {
-    it('should update tab selection', () => {
-      const { result } = renderHook(() => useOffice365DiscoveryLogic());
+  it('should update configuration', () => {
+    const { result } = renderHook(() => useOffice365DiscoveryLogic());
 
-      if (result.current.setSelectedTab) {
-        act(() => {
-          result.current.setSelectedTab('overview');
-        });
-        expect(result.current.selectedTab).toBeDefined();
-      } else if (result.current.setActiveTab) {
-        act(() => {
-          result.current.setActiveTab('overview');
-        });
-        expect(result.current.activeTab).toBeDefined();
-      }
+    act(() => {
+      result.current.updateConfig({ tenantDomain: 'contoso.com' });
     });
+
+    expect(result.current.config.tenantDomain).toBe('contoso.com');
+  });
+
+  it('should switch selected tab', () => {
+    const { result } = renderHook(() => useOffice365DiscoveryLogic());
+
+    act(() => {
+      result.current.setSelectedTab('users');
+    });
+
+    expect(result.current.selectedTab).toBe('users');
+  });
+
+  it('should expose export helper', () => {
+    const { result } = renderHook(() => useOffice365DiscoveryLogic());
+
+    expect(typeof result.current.exportResults).toBe('function');
   });
 });

@@ -1,16 +1,23 @@
 /**
  * Unit Tests for useLicensingDiscoveryLogic Hook
- * Tests all business logic for Licensing discovery functionality
+ * Tests core business logic for licensing discovery functionality
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 import { useLicensingDiscoveryLogic } from './useLicensingDiscoveryLogic';
+
+type ProgressCallback = (data: any) => void;
+
+const mockExecuteModule = jest.fn<(args?: any) => Promise<any>>();
+const mockCancelExecution = jest.fn<(token?: string) => Promise<void>>();
+const mockOnProgress = jest.fn<(cb: ProgressCallback) => () => void>();
 
 // Mock electron API
 const mockElectronAPI = {
-  executeModule: jest.fn(),
-  cancelExecution: jest.fn(),
-  onProgress: jest.fn(() => jest.fn()),
+  executeModule: mockExecuteModule,
+  cancelExecution: mockCancelExecution,
+  onProgress: mockOnProgress,
 };
 
 beforeAll(() => {
@@ -34,43 +41,36 @@ describe('useLicensingDiscoveryLogic', () => {
       const { result } = renderHook(() => useLicensingDiscoveryLogic());
 
       expect(result.current).toBeDefined();
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
+      expect(result.current.isDiscovering).toBe(false);
     });
 
-    it('should initialize with null or empty result', () => {
+    it('should initialize with null result', () => {
       const { result } = renderHook(() => useLicensingDiscoveryLogic());
 
-      expect(result.current.currentResult || result.current.currentResult).toBeNull();
+      expect(result.current.result).toBeNull();
     });
 
     it('should initialize with null error', () => {
       const { result } = renderHook(() => useLicensingDiscoveryLogic());
 
-      expect(result.current.error || result.current.error).toBeFalsy();
+      expect(result.current.error).toBeNull();
     });
   });
 
   describe('Discovery Execution', () => {
     it('should start discovery successfully', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
-
       const { result } = renderHook(() => useLicensingDiscoveryLogic());
 
       await act(async () => {
         await result.current.startDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
+      expect(result.current.isDiscovering).toBe(false);
     });
 
     it('should handle discovery failure', async () => {
       const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
+      mockExecuteModule.mockRejectedValueOnce(new Error(errorMessage));
 
       const { result } = renderHook(() => useLicensingDiscoveryLogic());
 
@@ -78,24 +78,22 @@ describe('useLicensingDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
+      expect(result.current.isDiscovering).toBe(false);
+      expect(result.current.error).toBe(errorMessage);
     });
 
-    it('should set progress during discovery', async () => {
-      let progressCallback;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
-        progressCallback = cb;
+    it('should consume progress updates', async () => {
+      let progressHandler: ProgressCallback | undefined;
+      let capturedToken: string | undefined;
+      mockOnProgress.mockImplementation((cb: ProgressCallback) => {
+        progressHandler = cb;
         return jest.fn();
       });
 
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockImplementation(() => {
-          if (progressCallback) {
-            progressCallback({ message: 'Processing...', percentage: 50 });
-          }
-          return Promise.resolve({ success: true, data: {} });
-        });
+      mockExecuteModule.mockImplementationOnce(async (args: any) => {
+        capturedToken = args?.parameters?.CancellationToken;
+        return { success: true, data: {} };
+      });
 
       const { result } = renderHook(() => useLicensingDiscoveryLogic());
 
@@ -103,21 +101,40 @@ describe('useLicensingDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
-      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
+      expect(mockOnProgress).toHaveBeenCalled();
+      if (progressHandler && capturedToken) {
+        const handler = progressHandler;
+
+        act(() => {
+          handler({
+            type: 'licensing-discovery',
+            token: capturedToken,
+            current: 20,
+            total: 100,
+            message: 'Processing...',
+            percentage: 20,
+          });
+        });
+
+        expect(result.current.progress.current).toBe(20);
+        expect(result.current.progress.percentage).toBe(20);
+      }
     });
   });
 
   describe('Cancellation', () => {
-    it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+    it('should cancel discovery when token exists', async () => {
+      mockCancelExecution.mockResolvedValueOnce(undefined);
 
       const { result } = renderHook(() => useLicensingDiscoveryLogic());
 
       await act(async () => {
+        await result.current.startDiscovery();
         await result.current.cancelDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
+      expect(mockCancelExecution).toHaveBeenCalled();
+      expect(result.current.isDiscovering).toBe(false);
     });
   });
 
@@ -126,31 +143,19 @@ describe('useLicensingDiscoveryLogic', () => {
       const { result } = renderHook(() => useLicensingDiscoveryLogic());
 
       act(() => {
-        if (result.current.updateConfig) {
-          result.current.updateConfig({ test: true });
-        } else if (result.current.setConfig) {
-          result.current.setConfig({ ...currentResult.current.config, test: true });
-        }
+        result.current.updateConfig({ tenantId: 'tenant-456' });
       });
 
-      expect(result.current.config).toBeDefined();
+      expect(result.current.config.tenantId).toBe('tenant-456');
     });
   });
 
   describe('Export', () => {
-    it('should handle export when no results', async () => {
+    it('should expose export utilities', () => {
       const { result } = renderHook(() => useLicensingDiscoveryLogic());
 
-      await act(async () => {
-        if (result.current.exportResults) {
-          await result.current.exportResults('csv');
-        } else if (result.current.exportData) {
-          await result.current.exportData({ format: 'csv' });
-        }
-      });
-
-      // Should not crash when no results
-      expect(true).toBe(true);
+      expect(typeof result.current.exportToCSV).toBe('function');
+      expect(typeof result.current.exportToExcel).toBe('function');
     });
   });
 
@@ -158,17 +163,11 @@ describe('useLicensingDiscoveryLogic', () => {
     it('should update tab selection', () => {
       const { result } = renderHook(() => useLicensingDiscoveryLogic());
 
-      if (result.current.setSelectedTab) {
-        act(() => {
-          result.current.setSelectedTab('overview');
-        });
-        expect(result.current.selectedTab).toBeDefined();
-      } else if (result.current.setActiveTab) {
-        act(() => {
-          result.current.setActiveTab('overview');
-        });
-        expect(result.current.activeTab).toBeDefined();
-      }
+      act(() => {
+        result.current.setActiveTab('licenses');
+      });
+
+      expect(result.current.activeTab).toBe('licenses');
     });
   });
 });

@@ -1,16 +1,18 @@
 /**
  * Unit Tests for useNetworkDiscoveryLogic Hook
- * Tests all business logic for Network discovery functionality
+ * Tests core business logic for network discovery functionality
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 import { useNetworkDiscoveryLogic } from './useNetworkDiscoveryLogic';
 
-// Mock electron API
+const mockExecuteModule = jest.fn<(args?: any) => Promise<any>>();
+const mockWriteFile = jest.fn<(fileName: string, content: string) => Promise<void>>();
+
 const mockElectronAPI = {
-  executeModule: jest.fn(),
-  cancelExecution: jest.fn(),
-  onProgress: jest.fn(() => jest.fn()),
+  executeModule: mockExecuteModule,
+  writeFile: mockWriteFile,
 };
 
 beforeAll(() => {
@@ -23,152 +25,131 @@ beforeAll(() => {
 describe('useNetworkDiscoveryLogic', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockElectronAPI.executeModule.mockResolvedValue({
+    jest.useRealTimers();
+  });
+
+  it('should initialize with expected default state', () => {
+    const { result } = renderHook(() => useNetworkDiscoveryLogic());
+
+    expect(result.current.result).toBeNull();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBeNull();
+    expect(result.current.activeTab).toBe('overview');
+  });
+
+  it('should update configuration', () => {
+    const { result } = renderHook(() => useNetworkDiscoveryLogic());
+
+    act(() => {
+      result.current.setConfig(prev => ({
+        ...prev,
+        subnets: ['10.0.0.0/24'],
+      }));
+    });
+
+    expect(result.current.config.subnets).toEqual(['10.0.0.0/24']);
+  });
+
+  it('should start discovery successfully', async () => {
+    jest.useFakeTimers();
+    const discoveryData = { devices: [], subnets: [], ports: [] };
+    mockExecuteModule.mockImplementation(async () => {
+      jest.advanceTimersByTime(1000);
+      return {
+        success: true,
+        data: discoveryData,
+      };
+    });
+
+    const { result } = renderHook(() => useNetworkDiscoveryLogic());
+
+    await act(async () => {
+      await result.current.handleStartDiscovery();
+    });
+
+    expect(mockExecuteModule).toHaveBeenCalled();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.result).toEqual(discoveryData);
+
+    jest.useRealTimers();
+  });
+
+  it('should surface errors when discovery fails', async () => {
+    jest.useFakeTimers();
+    mockExecuteModule.mockRejectedValueOnce(new Error('Failed'));
+
+    const { result } = renderHook(() => useNetworkDiscoveryLogic());
+
+    await act(async () => {
+      await result.current.handleStartDiscovery();
+    });
+
+    jest.runOnlyPendingTimers();
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBe('Failed');
+
+    jest.useRealTimers();
+  });
+
+  it('should apply template configuration', () => {
+    const { result } = renderHook(() => useNetworkDiscoveryLogic());
+    const template = result.current.templates[0];
+
+    act(() => {
+      result.current.handleApplyTemplate(template);
+    });
+
+    expect((result.current.config as any).name).toBe(template.name);
+  });
+
+  it('should switch active tab', () => {
+    const { result } = renderHook(() => useNetworkDiscoveryLogic());
+
+    act(() => {
+      result.current.setActiveTab('devices');
+    });
+
+    expect(result.current.activeTab).toBe('devices');
+  });
+
+  it('should export results when available', async () => {
+    jest.useFakeTimers();
+    const discoveryData = {
+      devices: [
+        {
+          hostname: 'router-1',
+          ipAddress: '10.0.0.1',
+          status: 'Online',
+          type: 'Router',
+          operatingSystem: 'IOS',
+          manufacturer: 'Cisco',
+          model: '2901',
+          macAddress: 'AA:BB:CC:DD:EE:FF',
+        },
+      ],
+      subnets: [],
+      ports: [],
+      vulnerabilities: [],
+    };
+    mockExecuteModule.mockResolvedValueOnce({
       success: true,
-      data: {},
+      data: discoveryData,
     });
-  });
+    mockWriteFile.mockResolvedValueOnce(undefined);
 
-  describe('Initial State', () => {
-    it('should initialize with default state', () => {
-      const { result } = renderHook(() => useNetworkDiscoveryLogic());
+    const { result } = renderHook(() => useNetworkDiscoveryLogic());
 
-      expect(result.current).toBeDefined();
-      // Skip discovery state check
+    await act(async () => {
+      await result.current.handleStartDiscovery();
     });
 
-    it('should initialize with null or empty result', () => {
-      const { result } = renderHook(() => useNetworkDiscoveryLogic());
-
-      expect(result.current.currentResult || result.current.currentResult).toBeNull();
+    await act(async () => {
+      await result.current.handleExport();
     });
 
-    it('should initialize with null error', () => {
-      const { result } = renderHook(() => useNetworkDiscoveryLogic());
+    expect(mockWriteFile).toHaveBeenCalled();
 
-      expect(result.current.error || result.current.error).toBeFalsy();
-    });
-  });
-
-  describe('Discovery Execution', () => {
-    it('should start discovery successfully', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
-
-      const { result } = renderHook(() => useNetworkDiscoveryLogic());
-
-      await act(async () => {
-        await // startDiscovery not available;
-      });
-
-      // Skip discovery state check
-    });
-
-    it('should handle discovery failure', async () => {
-      const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
-
-      const { result } = renderHook(() => useNetworkDiscoveryLogic());
-
-      await act(async () => {
-        await // startDiscovery not available;
-      });
-
-      // Skip discovery state check
-    });
-
-    it('should set progress during discovery', async () => {
-      let progressCallback;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
-        progressCallback = cb;
-        return jest.fn();
-      });
-
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockImplementation(() => {
-          if (progressCallback) {
-            progressCallback({ message: 'Processing...', percentage: 50 });
-          }
-          return Promise.resolve({ success: true, data: {} });
-        });
-
-      const { result } = renderHook(() => useNetworkDiscoveryLogic());
-
-      await act(async () => {
-        await // startDiscovery not available;
-      });
-
-      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
-    });
-  });
-
-  describe('Cancellation', () => {
-    it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
-
-      const { result } = renderHook(() => useNetworkDiscoveryLogic());
-
-      await act(async () => {
-        await // cancelDiscovery not available;
-      });
-
-      // Skip discovery state check
-    });
-  });
-
-  describe('Configuration', () => {
-    it('should allow config updates', () => {
-      const { result } = renderHook(() => useNetworkDiscoveryLogic());
-
-      act(() => {
-        if (result.current.updateConfig) {
-          result.current.updateConfig({ test: true });
-        } else if (result.current.setConfig) {
-          result.current.setConfig({ ...currentResult.current.config, test: true });
-        }
-      });
-
-      expect(result.current.config).toBeDefined();
-    });
-  });
-
-  describe('Export', () => {
-    it('should handle export when no results', async () => {
-      const { result } = renderHook(() => useNetworkDiscoveryLogic());
-
-      await act(async () => {
-        if (result.current.exportResults) {
-          await result.current.exportResults('csv');
-        } else if (result.current.exportData) {
-          await result.current.exportData({ format: 'csv' });
-        }
-      });
-
-      // Should not crash when no results
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('UI State', () => {
-    it('should update tab selection', () => {
-      const { result } = renderHook(() => useNetworkDiscoveryLogic());
-
-      if (result.current.setSelectedTab) {
-        act(() => {
-          result.current.setSelectedTab('overview');
-        });
-        expect(result.current.selectedTab).toBeDefined();
-      } else if (result.current.setActiveTab) {
-        act(() => {
-          result.current.setActiveTab('overview');
-        });
-        expect(result.current.activeTab).toBeDefined();
-      }
-    });
+    jest.useRealTimers();
   });
 });

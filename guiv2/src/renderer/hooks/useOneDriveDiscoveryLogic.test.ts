@@ -1,16 +1,22 @@
 /**
  * Unit Tests for useOneDriveDiscoveryLogic Hook
- * Tests all business logic for OneDrive discovery functionality
+ * Ensures core API and state transitions behave as expected
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 import { useOneDriveDiscoveryLogic } from './useOneDriveDiscoveryLogic';
 
-// Mock electron API
+type ProgressCallback = (data: any) => void;
+
+const mockExecuteModule = jest.fn<(args?: any) => Promise<any>>();
+const mockCancelExecution = jest.fn<(token?: string) => Promise<void>>();
+const mockOnProgress = jest.fn<(cb: ProgressCallback) => () => void>();
+
 const mockElectronAPI = {
-  executeModule: jest.fn(),
-  cancelExecution: jest.fn(),
-  onProgress: jest.fn(() => jest.fn()),
+  executeModule: mockExecuteModule,
+  cancelExecution: mockCancelExecution,
+  onProgress: mockOnProgress,
 };
 
 beforeAll(() => {
@@ -23,152 +29,157 @@ beforeAll(() => {
 describe('useOneDriveDiscoveryLogic', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockElectronAPI.executeModule.mockResolvedValue({
-      success: true,
-      data: {},
+    mockExecuteModule.mockImplementation(async (args: any) => {
+      const functionName = args?.functionName;
+      if (functionName === 'Get-OneDriveDiscoveryTemplates') {
+        return { success: true, data: { templates: [] } };
+      }
+
+      if (functionName === 'Get-OneDriveDiscoveryHistory') {
+        return { success: true, data: { results: [] } };
+      }
+
+      return { success: true, data: {} };
     });
   });
 
-  describe('Initial State', () => {
-    it('should initialize with default state', () => {
-      const { result } = renderHook(() => useOneDriveDiscoveryLogic());
+  it('should initialize with expected defaults', () => {
+    const { result } = renderHook(() => useOneDriveDiscoveryLogic());
 
-      expect(result.current).toBeDefined();
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
-    });
-
-    it('should initialize with null or empty result', () => {
-      const { result } = renderHook(() => useOneDriveDiscoveryLogic());
-
-      expect(result.current.currentResult || result.current.currentResult).toBeNull();
-    });
-
-    it('should initialize with null error', () => {
-      const { result } = renderHook(() => useOneDriveDiscoveryLogic());
-
-      expect(result.current.error || result.current.error).toBeFalsy();
-    });
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.currentResult).toBeNull();
+    expect(result.current.errors).toEqual([]);
+    expect(result.current.selectedTab).toBe('overview');
   });
 
-  describe('Discovery Execution', () => {
-    it('should start discovery successfully', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
+  it('should start discovery and capture results', async () => {
+    const discoveryPayload = { drives: [], summary: { totalFiles: 0 } };
+    mockElectronAPI.executeModule.mockImplementation(async ({ functionName }: { functionName: string }) => {
+      if (functionName === 'Invoke-OneDriveDiscovery') {
+        return { success: true, data: discoveryPayload };
+      }
 
-      const { result } = renderHook(() => useOneDriveDiscoveryLogic());
+      if (functionName === 'Get-OneDriveDiscoveryTemplates') {
+        return { success: true, data: { templates: [] } };
+      }
 
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
+      if (functionName === 'Get-OneDriveDiscoveryHistory') {
+        return { success: true, data: { results: [] } };
+      }
 
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
+      return { success: true, data: {} };
     });
 
-    it('should handle discovery failure', async () => {
-      const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
+    const { result } = renderHook(() => useOneDriveDiscoveryLogic());
 
-      const { result } = renderHook(() => useOneDriveDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
+    await act(async () => {
+      await result.current.startDiscovery();
     });
 
-    it('should set progress during discovery', async () => {
-      let progressCallback;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
-        progressCallback = cb;
-        return jest.fn();
-      });
-
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockImplementation(() => {
-          if (progressCallback) {
-            progressCallback({ message: 'Processing...', percentage: 50 });
-          }
-          return Promise.resolve({ success: true, data: {} });
-        });
-
-      const { result } = renderHook(() => useOneDriveDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
-    });
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.currentResult).toEqual(discoveryPayload);
   });
 
-  describe('Cancellation', () => {
-    it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+  it('should record discovery errors', async () => {
+    const errorMessage = 'Discovery failed';
+    mockElectronAPI.executeModule.mockImplementation(async ({ functionName }: { functionName: string }) => {
+      if (functionName === 'Invoke-OneDriveDiscovery') {
+        throw new Error(errorMessage);
+      }
 
-      const { result } = renderHook(() => useOneDriveDiscoveryLogic());
+      if (functionName === 'Get-OneDriveDiscoveryTemplates') {
+        return { success: true, data: { templates: [] } };
+      }
 
-      await act(async () => {
-        await result.current.cancelDiscovery();
-      });
+      if (functionName === 'Get-OneDriveDiscoveryHistory') {
+        return { success: true, data: { results: [] } };
+      }
 
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
+      return { success: true, data: {} };
     });
+
+    const { result } = renderHook(() => useOneDriveDiscoveryLogic());
+
+    await act(async () => {
+      await result.current.startDiscovery();
+    });
+
+    expect(result.current.errors).toContain(errorMessage);
+    expect(result.current.isDiscovering).toBe(false);
   });
 
-  describe('Configuration', () => {
-    it('should allow config updates', () => {
-      const { result } = renderHook(() => useOneDriveDiscoveryLogic());
+  it('should apply progress updates', () => {
+    let progressHandler: ProgressCallback | undefined;
+    mockElectronAPI.onProgress.mockImplementation((cb: ProgressCallback) => {
+      progressHandler = cb;
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => useOneDriveDiscoveryLogic());
+
+    if (progressHandler) {
+      const handler = progressHandler;
 
       act(() => {
-        if (result.current.updateConfig) {
-          result.current.updateConfig({ test: true });
-        } else if (result.current.setConfig) {
-          result.current.setConfig({ ...currentResult.current.config, test: true });
-        }
+        handler({
+          type: 'onedrive-discovery',
+          timestamp: new Date().toISOString(),
+          currentPhase: 'discovering-files',
+          phaseProgress: 40,
+          overallProgress: 25,
+          currentOperation: 'Fetching data...',
+          currentItem: null,
+          accountsProcessed: 5,
+          filesProcessed: 10,
+          sharesProcessed: 2,
+          errorsEncountered: 0,
+          warningsEncountered: 0,
+          itemsPerSecond: 3,
+          estimatedTimeRemaining: 120,
+          canCancel: true,
+          isPaused: false,
+        });
       });
 
-      expect(result.current.config).toBeDefined();
-    });
+      expect(result.current.progress?.overallProgress).toBe(25);
+    }
   });
 
-  describe('Export', () => {
-    it('should handle export when no results', async () => {
-      const { result } = renderHook(() => useOneDriveDiscoveryLogic());
+  it('should cancel discovery', async () => {
+    mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
 
-      await act(async () => {
-        if (result.current.exportResults) {
-          await result.current.exportResults('csv');
-        } else if (result.current.exportData) {
-          await result.current.exportData({ format: 'csv' });
-        }
-      });
+    const { result } = renderHook(() => useOneDriveDiscoveryLogic());
 
-      // Should not crash when no results
-      expect(true).toBe(true);
+    await act(async () => {
+      await result.current.cancelDiscovery();
     });
+
+    expect(mockElectronAPI.cancelExecution).toHaveBeenCalled();
   });
 
-  describe('UI State', () => {
-    it('should update tab selection', () => {
-      const { result } = renderHook(() => useOneDriveDiscoveryLogic());
+  it('should update configuration', () => {
+    const { result } = renderHook(() => useOneDriveDiscoveryLogic());
 
-      if (result.current.setSelectedTab) {
-        act(() => {
-          result.current.setSelectedTab('overview');
-        });
-        expect(result.current.selectedTab).toBeDefined();
-      } else if (result.current.setActiveTab) {
-        act(() => {
-          result.current.setActiveTab('overview');
-        });
-        expect(result.current.activeTab).toBeDefined();
-      }
+    act(() => {
+      result.current.updateConfig({ includePersonalOneDrive: false });
     });
+
+    expect(result.current.config.includePersonalOneDrive).toBe(false);
+  });
+
+  it('should switch selected tab', () => {
+    const { result } = renderHook(() => useOneDriveDiscoveryLogic());
+
+    act(() => {
+      result.current.setSelectedTab('files');
+    });
+
+    expect(result.current.selectedTab).toBe('files');
+  });
+
+  it('should expose export helper', () => {
+    const { result } = renderHook(() => useOneDriveDiscoveryLogic());
+
+    expect(typeof result.current.exportResults).toBe('function');
   });
 });

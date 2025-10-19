@@ -33,7 +33,7 @@ const createWindow = (): void => {
       sandbox: false,
     },
     backgroundColor: '#1a1a1a',
-    show: false,
+    show: true, // Changed to show immediately for debugging
   });
 
   // Show window when ready to avoid visual flash

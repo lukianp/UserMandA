@@ -91,8 +91,10 @@ export function useDomainDiscoveryLogic(): DomainDiscoveryHookReturn {
   const isFormValid = formData.domainController && formData.domainController.trim() !== '';
 
   // Methods
-  
-  const [config, setConfig] = useState<any>({});const startDiscovery = useCallback(async () => {
+
+  const [config, setConfig] = useState<any>({});
+
+  const startDiscovery = useCallback(async () => {
     setIsRunning(true);
     setError(null);
     setProgress({
@@ -172,7 +174,6 @@ export function useDomainDiscoveryLogic(): DomainDiscoveryHookReturn {
     isComplete,
     progress,
     results,
-    result: results,
     logs,
     error,
     formData,
@@ -190,8 +191,6 @@ export function useDomainDiscoveryLogic(): DomainDiscoveryHookReturn {
     updateFormField,
     resetForm,
     cancelDiscovery,
-    exportResults,,
-    config,
-    setConfig
+    exportResults,
   };
 }

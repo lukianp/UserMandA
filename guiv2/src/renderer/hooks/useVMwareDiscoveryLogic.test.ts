@@ -1,16 +1,18 @@
 /**
  * Unit Tests for useVMwareDiscoveryLogic Hook
- * Tests all business logic for VMware discovery functionality
+ * Ensures VMware discovery logic exposes expected API
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 import { useVMwareDiscoveryLogic } from './useVMwareDiscoveryLogic';
 
-// Mock electron API
+const mockExecuteModule = jest.fn<(args?: any) => Promise<any>>();
+const mockWriteFile = jest.fn<(fileName: string, content: string) => Promise<void>>();
+
 const mockElectronAPI = {
-  executeModule: jest.fn(),
-  cancelExecution: jest.fn(),
-  onProgress: jest.fn(() => jest.fn()),
+  executeModule: mockExecuteModule,
+  writeFile: mockWriteFile,
 };
 
 beforeAll(() => {
@@ -21,154 +23,129 @@ beforeAll(() => {
 });
 
 describe('useVMwareDiscoveryLogic', () => {
+  const discoveryResult = {
+    hosts: [
+      {
+        name: 'esxi-01',
+        cluster: 'ClusterA',
+        status: 'Connected',
+        cpu: { totalGHz: 40 },
+        memory: { totalGB: 256 },
+      },
+    ],
+    virtualMachines: [
+      {
+        name: 'vm-app-01',
+        status: 'Running',
+        cpu: { vcpu: 4 },
+        memory: { gb: 16 },
+        guestOS: 'Windows Server',
+        hostName: 'esxi-01',
+        cluster: 'ClusterA',
+      },
+    ],
+    clusters: [{ name: 'ClusterA', status: 'Healthy', hostCount: 1, vmCount: 1 }],
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
-    mockElectronAPI.executeModule.mockResolvedValue({
-      success: true,
-      data: {},
-    });
+    jest.useRealTimers();
   });
 
-  describe('Initial State', () => {
-    it('should initialize with default state', () => {
-      const { result } = renderHook(() => useVMwareDiscoveryLogic());
+  it('should initialize with neutral state', () => {
+    const { result } = renderHook(() => useVMwareDiscoveryLogic());
 
-      expect(result.current).toBeDefined();
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
-    });
-
-    it('should initialize with null or empty result', () => {
-      const { result } = renderHook(() => useVMwareDiscoveryLogic());
-
-      expect(result.current.result || result.current.currentResult).toBeNull();
-    });
-
-    it('should initialize with null error', () => {
-      const { result } = renderHook(() => useVMwareDiscoveryLogic());
-
-      expect(result.current.error || result.current.errors).toBeFalsy();
-    });
+    expect(result.current.result).toBeNull();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBeNull();
   });
 
-  describe('Discovery Execution', () => {
-    it('should start discovery successfully', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
+  it('should update configuration', () => {
+    const { result } = renderHook(() => useVMwareDiscoveryLogic());
 
-      const { result } = renderHook(() => useVMwareDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+    act(() => {
+      result.current.setConfig(prev => ({
+        ...prev,
+        parallelScans: 10,
+      }));
     });
 
-    it('should handle discovery failure', async () => {
-      const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
-
-      const { result } = renderHook(() => useVMwareDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
-    });
-
-    it('should set progress during discovery', async () => {
-      let progressCallback;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
-        progressCallback = cb;
-        return jest.fn();
-      });
-
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockImplementation(() => {
-          if (progressCallback) {
-            progressCallback({ message: 'Processing...', percentage: 50 });
-          }
-          return Promise.resolve({ success: true, data: {} });
-        });
-
-      const { result } = renderHook(() => useVMwareDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
-    });
+    expect(result.current.config.parallelScans).toBe(10);
   });
 
-  describe('Cancellation', () => {
-    it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+  it('should start discovery and populate results', async () => {
+    jest.useFakeTimers();
+    mockElectronAPI.executeModule.mockResolvedValueOnce({ success: true, data: discoveryResult });
 
-      const { result } = renderHook(() => useVMwareDiscoveryLogic());
+    const { result } = renderHook(() => useVMwareDiscoveryLogic());
 
-      await act(async () => {
-        await result.current.cancelDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+    await act(async () => {
+      await result.current.handleStartDiscovery();
     });
+
+    expect(mockElectronAPI.executeModule).toHaveBeenCalled();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.result).toEqual(discoveryResult);
+
+    jest.useRealTimers();
   });
 
-  describe('Configuration', () => {
-    it('should allow config updates', () => {
-      const { result } = renderHook(() => useVMwareDiscoveryLogic());
+  it('should surface discovery errors', async () => {
+    jest.useFakeTimers();
+    mockElectronAPI.executeModule.mockRejectedValueOnce(new Error('Failed'));
 
-      act(() => {
-        if (result.current.updateConfig) {
-          result.current.updateConfig({ test: true });
-        } else if (result.current.setConfig) {
-          result.current.setConfig({ ...result.current.config, test: true });
-        }
-      });
+    const { result } = renderHook(() => useVMwareDiscoveryLogic());
 
-      expect(result.current.config).toBeDefined();
+    await act(async () => {
+      await result.current.handleStartDiscovery();
     });
+
+    jest.runOnlyPendingTimers();
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBe('Failed');
+
+    jest.useRealTimers();
   });
 
-  describe('Export', () => {
-    it('should handle export when no results', async () => {
-      const { result } = renderHook(() => useVMwareDiscoveryLogic());
+  it('should apply templates to config', () => {
+    const { result } = renderHook(() => useVMwareDiscoveryLogic());
+    const template = result.current.templates[0];
 
-      await act(async () => {
-        if (result.current.exportResults) {
-          await result.current.exportResults('csv');
-        } else if (result.current.exportData) {
-          await result.current.exportData({ format: 'csv' });
-        }
-      });
-
-      // Should not crash when no results
-      expect(true).toBe(true);
+    act(() => {
+      result.current.handleApplyTemplate(template);
     });
+
+    expect(result.current.config.includeHosts).toBe(template.config.includeHosts);
   });
 
-  describe('UI State', () => {
-    it('should update tab selection', () => {
-      const { result } = renderHook(() => useVMwareDiscoveryLogic());
+  it('should export discovery results', async () => {
+    jest.useFakeTimers();
+    mockElectronAPI.executeModule.mockResolvedValueOnce({ success: true, data: discoveryResult });
+    mockElectronAPI.writeFile.mockResolvedValueOnce(undefined);
 
-      if (result.current.setSelectedTab) {
-        act(() => {
-          result.current.setSelectedTab('overview');
-        });
-        expect(result.current.selectedTab).toBeDefined();
-      } else if (result.current.setActiveTab) {
-        act(() => {
-          result.current.setActiveTab('overview');
-        });
-        expect(result.current.activeTab).toBeDefined();
-      }
+    const { result } = renderHook(() => useVMwareDiscoveryLogic());
+
+    await act(async () => {
+      await result.current.handleStartDiscovery();
     });
+
+    await act(async () => {
+      await result.current.handleExport();
+    });
+
+    expect(mockElectronAPI.writeFile).toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
+
+  it('should switch active tab', () => {
+    const { result } = renderHook(() => useVMwareDiscoveryLogic());
+
+    act(() => {
+      result.current.setActiveTab('vms');
+    });
+
+    expect(result.current.activeTab).toBe('vms');
   });
 });

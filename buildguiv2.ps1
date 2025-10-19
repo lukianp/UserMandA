@@ -212,11 +212,13 @@ while (-not $installSuccess -and $retryCount -lt $maxRetries) {
     try {
         $ErrorActionPreference = 'Continue'
         if ($DebugBuild) {
-            & npm install --verbose 2>&1 | ForEach-Object {
+            $npmOutput = Invoke-Expression "npm install --verbose 2>&1"
+            $npmOutput | ForEach-Object {
                 Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
             }
         } else {
-            & npm install --prefer-offline --no-audit 2>&1 | ForEach-Object {
+            $npmOutput = Invoke-Expression "npm install --prefer-offline --no-audit 2>&1"
+            $npmOutput | ForEach-Object {
                 Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
             }
         }
@@ -268,13 +270,19 @@ $criticalDeps = @(
 Write-Log "Verifying critical dependencies..." -Level 'INFO' -Color Yellow
 foreach ($dep in $criticalDeps) {
     try {
-        $ErrorActionPreference = 'Continue'
-        $version = & npx $dep --version 2>$null
-        $ErrorActionPreference = 'Stop'
-        if ($LASTEXITCODE -eq 0) {
-            Write-Log "Verified ${dep}: ${version}" -Level 'OK' -Color Green
+        $depPath = Join-Path "node_modules" $dep
+        if (Test-Path $depPath) {
+            # Try to get version from package.json
+            $packageJsonPath = Join-Path $depPath "package.json"
+            if (Test-Path $packageJsonPath) {
+                $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
+                $version = $packageJson.version
+                Write-Log "Verified ${dep}: v${version}" -Level 'OK' -Color Green
+            } else {
+                Write-Log "Verified ${dep}: (installed)" -Level 'OK' -Color Green
+            }
         } else {
-            Write-Log "Failed to verify ${dep}" -Level 'ERROR' -Color Red
+            Write-Log "Failed to verify ${dep} - not found in node_modules" -Level 'ERROR' -Color Red
             exit 1
         }
     } catch {
@@ -288,8 +296,9 @@ Write-Log "All prerequisites verified successfully" -Level 'OK' -Color Green
 # Check required files
 $RequiredFiles = @(
     'package.json',
-    'webpack.renderer.config.ts',
-    'webpack.main.config.ts',
+    'forge.config.js',
+    'webpack.renderer.config.js',
+    'webpack.main.config.js',
     'src/index.ts',
     'src/renderer.tsx',
     'src/preload.ts'
@@ -317,18 +326,16 @@ if (!(Test-Path "node_modules")) {
 if ($needsInstall) {
     Write-Log "Installing npm dependencies..." -Level 'INFO' -Color Yellow
 
-    $npmArgs = @('ci', '--prefer-offline', '--no-audit')
-    if ($DebugBuild) {
-        $npmArgs += '--verbose'
-    }
+    $npmCmd = if ($DebugBuild) { "npm ci --prefer-offline --no-audit --verbose" } else { "npm ci --prefer-offline --no-audit" }
 
-    & npm @npmArgs 2>&1 | ForEach-Object {
+    Invoke-Expression "$npmCmd 2>&1" | ForEach-Object {
         Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
     }
 
     if ($LASTEXITCODE -ne 0) {
         Write-Log "npm ci failed, trying npm install..." -Level 'WARNING' -Color Yellow
-        & npm install @npmArgs 2>&1 | ForEach-Object {
+        $npmInstallCmd = if ($DebugBuild) { "npm install --prefer-offline --no-audit --verbose" } else { "npm install --prefer-offline --no-audit" }
+        Invoke-Expression "$npmInstallCmd 2>&1" | ForEach-Object {
             Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
         }
         if ($LASTEXITCODE -ne 0) {
@@ -345,7 +352,8 @@ if ($needsInstall) {
 Write-Log "Checking TypeScript compilation..." -Level 'INFO' -Color Yellow
 try {
     $ErrorActionPreference = 'Continue'
-    $tscOutput = & npm run tsc --if-present --noEmit 2>&1
+    $tscCmd = "npm run tsc --if-present -- --noEmit 2>&1"
+    $tscOutput = Invoke-Expression $tscCmd
     $ErrorActionPreference = 'Stop'
     if ($DebugBuild) {
         $tscOutput | ForEach-Object { Write-Log ($_.ToString()) -Level 'TSC' -Color Gray }
@@ -366,12 +374,9 @@ catch {
 if (-not $SkipTests) {
     Write-Log "Running tests..." -Level 'INFO' -Color Yellow
 
-    $testArgs = @('run', 'test')
-    if (-not $DebugBuild) {
-        $testArgs += '--silent'
-    }
+    $testCmd = if ($DebugBuild) { "npm run test" } else { "npm run test --silent" }
 
-    & npm @testArgs 2>&1 | ForEach-Object {
+    Invoke-Expression "$testCmd 2>&1" | ForEach-Object {
         if ($DebugBuild) {
             Write-Log ($_.ToString()) -Level 'TEST' -Color Gray
         }
@@ -407,17 +412,20 @@ if (Test-Path ".webpack") {
 }
 
 # Build the application
-$buildCommand = if ($Configuration -eq 'Production') { 'build:prod' } else { 'package' }
+$buildCommand = if ($Configuration -eq 'Production') { 'package' } else { 'package' }
 Write-Log "Running: npm run $buildCommand" -Level 'INFO' -Color Cyan
 
-$buildArgs = @('run', $buildCommand)
-if ($DebugBuild) {
-    $buildArgs += '--verbose'
-}
+$buildCmd = if ($DebugBuild) { "npm run $buildCommand -- --verbose" } else { "npm run $buildCommand" }
 
-& npm @buildArgs 2>&1 | ForEach-Object {
-    Write-Log ($_.ToString()) -Level 'BUILD' -Color Gray
+Write-Log "Starting build process..." -Level 'INFO' -Color Cyan
+$ErrorActionPreference = 'Continue'
+Invoke-Expression "$buildCmd 2>&1" | ForEach-Object {
+    $line = $_.ToString()
+    if ($DebugBuild -or $line -notmatch "^npm (WARN|notice)") {
+        Write-Log $line -Level 'BUILD' -Color Gray
+    }
 }
+$ErrorActionPreference = 'Stop'
 
 if ($LASTEXITCODE -ne 0) {
     Write-Log "Build failed with exit code $LASTEXITCODE" -Level 'ERROR' -Color Red
@@ -466,7 +474,7 @@ Copy-Item -Path "package-lock.json" -Destination $OutputPath -Force -ErrorAction
 # Install production dependencies
 Write-Log "Installing production dependencies in output directory..." -Level 'INFO' -Color Cyan
 Push-Location $OutputPath
-& npm ci --production --prefer-offline --no-audit 2>&1 | ForEach-Object {
+Invoke-Expression "npm ci --production --prefer-offline --no-audit 2>&1" | ForEach-Object {
     if ($DebugBuild) {
         Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
     }
@@ -512,7 +520,7 @@ Write-Host "M&A Discovery Suite v2 - DEBUG MODE" -ForegroundColor Yellow
 Write-Host "====================================" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Application Directory: `$appDir" -ForegroundColor Cyan
-Write-Host "Data Directory: `$env:MANDA_DISCOVERY_PATH" -ForegroundColor Cyan
+Write-Host "Data Directory: `$(`$env:MANDA_DISCOVERY_PATH ?? 'C:\discoverydata')" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Debug Features Enabled:" -ForegroundColor Green
 Write-Host "  - Verbose console logging" -ForegroundColor White
@@ -528,12 +536,27 @@ Write-Host ""
 `$env:OPEN_DEVTOOLS = 'true'
 `$env:ELECTRON_ENABLE_LOGGING = '1'
 `$env:NODE_ENV = 'development'
+`$env:MANDA_DISCOVERY_PATH = if (`$env:MANDA_DISCOVERY_PATH) { `$env:MANDA_DISCOVERY_PATH } else { "C:\discoverydata" }
 
 # Change to app directory
 Set-Location `$appDir
 
-# Start with npm
-& npm start
+# Find electron executable
+`$electronPath = Join-Path `$appDir "node_modules\.bin\electron.cmd"
+if (-not (Test-Path `$electronPath)) {
+    `$electronPath = "electron"
+}
+
+# Start electron with the webpack output
+`$mainPath = Join-Path `$appDir ".webpack\main"
+Write-Host "Starting Electron from: `$mainPath" -ForegroundColor Cyan
+
+try {
+    & `$electronPath `$mainPath
+} catch {
+    Write-Host ""
+    Write-Host "Error launching application: `$(`$_.Exception.Message)" -ForegroundColor Red
+}
 
 # Keep console open if error occurs
 if (`$LASTEXITCODE -ne 0) {
@@ -560,7 +583,22 @@ Set-StrictMode -Version 3.0
 Set-Location `$AppDir
 
 Write-Host "Starting M&A Discovery Suite v2..." -ForegroundColor Green
-& npm start
+
+# Find electron executable
+`$electronPath = Join-Path `$AppDir "node_modules\.bin\electron.cmd"
+if (-not (Test-Path `$electronPath)) {
+    `$electronPath = "electron"
+}
+
+# Start electron with the webpack output
+`$mainPath = Join-Path `$AppDir ".webpack\main"
+
+try {
+    & `$electronPath `$mainPath
+} catch {
+    Write-Host "Error launching application: `$(`$_.Exception.Message)" -ForegroundColor Red
+    Read-Host "Press Enter to exit"
+}
 "@
 
 Set-Content -Path $ProdLauncherPath -Value $ProdLauncherContent -Encoding UTF8

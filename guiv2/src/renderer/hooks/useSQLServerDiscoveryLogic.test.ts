@@ -1,16 +1,15 @@
 /**
  * Unit Tests for useSQLServerDiscoveryLogic Hook
- * Tests all business logic for SQLServer discovery functionality
+ * Validates core discovery workflow and exposed helpers
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 import { useSQLServerDiscoveryLogic } from './useSQLServerDiscoveryLogic';
 
-// Mock electron API
 const mockElectronAPI = {
   executeModule: jest.fn(),
-  cancelExecution: jest.fn(),
-  onProgress: jest.fn(() => jest.fn()),
+  writeFile: jest.fn(),
 };
 
 beforeAll(() => {
@@ -21,154 +20,121 @@ beforeAll(() => {
 });
 
 describe('useSQLServerDiscoveryLogic', () => {
+  const discoveryResult = {
+    instances: [
+      { name: 'SQL01', version: '2019', edition: 'Enterprise', status: 'Online', isSysAdmin: true, cluster: null },
+    ],
+    databases: [
+      {
+        name: 'AppDB',
+        status: 'Online',
+        size: { totalMB: 512 },
+        lastBackup: { date: new Date().toISOString(), type: 'Full' },
+      },
+    ],
+    backups: [],
+    jobs: [],
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
-    mockElectronAPI.executeModule.mockResolvedValue({
-      success: true,
-      data: {},
-    });
+    jest.useRealTimers();
   });
 
-  describe('Initial State', () => {
-    it('should initialize with default state', () => {
-      const { result } = renderHook(() => useSQLServerDiscoveryLogic());
+  it('should initialize with default state', () => {
+    const { result } = renderHook(() => useSQLServerDiscoveryLogic());
 
-      expect(result.current).toBeDefined();
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
-    });
-
-    it('should initialize with null or empty result', () => {
-      const { result } = renderHook(() => useSQLServerDiscoveryLogic());
-
-      expect(result.current.result || result.current.currentResult).toBeNull();
-    });
-
-    it('should initialize with null error', () => {
-      const { result } = renderHook(() => useSQLServerDiscoveryLogic());
-
-      expect(result.current.error || result.current.errors).toBeFalsy();
-    });
+    expect(result.current.result).toBeNull();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBeNull();
   });
 
-  describe('Discovery Execution', () => {
-    it('should start discovery successfully', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
+  it('should update configuration values', () => {
+    const { result } = renderHook(() => useSQLServerDiscoveryLogic());
 
-      const { result } = renderHook(() => useSQLServerDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+    act(() => {
+      result.current.setConfig(prev => ({
+        ...prev,
+        servers: ['localhost'],
+      }));
     });
 
-    it('should handle discovery failure', async () => {
-      const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
-
-      const { result } = renderHook(() => useSQLServerDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
-    });
-
-    it('should set progress during discovery', async () => {
-      let progressCallback;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
-        progressCallback = cb;
-        return jest.fn();
-      });
-
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockImplementation(() => {
-          if (progressCallback) {
-            progressCallback({ message: 'Processing...', percentage: 50 });
-          }
-          return Promise.resolve({ success: true, data: {} });
-        });
-
-      const { result } = renderHook(() => useSQLServerDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
-    });
+    expect(result.current.config.servers).toEqual(['localhost']);
   });
 
-  describe('Cancellation', () => {
-    it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+  it('should start discovery successfully', async () => {
+    jest.useFakeTimers();
+    mockElectronAPI.executeModule.mockResolvedValueOnce({ success: true, data: discoveryResult });
 
-      const { result } = renderHook(() => useSQLServerDiscoveryLogic());
+    const { result } = renderHook(() => useSQLServerDiscoveryLogic());
 
-      await act(async () => {
-        await result.current.cancelDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+    await act(async () => {
+      await result.current.handleStartDiscovery();
     });
+
+    expect(mockElectronAPI.executeModule).toHaveBeenCalled();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.result).toEqual(discoveryResult);
+
+    jest.useRealTimers();
   });
 
-  describe('Configuration', () => {
-    it('should allow config updates', () => {
-      const { result } = renderHook(() => useSQLServerDiscoveryLogic());
+  it('should surface errors when discovery fails', async () => {
+    jest.useFakeTimers();
+    mockElectronAPI.executeModule.mockRejectedValueOnce(new Error('Failed'));
 
-      act(() => {
-        if (result.current.updateConfig) {
-          result.current.updateConfig({ test: true });
-        } else if (result.current.setConfig) {
-          result.current.setConfig({ ...result.current.config, test: true });
-        }
-      });
+    const { result } = renderHook(() => useSQLServerDiscoveryLogic());
 
-      expect(result.current.config).toBeDefined();
+    await act(async () => {
+      await result.current.handleStartDiscovery();
     });
+
+    jest.runOnlyPendingTimers();
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBe('Failed');
+
+    jest.useRealTimers();
   });
 
-  describe('Export', () => {
-    it('should handle export when no results', async () => {
-      const { result } = renderHook(() => useSQLServerDiscoveryLogic());
+  it('should apply templates to configuration', () => {
+    const { result } = renderHook(() => useSQLServerDiscoveryLogic());
+    const template = result.current.templates[0];
 
-      await act(async () => {
-        if (result.current.exportResults) {
-          await result.current.exportResults('csv');
-        } else if (result.current.exportData) {
-          await result.current.exportData({ format: 'csv' });
-        }
-      });
-
-      // Should not crash when no results
-      expect(true).toBe(true);
+    act(() => {
+      result.current.handleApplyTemplate(template);
     });
+
+    expect(result.current.config.parallelScans).toBe(template.config.parallelScans);
   });
 
-  describe('UI State', () => {
-    it('should update tab selection', () => {
-      const { result } = renderHook(() => useSQLServerDiscoveryLogic());
+  it('should export results when available', async () => {
+    jest.useFakeTimers();
+    mockElectronAPI.executeModule.mockResolvedValueOnce({ success: true, data: discoveryResult });
+    mockElectronAPI.writeFile.mockResolvedValueOnce(undefined);
 
-      if (result.current.setSelectedTab) {
-        act(() => {
-          result.current.setSelectedTab('overview');
-        });
-        expect(result.current.selectedTab).toBeDefined();
-      } else if (result.current.setActiveTab) {
-        act(() => {
-          result.current.setActiveTab('overview');
-        });
-        expect(result.current.activeTab).toBeDefined();
-      }
+    const { result } = renderHook(() => useSQLServerDiscoveryLogic());
+
+    await act(async () => {
+      await result.current.handleStartDiscovery();
     });
+
+    await act(async () => {
+      await result.current.handleExport();
+    });
+
+    expect(mockElectronAPI.writeFile).toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
+
+  it('should switch active tab', () => {
+    const { result } = renderHook(() => useSQLServerDiscoveryLogic());
+
+    act(() => {
+      result.current.setActiveTab('databases');
+    });
+
+    expect(result.current.activeTab).toBe('databases');
   });
 });

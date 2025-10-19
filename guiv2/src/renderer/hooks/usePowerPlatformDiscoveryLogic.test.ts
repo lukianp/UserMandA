@@ -1,12 +1,14 @@
 /**
  * Unit Tests for usePowerPlatformDiscoveryLogic Hook
- * Tests all business logic for PowerPlatform discovery functionality
+ * Validates contract of Power Platform discovery logic
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 import { usePowerPlatformDiscoveryLogic } from './usePowerPlatformDiscoveryLogic';
 
-// Mock electron API
+type ProgressCallback = (data: any) => void;
+
 const mockElectronAPI = {
   executeModule: jest.fn(),
   cancelExecution: jest.fn(),
@@ -23,152 +25,117 @@ beforeAll(() => {
 describe('usePowerPlatformDiscoveryLogic', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockElectronAPI.executeModule.mockResolvedValue({
-      success: true,
-      data: {},
-    });
+    mockElectronAPI.executeModule.mockResolvedValue({ success: true, data: {} });
   });
 
-  describe('Initial State', () => {
-    it('should initialize with default state', () => {
-      const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
+  it('should initialize with expected defaults', () => {
+    const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
 
-      expect(result.current).toBeDefined();
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
-    });
-
-    it('should initialize with null or empty result', () => {
-      const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
-
-      expect(result.current.result || result.current.currentResult).toBeNull();
-    });
-
-    it('should initialize with null error', () => {
-      const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
-
-      expect(result.current.error || result.current.errors).toBeFalsy();
-    });
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.result).toBeNull();
+    expect(result.current.error).toBeNull();
+    expect(result.current.activeTab).toBe('overview');
   });
 
-  describe('Discovery Execution', () => {
-    it('should start discovery successfully', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
+  it('should start discovery successfully', async () => {
+    const discoveryPayload = { environments: [], apps: [], flows: [] };
+    mockElectronAPI.executeModule.mockResolvedValueOnce({ success: true, data: discoveryPayload });
 
-      const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
+    const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
 
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+    await act(async () => {
+      await result.current.startDiscovery();
     });
 
-    it('should handle discovery failure', async () => {
-      const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
-
-      const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
-    });
-
-    it('should set progress during discovery', async () => {
-      let progressCallback;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
-        progressCallback = cb;
-        return jest.fn();
-      });
-
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockImplementation(() => {
-          if (progressCallback) {
-            progressCallback({ message: 'Processing...', percentage: 50 });
-          }
-          return Promise.resolve({ success: true, data: {} });
-        });
-
-      const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
-    });
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.result).toEqual(discoveryPayload);
   });
 
-  describe('Cancellation', () => {
-    it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+  it('should capture discovery errors', async () => {
+    const errorMessage = 'Discovery failed';
+    mockElectronAPI.executeModule.mockRejectedValueOnce(new Error(errorMessage));
 
-      const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
+    const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
 
-      await act(async () => {
-        await result.current.cancelDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+    await act(async () => {
+      await result.current.startDiscovery();
     });
+
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.error).toBe(errorMessage);
   });
 
-  describe('Configuration', () => {
-    it('should allow config updates', () => {
-      const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
+  it('should handle progress updates', async () => {
+    let progressHandler: ProgressCallback | undefined;
+    let capturedToken: string | undefined;
+    mockElectronAPI.onProgress.mockImplementation((cb: ProgressCallback) => {
+      progressHandler = cb;
+      return jest.fn();
+    });
 
+    mockElectronAPI.executeModule.mockImplementationOnce(async (args: any) => {
+      capturedToken = args?.parameters?.CancellationToken;
+      return { success: true, data: {} };
+    });
+
+    const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
+
+    await act(async () => {
+      await result.current.startDiscovery();
+    });
+
+    if (progressHandler && capturedToken) {
       act(() => {
-        if (result.current.updateConfig) {
-          result.current.updateConfig({ test: true });
-        } else if (result.current.setConfig) {
-          result.current.setConfig({ ...result.current.config, test: true });
-        }
+        progressHandler({
+          type: 'powerplatform-discovery',
+          token: capturedToken,
+          current: 6,
+          total: 10,
+          percentage: 60,
+          message: 'Processing...',
+        });
       });
 
-      expect(result.current.config).toBeDefined();
-    });
+      expect(result.current.progress.percentage).toBe(60);
+    }
   });
 
-  describe('Export', () => {
-    it('should handle export when no results', async () => {
-      const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
+  it('should cancel discovery when requested', async () => {
+    mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
 
-      await act(async () => {
-        if (result.current.exportResults) {
-          await result.current.exportResults('csv');
-        } else if (result.current.exportData) {
-          await result.current.exportData({ format: 'csv' });
-        }
-      });
+    const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
 
-      // Should not crash when no results
-      expect(true).toBe(true);
+    await act(async () => {
+      await result.current.cancelDiscovery();
     });
+
+    expect(mockElectronAPI.cancelExecution).toHaveBeenCalled();
   });
 
-  describe('UI State', () => {
-    it('should update tab selection', () => {
-      const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
+  it('should update configuration', () => {
+    const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
 
-      if (result.current.setSelectedTab) {
-        act(() => {
-          result.current.setSelectedTab('overview');
-        });
-        expect(result.current.selectedTab).toBeDefined();
-      } else if (result.current.setActiveTab) {
-        act(() => {
-          result.current.setActiveTab('overview');
-        });
-        expect(result.current.activeTab).toBeDefined();
-      }
+    act(() => {
+      result.current.updateConfig({ tenantId: '0000-1111' });
     });
+
+    expect(result.current.config.tenantId).toBe('0000-1111');
+  });
+
+  it('should update active tab', () => {
+    const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
+
+    act(() => {
+      result.current.setActiveTab('apps');
+    });
+
+    expect(result.current.activeTab).toBe('apps');
+  });
+
+  it('should expose export helpers', () => {
+    const { result } = renderHook(() => usePowerPlatformDiscoveryLogic());
+
+    expect(typeof result.current.exportToCSV).toBe('function');
+    expect(typeof result.current.exportToExcel).toBe('function');
   });
 });

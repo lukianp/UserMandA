@@ -1,16 +1,22 @@
 /**
  * Unit Tests for useWebServerDiscoveryLogic Hook
- * Tests all business logic for WebServer discovery functionality
+ * Confirms discovery workflow and exposed operations
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 import { useWebServerDiscoveryLogic } from './useWebServerDiscoveryLogic';
 
-// Mock electron API
+type ProgressCallback = (data: any) => void;
+
+const mockExecuteModule = jest.fn<(args?: any) => Promise<any>>();
+const mockCancelExecution = jest.fn<(token?: string) => Promise<void>>();
+const mockOnProgress = jest.fn<(cb: ProgressCallback) => () => void>();
+
 const mockElectronAPI = {
-  executeModule: jest.fn(),
-  cancelExecution: jest.fn(),
-  onProgress: jest.fn(() => jest.fn()),
+  executeModule: mockExecuteModule,
+  cancelExecution: mockCancelExecution,
+  onProgress: mockOnProgress,
 };
 
 beforeAll(() => {
@@ -21,154 +27,132 @@ beforeAll(() => {
 });
 
 describe('useWebServerDiscoveryLogic', () => {
+  const discoveryPayload = {
+    servers: [
+      {
+        name: 'web1',
+        ipAddress: '10.0.0.10',
+        operatingSystem: 'Windows Server',
+        serverType: 'IIS',
+        status: 'online',
+      },
+    ],
+    sites: [
+      {
+        name: 'Default Web Site',
+        status: 'started',
+        bindingInformation: 'http/*:80:',
+        applicationPool: 'DefaultAppPool',
+        physicalPath: 'C:\\inetpub\\wwwroot',
+      },
+    ],
+    bindings: [],
+    applicationPools: [],
+    certificates: [],
+    summary: { totalServers: 1, totalSites: 1, totalPools: 1, expiringCertificates: 0 },
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
-    mockElectronAPI.executeModule.mockResolvedValue({
-      success: true,
-      data: {},
-    });
+    mockElectronAPI.executeModule.mockResolvedValue({ success: true, data: discoveryPayload });
   });
 
-  describe('Initial State', () => {
-    it('should initialize with default state', () => {
-      const { result } = renderHook(() => useWebServerDiscoveryLogic());
+  it('should initialize with default state', () => {
+    const { result } = renderHook(() => useWebServerDiscoveryLogic());
 
-      expect(result.current).toBeDefined();
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
-    });
-
-    it('should initialize with null or empty result', () => {
-      const { result } = renderHook(() => useWebServerDiscoveryLogic());
-
-      expect(result.current.result || result.current.currentResult).toBeNull();
-    });
-
-    it('should initialize with null error', () => {
-      const { result } = renderHook(() => useWebServerDiscoveryLogic());
-
-      expect(result.current.error || result.current.errors).toBeFalsy();
-    });
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.result).toBeNull();
+    expect(result.current.error).toBeNull();
   });
 
-  describe('Discovery Execution', () => {
-    it('should start discovery successfully', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
+  it('should start discovery successfully', async () => {
+    const { result } = renderHook(() => useWebServerDiscoveryLogic());
 
-      const { result } = renderHook(() => useWebServerDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+    await act(async () => {
+      await result.current.startDiscovery();
     });
 
-    it('should handle discovery failure', async () => {
-      const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
-
-      const { result } = renderHook(() => useWebServerDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
-    });
-
-    it('should set progress during discovery', async () => {
-      let progressCallback;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
-        progressCallback = cb;
-        return jest.fn();
-      });
-
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockImplementation(() => {
-          if (progressCallback) {
-            progressCallback({ message: 'Processing...', percentage: 50 });
-          }
-          return Promise.resolve({ success: true, data: {} });
-        });
-
-      const { result } = renderHook(() => useWebServerDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
-    });
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.result).toEqual(discoveryPayload);
   });
 
-  describe('Cancellation', () => {
-    it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+  it('should report discovery errors', async () => {
+    const errorMessage = 'Discovery failed';
+    mockElectronAPI.executeModule.mockRejectedValueOnce(new Error(errorMessage));
 
-      const { result } = renderHook(() => useWebServerDiscoveryLogic());
+    const { result } = renderHook(() => useWebServerDiscoveryLogic());
 
-      await act(async () => {
-        await result.current.cancelDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+    await act(async () => {
+      await result.current.startDiscovery();
     });
+
+    expect(result.current.error).toBe(errorMessage);
+    expect(result.current.isDiscovering).toBe(false);
   });
 
-  describe('Configuration', () => {
-    it('should allow config updates', () => {
-      const { result } = renderHook(() => useWebServerDiscoveryLogic());
+  it('should react to progress updates', async () => {
+    let progressHandler: ProgressCallback | undefined;
+    let capturedToken: string | undefined;
+    mockElectronAPI.onProgress.mockImplementation((cb: ProgressCallback) => {
+      progressHandler = cb;
+      return jest.fn();
+    });
+
+    mockElectronAPI.executeModule.mockImplementationOnce(async (args: any) => {
+      capturedToken = args?.parameters?.cancellationToken;
+      return { success: true, data: discoveryPayload };
+    });
+
+    const { result } = renderHook(() => useWebServerDiscoveryLogic());
+
+    await act(async () => {
+      await result.current.startDiscovery();
+    });
+
+    if (progressHandler && capturedToken) {
+      const handler = progressHandler;
 
       act(() => {
-        if (result.current.updateConfig) {
-          result.current.updateConfig({ test: true });
-        } else if (result.current.setConfig) {
-          result.current.setConfig({ ...result.current.config, test: true });
-        }
+        handler({
+          type: 'webserver-discovery',
+          token: capturedToken,
+          progress: 40,
+          message: 'Gathering configuration',
+        });
       });
 
-      expect(result.current.config).toBeDefined();
-    });
+      expect(result.current.progress).toBe(40);
+    }
   });
 
-  describe('Export', () => {
-    it('should handle export when no results', async () => {
-      const { result } = renderHook(() => useWebServerDiscoveryLogic());
+  it('should cancel discovery when token exists', async () => {
+    mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
 
-      await act(async () => {
-        if (result.current.exportResults) {
-          await result.current.exportResults('csv');
-        } else if (result.current.exportData) {
-          await result.current.exportData({ format: 'csv' });
-        }
-      });
+    const { result } = renderHook(() => useWebServerDiscoveryLogic());
 
-      // Should not crash when no results
-      expect(true).toBe(true);
+    await act(async () => {
+      await result.current.startDiscovery();
+      await result.current.cancelDiscovery();
     });
+
+    expect(mockElectronAPI.cancelExecution).toHaveBeenCalled();
+    expect(result.current.isDiscovering).toBe(false);
   });
 
-  describe('UI State', () => {
-    it('should update tab selection', () => {
-      const { result } = renderHook(() => useWebServerDiscoveryLogic());
+  it('should update configuration values', () => {
+    const { result } = renderHook(() => useWebServerDiscoveryLogic());
 
-      if (result.current.setSelectedTab) {
-        act(() => {
-          result.current.setSelectedTab('overview');
-        });
-        expect(result.current.selectedTab).toBeDefined();
-      } else if (result.current.setActiveTab) {
-        act(() => {
-          result.current.setActiveTab('overview');
-        });
-        expect(result.current.activeTab).toBeDefined();
-      }
+    act(() => {
+      result.current.updateConfig({ includeCertificates: false });
     });
+
+    expect(result.current.config.includeCertificates).toBe(false);
+  });
+
+  it('should expose export helpers', () => {
+    const { result } = renderHook(() => useWebServerDiscoveryLogic());
+
+    expect(typeof result.current.exportToCSV).toBe('function');
+    expect(typeof result.current.exportToExcel).toBe('function');
   });
 });

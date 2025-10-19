@@ -93,7 +93,7 @@ const AzureDiscoveryView: React.FC = () => {
                 <Button
                   variant="secondary"
                   onClick={testConnection}
-                  disabled={!formData?.tenantId ?? '' || connectionStatus === 'connecting'}
+                  disabled={!(formData?.tenantId ?? '') || (connectionStatus === 'connecting')}
                   loading={connectionStatus === 'connecting'}
                   icon={<CheckCircle className="w-4 h-4" />}
                   className="w-full"

@@ -92,7 +92,7 @@ export const useAzureDiscoveryLogic = () => {
   // Progress streaming handler
   useEffect(() => {
     const api = getElectronAPI();
-    if (!api || !api.onProgress) return;
+    if (!api || !api.onProgress) return undefined;
 
     const unsubscribe = api.onProgress((data: ProgressData) => {
       // Convert ProgressData to DiscoveryProgress
@@ -117,13 +117,17 @@ export const useAzureDiscoveryLogic = () => {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, [setProgress]);
 
   // Output streaming handler
   useEffect(() => {
     const api = getElectronAPI();
-    if (!api || !api.onOutput) return;
+    if (!api || !api.onOutput) return undefined;
 
     const unsubscribe = api.onOutput((data: OutputData) => {
       // Convert OutputData to expected format
@@ -132,7 +136,11 @@ export const useAzureDiscoveryLogic = () => {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, []);
 
   const addLog = useCallback((message: string) => {

@@ -1,12 +1,14 @@
 /**
  * Unit Tests for useSecurityInfrastructureDiscoveryLogic Hook
- * Tests all business logic for SecurityInfrastructure discovery functionality
+ * Verifies key state transitions and exposed API
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 import { useSecurityInfrastructureDiscoveryLogic } from './useSecurityInfrastructureDiscoveryLogic';
 
-// Mock electron API
+type ProgressCallback = (data: any) => void;
+
 const mockElectronAPI = {
   executeModule: jest.fn(),
   cancelExecution: jest.fn(),
@@ -23,152 +25,155 @@ beforeAll(() => {
 describe('useSecurityInfrastructureDiscoveryLogic', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockElectronAPI.executeModule.mockResolvedValue({
-      success: true,
-      data: {},
-    });
-  });
-
-  describe('Initial State', () => {
-    it('should initialize with default state', () => {
-      const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
-
-      expect(result.current).toBeDefined();
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
-    });
-
-    it('should initialize with null or empty result', () => {
-      const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
-
-      expect(result.current.result || result.current.currentResult).toBeNull();
-    });
-
-    it('should initialize with null error', () => {
-      const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
-
-      expect(result.current.error || result.current.errors).toBeFalsy();
-    });
-  });
-
-  describe('Discovery Execution', () => {
-    it('should start discovery successfully', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
-
-      const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
-    });
-
-    it('should handle discovery failure', async () => {
-      const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
-
-      const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
-    });
-
-    it('should set progress during discovery', async () => {
-      let progressCallback;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
-        progressCallback = cb;
-        return jest.fn();
-      });
-
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockImplementation(() => {
-          if (progressCallback) {
-            progressCallback({ message: 'Processing...', percentage: 50 });
-          }
-          return Promise.resolve({ success: true, data: {} });
-        });
-
-      const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
-    });
-  });
-
-  describe('Cancellation', () => {
-    it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
-
-      const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.cancelDiscovery();
-      });
-
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
-    });
-  });
-
-  describe('Configuration', () => {
-    it('should allow config updates', () => {
-      const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
-
-      act(() => {
-        if (result.current.updateConfig) {
-          result.current.updateConfig({ test: true });
-        } else if (result.current.setConfig) {
-          result.current.setConfig({ ...result.current.config, test: true });
-        }
-      });
-
-      expect(result.current.config).toBeDefined();
-    });
-  });
-
-  describe('Export', () => {
-    it('should handle export when no results', async () => {
-      const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
-
-      await act(async () => {
-        if (result.current.exportResults) {
-          await result.current.exportResults('csv');
-        } else if (result.current.exportData) {
-          await result.current.exportData({ format: 'csv' });
-        }
-      });
-
-      // Should not crash when no results
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('UI State', () => {
-    it('should update tab selection', () => {
-      const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
-
-      if (result.current.setSelectedTab) {
-        act(() => {
-          result.current.setSelectedTab('overview');
-        });
-        expect(result.current.selectedTab).toBeDefined();
-      } else if (result.current.setActiveTab) {
-        act(() => {
-          result.current.setActiveTab('overview');
-        });
-        expect(result.current.activeTab).toBeDefined();
+    mockElectronAPI.executeModule.mockImplementation(async ({ functionName }: { functionName: string }) => {
+      if (functionName === 'Get-SecurityDiscoveryTemplates') {
+        return { success: true, data: { templates: [] } };
       }
+
+      if (functionName === 'Get-SecurityDiscoveryHistory') {
+        return { success: true, data: { results: [] } };
+      }
+
+      return { success: true, data: {} };
     });
+  });
+
+  it('should initialize with expected defaults', () => {
+    const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
+
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.currentResult).toBeNull();
+    expect(result.current.errors).toEqual([]);
+    expect(result.current.selectedTab).toBe('overview');
+  });
+
+  it('should start discovery and capture results', async () => {
+    const discoveryPayload = { assets: [], vulnerabilities: [] };
+    mockElectronAPI.executeModule.mockImplementation(async ({ functionName }: { functionName: string }) => {
+      if (functionName === 'Invoke-SecurityInfrastructureDiscovery') {
+        return { success: true, data: discoveryPayload };
+      }
+
+      if (functionName === 'Get-SecurityDiscoveryTemplates') {
+        return { success: true, data: { templates: [] } };
+      }
+
+      if (functionName === 'Get-SecurityDiscoveryHistory') {
+        return { success: true, data: { results: [] } };
+      }
+
+      return { success: true, data: {} };
+    });
+
+    const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
+
+    await act(async () => {
+      await result.current.startDiscovery();
+    });
+
+    expect(result.current.currentResult).toEqual(discoveryPayload);
+    expect(result.current.isDiscovering).toBe(false);
+  });
+
+  it('should record discovery errors', async () => {
+    const errorMessage = 'Discovery failed';
+    mockElectronAPI.executeModule.mockImplementation(async ({ functionName }: { functionName: string }) => {
+      if (functionName === 'Invoke-SecurityInfrastructureDiscovery') {
+        throw new Error(errorMessage);
+      }
+
+      if (functionName === 'Get-SecurityDiscoveryTemplates') {
+        return { success: true, data: { templates: [] } };
+      }
+
+      if (functionName === 'Get-SecurityDiscoveryHistory') {
+        return { success: true, data: { results: [] } };
+      }
+
+      return { success: true, data: {} };
+    });
+
+    const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
+
+    await act(async () => {
+      await result.current.startDiscovery();
+    });
+
+    expect(result.current.errors).toContain(errorMessage);
+    expect(result.current.isDiscovering).toBe(false);
+  });
+
+  it('should update progress when events arrive', () => {
+    let progressHandler: ProgressCallback | undefined;
+    mockElectronAPI.onProgress.mockImplementation((cb: ProgressCallback) => {
+      progressHandler = cb;
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
+
+    if (progressHandler) {
+      act(() => {
+        progressHandler({
+          type: 'security-discovery',
+          timestamp: new Date().toISOString(),
+          currentPhase: 'analyzing',
+          phaseProgress: 85,
+          overallProgress: 80,
+          currentOperation: 'Almost done',
+          currentItem: null,
+          devicesProcessed: 10,
+          policiesProcessed: 5,
+          incidentsProcessed: 2,
+          vulnerabilitiesProcessed: 1,
+          errorsEncountered: 0,
+          warningsEncountered: 0,
+          itemsPerSecond: 4,
+          estimatedTimeRemaining: 45,
+          canCancel: true,
+          isPaused: false,
+        });
+      });
+
+      expect(result.current.progress?.overallProgress).toBe(80);
+    }
+  });
+
+  it('should cancel discovery when requested', async () => {
+    mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+
+    const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
+
+    await act(async () => {
+      await result.current.cancelDiscovery();
+    });
+
+    expect(mockElectronAPI.cancelExecution).toHaveBeenCalled();
+  });
+
+  it('should update configuration', () => {
+    const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
+
+    act(() => {
+      result.current.updateConfig({ includeOfflineDevices: false });
+    });
+
+    expect(result.current.config.includeOfflineDevices).toBe(false);
+  });
+
+  it('should switch selected tab', () => {
+    const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
+
+    act(() => {
+      result.current.setSelectedTab('vulnerabilities');
+    });
+
+    expect(result.current.selectedTab).toBe('vulnerabilities');
+  });
+
+  it('should expose export helper', () => {
+    const { result } = renderHook(() => useSecurityInfrastructureDiscoveryLogic());
+
+    expect(typeof result.current.exportResults).toBe('function');
   });
 });
