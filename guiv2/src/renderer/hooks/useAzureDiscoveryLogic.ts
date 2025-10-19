@@ -63,6 +63,8 @@ export const useAzureDiscoveryLogic = () => {
   }, [formData]);
 
   // Form handlers
+  const [config, setConfig] = useState<any>({});
+
   const updateFormField = useCallback(<K extends keyof AzureDiscoveryFormData>(
     field: K,
     value: AzureDiscoveryFormData[K]
@@ -325,6 +327,7 @@ export const useAzureDiscoveryLogic = () => {
     isCancelling,
     progress,
     results,
+    result: results,
     error,
     logs,
     connectionStatus,
@@ -338,5 +341,7 @@ export const useAzureDiscoveryLogic = () => {
 
     // Profile info
     selectedProfile: selectedTargetProfile,
+    config,
+    setConfig
   };
 };

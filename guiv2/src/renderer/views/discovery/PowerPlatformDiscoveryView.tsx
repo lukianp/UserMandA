@@ -206,7 +206,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Globe className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.totalEnvironments.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.totalEnvironments ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Environments</div>
               </div>
             </div>
@@ -216,7 +216,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Smartphone className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.totalApps.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.totalApps ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Power Apps</div>
               </div>
             </div>
@@ -226,7 +226,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Workflow className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.totalFlows.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.totalFlows ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Power Automate</div>
               </div>
             </div>
@@ -236,7 +236,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Plug className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.totalConnectors.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.totalConnectors ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Connectors</div>
               </div>
             </div>
@@ -290,7 +290,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
           >
             <Globe className="w-4 h-4" />
             Environments
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats.totalEnvironments}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalEnvironments ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('apps')}
@@ -303,7 +303,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
           >
             <Smartphone className="w-4 h-4" />
             Apps
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats.totalApps}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalApps ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('flows')}
@@ -316,7 +316,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
           >
             <Workflow className="w-4 h-4" />
             Flows
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats.totalFlows}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalFlows ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('connectors')}
@@ -329,7 +329,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
           >
             <Plug className="w-4 h-4" />
             Connectors
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats.totalConnectors}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalConnectors ?? 0}</span>}
           </button>
         </div>
       </div>

@@ -34,7 +34,39 @@ Object.defineProperty(window, 'alert', { writable: true, value: jest.fn() });
 
 globalThis.window.electronAPI = {
   // Generic invoke/channel API used by views
-  invoke: jest.fn(async (_channel: string, _payload?: any) => ({ success: true, data: {} })),
+  invoke: jest.fn(async (channel: string, payload?: any) => {
+    // Provide realistic defaults for common channels used in views
+    if (channel === 'logicEngine:getAllUsers') {
+      return {
+        success: true,
+        data: [
+          { id: 'u1', userPrincipalName: 'user1@example.com', displayName: 'User One', department: 'IT' },
+          { id: 'u2', userPrincipalName: 'user2@example.com', displayName: 'User Two', department: 'HR' },
+          { id: 'u3', userPrincipalName: 'user3@example.com', displayName: 'User Three', department: 'Finance' },
+        ],
+      };
+    }
+    if (channel === 'logicEngine:getAllGroups') {
+      return {
+        success: true,
+        data: [
+          { id: 'g1', displayName: 'Group One', mailEnabled: false, securityEnabled: true, membersCount: 2 },
+          { id: 'g2', displayName: 'Group Two', mailEnabled: true, securityEnabled: false, membersCount: 5 },
+        ],
+      };
+    }
+    if (channel === 'logicEngine:analyzeMigrationComplexity') {
+      return {
+        success: true,
+        data: { userId: payload, complexity: 'Low', estimatedEffort: 1 },
+      };
+    }
+    if (channel === 'migration:add-item-to-wave') {
+      return { success: true, data: { waveId: payload?.waveId, itemId: payload?.itemId || 'mock-item' } };
+    }
+    // Default fallback
+    return { success: true, data: {} };
+  }),
 
   // PowerShell/module execution APIs
   executeScript: jest.fn(async () => ({ success: true, data: '', error: null })),

@@ -625,3 +625,8 @@ export const cacheService = new CacheService({
   enableStats: true,
   namespace: 'app',
 });
+
+/**
+ * Default export for better CommonJS compatibility
+ */
+export default CacheService;

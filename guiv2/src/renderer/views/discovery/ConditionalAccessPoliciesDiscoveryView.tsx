@@ -210,19 +210,19 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Discovery Statistics</h3>
           <div className="grid grid-cols-6 gap-4">
             <StatCard
-              value={stats.totalPolicies}
+              value={stats?.totalPolicies ?? 0}
               label="Total Policies"
               color="indigo"
               data-cy="stat-total-policies"
             />
             <StatCard
-              value={stats.enabledPolicies}
+              value={stats?.enabledPolicies ?? 0}
               label="Enabled"
               color="green"
               data-cy="stat-enabled-policies"
             />
             <StatCard
-              value={stats.reportOnlyPolicies}
+              value={stats?.reportOnlyPolicies ?? 0}
               label="Report Only"
               color="yellow"
               data-cy="stat-report-only"
@@ -332,7 +332,7 @@ const StatCard: React.FC<StatCardProps> = ({ value, label, color, 'data-cy': dat
 
   return (
     <div className={`p-4 rounded-lg ${colorClasses[color]}`} data-cy={dataCy}>
-      <div className="text-3xl font-bold">{value.toLocaleString()}</div>
+      <div className="text-3xl font-bold">{(value ?? 0).toLocaleString()}</div>
       <div className="text-sm mt-1 opacity-80">{label}</div>
     </div>
   );
@@ -391,7 +391,7 @@ const OverviewTab: React.FC<{ stats: any; result: any }> = ({ stats, result }) =
 const SummaryRow: React.FC<{ label: string; value: number }> = ({ label, value }) => (
   <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
     <span className="text-sm text-gray-600 dark:text-gray-400">{label}</span>
-    <span className="text-sm font-medium text-gray-900 dark:text-white">{value.toLocaleString()}</span>
+    <span className="text-sm font-medium text-gray-900 dark:text-white">{(value ?? 0).toLocaleString()}</span>
   </div>
 );
 

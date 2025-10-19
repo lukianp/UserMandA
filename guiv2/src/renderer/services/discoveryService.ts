@@ -21,6 +21,7 @@ import {
   HistoryFilter,
 } from '../types/models/discovery';
 import * as cron from 'node-cron';
+import { getCacheService } from './cacheService';
 
 /**
  * Discovery Service Class
@@ -32,6 +33,7 @@ class DiscoveryService {
   private scheduledDiscoveries: Map<string, ScheduledDiscovery>;
   private activeDiscoveries: Map<string, AbortController>;
   private cronJobs: Map<string, cron.ScheduledTask>;
+  private cacheService = getCacheService();
 
   constructor() {
     this.discoveryHistory = new Map();
@@ -424,8 +426,12 @@ class DiscoveryService {
    * Get all scheduled discoveries
    * @returns Array of scheduled discoveries
    */
-  getScheduledDiscoveries(): ScheduledDiscovery[] {
-    return Array.from(this.scheduledDiscoveries.values());
+  async getScheduledDiscoveries(): Promise<ScheduledDiscovery[]> {
+    return this.cacheService.getOrSet(
+      'discovery:scheduled',
+      async () => Array.from(this.scheduledDiscoveries.values()),
+      { ttl: 60 * 1000 } // 1 minute
+    );
   }
 
   /**
@@ -460,7 +466,11 @@ class DiscoveryService {
    * @returns Array of templates
    */
   async getTemplates(): Promise<DiscoveryTemplate[]> {
-    return Array.from(this.discoveryTemplates.values());
+    return this.cacheService.getOrSet(
+      'discovery:templates',
+      async () => Array.from(this.discoveryTemplates.values()),
+      { ttl: 5 * 60 * 1000 } // 5 minutes
+    );
   }
 
   /**
@@ -470,6 +480,10 @@ class DiscoveryService {
   async saveTemplate(template: DiscoveryTemplate): Promise<void> {
     this.discoveryTemplates.set(template.id, template);
     await this.saveDiscoveryTemplates();
+
+    // Invalidate templates cache
+    this.cacheService.delete('discovery:templates');
+
     console.log(`Saved discovery template: ${template.name}`);
   }
 
@@ -484,6 +498,10 @@ class DiscoveryService {
 
     this.discoveryTemplates.delete(id);
     await this.saveDiscoveryTemplates();
+
+    // Invalidate templates cache
+    this.cacheService.delete('discovery:templates');
+
     console.log(`Deleted discovery template: ${id}`);
   }
 
@@ -524,41 +542,50 @@ class DiscoveryService {
    * @returns Array of discovery runs
    */
   async getHistory(filter?: HistoryFilter): Promise<DiscoveryRun[]> {
-    let runs = Array.from(this.discoveryHistory.values());
+    // Generate cache key based on filter
+    const cacheKey = `discovery:history:${JSON.stringify(filter || {})}`;
 
-    if (filter) {
-      // Filter by type
-      if (filter.type) {
-        runs = runs.filter(r => r.config?.type === filter.type);
-      }
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        let runs = Array.from(this.discoveryHistory.values());
 
-      // Filter by status
-      if (filter.status) {
-        runs = runs.filter(r => r.status === filter.status);
-      }
+        if (filter) {
+          // Filter by type
+          if (filter.type) {
+            runs = runs.filter(r => r.config?.type === filter.type);
+          }
 
-      // Filter by date range
-      if (filter.startDate) {
-        runs = runs.filter(r => r.startTime && r.startTime >= filter.startDate);
-      }
-      if (filter.endDate) {
-        runs = runs.filter(r => r.startTime && r.startTime <= filter.endDate);
-      }
+          // Filter by status
+          if (filter.status) {
+            runs = runs.filter(r => r.status === filter.status);
+          }
 
-      // Limit results
-      if (filter.limit) {
-        runs = runs.slice(0, filter.limit);
-      }
-    }
+          // Filter by date range
+          if (filter.startDate) {
+            runs = runs.filter(r => r.startTime && r.startTime >= filter.startDate);
+          }
+          if (filter.endDate) {
+            runs = runs.filter(r => r.startTime && r.startTime <= filter.endDate);
+          }
 
-    // Sort by start time (newest first)
-    runs.sort((a, b) => {
-      const aTime = a.startTime ? (typeof a.startTime === 'string' ? new Date(a.startTime) : a.startTime) : new Date(0);
-      const bTime = b.startTime ? (typeof b.startTime === 'string' ? new Date(b.startTime) : b.startTime) : new Date(0);
-      return bTime.getTime() - aTime.getTime();
-    });
+          // Limit results
+          if (filter.limit) {
+            runs = runs.slice(0, filter.limit);
+          }
+        }
 
-    return runs;
+        // Sort by start time (newest first)
+        runs.sort((a, b) => {
+          const aTime = a.startTime ? (typeof a.startTime === 'string' ? new Date(a.startTime) : a.startTime) : new Date(0);
+          const bTime = b.startTime ? (typeof b.startTime === 'string' ? new Date(b.startTime) : b.startTime) : new Date(0);
+          return bTime.getTime() - aTime.getTime();
+        });
+
+        return runs;
+      },
+      { ttl: 30 * 1000 } // 30 seconds
+    );
   }
 
   /**
@@ -567,12 +594,18 @@ class DiscoveryService {
    * @returns Discovery result
    */
   async getResults(runId: string): Promise<DiscoveryResult> {
-    const run = this.discoveryHistory.get(runId);
-    if (!run || !run.result) {
-      throw new Error(`Discovery results not found: ${runId}`);
-    }
+    return this.cacheService.getOrSet(
+      `discovery:results:${runId}`,
+      async () => {
+        const run = this.discoveryHistory.get(runId);
+        if (!run || !run.result) {
+          throw new Error(`Discovery results not found: ${runId}`);
+        }
 
-    return run.result;
+        return run.result;
+      },
+      { ttl: 5 * 60 * 1000 } // 5 minutes
+    );
   }
 
   /**
@@ -586,6 +619,12 @@ class DiscoveryService {
 
     this.discoveryHistory.delete(runId);
     await this.saveDiscoveryHistory();
+
+    // Invalidate caches
+    this.cacheService.delete(`discovery:results:${runId}`);
+    this.cacheService.invalidatePrefix('discovery:history:');
+    this.cacheService.invalidatePrefix('discovery:comparison:');
+
     console.log(`Deleted discovery history: ${runId}`);
   }
 
@@ -645,52 +684,61 @@ class DiscoveryService {
    * @returns Comparison result
    */
   async compareResults(runId1: string, runId2: string): Promise<ComparisonResult> {
-    const result1 = await this.getResults(runId1);
-    const result2 = await this.getResults(runId2);
+    // Cache comparison results as they are computationally expensive
+    const cacheKey = `discovery:comparison:${runId1}:${runId2}`;
 
-    // Simple comparison based on ID field
-    const data1Map = new Map((result1.data ?? []).map(item => [item.id || item.Id || item.ID, item]));
-    const data2Map = new Map((result2.data ?? []).map(item => [item.id || item.Id || item.ID, item]));
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const result1 = await this.getResults(runId1);
+        const result2 = await this.getResults(runId2);
 
-    const added: any[] = [];
-    const removed: any[] = [];
-    const modified: any[] = [];
-    const unchanged: any[] = [];
+        // Simple comparison based on ID field
+        const data1Map = new Map((result1.data ?? []).map(item => [item.id || item.Id || item.ID, item]));
+        const data2Map = new Map((result2.data ?? []).map(item => [item.id || item.Id || item.ID, item]));
 
-    // Find added and modified
-    for (const [id, item2] of data2Map) {
-      const item1 = data1Map.get(id);
-      if (!item1) {
-        added.push(item2);
-      } else if (JSON.stringify(item1) !== JSON.stringify(item2)) {
-        modified.push(item2);
-      } else {
-        unchanged.push(item2);
-      }
-    }
+        const added: any[] = [];
+        const removed: any[] = [];
+        const modified: any[] = [];
+        const unchanged: any[] = [];
 
-    // Find removed
-    for (const [id, item1] of data1Map) {
-      if (!data2Map.has(id)) {
-        removed.push(item1);
-      }
-    }
+        // Find added and modified
+        for (const [id, item2] of data2Map) {
+          const item1 = data1Map.get(id);
+          if (!item1) {
+            added.push(item2);
+          } else if (JSON.stringify(item1) !== JSON.stringify(item2)) {
+            modified.push(item2);
+          } else {
+            unchanged.push(item2);
+          }
+        }
 
-    return {
-      runId1,
-      runId2,
-      timestamp: new Date(),
-      differences: {
-        added,
-        removed,
-        modified,
+        // Find removed
+        for (const [id, item1] of data1Map) {
+          if (!data2Map.has(id)) {
+            removed.push(item1);
+          }
+        }
+
+        return {
+          runId1,
+          runId2,
+          timestamp: new Date(),
+          differences: {
+            added,
+            removed,
+            modified,
+          },
+          summary: {
+            totalAdded: added.length,
+            totalRemoved: removed.length,
+            totalModified: modified.length,
+          },
+        };
       },
-      summary: {
-        totalAdded: added.length,
-        totalRemoved: removed.length,
-        totalModified: modified.length,
-      },
-    };
+      { ttl: 10 * 60 * 1000 } // 10 minutes - comparison results are expensive to compute
+    );
   }
 
   // ==================== Discovery Validation ====================
@@ -803,6 +851,9 @@ class DiscoveryService {
     try {
       const history = Object.fromEntries(this.discoveryHistory);
       localStorage.setItem('discovery_history', JSON.stringify(history));
+
+      // Invalidate all history caches when history is updated
+      this.cacheService.invalidatePrefix('discovery:history:');
     } catch (error) {
       console.error('Failed to save discovery history:', error);
     }
@@ -827,6 +878,9 @@ class DiscoveryService {
     try {
       const scheduled = Object.fromEntries(this.scheduledDiscoveries);
       localStorage.setItem('scheduled_discoveries', JSON.stringify(scheduled));
+
+      // Invalidate scheduled discoveries cache
+      this.cacheService.delete('discovery:scheduled');
     } catch (error) {
       console.error('Failed to save scheduled discoveries:', error);
     }

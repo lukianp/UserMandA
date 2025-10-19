@@ -26,7 +26,7 @@ export const CostAnalysisView: React.FC = () => {
     { label: 'Monthly Cost', value: `$${(costData?.totalMonthlyCost || 0).toLocaleString()}`, icon: DollarSign, color: 'blue' },
     { label: 'Annual Cost', value: `$${(costData?.totalAnnualCost || 0).toLocaleString()}`, icon: BarChart3, color: 'purple' },
     { label: 'Optimizations', value: (costData?.optimizations?.length || 0).toString(), icon: PieChart, color: 'green' },
-    { label: 'Potential Savings', value: `$${potentialSavings.toLocaleString()}`, icon: Calculator, color: 'orange' },
+    { label: 'Potential Savings', value: `$${(potentialSavings ?? 0).toLocaleString()}`, icon: Calculator, color: 'orange' },
   ];
 
   const timeRanges = [

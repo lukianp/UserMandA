@@ -577,6 +577,7 @@ export function useTeamsDiscoveryLogic() {
     config,
     setConfig,
     result,
+    currentResult: result,
     progress,
     isDiscovering,
     error,
@@ -622,5 +623,6 @@ export function useTeamsDiscoveryLogic() {
 
     // Statistics
     statistics: result?.statistics,
+  
   };
 }

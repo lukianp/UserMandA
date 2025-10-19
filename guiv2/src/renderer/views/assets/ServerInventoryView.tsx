@@ -60,29 +60,29 @@ const ServerInventoryView: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
             <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">Total Servers</div>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.total}</div>
+            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats?.total ?? 0}</div>
           </div>
           <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
             <div className="text-sm text-red-600 dark:text-red-400 font-medium">Critical</div>
-            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.critical}</div>
+            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats?.critical ?? 0}</div>
           </div>
           <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
             <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">High Resource</div>
             <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-              {stats.highResource}
+              {stats?.highResource ?? 0}
             </div>
           </div>
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
             <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Clustered</div>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.clustered}</div>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats?.clustered ?? 0}</div>
           </div>
           <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
             <div className="text-sm text-green-600 dark:text-green-400 font-medium">Physical</div>
-            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.physical}</div>
+            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats?.physical ?? 0}</div>
           </div>
           <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-lg p-4">
             <div className="text-sm text-cyan-600 dark:text-cyan-400 font-medium">Virtual</div>
-            <div className="text-2xl font-bold text-cyan-900 dark:text-cyan-100">{stats.virtual}</div>
+            <div className="text-2xl font-bold text-cyan-900 dark:text-cyan-100">{stats?.virtual ?? 0}</div>
           </div>
         </div>
       </div>
@@ -148,7 +148,7 @@ const ServerInventoryView: React.FC = () => {
             data-cy="role-select"
             options={[
               { value: '', label: 'All Roles' },
-              ...filterOptions.roles.map((role) => ({ value: role, label: role }))
+              ...(filterOptions?.roles ?? []).map((role) => ({ value: role, label: role }))
             ]}
           />
           <Select
@@ -157,7 +157,7 @@ const ServerInventoryView: React.FC = () => {
             data-cy="os-type-select"
             options={[
               { value: '', label: 'All OS Types' },
-              ...filterOptions.osTypes.map((os) => ({ value: os, label: os }))
+              ...(filterOptions?.osTypes ?? []).map((os) => ({ value: os, label: os }))
             ]}
           />
           <Select
@@ -166,7 +166,7 @@ const ServerInventoryView: React.FC = () => {
             data-cy="criticality-select"
             options={[
               { value: '', label: 'All Criticality Levels' },
-              ...filterOptions.criticalities.map((crit) => ({ value: crit, label: crit }))
+              ...(filterOptions?.criticalities ?? []).map((crit) => ({ value: crit, label: crit }))
             ]}
           />
           <Select
@@ -175,7 +175,7 @@ const ServerInventoryView: React.FC = () => {
             data-cy="cluster-select"
             options={[
               { value: '', label: 'All Clusters' },
-              ...filterOptions.clusters.map((cluster) => ({ value: cluster, label: cluster }))
+              ...(filterOptions?.clusters ?? []).map((cluster) => ({ value: cluster, label: cluster }))
             ]}
           />
         </div>
@@ -220,7 +220,7 @@ const ServerInventoryView: React.FC = () => {
               variant="secondary"
               icon={<Download className="w-4 h-4" />}
               onClick={exportData}
-              disabled={data.length === 0}
+              disabled={(data?.length ?? 0) === 0}
               data-cy="export-btn"
             >
               Export CSV

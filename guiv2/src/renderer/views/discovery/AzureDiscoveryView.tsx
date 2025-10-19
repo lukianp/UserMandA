@@ -81,7 +81,7 @@ const AzureDiscoveryView: React.FC = () => {
                 <Input
                   label="Tenant ID"
                   placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  value={formData.tenantId}
+                  value={formData?.tenantId ?? ''}
                   onChange={(e) => updateFormField('tenantId', e.target.value)}
                   disabled={isRunning}
                   required
@@ -93,7 +93,7 @@ const AzureDiscoveryView: React.FC = () => {
                 <Button
                   variant="secondary"
                   onClick={testConnection}
-                  disabled={!formData.tenantId || connectionStatus === 'connecting'}
+                  disabled={!formData?.tenantId ?? '' || connectionStatus === 'connecting'}
                   loading={connectionStatus === 'connecting'}
                   icon={<CheckCircle className="w-4 h-4" />}
                   className="w-full"
@@ -288,7 +288,7 @@ const AzureDiscoveryView: React.FC = () => {
                     Export
                   </Button>
                 </div>
-                {results.map((result) => (
+                {(results ?? []).map((result) => (
                   <div key={result.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">

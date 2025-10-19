@@ -41,9 +41,9 @@ const SecurityAuditView: React.FC = () => {
           <div className="flex items-center gap-3">
             <Shield className="w-8 h-8 text-red-600 dark:text-red-400" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Security Audit Log</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Security Audit</h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Monitor security events and audit trail
+                Audit security events and monitor audit trail
               </p>
             </div>
           </div>
@@ -68,33 +68,33 @@ const SecurityAuditView: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
             <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Events</div>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</div>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats?.total ?? 0}</div>
           </div>
           <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
             <div className="text-sm text-red-600 dark:text-red-400 font-medium">Critical</div>
-            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.critical}</div>
+            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats?.critical ?? 0}</div>
           </div>
           <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
             <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">High Severity</div>
-            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{stats.high}</div>
+            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{stats?.high ?? 0}</div>
           </div>
           <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
             <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Failures</div>
-            <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{stats.failures}</div>
+            <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{stats?.failures ?? 0}</div>
           </div>
           <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
             <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">Auth Events</div>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.authEvents}</div>
+            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats?.authEvents ?? 0}</div>
           </div>
           <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
             <div className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">Security Events</div>
-            <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{stats.securityEvents}</div>
+            <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{stats?.securityEvents ?? 0}</div>
           </div>
         </div>
       </div>
 
       {/* Event Timeline */}
-      {timelineData.length > 0 && (
+      {(timelineData?.length ?? 0) > 0 && (
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Event Timeline (Hourly)</h3>
           <ResponsiveContainer width="100%" height={120}>
@@ -139,7 +139,7 @@ const SecurityAuditView: React.FC = () => {
             onChange={(value) => updateFilter('eventCategory', value)}
             options={[
               { value: '', label: 'All Categories' },
-              ...filterOptions.categories.map(cat => ({ value: cat, label: cat }))
+              ...(filterOptions?.categories ?? []).map(cat => ({ value: cat, label: cat }))
             ]}
             data-cy="category-select"
           />
@@ -148,7 +148,7 @@ const SecurityAuditView: React.FC = () => {
             onChange={(value) => updateFilter('severity', value)}
             options={[
               { value: '', label: 'All Severities' },
-              ...filterOptions.severities.map(sev => ({ value: sev, label: sev }))
+              ...(filterOptions?.severities ?? []).map(sev => ({ value: sev, label: sev }))
             ]}
             data-cy="severity-select"
           />
@@ -157,7 +157,7 @@ const SecurityAuditView: React.FC = () => {
             onChange={(value) => updateFilter('result', value)}
             options={[
               { value: '', label: 'All Results' },
-              ...filterOptions.results.map(res => ({ value: res, label: res }))
+              ...(filterOptions?.results ?? []).map(res => ({ value: res, label: res }))
             ]}
             data-cy="result-select"
           />
@@ -211,7 +211,7 @@ const SecurityAuditView: React.FC = () => {
               variant="secondary"
               icon={<Download className="w-4 h-4" />}
               onClick={() => exportData('csv')}
-              disabled={data.length === 0}
+              disabled={(data?.length ?? 0) === 0}
               data-cy="export-csv-btn"
             >
               Export CSV
@@ -220,7 +220,7 @@ const SecurityAuditView: React.FC = () => {
               variant="secondary"
               icon={<Download className="w-4 h-4" />}
               onClick={() => exportData('json')}
-              disabled={data.length === 0}
+              disabled={(data?.length ?? 0) === 0}
               data-cy="export-json-btn"
             >
               Export JSON
@@ -229,7 +229,7 @@ const SecurityAuditView: React.FC = () => {
               variant="secondary"
               icon={<Download className="w-4 h-4" />}
               onClick={() => exportData('siem')}
-              disabled={data.length === 0}
+              disabled={(data?.length ?? 0) === 0}
               data-cy="export-siem-btn"
             >
               Export SIEM/CEF

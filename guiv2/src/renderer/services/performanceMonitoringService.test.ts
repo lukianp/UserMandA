@@ -13,7 +13,7 @@ jest.mock('../lib/performanceMonitor', () => ({
     startMemoryMonitoring: jest.fn(() => 123 as any),
     generateReport: jest.fn(() => ({
       timestamp: new Date(),
-      fps: { current: 60, average: 60, min: 60, max: 60 },
+      fps: { current: 20, average: 20, min: 20, max: 20 }, // Critical FPS (< 30)
       memory: {
         current: {
           timestamp: new Date(),
@@ -50,10 +50,12 @@ jest.mock('../lib/performanceMonitor', () => ({
 
 // Mock logging service
 jest.mock('./loggingService', () => ({
+  __esModule: true,
   default: {
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
+    debug: jest.fn(),
   },
 }));
 
@@ -128,6 +130,15 @@ describe('PerformanceMonitoringService', () => {
 
   describe('Alerts', () => {
     beforeEach(() => {
+      // Reset thresholds to default before each test
+      service.setThresholds({
+        fps: { min: 50, critical: 30 },
+        memory: { warningMB: 800, criticalMB: 1000, warningPercent: 80 },
+        renderTime: { warningMs: 16, criticalMs: 50 },
+        networkRequest: { warningMs: 1000, criticalMs: 3000 },
+        longTask: { maxPerMinute: 5 },
+      });
+
       // Mock low FPS
       (enhancedPerformanceMonitor.generateReport as jest.Mock).mockReturnValue({
         timestamp: new Date(),

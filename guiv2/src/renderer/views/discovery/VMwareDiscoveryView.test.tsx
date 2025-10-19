@@ -115,7 +115,7 @@ describe('VMwareDiscoveryView', () => {
       });
 
       render(<VMwareDiscoveryView />);
-      const button = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const button = screen.getByTestId('start-discovery-btn');
       fireEvent.click(button);
 
       expect(startDiscovery).toHaveBeenCalled();
@@ -128,7 +128,7 @@ describe('VMwareDiscoveryView', () => {
       });
 
       render(<VMwareDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
     });
 
     it('calls cancelDiscovery when stop button clicked', () => {
@@ -140,7 +140,7 @@ describe('VMwareDiscoveryView', () => {
       });
 
       render(<VMwareDiscoveryView />);
-      const button = screen.getByText(/Stop/i) || screen.getByText(/Cancel/i);
+      const button = screen.getByTestId('cancel-discovery-btn');
       fireEvent.click(button);
 
       expect(cancelDiscovery).toHaveBeenCalled();
@@ -155,7 +155,7 @@ describe('VMwareDiscoveryView', () => {
       });
 
       render(<VMwareDiscoveryView />);
-      const button = screen.getByText(/Export/i);
+      const button = screen.getByTestId('export-btn');
       fireEvent.click(button);
 
       expect(exportResults).toHaveBeenCalled();
@@ -168,7 +168,7 @@ describe('VMwareDiscoveryView', () => {
       });
 
       render(<VMwareDiscoveryView />);
-      const button = screen.getByText(/Export/i).closest('button');
+      const button = screen.getByTestId('export-btn').closest('button');
       expect(button).toBeDisabled();
     });
   });
@@ -276,7 +276,7 @@ describe('VMwareDiscoveryView', () => {
       });
 
       render(<VMwareDiscoveryView />);
-      const button = screen.getByText(/Clear/i);
+      const button = screen.getByTestId('clear-logs-btn');
       if (button) {
         fireEvent.click(button);
         expect(clearLogs).toHaveBeenCalled();
@@ -322,7 +322,7 @@ describe('VMwareDiscoveryView', () => {
       const { rerender } = render(<VMwareDiscoveryView />);
 
       // Start discovery
-      const startButton = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const startButton = screen.getByTestId('start-discovery-btn');
       fireEvent.click(startButton);
       expect(startDiscovery).toHaveBeenCalled();
 
@@ -334,7 +334,7 @@ describe('VMwareDiscoveryView', () => {
       });
 
       rerender(<VMwareDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
 
       // Completed state with results
       useVMwareDiscoveryLogic.mockReturnValue({
@@ -348,7 +348,7 @@ describe('VMwareDiscoveryView', () => {
       expect(resultsSection).toBeTruthy();
 
       // Export results
-      const exportButton = screen.getByText(/Export/i);
+      const exportButton = screen.getByTestId('export-btn');
       fireEvent.click(exportButton);
       expect(exportResults).toHaveBeenCalled();
     });

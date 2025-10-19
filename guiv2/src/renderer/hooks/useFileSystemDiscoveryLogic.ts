@@ -434,6 +434,7 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
 
   return {
     result,
+    currentResult: result,
     isRunning,
     progress,
     error,
@@ -473,6 +474,7 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     discoveryHistory,
     loadHistory,
     loadHistoryItem,
+  
   };
 };
 

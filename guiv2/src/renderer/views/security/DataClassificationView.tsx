@@ -83,7 +83,7 @@ export const DataClassificationView: React.FC = () => {
 
   // Handle bulk classification
   const handleBulkAction = async () => {
-    if (selectedItems.length === 0) return;
+    if ((selectedItems?.length ?? 0) === 0) return;
     await handleBulkClassify(selectedItems, bulkClassificationLevel);
     setSelectedItems([]);
   };
@@ -136,12 +136,12 @@ export const DataClassificationView: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Items</p>
-              <p className="text-2xl font-bold text-gray-900">{metrics.totalAssets.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900">{(metrics.totalAssets ?? 0).toLocaleString()}</p>
             </div>
             <FileText className="w-8 h-8 text-blue-600" />
           </div>
           <div className="mt-2 text-xs text-gray-500">
-            {metrics.classifiedAssets.toLocaleString()} classified ({Math.round((metrics.classifiedAssets / metrics.totalAssets) * 100)}%)
+            {(metrics.classifiedAssets ?? 0).toLocaleString()} classified ({Math.round((metrics.classifiedAssets / metrics.totalAssets) * 100)}%)
           </div>
         </div>
 
@@ -149,12 +149,12 @@ export const DataClassificationView: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Encrypted Items</p>
-              <p className="text-2xl font-bold text-green-700">{metrics.encryptedAssets.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-green-700">{(metrics.encryptedAssets ?? 0).toLocaleString()}</p>
             </div>
             <Lock className="w-8 h-8 text-green-600" />
           </div>
           <div className="mt-2 text-xs text-gray-500">
-            {metrics.unencryptedSensitiveAssets.toLocaleString()} sensitive unencrypted
+            {(metrics.unencryptedSensitiveAssets ?? 0).toLocaleString()} sensitive unencrypted
           </div>
         </div>
 
@@ -162,12 +162,12 @@ export const DataClassificationView: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">High Risk Assets</p>
-              <p className="text-2xl font-bold text-orange-700">{metrics.highRiskAssets.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-orange-700">{(metrics.highRiskAssets ?? 0).toLocaleString()}</p>
             </div>
             <Users className="w-8 h-8 text-orange-600" />
           </div>
           <div className="mt-2 text-xs text-gray-500">
-            {metrics.assetsRequiringReview.toLocaleString()} require review
+            {(metrics.assetsRequiringReview ?? 0).toLocaleString()} require review
           </div>
         </div>
 
@@ -180,7 +180,7 @@ export const DataClassificationView: React.FC = () => {
             <TrendingUp className="w-8 h-8 text-purple-600" />
           </div>
           <div className="mt-2 text-xs text-gray-500">
-            {metrics.unclassifiedAssets.toLocaleString()} items need classification
+            {(metrics.unclassifiedAssets ?? 0).toLocaleString()} items need classification
           </div>
         </div>
       </div>
@@ -233,31 +233,31 @@ export const DataClassificationView: React.FC = () => {
                   <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getLevelColor('Public')}`}>
                     Public
                   </span>
-                  <span className="text-gray-900 font-medium">{metrics.publicAssets.toLocaleString()}</span>
+                  <span className="text-gray-900 font-medium">{(metrics.publicAssets ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getLevelColor('Internal')}`}>
                     Internal
                   </span>
-                  <span className="text-gray-900 font-medium">{metrics.internalAssets.toLocaleString()}</span>
+                  <span className="text-gray-900 font-medium">{(metrics.internalAssets ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getLevelColor('Confidential')}`}>
                     Confidential
                   </span>
-                  <span className="text-gray-900 font-medium">{metrics.confidentialAssets.toLocaleString()}</span>
+                  <span className="text-gray-900 font-medium">{(metrics.confidentialAssets ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getLevelColor('Restricted')}`}>
                     Restricted
                   </span>
-                  <span className="text-gray-900 font-medium">{metrics.restrictedAssets.toLocaleString()}</span>
+                  <span className="text-gray-900 font-medium">{(metrics.restrictedAssets ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getLevelColor('TopSecret')}`}>
                     Top Secret
                   </span>
-                  <span className="text-gray-900 font-medium">{metrics.topSecretAssets.toLocaleString()}</span>
+                  <span className="text-gray-900 font-medium">{(metrics.topSecretAssets ?? 0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -267,23 +267,23 @@ export const DataClassificationView: React.FC = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                   <span className="text-sm font-medium text-green-900">Public Assets</span>
-                  <span className="text-green-900 font-bold">{metrics.publicAssets.toLocaleString()}</span>
+                  <span className="text-green-900 font-bold">{(metrics.publicAssets ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <span className="text-sm font-medium text-blue-900">Internal Assets</span>
-                  <span className="text-blue-900 font-bold">{metrics.internalAssets.toLocaleString()}</span>
+                  <span className="text-blue-900 font-bold">{(metrics.internalAssets ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                   <span className="text-sm font-medium text-yellow-900">Confidential Assets</span>
-                  <span className="text-yellow-900 font-bold">{metrics.confidentialAssets.toLocaleString()}</span>
+                  <span className="text-yellow-900 font-bold">{(metrics.confidentialAssets ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
                   <span className="text-sm font-medium text-orange-900">Restricted Assets</span>
-                  <span className="text-orange-900 font-bold">{metrics.restrictedAssets.toLocaleString()}</span>
+                  <span className="text-orange-900 font-bold">{(metrics.restrictedAssets ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
                   <span className="text-sm font-medium text-red-900">Top Secret Assets</span>
-                  <span className="text-red-900 font-bold">{metrics.topSecretAssets.toLocaleString()}</span>
+                  <span className="text-red-900 font-bold">{(metrics.topSecretAssets ?? 0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -320,9 +320,9 @@ export const DataClassificationView: React.FC = () => {
                 </select>
               </div>
 
-              {selectedItems.length > 0 && (
+              {(selectedItems?.length ?? 0) > 0 && (
                 <div className="flex items-center space-x-3">
-                  <span className="text-sm text-gray-600">{selectedItems.length} selected</span>
+                  <span className="text-sm text-gray-600">{(selectedItems?.length ?? 0)} selected</span>
                   <select
                     value={bulkClassificationLevel}
                     onChange={(e) => setBulkClassificationLevel(e.target.value as ClassificationLevel)}
@@ -352,7 +352,7 @@ export const DataClassificationView: React.FC = () => {
                     <th className="px-4 py-3 text-left">
                       <input
                         type="checkbox"
-                        checked={selectedItems.length === filteredItems.length && filteredItems.length > 0}
+                        checked={(selectedItems?.length ?? 0) === filteredItems.length && filteredItems.length > 0}
                         onChange={(e) => setSelectedItems(e.target.checked ? filteredItems.map(item => item.id) : [])}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />

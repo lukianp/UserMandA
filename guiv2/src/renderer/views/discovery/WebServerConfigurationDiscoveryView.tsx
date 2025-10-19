@@ -153,15 +153,15 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
       {stats && (
         <div className="grid grid-cols-5 gap-4 p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <div className="p-4 bg-gradient-to-br from-sky-50 to-sky-100 dark:from-sky-900/20 dark:to-sky-800/20 rounded-lg border border-sky-200 dark:border-sky-700">
-            <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">{stats.totalServers}</div>
+            <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">{stats?.totalServers ?? 0}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Total Servers</div>
           </div>
           <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg border border-blue-200 dark:border-blue-700">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.totalSites}</div>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats?.totalSites ?? 0}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Total Sites</div>
           </div>
           <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg border border-green-200 dark:border-green-700">
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.runningServers}</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats?.runningServers ?? 0}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Running Servers</div>
           </div>
           <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg border border-purple-200 dark:border-purple-700">
@@ -171,7 +171,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
             <div className="text-sm text-gray-600 dark:text-gray-400">Server Types</div>
           </div>
           <div className="p-4 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg border border-red-200 dark:border-red-700">
-            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.expiringCertificates}</div>
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{stats?.expiringCertificates ?? 0}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Expiring Certs</div>
           </div>
         </div>
@@ -304,7 +304,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
         >
           <Server className="w-4 h-4" />
           Servers
-          {stats && <span className="px-2 py-0.5 text-xs bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 rounded-full">{stats.totalServers}</span>}
+          {stats && <span className="px-2 py-0.5 text-xs bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 rounded-full">{stats?.totalServers ?? 0}</span>}
         </button>
         <button
           onClick={() => setActiveTab('sites')}
@@ -317,7 +317,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
         >
           <FileCode className="w-4 h-4" />
           Sites
-          {stats && <span className="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full">{stats.totalSites}</span>}
+          {stats && <span className="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full">{stats?.totalSites ?? 0}</span>}
         </button>
         <button
           onClick={() => setActiveTab('bindings')}
@@ -460,7 +460,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Running</span>
-                    <span className="text-2xl font-bold text-green-600">{stats.runningServers}</span>
+                    <span className="text-2xl font-bold text-green-600">{stats?.runningServers ?? 0}</span>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-700">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Stopped</span>
@@ -477,7 +477,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
                 </h3>
                 <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-700">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Certificates Expiring Soon</span>
-                  <span className="text-2xl font-bold text-red-600">{stats.expiringCertificates}</span>
+                  <span className="text-2xl font-bold text-red-600">{stats?.expiringCertificates ?? 0}</span>
                 </div>
               </div>
             </div>

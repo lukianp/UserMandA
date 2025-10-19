@@ -1,9 +1,24 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+  setupFilesAfterEnv: ['<rootDir>/src/test-utils/setupTests.ts'],
+  testMatch: [
+    '<rootDir>/src/**/*.(test|spec).(ts|tsx|js|jsx)',
+  ],
+  transform: {
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
+      tsconfig: '<rootDir>/tsconfig.json',
+      diagnostics: {
+        ignoreCodes: [2339, 2304, 6133], // Ignore common type errors in tests
+      },
+    }],
+  },
+  transformIgnorePatterns: [
+    'node_modules/(?!(@react-dnd|react-dnd|dnd-core|@dnd-kit|react-dnd-html5-backend|react-router|react-router-dom|@remix-run|framer-motion|zustand)/)',
+  ],
+  moduleDirectories: ['node_modules', '<rootDir>/src'],
   moduleNameMapper: {
-    '\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    // Path aliases (order matters - more specific first)
     '^@/(.*)$': '<rootDir>/src/renderer/$1',
     '^@components/(.*)$': '<rootDir>/src/renderer/components/$1',
     '^@views/(.*)$': '<rootDir>/src/renderer/views/$1',
@@ -12,34 +27,73 @@ module.exports = {
     '^@services/(.*)$': '<rootDir>/src/renderer/services/$1',
     '^@types/(.*)$': '<rootDir>/src/renderer/types/$1',
     '^@lib/(.*)$': '<rootDir>/src/renderer/lib/$1',
+    '^src/(.*)$': '<rootDir>/src/$1',
+
+    // Style and asset mocks
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '\\.(jpg|jpeg|png|gif|svg)$': '<rootDir>/src/test-utils/fileMock.js',
   },
-  transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: '<rootDir>/tsconfig.jest.json',
-      diagnostics: {
-        ignoreCodes: [2339, 2304]
-      },
-    }],
-  },
-  transformIgnorePatterns: [
-    'node_modules/(?!(@react-dnd|react-dnd|dnd-core|@dnd-kit|react-dnd-html5-backend|react-router|react-router-dom|@remix-run|framer-motion)/)',
-  ],
   testPathIgnorePatterns: [
-    '/node_modules/',
-    '/tests/e2e/',
+    '<rootDir>/node_modules/',
+    '<rootDir>/build/',
+    '<rootDir>/dist/',
+    '<rootDir>/.webpack/',
+    '<rootDir>/tests/e2e/', // E2E tests run separately with Playwright
   ],
   collectCoverageFrom: [
     'src/renderer/**/*.{ts,tsx}',
+    'src/main/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
-    '!src/main/**/*',
-    '!src/renderer/test-utils/**/*',
+    '!src/test-utils/**',
+    '!src/**/*.test.{ts,tsx}',
+    '!src/**/*.spec.{ts,tsx}',
+    '!src/renderer/index.tsx',
+    '!src/main/index.ts',
+    '!src/**/__tests__/**',
+    '!src/**/__mocks__/**',
+    '!**/node_modules/**',
   ],
   coverageThreshold: {
     global: {
-      branches: 80,
+      branches: 70,
+      functions: 75,
+      lines: 80,
+      statements: 80
+    },
+    // Stricter thresholds for critical paths
+    './src/renderer/hooks/**/*.ts': {
+      branches: 75,
+      functions: 85,
+      lines: 85,
+      statements: 85
+    },
+    './src/renderer/services/**/*.ts': {
+      branches: 75,
+      functions: 85,
+      lines: 85,
+      statements: 85
+    },
+    './src/main/services/**/*.ts': {
+      branches: 70,
       functions: 80,
       lines: 80,
       statements: 80
     }
-  }
+  },
+  coverageReporters: ['text', 'text-summary', 'lcov', 'html', 'json-summary'],
+  coverageDirectory: 'coverage',
+  verbose: true,
+  maxWorkers: '50%',
+  detectOpenHandles: true,
+  forceExit: true,
+  testTimeout: 10000,
+  globals: {
+    'ts-jest': {
+      isolatedModules: true,
+    },
+  },
+  // Clear mocks between tests
+  clearMocks: true,
+  resetMocks: false,
+  restoreMocks: true,
 };

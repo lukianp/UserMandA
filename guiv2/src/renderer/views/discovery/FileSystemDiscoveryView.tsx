@@ -85,7 +85,7 @@ const FileSystemDiscoveryView: React.FC = () => {
                 variant="primary"
                 icon={<Play className="w-4 h-4" />}
                 onClick={startDiscovery}
-                disabled={config.servers.length === 0}
+                disabled={config.servers?.length ?? 0 === 0}
                 data-cy="start-discovery-btn"
               >
                 Start Discovery
@@ -97,7 +97,7 @@ const FileSystemDiscoveryView: React.FC = () => {
         {/* Configuration badges */}
         <div className="flex items-center gap-2 mt-4">
           <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 rounded-full text-sm font-medium">
-            {config.servers.length} Servers
+            {config.servers?.length ?? 0} Servers
           </span>
           {config.scanPermissions && (
             <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm font-medium">
@@ -197,7 +197,7 @@ const FileSystemDiscoveryView: React.FC = () => {
               </div>
               <div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {result.securityRisks.length}
+                  {result.securityRisks?.length ?? 0}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">Security Risks</div>
               </div>

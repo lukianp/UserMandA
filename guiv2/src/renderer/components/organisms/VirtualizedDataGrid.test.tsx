@@ -22,8 +22,8 @@ import { VirtualizedDataGrid } from './VirtualizedDataGrid';
 // Mock AG Grid
 jest.mock('ag-grid-react', () => ({
   AgGridReact: ({ rowData, columnDefs, onRowClicked, onSelectionChanged, loading }: any) => (
-    <div data-testid="ag-grid-mock">
-      {loading && <div data-testid="grid-loading">Loading...</div>}
+    <div data-cy="ag-grid-mock">
+      {loading && <div data-cy="grid-loading">Loading...</div>}
       <table>
         <thead>
           <tr>
@@ -37,7 +37,7 @@ jest.mock('ag-grid-react', () => ({
             <tr
               key={rowIdx}
               onClick={() => onRowClicked?.({ data: row })}
-              data-testid={`grid-row-${rowIdx}`}
+              data-cy={`grid-row-${rowIdx}`}
             >
               {columnDefs.map((col: ColDef, colIdx: number) => (
                 <td key={colIdx}>{row[col.field!]}</td>
@@ -51,7 +51,7 @@ jest.mock('ag-grid-react', () => ({
           const selectedRows = rowData?.slice(0, 2);
           onSelectionChanged?.({ api: { getSelectedRows: () => selectedRows } });
         }}
-        data-testid="mock-select-rows"
+        data-cy="mock-select-rows"
       >
         Select Rows
       </button>

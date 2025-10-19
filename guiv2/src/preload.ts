@@ -82,6 +82,45 @@ const electronAPI: ElectronAPI = {
   },
 
   // ========================================
+  // Centralized Logging API
+  // ========================================
+
+  logging: {
+    debug: (component: string, message: string, context?: Record<string, any>) =>
+      ipcRenderer.invoke('log:message', { level: 'DEBUG', component, message, context }),
+
+    info: (component: string, message: string, context?: Record<string, any>) =>
+      ipcRenderer.invoke('log:message', { level: 'INFO', component, message, context }),
+
+    warn: (component: string, message: string, context?: Record<string, any>) =>
+      ipcRenderer.invoke('log:message', { level: 'WARN', component, message, context }),
+
+    error: (component: string, message: string, stack?: string, context?: Record<string, any>) =>
+      ipcRenderer.invoke('log:error', { component, message, stack, context }),
+
+    fatal: (component: string, message: string, stack?: string, context?: Record<string, any>) =>
+      ipcRenderer.invoke('log:message', { level: 'FATAL', component, message, context }),
+
+    getRecent: (count?: number) =>
+      ipcRenderer.invoke('log:getRecent', count),
+
+    getByLevel: (level: string, count?: number) =>
+      ipcRenderer.invoke('log:getByLevel', { level, count }),
+
+    getByComponent: (component: string, count?: number) =>
+      ipcRenderer.invoke('log:getByComponent', { component, count }),
+
+    clear: () =>
+      ipcRenderer.invoke('log:clear'),
+
+    updateConfig: (config: any) =>
+      ipcRenderer.invoke('log:updateConfig', config),
+
+    getConfig: () =>
+      ipcRenderer.invoke('log:getConfig'),
+  },
+
+  // ========================================
   // Configuration Management
   // ========================================
 

@@ -64,43 +64,43 @@ const NetworkDeviceInventoryView: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-lg p-4">
               <div className="text-sm text-cyan-600 dark:text-cyan-400 font-medium">Total Devices</div>
-              <div className="text-2xl font-bold text-cyan-900 dark:text-cyan-100">{stats.total}</div>
+              <div className="text-2xl font-bold text-cyan-900 dark:text-cyan-100">{stats?.total ?? 0}</div>
             </div>
             <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
               <div className="text-sm text-green-600 dark:text-green-400 font-medium">Online</div>
               <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-                {stats.online}
+                {stats?.online ?? 0}
                 <span className="text-sm ml-2 text-green-600 dark:text-green-400">
-                  ({stats.onlinePercentage}%)
+                  ({stats?.onlinePercentage ?? 0}%)
                 </span>
               </div>
             </div>
             <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
               <div className="text-sm text-red-600 dark:text-red-400 font-medium">Offline</div>
-              <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.offline}</div>
+              <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats?.offline ?? 0}</div>
             </div>
             <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
               <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Warranty Expiring</div>
               <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
-                {stats.warrantyExpiring}
+                {stats?.warrantyExpiring ?? 0}
               </div>
             </div>
             <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
               <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">Warranty Expired</div>
               <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-                {stats.warrantyExpired}
+                {stats?.warrantyExpired ?? 0}
               </div>
             </div>
             <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
               <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">High Utilization</div>
               <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                {stats.highUtilization}
+                {stats?.highUtilization ?? 0}
               </div>
             </div>
           </div>
 
           {/* Device Type Distribution Chart */}
-          {typeDistribution.length > 0 && (
+          {typeDistribution?.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
                 Device Type Distribution
@@ -159,7 +159,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
             data-cy="device-type-select"
             options={[
               { value: '', label: 'All Device Types' },
-              ...filterOptions.deviceTypes.map((type) => ({ value: type, label: type }))
+              ...(filterOptions?.deviceTypes ?? []).map((type) => ({ value: type, label: type }))
             ]}
           />
           <Select
@@ -168,7 +168,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
             data-cy="vendor-select"
             options={[
               { value: '', label: 'All Vendors' },
-              ...filterOptions.vendors.map((vendor) => ({ value: vendor, label: vendor }))
+              ...(filterOptions?.vendors ?? []).map((vendor) => ({ value: vendor, label: vendor }))
             ]}
           />
           <Select
@@ -177,7 +177,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
             data-cy="status-select"
             options={[
               { value: '', label: 'All Statuses' },
-              ...filterOptions.statuses.map((status) => ({ value: status, label: status }))
+              ...(filterOptions?.statuses ?? []).map((status) => ({ value: status, label: status }))
             ]}
           />
           <Select
@@ -186,7 +186,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
             data-cy="location-select"
             options={[
               { value: '', label: 'All Locations' },
-              ...filterOptions.locations.map((location) => ({ value: location, label: location }))
+              ...(filterOptions?.locations ?? []).map((location) => ({ value: location, label: location }))
             ]}
           />
         </div>
@@ -231,7 +231,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
               variant="secondary"
               icon={<Download className="w-4 h-4" />}
               onClick={exportData}
-              disabled={data.length === 0}
+              disabled={(data?.length ?? 0) === 0}
               data-cy="export-btn"
             >
               Export CSV

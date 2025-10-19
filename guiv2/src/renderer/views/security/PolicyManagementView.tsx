@@ -48,19 +48,19 @@ const PolicyManagementView: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
             <div className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">Total Policies</div>
-            <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{stats.total}</div>
+            <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{stats?.total ?? 0}</div>
           </div>
           <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
             <div className="text-sm text-green-600 dark:text-green-400 font-medium">Enforced</div>
-            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.enforced}</div>
+            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats?.enforced ?? 0}</div>
           </div>
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
             <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Compliant</div>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.compliant} <span className="text-sm">({stats.complianceRate}%)</span></div>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats?.compliant ?? 0} <span className="text-sm">({stats?.complianceRate ?? 0}%)</span></div>
           </div>
           <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
             <div className="text-sm text-red-600 dark:text-red-400 font-medium">Violations</div>
-            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.violations}</div>
+            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats?.violations ?? 0}</div>
           </div>
         </div>
       </div>
@@ -80,7 +80,7 @@ const PolicyManagementView: React.FC = () => {
             onChange={(value) => updateFilter('category', value)}
             options={[
               { value: '', label: 'All Categories' },
-              ...filterOptions.categories.map((cat) => ({ value: cat, label: cat }))
+              ...(filterOptions?.categories ?? []).map((cat) => ({ value: cat, label: cat }))
             ]}
             data-cy="category-select"
           />
@@ -89,7 +89,7 @@ const PolicyManagementView: React.FC = () => {
             onChange={(value) => updateFilter('status', value)}
             options={[
               { value: '', label: 'All Statuses' },
-              ...filterOptions.statuses.map((st) => ({ value: st, label: st }))
+              ...(filterOptions?.statuses ?? []).map((st) => ({ value: st, label: st }))
             ]}
             data-cy="status-select"
           />
@@ -98,7 +98,7 @@ const PolicyManagementView: React.FC = () => {
             onChange={(value) => updateFilter('compliance', value)}
             options={[
               { value: '', label: 'All Compliance' },
-              ...filterOptions.compliance.map((comp) => ({ value: comp, label: comp }))
+              ...(filterOptions?.compliance ?? []).map((comp) => ({ value: comp, label: comp }))
             ]}
             data-cy="compliance-select"
           />
@@ -116,7 +116,7 @@ const PolicyManagementView: React.FC = () => {
               </>
             )}
           </div>
-          <Button variant="secondary" icon={<Download className="w-4 h-4" />} disabled={data.length === 0} data-cy="export-btn">Export Policies</Button>
+          <Button variant="secondary" icon={<Download className="w-4 h-4" />} disabled={(data?.length ?? 0) === 0} data-cy="export-btn">Export Policies</Button>
         </div>
       </div>
 

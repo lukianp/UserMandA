@@ -124,7 +124,7 @@ const DomainDiscoveryView: React.FC = () => {
                 <Input
                   label="Max Results"
                   type="number"
-                  value={formData.maxResults.toString()}
+                  value={formData?.maxResults?.toString() || '10000'}
                   onChange={(e) => updateFormField('maxResults', parseInt(e.target.value) || 10000)}
                   disabled={isRunning}
                   min={1}
@@ -135,7 +135,7 @@ const DomainDiscoveryView: React.FC = () => {
                 <Input
                   label="Timeout (seconds)"
                   type="number"
-                  value={formData.timeout.toString()}
+                  value={formData?.timeout?.toString() || '300'}
                   onChange={(e) => updateFormField('timeout', parseInt(e.target.value) || 300)}
                   disabled={isRunning}
                   min={10}
@@ -203,27 +203,27 @@ const DomainDiscoveryView: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">
-                      {progress.currentOperation}
+                      {progress?.currentOperation || 'Processing'}
                     </span>
                     <span className="font-semibold text-gray-900 dark:text-white">
-                      {progress.overallProgress}%
+                      {progress?.overallProgress || 0}%
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div
                       className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${progress.overallProgress}%` }}
+                      style={{ width: `${progress?.overallProgress || 0}%` }}
                     />
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {progress.message}
+                    {progress?.currentOperation || 'Processing...'}
                   </p>
                 </div>
               </div>
             )}
 
             {/* Results Summary */}
-            {results.length > 0 && (
+            {results && results.length > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -239,24 +239,22 @@ const DomainDiscoveryView: React.FC = () => {
                     Export
                   </Button>
                 </div>
-                {results.map((result) => (
-                  <div key={result.id} className="space-y-2">
+                {(results ?? []).map((result, index) => (
+                  <div key={index} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Total Items Discovered
                       </span>
                       <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        {result.itemCount}
+                        {(result.users || 0) + (result.groups || 0) + (result.computers || 0) + (result.ous || 0)}
                       </span>
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                      <p>{result.summary}</p>
-                      <p>Duration: {(result.duration / 1000).toFixed(2)}s</p>
-                      {result.filePath && (
-                        <p className="mt-2 font-mono text-xs break-all">
-                          Output: {result.filePath}
-                        </p>
-                      )}
+                      <p>Discovery completed at {result.timestamp}</p>
+                      <p>
+                        Users: {result.users || 0}, Groups: {result.groups || 0},
+                        Computers: {result.computers || 0}, OUs: {result.ous || 0}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -292,9 +290,9 @@ const DomainDiscoveryView: React.FC = () => {
                     <div
                       key={index}
                       className={`mb-1 ${
-                        log.includes('ERROR')
+                        log && typeof log === 'string' && log.includes('ERROR')
                           ? 'text-red-400'
-                          : log.includes('SUCCESS') || log.includes('completed')
+                          : log && typeof log === 'string' && (log.includes('SUCCESS') || log.includes('completed'))
                           ? 'text-green-400'
                           : 'text-gray-300'
                       }`}

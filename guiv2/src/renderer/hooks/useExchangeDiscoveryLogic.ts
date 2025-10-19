@@ -497,6 +497,7 @@ export function useExchangeDiscoveryLogic() {
     config,
     setConfig,
     result,
+    currentResult: result,
     progress,
     isDiscovering,
     error,
@@ -538,5 +539,6 @@ export function useExchangeDiscoveryLogic() {
 
     // Statistics (from result)
     statistics: result?.statistics,
+  
   };
 }

@@ -47,19 +47,19 @@ const ComplianceReportView: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
             <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Controls</div>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</div>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats?.total ?? 0}</div>
           </div>
           <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
             <div className="text-sm text-green-600 dark:text-green-400 font-medium">Compliant</div>
-            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.compliant} <span className="text-sm">({stats.complianceRate}%)</span></div>
+            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats?.compliant ?? 0} <span className="text-sm">({stats?.complianceRate ?? 0}%)</span></div>
           </div>
           <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
             <div className="text-sm text-red-600 dark:text-red-400 font-medium">Non-Compliant</div>
-            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.nonCompliant}</div>
+            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats?.nonCompliant ?? 0}</div>
           </div>
           <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
             <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">Avg Score</div>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.avgScore}%</div>
+            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats?.avgScore ?? 0}%</div>
           </div>
         </div>
       </div>
@@ -76,19 +76,19 @@ const ComplianceReportView: React.FC = () => {
           <Input placeholder="Search controls..." value={filters.searchText} onChange={(e) => updateFilter('searchText', e.target.value)} data-cy="search-input" />
           <select value={filters.framework || ''} onChange={(e) => updateFilter('framework', e.target.value)} data-cy="framework-select" className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm">
             <option value="">All Frameworks</option>
-            {filterOptions.frameworks.map((fw) => (<option key={fw || 'unknown'} value={fw || ''}>{fw}</option>))}
+            {(filterOptions?.frameworks ?? []).map((fw) => (<option key={fw || 'unknown'} value={fw || ''}>{fw}</option>))}
           </select>
           <select value={filters.status || ''} onChange={(e) => updateFilter('status', e.target.value)} data-cy="status-select" className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm">
             <option value="">All Statuses</option>
-            {filterOptions.statuses.map((st) => (<option key={st || 'unknown'} value={st || ''}>{st}</option>))}
+            {(filterOptions?.statuses ?? []).map((st) => (<option key={st || 'unknown'} value={st || ''}>{st}</option>))}
           </select>
           <select value={filters.riskLevel || ''} onChange={(e) => updateFilter('riskLevel', e.target.value)} data-cy="risk-level-select" className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm">
             <option value="">All Risk Levels</option>
-            {filterOptions.riskLevels.map((rl) => (<option key={rl || 'unknown'} value={rl || ''}>{rl}</option>))}
+            {(filterOptions?.riskLevels ?? []).map((rl) => (<option key={rl || 'unknown'} value={rl || ''}>{rl}</option>))}
           </select>
           <select value={filters.owner || ''} onChange={(e) => updateFilter('owner', e.target.value)} data-cy="owner-select" className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm">
             <option value="">All Owners</option>
-            {filterOptions.owners.map((own) => (<option key={own || 'unknown'} value={own || ''}>{own}</option>))}
+            {(filterOptions?.owners ?? []).map((own) => (<option key={own || 'unknown'} value={own || ''}>{own}</option>))}
           </select>
         </div>
       </div>
@@ -96,7 +96,7 @@ const ComplianceReportView: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
         <div className="flex items-center justify-between">
           <Button variant="primary" icon={<RefreshCw className="w-4 h-4" />} onClick={loadData} loading={isLoading} data-cy="refresh-btn">Refresh</Button>
-          <Button variant="secondary" icon={<Download className="w-4 h-4" />} onClick={exportData} disabled={data.length === 0} data-cy="export-btn">Export Report</Button>
+          <Button variant="secondary" icon={<Download className="w-4 h-4" />} onClick={exportData} disabled={(data?.length ?? 0) === 0} data-cy="export-btn">Export Report</Button>
         </div>
       </div>
 

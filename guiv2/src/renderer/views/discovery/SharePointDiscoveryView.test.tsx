@@ -55,6 +55,7 @@ describe('SharePointDiscoveryView', () => {
     listColumns: null,
     permissionColumns: null,
     loadData: jest.fn(),
+    refreshData: jest.fn(),
     exportData: jest.fn(),
     selectedTab: 'overview',
     setSelectedTab: jest.fn(),
@@ -121,7 +122,7 @@ describe('SharePointDiscoveryView', () => {
       });
 
       render(<SharePointDiscoveryView />);
-      const button = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const button = screen.getByTestId('start-discovery-btn');
       fireEvent.click(button);
 
       expect(startDiscovery).toHaveBeenCalled();
@@ -134,7 +135,7 @@ describe('SharePointDiscoveryView', () => {
       });
 
       render(<SharePointDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
     });
 
     it('calls cancelDiscovery when stop button clicked', () => {
@@ -146,7 +147,7 @@ describe('SharePointDiscoveryView', () => {
       });
 
       render(<SharePointDiscoveryView />);
-      const button = screen.getByText(/Stop/i) || screen.getByText(/Cancel/i);
+      const button = screen.getByTestId('cancel-discovery-btn');
       fireEvent.click(button);
 
       expect(cancelDiscovery).toHaveBeenCalled();
@@ -161,7 +162,7 @@ describe('SharePointDiscoveryView', () => {
       });
 
       render(<SharePointDiscoveryView />);
-      const button = screen.getByText(/Export/i);
+      const button = screen.getByTestId('export-btn');
       fireEvent.click(button);
 
       expect(exportResults).toHaveBeenCalled();
@@ -174,7 +175,7 @@ describe('SharePointDiscoveryView', () => {
       });
 
       render(<SharePointDiscoveryView />);
-      const button = screen.getByText(/Export/i).closest('button');
+      const button = screen.getByTestId('export-btn').closest('button');
       expect(button).toBeDisabled();
     });
   });
@@ -282,7 +283,7 @@ describe('SharePointDiscoveryView', () => {
       });
 
       render(<SharePointDiscoveryView />);
-      const button = screen.getByText(/Clear/i);
+      const button = screen.getByTestId('clear-logs-btn');
       if (button) {
         fireEvent.click(button);
         expect(clearLogs).toHaveBeenCalled();
@@ -328,7 +329,7 @@ describe('SharePointDiscoveryView', () => {
       const { rerender } = render(<SharePointDiscoveryView />);
 
       // Start discovery
-      const startButton = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const startButton = screen.getByTestId('start-discovery-btn');
       fireEvent.click(startButton);
       expect(startDiscovery).toHaveBeenCalled();
 
@@ -340,7 +341,7 @@ describe('SharePointDiscoveryView', () => {
       });
 
       rerender(<SharePointDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
 
       // Completed state with results
       useSharePointDiscoveryLogic.mockReturnValue({
@@ -354,7 +355,7 @@ describe('SharePointDiscoveryView', () => {
       expect(resultsSection).toBeTruthy();
 
       // Export results
-      const exportButton = screen.getByText(/Export/i);
+      const exportButton = screen.getByTestId('export-btn');
       fireEvent.click(exportButton);
       expect(exportResults).toHaveBeenCalled();
     });

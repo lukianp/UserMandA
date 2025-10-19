@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders as render, screen, fireEvent, waitFor } from '../../test-utils/testWrappers';
 import '@testing-library/jest-dom';
 import GroupsView from './GroupsView';
 import {
@@ -35,6 +35,7 @@ describe('GroupsView', () => {
     loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
+    pagination: { page: 0, pageSize: 50, total: 0 },
   };
 
   beforeEach(() => {

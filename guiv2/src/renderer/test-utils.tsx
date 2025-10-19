@@ -1,28 +1,14 @@
-import React, { PropsWithChildren, ReactElement } from 'react';
-import { render, RenderOptions } from '@testing-library/react';
-import { MemoryRouter, MemoryRouterProps } from 'react-router';
+import React from 'react';
+import { RenderOptions } from '@testing-library/react';
+import { MemoryRouterProps } from 'react-router-dom';
+import { renderWithProviders as baseRenderWithProviders } from '../test-utils/testWrappers';
+export * from '@testing-library/react';
 
-// Extend options to allow passing initial routes/history entries for routing tests
+// Keep the same options shape for backward compatibility
 export interface ProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
   router?: Partial<MemoryRouterProps> & { initialEntries?: string[] };
 }
 
-// In the future, include ThemeProvider, Store Providers, etc.
-const Providers: React.FC<PropsWithChildren<{ router?: ProvidersOptions['router'] }>> = ({ children, router }) => {
-  const { initialEntries = ['/'], ...routerProps } = router || {};
-  return (
-    <MemoryRouter initialEntries={initialEntries} {...routerProps}>
-      {children}
-    </MemoryRouter>
-  );
-};
-
-export function renderWithProviders(ui: ReactElement, options: ProvidersOptions = {}) {
-  const { router, ...rtlOptions } = options;
-  return render(ui, {
-    wrapper: ({ children }) => <Providers router={router}>{children}</Providers>,
-    ...rtlOptions,
-  });
+export function renderWithProviders(ui: React.ReactElement, options: ProvidersOptions = {}) {
+  return baseRenderWithProviders(ui, options as any);
 }
-
-export * from '@testing-library/react';

@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders as render, screen, fireEvent, waitFor } from '../../test-utils/testWrappers';
 import '@testing-library/jest-dom';
 import SettingsView from './SettingsView';
 import {

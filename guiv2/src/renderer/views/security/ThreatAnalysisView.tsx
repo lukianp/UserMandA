@@ -47,19 +47,19 @@ const ThreatAnalysisView: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
             <div className="text-sm text-red-600 dark:text-red-400 font-medium">Total Threats</div>
-            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.total}</div>
+            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats?.total ?? 0}</div>
           </div>
           <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
             <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">Critical</div>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.critical}</div>
+            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats?.critical ?? 0}</div>
           </div>
           <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
             <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">High Severity</div>
-            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{stats.high}</div>
+            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{stats?.high ?? 0}</div>
           </div>
           <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
             <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Active</div>
-            <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{stats.active}</div>
+            <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{stats?.active ?? 0}</div>
           </div>
         </div>
       </div>
@@ -80,7 +80,7 @@ const ThreatAnalysisView: React.FC = () => {
             data-cy="threat-type-select"
             options={[
               { value: '', label: 'All Threat Types' },
-              ...filterOptions.threatTypes.map((tt) => ({ value: tt || '', label: tt || 'Unknown' }))
+              ...(filterOptions?.threatTypes ?? []).map((tt) => ({ value: tt || '', label: tt || 'Unknown' }))
             ]}
           />
           <Select
@@ -89,7 +89,7 @@ const ThreatAnalysisView: React.FC = () => {
             data-cy="severity-select"
             options={[
               { value: '', label: 'All Severities' },
-              ...filterOptions.severities.map((sev) => ({ value: sev || '', label: sev || 'Unknown' }))
+              ...(filterOptions?.severities ?? []).map((sev) => ({ value: sev || '', label: sev || 'Unknown' }))
             ]}
           />
           <Select
@@ -98,7 +98,7 @@ const ThreatAnalysisView: React.FC = () => {
             data-cy="status-select"
             options={[
               { value: '', label: 'All Statuses' },
-              ...filterOptions.statuses.map((st) => ({ value: st || '', label: st || 'Unknown' }))
+              ...(filterOptions?.statuses ?? []).map((st) => ({ value: st || '', label: st || 'Unknown' }))
             ]}
           />
         </div>
@@ -110,7 +110,7 @@ const ThreatAnalysisView: React.FC = () => {
             <Button variant="primary" icon={<RefreshCw className="w-4 h-4" />} onClick={loadData} loading={isLoading} data-cy="refresh-btn">Refresh</Button>
             <Button variant="secondary" icon={<Scan className="w-4 h-4" />} onClick={runSecurityScan} data-cy="scan-btn">Run Security Scan</Button>
           </div>
-          <Button variant="secondary" icon={<Download className="w-4 h-4" />} disabled={data.length === 0} data-cy="export-btn">Export Threats</Button>
+          <Button variant="secondary" icon={<Download className="w-4 h-4" />} disabled={(data?.length ?? 0) === 0} data-cy="export-btn">Export Threats</Button>
         </div>
       </div>
 

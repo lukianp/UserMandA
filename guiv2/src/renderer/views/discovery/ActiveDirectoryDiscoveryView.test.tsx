@@ -112,7 +112,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       } as any);
 
       render(<ActiveDirectoryDiscoveryView />);
-      const button = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const button = screen.getByTestId('start-discovery-btn');
       fireEvent.click(button);
 
       expect(startDiscovery).toHaveBeenCalled();
@@ -125,7 +125,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       } as any);
 
       render(<ActiveDirectoryDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
     });
 
     it('calls cancelDiscovery when stop button clicked', () => {
@@ -137,7 +137,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       } as any);
 
       render(<ActiveDirectoryDiscoveryView />);
-      const button = screen.getByText(/Stop/i) || screen.getByText(/Cancel/i);
+      const button = screen.getByTestId('cancel-discovery-btn');
       fireEvent.click(button);
 
       expect(cancelDiscovery).toHaveBeenCalled();
@@ -152,7 +152,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       } as any);
 
       render(<ActiveDirectoryDiscoveryView />);
-      const button = screen.getByText(/Export/i);
+      const button = screen.getByTestId('export-btn');
       fireEvent.click(button);
 
       expect(exportResults).toHaveBeenCalled();
@@ -165,7 +165,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       });
 
       render(<ActiveDirectoryDiscoveryView />);
-      const button = screen.getByText(/Export/i).closest('button');
+      const button = screen.getByTestId('export-btn').closest('button');
       expect(button).toBeDisabled();
     });
   });
@@ -273,7 +273,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       });
 
       render(<ActiveDirectoryDiscoveryView />);
-      const button = screen.getByText(/Clear/i);
+      const button = screen.getByTestId('clear-logs-btn');
       if (button) {
         fireEvent.click(button);
         expect(clearLogs).toHaveBeenCalled();
@@ -319,7 +319,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       const { rerender } = render(<ActiveDirectoryDiscoveryView />);
 
       // Start discovery
-      const startButton = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const startButton = screen.getByTestId('start-discovery-btn');
       fireEvent.click(startButton);
       expect(startDiscovery).toHaveBeenCalled();
 
@@ -331,7 +331,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       });
 
       rerender(<ActiveDirectoryDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
 
       // Completed state with results
       mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
@@ -345,7 +345,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       expect(resultsSection).toBeTruthy();
 
       // Export results
-      const exportButton = screen.getByText(/Export/i);
+      const exportButton = screen.getByTestId('export-btn');
       fireEvent.click(exportButton);
       expect(exportResults).toHaveBeenCalled();
     });

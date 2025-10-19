@@ -46,23 +46,23 @@ const RiskAssessmentView: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
             <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Risks</div>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</div>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats?.total ?? 0}</div>
           </div>
           <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
             <div className="text-sm text-red-600 dark:text-red-400 font-medium">Critical</div>
-            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.critical}</div>
+            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats?.critical ?? 0}</div>
           </div>
           <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
             <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">High</div>
-            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{stats.high}</div>
+            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{stats?.high ?? 0}</div>
           </div>
           <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
             <div className="text-sm text-green-600 dark:text-green-400 font-medium">Resolved</div>
-            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.resolved}</div>
+            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats?.resolved ?? 0}</div>
           </div>
           <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
             <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Overdue</div>
-            <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{stats.overdue}</div>
+            <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{stats?.overdue ?? 0}</div>
           </div>
         </div>
       </div>
@@ -83,7 +83,7 @@ const RiskAssessmentView: React.FC = () => {
             data-cy="risk-level-select"
             options={[
               { value: '', label: 'All Risk Levels' },
-              ...filterOptions.riskLevels.map((rl) => ({ value: rl, label: rl }))
+              ...(filterOptions?.riskLevels ?? []).map((rl) => ({ value: rl, label: rl }))
             ]}
           />
           <Select
@@ -92,7 +92,7 @@ const RiskAssessmentView: React.FC = () => {
             data-cy="category-select"
             options={[
               { value: '', label: 'All Categories' },
-              ...filterOptions.categories.map((cat) => ({ value: cat, label: cat }))
+              ...(filterOptions?.categories ?? []).map((cat) => ({ value: cat, label: cat }))
             ]}
           />
           <Select
@@ -101,7 +101,7 @@ const RiskAssessmentView: React.FC = () => {
             data-cy="status-select"
             options={[
               { value: '', label: 'All Statuses' },
-              ...filterOptions.statuses.map((st) => ({ value: st, label: st }))
+              ...(filterOptions?.statuses ?? []).map((st) => ({ value: st, label: st }))
             ]}
           />
           <Select
@@ -110,7 +110,7 @@ const RiskAssessmentView: React.FC = () => {
             data-cy="owner-select"
             options={[
               { value: '', label: 'All Owners' },
-              ...filterOptions.owners.map((own) => ({ value: own, label: own }))
+              ...(filterOptions?.owners ?? []).map((own) => ({ value: own, label: own }))
             ]}
           />
         </div>
@@ -119,7 +119,7 @@ const RiskAssessmentView: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
         <div className="flex items-center justify-between">
           <Button variant="primary" icon={<RefreshCw className="w-4 h-4" />} onClick={loadData} loading={isLoading} data-cy="refresh-btn">Refresh</Button>
-          <Button variant="secondary" icon={<Download className="w-4 h-4" />} disabled={data.length === 0} data-cy="export-btn">Export Risk Report</Button>
+          <Button variant="secondary" icon={<Download className="w-4 h-4" />} disabled={(data?.length ?? 0) === 0} data-cy="export-btn">Export Risk Report</Button>
         </div>
       </div>
 

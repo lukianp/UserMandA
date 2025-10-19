@@ -11,7 +11,7 @@ export const BackupRestoreView: React.FC = () => {
   ];
 
   return (
-    <div data-testid="backup-restore-view" className="flex flex-col h-full p-6 space-y-6">
+    <div data-cy="backup-restore-view" className="flex flex-col h-full p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Backup & Restore</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -67,7 +67,7 @@ export const BackupRestoreView: React.FC = () => {
           <tbody className="divide-y">
             {backupHistory.map((backup) => (
               <tr key={backup.id}>
-                <td className="px-6 py-4">{backup.date.toLocaleString()}</td>
+                <td className="px-6 py-4">{(backup.date ?? 0).toLocaleString()}</td>
                 <td className="px-6 py-4">{backup.type}</td>
                 <td className="px-6 py-4">{backup.size}</td>
                 <td className="px-6 py-4">

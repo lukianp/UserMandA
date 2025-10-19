@@ -14,14 +14,14 @@ import {
 } from '../../test-utils/viewTestHelpers';
 
 // Mock the hook
-jest.mock('../../hooks/useAWSCloudInfrastructureDiscoveryLogic', () => ({
-  useAWSCloudInfrastructureDiscoveryLogic: jest.fn(),
+jest.mock('../../hooks/useAWSDiscoveryLogic', () => ({
+  useAWSDiscoveryLogic: jest.fn(),
 }));
 
-import { useAWSCloudInfrastructureDiscoveryLogic } from '../../hooks/useAWSCloudInfrastructureDiscoveryLogic';
+import { useAWSDiscoveryLogic } from '../../hooks/useAWSDiscoveryLogic';
 
 describe('AWSCloudInfrastructureDiscoveryView', () => {
-  const mockUseAWSCloudInfrastructureDiscoveryLogic = useAWSCloudInfrastructureDiscoveryLogic as jest.MockedFunction<typeof useAWSCloudInfrastructureDiscoveryLogic>;
+  const mockUseAWSDiscoveryLogic = useAWSDiscoveryLogic as jest.MockedFunction<typeof useAWSDiscoveryLogic>;
 
   const mockHookDefaults = {
     isRunning: false,
@@ -53,7 +53,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
 
   beforeEach(() => {
     resetAllMocks();
-    mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue(mockHookDefaults);
+    mockUseAWSDiscoveryLogic.mockReturnValue(mockHookDefaults);
   });
 
   afterEach(() => {
@@ -67,7 +67,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
   describe('Rendering', () => {
     it('renders without crashing', () => {
       render(<AWSCloudInfrastructureDiscoveryView />);
-      expect(screen.getByTestId('a-w-s-cloud-infrastructure-discovery-view')).toBeInTheDocument();
+      expect(screen.getByTestId('aws-cloud-infrastructure-discovery-view')).toBeInTheDocument();
     });
 
     it('displays the view title', () => {
@@ -78,7 +78,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
     it('displays the view description', () => {
       render(<AWSCloudInfrastructureDiscoveryView />);
       expect(
-        screen.getByText(/AWS infrastructure discovery/i)
+        screen.getByText(/Discover and analyze AWS resources/i)
       ).toBeInTheDocument();
     });
 
@@ -89,7 +89,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
     });
 
     it('displays selected profile when available', () => {
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         selectedProfile: { name: 'Test Profile' },
       });
@@ -105,38 +105,38 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
   describe('Button Actions', () => {
     it('calls startDiscovery when start button clicked', () => {
       const startDiscovery = jest.fn();
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         startDiscovery,
       });
 
       render(<AWSCloudInfrastructureDiscoveryView />);
-      const button = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const button = screen.getByRole('button', { name: /Start Discovery/i }) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
       fireEvent.click(button);
 
       expect(startDiscovery).toHaveBeenCalled();
     });
 
     it('shows stop button when discovery is running', () => {
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
       });
 
       render(<AWSCloudInfrastructureDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Cancel Discovery/i })).toBeInTheDocument();
     });
 
     it('calls cancelDiscovery when stop button clicked', () => {
       const cancelDiscovery = jest.fn();
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         cancelDiscovery,
       });
 
       render(<AWSCloudInfrastructureDiscoveryView />);
-      const button = screen.getByText(/Stop/i) || screen.getByText(/Cancel/i);
+      const button = screen.getByRole('button', { name: /Cancel Discovery/i });
       fireEvent.click(button);
 
       expect(cancelDiscovery).toHaveBeenCalled();
@@ -144,27 +144,27 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
 
     it('calls exportResults when export button clicked', () => {
       const exportResults = jest.fn();
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: mockDiscoveryData(),
         exportResults,
       });
 
       render(<AWSCloudInfrastructureDiscoveryView />);
-      const button = screen.getByText(/Export/i);
+      const button = screen.getByTestId('export-btn');
       fireEvent.click(button);
 
       expect(exportResults).toHaveBeenCalled();
     });
 
     it('disables export button when no results', () => {
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: null,
       });
 
       render(<AWSCloudInfrastructureDiscoveryView />);
-      const button = screen.getByText(/Export/i).closest('button');
+      const button = screen.getByTestId('export-btn').closest('button');
       expect(button).toBeDisabled();
     });
   });
@@ -175,7 +175,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
 
   describe('Progress Display', () => {
     it('shows progress when discovery is running', () => {
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         progress: {
@@ -204,7 +204,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
   describe('Results Display', () => {
     it('displays results when available', () => {
       const results = mockDiscoveryData();
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results,
       });
@@ -229,7 +229,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
 
   describe('Error Handling', () => {
     it('displays error message when error occurs', () => {
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         error: 'Test error message',
       });
@@ -250,7 +250,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
 
   describe('Logs Display', () => {
     it('displays logs when available', () => {
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         logs: [
           { timestamp: '10:00:00', level: 'info', message: 'Discovery started' },
@@ -263,7 +263,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
 
     it('calls clearLogs when clear button clicked', () => {
       const clearLogs = jest.fn();
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         logs: [
           { timestamp: '10:00:00', level: 'info', message: 'Test log' },
@@ -272,7 +272,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
       });
 
       render(<AWSCloudInfrastructureDiscoveryView />);
-      const button = screen.getByText(/Clear/i);
+      const button = screen.getByTestId('clear-logs-btn');
       if (button) {
         fireEvent.click(button);
         expect(clearLogs).toHaveBeenCalled();
@@ -287,7 +287,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
   describe('Accessibility', () => {
     it('has accessible data-cy attributes', () => {
       render(<AWSCloudInfrastructureDiscoveryView />);
-      expect(screen.getByTestId('a-w-s-cloud-infrastructure-discovery-view')).toBeInTheDocument();
+      expect(screen.getByTestId('aws-cloud-infrastructure-discovery-view')).toBeInTheDocument();
     });
 
     it('has accessible button labels', () => {
@@ -310,7 +310,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
       const exportResults = jest.fn();
 
       // Initial state
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         startDiscovery,
       });
@@ -318,22 +318,22 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
       const { rerender } = render(<AWSCloudInfrastructureDiscoveryView />);
 
       // Start discovery
-      const startButton = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const startButton = screen.getByRole('button', { name: /Start Discovery/i }) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
       fireEvent.click(startButton);
       expect(startDiscovery).toHaveBeenCalled();
 
       // Running state
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         progress: { current: 50, total: 100, percentage: 50 },
       });
 
       rerender(<AWSCloudInfrastructureDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Cancel Discovery/i })).toBeInTheDocument();
 
       // Completed state with results
-      mockUseAWSCloudInfrastructureDiscoveryLogic.mockReturnValue({
+      mockUseAWSDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: mockDiscoveryData(),
         exportResults,
@@ -344,7 +344,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
       expect(resultsSection).toBeTruthy();
 
       // Export results
-      const exportButton = screen.getByText(/Export/i);
+      const exportButton = screen.getByTestId('export-btn');
       fireEvent.click(exportButton);
       expect(exportResults).toHaveBeenCalled();
     });

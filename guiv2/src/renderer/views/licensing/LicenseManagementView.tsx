@@ -38,8 +38,8 @@ export const LicenseManagementView: React.FC = () => {
     { label: 'Active', value: stats.activeLicenses, icon: CheckCircle, color: 'green' },
     { label: 'Expiring Soon', value: stats.expiringSoon, icon: Clock, color: 'yellow' },
     { label: 'Non-Compliant', value: stats.nonCompliant, icon: AlertCircle, color: 'red' },
-    { label: 'Total Cost', value: `$${stats.totalCost.toLocaleString()}`, icon: DollarSign, color: 'purple' },
-    { label: 'Potential Savings', value: `$${stats.potentialSavings.toLocaleString()}`, icon: TrendingUp, color: 'green' },
+    { label: 'Total Cost', value: `$${(stats.totalCost ?? 0).toLocaleString()}`, icon: DollarSign, color: 'purple' },
+    { label: 'Potential Savings', value: `$${(stats.potentialSavings ?? 0).toLocaleString()}`, icon: TrendingUp, color: 'green' },
   ];
 
   // Column definitions

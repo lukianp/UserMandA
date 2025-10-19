@@ -35,8 +35,8 @@ export const ComplianceDashboardView: React.FC = () => {
   const complianceStatus = [
     {
       status: 'Resolved',
-      count: stats.resolvedViolations,
-      percentage: stats.totalViolations > 0 ? Math.round((stats.resolvedViolations / stats.totalViolations) * 100) : 0,
+      count: stats?.resolvedViolations ?? 0,
+      percentage: stats.totalViolations > 0 ? Math.round((stats?.resolvedViolations ?? 0 / stats.totalViolations) * 100) : 0,
       icon: CheckCircle,
       color: 'green',
     },
@@ -168,7 +168,7 @@ export const ComplianceDashboardView: React.FC = () => {
             <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Violations</p>
             <Shield className="w-5 h-5 text-blue-500" />
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalViolations}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.totalViolations ?? 0}</p>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -176,7 +176,7 @@ export const ComplianceDashboardView: React.FC = () => {
             <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Open Violations</p>
             <FileText className="w-5 h-5 text-orange-500" />
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.openViolations}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.openViolations ?? 0}</p>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -185,7 +185,7 @@ export const ComplianceDashboardView: React.FC = () => {
             <TrendingUp className="w-5 h-5 text-red-500" />
           </div>
           <div className="flex items-end gap-2">
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.criticalViolations}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.criticalViolations ?? 0}</p>
             <Badge variant={stats.criticalViolations > 10 ? 'danger' : stats.criticalViolations > 5 ? 'warning' : 'success'}>
               {stats.criticalViolations > 10 ? 'High' : stats.criticalViolations > 5 ? 'Medium' : 'Low'}
             </Badge>

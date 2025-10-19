@@ -214,28 +214,28 @@ const NetworkDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<Network />}
                 label="Total Devices"
-                value={stats.totalDevices}
-                subValue={`${stats.onlineDevices} online`}
+                value={stats?.totalDevices ?? 0}
+                subValue={`${stats?.onlineDevices ?? 0} online`}
                 variant="default"
               />
               <StatCard
                 icon={<CheckCircle2 />}
                 label="Subnets"
-                value={stats.subnets}
+                value={stats?.subnets ?? 0}
                 variant="default"
               />
               <StatCard
                 icon={<FileText />}
                 label="Open Ports"
-                value={stats.openPorts}
+                value={stats?.openPorts ?? 0}
                 subValue={stats.openPorts > 1000 ? 'High exposure' : 'Normal'}
                 variant={stats.openPorts > 1000 ? 'warning' : 'default'}
               />
               <StatCard
                 icon={<AlertCircle />}
                 label="Vulnerabilities"
-                value={stats.vulnerabilities}
-                subValue={stats.criticalVulns > 0 ? `${stats.criticalVulns} critical, ${stats.highVulns} high` : 'None critical'}
+                value={stats?.vulnerabilities ?? 0}
+                subValue={stats.criticalVulns > 0 ? `${stats?.criticalVulns ?? 0} critical, ${stats?.highVulns ?? 0} high` : 'None critical'}
                 variant={stats.criticalVulns > 0 ? 'danger' : stats.vulnerabilities > 0 ? 'warning' : 'success'}
               />
             </div>

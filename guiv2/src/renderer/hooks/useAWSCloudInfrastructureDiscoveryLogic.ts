@@ -60,6 +60,7 @@ export const useAWSCloudInfrastructureDiscoveryLogic = (): AWSCloudInfrastructur
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [config, setConfig] = useState<any>({});
 
   /**
    * Add a log entry
@@ -209,6 +210,7 @@ export const useAWSCloudInfrastructureDiscoveryLogic = (): AWSCloudInfrastructur
     isCancelling,
     progress,
     results,
+    result: results,
     error,
     logs,
     startDiscovery,
@@ -216,5 +218,7 @@ export const useAWSCloudInfrastructureDiscoveryLogic = (): AWSCloudInfrastructur
     exportResults,
     clearLogs,
     selectedProfile,
+    config,
+    setConfig,
   };
 };

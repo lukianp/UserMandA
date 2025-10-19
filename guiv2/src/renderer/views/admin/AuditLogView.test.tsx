@@ -25,6 +25,7 @@ describe('AuditLogView', () => {
     error: null as string | null,
 
 
+    pagination: { page: 0, pageSize: 50, total: 0 },
   };
   beforeEach(() => {
     resetAllMocks();

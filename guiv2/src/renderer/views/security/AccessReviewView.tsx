@@ -521,10 +521,10 @@ export const AccessReviewView: React.FC = () => {
       </div>
 
       {/* Bulk Actions */}
-      {activeTab === 'items' && selectedItems.length > 0 && (
+      {activeTab === 'items' && (selectedItems?.length ?? 0) > 0 && (
         <div className="flex items-center gap-3 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {selectedItems.length} item(s) selected
+            {(selectedItems?.length ?? 0)} item(s) selected
           </span>
           <div className="flex gap-2 ml-auto">
             <Button variant="primary" size="sm" onClick={handleBulkApprove}>

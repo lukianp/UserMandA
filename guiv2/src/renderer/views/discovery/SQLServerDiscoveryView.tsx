@@ -217,14 +217,14 @@ const SQLServerDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<Database />}
                 label="Total Instances"
-                value={stats.totalInstances}
-                subValue={`${stats.activeInstances} active`}
+                value={stats?.totalInstances ?? 0}
+                subValue={`${stats?.activeInstances ?? 0} active`}
                 variant="default"
               />
               <StatCard
                 icon={<FileText />}
                 label="Databases"
-                value={stats.totalDatabases}
+                value={stats?.totalDatabases ?? 0}
                 variant="default"
               />
               <StatCard
@@ -236,7 +236,7 @@ const SQLServerDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<AlertCircle />}
                 label="Backup Status"
-                value={stats.outdatedBackups}
+                value={stats?.outdatedBackups ?? 0}
                 subValue={stats.outdatedBackups > 0 ? 'databases need backup' : 'all up to date'}
                 variant={stats.outdatedBackups > 0 ? 'warning' : 'success'}
               />

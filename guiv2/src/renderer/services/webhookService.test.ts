@@ -2,13 +2,9 @@
  * WebhookService Tests
  */
 
-import { WebhookService, WebhookConfig } from './webhookService';
-
-// Mock fetch
-global.fetch = jest.fn();
-
-// Mock logging service
+// Mock logging service BEFORE imports
 jest.mock('./loggingService', () => ({
+  __esModule: true,
   default: {
     info: jest.fn(),
     warn: jest.fn(),
@@ -16,6 +12,11 @@ jest.mock('./loggingService', () => ({
     debug: jest.fn(),
   },
 }));
+
+import { WebhookService, WebhookConfig } from './webhookService';
+
+// Mock fetch
+global.fetch = jest.fn();
 
 describe('WebhookService', () => {
   let service: WebhookService;

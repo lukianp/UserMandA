@@ -23,42 +23,29 @@ const { useDomainDiscoveryLogic } = require('../../hooks/useDomainDiscoveryLogic
 describe('DomainDiscoveryView', () => {
   const mockHookDefaults = {
     formData: {
-      domainController: '',
+      domainController: 'dc.contoso.com',
       searchBase: '',
       includeUsers: true,
       includeGroups: true,
-      includeComputers: true,
+      includeComputers: false,
       includeOUs: false,
-    
-    updateFormField: jest.fn(),
-    resetForm: null,
-    isFormValid: false,
-    isRunning: false,
-    isCancelling: false,
-    progress: null,
-    results: null,
-    error: null,
-    logs: null,
-    startDiscovery: jest.fn(),
-    cancelDiscovery: jest.fn(),
-    exportResults: jest.fn(),
-    clearLogs: jest.fn(),
-    selectedProfile: { tenantId: '12345678-1234-1234-1234-123456789012', clientId: '87654321-4321-4321-4321-210987654321', isValid: true },
-  },
+      maxResults: 10000,
+      timeout: 300,
+    },
     updateFormField: jest.fn(),
     resetForm: jest.fn(),
-    isFormValid: false,
+    isFormValid: true,
     isRunning: false,
     isCancelling: false,
     progress: null,
-    results: null,
+    results: [],
     error: null,
     logs: [],
     startDiscovery: jest.fn(),
     cancelDiscovery: jest.fn(),
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
-    selectedProfile: null,
+    selectedProfile: { id: 'test-profile', name: 'Test Profile' },
   };
 
   beforeEach(() => {
@@ -113,6 +100,10 @@ describe('DomainDiscoveryView', () => {
     });
 
     it('does not display profile section when no profile selected', () => {
+      useDomainDiscoveryLogic.mockReturnValue({
+        ...mockHookDefaults,
+        selectedProfile: null,
+      });
       render(<DomainDiscoveryView />);
       expect(screen.queryByText(/Profile:/)).not.toBeInTheDocument();
     });
@@ -276,7 +267,7 @@ describe('DomainDiscoveryView', () => {
       });
 
       render(<DomainDiscoveryView />);
-      const button = screen.getByText(/Export/i);
+      const button = screen.getByTestId('export-btn');
       fireEvent.click(button);
 
       expect(exportResults).toHaveBeenCalled();
@@ -289,7 +280,7 @@ describe('DomainDiscoveryView', () => {
       });
 
       render(<DomainDiscoveryView />);
-      const button = screen.getByText(/Export/i).closest('button');
+      const button = screen.getByTestId('export-btn').closest('button');
       expect(button).toBeDisabled();
     });
   });
@@ -497,7 +488,7 @@ describe('DomainDiscoveryView', () => {
       expect(screen.getByText(/Results/i)).toBeInTheDocument();
 
       // Export results
-      const exportButton = screen.getByText(/Export/i);
+      const exportButton = screen.getByTestId('export-btn');
       fireEvent.click(exportButton);
       expect(exportResults).toHaveBeenCalled();
     });

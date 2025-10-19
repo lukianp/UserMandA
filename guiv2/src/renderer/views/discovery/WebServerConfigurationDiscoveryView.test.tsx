@@ -14,11 +14,11 @@ import {
 } from '../../test-utils/viewTestHelpers';
 
 // Mock the hook
-jest.mock('../../hooks/useWebServerConfigurationDiscoveryLogic', () => ({
-  useWebServerConfigurationDiscoveryLogic: jest.fn(),
+jest.mock('../../hooks/useWebServerDiscoveryLogic', () => ({
+  useWebServerDiscoveryLogic: jest.fn(),
 }));
 
-const { useWebServerConfigurationDiscoveryLogic } = require('../../hooks/useWebServerConfigurationDiscoveryLogic');
+const { useWebServerDiscoveryLogic } = require('../../hooks/useWebServerDiscoveryLogic');
 
 describe('WebServerConfigurationDiscoveryView', () => {
   const mockHookDefaults = {
@@ -56,7 +56,7 @@ describe('WebServerConfigurationDiscoveryView', () => {
 
   beforeEach(() => {
     resetAllMocks();
-    useWebServerConfigurationDiscoveryLogic.mockReturnValue(mockHookDefaults);
+    useWebServerDiscoveryLogic.mockReturnValue(mockHookDefaults);
   });
 
   afterEach(() => {
@@ -70,7 +70,7 @@ describe('WebServerConfigurationDiscoveryView', () => {
   describe('Rendering', () => {
     it('renders without crashing', () => {
       render(<WebServerConfigurationDiscoveryView />);
-      expect(screen.getByTestId('web-server-configuration-discovery-view')).toBeInTheDocument();
+      expect(screen.getByTestId('web-server-discovery-view')).toBeInTheDocument();
     });
 
     it('displays the view title', () => {
@@ -92,7 +92,7 @@ describe('WebServerConfigurationDiscoveryView', () => {
     });
 
     it('displays selected profile when available', () => {
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         selectedProfile: { name: 'Test Profile' },
       });
@@ -108,38 +108,38 @@ describe('WebServerConfigurationDiscoveryView', () => {
   describe('Button Actions', () => {
     it('calls startDiscovery when start button clicked', () => {
       const startDiscovery = jest.fn();
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         startDiscovery,
       });
 
       render(<WebServerConfigurationDiscoveryView />);
-      const button = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const button = screen.getByRole('button', { name: /Start/i }) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
       fireEvent.click(button);
 
       expect(startDiscovery).toHaveBeenCalled();
     });
 
     it('shows stop button when discovery is running', () => {
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
       });
 
       render(<WebServerConfigurationDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
     });
 
     it('calls cancelDiscovery when stop button clicked', () => {
       const cancelDiscovery = jest.fn();
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         cancelDiscovery,
       });
 
       render(<WebServerConfigurationDiscoveryView />);
-      const button = screen.getByText(/Stop/i) || screen.getByText(/Cancel/i);
+      const button = screen.getByTestId('cancel-discovery-btn');
       fireEvent.click(button);
 
       expect(cancelDiscovery).toHaveBeenCalled();
@@ -147,27 +147,27 @@ describe('WebServerConfigurationDiscoveryView', () => {
 
     it('calls exportResults when export button clicked', () => {
       const exportResults = jest.fn();
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: mockDiscoveryData(),
         exportResults,
       });
 
       render(<WebServerConfigurationDiscoveryView />);
-      const button = screen.getByText(/Export/i);
+      const button = screen.getByTestId('export-btn');
       fireEvent.click(button);
 
       expect(exportResults).toHaveBeenCalled();
     });
 
     it('disables export button when no results', () => {
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: null,
       });
 
       render(<WebServerConfigurationDiscoveryView />);
-      const button = screen.getByText(/Export/i).closest('button');
+      const button = screen.getByTestId('export-btn').closest('button');
       expect(button).toBeDisabled();
     });
   });
@@ -178,7 +178,7 @@ describe('WebServerConfigurationDiscoveryView', () => {
 
   describe('Progress Display', () => {
     it('shows progress when discovery is running', () => {
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         progress: {
@@ -207,7 +207,7 @@ describe('WebServerConfigurationDiscoveryView', () => {
   describe('Results Display', () => {
     it('displays results when available', () => {
       const results = mockDiscoveryData();
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results,
       });
@@ -232,7 +232,7 @@ describe('WebServerConfigurationDiscoveryView', () => {
 
   describe('Error Handling', () => {
     it('displays error message when error occurs', () => {
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         error: 'Test error message',
       });
@@ -253,7 +253,7 @@ describe('WebServerConfigurationDiscoveryView', () => {
 
   describe('Logs Display', () => {
     it('displays logs when available', () => {
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         logs: [
           { timestamp: '10:00:00', level: 'info', message: 'Discovery started' },
@@ -266,7 +266,7 @@ describe('WebServerConfigurationDiscoveryView', () => {
 
     it('calls clearLogs when clear button clicked', () => {
       const clearLogs = jest.fn();
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         logs: [
           { timestamp: '10:00:00', level: 'info', message: 'Test log' },
@@ -275,7 +275,7 @@ describe('WebServerConfigurationDiscoveryView', () => {
       });
 
       render(<WebServerConfigurationDiscoveryView />);
-      const button = screen.getByText(/Clear/i);
+      const button = screen.getByTestId('clear-logs-btn');
       if (button) {
         fireEvent.click(button);
         expect(clearLogs).toHaveBeenCalled();
@@ -290,7 +290,7 @@ describe('WebServerConfigurationDiscoveryView', () => {
   describe('Accessibility', () => {
     it('has accessible data-cy attributes', () => {
       render(<WebServerConfigurationDiscoveryView />);
-      expect(screen.getByTestId('web-server-configuration-discovery-view')).toBeInTheDocument();
+      expect(screen.getByTestId('web-server-discovery-view')).toBeInTheDocument();
     });
 
     it('has accessible button labels', () => {
@@ -313,7 +313,7 @@ describe('WebServerConfigurationDiscoveryView', () => {
       const exportResults = jest.fn();
 
       // Initial state
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         startDiscovery,
       });
@@ -321,22 +321,22 @@ describe('WebServerConfigurationDiscoveryView', () => {
       const { rerender } = render(<WebServerConfigurationDiscoveryView />);
 
       // Start discovery
-      const startButton = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const startButton = screen.getByRole('button', { name: /Start/i }) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
       fireEvent.click(startButton);
       expect(startDiscovery).toHaveBeenCalled();
 
       // Running state
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         progress: { current: 50, total: 100, percentage: 50 },
       });
 
       rerender(<WebServerConfigurationDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
 
       // Completed state with results
-      useWebServerConfigurationDiscoveryLogic.mockReturnValue({
+      useWebServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: mockDiscoveryData(),
         exportResults,
@@ -347,7 +347,7 @@ describe('WebServerConfigurationDiscoveryView', () => {
       expect(resultsSection).toBeTruthy();
 
       // Export results
-      const exportButton = screen.getByText(/Export/i);
+      const exportButton = screen.getByTestId('export-btn');
       fireEvent.click(exportButton);
       expect(exportResults).toHaveBeenCalled();
     });

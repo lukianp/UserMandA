@@ -411,6 +411,7 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
     // State
     config: state.config,
     result: state.result,
+    currentResult: result,
     isDiscovering: state.isDiscovering,
     progress: state.progress,
     activeTab: state.activeTab,
@@ -430,6 +431,7 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
     cancelDiscovery,
     exportToCSV,
     exportToExcel
+  
   };
 };
 

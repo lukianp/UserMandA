@@ -3,20 +3,17 @@
  * Provides necessary context providers for testing
  */
 
-import React from 'react';
-import { MemoryRouter, BrowserRouter } from 'react-router-dom';
+import React, { PropsWithChildren, ReactElement } from 'react';
+import { MemoryRouter, MemoryRouterProps } from 'react-router-dom';
 import { render, RenderOptions } from '@testing-library/react';
 
 /**
- * Wrapper component that provides Router context
+ * Basic Router wrappers retained for backward compatibility
  */
 export const RouterWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <MemoryRouter>{children}</MemoryRouter>;
 };
 
-/**
- * Wrapper with initial route
- */
 export const RouterWrapperWithRoute: React.FC<{
   children: React.ReactNode;
   initialEntries?: string[];
@@ -24,9 +21,6 @@ export const RouterWrapperWithRoute: React.FC<{
   return <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>;
 };
 
-/**
- * Custom render function with Router wrapper
- */
 export const renderWithRouter = (
   ui: React.ReactElement,
   options?: Omit<RenderOptions, 'wrapper'>
@@ -34,9 +28,6 @@ export const renderWithRouter = (
   return render(ui, { wrapper: RouterWrapper, ...options });
 };
 
-/**
- * Custom render function with Router and initial route
- */
 export const renderWithRouterAndRoute = (
   ui: React.ReactElement,
   initialEntries: string[] = ['/'],
@@ -49,24 +40,80 @@ export const renderWithRouterAndRoute = (
 };
 
 /**
- * All-in-one wrapper with common providers
- * Add more providers as needed (Theme, Store, etc.)
+ * Consolidated provider-aware render utility
+ * - Supports MemoryRouter configuration via options.router
+ * - Extend in the future with ThemeProvider/Store Providers
  */
-export const AllProvidersWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export interface ProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
+  router?: Partial<MemoryRouterProps> & { initialEntries?: string[] };
+}
+
+const Providers: React.FC<PropsWithChildren<{ router?: ProvidersOptions['router'] }>> = ({ children, router }) => {
+  const { initialEntries = ['/'], ...routerProps } = router || {};
   return (
-    <MemoryRouter>
-      {/* Add other providers here as needed */}
+    <MemoryRouter initialEntries={initialEntries} {...routerProps}>
       {children}
     </MemoryRouter>
   );
 };
 
-/**
- * Custom render with all providers
- */
-export const renderWithProviders = (
-  ui: React.ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
-) => {
-  return render(ui, { wrapper: AllProvidersWrapper, ...options });
+export const AllProvidersWrapper: React.FC<{ children: React.ReactNode; router?: ProvidersOptions['router'] }> = ({ children, router }) => {
+  const { initialEntries = ['/'], ...routerProps } = router || {};
+  return (
+    <MemoryRouter initialEntries={initialEntries} {...routerProps}>
+      {children}
+    </MemoryRouter>
+  );
 };
+
+export const renderWithProviders = (ui: ReactElement, options: ProvidersOptions = {}) => {
+  const { router, ...rtlOptions } = options;
+  return render(ui, {
+    wrapper: ({ children }) => <Providers router={router}>{children}</Providers>,
+    ...rtlOptions,
+  });
+};
+
+/**
+ * Enhanced render utility with error boundaries and mock setup
+ */
+export const renderWithEnhancedProviders = (ui: ReactElement, options: ProvidersOptions = {}) => {
+  // Set up additional mocks that might be needed
+  const originalError = console.error;
+  console.error = (...args: any[]) => {
+    // Suppress React errors in tests that we expect
+    if (typeof args[0] === 'string' && args[0].includes('Warning:')) {
+      return;
+    }
+    originalError.call(console, ...args);
+  };
+
+  const result = renderWithProviders(ui, options);
+
+  // Restore console.error after render
+  console.error = originalError;
+
+  return result;
+};
+
+/**
+ * Utility to create proper mock hook returns with fallbacks
+ */
+export const createMockHookReturn = <T extends Record<string, any>>(
+  defaults: Partial<T>,
+  overrides: Partial<T> = {}
+): T => {
+  const result = { ...defaults, ...overrides } as any;
+
+  // Ensure functions are jest mocks
+  Object.keys(result).forEach(key => {
+    if (typeof result[key] === 'function' && !jest.isMockFunction(result[key])) {
+      result[key] = jest.fn(result[key]);
+    }
+  });
+
+  return result as T;
+};
+
+// Re-export testing-library utilities for convenience
+export * from '@testing-library/react';

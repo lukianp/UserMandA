@@ -33,6 +33,7 @@ describe('CostOptimizationView', () => {
     loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
+    pagination: { page: 0, pageSize: 50, total: 0 },
   };
 
   beforeEach(() => {

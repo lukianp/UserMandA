@@ -87,7 +87,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       {payload.map((entry: any, index: number) => (
         <p key={index} className="text-sm text-gray-600 dark:text-gray-400">
           <span style={{ color: entry.color }}>{entry.name}: </span>
-          <span className="font-semibold">{entry.value.toLocaleString()}</span>
+          <span className="font-semibold">{(entry.value ?? 0).toLocaleString()}</span>
         </p>
       ))}
     </div>

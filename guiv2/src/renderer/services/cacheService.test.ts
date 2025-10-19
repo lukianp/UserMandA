@@ -2,10 +2,10 @@
  * CacheService Tests
  */
 
-import { CacheService } from './cacheService';
-
-// Mock logging service
+// Mock logging service BEFORE importing CacheService
+// This must be hoisted to prevent errors when the global instance is created
 jest.mock('./loggingService', () => ({
+  __esModule: true,
   default: {
     info: jest.fn(),
     warn: jest.fn(),
@@ -13,6 +13,8 @@ jest.mock('./loggingService', () => ({
     debug: jest.fn(),
   },
 }));
+
+import { CacheService } from './cacheService';
 
 describe('CacheService', () => {
   let cache: CacheService;
@@ -124,12 +126,17 @@ describe('CacheService', () => {
 
     it('should evict least recently used entry', () => {
       cache.set('key1', 'value1');
+      jest.advanceTimersByTime(10);
       cache.set('key2', 'value2');
+      jest.advanceTimersByTime(10);
       cache.set('key3', 'value3');
+      jest.advanceTimersByTime(10);
 
       // Access key1 and key2 to make key3 least recently used
       cache.get('key1');
+      jest.advanceTimersByTime(10);
       cache.get('key2');
+      jest.advanceTimersByTime(10);
 
       // Add new entry, should evict key3
       cache.set('key4', 'value4');

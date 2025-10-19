@@ -347,25 +347,25 @@ const AWSCloudInfrastructureDiscoveryView: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
           <div className="grid grid-cols-6 gap-4">
             <StatCard
-              value={stats.totalResources}
+              value={stats?.totalResources ?? 0}
               label="Total Resources"
               icon={<Cloud className="w-5 h-5" />}
               color="orange"
             />
             <StatCard
-              value={stats.ec2Count}
+              value={stats?.ec2Count ?? 0}
               label="EC2 Instances"
               icon={<Server className="w-5 h-5" />}
               color="blue"
             />
             <StatCard
-              value={stats.s3Count}
+              value={stats?.s3Count ?? 0}
               label="S3 Buckets"
               icon={<Database className="w-5 h-5" />}
               color="green"
             />
             <StatCard
-              value={stats.rdsCount}
+              value={stats?.rdsCount ?? 0}
               label="RDS Databases"
               icon={<Database className="w-5 h-5" />}
               color="purple"
@@ -377,7 +377,7 @@ const AWSCloudInfrastructureDiscoveryView: React.FC = () => {
               color="gray"
             />
             <StatCard
-              value={stats.securityRisks}
+              value={stats?.securityRisks ?? 0}
               label="Security Risks"
               icon={<Shield className="w-5 h-5" />}
               color={stats.securityRisks > 0 ? "red" : "green"}

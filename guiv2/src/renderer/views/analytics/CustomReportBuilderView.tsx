@@ -416,7 +416,7 @@ const CustomReportBuilderView: React.FC = () => {
             </div>
           </div>
           <div className="flex-1 p-4">
-            {reportData.length === 0 ? (
+            {(reportData?.length ?? 0) === 0 ? (
               <div className="h-full flex items-center justify-center">
                 <div className="text-center">
                   <Settings className="w-16 h-16 text-gray-400 mx-auto mb-4" />

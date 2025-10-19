@@ -730,6 +730,7 @@ export const usePowerPlatformDiscoveryLogic = () => {
     // State
     config: state.config,
     result: state.result,
+    currentResult: result,
     isDiscovering: state.isDiscovering,
     progress: state.progress,
     activeTab: state.activeTab,
@@ -750,5 +751,6 @@ export const usePowerPlatformDiscoveryLogic = () => {
     clearError,
     exportToCSV,
     exportToExcel
+  
   };
 };

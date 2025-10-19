@@ -217,20 +217,20 @@ const VMwareDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<Server />}
                 label="Total Hosts"
-                value={stats.totalHosts}
+                value={stats?.totalHosts ?? 0}
                 variant="default"
               />
               <StatCard
                 icon={<CheckCircle2 />}
                 label="Virtual Machines"
-                value={stats.totalVMs}
-                subValue={`${stats.poweredOnVMs} powered on`}
+                value={stats?.totalVMs ?? 0}
+                subValue={`${stats?.poweredOnVMs ?? 0} powered on`}
                 variant="default"
               />
               <StatCard
                 icon={<FileText />}
                 label="Clusters"
-                value={stats.totalClusters}
+                value={stats?.totalClusters ?? 0}
                 variant="default"
               />
               <StatCard

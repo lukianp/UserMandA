@@ -215,25 +215,25 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Discovery Statistics</h3>
           <div className="grid grid-cols-6 gap-4">
             <StatCard
-              value={stats.totalAccessReviews}
+              value={stats?.totalAccessReviews ?? 0}
               label="Access Reviews"
               color="purple"
               data-cy="stat-access-reviews"
             />
             <StatCard
-              value={stats.activeReviews}
+              value={stats?.activeReviews ?? 0}
               label="Active Reviews"
               color="green"
               data-cy="stat-active-reviews"
             />
             <StatCard
-              value={stats.totalEntitlements}
+              value={stats?.totalEntitlements ?? 0}
               label="Entitlements"
               color="blue"
               data-cy="stat-entitlements"
             />
             <StatCard
-              value={stats.totalPIMRoles}
+              value={stats?.totalPIMRoles ?? 0}
               label="PIM Roles"
               color="orange"
               data-cy="stat-pim-roles"
@@ -289,7 +289,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
       {/* FULLY FUNCTIONAL Search with debouncing */}
       <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900">
         <Input
-          value={filter.searchText}
+          value={filter?.searchText ?? ''}
           onChange={(e) => updateFilter({ searchText: e.target.value })}
           placeholder={`Search ${activeTab.replace('-', ' ')}...`}
           data-cy="search-input"
@@ -337,7 +337,7 @@ const StatCard: React.FC<StatCardProps> = ({ value, label, color, 'data-cy': dat
 
   return (
     <div className={`p-4 rounded-lg ${colorClasses[color]}`} data-cy={dataCy}>
-      <div className="text-3xl font-bold">{value.toLocaleString()}</div>
+      <div className="text-3xl font-bold">{(value ?? 0).toLocaleString()}</div>
       <div className="text-sm mt-1 opacity-80">{label}</div>
     </div>
   );
@@ -411,7 +411,7 @@ const OverviewTab: React.FC<{ stats: any; result: any }> = ({ stats, result }) =
 const SummaryRow: React.FC<{ label: string; value: number }> = ({ label, value }) => (
   <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
     <span className="text-sm text-gray-600 dark:text-gray-400">{label}</span>
-    <span className="text-sm font-medium text-gray-900 dark:text-white">{value.toLocaleString()}</span>
+    <span className="text-sm font-medium text-gray-900 dark:text-white">{(value ?? 0).toLocaleString()}</span>
   </div>
 );
 

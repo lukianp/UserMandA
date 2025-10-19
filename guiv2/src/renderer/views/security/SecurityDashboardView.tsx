@@ -48,7 +48,7 @@ export const SecurityDashboardView: React.FC = () => {
     },
     {
       label: 'Security Score',
-      value: `${stats.securityScore}/100`,
+      value: `${stats?.securityScore ?? 0}/100`,
       icon: Shield,
       color: 'blue',
       change: stats.scoreChange,

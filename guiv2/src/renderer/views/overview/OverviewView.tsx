@@ -157,7 +157,7 @@ const OverviewView: React.FC = () => {
 
       {/* Footer Info */}
       <div className="text-center text-xs text-[var(--text-secondary)] pt-4 border-t border-[var(--border)]">
-        Last updated: {new Date(stats.lastDataRefresh).toLocaleString()} | Data source: {stats.dataSource}
+        Last updated: {new Date(stats.lastDataRefresh).toLocaleString()} | Data source: {stats?.dataSource ?? 0}
       </div>
     </div>
   );

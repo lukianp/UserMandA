@@ -196,10 +196,10 @@ const HyperVDiscoveryView: React.FC = () => {
         <div className="p-6 bg-white dark:bg-gray-800 border-b">
           <h3 className="text-sm font-medium mb-4">Hyper-V Infrastructure Statistics</h3>
           <div className="grid grid-cols-6 gap-4">
-            <StatCard value={stats.totalHosts} label="Hosts" color="slate" />
-            <StatCard value={stats.totalVMs} label="Total VMs" color="blue" />
-            <StatCard value={stats.runningVMs} label="Running VMs" color="green" />
-            <StatCard value={stats.totalVCPUs} label="vCPUs" color="purple" />
+            <StatCard value={stats?.totalHosts ?? 0} label="Hosts" color="slate" />
+            <StatCard value={stats?.totalVMs ?? 0} label="Total VMs" color="blue" />
+            <StatCard value={stats?.runningVMs ?? 0} label="Running VMs" color="green" />
+            <StatCard value={stats?.totalVCPUs ?? 0} label="vCPUs" color="purple" />
             <StatCard
               value={`${(stats.totalMemoryAllocated / 1024 / 1024 / 1024).toFixed(1)} GB`}
               label="Memory"
@@ -258,7 +258,7 @@ const HyperVDiscoveryView: React.FC = () => {
         <div className="flex gap-4 items-end">
           <div className="flex-1">
             <Input
-              value={filter.searchText}
+              value={filter?.searchText ?? ''}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFilter({ searchText: e.target.value })}
               placeholder={`Search ${activeTab}...`}
             />

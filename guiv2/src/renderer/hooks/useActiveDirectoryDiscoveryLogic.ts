@@ -38,7 +38,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTab, setSelectedTab] = useState<string>('users');
   const [searchText, setSearchText] = useState<string>('');
-  const [errors, setErrors] = useState<string[]>([]);
+  const [errors, setErrors] = useState<string[] | null>(null);
 
   /**
    * Add a log entry
@@ -201,6 +201,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
     isCancelling,
     progress,
     results,
+    result: results,
     error,
     logs,
     startDiscovery,
@@ -225,5 +226,6 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
     setSelectedTab,
     setSearchText,
     exportData,
+  
   };
 };

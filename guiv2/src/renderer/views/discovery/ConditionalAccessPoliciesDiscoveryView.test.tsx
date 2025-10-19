@@ -14,11 +14,11 @@ import {
 } from '../../test-utils/viewTestHelpers';
 
 // Mock the hook
-jest.mock('../../hooks/useConditionalAccessPoliciesDiscoveryLogic', () => ({
-  useConditionalAccessPoliciesDiscoveryLogic: jest.fn(),
+jest.mock('../../hooks/useConditionalAccessDiscoveryLogic', () => ({
+  useConditionalAccessDiscoveryLogic: jest.fn(),
 }));
 
-const { useConditionalAccessPoliciesDiscoveryLogic } = require('../../hooks/useConditionalAccessPoliciesDiscoveryLogic');
+const { useConditionalAccessDiscoveryLogic } = require('../../hooks/useConditionalAccessDiscoveryLogic');
 
 describe('ConditionalAccessPoliciesDiscoveryView', () => {
   const mockHookDefaults = {
@@ -51,7 +51,7 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
 
   beforeEach(() => {
     resetAllMocks();
-    useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue(mockHookDefaults);
+    useConditionalAccessDiscoveryLogic.mockReturnValue(mockHookDefaults);
   });
 
   afterEach(() => {
@@ -65,7 +65,7 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
   describe('Rendering', () => {
     it('renders without crashing', () => {
       render(<ConditionalAccessPoliciesDiscoveryView />);
-      expect(screen.getByTestId('conditional-access-policies-discovery-view')).toBeInTheDocument();
+      expect(screen.getByTestId('conditional-access-discovery-view')).toBeInTheDocument();
     });
 
     it('displays the view title', () => {
@@ -87,7 +87,7 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
     });
 
     it('displays selected profile when available', () => {
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         selectedProfile: { name: 'Test Profile' },
       });
@@ -103,38 +103,38 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
   describe('Button Actions', () => {
     it('calls startDiscovery when start button clicked', () => {
       const startDiscovery = jest.fn();
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         startDiscovery,
       });
 
       render(<ConditionalAccessPoliciesDiscoveryView />);
-      const button = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const button = screen.getByRole('button', { name: /Start/i }) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
       fireEvent.click(button);
 
       expect(startDiscovery).toHaveBeenCalled();
     });
 
     it('shows stop button when discovery is running', () => {
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
       });
 
       render(<ConditionalAccessPoliciesDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
     });
 
     it('calls cancelDiscovery when stop button clicked', () => {
       const cancelDiscovery = jest.fn();
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         cancelDiscovery,
       });
 
       render(<ConditionalAccessPoliciesDiscoveryView />);
-      const button = screen.getByText(/Stop/i) || screen.getByText(/Cancel/i);
+      const button = screen.getByTestId('cancel-discovery-btn');
       fireEvent.click(button);
 
       expect(cancelDiscovery).toHaveBeenCalled();
@@ -142,27 +142,27 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
 
     it('calls exportResults when export button clicked', () => {
       const exportResults = jest.fn();
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: mockDiscoveryData(),
         exportResults,
       });
 
       render(<ConditionalAccessPoliciesDiscoveryView />);
-      const button = screen.getByText(/Export/i);
+      const button = screen.getByTestId('export-btn');
       fireEvent.click(button);
 
       expect(exportResults).toHaveBeenCalled();
     });
 
     it('disables export button when no results', () => {
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: null,
       });
 
       render(<ConditionalAccessPoliciesDiscoveryView />);
-      const button = screen.getByText(/Export/i).closest('button');
+      const button = screen.getByTestId('export-btn').closest('button');
       expect(button).toBeDisabled();
     });
   });
@@ -173,7 +173,7 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
 
   describe('Progress Display', () => {
     it('shows progress when discovery is running', () => {
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         progress: {
@@ -202,7 +202,7 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
   describe('Results Display', () => {
     it('displays results when available', () => {
       const results = mockDiscoveryData();
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results,
       });
@@ -227,7 +227,7 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
 
   describe('Error Handling', () => {
     it('displays error message when error occurs', () => {
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         error: 'Test error message',
       });
@@ -248,7 +248,7 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
 
   describe('Logs Display', () => {
     it('displays logs when available', () => {
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         logs: [
           { timestamp: '10:00:00', level: 'info', message: 'Discovery started' },
@@ -261,7 +261,7 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
 
     it('calls clearLogs when clear button clicked', () => {
       const clearLogs = jest.fn();
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         logs: [
           { timestamp: '10:00:00', level: 'info', message: 'Test log' },
@@ -270,7 +270,7 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
       });
 
       render(<ConditionalAccessPoliciesDiscoveryView />);
-      const button = screen.getByText(/Clear/i);
+      const button = screen.getByTestId('clear-logs-btn');
       if (button) {
         fireEvent.click(button);
         expect(clearLogs).toHaveBeenCalled();
@@ -285,7 +285,7 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
   describe('Accessibility', () => {
     it('has accessible data-cy attributes', () => {
       render(<ConditionalAccessPoliciesDiscoveryView />);
-      expect(screen.getByTestId('conditional-access-policies-discovery-view')).toBeInTheDocument();
+      expect(screen.getByTestId('conditional-access-discovery-view')).toBeInTheDocument();
     });
 
     it('has accessible button labels', () => {
@@ -308,7 +308,7 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
       const exportResults = jest.fn();
 
       // Initial state
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         startDiscovery,
       });
@@ -316,22 +316,22 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
       const { rerender } = render(<ConditionalAccessPoliciesDiscoveryView />);
 
       // Start discovery
-      const startButton = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const startButton = screen.getByRole('button', { name: /Start/i }) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
       fireEvent.click(startButton);
       expect(startDiscovery).toHaveBeenCalled();
 
       // Running state
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
         progress: { current: 50, total: 100, percentage: 50 },
       });
 
       rerender(<ConditionalAccessPoliciesDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
 
       // Completed state with results
-      useConditionalAccessPoliciesDiscoveryLogic.mockReturnValue({
+      useConditionalAccessDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         results: mockDiscoveryData(),
         exportResults,
@@ -342,7 +342,7 @@ describe('ConditionalAccessPoliciesDiscoveryView', () => {
       expect(resultsSection).toBeTruthy();
 
       // Export results
-      const exportButton = screen.getByText(/Export/i);
+      const exportButton = screen.getByTestId('export-btn');
       fireEvent.click(exportButton);
       expect(exportResults).toHaveBeenCalled();
     });

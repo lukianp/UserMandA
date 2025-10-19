@@ -34,6 +34,7 @@ describe('DataVisualizationView', () => {
     loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
+    pagination: { page: 0, pageSize: 50, total: 0 },
   };
 
   beforeEach(() => {
@@ -63,7 +64,7 @@ describe('DataVisualizationView', () => {
     it('displays the view description', () => {
       render(<DataVisualizationView />);
       expect(
-        screen.getByText(/Visualize discovery data/i)
+        screen.getByText(/Interactive charts/i)
       ).toBeInTheDocument();
     });
 

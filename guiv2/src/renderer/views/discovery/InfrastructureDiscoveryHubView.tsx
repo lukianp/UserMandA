@@ -158,16 +158,16 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
           ) : (
             <>
               {/* Active Discoveries Banner */}
-              {activeDiscoveries.length > 0 && (
+              {activeDiscoveries?.length > 0 && (
                 <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                      Active Discoveries ({activeDiscoveries.length})
+                      Active Discoveries ({activeDiscoveries?.length ?? 0})
                     </h3>
                   </div>
                   <div className="space-y-2">
-                    {activeDiscoveries.map((active) => (
+                    {activeDiscoveries?.map((active) => (
                       <div
                         key={active.id}
                         className="bg-white dark:bg-gray-800 rounded-md p-3 flex items-center justify-between"
@@ -205,7 +205,7 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
 
               {/* Discovery Modules Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {discoveryModules.map((module) => {
+                {discoveryModules?.map((module) => {
                   const IconComponent = iconMap[module.icon] || Database;
 
                   return (
@@ -254,7 +254,7 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
                         {module.resultCount !== undefined && module.resultCount > 0 && (
                           <div className="flex items-center gap-1">
                             <Database className="w-3 h-3" />
-                            <span>{module.resultCount.toLocaleString()} items</span>
+                            <span>{(module.resultCount ?? 0).toLocaleString()} items</span>
                           </div>
                         )}
                       </div>
@@ -273,7 +273,7 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
               </div>
 
               {/* Empty State */}
-              {discoveryModules.length === 0 && (
+              {discoveryModules?.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                   <Grid className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -307,7 +307,7 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
           </div>
 
           <div className="p-4">
-            {recentActivity.length === 0 ? (
+            {recentActivity?.length === 0 ? (
               <div className="text-center py-8">
                 <Clock className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
                 <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -316,7 +316,7 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {recentActivity.slice(0, 20).map((activity) => (
+                {recentActivity?.slice(0, 20).map((activity) => (
                   <div
                     key={activity.id}
                     className="pb-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
@@ -333,10 +333,10 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
                     </div>
                     <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
                       <span>{format(activity.timestamp, 'MMM d, h:mm a')}</span>
-                      <span>{activity.resultCount.toLocaleString()} items</span>
+                      <span>{activity.resultCount?.toLocaleString() ?? 0} items</span>
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                      Duration: {(activity.duration / 1000).toFixed(1)}s
+                      Duration: {((activity.duration ?? 0) / 1000).toFixed(1)}s
                     </div>
                   </div>
                 ))}

@@ -191,10 +191,10 @@ const GoogleWorkspaceDiscoveryView: React.FC = () => {
         <div className="p-6 bg-white dark:bg-gray-800 border-b">
           <h3 className="text-sm font-medium mb-4">Google Workspace Statistics</h3>
           <div className="grid grid-cols-6 gap-4">
-            <StatCard value={stats.totalUsers} label="Total Users" color="red" />
-            <StatCard value={stats.activeUsers} label="Active Users" color="green" />
-            <StatCard value={stats.suspendedUsers} label="Suspended" color="orange" />
-            <StatCard value={stats.totalGroups} label="Groups" color="blue" />
+            <StatCard value={stats?.totalUsers ?? 0} label="Total Users" color="red" />
+            <StatCard value={stats?.activeUsers ?? 0} label="Active Users" color="green" />
+            <StatCard value={stats?.suspendedUsers ?? 0} label="Suspended" color="orange" />
+            <StatCard value={stats?.totalGroups ?? 0} label="Groups" color="blue" />
             <StatCard
               value={`${(stats.totalStorageUsed / 1024 / 1024 / 1024).toFixed(2)} GB`}
               label="Total Storage"
@@ -267,7 +267,7 @@ const GoogleWorkspaceDiscoveryView: React.FC = () => {
         <div className="flex gap-4 items-end">
           <div className="flex-1">
             <Input
-              value={filter.searchText}
+              value={filter?.searchText ?? ''}
               onChange={(e) => updateFilter({ searchText: e.target.value })}
               placeholder={`Search ${activeTab}...`}
             />

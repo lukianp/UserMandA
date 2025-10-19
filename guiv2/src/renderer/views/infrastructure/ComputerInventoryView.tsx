@@ -66,7 +66,7 @@ const ComputerInventoryView: React.FC = () => {
             <Button
               variant="primary"
               onClick={handleExport}
-              disabled={data.length === 0}
+              disabled={(data?.length ?? 0) === 0}
               icon={<Download className="w-4 h-4" />}
             >
               Export
@@ -80,24 +80,24 @@ const ComputerInventoryView: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
             <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total</div>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</div>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats?.total ?? 0}</div>
           </div>
           <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
             <div className="text-sm text-green-600 dark:text-green-400 font-medium">Online</div>
             <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-              {stats.online} <span className="text-sm">({stats.onlinePercentage}%)</span>
+              {stats?.online ?? 0} <span className="text-sm">({stats?.onlinePercentage ?? 0}%)</span>
             </div>
           </div>
           <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
             <div className="text-sm text-red-600 dark:text-red-400 font-medium">Offline</div>
-            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.offline}</div>
+            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats?.offline ?? 0}</div>
           </div>
           <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
             <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">
               Updates Needed
             </div>
             <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-              {stats.needsUpdates}
+              {stats?.needsUpdates ?? 0}
             </div>
           </div>
           <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
@@ -105,13 +105,13 @@ const ComputerInventoryView: React.FC = () => {
               Low Disk Space
             </div>
             <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-              {stats.lowDiskSpace}
+              {stats?.lowDiskSpace ?? 0}
             </div>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
             <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Filtered</div>
             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {data.length}
+              {(data?.length ?? 0)}
             </div>
           </div>
         </div>
@@ -132,7 +132,7 @@ const ComputerInventoryView: React.FC = () => {
             onChange={(value) => updateFilter('osType', value)}
             options={[
               { value: '', label: 'All OS Types' },
-              ...filterOptions.osTypes.map((os) => ({ value: os, label: os }))
+              ...(filterOptions?.osTypes ?? []).map((os) => ({ value: os, label: os }))
             ]}
             className="min-w-[150px]"
           />
@@ -141,7 +141,7 @@ const ComputerInventoryView: React.FC = () => {
             onChange={(value) => updateFilter('domain', value)}
             options={[
               { value: '', label: 'All Domains' },
-              ...filterOptions.domains.map((domain) => ({ value: domain, label: domain }))
+              ...(filterOptions?.domains ?? []).map((domain) => ({ value: domain, label: domain }))
             ]}
             className="min-w-[150px]"
           />
@@ -150,7 +150,7 @@ const ComputerInventoryView: React.FC = () => {
             onChange={(value) => updateFilter('status', value)}
             options={[
               { value: '', label: 'All Statuses' },
-              ...filterOptions.statuses.map((status) => ({ value: status, label: status }))
+              ...(filterOptions?.statuses ?? []).map((status) => ({ value: status, label: status }))
             ]}
             className="min-w-[120px]"
           />
@@ -188,7 +188,7 @@ const ComputerInventoryView: React.FC = () => {
 
 // Helper functions
 function convertToCSV(data: any[]): string {
-  if (data.length === 0) return '';
+  if ((data?.length ?? 0) === 0) return '';
 
   const headers = Object.keys(data[0]);
   const csvRows = [

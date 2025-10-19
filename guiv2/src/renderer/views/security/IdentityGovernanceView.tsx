@@ -229,27 +229,27 @@ export const IdentityGovernanceView: React.FC = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Total Users</span>
-                  <span className="text-sm font-medium text-gray-900">{provisioningStatus.totalUsers.toLocaleString()}</span>
+                  <span className="text-sm font-medium text-gray-900">{(provisioningStatus.totalUsers ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Provisioned</span>
-                  <span className="text-sm font-medium text-green-700">{provisioningStatus.provisionedUsers.toLocaleString()}</span>
+                  <span className="text-sm font-medium text-green-700">{(provisioningStatus.provisionedUsers ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Pending</span>
-                  <span className="text-sm font-medium text-orange-700">{provisioningStatus.pendingProvisioning.toLocaleString()}</span>
+                  <span className="text-sm font-medium text-orange-700">{(provisioningStatus.pendingProvisioning ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Failed</span>
-                  <span className="text-sm font-medium text-red-700">{provisioningStatus.failedProvisioning.toLocaleString()}</span>
+                  <span className="text-sm font-medium text-red-700">{(provisioningStatus.failedProvisioning ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Deprovisioned</span>
-                  <span className="text-sm font-medium text-gray-700">{provisioningStatus.deprovisionedUsers.toLocaleString()}</span>
+                  <span className="text-sm font-medium text-gray-700">{(provisioningStatus.deprovisionedUsers ?? 0).toLocaleString()}</span>
                 </div>
               </div>
               <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
-                Last sync: {provisioningStatus.lastSyncTime.toLocaleString()}
+                Last sync: {(provisioningStatus.lastSyncTime ?? 0).toLocaleString()}
               </div>
             </div>
 
@@ -266,7 +266,7 @@ export const IdentityGovernanceView: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{event.userName}</p>
                       <p className="text-xs text-gray-600">{event.details}</p>
-                      <p className="text-xs text-gray-500 mt-1">{event.timestamp.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500 mt-1">{(event.timestamp ?? 0).toLocaleString()}</p>
                     </div>
                     <span className={`px-2 py-1 text-xs rounded-full ${
                       event.status === 'success' ? 'bg-green-100 text-green-800' :
@@ -428,7 +428,7 @@ export const IdentityGovernanceView: React.FC = () => {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
                         <h4 className="text-sm font-semibold text-gray-900">{event.userName}</h4>
-                        <span className="text-xs text-gray-500">{event.timestamp.toLocaleString()}</span>
+                        <span className="text-xs text-gray-500">{(event.timestamp ?? 0).toLocaleString()}</span>
                       </div>
                       <p className="text-sm text-gray-600 mb-2">{event.details}</p>
                       <div className="flex items-center space-x-3">

@@ -1,0 +1,367 @@
+{
+  "categories": {
+    "Module Loading": {
+      "pattern": {},
+      "count": 254,
+      "examples": [
+        {
+          "file": "views/migration/MigrationExecutionView.test.tsx",
+          "testName": "MigrationExecutionView Rendering renders without crashing",
+          "message": "TypeError: Cannot read properties of undefined (reading 'total')\n    at MigrationExecutionView (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\migration\\MigrationExecutionView.tsx:50:108)\n    at render"
+        },
+        {
+          "file": "views/migration/MigrationExecutionView.test.tsx",
+          "testName": "MigrationExecutionView Rendering displays the view title",
+          "message": "TypeError: Cannot read properties of undefined (reading 'total')\n    at MigrationExecutionView (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\migration\\MigrationExecutionView.tsx:50:108)\n    at render"
+        },
+        {
+          "file": "views/migration/MigrationExecutionView.test.tsx",
+          "testName": "MigrationExecutionView Rendering displays the view description",
+          "message": "TypeError: Cannot read properties of undefined (reading 'total')\n    at MigrationExecutionView (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\migration\\MigrationExecutionView.tsx:50:108)\n    at render"
+        }
+      ]
+    },
+    "Element Not Found": {
+      "pattern": {},
+      "count": 429,
+      "examples": [
+        {
+          "file": "main/services/powerShellService.test.ts",
+          "testName": "PowerShellExecutionService Error Handling should handle runtime errors",
+          "message": "Error: expect(received).rejects.toThrow()\n\nReceived promise resolved instead of rejected\nResolved to value: {\"duration\": 10, \"error\": \"Script failed with exit code 1\", \"exitCode\": 1, \"stderr\": \"Runtim"
+        },
+        {
+          "file": "components/organisms/VirtualizedDataGrid.test.tsx",
+          "testName": "VirtualizedDataGrid should display loading state",
+          "message": "TestingLibraryElementError: Unable to find an element by: [data-cy=\"grid-loading\"]\n\nIgnored nodes: comments, script, style\n\u001b[36m<body>\u001b[39m\n  \u001b[36m<div>\u001b[39m\n    \u001b[36m<div\u001b[39m\n      \u001b[33mclass\u001b[39m=\u001b"
+        },
+        {
+          "file": "views/discovery/AWSCloudInfrastructureDiscoveryView.test.tsx",
+          "testName": "AWSCloudInfrastructureDiscoveryView Rendering displays selected profile when available",
+          "message": "TestingLibraryElementError: Unable to find an element with the text: Test Profile. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your t"
+        }
+      ]
+    },
+    "Type Errors": {
+      "pattern": {},
+      "count": 21,
+      "examples": [
+        {
+          "file": "views/compliance/ComplianceDashboardView.test.tsx",
+          "testName": "ComplianceDashboardView Button Actions calls exportData when export button clicked",
+          "message": "TypeError: handleExport is not a function\n    at onClick (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\compliance\\ComplianceDashboardView.tsx:93:28)\n    at handleClick (D:\\Scripts\\UserMandA\\guiv2\\src"
+        },
+        {
+          "file": "views/assets/AssetInventoryView.test.tsx",
+          "testName": "AssetInventoryView Search and Filtering handles search input changes",
+          "message": "TypeError: setSearchText is not a function\n    at onChange (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\assets\\AssetInventoryView.tsx:110:30)\n    at HTMLUnknownElement.callCallback (D:\\Scripts\\UserM"
+        },
+        {
+          "file": "views/infrastructure/InfrastructureView.test.tsx",
+          "testName": "InfrastructureView Loading State shows loading state when data is loading",
+          "message": "TypeError: loadInfrastructure is not a function\n    at D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\infrastructure\\InfrastructureView.tsx:30:5\n    at commitHookEffectListMount (D:\\Scripts\\UserMandA\\g"
+        }
+      ]
+    },
+    "Mock Issues": {
+      "pattern": {},
+      "count": 40,
+      "examples": [
+        {
+          "file": "main/services/powerShellService.test.ts",
+          "testName": "PowerShellExecutionService Script Execution should stream output events",
+          "message": "Error: expect(jest.fn()).toHaveBeenCalled()\n\nExpected number of calls: >= 1\nReceived number of calls:    0\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\powerShellService.tes"
+        },
+        {
+          "file": "main/services/powerShellService.test.ts",
+          "testName": "PowerShellExecutionService Stream Handling should emit output stream events",
+          "message": "Error: expect(jest.fn()).toHaveBeenCalled()\n\nExpected number of calls: >= 1\nReceived number of calls:    0\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\powerShellService.tes"
+        },
+        {
+          "file": "main/services/powerShellService.test.ts",
+          "testName": "PowerShellExecutionService Stream Handling should emit error stream events",
+          "message": "Error: expect(jest.fn()).toHaveBeenCalled()\n\nExpected number of calls: >= 1\nReceived number of calls:    0\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\powerShellService.tes"
+        }
+      ]
+    },
+    "Async/Timing": {
+      "pattern": {},
+      "count": 275,
+      "examples": [
+        {
+          "file": "main/services/powerShellService.test.ts",
+          "testName": "PowerShellExecutionService Script Execution should handle script execution errors",
+          "message": "Error: expect(received).rejects.toThrow()\n\nReceived promise resolved instead of rejected\nResolved to value: {\"duration\": 14, \"error\": \"Script failed with exit code 1\", \"exitCode\": 1, \"stderr\": \"PowerS"
+        },
+        {
+          "file": "main/services/powerShellService.test.ts",
+          "testName": "PowerShellExecutionService Script Execution should support cancellation",
+          "message": "Error: thrown: \"Exceeded timeout of 10000 ms for a test.\nAdd a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout.\"\n"
+        },
+        {
+          "file": "main/services/powerShellService.test.ts",
+          "testName": "PowerShellExecutionService Session Pooling should reuse idle sessions",
+          "message": "Error: thrown: \"Exceeded timeout of 10000 ms for a test.\nAdd a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout.\"\n"
+        }
+      ]
+    },
+    "Assertion Failures": {
+      "pattern": {},
+      "count": 59,
+      "examples": [
+        {
+          "file": "main/services/powerShellService.test.ts",
+          "testName": "PowerShellExecutionService Script Execution should execute a script successfully",
+          "message": "Error: expect(received).toEqual(expected) // deep equality\n\n- Expected  - 0\n+ Received  + 3\n\n  Object {\n+   \"data\": Object {\n      \"users\": Array [],\n+   },\n+   \"success\": true,\n  }\n    at Object.<ano"
+        },
+        {
+          "file": "main/services/powerShellService.test.ts",
+          "testName": "PowerShellExecutionService Module Execution should execute a PowerShell module function",
+          "message": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: true\nReceived: false\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\powerShellService.test.ts:191:30)"
+        },
+        {
+          "file": "main/services/powerShellService.test.ts",
+          "testName": "PowerShellExecutionService Parallel Execution should handle parallel execution with failures",
+          "message": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: \"rejected\"\nReceived: \"fulfilled\"\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\powerShellService.test."
+        }
+      ]
+    },
+    "Import/Export": {
+      "pattern": {},
+      "count": 0,
+      "examples": []
+    },
+    "React/Rendering": {
+      "pattern": {},
+      "count": 0,
+      "examples": []
+    },
+    "Other": {
+      "count": 6,
+      "examples": [
+        {
+          "file": "renderer/store/useMigrationStore.test.ts",
+          "testName": "useMigrationStore Wave Execution should pause a running wave",
+          "message": "Error: expect(jest.fn()).toHaveBeenCalledWith(...expected)\n\nExpected: {\"functionName\": \"Pause-MigrationWave\", \"modulePath\": \"Modules/Migration/MigrationOrchestrator.psm1\", \"parameters\": {\"WaveId\": \"00"
+        },
+        {
+          "file": "renderer/store/useMigrationStore.test.ts",
+          "testName": "useMigrationStore Wave Execution should resume a paused wave",
+          "message": "Error: expect(jest.fn()).toHaveBeenCalledWith(...expected)\n\nExpected: {\"functionName\": \"Resume-MigrationWave\", \"modulePath\": \"Modules/Migration/MigrationOrchestrator.psm1\", \"parameters\": {\"WaveId\": \"0"
+        },
+        {
+          "file": "renderer/store/useMigrationStore.test.ts",
+          "testName": "useMigrationStore Rollback System should rollback to a previous point",
+          "message": "Error: expect(jest.fn()).toHaveBeenCalledWith(...expected)\n\nExpected: {\"functionName\": \"Invoke-MigrationRollback\", \"modulePath\": \"Modules/Migration/MigrationOrchestrator.psm1\", \"parameters\": ObjectCon"
+        }
+      ]
+    }
+  },
+  "problematicFiles": [
+    [
+      "SecurityAuditView.test.tsx",
+      {
+        "total": 25,
+        "failed": 25,
+        "passed": 0,
+        "failureRate": 1,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\security\\SecurityAuditView.test.tsx"
+      }
+    ],
+    [
+      "ServerInventoryView.test.tsx",
+      {
+        "total": 25,
+        "failed": 25,
+        "passed": 0,
+        "failureRate": 1,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\assets\\ServerInventoryView.test.tsx"
+      }
+    ],
+    [
+      "PolicyManagementView.test.tsx",
+      {
+        "total": 25,
+        "failed": 25,
+        "passed": 0,
+        "failureRate": 1,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\security\\PolicyManagementView.test.tsx"
+      }
+    ],
+    [
+      "SecurityDashboardView.test.tsx",
+      {
+        "total": 25,
+        "failed": 25,
+        "passed": 0,
+        "failureRate": 1,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\security\\SecurityDashboardView.test.tsx"
+      }
+    ],
+    [
+      "ReportsView.test.tsx",
+      {
+        "total": 22,
+        "failed": 22,
+        "passed": 0,
+        "failureRate": 1,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\reports\\ReportsView.test.tsx"
+      }
+    ],
+    [
+      "InfrastructureView.test.tsx",
+      {
+        "total": 22,
+        "failed": 22,
+        "passed": 0,
+        "failureRate": 1,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\infrastructure\\InfrastructureView.test.tsx"
+      }
+    ],
+    [
+      "powerShellService.test.ts",
+      {
+        "total": 32,
+        "failed": 21,
+        "passed": 11,
+        "failureRate": 0.65625,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\powerShellService.test.ts"
+      }
+    ],
+    [
+      "HyperVDiscoveryView.test.tsx",
+      {
+        "total": 21,
+        "failed": 21,
+        "passed": 0,
+        "failureRate": 1,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\discovery\\HyperVDiscoveryView.test.tsx"
+      }
+    ],
+    [
+      "DataLossPreventionDiscoveryView.test.tsx",
+      {
+        "total": 21,
+        "failed": 21,
+        "passed": 0,
+        "failureRate": 1,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\discovery\\DataLossPreventionDiscoveryView.test.tsx"
+      }
+    ],
+    [
+      "EnvironmentDetectionView.test.tsx",
+      {
+        "total": 21,
+        "failed": 21,
+        "passed": 0,
+        "failureRate": 1,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\discovery\\EnvironmentDetectionView.test.tsx"
+      }
+    ],
+    [
+      "PowerPlatformDiscoveryView.test.tsx",
+      {
+        "total": 21,
+        "failed": 21,
+        "passed": 0,
+        "failureRate": 1,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\discovery\\PowerPlatformDiscoveryView.test.tsx"
+      }
+    ],
+    [
+      "ConditionalAccessPoliciesDiscoveryView.test.tsx",
+      {
+        "total": 21,
+        "failed": 21,
+        "passed": 0,
+        "failureRate": 1,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\discovery\\ConditionalAccessPoliciesDiscoveryView.test.tsx"
+      }
+    ],
+    [
+      "IntuneDiscoveryView.test.tsx",
+      {
+        "total": 21,
+        "failed": 21,
+        "passed": 0,
+        "failureRate": 1,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\discovery\\IntuneDiscoveryView.test.tsx"
+      }
+    ],
+    [
+      "WebServerConfigurationDiscoveryView.test.tsx",
+      {
+        "total": 21,
+        "failed": 21,
+        "passed": 0,
+        "failureRate": 1,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\discovery\\WebServerConfigurationDiscoveryView.test.tsx"
+      }
+    ],
+    [
+      "DomainDiscoveryView.test.tsx",
+      {
+        "total": 35,
+        "failed": 18,
+        "passed": 17,
+        "failureRate": 0.5142857142857142,
+        "path": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\discovery\\DomainDiscoveryView.test.tsx"
+      }
+    ]
+  ],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "title": "Module Loading Issues",
+      "description": "254 tests failing due to module loading problems",
+      "actions": [
+        "Check for global mocks in setupTests.ts that may interfere",
+        "Ensure __esModule: true is set in mocks",
+        "Verify module exports match import statements",
+        "Add default export for classes if using CommonJS"
+      ]
+    },
+    {
+      "priority": "MEDIUM",
+      "title": "Element Not Found Errors",
+      "description": "429 tests can't find expected elements",
+      "actions": [
+        "Verify test selectors match component data-cy attributes",
+        "Check if components are rendering conditionally",
+        "Add waitFor() for async element appearances",
+        "Review VirtualizedDataGrid mock configuration"
+      ]
+    },
+    {
+      "priority": "MEDIUM",
+      "title": "Type/Function Errors",
+      "description": "21 tests encountering type errors",
+      "actions": [
+        "Verify function exists in service implementation",
+        "Check if methods are private/protected",
+        "Ensure services are properly initialized",
+        "Review mock implementations for completeness"
+      ]
+    },
+    {
+      "priority": "LOW",
+      "title": "Async/Timing Issues",
+      "description": "275 tests with timeout or async problems",
+      "actions": [
+        "Add jest.advanceTimersByTime() when using fake timers",
+        "Ensure async functions use await properly",
+        "Increase timeout for slow integration tests",
+        "Check for infinite loops or unresolved promises"
+      ]
+    }
+  ],
+  "summary": {
+    "totalSuites": 136,
+    "passedSuites": 7,
+    "failedSuites": 129,
+    "totalTests": 2117,
+    "passedTests": 1017,
+    "failedTests": 1084,
+    "passRate": "48.0"
+  }
+}

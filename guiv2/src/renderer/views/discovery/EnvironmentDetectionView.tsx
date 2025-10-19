@@ -175,7 +175,7 @@ const EnvironmentDetectionView: React.FC = () => {
           <h3 className="text-sm font-medium mb-4">Environment Statistics</h3>
           <div className="grid grid-cols-6 gap-4">
             <StatCard
-              value={stats.totalServicesDetected}
+              value={stats?.totalServicesDetected ?? 0}
               label="Total Services"
               color="emerald"
             />
@@ -205,7 +205,7 @@ const EnvironmentDetectionView: React.FC = () => {
               color="red"
             />
             <StatCard
-              value={stats.criticalRecommendations}
+              value={stats?.criticalRecommendations ?? 0}
               label="Critical Items"
               color="rose"
             />
@@ -251,7 +251,7 @@ const EnvironmentDetectionView: React.FC = () => {
         <div className="flex gap-4 items-end">
           <div className="flex-1">
             <Input
-              value={filter.searchText}
+              value={filter?.searchText ?? ''}
               onChange={(e) => updateFilter({ searchText: e.target.value })}
               placeholder={`Search ${activeTab}...`}
             />

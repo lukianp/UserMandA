@@ -33,6 +33,7 @@ describe('LicensingDiscoveryView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null,
+    pagination: { page: 0, pageSize: 50, total: 0 },
   };
 
   beforeEach(() => {
@@ -95,7 +96,7 @@ describe('LicensingDiscoveryView', () => {
       });
 
       render(<LicensingDiscoveryView />);
-      const button = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const button = screen.getByTestId('start-discovery-btn');
       fireEvent.click(button);
 
       expect(startDiscovery).toHaveBeenCalled();
@@ -108,7 +109,7 @@ describe('LicensingDiscoveryView', () => {
       });
 
       render(<LicensingDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
     });
 
     it('calls cancelDiscovery when stop button clicked', () => {
@@ -120,7 +121,7 @@ describe('LicensingDiscoveryView', () => {
       });
 
       render(<LicensingDiscoveryView />);
-      const button = screen.getByText(/Stop/i) || screen.getByText(/Cancel/i);
+      const button = screen.getByTestId('cancel-discovery-btn');
       fireEvent.click(button);
 
       expect(cancelDiscovery).toHaveBeenCalled();
@@ -135,7 +136,7 @@ describe('LicensingDiscoveryView', () => {
       });
 
       render(<LicensingDiscoveryView />);
-      const button = screen.getByText(/Export/i);
+      const button = screen.getByTestId('export-btn');
       fireEvent.click(button);
 
       expect(exportResults).toHaveBeenCalled();
@@ -148,7 +149,7 @@ describe('LicensingDiscoveryView', () => {
       });
 
       render(<LicensingDiscoveryView />);
-      const button = screen.getByText(/Export/i).closest('button');
+      const button = screen.getByTestId('export-btn').closest('button');
       expect(button).toBeDisabled();
     });
   });
@@ -256,7 +257,7 @@ describe('LicensingDiscoveryView', () => {
       });
 
       render(<LicensingDiscoveryView />);
-      const button = screen.getByText(/Clear/i);
+      const button = screen.getByTestId('clear-logs-btn');
       if (button) {
         fireEvent.click(button);
         expect(clearLogs).toHaveBeenCalled();
@@ -302,7 +303,7 @@ describe('LicensingDiscoveryView', () => {
       const { rerender } = render(<LicensingDiscoveryView />);
 
       // Start discovery
-      const startButton = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const startButton = screen.getByTestId('start-discovery-btn');
       fireEvent.click(startButton);
       expect(startDiscovery).toHaveBeenCalled();
 
@@ -314,7 +315,7 @@ describe('LicensingDiscoveryView', () => {
       });
 
       rerender(<LicensingDiscoveryView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
 
       // Completed state with results
       useLicensingDiscoveryLogic.mockReturnValue({
@@ -328,7 +329,7 @@ describe('LicensingDiscoveryView', () => {
       expect(resultsSection).toBeTruthy();
 
       // Export results
-      const exportButton = screen.getByText(/Export/i);
+      const exportButton = screen.getByTestId('export-btn');
       fireEvent.click(exportButton);
       expect(exportResults).toHaveBeenCalled();
     });

@@ -203,7 +203,7 @@ const LicensingDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Key className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.totalLicenses.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.totalLicenses ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Total Licenses</div>
               </div>
             </div>
@@ -213,7 +213,7 @@ const LicensingDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Users className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.totalAssigned.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.totalAssigned ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Assigned</div>
               </div>
             </div>
@@ -223,7 +223,7 @@ const LicensingDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Package className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.totalAvailable.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.totalAvailable ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Available</div>
               </div>
             </div>
@@ -253,7 +253,7 @@ const LicensingDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Calendar className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.expiringCount}</div>
+                <div className="text-3xl font-bold">{stats?.expiringCount ?? 0}</div>
                 <div className="text-sm opacity-90">Expiring Soon</div>
               </div>
             </div>
@@ -263,7 +263,7 @@ const LicensingDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <AlertTriangle className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.underlicensedCount}</div>
+                <div className="text-3xl font-bold">{stats?.underlicensedCount ?? 0}</div>
                 <div className="text-sm opacity-90">Underlicensed</div>
               </div>
             </div>
@@ -273,7 +273,7 @@ const LicensingDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <CheckCircle className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.overlicensedCount}</div>
+                <div className="text-3xl font-bold">{stats?.overlicensedCount ?? 0}</div>
                 <div className="text-sm opacity-90">Overlicensed</div>
               </div>
             </div>
@@ -307,7 +307,7 @@ const LicensingDiscoveryView: React.FC = () => {
           >
             <Key className="w-4 h-4" />
             Licenses
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats.totalLicenses}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalLicenses ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('assignments')}
@@ -320,7 +320,7 @@ const LicensingDiscoveryView: React.FC = () => {
           >
             <Users className="w-4 h-4" />
             Assignments
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats.totalAssigned}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalAssigned ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('subscriptions')}

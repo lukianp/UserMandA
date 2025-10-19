@@ -66,7 +66,7 @@ const ServerInventoryView: React.FC = () => {
             <Button
               variant="primary"
               onClick={handleExport}
-              disabled={data.length === 0}
+              disabled={(data?.length ?? 0) === 0}
               icon={<Download className="w-4 h-4" />}
             >
               Export
@@ -80,27 +80,27 @@ const ServerInventoryView: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
             <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Servers</div>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</div>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats?.total ?? 0}</div>
           </div>
           <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
             <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">Physical</div>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.physical}</div>
+            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats?.physical ?? 0}</div>
           </div>
           <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
             <div className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">Virtual</div>
-            <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{stats.virtual}</div>
+            <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{stats?.virtual ?? 0}</div>
           </div>
           <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
             <div className="text-sm text-red-600 dark:text-red-400 font-medium">Critical</div>
-            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.critical}</div>
+            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats?.critical ?? 0}</div>
           </div>
           <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
             <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">High Resource</div>
-            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{stats.highResource}</div>
+            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{stats?.highResource ?? 0}</div>
           </div>
           <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
             <div className="text-sm text-green-600 dark:text-green-400 font-medium">Clustered</div>
-            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.clustered}</div>
+            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats?.clustered ?? 0}</div>
           </div>
         </div>
       </div>
@@ -121,7 +121,7 @@ const ServerInventoryView: React.FC = () => {
             className="min-w-[180px]"
             options={[
               { value: '', label: 'All Roles' },
-              ...filterOptions.roles.map((role) => ({ value: role, label: role }))
+              ...(filterOptions?.roles ?? []).map((role) => ({ value: role, label: role }))
             ]}
           />
           <Select
@@ -130,7 +130,7 @@ const ServerInventoryView: React.FC = () => {
             className="min-w-[180px]"
             options={[
               { value: '', label: 'All OS Types' },
-              ...filterOptions.osTypes.map((os) => ({ value: os, label: os }))
+              ...(filterOptions?.osTypes ?? []).map((os) => ({ value: os, label: os }))
             ]}
           />
           <Select
@@ -139,7 +139,7 @@ const ServerInventoryView: React.FC = () => {
             className="min-w-[150px]"
             options={[
               { value: '', label: 'All Criticality' },
-              ...filterOptions.criticalities.map((criticality) => ({ value: criticality, label: criticality }))
+              ...(filterOptions?.criticalities ?? []).map((criticality) => ({ value: criticality, label: criticality }))
             ]}
           />
           <Select
@@ -148,7 +148,7 @@ const ServerInventoryView: React.FC = () => {
             className="min-w-[150px]"
             options={[
               { value: '', label: 'All Clusters' },
-              ...filterOptions.clusters.map((cluster) => ({ value: cluster, label: cluster }))
+              ...(filterOptions?.clusters ?? []).map((cluster) => ({ value: cluster, label: cluster }))
             ]}
           />
           <Button variant="secondary" onClick={clearFilters} size="sm">
@@ -185,7 +185,7 @@ const ServerInventoryView: React.FC = () => {
 
 // Helper functions
 function convertToCSV(data: any[]): string {
-  if (data.length === 0) return '';
+  if ((data?.length ?? 0) === 0) return '';
   const headers = Object.keys(data[0]);
   const csvRows = [
     headers.join(','),

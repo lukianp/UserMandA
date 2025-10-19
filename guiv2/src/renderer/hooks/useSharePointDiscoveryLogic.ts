@@ -529,6 +529,7 @@ export function useSharePointDiscoveryLogic() {
     config,
     setConfig,
     result,
+    currentResult: result,
     progress,
     isDiscovering,
     error,
@@ -570,5 +571,6 @@ export function useSharePointDiscoveryLogic() {
 
     // Statistics
     statistics: result?.statistics,
+  
   };
 }

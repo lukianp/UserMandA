@@ -222,7 +222,7 @@ const DeviceManagementView: React.FC = () => {
 
 // Helper functions
 function convertToCSV(data: any[]): string {
-  if (data.length === 0) return '';
+  if ((data?.length ?? 0) === 0) return '';
   const headers = Object.keys(data[0]);
   const csvRows = [
     headers.join(','),

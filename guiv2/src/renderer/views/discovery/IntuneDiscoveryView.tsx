@@ -208,7 +208,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Monitor className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.totalDevices.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.totalDevices ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Total Devices</div>
               </div>
             </div>
@@ -218,7 +218,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <ShieldCheck className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.compliantDevices.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.compliantDevices ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Compliant Devices</div>
               </div>
             </div>
@@ -228,7 +228,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <ShieldAlert className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.nonCompliantDevices.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.nonCompliantDevices ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Non-Compliant</div>
               </div>
             </div>
@@ -248,7 +248,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Package className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.totalApplications.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.totalApplications ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Applications</div>
               </div>
             </div>
@@ -258,7 +258,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <FileText className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.totalConfigPolicies.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.totalConfigPolicies ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Config Policies</div>
               </div>
             </div>
@@ -268,7 +268,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Shield className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.totalCompliancePolicies.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.totalCompliancePolicies ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Compliance Policies</div>
               </div>
             </div>
@@ -278,7 +278,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <ShieldCheck className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.totalAppProtectionPolicies.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats.totalAppProtectionPolicies ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">App Protection</div>
               </div>
             </div>
@@ -312,7 +312,7 @@ const IntuneDiscoveryView: React.FC = () => {
           >
             <Smartphone className="w-4 h-4" />
             Devices
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats.totalDevices}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalDevices ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('applications')}
@@ -325,7 +325,7 @@ const IntuneDiscoveryView: React.FC = () => {
           >
             <Package className="w-4 h-4" />
             Applications
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats.totalApplications}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalApplications ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('config-policies')}
@@ -338,7 +338,7 @@ const IntuneDiscoveryView: React.FC = () => {
           >
             <FileText className="w-4 h-4" />
             Config Policies
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats.totalConfigPolicies}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalConfigPolicies ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('compliance-policies')}
@@ -351,7 +351,7 @@ const IntuneDiscoveryView: React.FC = () => {
           >
             <Shield className="w-4 h-4" />
             Compliance
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats.totalCompliancePolicies}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalCompliancePolicies ?? 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('app-protection')}
@@ -364,7 +364,7 @@ const IntuneDiscoveryView: React.FC = () => {
           >
             <ShieldCheck className="w-4 h-4" />
             App Protection
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats.totalAppProtectionPolicies}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalAppProtectionPolicies ?? 0}</span>}
           </button>
         </div>
       </div>

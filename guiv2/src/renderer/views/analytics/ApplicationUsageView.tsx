@@ -24,7 +24,7 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
  * Format currency
  */
 const formatCurrency = (amount: number): string => {
-  return `$${amount.toLocaleString()}`;
+  return `$${(amount ?? 0).toLocaleString()}`;
 };
 
 /**

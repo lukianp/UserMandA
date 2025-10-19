@@ -2249,6 +2249,13 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   const { registerErrorMonitoringHandlers } = await import('./ipc/errorMonitoringHandlers');
   registerErrorMonitoringHandlers(mainWindow || undefined);
 
+  // ========================================
+  // Centralized Logging (Task 10)
+  // ========================================
+  const { registerLoggingHandlers, initializeLogging } = await import('./ipc/loggingHandlers');
+  await initializeLogging();
+  registerLoggingHandlers();
+
   console.log('All IPC handlers registered successfully');
 }
 

@@ -150,9 +150,9 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
         <div className="p-6 bg-white dark:bg-gray-800 border-b">
           <h3 className="text-sm font-medium mb-4">Statistics</h3>
           <div className="grid grid-cols-6 gap-4">
-            <StatCard value={stats.totalPolicies} label="Policies" color="rose" />
-            <StatCard value={stats.enabledPolicies} label="Enabled" color="green" />
-            <StatCard value={stats.totalIncidents} label="Incidents" color="orange" />
+            <StatCard value={stats?.totalPolicies ?? 0} label="Policies" color="rose" />
+            <StatCard value={stats?.enabledPolicies ?? 0} label="Enabled" color="green" />
+            <StatCard value={stats?.totalIncidents ?? 0} label="Incidents" color="orange" />
             <StatCard value={stats.incidentsBySeverity.critical} label="Critical" color="red" />
             <StatCard value={stats.incidentsBySeverity.high} label="High" color="yellow" />
             <StatCard value={stats.incidentsBySeverity.medium + stats.incidentsBySeverity.low} label="Med/Low" color="blue" />
@@ -172,7 +172,7 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
       {/* Search */}
       <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900">
         <Input
-          value={filter.searchText}
+          value={filter?.searchText ?? ''}
           onChange={(e) => updateFilter({ searchText: e.target.value })}
           placeholder={`Search ${activeTab}...`}
         />
@@ -210,7 +210,7 @@ const StatCard: React.FC<{ value: number; label: string; color: string }> = ({ v
 
   return (
     <div className={`p-4 rounded-lg ${colors[color]}`}>
-      <div className="text-3xl font-bold">{value.toLocaleString()}</div>
+      <div className="text-3xl font-bold">{(value ?? 0).toLocaleString()}</div>
       <div className="text-sm mt-1 opacity-80">{label}</div>
     </div>
   );
@@ -262,7 +262,7 @@ const OverviewTab: React.FC<{ stats: any; result: any }> = ({ stats, result }) =
 const SummaryRow: React.FC<{ label: string; value: number }> = ({ label, value }) => (
   <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
     <span className="text-sm text-gray-600 dark:text-gray-400">{label}</span>
-    <span className="text-sm font-medium">{value.toLocaleString()}</span>
+    <span className="text-sm font-medium">{(value ?? 0).toLocaleString()}</span>
   </div>
 );
 

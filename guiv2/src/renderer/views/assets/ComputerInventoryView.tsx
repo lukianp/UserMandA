@@ -57,31 +57,31 @@ const ComputerInventoryView: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
             <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Computers</div>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</div>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats?.total ?? 0}</div>
           </div>
           <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
             <div className="text-sm text-green-600 dark:text-green-400 font-medium">Online</div>
             <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-              {stats.online}
+              {stats?.online ?? 0}
               <span className="text-sm ml-2 text-green-600 dark:text-green-400">
-                ({stats.onlinePercentage}%)
+                ({stats?.onlinePercentage ?? 0}%)
               </span>
             </div>
           </div>
           <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
             <div className="text-sm text-red-600 dark:text-red-400 font-medium">Offline</div>
-            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.offline}</div>
+            <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats?.offline ?? 0}</div>
           </div>
           <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
             <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">Needs Updates</div>
             <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-              {stats.needsUpdates}
+              {stats?.needsUpdates ?? 0}
             </div>
           </div>
           <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
             <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Low Disk</div>
             <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
-              {stats.lowDiskSpace}
+              {stats?.lowDiskSpace ?? 0}
             </div>
           </div>
         </div>
@@ -117,7 +117,7 @@ const ComputerInventoryView: React.FC = () => {
             data-cy="os-type-select"
             options={[
               { value: '', label: 'All OS Types' },
-              ...filterOptions.osTypes.map((os) => ({ value: os, label: os }))
+              ...(filterOptions?.osTypes ?? []).map((os) => ({ value: os, label: os }))
             ]}
           />
           <Select
@@ -126,7 +126,7 @@ const ComputerInventoryView: React.FC = () => {
             data-cy="domain-select"
             options={[
               { value: '', label: 'All Domains' },
-              ...filterOptions.domains.map((domain) => ({ value: domain, label: domain }))
+              ...(filterOptions?.domains ?? []).map((domain) => ({ value: domain, label: domain }))
             ]}
           />
           <Select
@@ -135,7 +135,7 @@ const ComputerInventoryView: React.FC = () => {
             data-cy="ou-select"
             options={[
               { value: '', label: 'All OUs' },
-              ...filterOptions.ous.map((ou) => ({ value: ou, label: ou }))
+              ...(filterOptions?.ous ?? []).map((ou) => ({ value: ou, label: ou }))
             ]}
           />
           <Select
@@ -144,7 +144,7 @@ const ComputerInventoryView: React.FC = () => {
             data-cy="status-select"
             options={[
               { value: '', label: 'All Statuses' },
-              ...filterOptions.statuses.map((status) => ({ value: status, label: status }))
+              ...(filterOptions?.statuses ?? []).map((status) => ({ value: status, label: status }))
             ]}
           />
         </div>
@@ -179,7 +179,7 @@ const ComputerInventoryView: React.FC = () => {
               variant="secondary"
               icon={<Download className="w-4 h-4" />}
               onClick={exportData}
-              disabled={data.length === 0}
+              disabled={(data?.length ?? 0) === 0}
               data-cy="export-btn"
             >
               Export CSV

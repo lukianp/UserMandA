@@ -142,7 +142,7 @@ const InfrastructureView: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-2">
         <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
           <span>Total items: {infrastructure.length}</span>
-          <span>Selected: {selectedItems.length}</span>
+          <span>Selected: {(selectedItems?.length ?? 0)}</span>
         </div>
       </div>
     </div>

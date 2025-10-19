@@ -106,7 +106,7 @@ export const IncidentResponseView: React.FC = () => {
                   </div>
                   <p className="text-sm text-gray-600 mb-2">{incident.description}</p>
                   <div className="text-xs text-gray-500">
-                    Detected: {incident.detectedAt.toLocaleString()} | Status: {incident.status}
+                    Detected: {(incident.detectedAt ?? 0).toLocaleString()} | Status: {incident.status}
                   </div>
                 </div>
               ))}

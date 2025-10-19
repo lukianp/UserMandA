@@ -316,7 +316,7 @@ const DataVisualizationView: React.FC = () => {
       const sampleData = generateSampleData(config.dataSource, config.dateRange);
       setData(sampleData);
 
-      showInfo(`Loaded ${sampleData.length} records from ${config.dataSource}`);
+      showInfo(`Loaded ${(sampleData?.length ?? 0)} records from ${config.dataSource}`);
     } catch (error) {
       showError(`Failed to load data: ${error}`);
     } finally {
@@ -391,7 +391,7 @@ const DataVisualizationView: React.FC = () => {
   const numericFields = useMemo(() => {
     return dataSourceFields[config.dataSource].filter(field => {
       // Check if field is numeric based on sample data
-      if (data.length > 0) {
+      if ((data?.length ?? 0) > 0) {
         const value = data[0][field.value];
         return typeof value === 'number';
       }
@@ -412,7 +412,7 @@ const DataVisualizationView: React.FC = () => {
       );
     }
 
-    if (!data || data.length === 0) {
+    if (!data || (data?.length ?? 0) === 0) {
       return (
         <div className="h-full flex items-center justify-center">
           <div className="text-center">
@@ -507,7 +507,7 @@ const DataVisualizationView: React.FC = () => {
                 label={customization.showDataLabels}
                 animationDuration={customization.animationDuration}
               >
-                {pieData.map((entry: any, index: number) => (
+                {(pieData ?? []).map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                 ))}
               </Pie>
@@ -666,7 +666,7 @@ const DataVisualizationView: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Data Visualization</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Interactive charts with {data.length} data points from {config.dataSource}
+              Interactive charts with {(data?.length ?? 0)} data points from {config.dataSource}
             </p>
           </div>
           <div className="flex gap-2">
@@ -894,7 +894,7 @@ const DataVisualizationView: React.FC = () => {
               {config.dataSource.charAt(0).toUpperCase() + config.dataSource.slice(1)}
             </span>
             <span>•</span>
-            <span>{data.length} records</span>
+            <span>{(data?.length ?? 0)} records</span>
             <span>•</span>
             <span>
               {config.dateRange && format(config.dateRange.start, 'MMM dd, yyyy')} - {config.dateRange && format(config.dateRange.end, 'MMM dd, yyyy')}
