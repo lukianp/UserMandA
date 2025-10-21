@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   BarChart,
   Bar,
@@ -202,7 +201,7 @@ const ExecutiveDashboardView: React.FC = () => {
           />
           <KpiCard
             title="Data Volume"
-            value={dashboardData.kpis.(typeof dataVolumeTB === 'number' ? dataVolumeTB : 0).toFixed(1)}
+            value={typeof dashboardData.kpis.dataVolumeTB === 'number' ? dashboardData.kpis.dataVolumeTB.toFixed(1) : '0'}
             suffix="TB"
             icon={<HardDrive className="w-6 h-6" />}
             trend={dashboardData.kpis.dataVolumeTrend}

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useNetworkInfrastructureLogic } from '../../hooks/useNetworkInfrastructureLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
@@ -225,7 +225,7 @@ const NetworkInfrastructureView: React.FC = () => {
             <div className="flex items-center gap-2 mb-2">
               <Activity className="text-orange-600" size={20} />
               <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                {statistics.(typeof avgUtilization === 'number' ? avgUtilization : 0).toFixed(0)}%
+                {(typeof statistics?.avgUtilization === 'number' ? statistics.avgUtilization : 0).toFixed(0)}%
               </div>
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Avg Utilization</div>

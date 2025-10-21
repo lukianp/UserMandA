@@ -62,7 +62,16 @@
       "Bash(node:*)",
       "Bash(timeout 300 npm test:*)",
       "Bash(timeout 120 npm test -- --no-cache --passWithNoTests)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(if [ -f /tmp/jest-results-router-fix.json ])",
+      "Bash(then cat /tmp/jest-results-router-fix.json)",
+      "Bash(else echo \"Results file not yet created\")",
+      "Bash(fi)",
+      "Bash(npx jest --listTests)",
+      "Bash(timeout 180 npm test:*)",
+      "Bash(git checkout:*)",
+      "Bash(md5sum:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": [],

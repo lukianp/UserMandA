@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { useAssetInventoryLogic } from '../../hooks/useAssetInventoryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
@@ -206,7 +206,7 @@ const AssetInventoryView: React.FC = () => {
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
             <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-              {statistics.(typeof avgAge === 'number' ? avgAge : 0).toFixed(1)} yrs
+              {(typeof statistics?.avgAge === 'number' ? statistics.avgAge : 0).toFixed(1)} yrs
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Avg Age</div>
           </div>

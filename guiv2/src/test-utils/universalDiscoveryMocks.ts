@@ -135,6 +135,12 @@ export const createUniversalConfig = (overrides = {}) => ({
   detectAWS: true,
   detectGCP: true,
 
+  // Hyper-V specific
+  hostAddresses: ['localhost'],
+  includeVMs: true,
+  includeVirtualSwitches: true,
+  includeVHDs: true,
+
   // Security
   includeSettings: true,
   scanVulnerabilities: false,
@@ -266,8 +272,10 @@ export const createUniversalDiscoveryHook = (overrides = {}) => ({
   isFormValid: true,
   validationErrors: [],
 
-  // Allow overrides
+  // Allow overrides with isDiscovering/isRunning sync
   ...overrides,
+  isDiscovering: overrides.isDiscovering !== undefined ? overrides.isDiscovering : (overrides.isRunning !== undefined ? overrides.isRunning : false),
+  isRunning: overrides.isRunning !== undefined ? overrides.isRunning : (overrides.isDiscovering !== undefined ? overrides.isDiscovering : false),
 });
 
 export default {

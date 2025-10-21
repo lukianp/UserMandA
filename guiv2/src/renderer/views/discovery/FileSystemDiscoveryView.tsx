@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { FolderOpen, Play, XCircle, Download, Clock, HardDrive, Shield, AlertTriangle } from 'lucide-react';
 import { useFileSystemDiscoveryLogic } from '../../hooks/useFileSystemDiscoveryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
@@ -85,7 +85,7 @@ const FileSystemDiscoveryView: React.FC = () => {
                 variant="primary"
                 icon={<Play className="w-4 h-4" />}
                 onClick={startDiscovery}
-                disabled={config.servers?.length ?? 0 === 0}
+                disabled={(config.servers?.length ?? 0) === 0}
                 data-cy="start-discovery-btn"
               >
                 Start Discovery
@@ -122,7 +122,7 @@ const FileSystemDiscoveryView: React.FC = () => {
         <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-6 py-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-blue-900 dark:text-blue-100">{progress.message}</span>
-            <span className="text-sm text-blue-700 dark:text-blue-300">{progress.(typeof percentComplete === 'number' ? percentComplete : 0).toFixed(0)}%</span>
+            <span className="text-sm text-blue-700 dark:text-blue-300">{(typeof progress?.percentComplete === 'number' ? progress.percentComplete : 0).toFixed(0)}%</span>
           </div>
           <ProgressBar value={progress.percentComplete} max={100} className="mb-2" />
           <div className="grid grid-cols-3 gap-4 text-sm">
@@ -173,7 +173,7 @@ const FileSystemDiscoveryView: React.FC = () => {
               </div>
               <div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {(result?.statistics?.usedStorage ?? 0).formatted}
+                  {(result?.statistics?.usedStorage as any)?.formatted ?? '0'}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">Storage Used</div>
               </div>
@@ -246,15 +246,15 @@ const FileSystemDiscoveryView: React.FC = () => {
                 <dl className="space-y-3">
                   <div className="flex justify-between">
                     <dt className="text-gray-600 dark:text-gray-400">Total Storage:</dt>
-                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.totalStorage ?? 0).formatted}</dd>
+                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.totalStorage as any)?.formatted ?? '0'}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-600 dark:text-gray-400">Used Storage:</dt>
-                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.usedStorage ?? 0).formatted}</dd>
+                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.usedStorage as any)?.formatted ?? '0'}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-600 dark:text-gray-400">Free Storage:</dt>
-                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.freeStorage ?? 0).formatted}</dd>
+                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.freeStorage as any)?.formatted ?? '0'}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-600 dark:text-gray-400">Total Files:</dt>
@@ -270,7 +270,7 @@ const FileSystemDiscoveryView: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Security Risks</h3>
                 <div className="space-y-2">
-                  {(result?.securityRisks?.slice ?? 0)(0, 5).map((risk) => (
+                  {(Array.isArray(result?.securityRisks) ? result.securityRisks.slice(0, 5) : []).map((risk) => (
                     <div
                       key={risk.id}
                       className="flex items-start gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"

@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { Server, Play, Download, FileText, AlertCircle, CheckCircle2, HardDrive } from 'lucide-react';
 import { useVMwareDiscoveryLogic } from '../../hooks/useVMwareDiscoveryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
@@ -236,8 +236,8 @@ const VMwareDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<HardDrive />}
                 label="Storage"
-                value={`${(stats?.totalStorageTB?.toFixed ?? 0)(2)} TB`}
-                subValue={`${(stats?.usedStorageTB?.toFixed ?? 0)(2)} TB used`}
+                value={`${typeof stats?.totalStorageTB === 'number' ? stats.totalStorageTB.toFixed(2) : '0'} TB`}
+                subValue={`${typeof stats?.usedStorageTB === 'number' ? stats.usedStorageTB.toFixed(2) : '0'} TB used`}
                 variant={(stats?.usedStorageTB ?? 0) / (stats?.totalStorageTB ?? 0) > 0.9 ? 'warning' : 'default'}
               />
             </div>

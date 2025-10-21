@@ -89,29 +89,18 @@ const HyperVDiscoveryView: React.FC = () => {
         <div className="flex gap-3">
           {result && (
             <>
-              <Button variant="secondary" onClick={exportToCSV} icon={<Download className="w-4 h-4" />} data-cy="export-btn">Export CSV</Button>
+              <Button variant="secondary" onClick={exportToCSV} icon={<Download className="w-4 h-4" />}>Export CSV</Button>
               <Button variant="secondary" onClick={exportToExcel} icon={<FileSpreadsheet className="w-4 h-4" />}>Export Excel</Button>
             </>
           )}
-          {!isDiscovering ? (
-            <Button
-              variant="primary"
-              onClick={handleStartDiscovery}
-              icon={<Play className="w-4 h-4" />}
-              data-cy="start-discovery-btn"
-            >
-              Start Discovery
-            </Button>
-          ) : (
-            <Button
-              variant="danger"
-              onClick={cancelDiscovery}
-              icon={<XCircle className="w-4 h-4" />}
-              data-cy="cancel-discovery-btn"
-            >
-              Cancel
-            </Button>
-          )}
+          <Button
+            variant="primary"
+            onClick={handleStartDiscovery}
+            disabled={isDiscovering}
+            icon={isDiscovering ? <XCircle className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+          >
+            {isDiscovering ? 'Discovering...' : 'Start Discovery'}
+          </Button>
         </div>
       </div>
 

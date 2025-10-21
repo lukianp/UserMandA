@@ -3,7 +3,7 @@
  * Comprehensive UI for discovering OneDrive/OneDrive for Business environments
  */
 
-import React from 'react';
+import * as React from 'react';
 import { useOneDriveDiscoveryLogic } from '../../hooks/useOneDriveDiscoveryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import SearchBar from '../../components/molecules/SearchBar';
@@ -248,7 +248,7 @@ const OneDriveDiscoveryView: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 <Database className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 <Badge variant="info" className="text-xs">
-                  {currentResult.statistics.(typeof averageStorageUsage === 'number' ? averageStorageUsage : 0).toFixed(1)}% avg
+                  {typeof currentResult?.statistics?.averageStorageUsage === 'number' ? currentResult.statistics.averageStorageUsage.toFixed(1) : '0'}% avg
                 </Badge>
               </div>
               <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">

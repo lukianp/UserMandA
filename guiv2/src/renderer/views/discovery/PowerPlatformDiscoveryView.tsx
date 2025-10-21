@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Zap,
   ChevronUp,
@@ -390,7 +390,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top App Owners</h3>
                 <div className="space-y-2">
-                  {(stats?.topAppOwners?.map ?? 0)((item, index) => (
+                  {(Array.isArray(stats?.topAppOwners) ? stats.topAppOwners : []).map((item, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-violet-100 dark:bg-violet-900 rounded-full flex items-center justify-center">
@@ -410,7 +410,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Flow Owners</h3>
                 <div className="space-y-2">
-                  {(stats?.topFlowOwners?.map ?? 0)((item, index) => (
+                  {(Array.isArray(stats?.topFlowOwners) ? stats.topFlowOwners : []).map((item, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">

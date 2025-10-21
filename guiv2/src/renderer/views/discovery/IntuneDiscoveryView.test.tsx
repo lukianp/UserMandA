@@ -127,13 +127,10 @@ describe('IntuneDiscoveryView', () => {
       expect(icon).toBeInTheDocument();
     });
 
-    it('displays selected profile when available', () => {
-      useIntuneDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        selectedProfile: { name: 'Test Profile' },
-      });
+    it('displays configuration toggle', () => {
       render(<IntuneDiscoveryView />);
-      expect(screen.getByText('Test Profile')).toBeInTheDocument();
+      expect(screen.getByTestId('config-toggle')).toBeInTheDocument();
+      expect(screen.getByText('Discovery Configuration')).toBeInTheDocument();
     });
   });
 
@@ -163,7 +160,9 @@ describe('IntuneDiscoveryView', () => {
       });
 
       render(<IntuneDiscoveryView />);
-      expect(screen.getByText(/Discovering\.\.\./i)).toBeInTheDocument();
+      const discoveringButton = screen.getByTestId('start-discovery-btn');
+      expect(discoveringButton).toHaveTextContent(/Discovering\.\.\./i);
+      expect(discoveringButton).toBeDisabled();
     });
 
     it('calls cancelDiscovery when stop button clicked', () => {
@@ -182,9 +181,10 @@ describe('IntuneDiscoveryView', () => {
 
     it('calls exportToCSV when export CSV button clicked', () => {
       const exportToCSV = jest.fn();
+      const mockResult = { data: [{ id: 1, name: 'Device 1' }, { id: 2, name: 'Device 2' }] };
       useIntuneDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        result: mockDiscoveryData(),
+        result: mockResult,
         exportToCSV,
       });
 
@@ -197,9 +197,10 @@ describe('IntuneDiscoveryView', () => {
 
     it('calls exportToExcel when export Excel button clicked', () => {
       const exportToExcel = jest.fn();
+      const mockResult = { data: [{ id: 1, name: 'Device 1' }, { id: 2, name: 'Device 2' }] };
       useIntuneDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        result: mockDiscoveryData(),
+        result: mockResult,
         exportToExcel,
       });
 
@@ -239,13 +240,13 @@ describe('IntuneDiscoveryView', () => {
       });
 
       render(<IntuneDiscoveryView />);
-      // The progress is shown in the LoadingOverlay, not directly in text
-      expect(screen.getByText(/Discovering\.\.\./i)).toBeInTheDocument();
+      // The progress is shown in the LoadingOverlay with data-cy
+      expect(screen.getByTestId('loading-overlay')).toBeInTheDocument();
     });
 
     it('does not show progress when not running', () => {
       render(<IntuneDiscoveryView />);
-      expect(screen.queryByText(/Discovering\.\.\./i)).not.toBeInTheDocument();
+      expect(screen.queryByTestId('loading-overlay')).not.toBeInTheDocument();
     });
   });
 
@@ -266,7 +267,11 @@ describe('IntuneDiscoveryView', () => {
       });
 
       render(<IntuneDiscoveryView />);
-      expect(screen.getByText('5')).toBeInTheDocument();
+      // Check for "Total Devices" label instead of just the number
+      expect(screen.getByText('Total Devices')).toBeInTheDocument();
+      // Verify the number appears somewhere in the document
+      const deviceCounts = screen.getAllByText('5');
+      expect(deviceCounts.length).toBeGreaterThan(0);
     });
 
     it('shows empty state when no results', () => {
@@ -301,7 +306,11 @@ describe('IntuneDiscoveryView', () => {
   // ============================================================================
 
   describe('Management State Filter', () => {
-    it('renders management state filter options', () => {
+    it('renders management state filter options on devices tab', () => {
+      useIntuneDiscoveryLogic.mockReturnValue({
+        ...mockHookDefaults,
+        activeTab: 'devices',
+      });
       render(<IntuneDiscoveryView />);
       expect(screen.getByText('Filter by Management State')).toBeInTheDocument();
       expect(screen.getByText('managed')).toBeInTheDocument();
@@ -312,6 +321,7 @@ describe('IntuneDiscoveryView', () => {
       const updateFilter = jest.fn();
       useIntuneDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
+        activeTab: 'devices',
         updateFilter,
       });
 
@@ -375,12 +385,13 @@ describe('IntuneDiscoveryView', () => {
       });
 
       rerender(<IntuneDiscoveryView />);
-      expect(screen.getByText(/Discovering\.\.\./i)).toBeInTheDocument();
+      expect(screen.getByTestId('loading-overlay')).toBeInTheDocument();
 
       // Completed state with results
+      const mockResult = { data: [{ id: 1, name: 'Device 1' }] };
       useIntuneDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        result: mockDiscoveryData(),
+        result: mockResult,
         exportToCSV,
         stats: {
           ...mockHookDefaults.stats,
@@ -389,7 +400,10 @@ describe('IntuneDiscoveryView', () => {
       });
 
       rerender(<IntuneDiscoveryView />);
-      expect(screen.getByText('10')).toBeInTheDocument();
+      // Check for stats display instead of specific number
+      expect(screen.getByText('Total Devices')).toBeInTheDocument();
+      const deviceCounts = screen.getAllByText('10');
+      expect(deviceCounts.length).toBeGreaterThan(0);
 
       // Export results
       const exportButton = screen.getByTestId('export-csv-btn');

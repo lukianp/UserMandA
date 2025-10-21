@@ -3,7 +3,7 @@
  * Interactive charts and visualizations using Recharts
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   BarChart3,
   PieChart as PieChartIcon,
@@ -492,7 +492,7 @@ const DataVisualizationView: React.FC = () => {
           </ResponsiveContainer>
         );
 
-      case 'pie':
+      case 'pie': {
         const pieData = config.yAxis?.[0] ? data : [];
         return (
           <ResponsiveContainer width="100%" height="100%">
@@ -516,6 +516,7 @@ const DataVisualizationView: React.FC = () => {
             </PieChart>
           </ResponsiveContainer>
         );
+      }
 
       case 'area':
         return (
@@ -891,7 +892,7 @@ const DataVisualizationView: React.FC = () => {
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
               {dataSourceIcons[config.dataSource]}
-              {(config?.dataSource?.charAt ?? '')(0).toUpperCase() + (config?.dataSource?.slice ?? '')(1)}
+              {(config?.dataSource?.charAt?.(0) ?? '').toUpperCase() + (config?.dataSource?.slice?.(1) ?? '')}
             </span>
             <span>•</span>
             <span>{(data?.length ?? 0)} records</span>
@@ -901,7 +902,7 @@ const DataVisualizationView: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span>Chart: {(config?.type?.charAt ?? '')(0).toUpperCase() + (config?.type?.slice ?? '')(1)}</span>
+            <span>Chart: {(config?.type?.charAt?.(0) ?? '').toUpperCase() + (config?.type?.slice?.(1) ?? '')}</span>
             <span>•</span>
             <span>Palette: {selectedPalette.charAt(0).toUpperCase() + selectedPalette.slice(1)}</span>
             <span>•</span>

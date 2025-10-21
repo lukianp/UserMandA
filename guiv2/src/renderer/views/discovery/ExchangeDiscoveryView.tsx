@@ -3,7 +3,7 @@
  * Comprehensive UI for discovering Exchange Online/On-Premises environments
  */
 
-import React from 'react';
+import * as React from 'react';
 import { useExchangeDiscoveryLogic } from '../../hooks/useExchangeDiscoveryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { SearchBar } from '../../components/molecules/SearchBar';
@@ -457,7 +457,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
         <SummaryRow label="Start Time" value={new Date(result.startTime).toLocaleString()} />
         <SummaryRow label="End Time" value={result.endTime ? new Date(result.endTime).toLocaleString() : 'N/A'} />
         <SummaryRow label="Duration" value={`${(result.duration / 1000).toFixed(2)} seconds`} />
-        <SummaryRow label="Objects per Second" value={result.(typeof objectsPerSecond === 'number' ? objectsPerSecond : 0).toFixed(2)} />
+        <SummaryRow label="Objects per Second" value={(typeof result?.objectsPerSecond === 'number' ? result.objectsPerSecond : 0).toFixed(2)} />
         <SummaryRow label="Status" value={<Badge variant={result.status === 'completed' ? 'success' : 'warning'}>{result.status}</Badge>} />
       </div>
     </div>
@@ -484,7 +484,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
         <SummaryRow label="Static Groups" value={(result?.statistics?.staticGroups ?? 0)} />
         <SummaryRow label="Dynamic Groups" value={(result?.statistics?.dynamicGroups ?? 0)} />
         <SummaryRow label="Mail-Enabled Security Groups" value={(result?.statistics?.mailEnabledSecurityGroups ?? 0)} />
-        <SummaryRow label="Average Members per Group" value={result.statistics.(typeof averageMembersPerGroup === 'number' ? averageMembersPerGroup : 0).toFixed(1)} />
+        <SummaryRow label="Average Members per Group" value={(typeof result?.statistics?.averageMembersPerGroup === 'number' ? result.statistics.averageMembersPerGroup : 0).toFixed(1)} />
       </div>
     </div>
 

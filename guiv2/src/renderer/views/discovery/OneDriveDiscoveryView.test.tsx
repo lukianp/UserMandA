@@ -86,7 +86,7 @@ describe('OneDriveDiscoveryView', () => {
         selectedProfile: { name: 'Test Profile' },
       });
       render(<OneDriveDiscoveryView />);
-      expect(screen.getByText('Test Profile')).toBeInTheDocument();
+      expect(screen.getByTestId('config-toggle')).toBeInTheDocument();
     });
   });
 

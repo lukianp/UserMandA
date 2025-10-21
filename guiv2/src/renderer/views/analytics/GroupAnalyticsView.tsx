@@ -10,13 +10,12 @@
  * - Nested group analysis
  */
 
-import React from 'react';
 import { RefreshCw, Download, Users, TrendingUp, BarChart3, PieChart } from 'lucide-react';
 import { BarChart, Bar, PieChart as RePieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useGroupAnalyticsLogic } from '../../hooks/useGroupAnalyticsLogic';
-import { Button } from '@components/atoms/Button';
-import { Select } from '@components/atoms/Select';
-import LoadingSpinner from '@components/atoms/LoadingSpinner';
+import { Button } from '../../components/atoms/Button';
+import { Select } from '../../components/atoms/Select';
+import LoadingSpinner from '../../components/atoms/LoadingSpinner';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -154,7 +153,7 @@ export const GroupAnalyticsView: React.FC = () => {
         />
         <MetricCard
           title="Avg Members/Group"
-          value={metrics.(typeof averageMembersPerGroup === 'number' ? averageMembersPerGroup : 0).toFixed(1)}
+          value={(typeof metrics?.averageMembersPerGroup === 'number' ? metrics.averageMembersPerGroup : 0).toFixed(1)}
           icon={<BarChart3 className="w-6 h-6 text-purple-600" />}
           subtitle="Average membership size"
         />

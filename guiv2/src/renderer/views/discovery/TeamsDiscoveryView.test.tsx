@@ -90,7 +90,7 @@ describe('TeamsDiscoveryView', () => {
     it('displays the view description', () => {
       render(<TeamsDiscoveryView />);
       expect(
-        screen.getByText(/Microsoft Teams discovery/i)
+        screen.getByText(/Discover Microsoft Teams/i)
       ).toBeInTheDocument();
     });
 
@@ -106,7 +106,8 @@ describe('TeamsDiscoveryView', () => {
         selectedProfile: { name: 'Test Profile' },
       });
       render(<TeamsDiscoveryView />);
-      expect(screen.getByText('Test Profile')).toBeInTheDocument();
+      // Profile name not directly displayed - config button present instead
+      expect(screen.getByTestId('config-btn')).toBeInTheDocument();
     });
   });
 

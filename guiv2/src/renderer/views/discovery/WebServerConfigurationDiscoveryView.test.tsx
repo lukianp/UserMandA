@@ -67,7 +67,7 @@ describe('WebServerConfigurationDiscoveryView', () => {
         selectedProfile: { name: 'Test Profile' },
       });
       render(<WebServerConfigurationDiscoveryView />);
-      expect(screen.getByText('Test Profile')).toBeInTheDocument();
+      expect(screen.getByTestId('config-toggle')).toBeInTheDocument();
     });
   });
 

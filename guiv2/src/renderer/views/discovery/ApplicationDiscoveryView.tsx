@@ -3,7 +3,7 @@
  * Comprehensive UI for discovering installed applications, services, and processes
  */
 
-import React from 'react';
+import * as React from 'react';
 import { useApplicationDiscoveryLogic } from '../../hooks/useApplicationDiscoveryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import SearchBar from '../../components/molecules/SearchBar';
@@ -218,33 +218,33 @@ const ApplicationDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<Package className="w-5 h-5" />}
                 label="Applications"
-                value={currentResult.(stats?.totalApplications ?? 0)}
-                subValue={`${currentResult.(stats?.licensedApplications ?? 0)} licensed`}
+                value={currentResult?.stats?.totalApplications ?? 0}
+                subValue={`${currentResult?.stats?.licensedApplications ?? 0} licensed`}
                 color="purple"
               />
               <StatCard
                 icon={<Activity className="w-5 h-5" />}
                 label="Processes"
-                value={currentResult.(stats?.totalProcesses ?? 0)}
+                value={currentResult?.stats?.totalProcesses ?? 0}
                 color="blue"
               />
               <StatCard
                 icon={<Server className="w-5 h-5" />}
                 label="Services"
-                value={currentResult.(stats?.totalServices ?? 0)}
-                subValue={`${currentResult.(stats?.runningServices ?? 0)} running`}
+                value={currentResult?.stats?.totalServices ?? 0}
+                subValue={`${currentResult?.stats?.runningServices ?? 0} running`}
                 color="green"
               />
               <StatCard
                 icon={<AlertTriangle className="w-5 h-5" />}
                 label="Updates Needed"
-                value={currentResult.(stats?.applicationsNeedingUpdate ?? 0)}
+                value={currentResult?.stats?.applicationsNeedingUpdate ?? 0}
                 color="orange"
               />
               <StatCard
                 icon={<Shield className="w-5 h-5" />}
                 label="Security Risks"
-                value={currentResult.(stats?.securityRisks ?? 0)}
+                value={currentResult?.stats?.securityRisks ?? 0}
                 color="red"
               />
             </div>
@@ -475,7 +475,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
         <SummaryRow label="Start Time" value={new Date(result.startTime).toLocaleString()} />
         <SummaryRow label="End Time" value={result.endTime ? new Date(result.endTime).toLocaleString() : 'N/A'} />
         <SummaryRow label="Duration" value={`${(result.duration / 1000).toFixed(2)} seconds`} />
-        <SummaryRow label="Objects per Second" value={result.(typeof objectsPerSecond === 'number' ? objectsPerSecond : 0).toFixed(2)} />
+        <SummaryRow label="Objects per Second" value={(typeof result?.objectsPerSecond === 'number' ? result.objectsPerSecond : 0).toFixed(2)} />
         <SummaryRow label="Status" value={<Badge variant={result.status === 'completed' ? 'success' : 'warning'}>{result.status}</Badge>} />
       </div>
     </div>
@@ -484,11 +484,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">License Compliance</h3>
       <div className="space-y-3">
-        <SummaryRow label="Licensed Applications" value={result.(stats?.licensedApplications ?? 0)} />
-        <SummaryRow label="Unlicensed Applications" value={result.(stats?.unlicensedApplications ?? 0)} />
+        <SummaryRow label="Licensed Applications" value={result?.stats?.licensedApplications ?? 0} />
+        <SummaryRow label="Unlicensed Applications" value={result?.stats?.unlicensedApplications ?? 0} />
         <SummaryRow
           label="Compliance Rate"
-          value={`${((result.(stats?.licensedApplications ?? 0) / result.(stats?.totalApplications ?? 0)) * 100).toFixed(1)}%`}
+          value={`${(((result?.stats?.licensedApplications ?? 0) / (result?.stats?.totalApplications ?? 1)) * 100).toFixed(1)}%`}
         />
       </div>
     </div>
@@ -497,10 +497,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Update Status</h3>
       <div className="space-y-3">
-        <SummaryRow label="Applications Needing Updates" value={result.(stats?.applicationsNeedingUpdate ?? 0)} />
+        <SummaryRow label="Applications Needing Updates" value={result?.stats?.applicationsNeedingUpdate ?? 0} />
         <SummaryRow
           label="Up-to-Date Rate"
-          value={`${(((result.(stats?.totalApplications ?? 0) - result.(stats?.applicationsNeedingUpdate ?? 0)) / result.(stats?.totalApplications ?? 0)) * 100).toFixed(1)}%`}
+          value={`${((((result?.stats?.totalApplications ?? 0) - (result?.stats?.applicationsNeedingUpdate ?? 0)) / (result?.stats?.totalApplications ?? 1)) * 100).toFixed(1)}%`}
         />
       </div>
     </div>
@@ -509,12 +509,12 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Security</h3>
       <div className="space-y-3">
-        <SummaryRow label="Security Risks Detected" value={result.(stats?.securityRisks ?? 0)} />
+        <SummaryRow label="Security Risks Detected" value={result?.stats?.securityRisks ?? 0} />
         <SummaryRow
           label="Security Risk Level"
           value={
-            <Badge variant={result.(stats?.securityRisks ?? 0) === 0 ? 'success' : result.(stats?.securityRisks ?? 0) < 5 ? 'warning' : 'danger'}>
-              {result.(stats?.securityRisks ?? 0) === 0 ? 'Low' : result.(stats?.securityRisks ?? 0) < 5 ? 'Medium' : 'High'}
+            <Badge variant={(result?.stats?.securityRisks ?? 0) === 0 ? 'success' : (result?.stats?.securityRisks ?? 0) < 5 ? 'warning' : 'danger'}>
+              {(result?.stats?.securityRisks ?? 0) === 0 ? 'Low' : (result?.stats?.securityRisks ?? 0) < 5 ? 'Medium' : 'High'}
             </Badge>
           }
         />

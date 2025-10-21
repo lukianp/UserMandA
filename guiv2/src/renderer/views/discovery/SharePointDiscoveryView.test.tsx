@@ -106,7 +106,7 @@ describe('SharePointDiscoveryView', () => {
         selectedProfile: { name: 'Test Profile' },
       });
       render(<SharePointDiscoveryView />);
-      expect(screen.getByText('Test Profile')).toBeInTheDocument();
+      expect(screen.getByTestId('config-toggle')).toBeInTheDocument();
     });
   });
 

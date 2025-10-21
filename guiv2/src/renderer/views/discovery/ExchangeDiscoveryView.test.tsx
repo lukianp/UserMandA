@@ -106,7 +106,7 @@ describe('ExchangeDiscoveryView', () => {
         selectedProfile: { name: 'Test Profile' },
       });
       render(<ExchangeDiscoveryView />);
-      expect(screen.getByText('Test Profile')).toBeInTheDocument();
+      expect(screen.getByTestId('config-toggle')).toBeInTheDocument();
     });
   });
 

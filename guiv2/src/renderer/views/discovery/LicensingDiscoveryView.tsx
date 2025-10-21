@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useState } from 'react';
 import {
   Key,
   ChevronUp,
@@ -233,7 +234,7 @@ const LicensingDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <TrendingUp className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.utilizationRate?.toFixed ?? 0)(1)}%</div>
+                <div className="text-3xl font-bold">{typeof stats?.utilizationRate === 'number' ? stats.utilizationRate.toFixed(1) : '0'}%</div>
                 <div className="text-sm opacity-90">Utilization</div>
               </div>
             </div>
@@ -243,7 +244,7 @@ const LicensingDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <DollarSign className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">${(stats?.costPerMonth?.toLocaleString ?? 0)(undefined, { maximumFractionDigits: 0 })}</div>
+                <div className="text-3xl font-bold">${typeof stats?.costPerMonth === 'number' ? stats.costPerMonth.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '0'}</div>
                 <div className="text-sm opacity-90">Monthly Cost</div>
               </div>
             </div>
@@ -357,7 +358,7 @@ const LicensingDiscoveryView: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Cost Products</h3>
               <div className="space-y-3">
-                {(stats?.topCostProducts?.map ?? 0)((item, index) => (
+                {(Array.isArray(stats?.topCostProducts) ? stats.topCostProducts : []).map((item, index) => (
                   <div key={index} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -379,11 +380,11 @@ const LicensingDiscoveryView: React.FC = () => {
                           className="bg-yellow-600 h-full flex items-center justify-end px-2 text-xs text-white font-medium"
                           style={{ width: `${item.utilization}%` }}
                         >
-                          {item.utilization > 10 && `${item.(typeof utilization === 'number' ? utilization : 0).toFixed(0)}%`}
+                          {item.utilization > 10 && `${(typeof item.utilization === 'number' ? item.utilization : 0).toFixed(0)}%`}
                         </div>
                       </div>
                       <div className="w-16 text-xs text-gray-600 dark:text-gray-400">
-                        {item.(typeof utilization === 'number' ? utilization : 0).toFixed(1)}%
+                        {(typeof item.utilization === 'number' ? item.utilization : 0).toFixed(1)}%
                       </div>
                     </div>
                   </div>
@@ -450,18 +451,18 @@ const LicensingDiscoveryView: React.FC = () => {
                 </h3>
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Overall Utilization: {result.complianceStatus.(typeof utilizationRate === 'number' ? utilizationRate : 0).toFixed(1)}%
+                Overall Utilization: {typeof result?.complianceStatus?.utilizationRate === 'number' ? result.complianceStatus.utilizationRate.toFixed(1) : '0'}%
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 Unassigned Licenses: {(result?.complianceStatus?.unassignedLicenses ?? 0).toLocaleString()}
               </div>
             </div>
 
-            {(result?.complianceStatus?.underlicensedProducts ?? 0).length > 0 && (
+            {(Array.isArray(result?.complianceStatus?.underlicensedProducts) ? result.complianceStatus.underlicensedProducts : []).length > 0 && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold text-red-900 dark:text-red-200 mb-3">Underlicensed Products</h3>
                 <ul className="space-y-2">
-                  {(result?.complianceStatus?.underlicensedProducts ?? 0).map((product, index) => (
+                  {(Array.isArray(result?.complianceStatus?.underlicensedProducts) ? result.complianceStatus.underlicensedProducts : []).map((product, index) => (
                     <li key={index} className="text-sm text-red-800 dark:text-red-300 flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4" />
                       {product}
@@ -471,22 +472,22 @@ const LicensingDiscoveryView: React.FC = () => {
               </div>
             )}
 
-            {(result?.complianceStatus?.overlicensedProducts ?? 0).length > 0 && (
+            {(Array.isArray(result?.complianceStatus?.overlicensedProducts) ? result.complianceStatus.overlicensedProducts : []).length > 0 && (
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold text-yellow-900 dark:text-yellow-200 mb-3">Overlicensed Products</h3>
                 <ul className="space-y-2">
-                  {(result?.complianceStatus?.overlicensedProducts ?? 0).map((product, index) => (
+                  {(Array.isArray(result?.complianceStatus?.overlicensedProducts) ? result.complianceStatus.overlicensedProducts : []).map((product, index) => (
                     <li key={index} className="text-sm text-yellow-800 dark:text-yellow-300">{product}</li>
                   ))}
                 </ul>
               </div>
             )}
 
-            {(result?.complianceStatus?.expiringSoon ?? 0).length > 0 && (
+            {(Array.isArray(result?.complianceStatus?.expiringSoon) ? result.complianceStatus.expiringSoon : []).length > 0 && (
               <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold text-orange-900 dark:text-orange-200 mb-3">Expiring Soon</h3>
                 <div className="space-y-2">
-                  {(result?.complianceStatus?.expiringSoon ?? 0).map((license, index) => (
+                  {(Array.isArray(result?.complianceStatus?.expiringSoon) ? result.complianceStatus.expiringSoon : []).map((license, index) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded">
                       <span className="text-sm text-gray-900 dark:text-white">{license.productName}</span>
                       <span className="text-sm text-orange-600">

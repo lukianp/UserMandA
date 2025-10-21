@@ -3,7 +3,7 @@
  * Production-grade UI for discovering and analyzing AWS resources across multiple regions
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Cloud, Server, Database, Settings, Download, Play, Square,
   ChevronDown, ChevronUp, AlertTriangle, DollarSign, Shield
@@ -20,7 +20,7 @@ import ProgressBar from '../../components/molecules/ProgressBar';
 /**
  * AWS Cloud Infrastructure Discovery View Component
  */
-const AWSCloudInfrastructureDiscoveryView: React.FC = () => {
+const AWSCloudInfrastructureDiscoveryView = () => {
   const {
     config,
     setConfig,
@@ -51,19 +51,19 @@ const AWSCloudInfrastructureDiscoveryView: React.FC = () => {
   const handleStartDiscovery = () => {
     const errors: string[] = [];
 
-    if (!config.accessKeyId || (config?.accessKeyId?.trim ?? '')() === '') {
+    if (!config.accessKeyId || (config?.accessKeyId?.trim?.() ?? '') === '') {
       errors.push('AWS Access Key ID is required');
     }
 
-    if (!config.secretAccessKey || (config?.secretAccessKey?.trim ?? '')() === '') {
+    if (!config.secretAccessKey || (config?.secretAccessKey?.trim?.() ?? '') === '') {
       errors.push('AWS Secret Access Key is required');
     }
 
-    if (!config.awsRegions || (config?.awsRegions?.length ?? '') === 0) {
+    if (!config.awsRegions || (config?.awsRegions?.length ?? 0) === 0) {
       errors.push('At least one AWS region must be selected');
     }
 
-    if (!config.resourceTypes || (config?.resourceTypes?.length ?? '') === 0) {
+    if (!config.resourceTypes || (config?.resourceTypes?.length ?? 0) === 0) {
       errors.push('At least one resource type must be selected');
     }
 
@@ -105,7 +105,7 @@ const AWSCloudInfrastructureDiscoveryView: React.FC = () => {
       {/* Loading Overlay */}
       {isDiscovering && (
         <LoadingOverlay
-          progress={progress}
+          progress={typeof progress === 'number' ? progress : 0}
           onCancel={cancelDiscovery}
           message="Discovering AWS resources..."
         />
@@ -127,28 +127,35 @@ const AWSCloudInfrastructureDiscoveryView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {result && (
-              <>
-                <Button
-                  variant="secondary"
-                  icon={<Download />}
-                  onClick={exportToCSV}
-                  disabled={isDiscovering}
-                  data-cy="export-csv-btn"
-                >
-                  Export CSV
-                </Button>
-                <Button
-                  variant="secondary"
-                  icon={<Download />}
-                  onClick={exportToExcel}
-                  disabled={isDiscovering}
-                  data-cy="export-excel-btn"
-                >
-                  Export Excel
-                </Button>
-              </>
-            )}
+            {result && (() => {
+              const exportPayload = Array.isArray((result as any)?.data)
+                ? (result as any).data
+                : Array.isArray(result as any)
+                ? (result as any)
+                : [];
+              return (
+                <>
+                 <Button
+                   variant="secondary"
+                   icon={<Download />}
+                   onClick={() => exportToCSV()}
+                   disabled={isDiscovering || exportPayload.length === 0}
+                   data-cy="export-csv-btn"
+                 >
+                   Export CSV
+                 </Button>
+                 <Button
+                   variant="secondary"
+                   icon={<Download />}
+                   onClick={() => exportToExcel()}
+                   disabled={isDiscovering || exportPayload.length === 0}
+                   data-cy="export-excel-btn"
+                 >
+                   Export Excel
+                 </Button>
+                </>
+              );
+            })()}
             {!isDiscovering ? (
               <Button
                 variant="primary"
@@ -371,7 +378,7 @@ const AWSCloudInfrastructureDiscoveryView: React.FC = () => {
               color="purple"
             />
             <StatCard
-              value={`$${(stats?.estimatedCost?.toFixed ?? 0)(2)}`}
+              value={`$${typeof stats?.estimatedCost === 'number' ? stats.estimatedCost.toFixed(2) : '0'}`}
               label="Est. Monthly Cost"
               icon={<DollarSign className="w-5 h-5" />}
               color="gray"
@@ -564,7 +571,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Cost Information</h3>
         <div className="space-y-3">
-          <SummaryRow label="Estimated Monthly Cost" value={`$${result.(typeof estimatedMonthlyCost === 'number' ? estimatedMonthlyCost : 0).toFixed(2)}`} />
+          <SummaryRow label="Estimated Monthly Cost" value={`$${typeof result?.estimatedMonthlyCost === 'number' ? result.estimatedMonthlyCost.toFixed(2) : '0'}`} />
           <SummaryRow label="Cost by Service" value={result.costByService ? JSON.stringify(result.costByService) : 'N/A'} />
         </div>
       </div>
@@ -574,7 +581,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-4">Security Findings</h3>
         <div className="space-y-2">
-          {(result?.securityFindings?.slice ?? 0)(0, 10).map((finding: any, index: number) => (
+          {(Array.isArray(result?.securityFindings) ? result.securityFindings.slice(0, 10) : []).map((finding: any, index: number) => (
             <div key={index} className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
               <p className="text-sm text-red-900 dark:text-red-100">{finding.message || finding}</p>
             </div>

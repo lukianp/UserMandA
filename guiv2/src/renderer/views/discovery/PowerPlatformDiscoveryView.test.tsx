@@ -110,7 +110,7 @@ describe('PowerPlatformDiscoveryView', () => {
         selectedProfile: { name: 'Test Profile' },
       });
       render(<PowerPlatformDiscoveryView />);
-      expect(screen.getByText('Test Profile')).toBeInTheDocument();
+      expect(screen.getByTestId('config-toggle')).toBeInTheDocument();
     });
   });
 

@@ -14,8 +14,8 @@ import React from 'react';
 import { RefreshCw, Activity, Database, Zap, Clock, TrendingUp, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { usePerformanceMetricsLogic } from '../../hooks/usePerformanceMetricsLogic';
-import { Button } from '@components/atoms/Button';
-import LoadingSpinner from '@components/atoms/LoadingSpinner';
+import { Button } from '../../components/atoms/Button';
+import LoadingSpinner from '../../components/atoms/LoadingSpinner';
 
 /**
  * Format time in milliseconds

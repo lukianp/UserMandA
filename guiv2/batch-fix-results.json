@@ -1,0 +1,74 @@
+{
+  "filesProcessed": 7,
+  "transformationsApplied": 7,
+  "beforeCounts": {
+    "src/renderer/views/discovery/TeamsDiscoveryView.test.tsx": {
+      "passed": 11,
+      "failed": 1
+    },
+    "src/renderer/views/discovery/ExchangeDiscoveryView.test.tsx": {
+      "passed": 0,
+      "failed": 1
+    },
+    "src/renderer/views/discovery/OneDriveDiscoveryView.test.tsx": {
+      "passed": 0,
+      "failed": 1
+    },
+    "src/renderer/views/discovery/SharePointDiscoveryView.test.tsx": {
+      "passed": 0,
+      "failed": 1
+    },
+    "src/renderer/views/discovery/AzureDiscoveryView.test.tsx": {
+      "passed": 0,
+      "failed": 1
+    },
+    "src/renderer/views/discovery/PowerPlatformDiscoveryView.test.tsx": {
+      "passed": 0,
+      "failed": 1
+    },
+    "src/renderer/views/discovery/HyperVDiscoveryView.test.tsx": {
+      "passed": 9,
+      "failed": 1
+    },
+    "src/renderer/views/discovery/WebServerConfigurationDiscoveryView.test.tsx": {
+      "passed": 0,
+      "failed": 1
+    }
+  },
+  "afterCounts": {
+    "src/renderer/views/discovery/TeamsDiscoveryView.test.tsx": {
+      "passed": 11,
+      "failed": 1
+    },
+    "src/renderer/views/discovery/ExchangeDiscoveryView.test.tsx": {
+      "passed": 0,
+      "failed": 1
+    },
+    "src/renderer/views/discovery/OneDriveDiscoveryView.test.tsx": {
+      "passed": 0,
+      "failed": 1
+    },
+    "src/renderer/views/discovery/SharePointDiscoveryView.test.tsx": {
+      "passed": 0,
+      "failed": 1
+    },
+    "src/renderer/views/discovery/PowerPlatformDiscoveryView.test.tsx": {
+      "passed": 0,
+      "failed": 1
+    },
+    "src/renderer/views/discovery/HyperVDiscoveryView.test.tsx": {
+      "passed": 9,
+      "failed": 1
+    },
+    "src/renderer/views/discovery/WebServerConfigurationDiscoveryView.test.tsx": {
+      "passed": 0,
+      "failed": 1
+    }
+  },
+  "errors": [
+    {
+      "file": "src/renderer/views/discovery/AzureADDiscoveryView.test.tsx",
+      "error": "File not found"
+    }
+  ]
+}

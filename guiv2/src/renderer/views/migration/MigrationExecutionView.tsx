@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { useMigrationExecutionLogic } from '../../hooks/useMigrationExecutionLogic';
 import { Button } from '../../components/atoms/Button';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
@@ -47,11 +47,11 @@ const MigrationExecutionView: React.FC = () => {
           </div>
         </div>
         <div className="grid grid-cols-5 gap-4">
-          <div className="bg-white p-3 rounded shadow-sm"><div className="text-2xl font-bold">{logic.(stats?.total ?? 0)}</div><div className="text-xs">Total</div></div>
-          <div className="bg-white p-3 rounded shadow-sm"><div className="text-2xl font-bold text-green-600">{logic.(stats?.completed ?? 0)}</div><div className="text-xs">Completed</div></div>
-          <div className="bg-white p-3 rounded shadow-sm"><div className="text-2xl font-bold text-red-600">{logic.(stats?.failed ?? 0)}</div><div className="text-xs">Failed</div></div>
-          <div className="bg-white p-3 rounded shadow-sm"><div className="text-2xl font-bold text-blue-600">{logic.(stats?.inProgress ?? 0)}</div><div className="text-xs">In Progress</div></div>
-          <div className="bg-white p-3 rounded shadow-sm"><div className="text-2xl font-bold text-gray-600">{logic.(stats?.pending ?? 0)}</div><div className="text-xs">Pending</div></div>
+          <div className="bg-white p-3 rounded shadow-sm"><div className="text-2xl font-bold">{logic.stats?.total ?? 0}</div><div className="text-xs">Total</div></div>
+          <div className="bg-white p-3 rounded shadow-sm"><div className="text-2xl font-bold text-green-600">{logic.stats?.completed ?? 0}</div><div className="text-xs">Completed</div></div>
+          <div className="bg-white p-3 rounded shadow-sm"><div className="text-2xl font-bold text-red-600">{logic.stats?.failed ?? 0}</div><div className="text-xs">Failed</div></div>
+          <div className="bg-white p-3 rounded shadow-sm"><div className="text-2xl font-bold text-blue-600">{logic.stats?.inProgress ?? 0}</div><div className="text-xs">In Progress</div></div>
+          <div className="bg-white p-3 rounded shadow-sm"><div className="text-2xl font-bold text-gray-600">{logic.stats?.pending ?? 0}</div><div className="text-xs">Pending</div></div>
         </div>
       </div>
 
