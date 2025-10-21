@@ -21,11 +21,8 @@ describe('useAzureDiscoveryLogic', () => {
     tenantId: 'test-tenant-id',
   };
 
-  const mockElectronAPI: {
-  executeModule: jest.MockedFunction<any>;
-  cancelExecution: jest.MockedFunction<any>;
-  onProgress: jest.MockedFunction<any>;
-} = {
+
+  const mockElectronAPI = {
     executeModule: jest.fn(),
     cancelExecution: jest.fn(),
     writeFile: jest.fn(),
@@ -201,9 +198,7 @@ describe('useAzureDiscoveryLogic', () => {
       });
 
       expect(result.current.connectionStatus).toBe('connected');
-      expect(result.current.logs).toContain(
-        expect.stringContaining('Connection successful')
-      );
+      expect(result.current.logs.some(log => log.includes('Connection successful'))).toBe(true);
       expect(mockElectronAPI.executeModule).toHaveBeenCalledWith({
         modulePath: 'Modules/Discovery/AzureDiscovery.psm1',
         functionName: 'Test-AzureConnection',
@@ -234,9 +229,7 @@ describe('useAzureDiscoveryLogic', () => {
 
       expect(result.current.connectionStatus).toBe('error');
       expect(result.current.error).toContain('Authentication failed');
-      expect(result.current.logs).toContain(
-        expect.stringContaining('Connection failed')
-      );
+      expect(result.current.logs.some(log => log.includes('Connection failed'))).toBe(true);
     });
 
     it('should set status to connecting during connection test', async () => {
@@ -297,9 +290,7 @@ describe('useAzureDiscoveryLogic', () => {
       expect(result.current.results[0].success).toBe(true);
       expect(result.current.results[0].itemCount).toBe(100);
       expect(mockDiscoveryStore.addResult).toHaveBeenCalled();
-      expect(result.current.logs).toContain(
-        expect.stringContaining('Discovery completed successfully')
-      );
+      expect(result.current.logs.some(log => log.includes('Discovery completed successfully'))).toBe(true);
     });
 
     it('should not start discovery if form is invalid', async () => {
@@ -354,7 +345,7 @@ describe('useAzureDiscoveryLogic', () => {
 
       expect(result.current.error).toContain('Discovery module failed');
       expect(result.current.isRunning).toBe(false);
-      expect(result.current.logs).toContain(expect.stringContaining('ERROR'));
+      expect(result.current.logs.some(log => log.includes('ERROR'))).toBe(true);
     });
 
     it('should log selected services when starting discovery', async () => {
@@ -451,9 +442,7 @@ describe('useAzureDiscoveryLogic', () => {
 
       expect(mockElectronAPI.cancelExecution).toHaveBeenCalled();
       expect(result.current.isCancelling).toBe(false);
-      expect(result.current.logs).toContain(
-        expect.stringContaining('cancelled successfully')
-      );
+      expect(result.current.logs.some(log => log.includes('cancelled successfully'))).toBe(true);
     });
 
     it('should not cancel if no active discovery', async () => {
@@ -503,7 +492,7 @@ describe('useAzureDiscoveryLogic', () => {
   // ==========================================================================
 
   describe('Export Results', () => {
-    it('should export results when results exist', () => {
+    it('should export results when results exist', async () => {
       const { result } = renderHook(() => useAzureDiscoveryLogic());
 
       // Manually set results (simulating successful discovery)
@@ -511,40 +500,22 @@ describe('useAzureDiscoveryLogic', () => {
         result.current.updateFormField('tenantId', 'test-tenant-id');
       });
 
-      // Mock having results
-      const mockResult = {
-        id: 'test-id',
-        name: 'Test Result',
-        moduleName: 'AzureDiscovery',
-        displayName: 'Test',
-        itemCount: 10,
-        discoveryTime: new Date().toISOString(),
-        duration: 1000,
-        status: 'Completed' as const,
-        filePath: '/path/to/file',
-        success: true,
-        summary: 'Test',
-        errorMessage: '',
-        additionalData: {},
-        createdAt: new Date().toISOString(),
-      };
-
       // We need to run a successful discovery first to have results
       mockElectronAPI.executeModule.mockResolvedValue({
         success: true,
         data: { totalItems: 10 },
       });
 
-      act(async () => {
+      await act(async () => {
         await result.current.startDiscovery();
       });
 
-      waitFor(() => {
+      await waitFor(() => {
         expect(result.current.results.length).toBeGreaterThan(0);
       });
 
       act(() => {
-        result.current.exportToExcel();
+        result.current.exportResults();
       });
 
       expect(mockElectronAPI.writeFile).toHaveBeenCalledWith(
@@ -557,7 +528,7 @@ describe('useAzureDiscoveryLogic', () => {
       const { result } = renderHook(() => useAzureDiscoveryLogic());
 
       act(() => {
-        result.current.exportToExcel();
+        result.current.exportResults();
       });
 
       expect(mockElectronAPI.writeFile).not.toHaveBeenCalled();
@@ -569,7 +540,7 @@ describe('useAzureDiscoveryLogic', () => {
   // ==========================================================================
 
   describe('Log Management', () => {
-    it('should clear logs', () => {
+    it('should clear logs', async () => {
       const { result } = renderHook(() => useAzureDiscoveryLogic());
 
       act(() => {
@@ -577,12 +548,13 @@ describe('useAzureDiscoveryLogic', () => {
       });
 
       // Logs are added automatically via testConnection
-      act(async () => {
-        mockElectronAPI.executeModule.mockResolvedValue({ success: true, data: {} });
+      mockElectronAPI.executeModule.mockResolvedValue({ success: true, data: {} });
+
+      await act(async () => {
         await result.current.testConnection();
       });
 
-      waitFor(() => {
+      await waitFor(() => {
         expect(result.current.logs.length).toBeGreaterThan(0);
       });
 
@@ -600,18 +572,28 @@ describe('useAzureDiscoveryLogic', () => {
 
   describe('Progress Handling', () => {
     it('should handle progress updates', () => {
-      let progressCallback: (data: any) => void = () => {};
+      let progressCallback: (data: any) => void | null = null;
 
-      mockElectronAPI.onProgress.mockImplementation((cb: any) => {
-        progressCallback = cb;
-        return jest.fn();
-      });
+      // Set up mock to capture callback BEFORE rendering hook
+      const capturedMockElectronAPI = {
+        ...mockElectronAPI,
+        onProgress: jest.fn((cb: any) => {
+          progressCallback = cb;
+          return jest.fn(); // Return unsubscribe function
+        }),
+      };
+
+      (getElectronAPI as jest.Mock).mockReturnValue(capturedMockElectronAPI);
 
       const { result } = renderHook(() => useAzureDiscoveryLogic());
 
+      // Verify onProgress was called to set up the listener
+      expect(capturedMockElectronAPI.onProgress).toHaveBeenCalled();
+      expect(progressCallback).not.toBeNull();
+
       // Simulate progress update
       act(() => {
-        progressCallback({
+        progressCallback!({
           percentage: 50,
           message: 'Processing users...',
           itemsProcessed: 50,

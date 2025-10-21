@@ -545,20 +545,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     }
   });
 
-  /**
-   * Load all target profiles
-   */
-  ipcMain.handle('profile:loadTargetProfiles', async () => {
-    try {
-      const profileService = getProfileService();
-      const profiles = profileService.getTargetProfiles();
-      console.log(`Loaded ${profiles.length} target profiles`);
-      return profiles;
-    } catch (error: unknown) {
-      console.error(`loadTargetProfiles error: ${error instanceof Error ? error.message : String(error)}`);
-      return [];
-    }
-  });
+  // NOTE: 'profile:loadTargetProfiles' handler is registered in ./ipc/targetProfileHandlers.ts
 
   /**
    * Get active source profile
@@ -606,23 +593,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     }
   });
 
-  /**
-   * Create a new target profile
-   */
-  ipcMain.handle('profile:createTarget', async (_, profile: any) => {
-    try {
-      const profileService = getProfileService();
-      const newProfile = await profileService.createTargetProfile(profile);
-      console.log(`Created target profile: ${newProfile.id}`);
-      return { success: true, profile: newProfile };
-    } catch (error: unknown) {
-      console.error(`createTarget error: ${error instanceof Error ? error.message : String(error)}`);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
+  // NOTE: 'profile:createTarget' handler is registered in ./ipc/targetProfileHandlers.ts
 
   /**
    * Update a source profile
@@ -642,23 +613,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     }
   });
 
-  /**
-   * Update a target profile
-   */
-  ipcMain.handle('profile:updateTarget', async (_, id: string, updates: any) => {
-    try {
-      const profileService = getProfileService();
-      const profile = await profileService.updateTargetProfile(id, updates);
-      console.log(`Updated target profile: ${id}`);
-      return { success: true, profile };
-    } catch (error: unknown) {
-      console.error(`updateTarget error: ${error instanceof Error ? error.message : String(error)}`);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
+  // NOTE: 'profile:updateTarget' handler is registered in ./ipc/targetProfileHandlers.ts
 
   /**
    * Delete a source profile
@@ -678,23 +633,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     }
   });
 
-  /**
-   * Delete a target profile
-   */
-  ipcMain.handle('profile:deleteTarget', async (_, profileId: string) => {
-    try {
-      const profileService = getProfileService();
-      await profileService.deleteTargetProfile(profileId);
-      console.log(`Deleted target profile: ${profileId}`);
-      return { success: true };
-    } catch (error: unknown) {
-      console.error(`deleteTarget error: ${error instanceof Error ? error.message : String(error)}`);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
+  // NOTE: 'profile:deleteTarget' handler is registered in ./ipc/targetProfileHandlers.ts
 
   /**
    * Set active source profile

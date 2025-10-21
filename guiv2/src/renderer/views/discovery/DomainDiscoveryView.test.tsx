@@ -37,7 +37,7 @@ describe('DomainDiscoveryView', () => {
     isFormValid: true,
     isRunning: false,
     isCancelling: false,
-    progress: null,
+    progress: { current: 0, total: 100, message: '', percentage: 0 },
     results: [],
     error: null,
     logs: [],

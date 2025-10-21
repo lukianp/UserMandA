@@ -24,27 +24,31 @@ describe('ApplicationDiscoveryView', () => {
   const mockUseApplicationDiscoveryLogic = useApplicationDiscoveryLogic as jest.MockedFunction<typeof useApplicationDiscoveryLogic>;
 
   const mockHookDefaults = {
-    isRunning: false,
-    isCancelling: false,
-    progress: null as any,
-    results: null as any,
-    error: null as any,
-    logs: [] as any[],
-    startDiscovery: jest.fn(),
-    cancelDiscovery: jest.fn(),
-    exportResults: jest.fn(),
-    clearLogs: jest.fn(),
-    selectedProfile: null as any,
-  
+    // State
     config: {},
     templates: [],
     currentResult: null,
     isDiscovering: false,
+    progress: { current: 0, total: 100, message: '', percentage: 0 },
     selectedTab: 'overview',
     searchText: '',
+    error: null,
+    logs: [],
+
+    // Data
     filteredData: [],
     columnDefs: [],
     errors: [],
+    stats: { totalApplications: 0, registeredApps: 0, enterpriseApps: 0 },
+
+    // Actions
+    isRunning: false,
+    isCancelling: false,
+    results: null,
+    startDiscovery: jest.fn(),
+    cancelDiscovery: jest.fn(),
+    exportResults: jest.fn(),
+    clearLogs: jest.fn(),
     updateConfig: jest.fn(),
     loadTemplate: jest.fn(),
     saveAsTemplate: jest.fn(),

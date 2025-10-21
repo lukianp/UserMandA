@@ -7,7 +7,7 @@ module.exports = {
   ],
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: '<rootDir>/tsconfig.json',
+      tsconfig: '<rootDir>/tsconfig.jest.json',
       diagnostics: {
         ignoreCodes: [2339, 2304, 6133], // Ignore common type errors in tests
       },
@@ -90,6 +90,7 @@ module.exports = {
   globals: {
     'ts-jest': {
       isolatedModules: true,
+      tsconfig: '<rootDir>/tsconfig.jest.json',
     },
   },
   // Clear mocks between tests

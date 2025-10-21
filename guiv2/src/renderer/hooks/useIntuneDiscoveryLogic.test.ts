@@ -9,8 +9,8 @@ import { useIntuneDiscoveryLogic } from './useIntuneDiscoveryLogic';
 
 type ProgressCallback = (data: any) => void;
 
-const mockExecuteModule = jest.fn<Promise<any>, [any?]>();
-const mockCancelExecution = jest.fn<Promise<void>, [string?]>();
+const mockExecuteModule = jest.fn<(args?: any) => Promise<any>>();
+const mockCancelExecution = jest.fn<(token?: string) => Promise<void>>();
 const mockOnProgress = jest.fn<(cb: ProgressCallback) => () => void>();
 
 // Mock electron API
@@ -124,10 +124,22 @@ describe('useIntuneDiscoveryLogic', () => {
     it('should cancel discovery when token exists', async () => {
       mockCancelExecution.mockResolvedValueOnce(undefined);
 
+      // Make discovery take longer so we can cancel it
+      mockExecuteModule.mockImplementationOnce(() => {
+        return new Promise(resolve => {
+          setTimeout(() => resolve({ success: true, data: {} }), 100);
+        });
+      });
+
       const { result } = renderHook(() => useIntuneDiscoveryLogic());
 
+      // Start discovery (don't await completion)
+      act(() => {
+        result.current.startDiscovery();
+      });
+
+      // Cancel while it's running
       await act(async () => {
-        await result.current.startDiscovery();
         await result.current.cancelDiscovery();
       });
 

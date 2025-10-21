@@ -89,7 +89,7 @@ describe('MigrationValidationView', () => {
       });
 
       render(<MigrationValidationView />);
-      expect(screen.getByRole('status') || screen.getByText(/loading/i)).toBeInTheDocument();
+      expect(screen.queryAllByRole('status').length > 0 || screen.queryByText(/loading/i)).toBeInTheDocument();
     });
 
     it('does not show loading state when data is loaded', () => {

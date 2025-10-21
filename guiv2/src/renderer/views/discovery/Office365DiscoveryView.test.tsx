@@ -22,27 +22,31 @@ const { useOffice365DiscoveryLogic } = require('../../hooks/useOffice365Discover
 
 describe('Office365DiscoveryView', () => {
   const mockHookDefaults = {
-    isRunning: false,
-    isCancelling: false,
-    progress: null,
-    results: null,
-    error: null,
-    logs: [],
-    startDiscovery: jest.fn(),
-    cancelDiscovery: jest.fn(),
-    exportResults: jest.fn(),
-    clearLogs: jest.fn(),
-    selectedProfile: null,
-  
+    // State
     config: {},
     templates: [],
     currentResult: null,
     isDiscovering: false,
+    progress: { current: 0, total: 100, message: '', percentage: 0 },
     selectedTab: 'overview',
     searchText: '',
+    error: null,
+    logs: [],
+
+    // Data
     filteredData: [],
     columnDefs: [],
     errors: [],
+    stats: { totalUsers: 0, totalMailboxes: 0, totalLicenses: 0, totalGroups: 0 },
+
+    // Actions
+    isRunning: false,
+    isCancelling: false,
+    results: null,
+    startDiscovery: jest.fn(),
+    cancelDiscovery: jest.fn(),
+    exportResults: jest.fn(),
+    clearLogs: jest.fn(),
     updateConfig: jest.fn(),
     loadTemplate: jest.fn(),
     saveAsTemplate: jest.fn(),

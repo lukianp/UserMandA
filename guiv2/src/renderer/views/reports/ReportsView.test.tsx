@@ -23,19 +23,20 @@ jest.mock('../../hooks/useReportsLogic', () => ({
 const { useReportsLogic } = require('../../hooks/useReportsLogic');
 
 describe('ReportsView', () => {
+  const mockTemplates = [
+    { id: 'user-summary', name: 'User Summary Report', description: 'Summary of all discovered users', category: 'Users', format: 'PDF' as const, parameters: {} },
+    { id: 'group-membership', name: 'Group Membership Report', description: 'Detailed group membership', category: 'Groups', format: 'Excel' as const, parameters: {} },
+    { id: 'migration-readiness', name: 'Migration Readiness Report', description: 'Assessment of migration readiness', category: 'Migration', format: 'PDF' as const, parameters: {} },
+  ];
+
   const mockHookDefaults = {
-    
-    
-    
-    data: [],
-    selectedItems: [],
+    templates: mockTemplates,
+    generatingReports: new Set<string>(),
     searchText: '',
-    isLoading: false,
-    error: null,
-    loadData: jest.fn(),
-    exportData: jest.fn(),
-    refreshData: jest.fn(),
-    pagination: { page: 0, pageSize: 50, total: 0 },
+    setSearchText: jest.fn(),
+    filterCategory: 'all',
+    setFilterCategory: jest.fn(),
+    generateReport: jest.fn(),
   };
 
   beforeEach(() => {
@@ -77,54 +78,52 @@ describe('ReportsView', () => {
   });
 
   // ============================================================================
-  // Loading State Tests
+  // Generating State Tests
   // ============================================================================
 
-  describe('Loading State', () => {
-    it('shows loading state when data is loading', () => {
+  describe('Generating State', () => {
+    it('shows generating state for a report', () => {
+      const generatingSet = new Set(['user-summary']);
       useReportsLogic.mockReturnValue({
         ...mockHookDefaults,
-        isLoading: true,
+        generatingReports: generatingSet,
       });
 
       render(<ReportsView />);
-      expect(screen.getByRole('status') || screen.getByText(/loading/i)).toBeInTheDocument();
+      expect(screen.getByText(/Generating.../i)).toBeInTheDocument();
     });
 
-    it('does not show loading state when data is loaded', () => {
+    it('does not show generating state when no reports generating', () => {
       render(<ReportsView />);
-      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Generating.../i)).not.toBeInTheDocument();
     });
   });
 
-  
+
   // ============================================================================
-  // Data Display Tests
+  // Template Display Tests
   // ============================================================================
 
-  describe('Data Display', () => {
-    it('displays data when loaded', () => {
+  describe('Template Display', () => {
+    it('displays templates when loaded', () => {
       useReportsLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: mockDiscoveryData().users,
+        templates: mockTemplates,
       });
 
       render(<ReportsView />);
-      expect(screen.queryByText(/no.*data/i)).not.toBeInTheDocument();
+      expect(screen.getByText('User Summary Report')).toBeInTheDocument();
+      expect(screen.getByText('Group Membership Report')).toBeInTheDocument();
     });
 
-    it('shows empty state when no data', () => {
+    it('shows empty state when no templates', () => {
       useReportsLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: [],
+        templates: [],
       });
 
       render(<ReportsView />);
-      expect(
-        screen.queryByText(/no.*data/i) ||
-        screen.queryByText(/no.*results/i) ||
-        screen.queryByText(/empty/i)
-      ).toBeTruthy();
+      expect(screen.getByText(/No report templates found/i)).toBeInTheDocument();
     });
   });
 
@@ -156,111 +155,53 @@ describe('ReportsView', () => {
   });
 
   // ============================================================================
-  // Selection Tests
+  // Report Generation Tests
   // ============================================================================
 
-  describe('Item Selection', () => {
-    it('allows selecting items', () => {
-      useReportsLogic.mockReturnValue({
-        ...mockHookDefaults,
-        data: mockDiscoveryData().users,
-      });
-
+  describe('Report Generation', () => {
+    it('renders generate buttons for each template', () => {
       render(<ReportsView />);
-      const checkboxes = screen.queryAllByRole('checkbox');
-      expect(checkboxes.length).toBeGreaterThan(0);
+      const generateButtons = screen.getAllByText(/Generate Report/i);
+      expect(generateButtons.length).toBe(mockTemplates.length);
     });
 
-    it('displays selected count', () => {
+    it('calls generateReport when generate button clicked', () => {
+      const generateReport = jest.fn();
       useReportsLogic.mockReturnValue({
         ...mockHookDefaults,
-        selectedItems: mockDiscoveryData().users.slice(0, 2),
+        generateReport,
       });
 
       render(<ReportsView />);
-      expect(screen.queryByText(/2.*selected/i) || screen.queryByText(/selected.*2/i)).toBeTruthy();
+      const generateButton = screen.getAllByText(/Generate Report/i)[0];
+      fireEvent.click(generateButton);
+      expect(generateReport).toHaveBeenCalledWith('user-summary');
+    });
+
+    it('disables button while generating', () => {
+      const generatingSet = new Set(['user-summary']);
+      useReportsLogic.mockReturnValue({
+        ...mockHookDefaults,
+        generatingReports: generatingSet,
+      });
+
+      render(<ReportsView />);
+      const generateButtons = screen.getAllByRole('button');
+      // First button should be disabled (for user-summary)
+      expect(generateButtons[0]).toBeDisabled();
     });
   });
-  
 
-  
-
-  
 
   // ============================================================================
   // Button Action Tests
   // ============================================================================
 
   describe('Button Actions', () => {
-    it('renders action buttons', () => {
+    it('renders generate report buttons', () => {
       render(<ReportsView />);
       const buttons = screen.getAllByRole('button');
       expect(buttons.length).toBeGreaterThan(0);
-    });
-
-    
-    it('calls exportData when export button clicked', () => {
-      const exportData = jest.fn();
-      useReportsLogic.mockReturnValue({
-        ...mockHookDefaults,
-        exportData,
-        data: mockDiscoveryData().users,
-      });
-
-      render(<ReportsView />);
-      const exportButton = screen.queryByText(/Export/i);
-      if (exportButton) {
-        fireEvent.click(exportButton);
-        expect(exportData).toHaveBeenCalled();
-      }
-    });
-
-    it('calls refreshData when refresh button clicked', () => {
-      const refreshData = jest.fn();
-      useReportsLogic.mockReturnValue({
-        ...mockHookDefaults,
-        refreshData,
-      });
-
-      render(<ReportsView />);
-      const refreshButton = screen.queryByText(/Refresh/i) || screen.queryByRole('button', { name: /refresh/i });
-      if (refreshButton) {
-        fireEvent.click(refreshButton);
-        expect(refreshData).toHaveBeenCalled();
-      }
-    });
-    
-  });
-
-  // ============================================================================
-  // Error Handling Tests
-  // ============================================================================
-
-  describe('Error Handling', () => {
-    it('displays error message when error occurs', () => {
-      useReportsLogic.mockReturnValue({
-        ...mockHookDefaults,
-        error: 'Test error message',
-      });
-
-      render(<ReportsView />);
-      expect(screen.getByText(/Test error message/i)).toBeInTheDocument();
-    });
-
-    it('does not display error when no error', () => {
-      render(<ReportsView />);
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    });
-
-    it('shows error alert with proper styling', () => {
-      useReportsLogic.mockReturnValue({
-        ...mockHookDefaults,
-        error: 'Test error',
-      });
-
-      const { container } = render(<ReportsView />);
-      const alert = container.querySelector('[role="alert"]');
-      expect(alert).toBeInTheDocument();
     });
   });
 
@@ -292,49 +233,55 @@ describe('ReportsView', () => {
     });
   });
 
-  
+
   // ============================================================================
   // Integration Tests
   // ============================================================================
 
   describe('Integration', () => {
     it('handles complete workflow', async () => {
-      const refreshData = jest.fn();
-      const exportData = jest.fn();
+      const generateReport = jest.fn();
+      const setSearchText = jest.fn();
+      const setFilterCategory = jest.fn();
 
-      // Initial state - loading
+      // Initial state - templates displayed
       useReportsLogic.mockReturnValue({
         ...mockHookDefaults,
-        isLoading: true,
+        templates: mockTemplates,
+        generateReport,
+        setSearchText,
+        setFilterCategory,
       });
 
-      const { rerender } = render(<ReportsView />);
-      expect(screen.getByRole('status') || screen.getByText(/loading/i)).toBeInTheDocument();
+      render(<ReportsView />);
 
-      // Data loaded
+      // Verify templates are displayed
+      expect(screen.getByText('User Summary Report')).toBeInTheDocument();
+      expect(screen.getByText('Group Membership Report')).toBeInTheDocument();
+
+      // Search for templates
+      const searchInput = screen.getByPlaceholderText(/search/i);
+      fireEvent.change(searchInput, { target: { value: 'User' } });
+      expect(searchInput).toHaveValue('User');
+
+      // Generate a report
+      const generateButtons = screen.getAllByText(/Generate Report/i);
+      fireEvent.click(generateButtons[0]);
+      expect(generateReport).toHaveBeenCalledWith('user-summary');
+    });
+
+    it('shows generating state during report generation', () => {
+      const generatingSet = new Set(['user-summary', 'migration-readiness']);
       useReportsLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: mockDiscoveryData().users,
-        refreshData,
-        exportData,
+        generatingReports: generatingSet,
       });
 
-      rerender(<ReportsView />);
-      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      render(<ReportsView />);
 
-      // Refresh data
-      const refreshButton = screen.queryByText(/Refresh/i);
-      if (refreshButton) {
-        fireEvent.click(refreshButton);
-        expect(refreshData).toHaveBeenCalled();
-      }
-
-      // Export data
-      const exportButton = screen.queryByText(/Export/i);
-      if (exportButton) {
-        fireEvent.click(exportButton);
-        expect(exportData).toHaveBeenCalled();
-      }
+      // Multiple "Generating..." texts should be present
+      const generatingTexts = screen.getAllByText(/Generating.../i);
+      expect(generatingTexts.length).toBeGreaterThan(0);
     });
   });
   

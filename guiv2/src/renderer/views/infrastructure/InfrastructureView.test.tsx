@@ -23,25 +23,23 @@ jest.mock('../../hooks/useInfrastructureLogic', () => ({
 import { useInfrastructureLogic } from '../../hooks/useInfrastructureLogic';
 
 describe('InfrastructureView', () => {
-  const mockInfrastructure = {
-  servers: [
-    { name: 'SRV-DC-01', role: 'Domain Controller', status: 'Online', cpu: 45, memory: 60 },
-    { name: 'SRV-SQL-01', role: 'Database', status: 'Online', cpu: 70, memory: 85 },
-  ],
-  networkDevices: [
-    { name: 'RTR-CORE-01', type: 'Router', status: 'Online', uptime: 99.9 },
-  ],
-  storage: [],
-};
+  const mockInfrastructure = [
+    { id: '1', name: 'SRV-DC-01', type: 'server' as const, ipAddress: '10.0.0.1', status: 'online' as const, os: 'Windows Server 2019', lastSeen: '2024-01-15', details: {} },
+    { id: '2', name: 'SRV-SQL-01', type: 'server' as const, ipAddress: '10.0.0.2', status: 'online' as const, os: 'Windows Server 2019', lastSeen: '2024-01-15', details: {} },
+    { id: '3', name: 'RTR-CORE-01', type: 'network' as const, ipAddress: '10.0.0.254', status: 'online' as const, os: 'Cisco IOS', lastSeen: '2024-01-15', details: {} },
+  ];
 
   const mockHookDefaults = {
     infrastructure: mockInfrastructure,
-    statistics: { servers: 2, networkDevices: 1, storage: 0 },
     isLoading: false,
-    error: null,
-    refreshData: jest.fn(),
-    loadData: jest.fn(),
-    exportData: jest.fn(),
+    searchText: '',
+    setSearchText: jest.fn(),
+    selectedItems: [],
+    setSelectedItems: jest.fn(),
+    filterType: 'all',
+    setFilterType: jest.fn(),
+    loadInfrastructure: jest.fn(),
+    handleExport: jest.fn(),
   };
 
   beforeEach(() => {
@@ -94,7 +92,7 @@ describe('InfrastructureView', () => {
       });
 
       render(<InfrastructureView />);
-      expect(screen.getByRole('status') || screen.getByText(/loading/i)).toBeInTheDocument();
+      expect(screen.queryAllByRole('status').length > 0 || screen.queryByText(/loading/i)).toBeInTheDocument();
     });
 
     it('does not show loading state when data is loaded', () => {
@@ -112,7 +110,7 @@ describe('InfrastructureView', () => {
     it('displays data when loaded', () => {
       useInfrastructureLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: mockDiscoveryData().users,
+        infrastructure: mockInfrastructure,
       });
 
       render(<InfrastructureView />);
@@ -122,7 +120,7 @@ describe('InfrastructureView', () => {
     it('shows empty state when no data', () => {
       useInfrastructureLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: [],
+        infrastructure: [],
       });
 
       render(<InfrastructureView />);
@@ -169,7 +167,7 @@ describe('InfrastructureView', () => {
     it('allows selecting items', () => {
       useInfrastructureLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: mockDiscoveryData().users,
+        infrastructure: mockInfrastructure,
       });
 
       render(<InfrastructureView />);
@@ -180,7 +178,7 @@ describe('InfrastructureView', () => {
     it('displays selected count', () => {
       useInfrastructureLogic.mockReturnValue({
         ...mockHookDefaults,
-        selectedItems: mockDiscoveryData().users.slice(0, 2),
+        selectedItems: mockInfrastructure.slice(0, 2),
       });
 
       render(<InfrastructureView />);
@@ -204,35 +202,35 @@ describe('InfrastructureView', () => {
       expect(buttons.length).toBeGreaterThan(0);
     });
 
-    
-    it('calls exportData when export button clicked', () => {
-      const exportData = jest.fn();
+
+    it('calls handleExport when export button clicked', () => {
+      const handleExport = jest.fn();
       useInfrastructureLogic.mockReturnValue({
         ...mockHookDefaults,
-        exportData,
-        data: mockDiscoveryData().users,
+        infrastructure: mockInfrastructure,
+        handleExport,
       });
 
       render(<InfrastructureView />);
       const exportButton = screen.queryByText(/Export/i);
       if (exportButton) {
         fireEvent.click(exportButton);
-        expect(exportData).toHaveBeenCalled();
+        expect(handleExport).toHaveBeenCalled();
       }
     });
 
-    it('calls refreshData when refresh button clicked', () => {
-      const refreshData = jest.fn();
+    it('calls loadInfrastructure when refresh button clicked', () => {
+      const loadInfrastructure = jest.fn();
       useInfrastructureLogic.mockReturnValue({
         ...mockHookDefaults,
-        refreshData,
+        loadInfrastructure,
       });
 
       render(<InfrastructureView />);
       const refreshButton = screen.queryByText(/Refresh/i) || screen.queryByRole('button', { name: /refresh/i });
       if (refreshButton) {
         fireEvent.click(refreshButton);
-        expect(refreshData).toHaveBeenCalled();
+        expect(loadInfrastructure).toHaveBeenCalled();
       }
     });
     
@@ -305,8 +303,8 @@ describe('InfrastructureView', () => {
 
   describe('Integration', () => {
     it('handles complete workflow', async () => {
-      const refreshData = jest.fn();
-      const exportData = jest.fn();
+      const loadInfrastructure = jest.fn();
+      const handleExport = jest.fn();
 
       // Initial state - loading
       useInfrastructureLogic.mockReturnValue({
@@ -315,14 +313,14 @@ describe('InfrastructureView', () => {
       });
 
       const { rerender } = render(<InfrastructureView />);
-      expect(screen.getByRole('status') || screen.getByText(/loading/i)).toBeInTheDocument();
+      expect(screen.queryAllByRole('status').length > 0 || screen.queryByText(/loading/i)).toBeInTheDocument();
 
       // Data loaded
       useInfrastructureLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: mockDiscoveryData().users,
-        refreshData,
-        exportData,
+        infrastructure: mockInfrastructure,
+        loadInfrastructure,
+        handleExport,
       });
 
       rerender(<InfrastructureView />);
@@ -332,14 +330,14 @@ describe('InfrastructureView', () => {
       const refreshButton = screen.queryByText(/Refresh/i);
       if (refreshButton) {
         fireEvent.click(refreshButton);
-        expect(refreshData).toHaveBeenCalled();
+        expect(loadInfrastructure).toHaveBeenCalled();
       }
 
       // Export data
       const exportButton = screen.queryByText(/Export/i);
       if (exportButton) {
         fireEvent.click(exportButton);
-        expect(exportData).toHaveBeenCalled();
+        expect(handleExport).toHaveBeenCalled();
       }
     });
   });

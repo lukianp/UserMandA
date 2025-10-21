@@ -22,26 +22,47 @@ const { usePowerPlatformDiscoveryLogic } = require('../../hooks/usePowerPlatform
 
 describe('PowerPlatformDiscoveryView', () => {
   const mockHookDefaults = {
-    isRunning: false,
-    isCancelling: false,
-    progress: null,
-    results: null,
-    error: null,
-    logs: [],
-    startDiscovery: jest.fn(),
-    cancelDiscovery: jest.fn(),
-    exportResults: jest.fn(),
-    clearLogs: jest.fn(),
-    selectedProfile: null,
-  
-    config: {},
+    // State
+    config: {
+      id: 'test-config',
+      name: 'Test Config',
+      tenantId: 'test-tenant',
+      includeEnvironments: true,
+      includeApps: true,
+      includeFlows: true,
+      includeCopilots: true,
+      includeConnections: true,
+      timeout: 600000,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
     result: null,
+    currentResult: null,
     isDiscovering: false,
-    activeTab: 'overview',
+    progress: { current: 0, total: 100, message: '', percentage: 0 },
+    activeTab: 'overview' as const,
     filter: { searchText: '', category: '', status: '', severity: '' },
+    error: null,
+
+    // Data
     columns: [],
     filteredData: [],
-    stats: { total: 0, active: 0, inactive: 0, critical: 0, warning: 0, info: 0 , online: 0, offline: 0, onlinePercentage: '0', warrantyExpiring: 0, warrantyExpired: 0, highUtilization: 0, compliant: 0, nonCompliant: 0, pending: 0, resolved: 0, unresolved: 0},
+    stats: {
+      totalEnvironments: 0,
+      totalApps: 0,
+      totalFlows: 0,
+      totalConnectors: 0,
+      flowRunStats: { successCount: 0, failedCount: 0 },
+      environmentsByType: {},
+      appsByType: {},
+      flowsByState: {},
+      topAppOwners: [],
+      topFlowOwners: []
+    },
+
+    // Actions
+    startDiscovery: jest.fn(),
+    cancelDiscovery: jest.fn(),
     updateConfig: jest.fn(),
     setActiveTab: jest.fn(),
     updateFilter: jest.fn(),

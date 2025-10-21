@@ -1,45 +1,19 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "strict": false,
-    "noImplicitAny": false,
-    "jsx": "react-jsx",
-    "baseUrl": ".",
-    "types": ["jest", "node", "@testing-library/jest-dom", "@jest/globals"],
-    "typeRoots": ["./node_modules/@types"],
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
-    "allowJs": true,
-    "paths": {
-      "@/*": ["src/renderer/*"],
-      "@components/*": ["src/renderer/components/*"],
-      "@views/*": ["src/renderer/views/*"],
-      "@hooks/*": ["src/renderer/hooks/*"],
-      "@store/*": ["src/renderer/store/*"],
-      "@services/*": ["src/renderer/services/*"],
-      "@types/*": ["src/renderer/types/*"],
-      "@lib/*": ["src/renderer/lib/*"],
-      "*": ["node_modules/*"]
-    }
+    "types": ["jest", "node"]
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
-    "src/**/*.d.ts",
-    "src/types/**/*.d.ts",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "jest.config.js",
-    "src/setupTests.ts"
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    ".webpack",
-    "**/*.config.ts",
-    "**/*.config.js"
+    ".webpack"
   ]
 }

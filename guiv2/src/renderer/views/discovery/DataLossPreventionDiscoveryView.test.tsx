@@ -22,26 +22,26 @@ const { useDataLossPreventionDiscoveryLogic } = require('../../hooks/useDataLoss
 
 describe('DataLossPreventionDiscoveryView', () => {
   const mockHookDefaults = {
-    isRunning: false,
-    isCancelling: false,
-    progress: null,
-    results: null,
+    // State
+    config: {},
+    result: null,
+    isDiscovering: false,
+    progress: { current: 0, total: 100, message: '', percentage: 0 },
+    activeTab: 'overview' as const,
+    filter: { searchText: '' },
     error: null,
     logs: [],
+
+    // Data
+    columns: [],
+    filteredData: [],
+    stats: { totalPolicies: 0, totalRules: 0, totalLocations: 0, enabledPolicies: 0 },
+
+    // Actions
     startDiscovery: jest.fn(),
     cancelDiscovery: jest.fn(),
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
-    selectedProfile: { tenantId: '12345678-1234-1234-1234-123456789012', clientId: '87654321-4321-4321-4321-210987654321', isValid: true },
-  
-    config: {},
-    result: null,
-    isDiscovering: false,
-    activeTab: 'overview',
-    filter: { searchText: '', category: '', status: '', severity: '' },
-    columns: [],
-    filteredData: [],
-    stats: { total: 0, active: 0, inactive: 0, critical: 0, warning: 0, info: 0 , online: 0, offline: 0, onlinePercentage: '0', warrantyExpiring: 0, warrantyExpired: 0, highUtilization: 0, compliant: 0, nonCompliant: 0, pending: 0, resolved: 0, unresolved: 0},
     updateConfig: jest.fn(),
     updateFilter: jest.fn(),
     setActiveTab: jest.fn(),

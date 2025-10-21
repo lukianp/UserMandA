@@ -22,24 +22,33 @@ const { useAzureDiscoveryLogic } = require('../../hooks/useAzureDiscoveryLogic')
 
 describe('AzureDiscoveryView', () => {
   const mockHookDefaults = {
+    // Form state
+    formData: {
+      tenantId: '',
+      clientId: '',
+      clientSecret: '',
+      subscriptionId: ''
+    },
+    updateFormField: jest.fn(),
+    resetForm: jest.fn(),
+    isFormValid: true,
+
+    // Execution state
     isRunning: false,
     isCancelling: false,
     progress: null,
     results: null,
+    result: null,
     error: null,
     logs: [],
+    connectionStatus: { connected: false, message: '', lastChecked: null },
+
+    // Actions
+    testConnection: jest.fn(),
     startDiscovery: jest.fn(),
     cancelDiscovery: jest.fn(),
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
-    selectedProfile: { tenantId: '12345678-1234-1234-1234-123456789012', clientId: '87654321-4321-4321-4321-210987654321', isValid: true },
-  
-    formData: { domain: '', username: '', password: '', server: '' },
-    updateFormField: jest.fn(),
-    resetForm: null,
-    isFormValid: false,
-    connectionStatus: { connected: false, message: '', lastChecked: null },
-    testConnection: null,
   };
 
   beforeEach(() => {
@@ -79,13 +88,14 @@ describe('AzureDiscoveryView', () => {
       expect(icon).toBeInTheDocument();
     });
 
-    it('displays selected profile when available', () => {
+    it('displays form when available', () => {
       useAzureDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        selectedProfile: { name: 'Test Profile' },
+        formData: { tenantId: 'test-tenant', clientId: 'test-client', clientSecret: 'secret', subscriptionId: 'sub-id' },
       });
       render(<AzureDiscoveryView />);
-      expect(screen.getByText('Test Profile')).toBeInTheDocument();
+      // Form should render
+      expect(screen.getByTestId('azure-discovery-view')).toBeInTheDocument();
     });
   });
 

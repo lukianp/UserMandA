@@ -91,7 +91,7 @@ describe('PrivilegedAccessView', () => {
       });
 
       render(<PrivilegedAccessView />);
-      expect(screen.getByRole('status') || screen.getByText(/loading/i)).toBeInTheDocument();
+      expect(screen.queryAllByRole('status').length > 0 || screen.queryByText(/loading/i)).toBeInTheDocument();
     });
 
     it('does not show loading state when data is loaded', () => {
@@ -318,7 +318,7 @@ describe('PrivilegedAccessView', () => {
       });
 
       const { rerender } = render(<PrivilegedAccessView />);
-      expect(screen.getByRole('status') || screen.getByText(/loading/i)).toBeInTheDocument();
+      expect(screen.queryAllByRole('status').length > 0 || screen.queryByText(/loading/i)).toBeInTheDocument();
 
       // Data loaded
       usePrivilegedAccessLogic.mockReturnValue({

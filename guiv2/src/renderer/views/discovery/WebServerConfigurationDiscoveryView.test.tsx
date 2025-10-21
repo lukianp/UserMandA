@@ -22,34 +22,38 @@ const { useWebServerDiscoveryLogic } = require('../../hooks/useWebServerDiscover
 
 describe('WebServerConfigurationDiscoveryView', () => {
   const mockHookDefaults = {
-    isRunning: false,
-    isCancelling: false,
-    progress: null,
-    results: null,
+    // State
+    config: {},
+    isDiscovering: false,
+    progress: { current: 0, total: 100, message: '', percentage: 0 },
     error: null,
     logs: [],
+
+    // Filter
+    filter: { searchText: '' },
+    updateFilter: jest.fn(),
+    updateConfig: jest.fn(),
+
+    // Columns
+    serverColumns: [],
+    siteColumns: [],
+    bindingColumns: [],
+    appPoolColumns: [],
+    certificateColumns: [],
+
+    // Data
+    filteredServers: [],
+    filteredSites: [],
+    filteredBindings: [],
+    filteredAppPools: [],
+    filteredCertificates: [],
+    stats: { totalServers: 0, totalSites: 0, totalBindings: 0, totalAppPools: 0, totalCertificates: 0 },
+
+    // Actions
     startDiscovery: jest.fn(),
     cancelDiscovery: jest.fn(),
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
-    selectedProfile: null,
-  
-    config: {},
-    updateConfig: jest.fn(),
-    isDiscovering: false,
-    filter: null,
-    updateFilter: jest.fn(),
-    serverColumns: null,
-    siteColumns: null,
-    bindingColumns: null,
-    appPoolColumns: null,
-    certificateColumns: null,
-    filteredServers: null,
-    filteredSites: null,
-    filteredBindings: null,
-    filteredAppPools: null,
-    filteredCertificates: null,
-    stats: null,
     exportToCSV: jest.fn(),
     exportToExcel: jest.fn(),
   };
