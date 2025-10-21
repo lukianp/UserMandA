@@ -34,31 +34,31 @@ export const SecurityDashboardView: React.FC = () => {
   const securityMetrics = [
     {
       label: 'Critical Vulnerabilities',
-      value: stats.criticalVulnerabilities,
+      value: (stats?.criticalVulnerabilities ?? 0),
       icon: AlertTriangle,
       color: 'red',
-      change: stats.criticalChange,
+      change: (stats?.criticalChange ?? 0),
     },
     {
       label: 'Active Threats',
-      value: stats.activeThreats,
+      value: (stats?.activeThreats ?? 0),
       icon: Bug,
       color: 'orange',
-      change: stats.threatsChange,
+      change: (stats?.threatsChange ?? 0),
     },
     {
       label: 'Security Score',
       value: `${stats?.securityScore ?? 0}/100`,
       icon: Shield,
       color: 'blue',
-      change: stats.scoreChange,
+      change: (stats?.scoreChange ?? 0),
     },
     {
       label: 'Exposed Services',
-      value: stats.exposedServices,
+      value: (stats?.exposedServices ?? 0),
       icon: Unlock,
       color: 'yellow',
-      change: stats.exposedChange,
+      change: (stats?.exposedChange ?? 0),
     },
   ];
 

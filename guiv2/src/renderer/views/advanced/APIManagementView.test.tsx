@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import APIManagementView from './APIManagementView';
 import {
@@ -21,17 +22,7 @@ jest.mock('../../hooks/useAPIManagementLogic', () => ({
 import { useAPIManagementLogic } from '../../hooks/useAPIManagementLogic';
 
 describe('APIManagementView', () => {
-  const mockHookDefaults = {
-
-    data: [] as any[],
-
-
-
-
-    selectedItems: [] as any[],
-    searchText: '',
-    isLoading: false,
-    error: {} as any,
+  const mockHookDefaults = createUniversalDiscoveryHook(); as any,
     loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),

@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import {  createUniversalDiscoveryHook , createUniversalStats } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import ServerInventoryView from './ServerInventoryView';
 import {
@@ -48,19 +49,7 @@ describe('ServerInventoryView', () => {
     healthCheck: jest.fn(),
 
     // Statistics
-    stats: {
-      total: 0,
-      online: 0,
-      offline: 0,
-      warning: 0,
-      critical: 0,
-      physical: 0,
-      virtual: 0,
-      cloud: 0,
-      avgCpuUsage: 0,
-      avgRamUsage: 0,
-      avgDiskUsage: 0,
-    },
+    stats: createUniversalStats(),
     roleDistribution: [],
 
     // Profile
@@ -163,11 +152,7 @@ describe('ServerInventoryView', () => {
     it('displays server statistics', () => {
       useServerInventoryLogic.mockReturnValue({
         ...mockHookDefaults,
-        stats: {
-          ...mockHookDefaults.stats,
-          total: 10,
-          online: 8,
-        },
+        stats: createUniversalStats(),
       });
 
       render(<ServerInventoryView />);

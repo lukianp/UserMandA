@@ -229,29 +229,29 @@ const ExchangeDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<Inbox className="w-5 h-5" />}
                 label="Total Mailboxes"
-                value={result.statistics.totalMailboxes}
-                subValue={`Avg size: ${formatBytes(result.statistics.averageMailboxSize)}`}
+                value={(result?.statistics?.totalMailboxes ?? 0)}
+                subValue={`Avg size: ${formatBytes((result?.statistics?.averageMailboxSize ?? 0))}`}
                 color="green"
               />
               <StatCard
                 icon={<Database className="w-5 h-5" />}
                 label="Total Storage"
-                value={formatBytes(result.statistics.totalMailboxSize)}
-                subValue={`${result.statistics.totalMailboxes.toLocaleString()} mailboxes`}
+                value={formatBytes((result?.statistics?.totalMailboxSize ?? 0))}
+                subValue={`${(result?.statistics?.totalMailboxes ?? 0).toLocaleString()} mailboxes`}
                 color="blue"
               />
               <StatCard
                 icon={<Users className="w-5 h-5" />}
                 label="Distribution Groups"
-                value={result.statistics.totalDistributionGroups}
-                subValue={`${result.statistics.securityGroups} security`}
+                value={(result?.statistics?.totalDistributionGroups ?? 0)}
+                subValue={`${(result?.statistics?.securityGroups ?? 0)} security`}
                 color="purple"
               />
               <StatCard
                 icon={<Shield className="w-5 h-5" />}
                 label="Transport Rules"
-                value={result.statistics.totalTransportRules}
-                subValue={`${result.statistics.enabledRules} enabled`}
+                value={(result?.statistics?.totalTransportRules ?? 0)}
+                subValue={`${(result?.statistics?.enabledRules ?? 0)} enabled`}
                 color="orange"
               />
             </div>
@@ -269,19 +269,19 @@ const ExchangeDiscoveryView: React.FC = () => {
               <TabButton
                 active={selectedTab === 'mailboxes'}
                 onClick={() => setSelectedTab('mailboxes')}
-                label={`Mailboxes (${result.mailboxes.length})`}
+                label={`Mailboxes (${(result?.mailboxes?.length ?? 0)})`}
                 icon={<Inbox className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'groups'}
                 onClick={() => setSelectedTab('groups')}
-                label={`Groups (${result.distributionGroups.length})`}
+                label={`Groups (${(result?.distributionGroups?.length ?? 0)})`}
                 icon={<Users className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'rules'}
                 onClick={() => setSelectedTab('rules')}
-                label={`Transport Rules (${result.transportRules.length})`}
+                label={`Transport Rules (${(result?.transportRules?.length ?? 0)})`}
                 icon={<Shield className="w-4 h-4" />}
               />
             </div>
@@ -457,7 +457,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
         <SummaryRow label="Start Time" value={new Date(result.startTime).toLocaleString()} />
         <SummaryRow label="End Time" value={result.endTime ? new Date(result.endTime).toLocaleString() : 'N/A'} />
         <SummaryRow label="Duration" value={`${(result.duration / 1000).toFixed(2)} seconds`} />
-        <SummaryRow label="Objects per Second" value={result.objectsPerSecond.toFixed(2)} />
+        <SummaryRow label="Objects per Second" value={result.(typeof objectsPerSecond === 'number' ? objectsPerSecond : 0).toFixed(2)} />
         <SummaryRow label="Status" value={<Badge variant={result.status === 'completed' ? 'success' : 'warning'}>{result.status}</Badge>} />
       </div>
     </div>
@@ -466,13 +466,13 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Mailbox Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Mailboxes" value={result.statistics.totalMailboxes} />
-        <SummaryRow label="User Mailboxes" value={result.statistics.userMailboxes} />
-        <SummaryRow label="Shared Mailboxes" value={result.statistics.sharedMailboxes} />
-        <SummaryRow label="Resource Mailboxes" value={result.statistics.resourceMailboxes} />
-        <SummaryRow label="Average Mailbox Size" value={formatBytes(result.statistics.averageMailboxSize)} />
-        <SummaryRow label="Largest Mailbox" value={formatBytes(result.statistics.largestMailboxSize)} />
-        <SummaryRow label="Total Storage" value={formatBytes(result.statistics.totalStorage)} />
+        <SummaryRow label="Total Mailboxes" value={(result?.statistics?.totalMailboxes ?? 0)} />
+        <SummaryRow label="User Mailboxes" value={(result?.statistics?.userMailboxes ?? 0)} />
+        <SummaryRow label="Shared Mailboxes" value={(result?.statistics?.sharedMailboxes ?? 0)} />
+        <SummaryRow label="Resource Mailboxes" value={(result?.statistics?.resourceMailboxes ?? 0)} />
+        <SummaryRow label="Average Mailbox Size" value={formatBytes((result?.statistics?.averageMailboxSize ?? 0))} />
+        <SummaryRow label="Largest Mailbox" value={formatBytes((result?.statistics?.largestMailboxSize ?? 0))} />
+        <SummaryRow label="Total Storage" value={formatBytes((result?.statistics?.totalStorage ?? 0))} />
       </div>
     </div>
 
@@ -480,11 +480,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Distribution Groups</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Distribution Groups" value={result.statistics.totalDistributionGroups} />
-        <SummaryRow label="Static Groups" value={result.statistics.staticGroups} />
-        <SummaryRow label="Dynamic Groups" value={result.statistics.dynamicGroups} />
-        <SummaryRow label="Mail-Enabled Security Groups" value={result.statistics.mailEnabledSecurityGroups} />
-        <SummaryRow label="Average Members per Group" value={result.statistics.averageMembersPerGroup.toFixed(1)} />
+        <SummaryRow label="Total Distribution Groups" value={(result?.statistics?.totalDistributionGroups ?? 0)} />
+        <SummaryRow label="Static Groups" value={(result?.statistics?.staticGroups ?? 0)} />
+        <SummaryRow label="Dynamic Groups" value={(result?.statistics?.dynamicGroups ?? 0)} />
+        <SummaryRow label="Mail-Enabled Security Groups" value={(result?.statistics?.mailEnabledSecurityGroups ?? 0)} />
+        <SummaryRow label="Average Members per Group" value={result.statistics.(typeof averageMembersPerGroup === 'number' ? averageMembersPerGroup : 0).toFixed(1)} />
       </div>
     </div>
 
@@ -492,14 +492,14 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Transport Rules</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Transport Rules" value={result.statistics.totalTransportRules} />
-        <SummaryRow label="Enabled Rules" value={result.statistics.enabledTransportRules} />
-        <SummaryRow label="Disabled Rules" value={result.statistics.disabledTransportRules} />
+        <SummaryRow label="Total Transport Rules" value={(result?.statistics?.totalTransportRules ?? 0)} />
+        <SummaryRow label="Enabled Rules" value={(result?.statistics?.enabledTransportRules ?? 0)} />
+        <SummaryRow label="Disabled Rules" value={(result?.statistics?.disabledTransportRules ?? 0)} />
         <SummaryRow
           label="Compliance Coverage"
           value={
-            <Badge variant={result.statistics.enabledTransportRules > 5 ? 'success' : result.statistics.enabledTransportRules > 2 ? 'warning' : 'danger'}>
-              {result.statistics.enabledTransportRules > 5 ? 'Good' : result.statistics.enabledTransportRules > 2 ? 'Moderate' : 'Low'}
+            <Badge variant={(result?.statistics?.enabledTransportRules ?? 0) > 5 ? 'success' : (result?.statistics?.enabledTransportRules ?? 0) > 2 ? 'warning' : 'danger'}>
+              {(result?.statistics?.enabledTransportRules ?? 0) > 5 ? 'Good' : (result?.statistics?.enabledTransportRules ?? 0) > 2 ? 'Moderate' : 'Low'}
             </Badge>
           }
         />
@@ -510,10 +510,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Connectors</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Connectors" value={result.statistics.totalConnectors} />
-        <SummaryRow label="Inbound Connectors" value={result.statistics.inboundConnectors} />
-        <SummaryRow label="Outbound Connectors" value={result.statistics.outboundConnectors} />
-        <SummaryRow label="Enabled Connectors" value={result.statistics.enabledConnectors} />
+        <SummaryRow label="Total Connectors" value={(result?.statistics?.totalConnectors ?? 0)} />
+        <SummaryRow label="Inbound Connectors" value={(result?.statistics?.inboundConnectors ?? 0)} />
+        <SummaryRow label="Outbound Connectors" value={(result?.statistics?.outboundConnectors ?? 0)} />
+        <SummaryRow label="Enabled Connectors" value={(result?.statistics?.enabledConnectors ?? 0)} />
       </div>
     </div>
   </div>

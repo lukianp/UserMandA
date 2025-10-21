@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import AboutView from './AboutView';
 import {
@@ -19,14 +20,7 @@ jest.mock('../../hooks/useAboutLogic', () => ({
 const { useAboutLogic } = require('../../hooks/useAboutLogic');
 
 describe('AboutView', () => {
-  const mockHookDefaults = {
-
-
-    error: null as string | null,
-
-
-    pagination: { page: 0, pageSize: 50, total: 0 },
-  };
+  const mockHookDefaults = createUniversalDiscoveryHook();
   beforeEach(() => {
     resetAllMocks();
     useAboutLogic.mockReturnValue(mockHookDefaults);

@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {    createUniversalDiscoveryHook , createUniversalStats , createUniversalConfig , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import Office365DiscoveryView from './Office365DiscoveryView';
 import {
@@ -23,11 +24,11 @@ const { useOffice365DiscoveryLogic } = require('../../hooks/useOffice365Discover
 describe('Office365DiscoveryView', () => {
   const mockHookDefaults = {
     // State
-    config: {},
+    config: createUniversalConfig(),
     templates: [],
     currentResult: null,
     isDiscovering: false,
-    progress: { current: 0, total: 100, message: '', percentage: 0 },
+    progress: createUniversalProgress(),
     selectedTab: 'overview',
     searchText: '',
     error: null,
@@ -37,7 +38,7 @@ describe('Office365DiscoveryView', () => {
     filteredData: [],
     columnDefs: [],
     errors: [],
-    stats: { totalUsers: 0, totalMailboxes: 0, totalLicenses: 0, totalGroups: 0 },
+    stats: createUniversalStats(),
 
     // Actions
     isRunning: false,

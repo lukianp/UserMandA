@@ -230,15 +230,15 @@ const SQLServerDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<HardDrive />}
                 label="Storage"
-                value={formatBytes(stats.totalStorageMB * 1024 * 1024)}
+                value={formatBytes((stats?.totalStorageMB ?? 0) * 1024 * 1024)}
                 variant="default"
               />
               <StatCard
                 icon={<AlertCircle />}
                 label="Backup Status"
                 value={stats?.outdatedBackups ?? 0}
-                subValue={stats.outdatedBackups > 0 ? 'databases need backup' : 'all up to date'}
-                variant={stats.outdatedBackups > 0 ? 'warning' : 'success'}
+                subValue={(stats?.outdatedBackups ?? 0) > 0 ? 'databases need backup' : 'all up to date'}
+                variant={(stats?.outdatedBackups ?? 0) > 0 ? 'warning' : 'success'}
               />
             </div>
 

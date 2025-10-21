@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {    createUniversalDiscoveryHook , createUniversalStats , createUniversalConfig , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import ActiveDirectoryDiscoveryView from './ActiveDirectoryDiscoveryView';
 import {
@@ -25,11 +26,11 @@ describe('ActiveDirectoryDiscoveryView', () => {
 
   const mockHookDefaults = {
     // State
-    config: {},
+    config: createUniversalConfig(),
     templates: [],
     currentResult: null,
     isDiscovering: false,
-    progress: { current: 0, total: 100, message: '', percentage: 0 },
+    progress: createUniversalProgress(),
     selectedTab: 'overview',
     searchText: '',
     error: null,
@@ -39,7 +40,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
     filteredData: [],
     columnDefs: [],
     errors: [],
-    stats: { totalUsers: 0, totalGroups: 0, totalComputers: 0, totalOUs: 0 },
+    stats: createUniversalStats(),
 
     // Actions
     isRunning: false,

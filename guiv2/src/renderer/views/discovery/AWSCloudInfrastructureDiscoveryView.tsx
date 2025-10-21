@@ -51,19 +51,19 @@ const AWSCloudInfrastructureDiscoveryView: React.FC = () => {
   const handleStartDiscovery = () => {
     const errors: string[] = [];
 
-    if (!config.accessKeyId || config.accessKeyId.trim() === '') {
+    if (!config.accessKeyId || (config?.accessKeyId?.trim ?? '')() === '') {
       errors.push('AWS Access Key ID is required');
     }
 
-    if (!config.secretAccessKey || config.secretAccessKey.trim() === '') {
+    if (!config.secretAccessKey || (config?.secretAccessKey?.trim ?? '')() === '') {
       errors.push('AWS Secret Access Key is required');
     }
 
-    if (!config.awsRegions || config.awsRegions.length === 0) {
+    if (!config.awsRegions || (config?.awsRegions?.length ?? '') === 0) {
       errors.push('At least one AWS region must be selected');
     }
 
-    if (!config.resourceTypes || config.resourceTypes.length === 0) {
+    if (!config.resourceTypes || (config?.resourceTypes?.length ?? '') === 0) {
       errors.push('At least one resource type must be selected');
     }
 
@@ -371,7 +371,7 @@ const AWSCloudInfrastructureDiscoveryView: React.FC = () => {
               color="purple"
             />
             <StatCard
-              value={`$${stats.estimatedCost.toFixed(2)}`}
+              value={`$${(stats?.estimatedCost?.toFixed ?? 0)(2)}`}
               label="Est. Monthly Cost"
               icon={<DollarSign className="w-5 h-5" />}
               color="gray"
@@ -380,7 +380,7 @@ const AWSCloudInfrastructureDiscoveryView: React.FC = () => {
               value={stats?.securityRisks ?? 0}
               label="Security Risks"
               icon={<Shield className="w-5 h-5" />}
-              color={stats.securityRisks > 0 ? "red" : "green"}
+              color={(stats?.securityRisks ?? 0) > 0 ? "red" : "green"}
             />
           </div>
         </div>
@@ -564,17 +564,17 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Cost Information</h3>
         <div className="space-y-3">
-          <SummaryRow label="Estimated Monthly Cost" value={`$${result.estimatedMonthlyCost.toFixed(2)}`} />
+          <SummaryRow label="Estimated Monthly Cost" value={`$${result.(typeof estimatedMonthlyCost === 'number' ? estimatedMonthlyCost : 0).toFixed(2)}`} />
           <SummaryRow label="Cost by Service" value={result.costByService ? JSON.stringify(result.costByService) : 'N/A'} />
         </div>
       </div>
     )}
 
-    {result.securityFindings && result.securityFindings.length > 0 && (
+    {result.securityFindings && (result?.securityFindings?.length ?? 0) > 0 && (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-4">Security Findings</h3>
         <div className="space-y-2">
-          {result.securityFindings.slice(0, 10).map((finding: any, index: number) => (
+          {(result?.securityFindings?.slice ?? 0)(0, 10).map((finding: any, index: number) => (
             <div key={index} className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
               <p className="text-sm text-red-900 dark:text-red-100">{finding.message || finding}</p>
             </div>

@@ -166,7 +166,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
           </div>
           <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg border border-purple-200 dark:border-purple-700">
             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              {Object.keys(stats.serversByType).filter(type => stats.serversByType[type as keyof typeof stats.serversByType] > 0).length}
+              {Object.keys((stats?.serversByType ?? 0)).filter(type => (stats?.serversByType ?? 0)[type as keyof typeof (stats?.serversByType ?? 0)] > 0).length}
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Server Types</div>
           </div>
@@ -442,7 +442,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
                   Servers by Type
                 </h3>
                 <div className="grid grid-cols-5 gap-4">
-                  {Object.entries(stats.serversByType).map(([type, count]) => (
+                  {Object.entries((stats?.serversByType ?? 0)).map(([type, count]) => (
                     <div key={type} className="flex flex-col items-center p-4 bg-gray-50 dark:bg-gray-750 rounded-lg">
                       <span className="text-2xl font-bold text-sky-600">{count}</span>
                       <span className="text-sm text-gray-600 dark:text-gray-400 capitalize mt-1">{type.toUpperCase()}</span>
@@ -464,7 +464,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-700">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Stopped</span>
-                    <span className="text-2xl font-bold text-red-600">{stats.totalServers - stats.runningServers}</span>
+                    <span className="text-2xl font-bold text-red-600">{(stats?.totalServers ?? 0) - (stats?.runningServers ?? 0)}</span>
                   </div>
                 </div>
               </div>

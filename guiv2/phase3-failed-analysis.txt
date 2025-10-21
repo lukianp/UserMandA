@@ -1,0 +1,43 @@
+Total failed suites: 120
+
+
+=== VIEWS (100 suites) ===
+  undefined failures: src/renderer/views/discovery/EnvironmentDetectionView.test.tsx
+  undefined failures: src/renderer/views/assets/ServerInventoryView.test.tsx
+  undefined failures: src/renderer/views/discovery/AWSCloudInfrastructureDiscoveryView.test.tsx
+  undefined failures: src/renderer/views/discovery/DomainDiscoveryView.test.tsx
+  undefined failures: src/renderer/views/analytics/DataVisualizationView.test.tsx
+  undefined failures: src/renderer/views/discovery/ConditionalAccessPoliciesDiscoveryView.test.tsx
+  undefined failures: src/renderer/views/security/SecurityAuditView.test.tsx
+  undefined failures: src/renderer/views/assets/NetworkDeviceInventoryView.test.tsx
+  undefined failures: src/renderer/views/discovery/HyperVDiscoveryView.test.tsx
+  undefined failures: src/renderer/views/discovery/DataLossPreventionDiscoveryView.test.tsx
+  ... and 90 more
+
+=== HOOKS (13 suites) ===
+  undefined failures: src/renderer/hooks/useAWSCloudInfrastructureDiscoveryLogic.test.ts
+  undefined failures: src/renderer/hooks/useDiscoveryLogic.test.ts
+  undefined failures: src/renderer/hooks/useGoogleWorkspaceDiscoveryLogic.test.ts
+  undefined failures: src/renderer/hooks/usePowerPlatformDiscoveryLogic.test.ts
+  undefined failures: src/renderer/hooks/useAWSDiscoveryLogic.test.ts
+  undefined failures: src/renderer/hooks/useIdentityGovernanceDiscoveryLogic.test.ts
+  undefined failures: src/renderer/hooks/useDataLossPreventionDiscoveryLogic.test.ts
+  undefined failures: src/renderer/hooks/useHyperVDiscoveryLogic.test.ts
+  undefined failures: src/renderer/hooks/useVMwareDiscoveryLogic.test.ts
+  undefined failures: src/renderer/hooks/useOffice365DiscoveryLogic.test.ts
+  ... and 3 more
+
+=== SERVICES (1 suites) ===
+  undefined failures: src/renderer/services/webhookService.test.ts
+
+=== COMPONENTS (1 suites) ===
+  undefined failures: src/renderer/components/organisms/VirtualizedDataGrid.test.tsx
+
+=== MAIN (3 suites) ===
+  undefined failures: src/main/services/migrationServiceIntegration.test.ts
+  undefined failures: src/main/services/rollbackService.test.ts
+  undefined failures: src/main/services/logicEngineService.test.ts
+
+=== OTHER (2 suites) ===
+  undefined failures: src/renderer/store/useMigrationStore.test.ts
+  undefined failures: src/renderer/App.test.tsx

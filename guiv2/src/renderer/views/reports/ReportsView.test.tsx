@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import ReportsView from './ReportsView';
 import {
@@ -29,15 +30,7 @@ describe('ReportsView', () => {
     { id: 'migration-readiness', name: 'Migration Readiness Report', description: 'Assessment of migration readiness', category: 'Migration', format: 'PDF' as const, parameters: {} },
   ];
 
-  const mockHookDefaults = {
-    templates: mockTemplates,
-    generatingReports: new Set<string>(),
-    searchText: '',
-    setSearchText: jest.fn(),
-    filterCategory: 'all',
-    setFilterCategory: jest.fn(),
-    generateReport: jest.fn(),
-  };
+  const mockHookDefaults = createUniversalDiscoveryHook();
 
   beforeEach(() => {
     resetAllMocks();

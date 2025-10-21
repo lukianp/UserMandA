@@ -490,7 +490,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
         <SummaryRow label="Start Time" value={new Date(result.startTime).toLocaleString()} />
         <SummaryRow label="End Time" value={result.endTime ? new Date(result.endTime).toLocaleString() : 'N/A'} />
         <SummaryRow label="Duration" value={`${(result.duration / 1000).toFixed(2)} seconds`} />
-        <SummaryRow label="Objects per Second" value={result.objectsPerSecond.toFixed(2)} />
+        <SummaryRow label="Objects per Second" value={result.(typeof objectsPerSecond === 'number' ? objectsPerSecond : 0).toFixed(2)} />
         <SummaryRow label="Status" value={<Badge variant={result.status === 'completed' ? 'success' : 'warning'}>{result.status}</Badge>} />
       </div>
     </div>
@@ -499,13 +499,13 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Site Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Sites" value={result.stats.totalSites} />
-        <SummaryRow label="Root Sites" value={result.stats.rootSites} />
-        <SummaryRow label="Subsites" value={result.stats.subsites} />
-        <SummaryRow label="Team Sites" value={result.stats.teamSites} />
-        <SummaryRow label="Communication Sites" value={result.stats.communicationSites} />
-        <SummaryRow label="Hub Sites" value={result.stats.hubSites} />
-        <SummaryRow label="Average Site Size" value={formatBytes(result.stats.averageSiteSize)} />
+        <SummaryRow label="Total Sites" value={result.(stats?.totalSites ?? 0)} />
+        <SummaryRow label="Root Sites" value={result.(stats?.rootSites ?? 0)} />
+        <SummaryRow label="Subsites" value={result.(stats?.subsites ?? 0)} />
+        <SummaryRow label="Team Sites" value={result.(stats?.teamSites ?? 0)} />
+        <SummaryRow label="Communication Sites" value={result.(stats?.communicationSites ?? 0)} />
+        <SummaryRow label="Hub Sites" value={result.(stats?.hubSites ?? 0)} />
+        <SummaryRow label="Average Site Size" value={formatBytes(result.(stats?.averageSiteSize ?? 0))} />
       </div>
     </div>
 
@@ -513,15 +513,15 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Storage Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Storage" value={formatBytes(result.stats.totalStorage)} />
-        <SummaryRow label="Storage Used" value={formatBytes(result.stats.storageUsed)} />
-        <SummaryRow label="Storage Available" value={formatBytes(result.stats.storageAvailable)} />
+        <SummaryRow label="Total Storage" value={formatBytes(result.(stats?.totalStorage ?? 0))} />
+        <SummaryRow label="Storage Used" value={formatBytes(result.(stats?.storageUsed ?? 0))} />
+        <SummaryRow label="Storage Available" value={formatBytes(result.(stats?.storageAvailable ?? 0))} />
         <SummaryRow
           label="Storage Utilization"
-          value={`${((result.stats.storageUsed / result.stats.totalStorage) * 100).toFixed(1)}%`}
+          value={`${((result.(stats?.storageUsed ?? 0) / result.(stats?.totalStorage ?? 0)) * 100).toFixed(1)}%`}
         />
-        <SummaryRow label="Total Documents" value={result.stats.totalDocuments.toLocaleString()} />
-        <SummaryRow label="Total Lists" value={result.stats.totalLists.toLocaleString()} />
+        <SummaryRow label="Total Documents" value={result.(stats?.totalDocuments?.toLocaleString ?? 0)()} />
+        <SummaryRow label="Total Lists" value={result.(stats?.totalLists?.toLocaleString ?? 0)()} />
       </div>
     </div>
 
@@ -529,16 +529,16 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Permission Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Unique Permissions" value={result.stats.uniquePermissions} />
-        <SummaryRow label="Sites with Unique Permissions" value={result.stats.sitesWithUniquePermissions} />
-        <SummaryRow label="Items with Unique Permissions" value={result.stats.itemsWithUniquePermissions} />
-        <SummaryRow label="External Users" value={result.stats.externalUsers} />
-        <SummaryRow label="Externally Shared Items" value={result.stats.externallySharedItems} />
+        <SummaryRow label="Unique Permissions" value={result.(stats?.uniquePermissions ?? 0)} />
+        <SummaryRow label="Sites with Unique Permissions" value={result.(stats?.sitesWithUniquePermissions ?? 0)} />
+        <SummaryRow label="Items with Unique Permissions" value={result.(stats?.itemsWithUniquePermissions ?? 0)} />
+        <SummaryRow label="External Users" value={result.(stats?.externalUsers ?? 0)} />
+        <SummaryRow label="Externally Shared Items" value={result.(stats?.externallySharedItems ?? 0)} />
         <SummaryRow
           label="Security Complexity"
           value={
-            <Badge variant={result.stats.uniquePermissions > 100 ? 'danger' : result.stats.uniquePermissions > 50 ? 'warning' : 'success'}>
-              {result.stats.uniquePermissions > 100 ? 'High' : result.stats.uniquePermissions > 50 ? 'Moderate' : 'Low'}
+            <Badge variant={result.(stats?.uniquePermissions ?? 0) > 100 ? 'danger' : result.(stats?.uniquePermissions ?? 0) > 50 ? 'warning' : 'success'}>
+              {result.(stats?.uniquePermissions ?? 0) > 100 ? 'High' : result.(stats?.uniquePermissions ?? 0) > 50 ? 'Moderate' : 'Low'}
             </Badge>
           }
         />
@@ -549,10 +549,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">External Sharing</h3>
       <div className="space-y-3">
-        <SummaryRow label="Sites Allowing External Sharing" value={result.stats.sitesAllowingExternalSharing} />
-        <SummaryRow label="Anonymous Links" value={result.stats.anonymousLinks} />
-        <SummaryRow label="Guest Links" value={result.stats.guestLinks} />
-        <SummaryRow label="Organization Links" value={result.stats.organizationLinks} />
+        <SummaryRow label="Sites Allowing External Sharing" value={result.(stats?.sitesAllowingExternalSharing ?? 0)} />
+        <SummaryRow label="Anonymous Links" value={result.(stats?.anonymousLinks ?? 0)} />
+        <SummaryRow label="Guest Links" value={result.(stats?.guestLinks ?? 0)} />
+        <SummaryRow label="Organization Links" value={result.(stats?.organizationLinks ?? 0)} />
       </div>
     </div>
   </div>

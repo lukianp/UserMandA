@@ -236,9 +236,9 @@ const VMwareDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<HardDrive />}
                 label="Storage"
-                value={`${stats.totalStorageTB.toFixed(2)} TB`}
-                subValue={`${stats.usedStorageTB.toFixed(2)} TB used`}
-                variant={stats.usedStorageTB / stats.totalStorageTB > 0.9 ? 'warning' : 'default'}
+                value={`${(stats?.totalStorageTB?.toFixed ?? 0)(2)} TB`}
+                subValue={`${(stats?.usedStorageTB?.toFixed ?? 0)(2)} TB used`}
+                variant={(stats?.usedStorageTB ?? 0) / (stats?.totalStorageTB ?? 0) > 0.9 ? 'warning' : 'default'}
               />
             </div>
 

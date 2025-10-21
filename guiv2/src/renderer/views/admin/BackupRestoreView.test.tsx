@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import BackupRestoreView from './BackupRestoreView';
 import {
@@ -20,14 +21,7 @@ jest.mock('../../hooks/useBackupRestoreLogic', () => ({
 }));
 
 describe('BackupRestoreView', () => {
-  const mockHookDefaults = {
-
-
-    error: null as string | null,
-
-
-    pagination: { page: 0, pageSize: 50, total: 0 },
-  };
+  const mockHookDefaults = createUniversalDiscoveryHook();
   beforeEach(() => {
     resetAllMocks();
     mockUseBackupRestoreLogic.mockReturnValue(mockHookDefaults);

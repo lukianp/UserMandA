@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {    createUniversalDiscoveryHook , createUniversalStats , createUniversalConfig , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import WebServerConfigurationDiscoveryView from './WebServerConfigurationDiscoveryView';
 import {
@@ -21,42 +22,7 @@ jest.mock('../../hooks/useWebServerDiscoveryLogic', () => ({
 const { useWebServerDiscoveryLogic } = require('../../hooks/useWebServerDiscoveryLogic');
 
 describe('WebServerConfigurationDiscoveryView', () => {
-  const mockHookDefaults = {
-    // State
-    config: {},
-    isDiscovering: false,
-    progress: { current: 0, total: 100, message: '', percentage: 0 },
-    error: null,
-    logs: [],
-
-    // Filter
-    filter: { searchText: '' },
-    updateFilter: jest.fn(),
-    updateConfig: jest.fn(),
-
-    // Columns
-    serverColumns: [],
-    siteColumns: [],
-    bindingColumns: [],
-    appPoolColumns: [],
-    certificateColumns: [],
-
-    // Data
-    filteredServers: [],
-    filteredSites: [],
-    filteredBindings: [],
-    filteredAppPools: [],
-    filteredCertificates: [],
-    stats: { totalServers: 0, totalSites: 0, totalBindings: 0, totalAppPools: 0, totalCertificates: 0 },
-
-    // Actions
-    startDiscovery: jest.fn(),
-    cancelDiscovery: jest.fn(),
-    exportResults: jest.fn(),
-    clearLogs: jest.fn(),
-    exportToCSV: jest.fn(),
-    exportToExcel: jest.fn(),
-  };
+  const mockHookDefaults = createUniversalDiscoveryHook();
 
   beforeEach(() => {
     resetAllMocks();

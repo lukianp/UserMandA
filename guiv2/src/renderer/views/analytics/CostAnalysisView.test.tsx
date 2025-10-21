@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import CostAnalysisView from './CostAnalysisView';
 import { useCostAnalysisLogic } from '../../hooks/useCostAnalysisLogic';
@@ -31,9 +32,7 @@ describe('CostAnalysisView', () => {
   ],
 };
 
-  const mockHookDefaults = {
-    costData: mockCostData,
-    chartData: [{ name: 'Jan', value: 400 }],
+  const mockHookDefaults = createUniversalDiscoveryHook();],
     isLoading: false,
     error: null,
     refreshData: jest.fn(),

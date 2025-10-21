@@ -228,13 +228,13 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
               data-cy="stat-report-only"
             />
             <StatCard
-              value={stats.policiesByCondition['With MFA'] || 0}
+              value={(stats?.policiesByCondition ?? 0)['With MFA'] || 0}
               label="With MFA"
               color="blue"
               data-cy="stat-with-mfa"
             />
             <StatCard
-              value={stats.policiesByCondition['Block Access'] || 0}
+              value={(stats?.policiesByCondition ?? 0)['Block Access'] || 0}
               label="Block Access"
               color="red"
               data-cy="stat-block-access"

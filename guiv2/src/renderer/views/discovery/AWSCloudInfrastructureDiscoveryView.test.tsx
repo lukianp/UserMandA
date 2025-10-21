@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {  createUniversalDiscoveryHook , createUniversalConfig } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import AWSCloudInfrastructureDiscoveryView from './AWSCloudInfrastructureDiscoveryView';
 import {
@@ -36,7 +37,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
     clearLogs: jest.fn(),
     selectedProfile: null as any,
   
-    config: {},
+    config: createUniversalConfig(),
     setConfig: jest.fn(),
     result: null,
     isDiscovering: false,

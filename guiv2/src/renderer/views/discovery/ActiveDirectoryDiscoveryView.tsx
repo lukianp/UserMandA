@@ -415,11 +415,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Forest Information</h3>
         <div className="space-y-3">
-          <SummaryRow label="Forest Name" value={result.forest.name} />
-          <SummaryRow label="Forest Mode" value={result.forest.forestMode} />
-          <SummaryRow label="Domains" value={result.forest.domains.length} />
-          <SummaryRow label="Sites" value={result.forest.sites.length} />
-          <SummaryRow label="Global Catalogs" value={result.forest.globalCatalogs.length} />
+          <SummaryRow label="Forest Name" value={(result?.forest?.name ?? 0)} />
+          <SummaryRow label="Forest Mode" value={(result?.forest?.forestMode ?? 0)} />
+          <SummaryRow label="Domains" value={(result?.forest?.domains ?? 0).length} />
+          <SummaryRow label="Sites" value={(result?.forest?.sites ?? 0).length} />
+          <SummaryRow label="Global Catalogs" value={(result?.forest?.globalCatalogs ?? 0).length} />
         </div>
       </div>
     )}

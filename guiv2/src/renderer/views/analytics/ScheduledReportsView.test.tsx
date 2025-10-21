@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import ScheduledReportsView from './ScheduledReportsView';
 import { useScheduledReportsLogic } from '../../hooks/useScheduledReportsLogic';

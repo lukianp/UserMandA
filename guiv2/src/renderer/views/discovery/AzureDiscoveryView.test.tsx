@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import AzureDiscoveryView from './AzureDiscoveryView';
 import {
@@ -21,35 +22,7 @@ jest.mock('../../hooks/useAzureDiscoveryLogic', () => ({
 const { useAzureDiscoveryLogic } = require('../../hooks/useAzureDiscoveryLogic');
 
 describe('AzureDiscoveryView', () => {
-  const mockHookDefaults = {
-    // Form state
-    formData: {
-      tenantId: '',
-      clientId: '',
-      clientSecret: '',
-      subscriptionId: ''
-    },
-    updateFormField: jest.fn(),
-    resetForm: jest.fn(),
-    isFormValid: true,
-
-    // Execution state
-    isRunning: false,
-    isCancelling: false,
-    progress: null,
-    results: null,
-    result: null,
-    error: null,
-    logs: [],
-    connectionStatus: { connected: false, message: '', lastChecked: null },
-
-    // Actions
-    testConnection: jest.fn(),
-    startDiscovery: jest.fn(),
-    cancelDiscovery: jest.fn(),
-    exportResults: jest.fn(),
-    clearLogs: jest.fn(),
-  };
+  const mockHookDefaults = createUniversalDiscoveryHook();
 
   beforeEach(() => {
     resetAllMocks();

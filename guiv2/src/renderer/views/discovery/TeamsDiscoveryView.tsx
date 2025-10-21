@@ -229,29 +229,29 @@ const TeamsDiscoveryView: React.FC = () => {
               <StatCard
                 icon={<MessageSquare className="w-5 h-5" />}
                 label="Total Teams"
-                value={result.statistics.totalTeams}
-                subValue={`${result.statistics.activeTeams} active`}
+                value={(result?.statistics?.totalTeams ?? 0)}
+                subValue={`${(result?.statistics?.activeTeams ?? 0)} active`}
                 color="indigo"
               />
               <StatCard
                 icon={<Hash className="w-5 h-5" />}
                 label="Total Channels"
-                value={result.statistics.totalChannels}
-                subValue={`${result.statistics.privateChannels} private`}
+                value={(result?.statistics?.totalChannels ?? 0)}
+                subValue={`${(result?.statistics?.privateChannels ?? 0)} private`}
                 color="blue"
               />
               <StatCard
                 icon={<Users className="w-5 h-5" />}
                 label="Total Members"
-                value={result.statistics.totalMembers}
-                subValue={`${result.statistics.totalGuests} guests`}
+                value={(result?.statistics?.totalMembers ?? 0)}
+                subValue={`${(result?.statistics?.totalGuests ?? 0)} guests`}
                 color="green"
               />
               <StatCard
                 icon={<Package className="w-5 h-5" />}
                 label="Installed Apps"
-                value={result.statistics.totalApps}
-                subValue={`${result.statistics.customApps} custom`}
+                value={(result?.statistics?.totalApps ?? 0)}
+                subValue={`${(result?.statistics?.customApps ?? 0)} custom`}
                 color="purple"
               />
             </div>
@@ -485,11 +485,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Teams Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Teams" value={result.statistics.totalTeams} />
-        <SummaryRow label="Active Teams" value={result.statistics.activeTeams} />
-        <SummaryRow label="Archived Teams" value={result.statistics.archivedTeams} />
-        <SummaryRow label="Public Teams" value={result.statistics.publicTeams} />
-        <SummaryRow label="Private Teams" value={result.statistics.privateTeams} />
+        <SummaryRow label="Total Teams" value={(result?.statistics?.totalTeams ?? 0)} />
+        <SummaryRow label="Active Teams" value={(result?.statistics?.activeTeams ?? 0)} />
+        <SummaryRow label="Archived Teams" value={(result?.statistics?.archivedTeams ?? 0)} />
+        <SummaryRow label="Public Teams" value={(result?.statistics?.publicTeams ?? 0)} />
+        <SummaryRow label="Private Teams" value={(result?.statistics?.privateTeams ?? 0)} />
         <SummaryRow label="Org-Wide Teams" value="N/A" />
         <SummaryRow label="Average Team Size" value={result.statistics.averageMembersPerTeam?.toFixed(1) || 'N/A'} />
       </div>
@@ -499,10 +499,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Channel Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Channels" value={result.statistics.totalChannels} />
-        <SummaryRow label="Standard Channels" value={result.statistics.standardChannels} />
-        <SummaryRow label="Private Channels" value={result.statistics.privateChannels} />
-        <SummaryRow label="Shared Channels" value={result.statistics.sharedChannels} />
+        <SummaryRow label="Total Channels" value={(result?.statistics?.totalChannels ?? 0)} />
+        <SummaryRow label="Standard Channels" value={(result?.statistics?.standardChannels ?? 0)} />
+        <SummaryRow label="Private Channels" value={(result?.statistics?.privateChannels ?? 0)} />
+        <SummaryRow label="Shared Channels" value={(result?.statistics?.sharedChannels ?? 0)} />
         <SummaryRow label="Average Channels per Team" value={result.statistics.averageChannelsPerTeam?.toFixed(1) || 'N/A'} />
       </div>
     </div>
@@ -511,16 +511,16 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Member Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Members" value={result.statistics.totalMembers} />
-        <SummaryRow label="Internal Members" value={result.statistics.totalOwners + result.statistics.totalMembers - result.statistics.totalGuests} />
-        <SummaryRow label="Guest Members" value={result.statistics.totalGuests} />
-        <SummaryRow label="Team Owners" value={result.statistics.totalOwners} />
-        <SummaryRow label="Team Members" value={result.statistics.totalMembers - result.statistics.totalOwners} />
+        <SummaryRow label="Total Members" value={(result?.statistics?.totalMembers ?? 0)} />
+        <SummaryRow label="Internal Members" value={(result?.statistics?.totalOwners ?? 0) + (result?.statistics?.totalMembers ?? 0) - (result?.statistics?.totalGuests ?? 0)} />
+        <SummaryRow label="Guest Members" value={(result?.statistics?.totalGuests ?? 0)} />
+        <SummaryRow label="Team Owners" value={(result?.statistics?.totalOwners ?? 0)} />
+        <SummaryRow label="Team Members" value={(result?.statistics?.totalMembers ?? 0) - (result?.statistics?.totalOwners ?? 0)} />
         <SummaryRow
           label="Guest Access"
           value={
-            <Badge variant={result.statistics.totalGuests > 0 ? 'warning' : 'success'}>
-              {result.statistics.totalGuests > 0 ? 'Enabled' : 'Disabled'}
+            <Badge variant={(result?.statistics?.totalGuests ?? 0) > 0 ? 'warning' : 'success'}>
+              {(result?.statistics?.totalGuests ?? 0) > 0 ? 'Enabled' : 'Disabled'}
             </Badge>
           }
         />
@@ -531,10 +531,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">App Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Installed Apps" value={result.statistics.totalApps} />
+        <SummaryRow label="Total Installed Apps" value={(result?.statistics?.totalApps ?? 0)} />
         <SummaryRow label="Microsoft Apps" value="N/A" />
-        <SummaryRow label="Custom Apps" value={result.statistics.customApps} />
-        <SummaryRow label="Third-Party Apps" value={result.statistics.thirdPartyApps} />
+        <SummaryRow label="Custom Apps" value={(result?.statistics?.customApps ?? 0)} />
+        <SummaryRow label="Third-Party Apps" value={(result?.statistics?.thirdPartyApps ?? 0)} />
         <SummaryRow label="Average Apps per Team" value="N/A" />
       </div>
     </div>

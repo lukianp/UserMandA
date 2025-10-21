@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {  createUniversalDiscoveryHook , createUniversalConfig } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import FileSystemDiscoveryView from './FileSystemDiscoveryView';
 import {
@@ -35,7 +36,7 @@ describe('FileSystemDiscoveryView', () => {
     selectedProfile: null,
   
     result: null,
-    config: {},
+    config: createUniversalConfig(),
     setConfig: jest.fn(),
     activeTab: 'overview',
     setActiveTab: jest.fn(),

@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {  createUniversalDiscoveryHook , createUniversalConfig } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import OneDriveDiscoveryView from './OneDriveDiscoveryView';
 import {
@@ -22,7 +23,7 @@ const { useOneDriveDiscoveryLogic } = require('../../hooks/useOneDriveDiscoveryL
 
 describe('OneDriveDiscoveryView', () => {
   const mockHookDefaults = {
-    config: {},
+    config: createUniversalConfig(),
     templates: [],
     currentResult: null,
     isDiscovering: false,

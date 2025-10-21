@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {  createUniversalDiscoveryHook , createUniversalConfig } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import VMwareDiscoveryView from './VMwareDiscoveryView';
 import {
@@ -34,7 +35,7 @@ describe('VMwareDiscoveryView', () => {
     clearLogs: jest.fn(),
     selectedProfile: null,
   
-    config: {},
+    config: createUniversalConfig(),
     setConfig: jest.fn(),
     result: null,
     isLoading: false,

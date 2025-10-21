@@ -36,21 +36,21 @@ export const ComplianceDashboardView: React.FC = () => {
     {
       status: 'Resolved',
       count: stats?.resolvedViolations ?? 0,
-      percentage: stats.totalViolations > 0 ? Math.round((stats?.resolvedViolations ?? 0 / stats.totalViolations) * 100) : 0,
+      percentage: (stats?.totalViolations ?? 0) > 0 ? Math.round((stats?.resolvedViolations ?? 0 / (stats?.totalViolations ?? 0)) * 100) : 0,
       icon: CheckCircle,
       color: 'green',
     },
     {
       status: 'Critical',
-      count: stats.criticalViolations,
-      percentage: stats.totalViolations > 0 ? Math.round((stats.criticalViolations / stats.totalViolations) * 100) : 0,
+      count: (stats?.criticalViolations ?? 0),
+      percentage: (stats?.totalViolations ?? 0) > 0 ? Math.round(((stats?.criticalViolations ?? 0) / (stats?.totalViolations ?? 0)) * 100) : 0,
       icon: XCircle,
       color: 'red',
     },
     {
       status: 'Open',
-      count: stats.openViolations,
-      percentage: stats.totalViolations > 0 ? Math.round((stats.openViolations / stats.totalViolations) * 100) : 0,
+      count: (stats?.openViolations ?? 0),
+      percentage: (stats?.totalViolations ?? 0) > 0 ? Math.round(((stats?.openViolations ?? 0) / (stats?.totalViolations ?? 0)) * 100) : 0,
       icon: AlertTriangle,
       color: 'yellow',
     },
@@ -186,8 +186,8 @@ export const ComplianceDashboardView: React.FC = () => {
           </div>
           <div className="flex items-end gap-2">
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.criticalViolations ?? 0}</p>
-            <Badge variant={stats.criticalViolations > 10 ? 'danger' : stats.criticalViolations > 5 ? 'warning' : 'success'}>
-              {stats.criticalViolations > 10 ? 'High' : stats.criticalViolations > 5 ? 'Medium' : 'Low'}
+            <Badge variant={(stats?.criticalViolations ?? 0) > 10 ? 'danger' : (stats?.criticalViolations ?? 0) > 5 ? 'warning' : 'success'}>
+              {(stats?.criticalViolations ?? 0) > 10 ? 'High' : (stats?.criticalViolations ?? 0) > 5 ? 'Medium' : 'Low'}
             </Badge>
           </div>
         </div>

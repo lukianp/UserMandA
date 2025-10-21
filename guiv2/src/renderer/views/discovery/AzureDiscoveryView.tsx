@@ -272,7 +272,7 @@ const AzureDiscoveryView: React.FC = () => {
             )}
 
             {/* Results Summary */}
-            {results.length > 0 && (
+            {(Array.isArray(results) ? results.length : 0) > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -318,7 +318,7 @@ const AzureDiscoveryView: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Execution Log
                 </h3>
-                {logs.length > 0 && (
+                {(Array.isArray(logs) ? logs.length : 0) > 0 && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -334,7 +334,7 @@ const AzureDiscoveryView: React.FC = () => {
                 className="bg-gray-900 dark:bg-black rounded-md p-4 h-96 overflow-auto font-mono text-xs"
                 data-cy="execution-log"
               >
-                {logs.length === 0 ? (
+                {(Array.isArray(logs) ? logs.length : 0) === 0 ? (
                   <p className="text-gray-500">No logs yet. Start discovery to see output.</p>
                 ) : (
                   logs.map((log, index) => (

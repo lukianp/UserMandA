@@ -196,12 +196,12 @@ const GoogleWorkspaceDiscoveryView: React.FC = () => {
             <StatCard value={stats?.suspendedUsers ?? 0} label="Suspended" color="orange" />
             <StatCard value={stats?.totalGroups ?? 0} label="Groups" color="blue" />
             <StatCard
-              value={`${(stats.totalStorageUsed / 1024 / 1024 / 1024).toFixed(2)} GB`}
+              value={`${((stats?.totalStorageUsed ?? 0) / 1024 / 1024 / 1024).toFixed(2)} GB`}
               label="Total Storage"
               color="purple"
             />
             <StatCard
-              value={`${(stats.averageStoragePerUser / 1024 / 1024 / 1024).toFixed(2)} GB`}
+              value={`${((stats?.averageStoragePerUser ?? 0) / 1024 / 1024 / 1024).toFixed(2)} GB`}
               label="Avg/User"
               color="teal"
             />
@@ -366,10 +366,10 @@ const OverviewTab: React.FC<{ stats: any; result: any }> = ({ stats, result }) =
       </div>
 
       {/* Top Storage Users */}
-      {stats?.topStorageUsers && stats.topStorageUsers.length > 0 && (
+      {stats?.topStorageUsers && (stats?.topStorageUsers?.length ?? 0) > 0 && (
         <div className="pb-4 border-b">
           <h3 className="text-sm font-medium mb-3">Top Storage Users</h3>
-          {stats.topStorageUsers.map((user: any, i: number) => (
+          {(stats?.topStorageUsers?.map ?? 0)((user: any, i: number) => (
             <div key={i} className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
               <div>
                 <span className="text-sm font-medium">{user.name}</span>
@@ -387,31 +387,31 @@ const OverviewTab: React.FC<{ stats: any; result: any }> = ({ stats, result }) =
         <SummaryRow label="Total Groups" value={stats?.totalGroups || 0} />
         {result?.gmailData && (
           <>
-            <SummaryRow label="Total Mailboxes" value={result.gmailData.totalMailboxes || 0} />
+            <SummaryRow label="Total Mailboxes" value={(result?.gmailData?.totalMailboxes ?? 0) || 0} />
             <SummaryRow
               label="Gmail Storage"
-              value={`${((result.gmailData.totalStorageUsed || 0) / 1024 / 1024 / 1024).toFixed(2)} GB`}
+              value={`${(((result?.gmailData?.totalStorageUsed ?? 0) || 0) / 1024 / 1024 / 1024).toFixed(2)} GB`}
             />
           </>
         )}
         {result?.driveData && (
           <>
-            <SummaryRow label="Drive Users" value={result.driveData.totalUsers || 0} />
-            <SummaryRow label="Total Files" value={(result.driveData.totalFilesCount || 0).toLocaleString()} />
+            <SummaryRow label="Drive Users" value={(result?.driveData?.totalUsers ?? 0) || 0} />
+            <SummaryRow label="Total Files" value={((result?.driveData?.totalFilesCount ?? 0) || 0).toLocaleString()} />
             <SummaryRow label="Shared Drives" value={result.driveData.sharedDrives?.length || 0} />
           </>
         )}
       </div>
 
       {/* License Utilization */}
-      {stats?.licenseUtilization && Object.keys(stats.licenseUtilization).length > 0 && (
+      {stats?.licenseUtilization && Object.keys((stats?.licenseUtilization ?? 0)).length > 0 && (
         <div>
           <h3 className="text-sm font-medium mb-3">License Utilization</h3>
-          {Object.entries(stats.licenseUtilization).slice(0, 5).map(([sku, util]: [string, any], i: number) => (
+          {Object.entries((stats?.licenseUtilization ?? 0)).slice(0, 5).map(([sku, util]: [string, any], i: number) => (
             <div key={i} className="mb-2">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-xs text-gray-600 dark:text-gray-400">{sku}</span>
-                <span className="text-xs font-medium">{util.toFixed(1)}%</span>
+                <span className="text-xs font-medium">{(typeof util === 'number' ? util : 0).toFixed(1)}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div

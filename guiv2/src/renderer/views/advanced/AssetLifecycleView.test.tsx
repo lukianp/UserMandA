@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import AssetLifecycleView from './AssetLifecycleView';
 import {
@@ -18,18 +19,7 @@ jest.mock('../../hooks/useAssetLifecycleLogic', () => ({
 }));
 
 describe('AssetLifecycleView', () => {
-  const mockHookDefaults = {
-    data: [] as any[],
-
-
-
-
-
-
-    selectedItems: [] as any[],
-    searchText: '',
-    isLoading: false,
-    error: {} as any,
+  const mockHookDefaults = createUniversalDiscoveryHook(); as any,
     loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),

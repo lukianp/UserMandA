@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {  createUniversalDiscoveryHook , createUniversalConfig } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import ExchangeDiscoveryView from './ExchangeDiscoveryView';
 import {
@@ -34,7 +35,7 @@ describe('ExchangeDiscoveryView', () => {
     clearLogs: jest.fn(),
     selectedProfile: null,
   
-    config: {},
+    config: createUniversalConfig(),
     setConfig: jest.fn(),
     result: null,
     isDiscovering: false,

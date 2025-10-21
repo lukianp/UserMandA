@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {  createUniversalDiscoveryHook , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import DomainDiscoveryView from './DomainDiscoveryView';
 import {
@@ -21,32 +22,7 @@ jest.mock('../../hooks/useDomainDiscoveryLogic', () => ({
 const { useDomainDiscoveryLogic } = require('../../hooks/useDomainDiscoveryLogic');
 
 describe('DomainDiscoveryView', () => {
-  const mockHookDefaults = {
-    formData: {
-      domainController: 'dc.contoso.com',
-      searchBase: '',
-      includeUsers: true,
-      includeGroups: true,
-      includeComputers: false,
-      includeOUs: false,
-      maxResults: 10000,
-      timeout: 300,
-    },
-    updateFormField: jest.fn(),
-    resetForm: jest.fn(),
-    isFormValid: true,
-    isRunning: false,
-    isCancelling: false,
-    progress: { current: 0, total: 100, message: '', percentage: 0 },
-    results: [],
-    error: null,
-    logs: [],
-    startDiscovery: jest.fn(),
-    cancelDiscovery: jest.fn(),
-    exportResults: jest.fn(),
-    clearLogs: jest.fn(),
-    selectedProfile: { id: 'test-profile', name: 'Test Profile' },
-  };
+  const mockHookDefaults = createUniversalDiscoveryHook();
 
   beforeEach(() => {
     resetAllMocks();

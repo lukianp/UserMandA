@@ -891,17 +891,17 @@ const DataVisualizationView: React.FC = () => {
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
               {dataSourceIcons[config.dataSource]}
-              {config.dataSource.charAt(0).toUpperCase() + config.dataSource.slice(1)}
+              {(config?.dataSource?.charAt ?? '')(0).toUpperCase() + (config?.dataSource?.slice ?? '')(1)}
             </span>
             <span>•</span>
             <span>{(data?.length ?? 0)} records</span>
             <span>•</span>
             <span>
-              {config.dateRange && format(config.dateRange.start, 'MMM dd, yyyy')} - {config.dateRange && format(config.dateRange.end, 'MMM dd, yyyy')}
+              {config.dateRange && format((config?.dateRange?.start ?? ''), 'MMM dd, yyyy')} - {config.dateRange && format((config?.dateRange?.end ?? ''), 'MMM dd, yyyy')}
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span>Chart: {config.type.charAt(0).toUpperCase() + config.type.slice(1)}</span>
+            <span>Chart: {(config?.type?.charAt ?? '')(0).toUpperCase() + (config?.type?.slice ?? '')(1)}</span>
             <span>•</span>
             <span>Palette: {selectedPalette.charAt(0).toUpperCase() + selectedPalette.slice(1)}</span>
             <span>•</span>

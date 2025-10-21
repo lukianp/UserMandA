@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import ChangeManagementView from './ChangeManagementView';
 import {
@@ -19,18 +20,7 @@ jest.mock('../../hooks/useChangeManagementLogic', () => ({
 import { useChangeManagementLogic } from '../../hooks/useChangeManagementLogic';
 
 describe('ChangeManagementView', () => {
-  const mockHookDefaults = {
-    data: [] as any[],
-
-
-
-
-
-
-    selectedItems: [] as any[],
-    searchText: '',
-    isLoading: false,
-    error: {} as any,
+  const mockHookDefaults = createUniversalDiscoveryHook(); as any,
     loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),

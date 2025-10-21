@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {    createUniversalDiscoveryHook , createUniversalStats , createUniversalConfig , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import EnvironmentDetectionView from './EnvironmentDetectionView';
 import {
@@ -21,35 +22,7 @@ jest.mock('../../hooks/useEnvironmentDetectionLogic', () => ({
 const { useEnvironmentDetectionLogic } = require('../../hooks/useEnvironmentDetectionLogic');
 
 describe('EnvironmentDetectionView', () => {
-  const mockHookDefaults = {
-    // State
-    config: {},
-    result: null,
-    isDetecting: false,
-    progress: { current: 0, total: 100, message: '', percentage: 0 },
-    activeTab: 'overview' as const,
-    filter: { searchText: '' },
-    error: null,
-    logs: [],
-
-    // Data
-    columns: [],
-    filteredData: [],
-    stats: { totalEnvironments: 0, onPremiseEnvironments: 0, cloudEnvironments: 0, hybridEnvironments: 0 },
-
-    // Actions
-    startDiscovery: jest.fn(),
-    cancelDiscovery: jest.fn(),
-    exportResults: jest.fn(),
-    clearLogs: jest.fn(),
-    updateConfig: jest.fn(),
-    updateFilter: jest.fn(),
-    setActiveTab: jest.fn(),
-    startDetection: jest.fn(),
-    cancelDetection: jest.fn(),
-    exportToCSV: jest.fn(),
-    exportToExcel: jest.fn(),
-  };
+  const mockHookDefaults = createUniversalDiscoveryHook();
 
   beforeEach(() => {
     resetAllMocks();

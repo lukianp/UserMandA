@@ -186,3 +186,37 @@ console.warn = (...args: any[]) => {
   }
   originalWarn.call(console, ...args);
 };
+// Mock React Router hooks globally to prevent "useHref() may be used only in the context of a <Router>" errors
+// This allows tests to run without always wrapping in MemoryRouter
+jest.mock('react-router-dom', () => {
+  const actual = jest.requireActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: jest.fn(() => jest.fn()),
+    useParams: jest.fn(() => ({})),
+    useLocation: jest.fn(() => ({
+      pathname: '/',
+      search: '',
+      hash: '',
+      state: null,
+      key: 'default'
+    })),
+    useHref: jest.fn((to) => typeof to === 'string' ? to : '/'),
+    useSearchParams: jest.fn(() => [new URLSearchParams(), jest.fn()]),
+    useMatch: jest.fn(() => null),
+    useRoutes: jest.fn(() => null),
+    useOutlet: jest.fn(() => null),
+    useOutletContext: jest.fn(() => ({})),
+    useResolvedPath: jest.fn((to) => ({ pathname: typeof to === 'string' ? to : '/', search: '', hash: '' })),
+    // Keep actual components for proper rendering in tests that use MemoryRouter
+    MemoryRouter: actual.MemoryRouter,
+    Routes: actual.Routes,
+    Route: actual.Route,
+    Link: actual.Link,
+    Navigate: actual.Navigate,
+    Outlet: actual.Outlet,
+    BrowserRouter: actual.BrowserRouter,
+    HashRouter: actual.HashRouter,
+    Router: actual.Router,
+  };
+});

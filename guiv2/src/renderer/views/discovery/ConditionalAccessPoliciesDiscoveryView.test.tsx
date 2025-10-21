@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {    createUniversalDiscoveryHook , createUniversalStats , createUniversalConfig , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import ConditionalAccessPoliciesDiscoveryView from './ConditionalAccessPoliciesDiscoveryView';
 import {
@@ -21,33 +22,7 @@ jest.mock('../../hooks/useConditionalAccessDiscoveryLogic', () => ({
 const { useConditionalAccessDiscoveryLogic } = require('../../hooks/useConditionalAccessDiscoveryLogic');
 
 describe('ConditionalAccessPoliciesDiscoveryView', () => {
-  const mockHookDefaults = {
-    // State
-    config: {},
-    result: null,
-    isDiscovering: false,
-    progress: { current: 0, total: 100, message: '', percentage: 0 },
-    activeTab: 'overview' as const,
-    filter: { searchText: '' },
-    error: null,
-    logs: [],
-
-    // Data
-    columns: [],
-    filteredData: [],
-    stats: { totalPolicies: 0, enabledPolicies: 0, disabledPolicies: 0, reportOnlyPolicies: 0 },
-
-    // Actions
-    startDiscovery: jest.fn(),
-    cancelDiscovery: jest.fn(),
-    exportResults: jest.fn(),
-    clearLogs: jest.fn(),
-    updateConfig: jest.fn(),
-    updateFilter: jest.fn(),
-    setActiveTab: jest.fn(),
-    exportToCSV: jest.fn(),
-    exportToExcel: jest.fn(),
-  };
+  const mockHookDefaults = createUniversalDiscoveryHook();
 
   beforeEach(() => {
     resetAllMocks();

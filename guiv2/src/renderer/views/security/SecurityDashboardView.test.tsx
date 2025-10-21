@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import {  createUniversalDiscoveryHook , createUniversalStats } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import SecurityDashboardView from './SecurityDashboardView';
 import {
@@ -19,32 +20,7 @@ jest.mock('../../hooks/useSecurityDashboardLogic', () => ({
 const { useSecurityDashboardLogic } = require('../../hooks/useSecurityDashboardLogic');
 
 describe('SecurityDashboardView', () => {
-  const mockHookDefaults = {
-    // Properties actually returned by useSecurityDashboardLogic
-    securityData: [],
-    isLoading: false,
-    stats: {
-      totalThreats: 0,
-      critical: 0,
-      high: 0,
-      medium: 0,
-      low: 0,
-      criticalVulnerabilities: 0,
-      criticalChange: 0,
-      activeThreats: 0,
-      threatsChange: 0,
-      securityScore: 0,
-      scoreChange: 0,
-      exposedServices: 0,
-      exposedChange: 0,
-    },
-    selectedCategory: 'all',
-    setSelectedCategory: jest.fn(),
-    handleExport: jest.fn(),
-    handleRefresh: jest.fn(),
-    handleRunScan: jest.fn(),
-    columnDefs: [],
-  };
+  const mockHookDefaults = createUniversalDiscoveryHook();
 
   beforeEach(() => {
     resetAllMocks();
@@ -142,11 +118,7 @@ describe('SecurityDashboardView', () => {
     it('displays security metrics', () => {
       useSecurityDashboardLogic.mockReturnValue({
         ...mockHookDefaults,
-        stats: {
-          ...mockHookDefaults.stats,
-          criticalVulnerabilities: 5,
-          activeThreats: 10,
-        },
+        stats: createUniversalStats(),
       });
 
       render(<SecurityDashboardView />);

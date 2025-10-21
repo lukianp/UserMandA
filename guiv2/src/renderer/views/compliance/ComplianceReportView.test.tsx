@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import {  createUniversalDiscoveryHook , createUniversalStats } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import ComplianceReportView from './ComplianceReportView';
 import {
@@ -39,7 +40,7 @@ describe('ComplianceReportView', () => {
     clearFilters: jest.fn(),
     setSelectedItems: jest.fn(),
     loadData: jest.fn(),
-    stats: { total: 0, active: 0, inactive: 0, critical: 0, warning: 0, info: 0 , online: 0, offline: 0, onlinePercentage: '0', warrantyExpiring: 0, warrantyExpired: 0, highUtilization: 0, compliant: 0, nonCompliant: 0, pending: 0, resolved: 0, unresolved: 0},
+    stats: createUniversalStats(),
     selectedProfile: { tenantId: '12345678-1234-1234-1234-123456789012', clientId: '87654321-4321-4321-4321-210987654321', isValid: true },
   };
 

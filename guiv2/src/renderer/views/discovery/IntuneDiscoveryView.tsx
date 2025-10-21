@@ -44,12 +44,29 @@ const IntuneDiscoveryView: React.FC = () => {
 
   const [configExpanded, setConfigExpanded] = useState(false);
 
+  // Normalize filter to ensure arrays exist
+  const normalizedFilter = {
+    selectedPlatforms: Array.isArray(filter?.selectedPlatforms) ? filter.selectedPlatforms : [],
+    selectedComplianceStates: Array.isArray(filter?.selectedComplianceStates) ? filter.selectedComplianceStates : [],
+    selectedManagementStates: Array.isArray(filter?.selectedManagementStates) ? filter.selectedManagementStates : [],
+    searchText: filter?.searchText ?? '',
+    showNonCompliantOnly: !!filter?.showNonCompliantOnly,
+  };
+
+  // Normalize stats objects for safe iteration
+  const devicesByPlatform = stats?.devicesByPlatform && typeof stats.devicesByPlatform === 'object' ? stats.devicesByPlatform : {};
+  const devicesByComplianceState = stats?.devicesByComplianceState && typeof stats.devicesByComplianceState === 'object' ? stats.devicesByComplianceState : {};
+  const topDeviceModels = Array.isArray(stats?.topDeviceModels) ? stats.topDeviceModels : [];
+
+  // Normalize export payload
+  const exportPayload = Array.isArray((result as any)?.data) ? (result as any).data : Array.isArray(result) ? result : [];
+
   const platforms = ['Windows', 'iOS', 'Android', 'macOS', 'Linux'];
   const complianceStates = ['compliant', 'noncompliant', 'conflict', 'error', 'inGracePeriod', 'configManager'];
   const managementStates = ['managed', 'managedByExchangeActiveSync', 'unknown'];
 
   const togglePlatform = (platform: string) => {
-    const current = filter.selectedPlatforms;
+    const current = normalizedFilter.selectedPlatforms;
     const updated = current.includes(platform)
       ? current.filter(p => p !== platform)
       : [...current, platform];
@@ -57,7 +74,7 @@ const IntuneDiscoveryView: React.FC = () => {
   };
 
   const toggleComplianceState = (state: string) => {
-    const current = filter.selectedComplianceStates;
+    const current = normalizedFilter.selectedComplianceStates;
     const updated = current.includes(state)
       ? current.filter(s => s !== state)
       : [...current, state];
@@ -65,7 +82,7 @@ const IntuneDiscoveryView: React.FC = () => {
   };
 
   const toggleManagementState = (state: string) => {
-    const current = filter.selectedManagementStates;
+    const current = normalizedFilter.selectedManagementStates;
     const updated = current.includes(state)
       ? current.filter(s => s !== state)
       : [...current, state];
@@ -76,9 +93,9 @@ const IntuneDiscoveryView: React.FC = () => {
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="intune-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
-          progress={progress.percentage}
-          onCancel={cancelDiscovery}
-          message={progress.message || 'Discovering Intune resources...'}
+          progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}
+          onCancel={cancelDiscovery || undefined}
+          message={progress?.message || 'Discovering Intune resources...'}
         />
       )}
 
@@ -94,20 +111,22 @@ const IntuneDiscoveryView: React.FC = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          {result && (
+          {exportPayload.length > 0 && (
             <>
               <Button
-                onClick={() => exportToCSV((result as any).data || result, `intune-discovery-${new Date().toISOString().split('T')[0]}.csv`)}
+                onClick={() => exportToCSV(exportPayload, `intune-discovery-${new Date().toISOString().split('T')[0]}.csv`)}
                 variant="secondary"
                 icon={<Download className="w-4 h-4" />}
+                aria-label="Export as CSV"
                 data-cy="export-csv-btn"
               >
                 Export CSV
               </Button>
               <Button
-                onClick={() => exportToExcel((result as any).data || result, `intune-discovery-${new Date().toISOString().split('T')[0]}.xlsx`)}
+                onClick={() => exportToExcel(exportPayload, `intune-discovery-${new Date().toISOString().split('T')[0]}.xlsx`)}
                 variant="secondary"
                 icon={<FileSpreadsheet className="w-4 h-4" />}
+                aria-label="Export as Excel"
                 data-cy="export-excel-btn"
               >
                 Export Excel
@@ -118,6 +137,7 @@ const IntuneDiscoveryView: React.FC = () => {
             onClick={startDiscovery}
             disabled={isDiscovering}
             variant="primary"
+            aria-label="Start discovery"
             data-cy="start-discovery-btn"
           >
             {isDiscovering ? 'Discovering...' : 'Start Discovery'}
@@ -137,7 +157,7 @@ const IntuneDiscoveryView: React.FC = () => {
       <div className="mx-6 mt-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setConfigExpanded(!configExpanded)}
-          className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-750 rounded-lg transition-colors"
+          className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
           data-cy="config-toggle"
         >
           <span className="font-semibold text-gray-900 dark:text-white">Discovery Configuration</span>
@@ -190,7 +210,11 @@ const IntuneDiscoveryView: React.FC = () => {
               <Input
                 type="number"
                 value={config.timeout}
-                onChange={(e) => updateConfig({ timeout: parseInt(e.target.value) || 600000 })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  const next = Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : config.timeout;
+                  const clamped = Math.max(60000, Math.min(1800000, next));
+                  updateConfig({ timeout: clamped });
+                }}
                 min={60000}
                 max={1800000}
                 step={60000}
@@ -208,7 +232,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Monitor className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats.totalDevices ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats?.totalDevices ?? 0) ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Total Devices</div>
               </div>
             </div>
@@ -218,7 +242,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <ShieldCheck className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats.compliantDevices ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats?.compliantDevices ?? 0) ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Compliant Devices</div>
               </div>
             </div>
@@ -228,7 +252,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <ShieldAlert className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats.nonCompliantDevices ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats?.nonCompliantDevices ?? 0) ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Non-Compliant</div>
               </div>
             </div>
@@ -238,7 +262,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Cpu className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.complianceRate.toFixed(1)}%</div>
+                <div className="text-3xl font-bold">{(typeof stats?.complianceRate === 'number' ? stats.complianceRate : 0).toFixed(1)}%</div>
                 <div className="text-sm opacity-90">Compliance Rate</div>
               </div>
             </div>
@@ -248,7 +272,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Package className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats.totalApplications ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats?.totalApplications ?? 0) ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Applications</div>
               </div>
             </div>
@@ -258,7 +282,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <FileText className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats.totalConfigPolicies ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats?.totalConfigPolicies ?? 0) ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Config Policies</div>
               </div>
             </div>
@@ -268,7 +292,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Shield className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats.totalCompliancePolicies ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats?.totalCompliancePolicies ?? 0) ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Compliance Policies</div>
               </div>
             </div>
@@ -278,7 +302,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <ShieldCheck className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats.totalAppProtectionPolicies ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats?.totalAppProtectionPolicies ?? 0) ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">App Protection</div>
               </div>
             </div>
@@ -371,25 +395,38 @@ const IntuneDiscoveryView: React.FC = () => {
 
       {/* Content Area */}
       <div className="flex-1 flex flex-col p-6 overflow-hidden">
-        {activeTab === 'overview' && stats && (
+        {activeTab === 'overview' && (!stats || (stats?.totalDevices ?? 0) === 0) && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <Smartphone className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Intune Data Available</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">Start a discovery to view device statistics and insights.</p>
+              <Button onClick={startDiscovery} disabled={isDiscovering} variant="primary">
+                {isDiscovering ? 'Discovering...' : 'Start Discovery'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'overview' && stats && (stats?.totalDevices ?? 0) > 0 && (
           <div className="space-y-6 overflow-auto">
             {/* Devices by Platform */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Devices by Platform</h3>
               <div className="space-y-3">
-                {Object.entries(stats.devicesByPlatform).map(([platform, count]) => (
+                {Object.entries(devicesByPlatform).map(([platform, count]) => (
                   <div key={platform} className="flex items-center gap-3">
                     <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">{platform}</div>
                     <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6 overflow-hidden">
                       <div
                         className="bg-blue-600 h-full flex items-center justify-end px-2 text-xs text-white font-medium"
-                        style={{ width: `${stats.totalDevices > 0 ? (count / stats.totalDevices) * 100 : 0}%` }}
+                        style={{ width: `${(stats?.totalDevices ?? 0) > 0 ? (count / (stats?.totalDevices ?? 0)) * 100 : 0}%` }}
                       >
                         {count > 0 && `${count}`}
                       </div>
                     </div>
                     <div className="w-16 text-sm text-gray-600 dark:text-gray-400 text-right">
-                      {stats.totalDevices > 0 ? ((count / stats.totalDevices) * 100).toFixed(1) : 0}%
+                      {(stats?.totalDevices ?? 0) > 0 ? ((count / (stats?.totalDevices ?? 0)) * 100).toFixed(1) : 0}%
                     </div>
                   </div>
                 ))}
@@ -400,7 +437,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Compliance State Breakdown</h3>
               <div className="grid grid-cols-2 gap-4">
-                {Object.entries(stats.devicesByComplianceState).map(([state, count]) => (
+                {Object.entries(devicesByComplianceState).map(([state, count]) => (
                   <div key={state} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">{state}</span>
                     <span className={`text-lg font-bold ${state === 'compliant' ? 'text-green-600' : state === 'noncompliant' ? 'text-red-600' : 'text-yellow-600'}`}>
@@ -412,12 +449,12 @@ const IntuneDiscoveryView: React.FC = () => {
             </div>
 
             {/* Top Device Models */}
-            {stats.topDeviceModels.length > 0 && (
+            {topDeviceModels.length > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Device Models</h3>
                 <div className="space-y-2">
-                  {stats.topDeviceModels.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded">
+                  {topDeviceModels.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
                           <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{index + 1}</span>
@@ -438,8 +475,15 @@ const IntuneDiscoveryView: React.FC = () => {
             {/* Filters */}
             <div className="mb-4 space-y-4">
               <Input
-                value={filter.searchText}
-                onChange={(e) => updateFilter({ searchText: e.target.value })}
+                value={normalizedFilter.searchText}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  const value = e.target.value;
+                  // Debounce search updates to avoid excessive filtering
+                  const timeoutId = setTimeout(() => {
+                    updateFilter({ searchText: value });
+                  }, 150);
+                  return () => clearTimeout(timeoutId);
+                }}
                 placeholder="Search..."
                 data-cy="search-input"
               />
@@ -486,9 +530,29 @@ const IntuneDiscoveryView: React.FC = () => {
                     </div>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Management State</label>
+                    <div className="flex flex-wrap gap-2">
+                      {managementStates.map(state => (
+                        <button
+                          key={state}
+                          onClick={() => toggleManagementState(state)}
+                          className={`px-3 py-1 text-sm rounded-full transition-colors capitalize ${
+                            normalizedFilter.selectedManagementStates.includes(state)
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                          }`}
+                          data-cy={`filter-management-${state}`}
+                        >
+                          {state === 'managedByExchangeActiveSync' ? 'Exchange ActiveSync' : state}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <Checkbox
                     label="Show Non-Compliant Devices Only"
-                    checked={filter.showNonCompliantOnly}
+                    checked={normalizedFilter.showNonCompliantOnly}
                     onChange={(checked) => updateFilter({ showNonCompliantOnly: checked })}
                     data-cy="show-noncompliant-checkbox"
                   />
@@ -499,13 +563,13 @@ const IntuneDiscoveryView: React.FC = () => {
             {/* Data Grid */}
             <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
               <VirtualizedDataGrid
-                data={filteredData as any[]}
-                columns={columns}
-                loading={isDiscovering}
-                enableColumnReorder
-                enableColumnResize
-
-              />
+                  data={Array.isArray(filteredData) ? filteredData as any[] : []}
+                  columns={Array.isArray(columns) ? columns : []}
+                  loading={isDiscovering}
+                  enableColumnReorder
+                  enableColumnResize
+                  data-cy={isDiscovering ? "grid-loading" : undefined}
+                />
             </div>
           </>
         )}

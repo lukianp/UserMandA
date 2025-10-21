@@ -44,7 +44,7 @@ export const SystemConfigurationView: React.FC = () => {
         <div className="space-y-4">
           <Input
             label="Connection String"
-            value={config.database.connectionString}
+            value={(config?.database?.connectionString ?? '')}
             onChange={(value) => handleChange('database.connectionString', value)}
             placeholder="Data Source=..."
           />
@@ -52,13 +52,13 @@ export const SystemConfigurationView: React.FC = () => {
             <Input
               label="Command Timeout (seconds)"
               type="number"
-              value={config.database.commandTimeout}
+              value={(config?.database?.commandTimeout ?? '')}
               onChange={(e) => handleChange('database.commandTimeout', parseInt(e.target.value))}
             />
             <Input
               label="Max Pool Size"
               type="number"
-              value={config.database.maxPoolSize}
+              value={(config?.database?.maxPoolSize ?? '')}
               onChange={(e) => handleChange('database.maxPoolSize', parseInt(e.target.value))}
             />
           </div>
@@ -78,32 +78,32 @@ export const SystemConfigurationView: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="SMTP Server"
-              value={config.email.smtpServer}
+              value={(config?.email?.smtpServer ?? '')}
               onChange={(value) => handleChange('email.smtpServer', value)}
             />
             <Input
               label="SMTP Port"
               type="number"
-              value={config.email.smtpPort}
+              value={(config?.email?.smtpPort ?? '')}
               onChange={(e) => handleChange('email.smtpPort', parseInt(e.target.value))}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Username"
-              value={config.email.username}
+              value={(config?.email?.username ?? '')}
               onChange={(value) => handleChange('email.username', value)}
             />
             <Input
               label="From Address"
               type="email"
-              value={config.email.fromAddress}
+              value={(config?.email?.fromAddress ?? '')}
               onChange={(value) => handleChange('email.fromAddress', value)}
             />
           </div>
           <Checkbox
             label="Enable SSL"
-            checked={config.email.enableSsl}
+            checked={(config?.email?.enableSsl ?? '')}
             onChange={(checked) => handleChange('email.enableSsl', checked)}
           />
         </div>
@@ -120,24 +120,24 @@ export const SystemConfigurationView: React.FC = () => {
             <Input
               label="Session Timeout (minutes)"
               type="number"
-              value={config.security.sessionTimeout}
+              value={(config?.security?.sessionTimeout ?? '')}
               onChange={(e) => handleChange('security.sessionTimeout', parseInt(e.target.value))}
             />
             <Input
               label="Max Login Attempts"
               type="number"
-              value={config.security.maxLoginAttempts}
+              value={(config?.security?.maxLoginAttempts ?? '')}
               onChange={(e) => handleChange('security.maxLoginAttempts', parseInt(e.target.value))}
             />
           </div>
           <Checkbox
             label="Require Strong Passwords"
-            checked={config.security.requireStrongPassword}
+            checked={(config?.security?.requireStrongPassword ?? '')}
             onChange={(checked) => handleChange('security.requireStrongPassword', checked)}
           />
           <Checkbox
             label="Enable Audit Logging"
-            checked={config.security.enableAuditLog}
+            checked={(config?.security?.enableAuditLog ?? '')}
             onChange={(checked) => handleChange('security.enableAuditLog', checked)}
           />
         </div>
@@ -152,7 +152,7 @@ export const SystemConfigurationView: React.FC = () => {
         <div className="space-y-4">
           <Select
             label="Default Theme"
-            value={config.application.defaultTheme}
+            value={(config?.application?.defaultTheme ?? '')}
             onChange={(value) => handleChange('application.defaultTheme', value)}
             options={[
               { value: "light", label: "Light" },
@@ -162,7 +162,7 @@ export const SystemConfigurationView: React.FC = () => {
           />
           <Select
             label="Date Format"
-            value={config.application.dateFormat}
+            value={(config?.application?.dateFormat ?? '')}
             onChange={(value) => handleChange('application.dateFormat', value)}
             options={[
               { value: "MM/DD/YYYY", label: "MM/DD/YYYY" },
@@ -173,7 +173,7 @@ export const SystemConfigurationView: React.FC = () => {
           <Input
             label="Items Per Page"
             type="number"
-            value={config.application.itemsPerPage}
+            value={(config?.application?.itemsPerPage ?? '')}
             onChange={(e) => handleChange('application.itemsPerPage', parseInt(e.target.value))}
           />
         </div>

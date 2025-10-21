@@ -180,27 +180,27 @@ const EnvironmentDetectionView: React.FC = () => {
               color="emerald"
             />
             <StatCard
-              value={stats.servicesByProvider.azure}
+              value={(stats?.servicesByProvider?.azure ?? 0)}
               label="Azure"
               color="blue"
             />
             <StatCard
-              value={stats.servicesByProvider.microsoft365}
+              value={(stats?.servicesByProvider?.microsoft365 ?? 0)}
               label="Microsoft 365"
               color="purple"
             />
             <StatCard
-              value={stats.servicesByProvider['on-premises']}
+              value={(stats?.servicesByProvider ?? 0)['on-premises']}
               label="On-Premises"
               color="gray"
             />
             <StatCard
-              value={stats.servicesByProvider.aws}
+              value={(stats?.servicesByProvider?.aws ?? 0)}
               label="AWS"
               color="orange"
             />
             <StatCard
-              value={stats.servicesByProvider.gcp}
+              value={(stats?.servicesByProvider?.gcp ?? 0)}
               label="GCP"
               color="red"
             />
@@ -210,7 +210,7 @@ const EnvironmentDetectionView: React.FC = () => {
               color="rose"
             />
             <StatCard
-              value={`${Math.round(stats.environmentConfidence * 100)}%`}
+              value={`${Math.round((stats?.environmentConfidence ?? 0) * 100)}%`}
               label="Confidence"
               color="teal"
             />
@@ -402,10 +402,10 @@ const OverviewTab: React.FC<{ stats: any; result: any }> = ({ stats, result }) =
       </div>
 
       {/* Top Services */}
-      {result?.detectedServices && result.detectedServices.length > 0 && (
+      {result?.detectedServices && (result?.detectedServices?.length ?? 0) > 0 && (
         <div className="pb-4 border-b">
           <h3 className="text-sm font-medium mb-3">Recently Detected Services</h3>
-          {result.detectedServices.slice(0, 5).map((service: any, i: number) => (
+          {(result?.detectedServices?.slice ?? 0)(0, 5).map((service: any, i: number) => (
             <div key={i} className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
               <div>
                 <span className="text-sm font-medium">{service.name}</span>
@@ -422,10 +422,10 @@ const OverviewTab: React.FC<{ stats: any; result: any }> = ({ stats, result }) =
       )}
 
       {/* Recommendations Preview */}
-      {result?.recommendations && result.recommendations.length > 0 && (
+      {result?.recommendations && (result?.recommendations?.length ?? 0) > 0 && (
         <div>
           <h3 className="text-sm font-medium mb-3">Top Recommendations</h3>
-          {result.recommendations.slice(0, 3).map((rec: any, i: number) => (
+          {(result?.recommendations?.slice ?? 0)(0, 3).map((rec: any, i: number) => (
             <div key={i} className="mb-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <div className="flex items-start justify-between">
                 <div className="flex-1">

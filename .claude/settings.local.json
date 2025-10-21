@@ -52,7 +52,17 @@
       "Bash(powershell -Command \"cd D:\\Scripts\\UserMandA\\guiv2; Get-Content ''src\\renderer\\views\\assets\\ServerInventoryView.test.tsx'' | Select-String -Pattern ''refreshData|selectedItems'' -Context 1,1\")",
       "Bash(powershell -Command \"cd D:\\Scripts\\UserMandA\\guiv2; Get-Content ''src\\renderer\\views\\assets\\ServerInventoryView.tsx'' | Select-String -Pattern ''error'' -Context 1,1\")",
       "Bash(powershell -Command \"cd D:\\Scripts\\UserMandA\\guiv2; npm test -- ServerInventoryView.test.tsx --no-coverage 2>&1 | Select-Object -Skip 100 -First 100\")",
-      "Bash(powershell -Command \"cd D:\\Scripts\\UserMandA\\guiv2; npm test -- ServerInventoryView.test.tsx --no-coverage 2>&1 | Select-String ''expect'' -Context 2,0 | Select-Object -Last 20\")"
+      "Bash(powershell -Command \"cd D:\\Scripts\\UserMandA\\guiv2; npm test -- ServerInventoryView.test.tsx --no-coverage 2>&1 | Select-String ''expect'' -Context 2,0 | Select-Object -Last 20\")",
+      "Bash(node --version)",
+      "Bash(cat:*)",
+      "Bash(node -e:*)",
+      "Bash(node analyze-failures.js:*)",
+      "Bash(node get-failed-suites.js:*)",
+      "Bash(npm test:*)",
+      "Bash(node:*)",
+      "Bash(timeout 300 npm test:*)",
+      "Bash(timeout 120 npm test -- --no-cache --passWithNoTests)",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "ask": [],

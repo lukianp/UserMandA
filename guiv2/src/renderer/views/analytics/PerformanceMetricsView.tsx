@@ -21,7 +21,7 @@ import LoadingSpinner from '@components/atoms/LoadingSpinner';
  * Format time in milliseconds
  */
 const formatMs = (ms: number): string => {
-  if (ms < 1000) return `${ms.toFixed(0)}ms`;
+  if (ms < 1000) return `${(typeof ms === 'number' ? ms : 0).toFixed(0)}ms`;
   return `${(ms / 1000).toFixed(2)}s`;
 };
 
@@ -29,7 +29,7 @@ const formatMs = (ms: number): string => {
  * Format memory size
  */
 const formatMemory = (mb: number): string => {
-  if (mb < 1024) return `${mb.toFixed(0)} MB`;
+  if (mb < 1024) return `${(typeof mb === 'number' ? mb : 0).toFixed(0)} MB`;
   return `${(mb / 1024).toFixed(2)} GB`;
 };
 

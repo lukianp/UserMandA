@@ -206,7 +206,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Globe className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats.totalEnvironments ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats?.totalEnvironments ?? 0) ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Environments</div>
               </div>
             </div>
@@ -216,7 +216,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Smartphone className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats.totalApps ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats?.totalApps ?? 0) ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Power Apps</div>
               </div>
             </div>
@@ -226,7 +226,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Workflow className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats.totalFlows ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats?.totalFlows ?? 0) ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Power Automate</div>
               </div>
             </div>
@@ -236,7 +236,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Plug className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats.totalConnectors ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{((stats?.totalConnectors ?? 0) ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Connectors</div>
               </div>
             </div>
@@ -246,7 +246,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <CheckCircle className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.flowRunStats.successCount.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats?.flowRunStats?.successCount ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Successful Runs</div>
               </div>
             </div>
@@ -256,7 +256,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <XCircle className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{stats.flowRunStats.failedCount.toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(stats?.flowRunStats?.failedCount ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Failed Runs</div>
               </div>
             </div>
@@ -342,7 +342,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Environments by Type</h3>
               <div className="grid grid-cols-2 gap-4">
-                {Object.entries(stats.environmentsByType).map(([type, count]) => (
+                {Object.entries((stats?.environmentsByType ?? 0)).map(([type, count]) => (
                   <div key={type} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">{type}</span>
                     <span className="text-lg font-bold text-violet-600">{count}</span>
@@ -355,7 +355,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Apps by Type</h3>
               <div className="grid grid-cols-2 gap-4">
-                {Object.entries(stats.appsByType).map(([type, count]) => (
+                {Object.entries((stats?.appsByType ?? 0)).map(([type, count]) => (
                   <div key={type} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       {type === 'canvas' ? 'Canvas Apps' : type === 'model-driven' ? 'Model-Driven Apps' : type}
@@ -370,7 +370,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Flow States</h3>
               <div className="grid grid-cols-3 gap-4">
-                {Object.entries(stats.flowsByState).map(([state, count]) => (
+                {Object.entries((stats?.flowsByState ?? 0)).map(([state, count]) => (
                   <div key={state} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">{state}</span>
                     <span className={`text-lg font-bold ${
@@ -386,11 +386,11 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             </div>
 
             {/* Top App Owners */}
-            {stats.topAppOwners.length > 0 && (
+            {(stats?.topAppOwners?.length ?? 0) > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top App Owners</h3>
                 <div className="space-y-2">
-                  {stats.topAppOwners.map((item, index) => (
+                  {(stats?.topAppOwners?.map ?? 0)((item, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-violet-100 dark:bg-violet-900 rounded-full flex items-center justify-center">
@@ -406,11 +406,11 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             )}
 
             {/* Top Flow Owners */}
-            {stats.topFlowOwners.length > 0 && (
+            {(stats?.topFlowOwners?.length ?? 0) > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Flow Owners</h3>
                 <div className="space-y-2">
-                  {stats.topFlowOwners.map((item, index) => (
+                  {(stats?.topFlowOwners?.map ?? 0)((item, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">

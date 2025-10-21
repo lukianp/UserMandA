@@ -5,6 +5,7 @@
 import React from 'react';
 
 import { render, screen } from '@testing-library/react';
+import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import UserManagementView from './UserManagementView';
 import {
@@ -20,14 +21,7 @@ jest.mock('../../hooks/useUserManagementLogic', () => ({
 const { useUserManagementLogic } = require('../../hooks/useUserManagementLogic');
 
 describe('UserManagementView', () => {
-  const mockHookDefaults = {
-
-
-    error: null as string | null,
-
-
-    pagination: { page: 0, pageSize: 50, total: 0 },
-  };
+  const mockHookDefaults = createUniversalDiscoveryHook();
   beforeEach(() => {
     resetAllMocks();
     useUserManagementLogic.mockReturnValue(mockHookDefaults);

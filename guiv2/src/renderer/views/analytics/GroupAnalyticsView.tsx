@@ -154,7 +154,7 @@ export const GroupAnalyticsView: React.FC = () => {
         />
         <MetricCard
           title="Avg Members/Group"
-          value={metrics.averageMembersPerGroup.toFixed(1)}
+          value={metrics.(typeof averageMembersPerGroup === 'number' ? averageMembersPerGroup : 0).toFixed(1)}
           icon={<BarChart3 className="w-6 h-6 text-purple-600" />}
           subtitle="Average membership size"
         />

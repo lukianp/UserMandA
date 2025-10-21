@@ -23,29 +23,7 @@ jest.mock('../../hooks/useSettingsLogic', () => ({
 const { useSettingsLogic } = require('../../hooks/useSettingsLogic');
 
 describe('SettingsView', () => {
-  const mockHookDefaults = {
-    settings: {
-      theme: {
-        isDarkTheme: false,
-        accentColor: '#3B82F6',
-        fontSize: 14,
-        fontFamily: 'Inter, sans-serif',
-        useAnimations: true,
-        windowOpacity: 1.0,
-      },
-      autoRefreshDashboard: true,
-      refreshInterval: 30,
-      enableNotifications: true,
-      defaultExportFormat: 'CSV' as const,
-    },
-    updateSetting: jest.fn(),
-    updateThemeSetting: jest.fn(),
-    saveSettings: jest.fn(),
-    resetSettings: jest.fn(),
-    isSaving: false,
-    hasChanges: false,
-    saveSuccess: false,
-  };
+  const mockHookDefaults = createUniversalDiscoveryHook();
 
   beforeEach(() => {
     resetAllMocks();

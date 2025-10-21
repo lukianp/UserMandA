@@ -229,41 +229,41 @@ const Office365DiscoveryView: React.FC = () => {
               <StatCard
                 icon={<Users className="w-5 h-5" />}
                 label="Total Users"
-                value={currentResult.stats.totalUsers}
-                subValue={`${currentResult.stats.enabledUsers} enabled`}
+                value={currentResult.(stats?.totalUsers ?? 0)}
+                subValue={`${currentResult.(stats?.enabledUsers ?? 0)} enabled`}
                 color="blue"
               />
               <StatCard
                 icon={<UserCheck className="w-5 h-5" />}
                 label="MFA Enabled"
-                value={currentResult.stats.mfaEnabledUsers}
-                subValue={`${((currentResult.stats.mfaEnabledUsers / currentResult.stats.totalUsers) * 100).toFixed(1)}% coverage`}
+                value={currentResult.(stats?.mfaEnabledUsers ?? 0)}
+                subValue={`${((currentResult.(stats?.mfaEnabledUsers ?? 0) / currentResult.(stats?.totalUsers ?? 0)) * 100).toFixed(1)}% coverage`}
                 color="green"
               />
               <StatCard
                 icon={<Key className="w-5 h-5" />}
                 label="Licenses"
-                value={currentResult.stats.totalLicenses}
-                subValue={`${currentResult.stats.assignedLicenses} assigned`}
+                value={currentResult.(stats?.totalLicenses ?? 0)}
+                subValue={`${currentResult.(stats?.assignedLicenses ?? 0)} assigned`}
                 color="purple"
               />
               <StatCard
                 icon={<Activity className="w-5 h-5" />}
                 label="Services"
-                value={currentResult.stats.totalServices}
-                subValue={`${currentResult.stats.healthyServices} healthy`}
+                value={currentResult.(stats?.totalServices ?? 0)}
+                subValue={`${currentResult.(stats?.healthyServices ?? 0)} healthy`}
                 color="blue"
               />
               <StatCard
                 icon={<Award className="w-5 h-5" />}
                 label="Admins"
-                value={currentResult.stats.adminUsers}
+                value={currentResult.(stats?.adminUsers ?? 0)}
                 color="orange"
               />
               <StatCard
                 icon={<Shield className="w-5 h-5" />}
                 label="CA Policies"
-                value={currentResult.stats.conditionalAccessPolicies}
+                value={currentResult.(stats?.conditionalAccessPolicies ?? 0)}
                 color="green"
               />
             </div>
@@ -513,7 +513,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
         <SummaryRow label="Start Time" value={new Date(result.startTime).toLocaleString()} />
         <SummaryRow label="End Time" value={result.endTime ? new Date(result.endTime).toLocaleString() : 'N/A'} />
         <SummaryRow label="Duration" value={`${(result.duration / 1000).toFixed(2)} seconds`} />
-        <SummaryRow label="Objects per Second" value={result.objectsPerSecond.toFixed(2)} />
+        <SummaryRow label="Objects per Second" value={result.(typeof objectsPerSecond === 'number' ? objectsPerSecond : 0).toFixed(2)} />
         <SummaryRow label="Status" value={<Badge variant={result.status === 'completed' ? 'success' : 'warning'}>{result.status}</Badge>} />
       </div>
     </div>
@@ -522,12 +522,12 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">License Summary</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Licenses" value={result.stats.totalLicenses} />
-        <SummaryRow label="Assigned Licenses" value={result.stats.assignedLicenses} />
-        <SummaryRow label="Available Licenses" value={result.stats.availableLicenses} />
+        <SummaryRow label="Total Licenses" value={result.(stats?.totalLicenses ?? 0)} />
+        <SummaryRow label="Assigned Licenses" value={result.(stats?.assignedLicenses ?? 0)} />
+        <SummaryRow label="Available Licenses" value={result.(stats?.availableLicenses ?? 0)} />
         <SummaryRow
           label="Utilization Rate"
-          value={`${((result.stats.assignedLicenses / result.stats.totalLicenses) * 100).toFixed(1)}%`}
+          value={`${((result.(stats?.assignedLicenses ?? 0) / result.(stats?.totalLicenses ?? 0)) * 100).toFixed(1)}%`}
         />
       </div>
     </div>
@@ -536,17 +536,17 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Multi-Factor Authentication</h3>
       <div className="space-y-3">
-        <SummaryRow label="MFA Enabled Users" value={result.stats.mfaEnabledUsers} />
-        <SummaryRow label="MFA Registered Users" value={result.stats.mfaRegisteredUsers} />
+        <SummaryRow label="MFA Enabled Users" value={result.(stats?.mfaEnabledUsers ?? 0)} />
+        <SummaryRow label="MFA Registered Users" value={result.(stats?.mfaRegisteredUsers ?? 0)} />
         <SummaryRow
           label="MFA Coverage"
-          value={`${((result.stats.mfaEnabledUsers / result.stats.totalUsers) * 100).toFixed(1)}%`}
+          value={`${((result.(stats?.mfaEnabledUsers ?? 0) / result.(stats?.totalUsers ?? 0)) * 100).toFixed(1)}%`}
         />
         <SummaryRow
           label="Security Posture"
           value={
-            <Badge variant={result.stats.mfaEnabledUsers / result.stats.totalUsers > 0.9 ? 'success' : result.stats.mfaEnabledUsers / result.stats.totalUsers > 0.7 ? 'warning' : 'danger'}>
-              {result.stats.mfaEnabledUsers / result.stats.totalUsers > 0.9 ? 'Strong' : result.stats.mfaEnabledUsers / result.stats.totalUsers > 0.7 ? 'Moderate' : 'Weak'}
+            <Badge variant={result.(stats?.mfaEnabledUsers ?? 0) / result.(stats?.totalUsers ?? 0) > 0.9 ? 'success' : result.(stats?.mfaEnabledUsers ?? 0) / result.(stats?.totalUsers ?? 0) > 0.7 ? 'warning' : 'danger'}>
+              {result.(stats?.mfaEnabledUsers ?? 0) / result.(stats?.totalUsers ?? 0) > 0.9 ? 'Strong' : result.(stats?.mfaEnabledUsers ?? 0) / result.(stats?.totalUsers ?? 0) > 0.7 ? 'Moderate' : 'Weak'}
             </Badge>
           }
         />
@@ -557,15 +557,15 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Service Health</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Services" value={result.stats.totalServices} />
-        <SummaryRow label="Healthy Services" value={result.stats.healthyServices} />
-        <SummaryRow label="Degraded Services" value={result.stats.degradedServices} />
-        <SummaryRow label="Unavailable Services" value={result.stats.unavailableServices} />
+        <SummaryRow label="Total Services" value={result.(stats?.totalServices ?? 0)} />
+        <SummaryRow label="Healthy Services" value={result.(stats?.healthyServices ?? 0)} />
+        <SummaryRow label="Degraded Services" value={result.(stats?.degradedServices ?? 0)} />
+        <SummaryRow label="Unavailable Services" value={result.(stats?.unavailableServices ?? 0)} />
         <SummaryRow
           label="Overall Health"
           value={
-            <Badge variant={result.stats.unavailableServices === 0 && result.stats.degradedServices === 0 ? 'success' : result.stats.unavailableServices === 0 ? 'warning' : 'danger'}>
-              {result.stats.unavailableServices === 0 && result.stats.degradedServices === 0 ? 'Healthy' : result.stats.unavailableServices === 0 ? 'Degraded' : 'Critical'}
+            <Badge variant={result.(stats?.unavailableServices ?? 0) === 0 && result.(stats?.degradedServices ?? 0) === 0 ? 'success' : result.(stats?.unavailableServices ?? 0) === 0 ? 'warning' : 'danger'}>
+              {result.(stats?.unavailableServices ?? 0) === 0 && result.(stats?.degradedServices ?? 0) === 0 ? 'Healthy' : result.(stats?.unavailableServices ?? 0) === 0 ? 'Degraded' : 'Critical'}
             </Badge>
           }
         />
@@ -576,10 +576,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Security Configuration</h3>
       <div className="space-y-3">
-        <SummaryRow label="Conditional Access Policies" value={result.stats.conditionalAccessPolicies} />
-        <SummaryRow label="DLP Policies" value={result.stats.dlpPolicies} />
-        <SummaryRow label="Retention Policies" value={result.stats.retentionPolicies} />
-        <SummaryRow label="Admin Users" value={result.stats.adminUsers} />
+        <SummaryRow label="Conditional Access Policies" value={result.(stats?.conditionalAccessPolicies ?? 0)} />
+        <SummaryRow label="DLP Policies" value={result.(stats?.dlpPolicies ?? 0)} />
+        <SummaryRow label="Retention Policies" value={result.(stats?.retentionPolicies ?? 0)} />
+        <SummaryRow label="Admin Users" value={result.(stats?.adminUsers ?? 0)} />
       </div>
     </div>
 
@@ -587,13 +587,13 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">User Statistics</h3>
       <div className="space-y-3">
-        <SummaryRow label="Total Users" value={result.stats.totalUsers} />
-        <SummaryRow label="Enabled Users" value={result.stats.enabledUsers} />
-        <SummaryRow label="Disabled Users" value={result.stats.disabledUsers} />
-        <SummaryRow label="Guest Users" value={result.stats.guestUsers} />
+        <SummaryRow label="Total Users" value={result.(stats?.totalUsers ?? 0)} />
+        <SummaryRow label="Enabled Users" value={result.(stats?.enabledUsers ?? 0)} />
+        <SummaryRow label="Disabled Users" value={result.(stats?.disabledUsers ?? 0)} />
+        <SummaryRow label="Guest Users" value={result.(stats?.guestUsers ?? 0)} />
         <SummaryRow
           label="Active User Rate"
-          value={`${((result.stats.enabledUsers / result.stats.totalUsers) * 100).toFixed(1)}%`}
+          value={`${((result.(stats?.enabledUsers ?? 0) / result.(stats?.totalUsers ?? 0)) * 100).toFixed(1)}%`}
         />
       </div>
     </div>

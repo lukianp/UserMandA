@@ -260,7 +260,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
           label="Overview"
           active={activeTab === 'overview'}
           onClick={() => setActiveTab('overview')}
-          count={stats ? stats.totalAccessReviews + stats.totalEntitlements + stats.totalPIMRoles : undefined}
+          count={stats ? (stats?.totalAccessReviews ?? 0) + (stats?.totalEntitlements ?? 0) + (stats?.totalPIMRoles ?? 0) : undefined}
           data-cy="tab-overview"
         />
         <TabButton

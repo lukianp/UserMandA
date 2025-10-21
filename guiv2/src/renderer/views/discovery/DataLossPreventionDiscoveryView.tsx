@@ -153,9 +153,9 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
             <StatCard value={stats?.totalPolicies ?? 0} label="Policies" color="rose" />
             <StatCard value={stats?.enabledPolicies ?? 0} label="Enabled" color="green" />
             <StatCard value={stats?.totalIncidents ?? 0} label="Incidents" color="orange" />
-            <StatCard value={stats.incidentsBySeverity.critical} label="Critical" color="red" />
-            <StatCard value={stats.incidentsBySeverity.high} label="High" color="yellow" />
-            <StatCard value={stats.incidentsBySeverity.medium + stats.incidentsBySeverity.low} label="Med/Low" color="blue" />
+            <StatCard value={(stats?.incidentsBySeverity?.critical ?? 0)} label="Critical" color="red" />
+            <StatCard value={(stats?.incidentsBySeverity?.high ?? 0)} label="High" color="yellow" />
+            <StatCard value={(stats?.incidentsBySeverity?.medium ?? 0) + (stats?.incidentsBySeverity?.low ?? 0)} label="Med/Low" color="blue" />
           </div>
         </div>
       )}
@@ -247,10 +247,10 @@ const OverviewTab: React.FC<{ stats: any; result: any }> = ({ stats, result }) =
         ))}
       </div>
 
-      {stats?.topPoliciesByIncidents && stats.topPoliciesByIncidents.length > 0 && (
+      {stats?.topPoliciesByIncidents && (stats?.topPoliciesByIncidents?.length ?? 0) > 0 && (
         <div className="pt-4 border-t">
           <h3 className="text-sm font-medium mb-2">Top Policies by Incidents</h3>
-          {stats.topPoliciesByIncidents.map((item: any, i: number) => (
+          {(stats?.topPoliciesByIncidents?.map ?? 0)((item: any, i: number) => (
             <SummaryRow key={i} label={item.policyName} value={item.count} />
           ))}
         </div>

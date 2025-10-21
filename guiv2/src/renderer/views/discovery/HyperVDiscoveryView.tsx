@@ -53,7 +53,7 @@ const HyperVDiscoveryView: React.FC = () => {
 
   const handleStartDiscovery = () => {
     const errors: string[] = [];
-    if (!config.hostAddresses || config.hostAddresses.length === 0) {
+    if (!config.hostAddresses || (config?.hostAddresses?.length ?? '') === 0) {
       errors.push('At least one Hyper-V host address is required');
     }
     if (errors.length > 0) {
@@ -201,12 +201,12 @@ const HyperVDiscoveryView: React.FC = () => {
             <StatCard value={stats?.runningVMs ?? 0} label="Running VMs" color="green" />
             <StatCard value={stats?.totalVCPUs ?? 0} label="vCPUs" color="purple" />
             <StatCard
-              value={`${(stats.totalMemoryAllocated / 1024 / 1024 / 1024).toFixed(1)} GB`}
+              value={`${((stats?.totalMemoryAllocated ?? 0) / 1024 / 1024 / 1024).toFixed(1)} GB`}
               label="Memory"
               color="orange"
             />
             <StatCard
-              value={`${stats.vmsByState.off + stats.vmsByState.paused + stats.vmsByState.saved}`}
+              value={`${(stats?.vmsByState?.off ?? 0) + (stats?.vmsByState?.paused ?? 0) + (stats?.vmsByState?.saved ?? 0)}`}
               label="Stopped VMs"
               color="gray"
             />
@@ -361,7 +361,7 @@ const OverviewTab: React.FC<{ stats: any; result: any }> = ({ stats, result }) =
         <div className="pb-4 border-b">
           <h3 className="text-sm font-medium mb-3">Virtual Machine States</h3>
           <div className="space-y-2">
-            {Object.entries(stats.vmsByState).map(([state, count]) => {
+            {Object.entries((stats?.vmsByState ?? 0)).map(([state, count]) => {
               const vmCount = count as number;
               return vmCount > 0 && (
                 <div key={state} className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
@@ -381,10 +381,10 @@ const OverviewTab: React.FC<{ stats: any; result: any }> = ({ stats, result }) =
       )}
 
       {/* Host Details */}
-      {result?.hosts && result.hosts.length > 0 && (
+      {result?.hosts && (result?.hosts?.length ?? 0) > 0 && (
         <div className="pb-4 border-b">
           <h3 className="text-sm font-medium mb-3">Hyper-V Hosts</h3>
-          {result.hosts.slice(0, 5).map((host: any, i: number) => (
+          {(result?.hosts?.slice ?? 0)(0, 5).map((host: any, i: number) => (
             <div key={i} className="mb-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -415,7 +415,7 @@ const OverviewTab: React.FC<{ stats: any; result: any }> = ({ stats, result }) =
       {result?.hosts && (
         <div>
           <h3 className="text-sm font-medium mb-3">Virtual Switches</h3>
-          {result.hosts.flatMap((h: any) => h.virtualSwitches).slice(0, 5).map((sw: any, i: number) => (
+          {(result?.hosts?.flatMap ?? 0)((h: any) => h.virtualSwitches).slice(0, 5).map((sw: any, i: number) => (
             <SummaryRow
               key={i}
               label={sw.name}

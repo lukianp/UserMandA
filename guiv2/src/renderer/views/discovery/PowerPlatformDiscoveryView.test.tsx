@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {   createUniversalDiscoveryHook , createUniversalStats , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 import PowerPlatformDiscoveryView from './PowerPlatformDiscoveryView';
 import {
@@ -39,7 +40,7 @@ describe('PowerPlatformDiscoveryView', () => {
     result: null,
     currentResult: null,
     isDiscovering: false,
-    progress: { current: 0, total: 100, message: '', percentage: 0 },
+    progress: createUniversalProgress(),
     activeTab: 'overview' as const,
     filter: { searchText: '', category: '', status: '', severity: '' },
     error: null,
@@ -47,12 +48,7 @@ describe('PowerPlatformDiscoveryView', () => {
     // Data
     columns: [],
     filteredData: [],
-    stats: {
-      totalEnvironments: 0,
-      totalApps: 0,
-      totalFlows: 0,
-      totalConnectors: 0,
-      flowRunStats: { successCount: 0, failedCount: 0 },
+    stats: createUniversalStats(),
       environmentsByType: {},
       appsByType: {},
       flowsByState: {},
