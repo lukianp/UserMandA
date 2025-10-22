@@ -412,7 +412,7 @@ describe('Migration Services Integration', () => {
 
       // Step 2: Monitor coexistence health
       const health = await coexistenceService.checkHealth(coexistenceConfig.id);
-      expect(health.status).toBe('healthy');
+      expect(health.overallStatus).toBe('healthy');
 
       // Step 3: Plan cutover
       const cutoverPlan = await cutoverService.createCutoverPlan({

@@ -71,7 +71,10 @@
       "Bash(timeout 180 npm test:*)",
       "Bash(git checkout:*)",
       "Bash(md5sum:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(bash:*)",
+      "Bash(test:*)",
+      "Bash(timeout 120 npm test)"
     ],
     "deny": [],
     "ask": [],

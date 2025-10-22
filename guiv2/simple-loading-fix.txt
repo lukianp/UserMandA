@@ -1,0 +1,15 @@
+  it('should display loading state', () => {
+    render(
+      <VirtualizedDataGrid
+        data={[]}
+        columns={mockColumns}
+        loading={true}
+        data-cy="test-grid"
+      />
+    );
+
+    // Spinner uses aria-label for accessibility
+    expect(screen.getByLabelText('Loading data...')).toBeInTheDocument();
+    // Verify spinner is rendered
+    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+  });

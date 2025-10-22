@@ -1,0 +1,28 @@
+
+// Mock AG Grid Enterprise
+jest.mock('ag-grid-enterprise', () => ({}));
+
+// Mock lucide-react icons
+jest.mock('lucide-react', () => ({
+  Download: () => null,
+  Printer: () => null,
+  Eye: () => null,
+  EyeOff: () => null,
+  Filter: () => null,
+  Loader2: () => null,
+}));
+
+// Mock Button component
+jest.mock('../atoms/Button', () => ({
+  Button: ({ children, onClick, icon, ...props }: any) => (
+    <button onClick={onClick} {...props}>{icon}{children}</button>
+  ),
+}));
+
+// Mock Spinner component
+jest.mock('../atoms/Spinner', () => ({
+  Spinner: ({ label, size }: any) => (
+    <div role="status" aria-label={label} data-testid="spinner">{label}</div>
+  ),
+}));
+

@@ -327,7 +327,11 @@ export function VirtualizedDataGrid<T = any>({
       {/* Grid */}
       <div className="flex-1 relative">
         {loading && (
-          <div className="absolute inset-0 bg-white bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 z-10 flex items-center justify-center">
+          <div
+            data-testid="grid-loading"
+            role="status"
+            aria-label="Loading data"
+            className="absolute inset-0 bg-white bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 z-10 flex items-center justify-center">
             <Spinner size="lg" label="Loading data..." />
           </div>
         )}

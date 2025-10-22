@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+
+
+import { useState } from 'react';
 import {
   Smartphone,
   ChevronUp,
@@ -438,7 +440,7 @@ const IntuneDiscoveryView: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Compliance State Breakdown</h3>
               <div className="grid grid-cols-2 gap-4">
                 {Object.entries(devicesByComplianceState).map(([state, count]) => (
-                  <div key={state} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
+                  <div key={state} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">{state}</span>
                     <span className={`text-lg font-bold ${state === 'compliant' ? 'text-green-600' : state === 'noncompliant' ? 'text-red-600' : 'text-yellow-600'}`}>
                       {count}

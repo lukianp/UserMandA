@@ -238,34 +238,38 @@ describe('WebhookService', () => {
         text: jest.fn().mockResolvedValue('Error'),
       });
 
-      await service.trigger('test', { data: 'test' });
-      await Promise.resolve();
+      const promise = service.trigger('test', { data: 'test' });
 
-      // Wait for retries
-      jest.runAllTimers();
-      await Promise.resolve();
+      // Run all pending timers and microtasks
+      await jest.runOnlyPendingTimersAsync();
+      await promise;
 
       const deliveries = service.getDeliveriesForWebhook('webhook1');
       expect(deliveries.length).toBeGreaterThan(0);
       expect(deliveries[0].status).toBe('failed');
-    });
+    }, 15000);
 
     it('should retry on failure', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(
-        new Error('Network error')
-      );
+      (global.fetch as jest.Mock)
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: jest.fn().mockResolvedValue('Success'),
+        });
 
       service.update('webhook1', { retryCount: 2, retryDelay: 100 });
 
-      await service.trigger('test', { data: 'test' });
+      const promise = service.trigger('test', { data: 'test' });
 
-      // Run timers to execute retries
-      jest.runAllTimers();
-      await Promise.resolve();
+      // Run all pending timers to execute retries
+      await jest.runOnlyPendingTimersAsync();
+      await promise;
 
       // Should have attempted delivery multiple times
-      expect(global.fetch).toHaveBeenCalled();
-    });
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    }, 15000);
   });
 
   describe('Webhook Testing', () => {
@@ -385,7 +389,7 @@ describe('WebhookService', () => {
       });
 
       await service.trigger('test', { data: 1 });
-      await Promise.resolve();
+      await jest.runOnlyPendingTimersAsync();
 
       // Failed delivery
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -396,13 +400,14 @@ describe('WebhookService', () => {
       });
 
       await service.trigger('test', { data: 2 });
-      await Promise.resolve();
+      await jest.runOnlyPendingTimersAsync();
 
       const stats = service.getStats('webhook1');
 
-      expect(stats.totalDeliveries).toBeGreaterThan(0);
-      expect(stats.successfulDeliveries).toBeGreaterThan(0);
-    });
+      expect(stats.totalDeliveries).toBe(2);
+      expect(stats.successfulDeliveries).toBe(1);
+      expect(stats.failedDeliveries).toBe(1);
+    }, 15000);
   });
 
   describe('Import/Export', () => {
@@ -478,18 +483,18 @@ describe('WebhookService', () => {
     });
 
     it('should enforce rate limit', async () => {
-      // First two should succeed
-      await service.trigger('test', { data: 1 });
-      await service.trigger('test', { data: 2 });
+      // Trigger multiple webhooks
+      const promise1 = service.trigger('test', { data: 1 });
+      const promise2 = service.trigger('test', { data: 2 });
+      const promise3 = service.trigger('test', { data: 3 });
 
-      // Third should be rate limited
-      await service.trigger('test', { data: 3 });
+      // Run timers to process all
+      await jest.runOnlyPendingTimersAsync();
+      await Promise.all([promise1, promise2, promise3]);
 
-      await Promise.resolve();
-
-      // Only 2 requests should have been made
+      // Only 2 requests should have been made due to rate limit
       expect(global.fetch).toHaveBeenCalledTimes(2);
-    });
+    }, 15000);
 
     it('should get rate limit', () => {
       expect(service.getRateLimit()).toBe(2);
@@ -514,12 +519,14 @@ describe('WebhookService', () => {
       });
 
       await service.trigger('test', { data: 'test' });
-      await Promise.resolve();
+      await jest.runOnlyPendingTimersAsync();
 
+      // Verify deliveries exist
       expect(service.getAllDeliveries().length).toBeGreaterThan(0);
 
+      // Clear and verify
       service.clearDeliveries();
       expect(service.getAllDeliveries().length).toBe(0);
-    });
+    }, 15000);
   });
 });
