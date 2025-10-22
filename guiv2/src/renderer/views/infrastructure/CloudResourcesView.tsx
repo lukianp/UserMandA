@@ -1,8 +1,9 @@
 import React from 'react';
+import { RefreshCw } from 'lucide-react';
+
 import DataTable, { DataTableColumn } from '../../components/organisms/DataTable';
 import { useCloudResourcesLogic } from '../../hooks/infrastructure/useCloudResourcesLogic';
 import { Button } from '../../components/atoms/Button';
-import { RefreshCw } from 'lucide-react';
 import type { CloudResourcesData } from '../../hooks/infrastructure/useCloudResourcesLogic';
 
 const CloudResourcesView: React.FC = () => {

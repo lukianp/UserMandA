@@ -4,15 +4,18 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
 import {   createUniversalDiscoveryHook , createUniversalStats , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import IntuneDiscoveryView from './IntuneDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import IntuneDiscoveryView from './IntuneDiscoveryView';
 
 // Mock the hook
 jest.mock('../../hooks/useIntuneDiscoveryLogic', () => ({

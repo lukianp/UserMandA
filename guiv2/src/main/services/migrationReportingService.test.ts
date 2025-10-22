@@ -4,8 +4,9 @@
  * Tests the migration reporting service that generates and exports migration reports.
  */
 
-import MigrationReportingService from './migrationReportingService';
 import * as path from 'path';
+
+import MigrationReportingService from './migrationReportingService';
 
 // Mock fs/promises
 jest.mock('fs/promises', () => ({

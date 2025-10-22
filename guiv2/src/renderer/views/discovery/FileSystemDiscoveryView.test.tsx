@@ -4,15 +4,18 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
 import {  createUniversalDiscoveryHook , createUniversalConfig } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import FileSystemDiscoveryView from './FileSystemDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import FileSystemDiscoveryView from './FileSystemDiscoveryView';
 
 // Mock the hook
 jest.mock('../../hooks/useFileSystemDiscoveryLogic', () => ({

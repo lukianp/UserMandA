@@ -5,12 +5,13 @@
 
 import * as React from 'react';
 import { useState } from 'react';
+import { Save, RotateCcw, Settings as SettingsIcon, CheckCircle, Cloud } from 'lucide-react';
+
 import { useSettingsLogic } from '../../hooks/useSettingsLogic';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { Select } from '../../components/atoms/Select';
 import { Checkbox } from '../../components/atoms/Checkbox';
-import { Save, RotateCcw, Settings as SettingsIcon, CheckCircle, Cloud } from 'lucide-react';
 import { AppRegistrationDialog } from '../../components/organisms/AppRegistrationDialog';
 
 const SettingsView: React.FC = () => {

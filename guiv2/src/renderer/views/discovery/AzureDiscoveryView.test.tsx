@@ -4,15 +4,18 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import AzureDiscoveryView from './AzureDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import AzureDiscoveryView from './AzureDiscoveryView';
 
 // Mock the hook
 jest.mock('../../hooks/useAzureDiscoveryLogic', () => ({

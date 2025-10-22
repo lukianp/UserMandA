@@ -5,6 +5,7 @@
  */
 
 import { ipcMain } from 'electron';
+
 import { getLoggingService, LogLevel } from '../services/loggingService';
 import { getErrorHandler, AppError } from '../utils/errorHandler';
 
@@ -87,7 +88,7 @@ export function registerLoggingHandlers(): void {
   /**
    * Get recent logs
    */
-  ipcMain.handle('log:getRecent', async (_, count: number = 100) => {
+  ipcMain.handle('log:getRecent', async (_, count = 100) => {
     try {
       const logs = loggingService.getRecentLogs(count);
       return { success: true, logs };

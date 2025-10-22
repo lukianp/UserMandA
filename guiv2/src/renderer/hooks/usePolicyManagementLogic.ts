@@ -3,8 +3,9 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useProfileStore } from '../store/useProfileStore';
 import type { ColDef } from 'ag-grid-community';
+
+import { useProfileStore } from '../store/useProfileStore';
 
 export interface SecurityPolicy {
   id: string;

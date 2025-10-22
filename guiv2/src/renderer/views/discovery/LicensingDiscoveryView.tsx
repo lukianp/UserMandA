@@ -14,6 +14,7 @@ import {
   Calendar,
   CheckCircle
 } from 'lucide-react';
+
 import { useLicensingDiscoveryLogic } from '../../hooks/useLicensingDiscoveryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';

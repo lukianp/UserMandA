@@ -31,7 +31,7 @@ export const waitForCondition = async (
 /**
  * Wait for async operation to complete
  */
-export const waitForAsync = async (ms: number = 0): Promise<void> => {
+export const waitForAsync = async (ms = 0): Promise<void> => {
   return new Promise(resolve => setTimeout(resolve, ms));
 };
 

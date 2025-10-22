@@ -2,8 +2,9 @@
  * PerformanceMonitoringService Tests
  */
 
-import { PerformanceMonitoringService } from './performanceMonitoringService';
 import { enhancedPerformanceMonitor } from '../lib/performanceMonitor';
+
+import { PerformanceMonitoringService } from './performanceMonitoringService';
 
 // Mock the enhanced performance monitor
 jest.mock('../lib/performanceMonitor', () => ({

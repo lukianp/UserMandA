@@ -7,6 +7,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertCircle, RefreshCw, Home, Bug } from 'lucide-react';
+
 import { Button } from './atoms/Button';
 
 interface Props {

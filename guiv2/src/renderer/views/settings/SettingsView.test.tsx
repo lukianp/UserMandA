@@ -3,9 +3,10 @@
  */
 
 import React from 'react';
+
 import { renderWithProviders as render, screen, fireEvent, waitFor } from '../../test-utils/testWrappers';
+
 import '@testing-library/jest-dom';
-import SettingsView from './SettingsView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -14,6 +15,8 @@ import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import SettingsView from './SettingsView';
 
 // Mock the hook
 jest.mock('../../hooks/useSettingsLogic', () => ({

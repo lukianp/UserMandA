@@ -14,8 +14,10 @@
 
 import { EventEmitter } from 'events';
 import * as crypto from 'crypto';
-import PowerShellExecutionService from './powerShellService';
+
 import { ExecutionOptions, ExecutionResult } from '../../types/shared';
+
+import PowerShellExecutionService from './powerShellService';
 
 /**
  * Task priority levels

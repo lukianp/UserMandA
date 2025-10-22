@@ -95,15 +95,62 @@ jest.mock('electron', () => ({
 }));
 
 // Mock window.electronAPI for tests that expect it
+const mockElectronAPI = {
+  // Discovery APIs
+  executeModule: jest.fn().mockResolvedValue({ success: true, data: {} }),
+  cancelExecution: jest.fn().mockResolvedValue({ cancelled: true }),
+  onProgress: jest.fn(),
+  exportToCsv: jest.fn().mockResolvedValue({ exported: true, path: '/mock/path' }),
+  exportToExcel: jest.fn().mockResolvedValue({ exported: true, path: '/mock/path' }),
+  startDiscovery: jest.fn().mockResolvedValue({ success: true, data: {} }),
+  cancelDiscovery: jest.fn().mockResolvedValue({ cancelled: true }),
+  exportResults: jest.fn().mockResolvedValue({ exported: true, path: '/mock/path' }),
+
+  // File system APIs
+  readFile: jest.fn().mockResolvedValue('mock file content'),
+  writeFile: jest.fn().mockResolvedValue(undefined),
+  showOpenDialog: jest.fn().mockResolvedValue({ filePaths: ['/mock/path'] }),
+  showSaveDialog: jest.fn().mockResolvedValue({ filePath: '/mock/save/path' }),
+
+  // Window management
+  minimize: jest.fn(),
+  maximize: jest.fn(),
+  close: jest.fn(),
+};
+
 Object.defineProperty(window, 'electronAPI', {
   writable: true,
-  value: {
-    executeModule: jest.fn(),
-    cancelExecution: jest.fn(),
-    onProgress: jest.fn(),
-    exportToCsv: jest.fn(),
-    exportToExcel: jest.fn(),
-  },
+  value: mockElectronAPI,
+});
+
+// Also expose as window.electron for backward compatibility
+Object.defineProperty(window, 'electron', {
+  writable: true,
+  value: mockElectronAPI,
+});
+
+// Mock fetch globally
+global.fetch = jest.fn().mockResolvedValue({
+  ok: true,
+  status: 200,
+  json: jest.fn().mockResolvedValue({}),
+  text: jest.fn().mockResolvedValue(''),
+  blob: jest.fn().mockResolvedValue(new Blob()),
+  arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(0)),
+  headers: new Headers(),
+}) as any;
+
+// Reset mocks before each test
+beforeEach(() => {
+  Object.values(mockElectronAPI).forEach(mock => {
+    if (jest.isMockFunction(mock)) {
+      mock.mockClear();
+    }
+  });
+
+  if (jest.isMockFunction(global.fetch)) {
+    (global.fetch as jest.Mock).mockClear();
+  }
 });
 
 // Mock all services that might be imported - using absolute paths from root
@@ -147,6 +194,10 @@ beforeAll(() => {
 afterAll(() => {
   console.error = originalError;
 });
+
+// Mock setImmediate for browser environment (jsdom doesn't have it)
+global.setImmediate = global.setImmediate || ((fn: any, ...args: any[]) => setTimeout(fn, 0, ...args)) as any;
+global.clearImmediate = global.clearImmediate || ((id: any) => clearTimeout(id)) as any;
 
 // Global test utilities
 global.flushPromises = () => new Promise(resolve => setImmediate(resolve));

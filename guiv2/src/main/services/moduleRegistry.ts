@@ -5,10 +5,12 @@
  * Provides metadata, categorization, validation, and execution routing.
  */
 
-import PowerShellExecutionService from './powerShellService';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+
 import { ExecutionOptions, ExecutionResult } from '../../types/shared';
+
+import PowerShellExecutionService from './powerShellService';
 
 /**
  * Module categories

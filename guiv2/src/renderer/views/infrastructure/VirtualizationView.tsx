@@ -1,9 +1,10 @@
 import React from 'react';
+import { RefreshCw } from 'lucide-react';
+import type { ColDef } from 'ag-grid-community';
+
 import DataTable from '../../components/organisms/DataTable';
 import { useVirtualizationLogic } from '../../hooks/infrastructure/useVirtualizationLogic';
 import { Button } from '../../components/atoms/Button';
-import { RefreshCw } from 'lucide-react';
-import type { ColDef } from 'ag-grid-community';
 import type { VirtualizationData } from '../../hooks/infrastructure/useVirtualizationLogic';
 
 const VirtualizationView: React.FC = () => {

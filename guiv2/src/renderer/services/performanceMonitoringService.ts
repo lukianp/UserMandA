@@ -11,6 +11,7 @@
  */
 
 import { enhancedPerformanceMonitor, PerformanceReport } from '../lib/performanceMonitor';
+
 import loggingService from './loggingService';
 
 export interface PerformanceThresholds {

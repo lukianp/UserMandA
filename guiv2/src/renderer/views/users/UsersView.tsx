@@ -7,13 +7,14 @@
 import React, { useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDrag } from 'react-dnd';
+import { Download, Trash, UserPlus, RefreshCw, Eye, GripVertical } from 'lucide-react';
+import { ColDef } from 'ag-grid-community';
+import { clsx } from 'clsx';
+
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
-import { Download, Trash, UserPlus, RefreshCw, Eye, GripVertical } from 'lucide-react';
-import { ColDef } from 'ag-grid-community';
 import { UserData } from '../../types/models/user';
-import { clsx } from 'clsx';
 import { useUsersViewLogic } from '../../hooks/useUsersViewLogic';
 
 /**

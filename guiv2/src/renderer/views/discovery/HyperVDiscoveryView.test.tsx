@@ -4,15 +4,18 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
 import {    createUniversalDiscoveryHook , createUniversalStats , createUniversalConfig , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import HyperVDiscoveryView from './HyperVDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import HyperVDiscoveryView from './HyperVDiscoveryView';
 
 // Mock the hook
 jest.mock('../../hooks/useHyperVDiscoveryLogic', () => ({

@@ -4,13 +4,16 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import TicketingSystemView from './TicketingSystemView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import TicketingSystemView from './TicketingSystemView';
 
 // Mock the hook
 jest.mock('../../hooks/useTicketingSystemLogic', () => ({

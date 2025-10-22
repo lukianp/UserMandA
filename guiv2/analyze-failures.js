@@ -1,39 +1,38 @@
 const fs = require('fs');
-
-const data = JSON.parse(fs.readFileSync('jest-report-session-8-complete.json', 'utf8'));
-const failed = data.testResults.filter(t => t.status === 'failed');
-
-const errors = {};
-const failedSuites = [];
-
-failed.forEach(f => {
-  const suiteName = f.name.replace(/^.*\/src\//, 'src/');
-  failedSuites.push(suiteName);
-
-  f.assertionResults.filter(a => a.status === 'failed').forEach(a => {
-    const msg = a.failureMessages?.[0]?.split('\n')?.[0] || 'Unknown';
-    const shortMsg = msg.substring(0, 120);
-    errors[shortMsg] = (errors[shortMsg] || 0) + 1;
+const report = JSON.parse(fs.readFileSync('./current-test-report.json', 'utf-8'));
+const errorCategories = {
+  missingDataCy: [],
+  nullUndefined: [],
+  mockErrors: [],
+  timeouts: [],
+  other: []
+};
+report.testResults.forEach(suite => {
+  suite.assertionResults.forEach(test => {
+    if (test.status === 'failed') {
+      const msg = test.failureMessages.join('\n');
+      const testInfo = suite.name + '::' + test.title;
+      if (msg.includes('Unable to find an element') || msg.includes('TestingLibraryElementError')) {
+        errorCategories.missingDataCy.push(testInfo);
+      } else if (msg.includes('Cannot read propert') || msg.includes('undefined') || msg.includes('TypeError')) {
+        errorCategories.nullUndefined.push(testInfo);
+      } else if (msg.includes('is not a function') || msg.includes('mockResolvedValue') || msg.includes('mock')) {
+        errorCategories.mockErrors.push(testInfo);
+      } else if (msg.includes('Exceeded timeout') || msg.includes('timeout')) {
+        errorCategories.timeouts.push(testInfo);
+      } else {
+        errorCategories.other.push(testInfo);
+      }
+    }
   });
 });
-
-console.log('=== TOP 20 FAILURE PATTERNS ===\n');
-const sorted = Object.entries(errors).sort((a, b) => b[1] - a[1]).slice(0, 20);
-sorted.forEach(([msg, count]) => {
-  console.log(`${count}x: ${msg}`);
-});
-
-console.log('\n=== FAILED SUITES BY CATEGORY ===\n');
-const categories = {
-  views: failedSuites.filter(s => s.includes('/views/')),
-  hooks: failedSuites.filter(s => s.includes('/hooks/')),
-  services: failedSuites.filter(s => s.includes('/services/')),
-  components: failedSuites.filter(s => s.includes('/components/')),
-  main: failedSuites.filter(s => s.includes('/main/'))
-};
-
-Object.entries(categories).forEach(([cat, suites]) => {
-  console.log(`${cat}: ${suites.length} failed suites`);
-  suites.slice(0, 5).forEach(s => console.log(`  - ${s}`));
-  if (suites.length > 5) console.log(`  ... and ${suites.length - 5} more`);
-});
+console.log('=== FAILURE ANALYSIS ===');
+console.log('Missing data-cy attributes: ' + errorCategories.missingDataCy.length);
+console.log('Null/undefined errors: ' + errorCategories.nullUndefined.length);
+console.log('Mock errors: ' + errorCategories.mockErrors.length);
+console.log('Timeout errors: ' + errorCategories.timeouts.length);
+console.log('Other errors: ' + errorCategories.other.length);
+console.log('Total failures: ' + report.numFailedTests);
+console.log('Pass rate: ' + ((report.numPassedTests / report.numTotalTests) * 100).toFixed(1) + '%');
+fs.writeFileSync('failure-categories.json', JSON.stringify(errorCategories, null, 2));
+console.log('Detailed categories written to failure-categories.json');

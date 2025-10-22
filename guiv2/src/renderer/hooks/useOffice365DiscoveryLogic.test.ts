@@ -5,6 +5,7 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
+
 import { useOffice365DiscoveryLogic } from './useOffice365DiscoveryLogic';
 
 type ProgressCallback = (data: any) => void;

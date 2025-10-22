@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
 import type { ComputerDetailProjection } from '../types/models/computerDetail';
 import { useTabStore } from '../store/useTabStore';
 import { useModalStore } from '../store/useModalStore';

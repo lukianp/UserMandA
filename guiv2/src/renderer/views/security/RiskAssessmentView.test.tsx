@@ -4,13 +4,16 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import {  createUniversalDiscoveryHook , createUniversalStats } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import RiskAssessmentView from './RiskAssessmentView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import RiskAssessmentView from './RiskAssessmentView';
 
 // Mock the hook
 jest.mock('../../hooks/useRiskAssessmentLogic', () => ({

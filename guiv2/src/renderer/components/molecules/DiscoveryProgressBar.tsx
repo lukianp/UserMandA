@@ -15,6 +15,7 @@
 
 import React from 'react';
 import { Loader2, CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
+
 import type { ProgressData } from '../../hooks/useDiscoveryExecution';
 
 // ==================== Type Definitions ====================

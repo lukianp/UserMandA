@@ -6,12 +6,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, UserPlus, Trash2, RefreshCw } from 'lucide-react';
+import type { ColDef } from 'ag-grid-community';
+
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import LoadingSpinner from '../atoms/LoadingSpinner';
 import { useModalStore } from '../../store/useModalStore';
 import { VirtualizedDataGrid } from '../organisms/VirtualizedDataGrid';
-import type { ColDef } from 'ag-grid-community';
 
 export interface GroupMembersModalProps {
   modalId: string;

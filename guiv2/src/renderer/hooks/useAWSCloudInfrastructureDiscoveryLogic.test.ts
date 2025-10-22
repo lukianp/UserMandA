@@ -4,6 +4,7 @@
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
+
 import { useAWSCloudInfrastructureDiscoveryLogic } from './useAWSCloudInfrastructureDiscoveryLogic';
 
 // Mock electron API

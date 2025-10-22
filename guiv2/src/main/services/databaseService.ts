@@ -6,11 +6,13 @@
  */
 
 // eslint-disable-next-line import/no-unresolved
+import path from 'path';
+import fs from 'fs/promises';
+
 import { Low } from 'lowdb';
 // eslint-disable-next-line import/no-unresolved
 import { JSONFile } from 'lowdb/node';
-import path from 'path';
-import fs from 'fs/promises';
+
 import type { MigrationWave, MigrationItem } from '../../renderer/types/models/migration';
 
 /**

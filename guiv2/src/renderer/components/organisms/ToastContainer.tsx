@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+
 import { useNotificationStore } from '../../store/useNotificationStore';
 import { Toast } from '../molecules/Toast';
 import { NotificationPosition } from '../../types/models/notification';

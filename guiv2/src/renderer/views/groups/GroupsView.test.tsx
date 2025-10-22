@@ -3,9 +3,10 @@
  */
 
 import React from 'react';
+
 import { renderWithProviders as render, screen, fireEvent, waitFor } from '../../test-utils/testWrappers';
+
 import '@testing-library/jest-dom';
-import GroupsView from './GroupsView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -14,6 +15,8 @@ import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import GroupsView from './GroupsView';
 
 // Mock the hook
 jest.mock('../../hooks/useGroupsLogic', () => ({

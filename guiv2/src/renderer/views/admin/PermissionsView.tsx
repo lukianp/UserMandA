@@ -1,5 +1,6 @@
 import React from 'react';
 import { Shield, Check, X } from 'lucide-react';
+
 import { Button } from '../../components/atoms/Button';
 import { Checkbox } from '../../components/atoms/Checkbox';
 import { Select } from '../../components/atoms/Select';

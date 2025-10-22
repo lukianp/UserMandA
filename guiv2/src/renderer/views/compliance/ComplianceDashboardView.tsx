@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { Shield, CheckCircle, XCircle, AlertTriangle, FileText, TrendingUp, Activity } from 'lucide-react';
+
 import { useComplianceDashboardLogic } from '../../hooks/useComplianceDashboardLogic';
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';

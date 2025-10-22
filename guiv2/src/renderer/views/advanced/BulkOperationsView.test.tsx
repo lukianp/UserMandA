@@ -4,9 +4,12 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
 import BulkOperationsView from './BulkOperationsView';
+
 import {
   mockDiscoveryData,
   resetAllMocks,
@@ -20,7 +23,8 @@ jest.mock('../../hooks/useBulkOperationsLogic', () => ({
 import { useBulkOperationsLogic } from '../../hooks/useBulkOperationsLogic';
 
 describe('BulkOperationsView', () => {
-  const mockHookDefaults = createUniversalDiscoveryHook(); as any,
+  const mockHookDefaults = {
+    ...createUniversalDiscoveryHook() as any,
     loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),

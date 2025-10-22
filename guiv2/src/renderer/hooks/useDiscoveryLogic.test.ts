@@ -18,6 +18,7 @@
  */
 
 import { renderHook, act } from '@testing-library/react';
+
 import { useIntuneDiscoveryLogic } from './useIntuneDiscoveryLogic';
 import { useLicensingDiscoveryLogic } from './useLicensingDiscoveryLogic';
 import { usePowerPlatformDiscoveryLogic } from './usePowerPlatformDiscoveryLogic';

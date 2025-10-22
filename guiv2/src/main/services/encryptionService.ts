@@ -21,11 +21,11 @@ import {
   createHash
 } from 'crypto';
 import { createReadStream, createWriteStream , promises as fs } from 'fs';
-
 import { pipeline } from 'stream/promises';
 import path from 'path';
-import { app, safeStorage } from 'electron';
 import { Transform } from 'stream';
+
+import { app, safeStorage } from 'electron';
 
 // ============================================================================
 // Types

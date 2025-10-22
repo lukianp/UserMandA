@@ -193,6 +193,22 @@ export const createUniversalFilter = (overrides = {}) => ({
 export const createUniversalDiscoveryHook = (overrides = {}) => ({
   // State
   config: createUniversalConfig(),
+  formData: {
+    // Domain Discovery
+    domainController: '',
+    searchBase: '',
+    includeUsers: true,
+    includeGroups: true,
+    includeComputers: true,
+    includeOUs: false,
+    maxResults: 10000,
+    timeout: 300,
+    // Generic fields for all discoveries
+    tenantId: '',
+    clientId: '',
+    region: '',
+    endpoint: '',
+  },
   result: null,
   isDiscovering: false,
   isDetecting: false,

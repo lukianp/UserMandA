@@ -4,11 +4,12 @@
  */
 
 import React, { useEffect } from 'react';
+import { Download, RefreshCw, Server, AlertCircle } from 'lucide-react';
+
 import { useServerInventoryLogic } from '../../hooks/useServerInventoryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { Select } from '../../components/atoms/Select';
-import { Download, RefreshCw, Server, AlertCircle } from 'lucide-react';
 
 const ServerInventoryView: React.FC = () => {
   const {

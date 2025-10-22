@@ -1,8 +1,9 @@
 import React from 'react';
+import { RefreshCw } from 'lucide-react';
+
 import DataTable, { DataTableColumn } from '../../components/organisms/DataTable';
 import { useApplicationServersLogic } from '../../hooks/infrastructure/useApplicationServersLogic';
 import { Button } from '../../components/atoms/Button';
-import { RefreshCw } from 'lucide-react';
 import type { ApplicationServersData } from '../../hooks/infrastructure/useApplicationServersLogic';
 
 const ApplicationServersView: React.FC = () => {

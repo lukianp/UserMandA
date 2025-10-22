@@ -7,6 +7,7 @@
 
 import React, { ErrorInfo } from 'react';
 import { HashRouter, useRoutes } from 'react-router-dom';
+
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NotificationContainer } from './components/NotificationContainer';
 import { MainLayout } from './components/layouts/MainLayout';

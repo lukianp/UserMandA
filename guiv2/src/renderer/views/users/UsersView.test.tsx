@@ -4,9 +4,10 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import UsersView from './UsersView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
@@ -15,6 +16,8 @@ import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import UsersView from './UsersView';
 
 // Mock the hook
 jest.mock('../../hooks/useUsersLogic', () => ({

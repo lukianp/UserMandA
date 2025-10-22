@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { differenceInDays, addDays } from 'date-fns';
+
 import type { ProjectConfig, WaveConfig, ProjectStatus, WaveStatus } from '../types/project';
 import { useProfileStore } from '../store/useProfileStore';
 

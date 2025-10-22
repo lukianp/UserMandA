@@ -13,8 +13,9 @@
  * - Error handling
  */
 
-import MigrationPlanningService, { MigrationPlan, MigrationWave } from './migrationPlanningService';
 import * as path from 'path';
+
+import MigrationPlanningService, { MigrationPlan, MigrationWave } from './migrationPlanningService';
 
 // Mock fs module
 jest.mock('fs', () => ({

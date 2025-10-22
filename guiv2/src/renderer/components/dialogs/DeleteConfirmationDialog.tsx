@@ -5,8 +5,9 @@
 
 import React from 'react';
 import { Dialog } from '@headlessui/react';
-import { Button } from '../atoms/Button';
 import { AlertTriangle, X } from 'lucide-react';
+
+import { Button } from '../atoms/Button';
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;

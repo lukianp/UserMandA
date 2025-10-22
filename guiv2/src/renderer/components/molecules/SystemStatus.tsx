@@ -15,8 +15,9 @@
  */
 
 import React from 'react';
-import { StatusIndicator } from '../atoms/StatusIndicator';
 import { Database, Server, Shield, Activity } from 'lucide-react';
+
+import { StatusIndicator } from '../atoms/StatusIndicator';
 import type { StatusType } from '../atoms/StatusIndicator';
 
 export interface SystemStatusIndicators {

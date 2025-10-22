@@ -14,11 +14,12 @@
  * - Performance optimized with chokidar
  */
 
-import chokidar, { FSWatcher } from 'chokidar';
 import * as fs from 'fs/promises';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import { EventEmitter } from 'events';
+
+import chokidar, { FSWatcher } from 'chokidar';
 import { BrowserWindow } from 'electron';
 
 /**

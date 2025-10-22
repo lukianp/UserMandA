@@ -5,9 +5,10 @@
 
 import React, { useState, useCallback } from 'react';
 import { Dialog } from '@headlessui/react';
+import { X, Eye } from 'lucide-react';
+
 import { Button } from '../atoms/Button';
 import Checkbox from '../atoms/Checkbox';
-import { X, Eye } from 'lucide-react';
 
 interface ColumnVisibilityDialogProps {
   isOpen: boolean;

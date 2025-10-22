@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import {
   BaseDiscoveryHookResult,
   LogEntry,
@@ -14,7 +15,7 @@ import {
 /**
  * Active Directory Discovery Hook Return Type
  */
-export interface ActiveDirectoryDiscoveryHookResult extends BaseDiscoveryHookResult {}
+export type ActiveDirectoryDiscoveryHookResult = BaseDiscoveryHookResult
 
 /**
  * Custom hook for Active Directory discovery logic

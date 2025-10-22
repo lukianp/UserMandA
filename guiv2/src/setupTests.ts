@@ -124,7 +124,7 @@ globalThis.window.electronAPI = {
 // Mock IntersectionObserver
 globalThis.IntersectionObserver = class IntersectionObserver implements globalThis.IntersectionObserver {
   root: Element | null = null;
-  rootMargin: string = '';
+  rootMargin = '';
   thresholds: ReadonlyArray<number> = [];
 
   constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {}

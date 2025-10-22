@@ -5,10 +5,12 @@
  */
 
 import React, { useState, useMemo } from 'react';
+
 import { useModuleDiscovery } from '../../hooks/useModuleDiscovery';
-import { Modal } from './Modal';
 import LoadingSpinner from '../atoms/LoadingSpinner';
 import type { DiscoveredModule, ModuleParameter } from '../../hooks/useModuleDiscovery';
+
+import { Modal } from './Modal';
 
 interface ModuleExecutionDialogProps {
   isOpen: boolean;

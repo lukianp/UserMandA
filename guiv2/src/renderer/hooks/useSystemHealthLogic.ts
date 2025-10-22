@@ -19,6 +19,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
 import type { SystemStatusIndicators } from '../components/molecules/SystemStatus';
 import { getElectronAPI } from '../lib/electron-api-fallback';
 

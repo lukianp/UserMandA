@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import type { ComplexityScore, MigrationAnalysis } from '../types/models/migration';
 
 export interface MigrationAnalysisState {

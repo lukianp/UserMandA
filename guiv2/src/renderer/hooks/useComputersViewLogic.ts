@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect } from 'react';
+
 import { useProfileStore } from '../store/useProfileStore';
 
 interface Computer {

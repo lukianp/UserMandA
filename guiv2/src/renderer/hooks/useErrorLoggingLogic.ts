@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react';
+
 import { ErrorContext } from '../../types/debug';
 
 interface ErrorLoggingOptions {

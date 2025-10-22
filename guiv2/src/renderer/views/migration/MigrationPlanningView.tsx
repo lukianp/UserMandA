@@ -10,6 +10,10 @@
 
 import React, { useCallback, useState, useEffect } from 'react';
 import { useDrop } from 'react-dnd';
+import { Plus, Edit, Trash2, Copy, Calendar, AlertCircle, FileSearch, Users, GitBranch, CheckCircle, ArrowRight } from 'lucide-react';
+import { format } from 'date-fns';
+import { clsx } from 'clsx';
+
 import { useMigrationPlanningLogic } from '../../hooks/useMigrationPlanningLogic';
 import { useMigrationAnalysisLogic } from '../../hooks/useMigrationAnalysisLogic';
 import { useMigrationStore } from '../../store/useMigrationStore';
@@ -19,9 +23,6 @@ import { Input } from '../../components/atoms/Input';
 import { SearchBar } from '../../components/molecules/SearchBar';
 import { Select } from '../../components/atoms/Select';
 import { Badge } from '../../components/atoms/Badge';
-import { Plus, Edit, Trash2, Copy, Calendar, AlertCircle, FileSearch, Users, GitBranch, CheckCircle, ArrowRight } from 'lucide-react';
-import { format } from 'date-fns';
-import { clsx } from 'clsx';
 import type { MigrationPriority, MigrationWave } from '../../types/models/migration';
 
 /**

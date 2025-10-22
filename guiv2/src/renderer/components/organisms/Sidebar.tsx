@@ -24,6 +24,7 @@ import {
   Search,
   ChevronRight,
 } from 'lucide-react';
+
 import { useProfileStore } from '../../store/useProfileStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { Button } from '../atoms/Button';

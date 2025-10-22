@@ -1,9 +1,10 @@
 import React from 'react';
+import { RefreshCw } from 'lucide-react';
+import type { ColDef } from 'ag-grid-community';
+
 import DataTable from '../../components/organisms/DataTable';
 import { useSecurityAppliancesLogic } from '../../hooks/infrastructure/useSecurityAppliancesLogic';
 import { Button } from '../../components/atoms/Button';
-import { RefreshCw } from 'lucide-react';
-import type { ColDef } from 'ag-grid-community';
 import type { SecurityAppliancesData } from '../../hooks/infrastructure/useSecurityAppliancesLogic';
 
 const SecurityAppliancesView: React.FC = () => {

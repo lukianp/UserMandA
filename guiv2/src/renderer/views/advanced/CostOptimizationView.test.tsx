@@ -4,13 +4,16 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import CostOptimizationView from './CostOptimizationView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import CostOptimizationView from './CostOptimizationView';
 
 // Mock the hook
 jest.mock('../../hooks/useCostOptimizationLogic', () => ({

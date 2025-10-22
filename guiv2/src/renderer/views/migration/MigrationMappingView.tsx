@@ -1,10 +1,11 @@
 import React, { useRef } from 'react';
+import { Upload, Download, Wand2, AlertTriangle, Filter, FileType, AlertCircle } from 'lucide-react';
+
 import { useMigrationMappingLogic } from '../../hooks/useMigrationMappingLogic';
 import { Button } from '../../components/atoms/Button';
 import { SearchBar } from '../../components/molecules/SearchBar';
 import { Select } from '../../components/atoms/Select';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
-import { Upload, Download, Wand2, AlertTriangle, Filter, FileType, AlertCircle } from 'lucide-react';
 
 const MigrationMappingView: React.FC = () => {
   const logic = useMigrationMappingLogic();

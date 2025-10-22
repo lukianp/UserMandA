@@ -5,6 +5,7 @@
  */
 
 import { ProgressTask, ProgressSubtask, ProgressNotificationOptions } from '../types/uiux';
+
 import { notificationService } from './notificationService';
 
 /**

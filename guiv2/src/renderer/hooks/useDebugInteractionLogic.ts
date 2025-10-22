@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
+
 import { KeystrokeEvent, MouseEvent, PerformanceMetrics, ErrorContext } from '../../types/debug';
 
 interface DebugInteractionOptions {

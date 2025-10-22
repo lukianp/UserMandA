@@ -1,5 +1,6 @@
 import React from 'react';
 import { Info, Package, Code, Globe, Mail, ExternalLink, Shield, Zap } from 'lucide-react';
+
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';
 

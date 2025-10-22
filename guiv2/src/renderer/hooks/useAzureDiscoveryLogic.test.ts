@@ -4,10 +4,12 @@
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useAzureDiscoveryLogic } from './useAzureDiscoveryLogic';
+
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { getElectronAPI } from '../lib/electron-api-fallback';
+
+import { useAzureDiscoveryLogic } from './useAzureDiscoveryLogic';
 
 // Mock dependencies
 jest.mock('../store/useProfileStore');

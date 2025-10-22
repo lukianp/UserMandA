@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+
 import type {
   ComplianceDashboardData,
   ComplianceDashboardMetrics,
@@ -139,7 +140,7 @@ function generateFrameworkSummaries(metrics: ComplianceDashboardMetrics): Framew
 /**
  * Generate compliance findings
  */
-function generateComplianceFindings(metrics: ComplianceDashboardMetrics, count: number = 20): ComplianceFinding[] {
+function generateComplianceFindings(metrics: ComplianceDashboardMetrics, count = 20): ComplianceFinding[] {
   const findings: ComplianceFinding[] = [];
   const frameworks = ['ISO 27001', 'SOC 2', 'GDPR', 'HIPAA', 'PCI DSS'];
   const severities: Array<'Critical' | 'High' | 'Medium' | 'Low'> = ['Critical', 'High', 'Medium', 'Low'];
@@ -334,7 +335,7 @@ function generateRecentAssessments(): ComplianceAssessmentResult[] {
 /**
  * Generate upcoming deadlines
  */
-function generateUpcomingDeadlines(count: number = 10): ComplianceItem[] {
+function generateUpcomingDeadlines(count = 10): ComplianceItem[] {
   const items: ComplianceItem[] = [];
   const frameworks = ['ISO 27001', 'SOC 2', 'GDPR', 'HIPAA', 'PCI DSS'];
   const statuses = ['Pending', 'In Progress', 'Not Started'];

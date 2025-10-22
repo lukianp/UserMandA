@@ -8,6 +8,7 @@
 
 import { create } from 'zustand';
 import { devtools, persist, subscribeWithSelector } from 'zustand/middleware';
+
 import { Profile, ConnectionStatus } from '../types/models/profile';
 import { getElectronAPI } from '../lib/electron-api-fallback';
 

@@ -9,6 +9,8 @@
  * - Result comparison
  */
 
+import * as cron from 'node-cron';
+
 import {
   DiscoveryConfig,
   DiscoveryResult,
@@ -20,7 +22,7 @@ import {
   ConnectionResult,
   HistoryFilter,
 } from '../types/models/discovery';
-import * as cron from 'node-cron';
+
 import { getCacheService } from './cacheService';
 
 /**

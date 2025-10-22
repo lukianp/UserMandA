@@ -9,6 +9,8 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { RefreshCw, Users, Layers, Monitor, Server, AlertCircle } from 'lucide-react';
+
 import { useDashboardLogic } from '../../hooks/useDashboardLogic';
 import { ProjectTimelineCard } from '../../components/molecules/ProjectTimelineCard';
 import { StatisticsCard } from '../../components/molecules/StatisticsCard';
@@ -17,7 +19,6 @@ import { RecentActivityFeed } from '../../components/molecules/RecentActivityFee
 import { QuickActionsPanel } from '../../components/molecules/QuickActionsPanel';
 import { Button } from '../../components/atoms/Button';
 import { Spinner } from '../../components/atoms/Spinner';
-import { RefreshCw, Users, Layers, Monitor, Server, AlertCircle } from 'lucide-react';
 
 /**
  * OverviewView Component

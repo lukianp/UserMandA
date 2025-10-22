@@ -4,8 +4,10 @@
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useTeamsDiscoveryLogic } from './useTeamsDiscoveryLogic';
+
 import type { TeamsDiscoveryResult, Team, TeamChannel, TeamMember, TeamApp } from '../types/models/teams';
+
+import { useTeamsDiscoveryLogic } from './useTeamsDiscoveryLogic';
 
 // Mock electron API
 const mockElectronAPI = {

@@ -7,6 +7,7 @@ import './index.css';
 import './renderer/styles/tailwind.css';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+
 import App from './renderer/App';
 
 console.log('🚀 M&A Discovery Suite - Renderer Process Starting...');

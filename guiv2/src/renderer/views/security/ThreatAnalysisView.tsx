@@ -3,12 +3,13 @@
  */
 
 import React from 'react';
+import { Skull, RefreshCw, Download, Filter, X, Scan } from 'lucide-react';
+
 import { useThreatAnalysisLogic } from '../../hooks/useThreatAnalysisLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { Select } from '../../components/atoms/Select';
-import { Skull, RefreshCw, Download, Filter, X, Scan } from 'lucide-react';
 
 const ThreatAnalysisView: React.FC = () => {
   const {

@@ -1,9 +1,10 @@
 import React from 'react';
+import { RefreshCw } from 'lucide-react';
+import type { ColDef } from 'ag-grid-community';
+
 import DataTable from '../../components/organisms/DataTable';
 import { useWebServersLogic } from '../../hooks/infrastructure/useWebServersLogic';
 import { Button } from '../../components/atoms/Button';
-import { RefreshCw } from 'lucide-react';
-import type { ColDef } from 'ag-grid-community';
 import type { WebServersData } from '../../hooks/infrastructure/useWebServersLogic';
 
 const WebServersView: React.FC = () => {

@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Shield, AlertTriangle, Lock, Unlock, Activity, Eye, Bug, TrendingDown } from 'lucide-react';
+
 import { useSecurityDashboardLogic } from '../../hooks/useSecurityDashboardLogic';
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';

@@ -5,6 +5,7 @@
  */
 
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
+
 import * as appRegistrationService from '../services/appRegistrationService';
 
 /**

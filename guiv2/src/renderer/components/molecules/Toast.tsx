@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { X, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
+
 import { Notification } from '../../types/models/notification';
 import { Button } from '../atoms/Button';
 

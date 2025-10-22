@@ -5,6 +5,7 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
+
 import { useSecurityInfrastructureDiscoveryLogic } from './useSecurityInfrastructureDiscoveryLogic';
 
 type ProgressCallback = (data: any) => void;

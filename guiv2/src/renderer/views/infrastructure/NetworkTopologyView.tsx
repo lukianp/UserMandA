@@ -1,9 +1,10 @@
 import React from 'react';
+import { RefreshCw } from 'lucide-react';
+import type { ColDef } from 'ag-grid-community';
+
 import DataTable from '../../components/organisms/DataTable';
 import { useNetworkTopologyLogic } from '../../hooks/infrastructure/useNetworkTopologyLogic';
 import { Button } from '../../components/atoms/Button';
-import { RefreshCw } from 'lucide-react';
-import type { ColDef } from 'ag-grid-community';
 import type { NetworkTopologyData } from '../../hooks/infrastructure/useNetworkTopologyLogic';
 
 const NetworkTopologyView: React.FC = () => {

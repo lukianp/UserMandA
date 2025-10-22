@@ -13,6 +13,7 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react';
+
 import { usePowerPlatformDiscoveryLogic } from '../../hooks/usePowerPlatformDiscoveryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';

@@ -4,13 +4,16 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import AssetInventoryView from './AssetInventoryView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import AssetInventoryView from './AssetInventoryView';
 
 // Mock the hook
 jest.mock('../../hooks/useAssetInventoryLogic', () => ({

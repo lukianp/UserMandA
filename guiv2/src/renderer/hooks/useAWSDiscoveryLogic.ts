@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import { AWSDiscoveryConfig, AWSDiscoveryResult, AWSFilterState, AWSResourceType, EC2Instance, S3Bucket, RDSInstance } from '../types/models/aws';
+
 import { useDebounce } from './useDebounce';
 
 type TabType = 'overview' | 'ec2' | 's3' | 'rds';

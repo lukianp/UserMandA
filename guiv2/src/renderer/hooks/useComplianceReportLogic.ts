@@ -4,8 +4,9 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useProfileStore } from '../store/useProfileStore';
 import type { ColDef } from 'ag-grid-community';
+
+import { useProfileStore } from '../store/useProfileStore';
 import { ComplianceItem } from '../types/models/compliance';
 
 export interface ComplianceFilters {

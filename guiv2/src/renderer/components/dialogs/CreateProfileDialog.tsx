@@ -5,12 +5,13 @@
 
 import React, { useState, useCallback } from 'react';
 import { Dialog } from '@headlessui/react';
+import { X, CheckCircle, AlertCircle } from 'lucide-react';
+
 import { useModalStore } from '../../store/useModalStore';
 import { useProfileStore } from '../../store/useProfileStore';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { Select } from '../atoms/Select';
-import { X, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface ProfileFormData {
   name: string;

@@ -15,8 +15,10 @@
 
 import { EventEmitter } from 'events';
 import * as crypto from 'crypto';
-import BackgroundTaskQueueService, { TaskOptions, TaskPriority } from './backgroundTaskQueueService';
+
 import { ExecutionOptions } from '../../types/shared';
+
+import BackgroundTaskQueueService, { TaskOptions, TaskPriority } from './backgroundTaskQueueService';
 
 /**
  * Cron field types

@@ -4,9 +4,10 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import CostAnalysisView from './CostAnalysisView';
 import { useCostAnalysisLogic } from '../../hooks/useCostAnalysisLogic';
 import {
   mockSuccessfulExecution,
@@ -16,6 +17,8 @@ import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import CostAnalysisView from './CostAnalysisView';
 
 // Mock the hook
 jest.mock('../../hooks/useCostAnalysisLogic', () => ({
@@ -32,7 +35,8 @@ describe('CostAnalysisView', () => {
   ],
 };
 
-  const mockHookDefaults = createUniversalDiscoveryHook();],
+  const mockHookDefaults = {
+    ...createUniversalDiscoveryHook(),
     isLoading: false,
     error: null,
     refreshData: jest.fn(),

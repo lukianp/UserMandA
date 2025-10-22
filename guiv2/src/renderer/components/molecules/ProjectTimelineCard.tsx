@@ -8,10 +8,11 @@
  */
 
 import React from 'react';
+import { Calendar, Clock, TrendingUp, Target } from 'lucide-react';
+
 import { ModernCard } from '../atoms/ModernCard';
 import { Badge } from '../atoms/Badge';
 import type { ProjectTimeline } from '../../types/dashboard';
-import { Calendar, Clock, TrendingUp, Target } from 'lucide-react';
 
 interface ProjectTimelineCardProps {
   project: ProjectTimeline;

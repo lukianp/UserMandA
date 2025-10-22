@@ -8,10 +8,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { ColDef } from 'ag-grid-community';
+
 import { GroupData, GroupType, GroupScope, MembershipType } from '../types/models/group';
-import { useDebounce } from './useDebounce';
 import { powerShellService } from '../services/powerShellService';
 import { useProfileStore } from '../store/useProfileStore';
+
+import { useDebounce } from './useDebounce';
 
 export const useGroupsViewLogic = () => {
   // State

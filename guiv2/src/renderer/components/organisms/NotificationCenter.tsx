@@ -4,7 +4,6 @@
  */
 
 import React, { useState } from 'react';
-import { useNotificationStore } from '../../store/useNotificationStore';
 import {
   Bell,
   BellOff,
@@ -19,6 +18,8 @@ import {
   Filter,
   X,
 } from 'lucide-react';
+
+import { useNotificationStore } from '../../store/useNotificationStore';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { Badge } from '../atoms/Badge';

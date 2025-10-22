@@ -1,7 +1,8 @@
 import React from 'react';
+import { CheckCircle2, XCircle, PlayCircle, Download, Shield } from 'lucide-react';
+
 import { useMigrationValidationLogic } from '../../hooks/useMigrationValidationLogic';
 import { Button } from '../../components/atoms/Button';
-import { CheckCircle2, XCircle, PlayCircle, Download, Shield } from 'lucide-react';
 
 const MigrationValidationView: React.FC = () => {
   const logic = useMigrationValidationLogic();

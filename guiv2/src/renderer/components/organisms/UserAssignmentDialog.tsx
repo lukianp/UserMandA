@@ -5,9 +5,11 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+
 import { useMigrationPlanning } from '../../hooks/useMigrationPlanning';
-import { Modal } from './Modal';
 import LoadingSpinner from '../atoms/LoadingSpinner';
+
+import { Modal } from './Modal';
 
 interface UserAssignmentDialogProps {
   isOpen: boolean;

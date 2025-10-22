@@ -9,6 +9,7 @@ import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { enableMapSet } from 'immer';
+
 import {
   MigrationPlan,
   MigrationTask,
@@ -22,8 +23,7 @@ import {
   ConflictResolution,
   ValidationError,
   ValidationWarning,
-} from '../types/models/migration';
-import { ValidationResult } from '../types/models/migration';
+ ValidationResult } from '../types/models/migration';
 import type { ProgressData } from '../../shared/types';
 
 // ValidationResult is imported from migration types

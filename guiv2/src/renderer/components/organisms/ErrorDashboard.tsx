@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
+
 import { useErrorMonitoring } from '../../hooks/useErrorMonitoring';
 import type { LogLevel, LogEntry, ErrorReport } from '../../hooks/useErrorMonitoring';
 

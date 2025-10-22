@@ -4,13 +4,16 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import SecurityPostureView from './SecurityPostureView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import SecurityPostureView from './SecurityPostureView';
 
 // Mock the hook
 jest.mock('../../hooks/useSecurityPostureLogic', () => ({

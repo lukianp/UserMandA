@@ -23,8 +23,9 @@
  */
 
 import React from 'react';
-import { Modal } from '../organisms/Modal';
 import { Keyboard } from 'lucide-react';
+
+import { Modal } from '../organisms/Modal';
 
 export interface KeyboardShortcutsDialogProps {
   /** Dialog open state */

@@ -7,8 +7,10 @@
 import { EventEmitter } from 'events';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+
 import * as Papa from 'papaparse';
 import { glob } from 'glob';
+
 import {
   UserDto, GroupDto, DeviceDto, AppDto, GpoDto, AclEntry,
   MappedDriveDto, MailboxDto, AzureRoleAssignment, SqlDbDto,
@@ -2332,7 +2334,7 @@ export class LogicEngineService extends EventEmitter {
   /**
    * Get users discovered in last N days
    */
-  public getDiscoveredUserCount(days: number = 7): number {
+  public getDiscoveredUserCount(days = 7): number {
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     let count = 0;
 
@@ -2348,7 +2350,7 @@ export class LogicEngineService extends EventEmitter {
   /**
    * Get groups discovered in last N days
    */
-  public getDiscoveredGroupCount(days: number = 7): number {
+  public getDiscoveredGroupCount(days = 7): number {
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     let count = 0;
 
@@ -2364,7 +2366,7 @@ export class LogicEngineService extends EventEmitter {
   /**
    * Get devices discovered in last N days
    */
-  public getDiscoveredDeviceCount(days: number = 7): number {
+  public getDiscoveredDeviceCount(days = 7): number {
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     let count = 0;
 

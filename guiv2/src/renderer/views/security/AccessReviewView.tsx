@@ -18,11 +18,12 @@ import {
   RefreshCw,
   ChevronRight,
 } from 'lucide-react';
+import { ColDef, ICellRendererParams } from 'ag-grid-community';
+
 import { useAccessReviewLogic } from '../../hooks/security/useAccessReviewLogic';
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
-import { ColDef, ICellRendererParams } from 'ag-grid-community';
 import type { AccessReviewItem, BulkReviewAction } from '../../types/models/accessReview';
 
 export const AccessReviewView: React.FC = () => {

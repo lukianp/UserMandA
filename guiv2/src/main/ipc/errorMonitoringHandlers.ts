@@ -5,6 +5,7 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
+
 import { getErrorHandlingService } from '../services/errorHandlingService';
 import type { LogLevel, LogEntry } from '../services/errorHandlingService';
 

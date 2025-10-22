@@ -15,6 +15,7 @@
 
 import { EventEmitter } from 'events';
 import * as crypto from 'crypto';
+
 import loggingService from './loggingService';
 import eventAggregator from './eventAggregatorService';
 

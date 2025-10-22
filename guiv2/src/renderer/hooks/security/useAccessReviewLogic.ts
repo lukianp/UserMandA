@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+
 import type {
   AccessReviewData,
   AccessReviewItem,
@@ -79,7 +80,7 @@ function calculateAccessReviewMetrics(stats: any): AccessReviewMetrics {
 /**
  * Generate access review items from Logic Engine data
  */
-function generateAccessReviewItems(stats: any, count: number = 50): AccessReviewItem[] {
+function generateAccessReviewItems(stats: any, count = 50): AccessReviewItem[] {
   const items: AccessReviewItem[] = [];
   const resourceTypes: Array<'Group' | 'Application' | 'SharePoint' | 'FileShare' | 'Database' | 'System'> =
     ['Group', 'Application', 'SharePoint', 'FileShare', 'Database', 'System'];
@@ -199,7 +200,7 @@ function generateAccessReviewCampaigns(): AccessReviewCampaign[] {
 /**
  * Generate resource access summaries
  */
-function generateResourceAccessSummaries(count: number = 20): ResourceAccessSummary[] {
+function generateResourceAccessSummaries(count = 20): ResourceAccessSummary[] {
   const summaries: ResourceAccessSummary[] = [];
   const resourceTypes = ['Group', 'Application', 'SharePoint', 'FileShare', 'Database', 'System'];
   const riskLevels: Array<'Low' | 'Medium' | 'High' | 'Critical'> = ['Low', 'Medium', 'High', 'Critical'];
@@ -236,7 +237,7 @@ function generateResourceAccessSummaries(count: number = 20): ResourceAccessSumm
 /**
  * Generate user access summaries
  */
-function generateUserAccessSummaries(stats: any, count: number = 30): UserAccessSummary[] {
+function generateUserAccessSummaries(stats: any, count = 30): UserAccessSummary[] {
   const summaries: UserAccessSummary[] = [];
 
   for (let i = 0; i < count; i++) {

@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
 import { useThemeStore } from '../store/useThemeStore';
 import { ApplicationSettings } from '../types/models/discovery';
 

@@ -2,8 +2,9 @@
  * ThemeService Tests
  */
 
-import { ThemeService, THEME_PRESETS, ExportedTheme } from './themeService';
 import { useThemeStore } from '../store/useThemeStore';
+
+import { ThemeService, THEME_PRESETS, ExportedTheme } from './themeService';
 
 // Mock DOM APIs
 const mockMatchMedia = (matches: boolean) => ({

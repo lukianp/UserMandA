@@ -4,9 +4,10 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import TrendAnalysisView from './TrendAnalysisView';
 import { useTrendAnalysisLogic } from '../../hooks/useTrendAnalysisLogic';
 import {
   mockSuccessfulExecution,
@@ -16,6 +17,8 @@ import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import TrendAnalysisView from './TrendAnalysisView';
 
 // Mock the hook
 jest.mock('../../hooks/useTrendAnalysisLogic', () => ({

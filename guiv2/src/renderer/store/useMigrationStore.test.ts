@@ -7,13 +7,15 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
-import { useMigrationStore } from './useMigrationStore';
+
 import type {
   MigrationConflict,
   MigrationWave,
   ResourceMapping,
   ValidationResult,
 } from '../types/models/migration';
+
+import { useMigrationStore } from './useMigrationStore';
 
 const mockExecuteModule = jest.fn<(args?: any) => Promise<any>>();
 const mockCancelExecution = jest.fn<(token?: string) => Promise<void>>();

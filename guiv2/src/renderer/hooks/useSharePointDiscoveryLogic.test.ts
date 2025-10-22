@@ -4,8 +4,10 @@
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useSharePointDiscoveryLogic } from './useSharePointDiscoveryLogic';
+
 import type { SharePointDiscoveryResult, SharePointSite, SharePointList, SharePointPermission } from '../types/models/sharepoint';
+
+import { useSharePointDiscoveryLogic } from './useSharePointDiscoveryLogic';
 
 // Mock electron API
 const mockElectronAPI = {

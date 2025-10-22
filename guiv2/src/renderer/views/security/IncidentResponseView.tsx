@@ -1,6 +1,7 @@
 import React from 'react';
-import { useIncidentResponseLogic } from '../../hooks/security/useIncidentResponseLogic';
 import { AlertTriangle, RefreshCw, Activity, Clock, CheckCircle } from 'lucide-react';
+
+import { useIncidentResponseLogic } from '../../hooks/security/useIncidentResponseLogic';
 
 export const IncidentResponseView: React.FC = () => {
   const { data, isLoading, error, handleRefresh } = useIncidentResponseLogic();

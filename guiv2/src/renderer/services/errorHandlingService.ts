@@ -13,6 +13,7 @@
  */
 
 import * as crypto from 'crypto';
+
 import loggingService, { LogLevel } from './loggingService';
 
 /**

@@ -5,10 +5,12 @@
  */
 
 import React, { useState } from 'react';
+
 import { useDataExportImport } from '../../hooks/useDataExportImport';
-import { Modal } from './Modal';
 import LoadingSpinner from '../atoms/LoadingSpinner';
 import type { ExportFormat } from '../../hooks/useDataExportImport';
+
+import { Modal } from './Modal';
 
 interface DataExportImportDialogProps {
   isOpen: boolean;

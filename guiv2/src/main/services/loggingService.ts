@@ -7,6 +7,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+
 import { app } from 'electron';
 
 export enum LogLevel {
@@ -303,14 +304,14 @@ class LoggingService {
   /**
    * Get recent log entries
    */
-  getRecentLogs(count: number = 100): LogEntry[] {
+  getRecentLogs(count = 100): LogEntry[] {
     return this.logBuffer.slice(-count);
   }
 
   /**
    * Get logs by level
    */
-  getLogsByLevel(level: LogLevel, count: number = 100): LogEntry[] {
+  getLogsByLevel(level: LogLevel, count = 100): LogEntry[] {
     return this.logBuffer
       .filter(entry => entry.level === level)
       .slice(-count);
@@ -319,7 +320,7 @@ class LoggingService {
   /**
    * Get logs by component
    */
-  getLogsByComponent(component: string, count: number = 100): LogEntry[] {
+  getLogsByComponent(component: string, count = 100): LogEntry[] {
     return this.logBuffer
       .filter(entry => entry.component === component)
       .slice(-count);

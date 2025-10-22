@@ -1,4 +1,5 @@
 import { useState } from "react";
+
 import { useProfileStore } from "../../store/useProfileStore";
 import { useApplicationMigration } from "../../hooks/useApplicationMigration";
 import DataTable from "../../components/DataTable";

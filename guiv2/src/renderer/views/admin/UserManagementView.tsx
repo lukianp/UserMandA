@@ -1,5 +1,6 @@
 import React from 'react';
 import { UserPlus, Trash2, Edit2, Shield, Lock, Unlock } from 'lucide-react';
+
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';

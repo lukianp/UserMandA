@@ -10,6 +10,7 @@ import {
   ChordShortcut,
   ShortcutConflict,
 } from '../types/uiux';
+
 import { commandPaletteService } from './commandPaletteService';
 
 /**

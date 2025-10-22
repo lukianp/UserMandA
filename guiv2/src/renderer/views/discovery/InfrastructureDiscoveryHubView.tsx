@@ -4,12 +4,6 @@
  */
 
 import React from 'react';
-import { useInfrastructureDiscoveryHubLogic } from '../../hooks/useInfrastructureDiscoveryHubLogic';
-import SearchBar from '../../components/molecules/SearchBar';
-import { Button } from '../../components/atoms/Button';
-import { Spinner } from '../../components/atoms/Spinner';
-import Badge from '../../components/atoms/Badge';
-import StatusIndicator from '../../components/atoms/StatusIndicator';
 import {
   RefreshCw,
   Filter,
@@ -33,6 +27,13 @@ import {
   PlayCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
+
+import { useInfrastructureDiscoveryHubLogic } from '../../hooks/useInfrastructureDiscoveryHubLogic';
+import SearchBar from '../../components/molecules/SearchBar';
+import { Button } from '../../components/atoms/Button';
+import { Spinner } from '../../components/atoms/Spinner';
+import Badge from '../../components/atoms/Badge';
+import StatusIndicator from '../../components/atoms/StatusIndicator';
 
 /**
  * Icon mapping for discovery modules

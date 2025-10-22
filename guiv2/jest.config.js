@@ -6,12 +6,13 @@ module.exports = {
     '<rootDir>/src/**/*.(test|spec).(ts|tsx|js|jsx)',
   ],
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: '<rootDir>/tsconfig.jest.json',
-      diagnostics: {
-        ignoreCodes: [2339, 2304, 6133], // Ignore common type errors in tests
-      },
-    }],
+    '^.+\\.(ts|tsx)$': ['babel-jest', {
+      presets: [
+        ['@babel/preset-env', { targets: { node: 'current' } }],
+        '@babel/preset-typescript',
+        ['@babel/preset-react', { runtime: 'automatic' }]
+      ]
+    }]
   },
   transformIgnorePatterns: [
     'node_modules/(?!(@react-dnd|react-dnd|dnd-core|@dnd-kit|react-dnd-html5-backend|react-router|react-router-dom|@remix-run|framer-motion|zustand)/)',
@@ -87,12 +88,6 @@ module.exports = {
   detectOpenHandles: true,
   forceExit: true,
   testTimeout: 10000,
-  globals: {
-    'ts-jest': {
-      isolatedModules: true,
-      tsconfig: '<rootDir>/tsconfig.jest.json',
-    },
-  },
   // Clear mocks between tests
   clearMocks: true,
   resetMocks: false,

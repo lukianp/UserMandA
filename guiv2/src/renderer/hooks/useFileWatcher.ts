@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+
 import { useProfileStore } from '../store/useProfileStore';
 
 export type DataType =

@@ -4,13 +4,16 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import LicenseOptimizationView from './LicenseOptimizationView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import LicenseOptimizationView from './LicenseOptimizationView';
 
 // Mock the hook
 jest.mock('../../hooks/useLicenseOptimizationLogic', () => ({

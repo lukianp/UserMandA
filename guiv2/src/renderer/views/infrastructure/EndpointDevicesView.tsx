@@ -1,9 +1,10 @@
 import React from 'react';
+import { RefreshCw } from 'lucide-react';
+import type { ColDef } from 'ag-grid-community';
+
 import DataTable from '../../components/organisms/DataTable';
 import { useEndpointDevicesLogic } from '../../hooks/infrastructure/useEndpointDevicesLogic';
 import { Button } from '../../components/atoms/Button';
-import { RefreshCw } from 'lucide-react';
-import type { ColDef } from 'ag-grid-community';
 import type { EndpointDevicesData } from '../../hooks/infrastructure/useEndpointDevicesLogic';
 
 const EndpointDevicesView: React.FC = () => {

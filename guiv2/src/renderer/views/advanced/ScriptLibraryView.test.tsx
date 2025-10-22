@@ -4,13 +4,16 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import ScriptLibraryView from './ScriptLibraryView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import ScriptLibraryView from './ScriptLibraryView';
 
 // Mock the hook
 jest.mock('../../hooks/useScriptLibraryLogic', () => ({

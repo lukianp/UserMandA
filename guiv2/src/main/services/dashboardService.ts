@@ -3,12 +3,15 @@
  * Aggregates data from Logic Engine and Project Service for dashboard display
  */
 
-import { LogicEngineService } from './logicEngineService';
-import { ProjectService } from './projectService';
-import { DashboardStats, ProjectTimeline, SystemHealth, ActivityItem, ServiceStatus, SystemAlert, ActivityType } from '../../renderer/types/dashboard';
-import { ProjectConfig, WaveConfig } from '../../renderer/types/project';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+
+import { DashboardStats, ProjectTimeline, SystemHealth, ActivityItem, ServiceStatus, SystemAlert, ActivityType } from '../../renderer/types/dashboard';
+import { ProjectConfig, WaveConfig } from '../../renderer/types/project';
+
+import { LogicEngineService } from './logicEngineService';
+import { ProjectService } from './projectService';
+
 
 export class DashboardService {
   private statsCache: Map<string, { data: DashboardStats; timestamp: number }> = new Map();

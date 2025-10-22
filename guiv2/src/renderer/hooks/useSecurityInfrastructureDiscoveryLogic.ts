@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ColDef } from 'ag-grid-community';
+
 import {
   SecurityDiscoveryConfig,
   SecurityDiscoveryResult,
@@ -18,6 +19,7 @@ import {
   createDefaultSecurityConfig,
   createDefaultSecurityFilter,
 } from '../types/models/securityInfrastructure';
+
 import { useDebounce } from './useDebounce';
 
 /**

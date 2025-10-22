@@ -5,6 +5,7 @@
  */
 
 import { ipcMain } from 'electron';
+
 import { getMigrationPlanningService } from '../services/migrationPlanningService';
 
 /**

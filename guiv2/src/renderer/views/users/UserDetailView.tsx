@@ -18,13 +18,14 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
+import { RefreshCw, UserPlus, Download, X } from 'lucide-react';
+import { ColDef, ICellRendererParams } from 'ag-grid-community';
+
 import { useUserDetailLogic } from '../../hooks/useUserDetailLogic';
 import { Button } from '../../components/atoms/Button';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { ModernCard } from '../../components/atoms/ModernCard';
-import { RefreshCw, UserPlus, Download, X } from 'lucide-react';
-import { ColDef, ICellRendererParams } from 'ag-grid-community';
 import type {
   UserDetailProjection,
   DeviceData,

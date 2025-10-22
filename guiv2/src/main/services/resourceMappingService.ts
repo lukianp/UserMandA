@@ -20,8 +20,10 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import PowerShellExecutionService from './powerShellService';
+
 import { parse as parseCSV } from 'papaparse';
+
+import PowerShellExecutionService from './powerShellService';
 
 /**
  * Resource type

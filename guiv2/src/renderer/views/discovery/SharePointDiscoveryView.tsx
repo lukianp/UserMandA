@@ -4,12 +4,6 @@
  */
 
 import * as React from 'react';
-import { useSharePointDiscoveryLogic } from '../../hooks/useSharePointDiscoveryLogic';
-import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
-import SearchBar from '../../components/molecules/SearchBar';
-import { Button } from '../../components/atoms/Button';
-import { Badge } from '../../components/atoms/Badge';
-import ProgressBar from '../../components/molecules/ProgressBar';
 import {
   Download,
   Play,
@@ -28,6 +22,13 @@ import {
   Lock,
   Users,
 } from 'lucide-react';
+
+import { useSharePointDiscoveryLogic } from '../../hooks/useSharePointDiscoveryLogic';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import SearchBar from '../../components/molecules/SearchBar';
+import { Button } from '../../components/atoms/Button';
+import { Badge } from '../../components/atoms/Badge';
+import ProgressBar from '../../components/molecules/ProgressBar';
 
 /**
  * SharePoint Discovery View Component

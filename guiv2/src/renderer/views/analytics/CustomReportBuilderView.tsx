@@ -11,11 +11,12 @@
 
 import React, { useState, useMemo } from 'react';
 import { Download, Save, Play, Plus, Trash2, ChevronDown, ChevronUp, Settings } from 'lucide-react';
+import { ColDef } from 'ag-grid-community';
+
 import { Button } from '../../components/atoms/Button';
 import { Select } from '../../components/atoms/Select';
 import { Input } from '../../components/atoms/Input';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
-import { ColDef } from 'ag-grid-community';
 
 // Report field definition
 interface ReportField {

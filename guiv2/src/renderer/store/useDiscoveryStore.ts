@@ -7,6 +7,7 @@
 
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
+
 import { DiscoveryResult, DiscoveryProgress, DiscoveryType, DiscoveryStatus } from '../types/models/discovery';
 import type { ProgressData } from '../../shared/types';
 

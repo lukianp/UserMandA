@@ -4,13 +4,16 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import {  createUniversalDiscoveryHook , createUniversalStats } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import ComplianceDashboardView from './ComplianceDashboardView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import ComplianceDashboardView from './ComplianceDashboardView';
 
 // Mock the hook
 jest.mock('../../hooks/useComplianceDashboardLogic', () => ({

@@ -5,8 +5,10 @@
  */
 
 import React, { useState } from 'react';
-import { Modal } from './Modal';
+
 import type { MigrationWave } from '../../hooks/useMigrationPlanning';
+
+import { Modal } from './Modal';
 
 interface MigrationWaveEditorProps {
   isOpen: boolean;

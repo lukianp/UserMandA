@@ -1,16 +1,15 @@
 {
   "compilerOptions": {
-    "target": "es2020",
-    "useDefineForClassFields": true,
-    "lib": ["dom", "dom.iterable", "es6"],
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "allowJs": true,
-    "skipLibCheck": false,
+    "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "strict": false,
+    "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
+    "module": "ESNext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -18,23 +17,22 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/renderer/*"],
-      "@components/*": ["src/renderer/components/*"],
-      "@views/*": ["src/renderer/views/*"],
-      "@hooks/*": ["src/renderer/hooks/*"],
-      "@store/*": ["src/renderer/store/*"],
-      "@services/*": ["src/renderer/services/*"],
-      "@types/*": ["src/renderer/types/*"],
-      "@lib/*": ["src/renderer/lib/*"],
-      "*": ["node_modules/*"]
-    }
+      "@/*": ["src/*"],
+      "@main/*": ["src/main/*"],
+      "@renderer/*": ["src/renderer/*"],
+      "@shared/*": ["src/shared/*"]
+    },
+    "types": ["node", "jest", "@testing-library/jest-dom"]
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/**/*",
+    "forge.config.ts"
+  ],
   "exclude": [
     "node_modules",
-    "dist",
     ".webpack",
-    "**/*.test.ts",
-    "**/*.test.tsx"
+    "out",
+    "e2e",
+    "playwright-report"
   ]
 }

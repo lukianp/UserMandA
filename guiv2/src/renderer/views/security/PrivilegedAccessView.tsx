@@ -6,7 +6,6 @@
  */
 
 import React, { useState } from 'react';
-import { usePrivilegedAccessLogic } from '../../hooks/security/usePrivilegedAccessLogic';
 import {
   Shield,
   RefreshCw,
@@ -20,6 +19,8 @@ import {
   XCircle,
   AlertCircle,
 } from 'lucide-react';
+
+import { usePrivilegedAccessLogic } from '../../hooks/security/usePrivilegedAccessLogic';
 
 export const PrivilegedAccessView: React.FC = () => {
   const {

@@ -19,6 +19,7 @@ import { EventEmitter } from 'events';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
+
 import { ExecutionOptions, ExecutionResult, OutputData, ModuleInfo, ScriptTask } from '../../types/shared';
 
 /**

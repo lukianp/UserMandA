@@ -4,8 +4,10 @@
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useFileSystemDiscoveryLogic } from './useFileSystemDiscoveryLogic';
+
 import type { FileSystemDiscoveryResult, FileShare, FilePermission, LargeFile } from '../types/models/filesystem';
+
+import { useFileSystemDiscoveryLogic } from './useFileSystemDiscoveryLogic';
 
 // Mock electron API
 const mockElectronAPI = {

@@ -5,11 +5,12 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Calendar, Clock, Mail, Play, Pause, Trash2, Plus, Edit2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { ColDef } from 'ag-grid-community';
+
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { Select } from '../../components/atoms/Select';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
-import { ColDef } from 'ag-grid-community';
 import { useModalStore } from '../../store/useModalStore';
 import { useNotificationStore } from '../../store/useNotificationStore';
 

@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+
 import { Sidebar } from '../organisms/Sidebar';
 import { TabView } from '../organisms/TabView';
 import { CommandPalette } from '../organisms/CommandPalette';

@@ -238,11 +238,12 @@ describe('WebhookService', () => {
         text: jest.fn().mockResolvedValue('Error'),
       });
 
-      const promise = service.trigger('test', { data: 'test' });
+      service.trigger('test', { data: 'test' });
 
-      // Run all pending timers and microtasks
-      await jest.runOnlyPendingTimersAsync();
-      await promise;
+      // Run all timers synchronously
+      jest.runAllTimers();
+      // Allow microtasks (promises) to resolve
+      await new Promise(resolve => setImmediate(resolve));
 
       const deliveries = service.getDeliveriesForWebhook('webhook1');
       expect(deliveries.length).toBeGreaterThan(0);
@@ -388,8 +389,9 @@ describe('WebhookService', () => {
         text: jest.fn().mockResolvedValue('Success'),
       });
 
-      await service.trigger('test', { data: 1 });
-      await jest.runOnlyPendingTimersAsync();
+      service.trigger('test', { data: 1 });
+      jest.runAllTimers();
+      await new Promise(resolve => setImmediate(resolve));
 
       // Failed delivery
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -399,8 +401,9 @@ describe('WebhookService', () => {
         text: jest.fn().mockResolvedValue('Error'),
       });
 
-      await service.trigger('test', { data: 2 });
-      await jest.runOnlyPendingTimersAsync();
+      service.trigger('test', { data: 2 });
+      jest.runAllTimers();
+      await new Promise(resolve => setImmediate(resolve));
 
       const stats = service.getStats('webhook1');
 
@@ -484,13 +487,13 @@ describe('WebhookService', () => {
 
     it('should enforce rate limit', async () => {
       // Trigger multiple webhooks
-      const promise1 = service.trigger('test', { data: 1 });
-      const promise2 = service.trigger('test', { data: 2 });
-      const promise3 = service.trigger('test', { data: 3 });
+      service.trigger('test', { data: 1 });
+      service.trigger('test', { data: 2 });
+      service.trigger('test', { data: 3 });
 
-      // Run timers to process all
-      await jest.runOnlyPendingTimersAsync();
-      await Promise.all([promise1, promise2, promise3]);
+      // Run all timers
+      jest.runAllTimers();
+      await new Promise(resolve => setImmediate(resolve));
 
       // Only 2 requests should have been made due to rate limit
       expect(global.fetch).toHaveBeenCalledTimes(2);
@@ -518,8 +521,9 @@ describe('WebhookService', () => {
         text: jest.fn().mockResolvedValue('Success'),
       });
 
-      await service.trigger('test', { data: 'test' });
-      await jest.runOnlyPendingTimersAsync();
+      service.trigger('test', { data: 'test' });
+      jest.runAllTimers();
+      await new Promise(resolve => setImmediate(resolve));
 
       // Verify deliveries exist
       expect(service.getAllDeliveries().length).toBeGreaterThan(0);

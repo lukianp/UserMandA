@@ -18,9 +18,11 @@
 import { EventEmitter } from 'events';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { app } from 'electron';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+
+import { app } from 'electron';
+
 import auditService, { AuditEvent, AuditCategory, AuditSeverity } from './auditService';
 
 const execAsync = promisify(exec);

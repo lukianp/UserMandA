@@ -4,8 +4,9 @@
  * Tests the delta synchronization service that handles incremental syncs after migration.
  */
 
-import DeltaSyncService from './deltaSyncService';
 import * as path from 'path';
+
+import DeltaSyncService from './deltaSyncService';
 
 // Mock fs/promises
 jest.mock('fs/promises', () => ({

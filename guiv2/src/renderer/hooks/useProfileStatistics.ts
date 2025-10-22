@@ -14,10 +14,12 @@
  * ```
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useProfileStore } from '../store/useProfileStore';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+
+import { useState, useEffect, useCallback } from 'react';
+
+import { useProfileStore } from '../store/useProfileStore';
 
 export interface ProfileStatistics {
   profileId: string;

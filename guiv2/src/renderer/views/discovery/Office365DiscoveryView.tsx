@@ -4,12 +4,6 @@
  */
 
 import * as React from 'react';
-import { useOffice365DiscoveryLogic } from '../../hooks/useOffice365DiscoveryLogic';
-import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
-import SearchBar from '../../components/molecules/SearchBar';
-import { Button } from '../../components/atoms/Button';
-import Badge from '../../components/atoms/Badge';
-import ProgressBar from '../../components/molecules/ProgressBar';
 import {
   Download,
   Play,
@@ -29,6 +23,13 @@ import {
   UserCheck,
   UserX,
 } from 'lucide-react';
+
+import { useOffice365DiscoveryLogic } from '../../hooks/useOffice365DiscoveryLogic';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import SearchBar from '../../components/molecules/SearchBar';
+import { Button } from '../../components/atoms/Button';
+import Badge from '../../components/atoms/Badge';
+import ProgressBar from '../../components/molecules/ProgressBar';
 
 /**
  * Office 365 Discovery View Component

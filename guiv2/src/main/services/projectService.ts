@@ -5,6 +5,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
+
 import { ProjectConfig, ProjectStatus, WaveConfig, WaveStatus } from '../../renderer/types/project';
 import { ProjectPhase } from '../../renderer/types/dashboard';
 

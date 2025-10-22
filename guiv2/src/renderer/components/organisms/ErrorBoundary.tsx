@@ -6,6 +6,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+
 import { Button } from '../atoms/Button';
 
 interface Props {

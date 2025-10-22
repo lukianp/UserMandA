@@ -4,8 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { useCertificationLogic } from '../../hooks/security/useCertificationLogic';
 import { Award, RefreshCw, AlertTriangle, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+
+import { useCertificationLogic } from '../../hooks/security/useCertificationLogic';
 
 export const CertificationView: React.FC = () => {
   const { data, isLoading, error, filter, setFilter, filteredCertifications, handleRefresh } = useCertificationLogic();

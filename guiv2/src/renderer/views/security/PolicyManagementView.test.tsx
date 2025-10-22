@@ -4,13 +4,16 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import {  createUniversalDiscoveryHook , createUniversalStats } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import PolicyManagementView from './PolicyManagementView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import PolicyManagementView from './PolicyManagementView';
 
 // Mock the hook
 jest.mock('../../hooks/usePolicyManagementLogic', () => ({

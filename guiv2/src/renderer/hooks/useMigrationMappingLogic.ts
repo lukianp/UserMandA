@@ -10,9 +10,10 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import type { ColDef } from 'ag-grid-community';
+
 import { useMigrationStore } from '../store/useMigrationStore';
 import type { ResourceMapping } from '../types/models/migration';
-import type { ColDef } from 'ag-grid-community';
 
 export const useMigrationMappingLogic = () => {
   const {

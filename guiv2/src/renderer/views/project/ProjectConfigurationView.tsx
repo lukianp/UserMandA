@@ -12,13 +12,6 @@
  */
 
 import React, { useState } from 'react';
-import { useProjectLogic } from '../../hooks/useProjectLogic';
-import { ModernCard } from '../../components/atoms/ModernCard';
-import { Button } from '../../components/atoms/Button';
-import { Input } from '../../components/atoms/Input';
-import { Select } from '../../components/atoms/Select';
-import { Badge } from '../../components/atoms/Badge';
-import { Spinner } from '../../components/atoms/Spinner';
 import {
   Save,
   Plus,
@@ -31,6 +24,14 @@ import {
   AlertCircle,
   TrendingUp
 } from 'lucide-react';
+
+import { useProjectLogic } from '../../hooks/useProjectLogic';
+import { ModernCard } from '../../components/atoms/ModernCard';
+import { Button } from '../../components/atoms/Button';
+import { Input } from '../../components/atoms/Input';
+import { Select } from '../../components/atoms/Select';
+import { Badge } from '../../components/atoms/Badge';
+import { Spinner } from '../../components/atoms/Spinner';
 import type { ProjectConfig, WaveConfig, WaveStatus, ProjectStatus } from '../../types/project';
 
 export const ProjectConfigurationView: React.FC = () => {

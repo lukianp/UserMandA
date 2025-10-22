@@ -4,12 +4,15 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import RoleManagementView from './RoleManagementView';
 import {
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import RoleManagementView from './RoleManagementView';
 
 // Mock the hook
 jest.mock('../../hooks/useRoleManagementLogic', () => ({

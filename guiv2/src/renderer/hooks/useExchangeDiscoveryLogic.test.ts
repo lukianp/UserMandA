@@ -4,8 +4,10 @@
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useExchangeDiscoveryLogic } from './useExchangeDiscoveryLogic';
+
 import type { ExchangeDiscoveryResult, ExchangeMailbox, ExchangeDistributionGroup, ExchangeTransportRule } from '../types/models/exchange';
+
+import { useExchangeDiscoveryLogic } from './useExchangeDiscoveryLogic';
 
 // Mock electron API
 const mockElectronAPI = {

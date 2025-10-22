@@ -12,10 +12,11 @@
  * - Pre-execution validation
  */
 
-import MigrationExecutionService from './migrationExecutionService';
-import PowerShellExecutionService from './powerShellService';
 import * as path from 'path';
 import { EventEmitter } from 'events';
+
+import MigrationExecutionService from './migrationExecutionService';
+import PowerShellExecutionService from './powerShellService';
 
 // Mock dependencies
 jest.mock('fs/promises', () => ({

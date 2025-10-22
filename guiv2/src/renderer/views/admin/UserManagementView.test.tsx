@@ -3,14 +3,16 @@
  */
 
 import React from 'react';
-
 import { render, screen } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import UserManagementView from './UserManagementView';
 import {
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import UserManagementView from './UserManagementView';
 
 // Mock the hook
 jest.mock('../../hooks/useUserManagementLogic', () => ({

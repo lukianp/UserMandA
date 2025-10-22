@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { clsx } from 'clsx';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
+
 import { Button } from '../atoms/Button';
 
 export interface FilterConfig {

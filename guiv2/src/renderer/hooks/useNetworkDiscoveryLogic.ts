@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { ColDef } from 'ag-grid-community';
+
 import type {
   NetworkDiscoveryConfig,
   NetworkDiscoveryResult,

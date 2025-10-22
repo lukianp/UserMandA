@@ -16,6 +16,7 @@
 
 import { EventEmitter } from 'events';
 import { ChildProcess } from 'child_process';
+
 import {
   PowerShellExecutionService,
   PowerShellError,

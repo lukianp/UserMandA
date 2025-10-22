@@ -4,15 +4,18 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
 import {   createUniversalDiscoveryHook , createUniversalStats , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import PowerPlatformDiscoveryView from './PowerPlatformDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import PowerPlatformDiscoveryView from './PowerPlatformDiscoveryView';
 
 // Mock the hook
 jest.mock('../../hooks/usePowerPlatformDiscoveryLogic', () => ({
@@ -48,7 +51,8 @@ describe('PowerPlatformDiscoveryView', () => {
     // Data
     columns: [],
     filteredData: [],
-    stats: createUniversalStats(),
+    stats: {
+      ...createUniversalStats(),
       environmentsByType: {},
       appsByType: {},
       flowsByState: {},

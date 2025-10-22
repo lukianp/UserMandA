@@ -1,5 +1,6 @@
 import React from 'react';
 import { Shield, Lock, Cloud, FileText } from 'lucide-react';
+
 import { Button } from '../../components/atoms/Button';
 
 export const EndpointProtectionView: React.FC = () => {

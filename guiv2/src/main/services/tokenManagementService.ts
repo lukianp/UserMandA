@@ -16,8 +16,10 @@
 import { EventEmitter } from 'events';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { app } from 'electron';
 import { randomBytes, createHmac } from 'crypto';
+
+import { app } from 'electron';
+
 import CredentialService from './credentialService';
 
 // ============================================================================

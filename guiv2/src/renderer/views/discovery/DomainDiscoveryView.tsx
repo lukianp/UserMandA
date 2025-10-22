@@ -4,11 +4,12 @@
  */
 
 import React from 'react';
+import { Play, Square, RefreshCw, Download, Trash2, Server } from 'lucide-react';
+
 import { useDomainDiscoveryLogic } from '../../hooks/useDomainDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
-import { Play, Square, RefreshCw, Download, Trash2, Server } from 'lucide-react';
 
 const DomainDiscoveryView: React.FC = () => {
   const {

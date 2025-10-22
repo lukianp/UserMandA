@@ -4,15 +4,18 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
 import {    createUniversalDiscoveryHook , createUniversalStats , createUniversalConfig , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import DataLossPreventionDiscoveryView from './DataLossPreventionDiscoveryView';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import DataLossPreventionDiscoveryView from './DataLossPreventionDiscoveryView';
 
 // Mock the hook
 jest.mock('../../hooks/useDataLossPreventionDiscoveryLogic', () => ({

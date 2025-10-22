@@ -6,8 +6,9 @@
  */
 
 import { EventEmitter } from 'events';
-import PowerShellExecutionService from './powerShellService';
 import * as path from 'path';
+
+import PowerShellExecutionService from './powerShellService';
 
 export type EnvironmentType = 'azure' | 'on-premises' | 'hybrid' | 'aws' | 'gcp' | 'unknown';
 export type DetectionStatus = 'idle' | 'detecting' | 'completed' | 'failed' | 'cancelled';

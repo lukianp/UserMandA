@@ -4,12 +4,15 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import LicenseActivationView from './LicenseActivationView';
 import {
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import LicenseActivationView from './LicenseActivationView';
 
 // Mock the hook
 jest.mock('../../hooks/useLicenseActivationLogic', () => ({

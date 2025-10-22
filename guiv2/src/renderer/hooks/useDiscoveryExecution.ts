@@ -338,7 +338,7 @@ export const useDiscoveryExecution = (
   /**
    * Internal execute function (supports retry)
    */
-  const executeInternal = useCallback(async (params: Record<string, any>, isRetry: boolean = false) => {
+  const executeInternal = useCallback(async (params: Record<string, any>, isRetry = false) => {
     try {
       // Don't start if already executing
       if (state.isExecuting && !isRetry) {

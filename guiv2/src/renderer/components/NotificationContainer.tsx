@@ -6,6 +6,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { X, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
+
 import { getNotificationService, Notification, NotificationType } from '../services/notificationService';
 
 export const NotificationContainer: React.FC = () => {

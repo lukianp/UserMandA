@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { X, Settings } from 'lucide-react';
+
 import { Button } from '../atoms/Button';
 import Checkbox from '../atoms/Checkbox';
 import { Select } from '../atoms/Select';

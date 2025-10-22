@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
 
@@ -13,11 +14,12 @@ import '@testing-library/jest-dom';
 
 
 
-import EDiscoveryView from './eDiscoveryView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import EDiscoveryView from './eDiscoveryView';
 
 // Mock the hook
 jest.mock('../../hooks/useEDiscoveryLogic', () => ({

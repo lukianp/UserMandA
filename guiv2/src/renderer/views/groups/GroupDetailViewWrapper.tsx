@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { useParams } from 'react-router-dom';
+
 import { GroupDetailView } from './GroupDetailView';
 
 export const GroupDetailViewWrapper: React.FC = () => {

@@ -1,4 +1,5 @@
 import { useState } from "react";
+
 import { useProfileStore } from "../../store/useProfileStore";
 import { useEntraIDAppDiscovery } from "../../hooks/useEntraIDAppDiscovery";
 import DataTable from "../../components/DataTable";

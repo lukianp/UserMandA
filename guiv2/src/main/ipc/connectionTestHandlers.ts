@@ -5,6 +5,7 @@
  */
 
 import { ipcMain, IpcMainInvokeEvent, BrowserWindow } from 'electron';
+
 import { getConnectionTestingService } from '../services/connectionTestingService';
 
 let mainWindow: BrowserWindow | null = null;

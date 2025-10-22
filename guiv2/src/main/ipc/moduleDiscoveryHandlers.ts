@@ -4,9 +4,11 @@
  * IPC handlers for PowerShell module discovery service
  */
 
-import { ipcMain } from 'electron';
-import { getEnhancedModuleDiscoveryService } from '../services/enhancedModuleDiscovery';
 import path from 'path';
+
+import { ipcMain } from 'electron';
+
+import { getEnhancedModuleDiscoveryService } from '../services/enhancedModuleDiscovery';
 
 /**
  * Register all module discovery IPC handlers

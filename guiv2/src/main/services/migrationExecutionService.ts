@@ -20,8 +20,10 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { Worker } from 'worker_threads';
-import PowerShellExecutionService from './powerShellService';
+
 import { ExecutionResult, ExecutionOptions } from '../../types/shared';
+
+import PowerShellExecutionService from './powerShellService';
 
 /**
  * Execution mode

@@ -4,13 +4,16 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import RetentionPolicyView from './RetentionPolicyView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import RetentionPolicyView from './RetentionPolicyView';
 
 // Mock the hook
 jest.mock('../../hooks/useRetentionPolicyLogic', () => ({

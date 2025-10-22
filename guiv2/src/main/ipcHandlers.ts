@@ -5,20 +5,24 @@
  * Provides secure bridge for PowerShell execution, file operations, configuration, and more.
  */
 
-import { ipcMain, dialog, shell, BrowserWindow } from 'electron';
-import { PowerShellExecutionService } from './services/powerShellService';
-import ModuleRegistry from './services/moduleRegistry';
-import EnvironmentDetectionService from './services/environmentDetectionService';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
+
+import { ipcMain, dialog, shell, BrowserWindow } from 'electron';
+
 import { ScriptExecutionParams, ModuleExecutionParams, ScriptTask } from '../types/shared';
+import type { UserDetailProjection } from '../renderer/types/models/userDetail';
+
+import { PowerShellExecutionService } from './services/powerShellService';
+import ModuleRegistry from './services/moduleRegistry';
+import EnvironmentDetectionService from './services/environmentDetectionService';
 import { MockLogicEngineService } from './services/mockLogicEngineService';
 import { LogicEngineService } from './services/logicEngineService';
 import { ProjectService } from './services/projectService';
 import { DashboardService } from './services/dashboardService';
-import { initializeProfileService, getProfileService } from './services/profileService';
-import type { UserDetailProjection } from '../renderer/types/models/userDetail';
+import { ProfileService } from './services/profileService';
+
 
 // Service instances
 let psService: PowerShellExecutionService;
@@ -28,6 +32,7 @@ let mockLogicEngineService: MockLogicEngineService;
 let logicEngineService: LogicEngineService;
 let projectService: ProjectService;
 let dashboardService: DashboardService;
+let profileService: ProfileService;
 let mainWindow: BrowserWindow | null = null;
 
 // Configuration storage
@@ -87,19 +92,21 @@ async function initializeServices(): Promise<void> {
   console.log('Dashboard Service initialized');
 
   // Initialize Profile Service with auto-discovery
-  await initializeProfileService({
-    profilesDir: path.join(process.cwd(), 'config', 'profiles'),
-    discoveryDataRoot: 'C:\\DiscoveryData',
-    enableAutoDiscovery: true,
-  });
+  profileService = new ProfileService();
+  await profileService.initialize();
+
+  // Initialize FileSystem Service
+  const { FileSystemService } = await import('./services/FileSystemService');
+  const fsService = new FileSystemService();
+
   console.log('Profile Service initialized');
+  console.log('FileSystem Service initialized');
 
   // Get active profile and load its data into Logic Engine
-  const profileService = getProfileService();
-  const activeProfile = profileService.getActiveSourceProfile();
+  const activeProfile = await profileService.getCurrentProfile();
   if (activeProfile) {
     console.log(`[ProfileService] Active profile found: ${activeProfile.companyName}`);
-    const dataPath = profileService.getProfileDataPath(activeProfile.id);
+    const dataPath = profileService.getCompanyDataPath(activeProfile.companyName);
     const rawPath = path.join(dataPath, 'Raw');
     console.log(`[ProfileService] Loading data from: ${rawPath}`);
 
@@ -535,8 +542,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('profile:loadSourceProfiles', async () => {
     try {
-      const profileService = getProfileService();
-      const profiles = profileService.getSourceProfiles();
+      const profiles = await profileService.getProfiles();
       console.log(`Loaded ${profiles.length} source profiles`);
       return profiles;
     } catch (error: unknown) {
@@ -552,8 +558,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('profile:getActiveSource', async () => {
     try {
-      const profileService = getProfileService();
-      const profile = profileService.getActiveSourceProfile();
+      const profile = await profileService.getCurrentProfile();
       return profile;
     } catch (error: unknown) {
       console.error(`getActiveSource error: ${error instanceof Error ? error.message : String(error)}`);
@@ -566,8 +571,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('profile:getActiveTarget', async () => {
     try {
-      const profileService = getProfileService();
-      const profile = profileService.getActiveTargetProfile();
+      // For now, return same as active profile (target profiles not yet implemented)
+      const profile = await profileService.getCurrentProfile();
       return profile;
     } catch (error: unknown) {
       console.error(`getActiveTarget error: ${error instanceof Error ? error.message : String(error)}`);
@@ -580,8 +585,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('profile:createSource', async (_, profile: any) => {
     try {
-      const profileService = getProfileService();
-      const newProfile = await profileService.createSourceProfile(profile);
+      const newProfile = await profileService.createProfile(profile);
       console.log(`Created source profile: ${newProfile.id}`);
       return { success: true, profile: newProfile };
     } catch (error: unknown) {
@@ -600,8 +604,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('profile:updateSource', async (_, id: string, updates: any) => {
     try {
-      const profileService = getProfileService();
-      const profile = await profileService.updateSourceProfile(id, updates);
+      const profile = await profileService.updateProfile({ id, ...updates });
       console.log(`Updated source profile: ${id}`);
       return { success: true, profile };
     } catch (error: unknown) {
@@ -620,10 +623,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('profile:deleteSource', async (_, profileId: string) => {
     try {
-      const profileService = getProfileService();
-      await profileService.deleteSourceProfile(profileId);
+      const success = await profileService.deleteProfile(profileId);
       console.log(`Deleted source profile: ${profileId}`);
-      return { success: true };
+      return { success };
     } catch (error: unknown) {
       console.error(`deleteSource error: ${error instanceof Error ? error.message : String(error)}`);
       return {
@@ -640,19 +642,18 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('profile:setActiveSource', async (_, profileId: string) => {
     try {
-      const profileService = getProfileService();
-      await profileService.setActiveSourceProfile(profileId);
+      const success = await profileService.setCurrentProfile(profileId);
       console.log(`Set active source profile: ${profileId}`);
 
       // Update Logic Engine data path to use this profile's data
-      const dataPath = profileService.getProfileDataPath(profileId);
+      const dataPath = profileService.getCompanyDataPath(profileId);
       const rawPath = path.join(dataPath, 'Raw');
       console.log(`Updating Logic Engine data path to: ${rawPath}`);
 
       // Reinitialize Logic Engine with new data path
       logicEngineService = LogicEngineService.getInstance(rawPath);
 
-      return { success: true, dataPath: rawPath };
+      return { success, dataPath: rawPath };
     } catch (error: unknown) {
       console.error(`setActiveSource error: ${error instanceof Error ? error.message : String(error)}`);
       return {

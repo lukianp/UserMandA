@@ -3,12 +3,13 @@
  */
 
 import React from 'react';
+import { CheckCircle, RefreshCw, Download, Filter, X } from 'lucide-react';
+
 import { useComplianceReportLogic } from '../../hooks/useComplianceReportLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { Select } from '../../components/atoms/Select';
-import { CheckCircle, RefreshCw, Download, Filter, X } from 'lucide-react';
 
 const ComplianceReportView: React.FC = () => {
   const {

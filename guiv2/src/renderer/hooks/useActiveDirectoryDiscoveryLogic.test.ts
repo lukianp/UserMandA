@@ -4,6 +4,7 @@
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
+
 import { useActiveDirectoryDiscoveryLogic } from './useActiveDirectoryDiscoveryLogic';
 
 // Mock electron API

@@ -4,13 +4,16 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import {  createUniversalDiscoveryHook , createUniversalStats } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import SecurityDashboardView from './SecurityDashboardView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import SecurityDashboardView from './SecurityDashboardView';
 
 // Mock the hook
 jest.mock('../../hooks/useSecurityDashboardLogic', () => ({

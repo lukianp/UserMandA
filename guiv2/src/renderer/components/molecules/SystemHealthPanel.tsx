@@ -8,10 +8,11 @@
  */
 
 import React from 'react';
+import { AlertCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
+
 import { ModernCard } from '../atoms/ModernCard';
 import { StatusIndicator } from '../atoms/StatusIndicator';
 import type { SystemHealth } from '../../types/dashboard';
-import { AlertCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 interface SystemHealthPanelProps {
   health: SystemHealth;

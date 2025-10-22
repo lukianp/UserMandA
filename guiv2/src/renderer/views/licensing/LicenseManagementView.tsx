@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Key, TrendingUp, DollarSign, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+
 import { useLicenseManagementLogic } from '../../hooks/useLicenseManagementLogic';
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';

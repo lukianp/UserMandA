@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
 import type { GroupDetailProjection } from '../types/models/groupDetail';
 import { useTabStore } from '../store/useTabStore';
 import { useModalStore } from '../store/useModalStore';

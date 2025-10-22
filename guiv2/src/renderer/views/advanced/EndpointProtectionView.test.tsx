@@ -4,13 +4,16 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import EndpointProtectionView from './EndpointProtectionView';
 import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import EndpointProtectionView from './EndpointProtectionView';
 
 // Mock the hook
 jest.mock('../../hooks/useEndpointProtectionLogic', () => ({

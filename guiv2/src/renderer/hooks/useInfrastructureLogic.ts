@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { DiscoveryResult } from '../types/models/discovery';
 import { getElectronAPI } from '../lib/electron-api-fallback';

@@ -8,10 +8,11 @@
  */
 
 import React from 'react';
-import { ModernCard } from '../atoms/ModernCard';
-import { Button } from '../atoms/Button';
 import { useNavigate } from 'react-router-dom';
 import { Play, FileText, Settings, Download, Search, Users } from 'lucide-react';
+
+import { ModernCard } from '../atoms/ModernCard';
+import { Button } from '../atoms/Button';
 
 interface QuickActionsPanelProps {
   className?: string;

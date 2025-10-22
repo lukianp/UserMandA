@@ -18,8 +18,10 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import PowerShellExecutionService from './powerShellService';
+
 import { ExecutionResult } from '../../types/shared';
+
+import PowerShellExecutionService from './powerShellService';
 
 /**
  * Validation severity

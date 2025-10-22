@@ -4,9 +4,12 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
 import {    createUniversalDiscoveryHook , createUniversalStats , createUniversalConfig , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
 import ApplicationDiscoveryView from './ApplicationDiscoveryView';
+
 import {
   mockSuccessfulExecution,
   mockFailedExecution,

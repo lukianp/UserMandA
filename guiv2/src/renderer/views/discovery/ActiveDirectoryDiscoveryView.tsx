@@ -4,6 +4,8 @@
  */
 
 import React from 'react';
+import { Download, Play, Square, Save, FolderOpen, Settings, RefreshCw, Database, Users, Server, FolderTree, Shield, Network } from 'lucide-react';
+
 import { useActiveDirectoryDiscoveryLogic } from '../../hooks/useActiveDirectoryDiscoveryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import SearchBar from '../../components/molecules/SearchBar';
@@ -11,7 +13,6 @@ import { Button } from '../../components/atoms/Button';
 import { Spinner } from '../../components/atoms/Spinner';
 import Badge from '../../components/atoms/Badge';
 import ProgressBar from '../../components/molecules/ProgressBar';
-import { Download, Play, Square, Save, FolderOpen, Settings, RefreshCw, Database, Users, Server, FolderTree, Shield, Network } from 'lucide-react';
 
 /**
  * Active Directory Discovery View Component

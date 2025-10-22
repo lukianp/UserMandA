@@ -4,12 +4,6 @@
  */
 
 import * as React from 'react';
-import { useOneDriveDiscoveryLogic } from '../../hooks/useOneDriveDiscoveryLogic';
-import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
-import SearchBar from '../../components/molecules/SearchBar';
-import { Button } from '../../components/atoms/Button';
-import Badge from '../../components/atoms/Badge';
-import ProgressBar from '../../components/molecules/ProgressBar';
 import {
   Download,
   Play,
@@ -29,6 +23,13 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react';
+
+import { useOneDriveDiscoveryLogic } from '../../hooks/useOneDriveDiscoveryLogic';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import SearchBar from '../../components/molecules/SearchBar';
+import { Button } from '../../components/atoms/Button';
+import Badge from '../../components/atoms/Badge';
+import ProgressBar from '../../components/molecules/ProgressBar';
 
 /**
  * OneDrive Discovery View Component

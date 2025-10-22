@@ -4,8 +4,9 @@
  * Tests the coexistence service that manages hybrid environments during migration.
  */
 
-import CoexistenceService from './coexistenceService';
 import * as path from 'path';
+
+import CoexistenceService from './coexistenceService';
 
 // Mock fs/promises
 jest.mock('fs/promises', () => ({

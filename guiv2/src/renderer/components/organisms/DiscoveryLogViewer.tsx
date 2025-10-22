@@ -23,6 +23,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { List, type ListImperativeAPI } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { Terminal, Trash2, Download, Search, X, Settings, Copy } from 'lucide-react';
+
 import type { LogLine } from '../../hooks/useDiscoveryExecution';
 
 // ==================== Type Definitions ====================

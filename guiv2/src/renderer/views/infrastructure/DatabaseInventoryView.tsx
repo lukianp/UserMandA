@@ -1,8 +1,9 @@
 import React from 'react';
+import { RefreshCw } from 'lucide-react';
+
 import DataTable, { DataTableColumn } from '../../components/organisms/DataTable';
 import { useDatabaseInventoryLogic } from '../../hooks/infrastructure/useDatabaseInventoryLogic';
 import { Button } from '../../components/atoms/Button';
-import { RefreshCw } from 'lucide-react';
 import type { DatabaseInventoryData } from '../../hooks/infrastructure/useDatabaseInventoryLogic';
 
 const DatabaseInventoryView: React.FC = () => {

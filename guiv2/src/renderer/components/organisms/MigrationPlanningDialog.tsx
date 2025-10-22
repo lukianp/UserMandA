@@ -5,12 +5,15 @@
  */
 
 import React, { useState, useEffect } from 'react';
+
 import { useMigrationPlanning } from '../../hooks/useMigrationPlanning';
 import { useProfileStore } from '../../store/useProfileStore';
-import { Modal } from './Modal';
 import LoadingSpinner from '../atoms/LoadingSpinner';
-import { MigrationWaveEditor } from './MigrationWaveEditor';
 import type { MigrationPlan, MigrationWave } from '../../hooks/useMigrationPlanning';
+
+import { Modal } from './Modal';
+import { MigrationWaveEditor } from './MigrationWaveEditor';
+
 
 interface MigrationPlanningDialogProps {
   isOpen: boolean;

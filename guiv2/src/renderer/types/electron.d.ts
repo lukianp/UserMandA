@@ -316,99 +316,100 @@ export interface ElectronAPI {
   // ========================================
 
   /**
-   * Load all source profiles from disk
-   * @returns Promise resolving to array of source profiles
+   * Profile management API with CRUD operations and profile switching
    */
-  loadSourceProfiles: () => Promise<any[]>;
+  profile: {
+    /**
+     * Get all profiles
+     * @returns Promise resolving to array of CompanyProfile
+     */
+    getAll: () => Promise<import('../../../shared/types/profile').CompanyProfile[]>;
 
-  /**
-   * Load all target profiles from disk
-   * @returns Promise resolving to array of target profiles
-   */
-  loadTargetProfiles: () => Promise<any[]>;
+    /**
+     * Get the current active profile
+     * @returns Promise resolving to active CompanyProfile or null
+     */
+    getCurrent: () => Promise<import('../../../shared/types/profile').CompanyProfile | null>;
 
-  /**
-   * Get the active source profile
-   * @returns Promise resolving to active source profile or null
-   */
-  getActiveSourceProfile: () => Promise<any | null>;
+    /**
+     * Set the active profile
+     * @param profileId Profile ID to set as active
+     * @returns Promise resolving to success status
+     */
+    setCurrent: (profileId: string) => Promise<boolean>;
 
-  /**
-   * Get the active target profile
-   * @returns Promise resolving to active target profile or null
-   */
-  getActiveTargetProfile: () => Promise<any | null>;
+    /**
+     * Create a new profile
+     * @param profile Profile data (without id, created, lastModified)
+     * @returns Promise resolving to created CompanyProfile
+     */
+    create: (profile: Omit<import('../../../shared/types/profile').CompanyProfile, 'id' | 'created' | 'lastModified'>) => Promise<import('../../../shared/types/profile').CompanyProfile>;
 
-  /**
-   * Create a new source profile
-   * @param profile Profile data
-   * @returns Promise resolving to operation result
-   */
-  createSourceProfile: (profile: any) => Promise<{ success: boolean; error?: string; profile?: any }>;
+    /**
+     * Update an existing profile
+     * @param profile Complete profile data
+     * @returns Promise resolving to updated CompanyProfile
+     */
+    update: (profile: import('../../../shared/types/profile').CompanyProfile) => Promise<import('../../../shared/types/profile').CompanyProfile>;
 
-  /**
-   * Create a new target profile
-   * @param profile Profile data
-   * @returns Promise resolving to operation result
-   */
-  createTargetProfile: (profile: any) => Promise<{ success: boolean; error?: string; profile?: any }>;
+    /**
+     * Delete a profile
+     * @param profileId Profile ID to delete
+     * @returns Promise resolving to success status
+     */
+    delete: (profileId: string) => Promise<boolean>;
 
-  /**
-   * Update an existing source profile
-   * @param profileId Profile ID
-   * @param updates Profile updates
-   * @returns Promise resolving to operation result
-   */
-  updateSourceProfile: (profileId: string, updates: any) => Promise<{ success: boolean; error?: string; profile?: any }>;
+    /**
+     * Import profile from file
+     * @param filePath Path to profile JSON file
+     * @returns Promise resolving to imported CompanyProfile
+     */
+    import: (filePath: string) => Promise<import('../../../shared/types/profile').CompanyProfile>;
 
-  /**
-   * Update an existing target profile
-   * @param profileId Profile ID
-   * @param updates Profile updates
-   * @returns Promise resolving to operation result
-   */
-  updateTargetProfile: (profileId: string, updates: any) => Promise<{ success: boolean; error?: string; profile?: any }>;
+    /**
+     * Export profile to file
+     * @param profileId Profile ID to export
+     * @param filePath Destination file path
+     * @returns Promise resolving when export is complete
+     */
+    export: (profileId: string, filePath: string) => Promise<void>;
 
-  /**
-   * Delete a source profile
-   * @param profileId Profile ID
-   * @returns Promise resolving to operation result
-   */
-  deleteSourceProfile: (profileId: string) => Promise<{ success: boolean; error?: string }>;
+    /**
+     * Get profile statistics
+     * @param profileId Profile ID to get stats for
+     * @returns Promise resolving to ProfileStatistics or null
+     */
+    getStats: (profileId: string) => Promise<import('../../../shared/types/profile').ProfileStatistics | null>;
 
-  /**
-   * Delete a target profile
-   * @param profileId Profile ID
-   * @returns Promise resolving to operation result
-   */
-  deleteTargetProfile: (profileId: string) => Promise<{ success: boolean; error?: string }>;
+    /**
+     * Validate a profile
+     * @param profile Profile data to validate
+     * @returns Promise resolving to ProfileValidationResult
+     */
+    validate: (profile: import('../../../shared/types/profile').CompanyProfile) => Promise<import('../../../shared/types/profile').ProfileValidationResult>;
 
-  /**
-   * Set the active source profile
-   * @param profileId Profile ID
-   * @returns Promise resolving to operation result
-   */
-  setActiveSourceProfile: (profileId: string) => Promise<{ success: boolean; error?: string; dataPath?: string }>;
+    /**
+     * Get connection configuration for a profile
+     * @param profileId Profile ID
+     * @returns Promise resolving to ConnectionConfig or null
+     */
+    getConnectionConfig: (profileId: string) => Promise<import('../../../shared/types/profile').ConnectionConfig | null>;
 
-  /**
-   * Set the active target profile
-   * @param profileId Profile ID
-   * @returns Promise resolving to operation result
-   */
-  setActiveTargetProfile: (profileId: string) => Promise<{ success: boolean; error?: string }>;
+    /**
+     * Save connection configuration for a profile
+     * @param profileId Profile ID
+     * @param config Connection configuration
+     * @returns Promise resolving when saved
+     */
+    setConnectionConfig: (profileId: string, config: import('../../../shared/types/profile').ConnectionConfig) => Promise<void>;
 
-  /**
-   * Refresh profile list from disk
-   * @returns Promise resolving to operation result with updated profiles
-   */
-  refreshProfiles: () => Promise<{ success: boolean; error?: string; profiles: any[] }>;
-
-  /**
-   * Get the data path for a profile
-   * @param profileName Profile name
-   * @returns Promise resolving to profile data path
-   */
-  getProfileDataPath: (profileName: string) => Promise<{ success: boolean; path?: string; error?: string }>;
+    /**
+     * Register a listener for profile change events
+     * @param callback Function to call when profile changes
+     * @returns Cleanup function to remove listener
+     */
+    onProfileChanged: (callback: () => void) => () => void;
+  };
 
   // ========================================
   // Credential Management

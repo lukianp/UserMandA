@@ -9,9 +9,10 @@
  */
 
 import React, { useState } from 'react';
+import { Download, RefreshCw, Shield, Lock, AlertTriangle, TrendingUp, FileText, Users } from 'lucide-react';
+
 import { useDataClassificationLogic } from '../../hooks/security/useDataClassificationLogic';
 import { ClassificationLevel } from '../../types/models/dataClassification';
-import { Download, RefreshCw, Shield, Lock, AlertTriangle, TrendingUp, FileText, Users } from 'lucide-react';
 
 export const DataClassificationView: React.FC = () => {
   const {

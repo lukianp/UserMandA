@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
+
 import { PerformanceMetrics } from '../../types/debug';
 
 interface PerformanceMonitoringOptions {

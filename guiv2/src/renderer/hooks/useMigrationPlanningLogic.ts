@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+
 import { useMigrationStore } from '../store/useMigrationStore';
 import { useProfileStore } from '../store/useProfileStore';
 import type { MigrationWave, MigrationPriority } from '../types/models/migration';

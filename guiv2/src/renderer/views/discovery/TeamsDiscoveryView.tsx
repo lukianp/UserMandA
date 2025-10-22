@@ -4,14 +4,6 @@
  */
 
 import React from 'react';
-import { useTeamsDiscoveryLogic } from '../../hooks/useTeamsDiscoveryLogic';
-import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
-import SearchBar from '../../components/molecules/SearchBar';
-import { Button } from '../../components/atoms/Button';
-import Badge from '../../components/atoms/Badge';
-import ProgressBar from '../../components/molecules/ProgressBar';
-import { Select } from '../../components/atoms/Select';
-import type { TeamsDiscoveryResult } from '../../types/models/teams';
 import {
   Download,
   Play,
@@ -30,6 +22,15 @@ import {
   UserCheck,
   Calendar,
 } from 'lucide-react';
+
+import { useTeamsDiscoveryLogic } from '../../hooks/useTeamsDiscoveryLogic';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import SearchBar from '../../components/molecules/SearchBar';
+import { Button } from '../../components/atoms/Button';
+import Badge from '../../components/atoms/Badge';
+import ProgressBar from '../../components/molecules/ProgressBar';
+import { Select } from '../../components/atoms/Select';
+import type { TeamsDiscoveryResult } from '../../types/models/teams';
 
 /**
  * Teams Discovery View Component

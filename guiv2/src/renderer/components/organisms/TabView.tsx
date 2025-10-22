@@ -6,8 +6,9 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
-import { useTabStore } from '../../store/useTabStore';
 import { clsx } from 'clsx';
+
+import { useTabStore } from '../../store/useTabStore';
 
 /**
  * Tab view component for managing open tabs

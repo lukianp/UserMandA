@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
 import {
   IGDiscoveryResult,
   IGStats,

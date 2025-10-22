@@ -5,6 +5,7 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
+
 import { useLicensingDiscoveryLogic } from './useLicensingDiscoveryLogic';
 
 type ProgressCallback = (data: any) => void;

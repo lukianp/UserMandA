@@ -1,4 +1,5 @@
 import { useState } from "react";
+
 import { useProfileStore } from "../../store/useProfileStore";
 import { usePrinterDiscovery } from "../../hooks/usePrinterDiscovery";
 import DataTable from "../../components/DataTable";

@@ -8,8 +8,9 @@
  */
 
 import React from 'react';
-import { ModernCard } from '../atoms/ModernCard';
 import { clsx } from 'clsx';
+
+import { ModernCard } from '../atoms/ModernCard';
 
 interface StatisticsCardProps {
   /** Card title */

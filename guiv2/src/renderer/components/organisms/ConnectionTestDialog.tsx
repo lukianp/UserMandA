@@ -6,10 +6,12 @@
  */
 
 import React, { useState } from 'react';
+
 import { useConnectionTest } from '../../hooks/useConnectionTest';
 import { useProfileStore } from '../../store/useProfileStore';
-import { Modal } from './Modal';
 import LoadingSpinner from '../atoms/LoadingSpinner';
+
+import { Modal } from './Modal';
 
 interface ConnectionTestDialogProps {
   isOpen: boolean;

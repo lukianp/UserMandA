@@ -1,8 +1,9 @@
 import { useRef, useEffect } from 'react';
+import { RefreshCw, Download, Network, Activity } from 'lucide-react';
+
 import { useNetworkInfrastructureLogic } from '../../hooks/useNetworkInfrastructureLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
-import { RefreshCw, Download, Network, Activity } from 'lucide-react';
 
 /**
  * Network Infrastructure View Component

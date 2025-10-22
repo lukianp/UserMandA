@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
 import type { DashboardStats, ProjectTimeline, SystemHealth, ActivityItem } from '../types/dashboard';
 import { getElectronAPI } from '../lib/electron-api-fallback';
 import { useProfileStore } from '../store/useProfileStore';

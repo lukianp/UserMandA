@@ -6,7 +6,6 @@
  */
 
 import React, { useState } from 'react';
-import { useIdentityGovernanceLogic } from '../../hooks/security/useIdentityGovernanceLogic';
 import {
   Shield,
   RefreshCw,
@@ -19,6 +18,8 @@ import {
   Activity,
   TrendingUp,
 } from 'lucide-react';
+
+import { useIdentityGovernanceLogic } from '../../hooks/security/useIdentityGovernanceLogic';
 
 export const IdentityGovernanceView: React.FC = () => {
   const {

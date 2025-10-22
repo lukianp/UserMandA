@@ -16,10 +16,10 @@
 
 import { EventEmitter } from 'events';
 import { promises as fs , createWriteStream, WriteStream } from 'fs';
-
 import path from 'path';
-import { app } from 'electron';
 import { createHash } from 'crypto';
+
+import { app } from 'electron';
 
 // ============================================================================
 // Types

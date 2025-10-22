@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+
 import { IncidentResponseData, SecurityIncident } from '../../types/models/incidentResponse';
 
 export const useIncidentResponseLogic = () => {

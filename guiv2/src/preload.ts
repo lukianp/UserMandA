@@ -12,6 +12,7 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
+
 import type { ElectronAPI } from './renderer/types/electron';
 import type {
   ScriptExecutionParams,
@@ -144,60 +145,23 @@ const electronAPI: ElectronAPI = {
   // Profile Management
   // ========================================
 
-  loadSourceProfiles: () => {
-    return ipcRenderer.invoke('profile:loadSourceProfiles');
-  },
-
-  loadTargetProfiles: () => {
-    return ipcRenderer.invoke('profile:loadTargetProfiles');
-  },
-
-  getActiveSourceProfile: () => {
-    return ipcRenderer.invoke('profile:getActiveSource');
-  },
-
-  getActiveTargetProfile: () => {
-    return ipcRenderer.invoke('profile:getActiveTarget');
-  },
-
-  createSourceProfile: (profile: unknown) => {
-    return ipcRenderer.invoke('profile:createSource', profile);
-  },
-
-  createTargetProfile: (profile: unknown) => {
-    return ipcRenderer.invoke('profile:createTarget', profile);
-  },
-
-  updateSourceProfile: (id: string, updates: unknown) => {
-    return ipcRenderer.invoke('profile:updateSource', id, updates);
-  },
-
-  updateTargetProfile: (id: string, updates: unknown) => {
-    return ipcRenderer.invoke('profile:updateTarget', id, updates);
-  },
-
-  deleteSourceProfile: (profileId: string) => {
-    return ipcRenderer.invoke('profile:deleteSource', profileId);
-  },
-
-  deleteTargetProfile: (profileId: string) => {
-    return ipcRenderer.invoke('profile:deleteTarget', profileId);
-  },
-
-  setActiveSourceProfile: (profileId: string) => {
-    return ipcRenderer.invoke('profile:setActiveSource', profileId);
-  },
-
-  setActiveTargetProfile: (profileId: string) => {
-    return ipcRenderer.invoke('profile:setActiveTarget', profileId);
-  },
-
-  refreshProfiles: () => {
-    return ipcRenderer.invoke('profile:refresh');
-  },
-
-  getProfileDataPath: (profileId: string) => {
-    return ipcRenderer.invoke('profile:getDataPath', profileId);
+  profile: {
+    getAll: () => ipcRenderer.invoke('profile:getAll'),
+    getCurrent: () => ipcRenderer.invoke('profile:getCurrent'),
+    setCurrent: (profileId: string) => ipcRenderer.invoke('profile:setCurrent', profileId),
+    create: (profile: any) => ipcRenderer.invoke('profile:create', profile),
+    update: (profile: any) => ipcRenderer.invoke('profile:update', profile),
+    delete: (profileId: string) => ipcRenderer.invoke('profile:delete', profileId),
+    import: (filePath: string) => ipcRenderer.invoke('profile:import', filePath),
+    export: (profileId: string, filePath: string) => ipcRenderer.invoke('profile:export', profileId, filePath),
+    getStats: (profileId: string) => ipcRenderer.invoke('profile:getStats', profileId),
+    validate: (profile: any) => ipcRenderer.invoke('profile:validate', profile),
+    getConnectionConfig: (profileId: string) => ipcRenderer.invoke('profile:getConnectionConfig', profileId),
+    setConnectionConfig: (profileId: string, config: any) => ipcRenderer.invoke('profile:setConnectionConfig', profileId, config),
+    onProfileChanged: (callback: () => void) => {
+      ipcRenderer.on('profile:changed', callback);
+      return () => ipcRenderer.removeListener('profile:changed', callback);
+    }
   },
 
   // ========================================
@@ -894,7 +858,7 @@ const electronAPI: ElectronAPI = {
 };
 
 // Expose the API to the renderer process
-contextBridge.exposeInMainWorld('electronAPI', electronAPI);
+contextBridge.exposeInMainWorld('electron', electronAPI);
 
 console.log('========================================');
 console.log('[PRELOAD] ✅ Preload script loaded successfully - Secure bridge established');
@@ -904,5 +868,6 @@ console.log('[PRELOAD] Total API methods:', Object.keys(electronAPI).length);
 console.log('[PRELOAD] dashboard methods:', electronAPI.dashboard ? Object.keys(electronAPI.dashboard).length : 'UNDEFINED');
 console.log('[PRELOAD] logicEngine methods:', electronAPI.logicEngine ? Object.keys(electronAPI.logicEngine).length : 'UNDEFINED');
 console.log('[PRELOAD] project methods:', electronAPI.project ? Object.keys(electronAPI.project).length : 'UNDEFINED');
+console.log('[PRELOAD] profile methods:', electronAPI.profile ? Object.keys(electronAPI.profile).length : 'UNDEFINED');
 console.log('[PRELOAD] Context isolation:', true);
 console.log('========================================');

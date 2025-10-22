@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { useParams } from 'react-router-dom';
+
 import { ComputerDetailView } from './ComputerDetailView';
 
 export const ComputerDetailViewWrapper: React.FC = () => {

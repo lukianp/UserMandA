@@ -4,13 +4,14 @@
  */
 
 import React, { useEffect } from 'react';
+import { Download, RefreshCw, Server } from 'lucide-react';
+import { ColDef } from 'ag-grid-community';
+
 import { useInfrastructureLogic } from '../../hooks/useInfrastructureLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import SearchBar from '../../components/molecules/SearchBar';
 import { Button } from '../../components/atoms/Button';
 import { Select } from '../../components/atoms/Select';
-import { Download, RefreshCw, Server } from 'lucide-react';
-import { ColDef } from 'ag-grid-community';
 
 const InfrastructureView: React.FC = () => {
   const {

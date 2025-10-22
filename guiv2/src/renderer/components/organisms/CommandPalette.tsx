@@ -7,9 +7,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Search, Keyboard } from 'lucide-react';
+
 import { useModalStore } from '../../store/useModalStore';
 import { createCommandRegistry, filterCommands, groupCommandsByCategory, Command } from '../../lib/commandRegistry';
-import { Search, Keyboard } from 'lucide-react';
 
 /**
  * Command Palette Component

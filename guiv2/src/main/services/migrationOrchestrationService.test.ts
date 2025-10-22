@@ -4,8 +4,9 @@
  * Tests the migration orchestration service that coordinates multi-wave migrations.
  */
 
-import MigrationOrchestrationService from './migrationOrchestrationService';
 import * as path from 'path';
+
+import MigrationOrchestrationService from './migrationOrchestrationService';
 
 // Mock fs/promises
 jest.mock('fs/promises', () => ({

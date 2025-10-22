@@ -7,6 +7,7 @@
 
 import React, { Suspense, lazy } from 'react';
 import { RouteObject } from 'react-router-dom';
+
 import { Spinner } from './components/atoms/Spinner';
 
 /**

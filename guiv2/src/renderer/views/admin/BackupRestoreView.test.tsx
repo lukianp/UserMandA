@@ -4,12 +4,15 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
 import '@testing-library/jest-dom';
-import BackupRestoreView from './BackupRestoreView';
 import {
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+
+import BackupRestoreView from './BackupRestoreView';
 
 // Mock the hook - since the hook doesn't exist, we'll create a simple mock
 const mockUseBackupRestoreLogic = jest.fn().mockReturnValue({

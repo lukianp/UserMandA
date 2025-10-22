@@ -4,12 +4,6 @@
  */
 
 import React from 'react';
-import { useSecurityInfrastructureDiscoveryLogic } from '../../hooks/useSecurityInfrastructureDiscoveryLogic';
-import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
-import SearchBar from '../../components/molecules/SearchBar';
-import { Button } from '../../components/atoms/Button';
-import Badge from '../../components/atoms/Badge';
-import ProgressBar from '../../components/molecules/ProgressBar';
 import {
   Download,
   Play,
@@ -28,6 +22,13 @@ import {
   Activity,
   Award,
 } from 'lucide-react';
+
+import { useSecurityInfrastructureDiscoveryLogic } from '../../hooks/useSecurityInfrastructureDiscoveryLogic';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import SearchBar from '../../components/molecules/SearchBar';
+import { Button } from '../../components/atoms/Button';
+import Badge from '../../components/atoms/Badge';
+import ProgressBar from '../../components/molecules/ProgressBar';
 
 /**
  * Security Infrastructure Discovery View Component

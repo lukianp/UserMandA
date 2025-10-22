@@ -4,8 +4,9 @@
  * Tests the cutover automation service that handles final migration cutover.
  */
 
-import CutoverService from './cutoverService';
 import * as path from 'path';
+
+import CutoverService from './cutoverService';
 
 // Mock fs/promises
 jest.mock('fs/promises', () => ({

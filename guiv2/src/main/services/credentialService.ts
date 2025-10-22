@@ -12,10 +12,11 @@
  * Legacy files are UNENCRYPTED - auto-migrates to safeStorage on first load
  */
 
-import { safeStorage , app } from 'electron';
 import { promises as fs } from 'fs';
 import * as crypto from 'crypto';
 import path from 'path';
+
+import { safeStorage , app } from 'electron';
 
 
 interface StoredCredential {

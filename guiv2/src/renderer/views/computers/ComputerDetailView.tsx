@@ -17,13 +17,14 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
+import { RefreshCw, UserPlus, Download, X, MonitorPlay } from 'lucide-react';
+import { ColDef } from 'ag-grid-community';
+
 import { useComputerDetailLogic } from '../../hooks/useComputerDetailLogic';
 import { Button } from '../../components/atoms/Button';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { ModernCard } from '../../components/atoms/ModernCard';
-import { RefreshCw, UserPlus, Download, X, MonitorPlay } from 'lucide-react';
-import { ColDef } from 'ag-grid-community';
 import type {
   ComputerDetailProjection,
   ComputerUserData,

@@ -10,6 +10,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+
 import { useProfileStore } from '../store/useProfileStore';
 import type { TargetProfile } from '../types/models/profile';
 

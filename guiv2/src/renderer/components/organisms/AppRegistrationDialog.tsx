@@ -7,9 +7,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
+
 import { useAppRegistration } from '../../hooks/useAppRegistration';
-import { Modal } from './Modal';
 import LoadingSpinner from '../atoms/LoadingSpinner';
+
+import { Modal } from './Modal';
 
 interface AppRegistrationDialogProps {
   isOpen: boolean;

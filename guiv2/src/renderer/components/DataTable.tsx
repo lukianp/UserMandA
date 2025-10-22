@@ -4,6 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
+
 import DataTableOrganism, { DataTableColumn } from './organisms/DataTable';
 
 export interface SimpleDataTableProps {

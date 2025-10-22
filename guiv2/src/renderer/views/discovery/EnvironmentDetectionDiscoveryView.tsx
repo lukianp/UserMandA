@@ -1,4 +1,5 @@
 import { useState } from "react";
+
 import { useProfileStore } from "../../store/useProfileStore";
 import { useEnvironmentDetectionDiscovery } from "../../hooks/useEnvironmentDetectionDiscovery";
 import DataTable from "../../components/DataTable";

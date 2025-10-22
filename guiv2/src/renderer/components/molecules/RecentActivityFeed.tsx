@@ -8,8 +8,6 @@
  */
 
 import React from 'react';
-import { ModernCard } from '../atoms/ModernCard';
-import type { ActivityItem } from '../../types/dashboard';
 import {
   Activity,
   AlertCircle,
@@ -21,6 +19,9 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { clsx } from 'clsx';
+
+import { ModernCard } from '../atoms/ModernCard';
+import type { ActivityItem } from '../../types/dashboard';
 
 interface RecentActivityFeedProps {
   activities: ActivityItem[];
