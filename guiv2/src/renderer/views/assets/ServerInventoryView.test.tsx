@@ -86,7 +86,7 @@ describe('ServerInventoryView', () => {
     it('displays the view description', () => {
       render(<ServerInventoryView />);
       expect(
-        screen.getByText(/View server inventory/i)
+        screen.getByText(/Monitor server resources, roles, and health status/i)
       ).toBeInTheDocument();
     });
 

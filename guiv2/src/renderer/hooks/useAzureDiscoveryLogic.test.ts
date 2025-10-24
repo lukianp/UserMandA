@@ -394,8 +394,8 @@ describe('useAzureDiscoveryLogic', () => {
       expect(servicesLog).toContain('Exchange');
     });
 
-    it('should pass correct parameters to executeModule', async () => {
-      mockElectronAPI.executeModule.mockResolvedValue({
+    it('should pass correct parameters to executeDiscovery', async () => {
+      mockElectronAPI.executeDiscovery.mockResolvedValue({
         success: true,
         data: { totalItems: 0 },
       });
@@ -413,21 +413,17 @@ describe('useAzureDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
-      expect(mockElectronAPI.executeModule).toHaveBeenCalledWith(
+      expect(mockElectronAPI.executeDiscovery).toHaveBeenCalledWith(
         expect.objectContaining({
-          modulePath: 'Modules/Discovery/AzureDiscovery.psm1',
-          functionName: 'Invoke-AzureDiscovery',
+          moduleName: 'AzureDiscovery',
           parameters: expect.objectContaining({
-            TenantId: 'test-tenant-id',
-            IncludeUsers: true,
-            IncludeGroups: true,
-            IncludeTeams: true,
-            MaxResults: 10000,
+            tenantId: 'test-tenant-id',
+            includeUsers: true,
+            includeGroups: true,
+            includeTeams: true,
+            maxResults: 10000,
           }),
-          options: expect.objectContaining({
-            timeout: 300000, // 300 seconds * 1000
-            streamOutput: true,
-          }),
+          executionId: expect.stringContaining('azure-discovery-'),
         })
       );
     });
@@ -519,21 +515,42 @@ describe('useAzureDiscoveryLogic', () => {
 
   describe('Export Results', () => {
     it('should export results when results exist', async () => {
+      let completeCallback: ((data: any) => void) | null = null;
+
+      // Capture the onDiscoveryComplete callback
+      mockElectronAPI.onDiscoveryComplete = jest.fn((cb: any) => {
+        completeCallback = cb;
+        return jest.fn(); // Return unsubscribe function
+      });
+
       const { result } = renderHook(() => useAzureDiscoveryLogic());
 
-      // Manually set results (simulating successful discovery)
       act(() => {
         result.current.updateFormField('tenantId', 'test-tenant-id');
       });
 
-      // We need to run a successful discovery first to have results
-      mockElectronAPI.executeModule.mockResolvedValue({
+      mockElectronAPI.executeDiscovery.mockResolvedValue({
         success: true,
         data: { totalItems: 10 },
       });
 
+      let executionId: string;
       await act(async () => {
         await result.current.startDiscovery();
+        // Capture the execution ID from the call
+        executionId = mockElectronAPI.executeDiscovery.mock.calls[0][0].executionId;
+      });
+
+      // Simulate discovery completion with results using the actual executionId
+      act(() => {
+        completeCallback!({
+          executionId: executionId!,
+          result: {
+            totalItems: 10,
+            outputPath: 'test-path.csv'
+          },
+          duration: 5000
+        });
       });
 
       await waitFor(() => {
@@ -597,34 +614,46 @@ describe('useAzureDiscoveryLogic', () => {
   // ==========================================================================
 
   describe('Progress Handling', () => {
-    it('should handle progress updates', () => {
+    it('should handle progress updates', async () => {
       let progressCallback: (data: any) => void | null = null;
 
-      // Set up mock to capture callback BEFORE rendering hook
-      const capturedMockElectronAPI = {
-        ...mockElectronAPI,
-        onProgress: jest.fn((cb: any) => {
-          progressCallback = cb;
-          return jest.fn(); // Return unsubscribe function
-        }),
-      };
-
-      (getElectronAPI as jest.Mock).mockReturnValue(capturedMockElectronAPI);
+      // Set up mock to capture callback
+      mockElectronAPI.onDiscoveryProgress = jest.fn((cb: any) => {
+        progressCallback = cb;
+        return jest.fn(); // Return unsubscribe function
+      });
 
       const { result } = renderHook(() => useAzureDiscoveryLogic());
 
-      // Verify onProgress was called to set up the listener
-      expect(capturedMockElectronAPI.onProgress).toHaveBeenCalled();
+      // Start discovery to set currentToken
+      act(() => {
+        result.current.updateFormField('tenantId', 'test-tenant-id');
+      });
+
+      mockElectronAPI.executeDiscovery.mockResolvedValue({
+        success: true,
+        data: {},
+      });
+
+      let executionId: string;
+      await act(async () => {
+        await result.current.startDiscovery();
+        // Capture the execution ID from the call
+        executionId = mockElectronAPI.executeDiscovery.mock.calls[0][0].executionId;
+      });
+
+      // Verify onDiscoveryProgress was called to set up the listener
+      expect(mockElectronAPI.onDiscoveryProgress).toHaveBeenCalled();
       expect(progressCallback).not.toBeNull();
 
-      // Simulate progress update
+      // Simulate progress update with matching executionId
       act(() => {
         progressCallback!({
+          executionId: executionId!,
           percentage: 50,
-          message: 'Processing users...',
+          currentPhase: 'Processing users...',
           itemsProcessed: 50,
           totalItems: 100,
-          currentItem: 'user@example.com',
         });
       });
 

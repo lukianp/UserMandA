@@ -31,7 +31,8 @@
       "Bash(node add-data-testid-to-existing.js:*)",
       "Bash(npx tsc:*)",
       "Bash(git checkout:*)",
-      "Bash(node fix-test-mock-mismatches.js:*)"
+      "Bash(node fix-test-mock-mismatches.js:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": [],
