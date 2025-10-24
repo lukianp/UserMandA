@@ -18,13 +18,21 @@ import { WebhookService, WebhookConfig } from './webhookService';
 // Mock fetch
 global.fetch = jest.fn();
 
+// Mock Date.now() to work with fake timers
+let mockTime = Date.now();
+jest.spyOn(Date, 'now').mockImplementation(() => mockTime);
+
 describe('WebhookService', () => {
   let service: WebhookService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    // Advance mock time to clear rate limit window (60 seconds)
+    mockTime += 61000;
     service = WebhookService.getInstance();
+    // Reset rate limit to default
+    service.setRateLimit(60);
 
     // Clear all webhooks
     const webhooks = service.getAllWebhooks();
@@ -238,12 +246,11 @@ describe('WebhookService', () => {
         text: jest.fn().mockResolvedValue('Error'),
       });
 
-      service.trigger('test', { data: 'test' });
+      const promise = service.trigger('test', { data: 'test' });
 
-      // Run all timers synchronously
-      jest.runAllTimers();
-      // Allow microtasks (promises) to resolve
-      await new Promise(resolve => setImmediate(resolve));
+      // Run all timers and wait for promise
+      await jest.runAllTimersAsync();
+      await promise;
 
       const deliveries = service.getDeliveriesForWebhook('webhook1');
       expect(deliveries.length).toBeGreaterThan(0);
@@ -377,10 +384,16 @@ describe('WebhookService', () => {
         url: 'https://example.com/webhook',
         events: ['test'],
         enabled: true,
+        retryCount: 1,  // No retries (attempt=1, so 1 < 1 is false)
       });
     });
 
     it('should calculate statistics', async () => {
+      // Clear any previous deliveries
+      service.clearDeliveries();
+      // Verify only one webhook
+      const webhooks = service.getAllWebhooks();
+      expect(webhooks.length).toBe(1);
       // Successful delivery
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -389,9 +402,9 @@ describe('WebhookService', () => {
         text: jest.fn().mockResolvedValue('Success'),
       });
 
-      service.trigger('test', { data: 1 });
-      jest.runAllTimers();
-      await new Promise(resolve => setImmediate(resolve));
+      const promise1 = service.trigger('test', { data: 1 });
+      await jest.runAllTimersAsync();
+      await promise1;
 
       // Failed delivery
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -401,9 +414,9 @@ describe('WebhookService', () => {
         text: jest.fn().mockResolvedValue('Error'),
       });
 
-      service.trigger('test', { data: 2 });
-      jest.runAllTimers();
-      await new Promise(resolve => setImmediate(resolve));
+      const promise2 = service.trigger('test', { data: 2 });
+      await jest.runAllTimersAsync();
+      await promise2;
 
       const stats = service.getStats('webhook1');
 
@@ -486,6 +499,11 @@ describe('WebhookService', () => {
     });
 
     it('should enforce rate limit', async () => {
+      // Reset fetch mock call count
+      (global.fetch as jest.Mock).mockClear();
+      // Verify webhook is registered
+      const webhooks = service.getAllWebhooks();
+      expect(webhooks.length).toBe(1);
       // Trigger multiple webhooks
       const promise1 = service.trigger('test', { data: 1 });
       const promise2 = service.trigger('test', { data: 2 });
@@ -514,17 +532,24 @@ describe('WebhookService', () => {
         enabled: true,
       });
 
+      // Set up fetch mock for this test
+      (global.fetch as jest.Mock).mockClear();
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         status: 200,
         statusText: 'OK',
         text: jest.fn().mockResolvedValue('Success'),
       });
-
+      // Verify webhook is registered
+      const webhooks = service.getAllWebhooks();
+      expect(webhooks.length).toBe(1);
+      expect(webhooks[0].enabled).toBe(true);
       const promise = service.trigger('test', { data: 'test' });
       await jest.runAllTimersAsync();
       await promise;
 
+      // Verify fetch was called
+      expect(global.fetch).toHaveBeenCalled();
       // Verify deliveries exist
       expect(service.getAllDeliveries().length).toBeGreaterThan(0);
 
