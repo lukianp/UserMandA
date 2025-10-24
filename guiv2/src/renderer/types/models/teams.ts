@@ -48,7 +48,7 @@ export interface Team {
   sharepointSiteUrl?: string;
 
   // Activity
-  lastActivityDate?: Date;
+  lastActivityDate?: Date | string;
   messageCount?: number;
   reactionCount?: number;
   mentionCount?: number;
@@ -58,8 +58,8 @@ export interface Team {
   tabs: TeamTab[];
 
   // Metadata
-  createdDateTime: Date;
-  archivedDateTime?: Date;
+  createdDateTime: Date | string;
+  archivedDateTime?: Date | string;
   isArchived: boolean;
   internalId: string;
   tenantId: string;
@@ -75,7 +75,7 @@ export interface TeamMember {
   isGuest: boolean;
 
   // Activity
-  lastActiveDate?: Date;
+  lastActiveDate?: Date | string;
   messageCount?: number;
   reactionCount?: number;
 
@@ -112,15 +112,15 @@ export interface TeamChannel {
   fileCount?: number;
 
   // Activity
-  lastMessageDate?: Date;
-  lastActivityDate?: Date;
+  lastMessageDate?: Date | string;
+  lastActivityDate?: Date | string;
 
   // Settings
   isFavoriteByDefault: boolean;
   moderationSettings?: ChannelModerationSettings;
 
   // Metadata
-  createdDateTime: Date;
+  createdDateTime: Date | string;
 }
 
 export interface TeamMemberSettings {
@@ -172,7 +172,7 @@ export interface TeamApp {
 
   // Installation
   installedBy?: string;
-  installedDate?: Date;
+  installedDate?: Date | string;
 
   // Permissions
   resourceSpecificPermissions?: string[];
@@ -237,7 +237,7 @@ export interface TeamsDiscoveryConfig {
   throttleDelay: number;
 
   // Output
-  exportFormat: 'JSON' | 'CSV' | 'XML';
+  exportFormat: 'json' | 'csv' | 'xml';
   includeDetailedLogs: boolean;
 }
 
@@ -272,7 +272,7 @@ export const DEFAULT_TEAMS_CONFIG: TeamsDiscoveryConfig = {
   batchSize: 50,
   throttleDelay: 100,
 
-  exportFormat: 'JSON',
+  exportFormat: 'json',
   includeDetailedLogs: false,
 };
 
@@ -282,8 +282,8 @@ export const DEFAULT_TEAMS_CONFIG: TeamsDiscoveryConfig = {
 
 export interface TeamsDiscoveryResult {
   id: string;
-  startTime: Date;
-  endTime?: Date;
+  startTime: Date | string;
+  endTime?: Date | string;
   duration?: number;
   status: 'running' | 'completed' | 'failed' | 'cancelled';
 
@@ -354,7 +354,7 @@ export interface AppUsageCount {
 }
 
 export interface DiscoveryError {
-  timestamp: Date;
+  timestamp: Date | string;
   severity: 'critical' | 'error' | 'warning';
   category: string;
   message: string;
@@ -364,7 +364,7 @@ export interface DiscoveryError {
 }
 
 export interface DiscoveryWarning {
-  timestamp: Date;
+  timestamp: Date | string;
   category: string;
   message: string;
   teamId?: string;
@@ -398,8 +398,8 @@ export interface TeamFilter {
   maxMemberCount?: number;
   isArchived?: boolean;
   hasGuests?: boolean;
-  lastActivityBefore?: Date;
-  lastActivityAfter?: Date;
+  lastActivityBefore?: Date | string;
+  lastActivityAfter?: Date | string;
   classification?: string[];
 }
 
@@ -408,8 +408,8 @@ export interface ChannelFilter {
   channelTypes?: ChannelType[];
   minMessageCount?: number;
   hasFiles?: boolean;
-  lastActivityBefore?: Date;
-  lastActivityAfter?: Date;
+  lastActivityBefore?: Date | string;
+  lastActivityAfter?: Date | string;
 }
 
 export interface MemberFilter {
@@ -418,8 +418,8 @@ export interface MemberFilter {
   isGuest?: boolean;
   accountEnabled?: boolean;
   hasLicense?: boolean;
-  lastActiveBefore?: Date;
-  lastActiveAfter?: Date;
+  lastActiveBefore?: Date | string;
+  lastActiveAfter?: Date | string;
 }
 
 export interface AppFilter {
@@ -438,8 +438,8 @@ export interface TeamsDiscoveryTemplate {
   description: string;
   config: TeamsDiscoveryConfig;
   createdBy: string;
-  createdDate: Date;
-  modifiedDate: Date;
+  createdDate: Date | string;
+  modifiedDate: Date | string;
   isDefault: boolean;
   tags: string[];
 }
@@ -449,7 +449,7 @@ export interface TeamsDiscoveryTemplate {
 // ============================================================================
 
 export interface TeamsExportOptions {
-  format: 'CSV' | 'JSON' | 'Excel' | 'XML';
+  format: 'csv' | 'json' | 'excel' | 'xml';
   includeTeams: boolean;
   includeChannels: boolean;
   includeMembers: boolean;

@@ -1802,6 +1802,441 @@ export interface ElectronAPI {
      */
     onMigrationError: (callback: (data: any) => void) => () => void;
   };
+
+  // ========================================
+  // Ticketing API
+  // ========================================
+
+  /**
+   * Ticketing API for managing support tickets with full CRUD operations
+   */
+  ticketing: {
+    /**
+     * Get tickets with pagination and filtering
+     * @param options - Query options
+     * @returns Promise with ticket list result
+     */
+    getTickets: (options?: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      status?: string;
+      priority?: string;
+      assignee?: string;
+    }) => Promise<{
+      success: boolean;
+      data?: { tickets: any[]; total: number };
+      error?: string;
+    }>;
+
+    /**
+     * Create a new ticket
+     * @param ticketData - Ticket creation data
+     * @returns Promise with created ticket
+     */
+    createTicket: (ticketData: any) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Update an existing ticket
+     * @param ticketId - Ticket ID
+     * @param updates - Update data
+     * @returns Promise with updated ticket
+     */
+    updateTicket: (ticketId: string, updates: any) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Delete a ticket
+     * @param ticketId - Ticket ID
+     * @returns Promise with success status
+     */
+    deleteTicket: (ticketId: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Add comment to ticket
+     * @param ticketId - Ticket ID
+     * @param commentData - Comment data
+     * @returns Promise with created comment
+     */
+    addComment: (ticketId: string, commentData: any) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Upload attachment to ticket
+     * @param ticketId - Ticket ID
+     * @param attachmentData - Attachment data
+     * @returns Promise with uploaded attachment
+     */
+    uploadAttachment: (ticketId: string, attachmentData: any) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Bulk update ticket status
+     * @param ticketIds - Array of ticket IDs
+     * @param status - New status
+     * @returns Promise with success status
+     */
+    bulkUpdateStatus: (ticketIds: string[], status: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Export tickets to CSV
+     * @param options - Export options
+     * @returns Promise with success status
+     */
+    exportTickets: (options?: {
+      search?: string;
+      status?: string;
+      priority?: string;
+      assignee?: string;
+    }) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+  };
+
+  // ========================================
+  // Webhooks API
+  // ========================================
+
+  /**
+   * Webhooks API for managing webhook configuration and delivery tracking
+   */
+  webhooks: {
+    /**
+     * Get webhooks with pagination and filtering
+     * @param options - Query options
+     * @returns Promise with webhook list result
+     */
+    getWebhooks: (options?: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      status?: string;
+      event?: string;
+    }) => Promise<{
+      success: boolean;
+      data?: { webhooks: any[]; total: number };
+      error?: string;
+    }>;
+
+    /**
+     * Get webhook deliveries
+     * @param options - Query options
+     * @returns Promise with deliveries result
+     */
+    getDeliveries: (options?: {
+      webhookId?: string;
+      limit?: number;
+    }) => Promise<{
+      success: boolean;
+      data?: { deliveries: any[] };
+      error?: string;
+    }>;
+
+    /**
+     * Get webhook statistics
+     * @returns Promise with statistics
+     */
+    getStatistics: () => Promise<{
+      success: boolean;
+      data?: { statistics: any };
+      error?: string;
+    }>;
+
+    /**
+     * Create a new webhook
+     * @param webhookData - Webhook creation data
+     * @returns Promise with created webhook
+     */
+    createWebhook: (webhookData: any) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Update an existing webhook
+     * @param webhookId - Webhook ID
+     * @param updates - Update data
+     * @returns Promise with updated webhook
+     */
+    updateWebhook: (webhookId: string, updates: any) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Delete a webhook
+     * @param webhookId - Webhook ID
+     * @returns Promise with success status
+     */
+    deleteWebhook: (webhookId: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Test a webhook
+     * @param webhookId - Webhook ID
+     * @param testData - Test data
+     * @returns Promise with test result
+     */
+    testWebhook: (webhookId: string, testData: any) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Redeliver a failed webhook
+     * @param deliveryId - Delivery ID
+     * @returns Promise with redelivery result
+     */
+    redeliverWebhook: (deliveryId: string) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Bulk toggle webhook status
+     * @param webhookIds - Array of webhook IDs
+     * @param status - New status
+     * @returns Promise with success status
+     */
+    bulkToggleStatus: (webhookIds: string[], status: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Export webhooks to CSV
+     * @param options - Export options
+     * @returns Promise with success status
+     */
+    exportWebhooks: (options?: {
+      search?: string;
+      status?: string;
+      event?: string;
+    }) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+  };
+
+  // ========================================
+  // Workflows API
+  // ========================================
+
+  /**
+   * Workflows API for managing workflow automation with complete lifecycle
+   */
+  workflows: {
+    /**
+     * Get workflows with pagination and filtering
+     * @param options - Query options
+     * @returns Promise with workflow list result
+     */
+    getWorkflows: (options?: {
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      status?: string;
+      trigger?: string;
+    }) => Promise<{
+      success: boolean;
+      data?: { workflows: any[]; total: number };
+      error?: string;
+    }>;
+
+    /**
+     * Get workflow executions
+     * @param options - Query options
+     * @returns Promise with executions result
+     */
+    getExecutions: (options?: {
+      workflowId?: string;
+      limit?: number;
+    }) => Promise<{
+      success: boolean;
+      data?: { executions: any[] };
+      error?: string;
+    }>;
+
+    /**
+     * Get workflow statistics
+     * @returns Promise with statistics
+     */
+    getStatistics: () => Promise<{
+      success: boolean;
+      data?: { statistics: any };
+      error?: string;
+    }>;
+
+    /**
+     * Create a new workflow
+     * @param workflowData - Workflow creation data
+     * @returns Promise with created workflow
+     */
+    createWorkflow: (workflowData: any) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Update an existing workflow
+     * @param workflowId - Workflow ID
+     * @param updates - Update data
+     * @returns Promise with updated workflow
+     */
+    updateWorkflow: (workflowId: string, updates: any) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Delete a workflow
+     * @param workflowId - Workflow ID
+     * @returns Promise with success status
+     */
+    deleteWorkflow: (workflowId: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Execute a workflow
+     * @param workflowId - Workflow ID
+     * @param executionData - Execution data
+     * @returns Promise with execution result
+     */
+    executeWorkflow: (workflowId: string, executionData: any) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Cancel workflow execution
+     * @param executionId - Execution ID
+     * @returns Promise with success status
+     */
+    cancelExecution: (executionId: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Pause workflow execution
+     * @param executionId - Execution ID
+     * @returns Promise with success status
+     */
+    pauseExecution: (executionId: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Resume workflow execution
+     * @param executionId - Execution ID
+     * @returns Promise with success status
+     */
+    resumeExecution: (executionId: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Clone a workflow
+     * @param workflowId - Workflow ID to clone
+     * @param options - Clone options
+     * @returns Promise with cloned workflow
+     */
+    cloneWorkflow: (workflowId: string, options: any) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Export a workflow
+     * @param workflowId - Workflow ID
+     * @returns Promise with success status
+     */
+    exportWorkflow: (workflowId: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Import a workflow
+     * @param importData - Import data
+     * @returns Promise with imported workflow
+     */
+    importWorkflow: (importData: any) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Bulk toggle workflow status
+     * @param workflowIds - Array of workflow IDs
+     * @param status - New status
+     * @returns Promise with success status
+     */
+    bulkToggleStatus: (workflowIds: string[], status: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Get execution logs
+     * @param executionId - Execution ID
+     * @returns Promise with logs
+     */
+    getExecutionLogs: (executionId: string) => Promise<{
+      success: boolean;
+      data?: { logs: any[] };
+      error?: string;
+    }>;
+
+    /**
+     * Export workflows to CSV
+     * @param options - Export options
+     * @returns Promise with success status
+     */
+    exportWorkflows: (options?: {
+      search?: string;
+      status?: string;
+      trigger?: string;
+    }) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+  };
 }
 
 /**

@@ -2673,7 +2673,13 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   registerLoggingHandlers();
 
   // ========================================
-  // Webhook Handlers
+  // Advanced IPC Handlers (External File)
+  // ========================================
+  const { registerAdvancedIpcHandlers } = await import('./ipc/handlers');
+  registerAdvancedIpcHandlers();
+
+  // ========================================
+  // Webhook Handlers (Legacy - moved to handlers.ts)
   // ========================================
 
   ipcMain.handle('getWebhooks', async (_, args: { page?: number; limit?: number; search?: string } = {}) => {
