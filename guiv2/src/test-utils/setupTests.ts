@@ -3,15 +3,21 @@
  * Configures test environment with necessary mocks and utilities
  */
 
+// Add TextEncoder and TextDecoder FIRST before any imports
+if (typeof global.TextEncoder === 'undefined') {
+  const util = require('util');
+  global.TextEncoder = util.TextEncoder as any;
+  global.TextDecoder = util.TextDecoder as any;
+}
+
 import '@testing-library/jest-dom';
 import './customMatchers'; // Load custom matchers
 import { configure } from '@testing-library/react';
-
 // Configure testing-library
 // Use 'data-cy' as test ID attribute to match Cypress/component conventions
 configure({
   testIdAttribute: 'data-cy',
-  asyncUtilTimeout: 5000
+  asyncUtilTimeout: 5000  
 });
 
 // Mock window.matchMedia
@@ -43,6 +49,14 @@ Object.defineProperty(global, 'crypto', {
     getRandomValues: (arr: any) => arr,
   },
 });
+
+
+// Add TextEncoder and TextDecoder for tests that need them (e.g., react-router-dom)
+if (typeof global.TextEncoder === 'undefined') {
+  const util = require('util');
+  global.TextEncoder = util.TextEncoder as any;
+  global.TextDecoder = util.TextDecoder as any;
+}
 
 // Mock AG Grid modules to prevent errors
 jest.mock('ag-grid-community', () => ({
@@ -84,6 +98,17 @@ jest.mock('ag-grid-enterprise', () => ({
   SparklinesModule: {},
 }));
 
+// Mock react-dnd and react-dnd-html5-backend for drag-and-drop functionality
+jest.mock('react-dnd', () => ({
+  useDrag: jest.fn(() => [{ isDragging: false }, jest.fn(), jest.fn()]),
+  useDrop: jest.fn(() => [{ isOver: false, canDrop: false }, jest.fn()]),
+  DndProvider: ({ children }: any) => children,
+}));
+
+jest.mock('react-dnd-html5-backend', () => ({
+  HTML5Backend: {},
+}));
+
 // Mock Electron API
 jest.mock('electron', () => ({
   ipcRenderer: {
@@ -100,6 +125,14 @@ const mockElectronAPI = {
   executeModule: jest.fn().mockResolvedValue({ success: true, data: {} }),
   cancelExecution: jest.fn().mockResolvedValue({ cancelled: true }),
   onProgress: jest.fn(),
+  onDiscoveryProgress: jest.fn((callback) => {
+    // Return unsubscribe function
+    return jest.fn();
+  }),
+  onProfileChanged: jest.fn((callback) => {
+    // Return unsubscribe function
+    return jest.fn();
+  }),
   exportToCsv: jest.fn().mockResolvedValue({ exported: true, path: '/mock/path' }),
   exportToExcel: jest.fn().mockResolvedValue({ exported: true, path: '/mock/path' }),
   startDiscovery: jest.fn().mockResolvedValue({ success: true, data: {} }),
@@ -116,6 +149,34 @@ const mockElectronAPI = {
   minimize: jest.fn(),
   maximize: jest.fn(),
   close: jest.fn(),
+
+  
+  // Additional Discovery event handlers
+  onDiscoveryComplete: jest.fn((callback) => jest.fn()),
+  onDiscoveryError: jest.fn((callback) => jest.fn()),
+  onDiscoveryOutput: jest.fn((callback) => jest.fn()),
+
+  // Discovery execution APIs
+  executeDiscovery: jest.fn().mockResolvedValue({ success: true, executionId: 'test-exec-id' }),
+  cancelDiscovery: jest.fn().mockResolvedValue({ cancelled: true }),
+
+  // Profile management (flat structure for backward compatibility)
+  getActiveProfile: jest.fn().mockResolvedValue({ id: 'test-profile', name: 'Test Profile' }),
+  setActiveProfile: jest.fn().mockResolvedValue(undefined),
+  listProfiles: jest.fn().mockResolvedValue([
+    { id: 'test-profile', name: 'Test Profile' }
+  ]),
+
+  // Nested profile structure (some views use window.electron.profile.method)
+  profile: {
+    onProfileChanged: jest.fn((callback) => jest.fn()), // Returns unsubscribe function
+    validate: jest.fn().mockResolvedValue({ valid: true, errors: [] }),
+    getActiveProfile: jest.fn().mockResolvedValue({ id: 'test-profile', name: 'Test Profile' }),
+    setActiveProfile: jest.fn().mockResolvedValue(undefined),
+    listProfiles: jest.fn().mockResolvedValue([
+      { id: 'test-profile', name: 'Test Profile' }
+    ]),
+  },
 };
 
 Object.defineProperty(window, 'electronAPI', {

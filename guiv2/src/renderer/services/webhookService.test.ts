@@ -487,13 +487,13 @@ describe('WebhookService', () => {
 
     it('should enforce rate limit', async () => {
       // Trigger multiple webhooks
-      service.trigger('test', { data: 1 });
-      service.trigger('test', { data: 2 });
-      service.trigger('test', { data: 3 });
+      const promise1 = service.trigger('test', { data: 1 });
+      const promise2 = service.trigger('test', { data: 2 });
+      const promise3 = service.trigger('test', { data: 3 });
 
-      // Run all timers
-      jest.runAllTimers();
-      await new Promise(resolve => setImmediate(resolve));
+      // Run all timers and await promises
+      await jest.runAllTimersAsync();
+      await Promise.allSettled([promise1, promise2, promise3]);
 
       // Only 2 requests should have been made due to rate limit
       expect(global.fetch).toHaveBeenCalledTimes(2);
@@ -521,9 +521,9 @@ describe('WebhookService', () => {
         text: jest.fn().mockResolvedValue('Success'),
       });
 
-      service.trigger('test', { data: 'test' });
-      jest.runAllTimers();
-      await new Promise(resolve => setImmediate(resolve));
+      const promise = service.trigger('test', { data: 'test' });
+      await jest.runAllTimersAsync();
+      await promise;
 
       // Verify deliveries exist
       expect(service.getAllDeliveries().length).toBeGreaterThan(0);

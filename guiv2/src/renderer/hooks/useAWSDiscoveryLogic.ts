@@ -76,27 +76,60 @@ export const useAWSDiscoveryLogic = () => {
 
   const debouncedSearch = useDebounce(state.filter.searchText, 300);
 
-  // Subscribe to discovery progress events
+  // Subscribe to discovery progress and output events
   useEffect(() => {
-    const unsubscribe = window.electronAPI?.onProgress?.((data: any) => {
-      if (data.type === 'aws-discovery' && data.token === state.cancellationToken) {
+    const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
+      if (data.executionId === state.cancellationToken) {
         setState(prev => ({
           ...prev,
           progress: {
-            phase: data.phase || 'discovering',
-            progress: data.progress || 0,
-            currentRegion: data.currentRegion,
-            currentResourceType: data.currentResourceType,
+            phase: data.currentPhase,
+            progress: data.percentage,
+            currentRegion: data.currentItem,
+            currentResourceType: data.currentPhase,
             itemsProcessed: data.itemsProcessed,
             totalItems: data.totalItems,
-            message: data.message,
+            message: `${data.currentPhase} (${data.itemsProcessed || 0}/${data.totalItems || 0})`,
           }
         }));
       }
     });
 
+    const unsubscribeOutput = window.electron.onDiscoveryOutput((data) => {
+      if (data.executionId === state.cancellationToken) {
+        // Results are handled by onDiscoveryComplete
+      }
+    });
+
+    const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
+      if (data.executionId === state.cancellationToken) {
+        setState(prev => ({
+          ...prev,
+          result: data.result,
+          isDiscovering: false,
+          progress: null,
+          cancellationToken: null,
+        }));
+      }
+    });
+
+    const unsubscribeError = window.electron.onDiscoveryError((data) => {
+      if (data.executionId === state.cancellationToken) {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          error: data.error,
+          progress: null,
+          cancellationToken: null,
+        }));
+      }
+    });
+
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribeProgress) unsubscribeProgress();
+      if (unsubscribeOutput) unsubscribeOutput();
+      if (unsubscribeComplete) unsubscribeComplete();
+      if (unsubscribeError) unsubscribeError();
     };
   }, [state.cancellationToken]);
 
@@ -115,33 +148,19 @@ export const useAWSDiscoveryLogic = () => {
     }));
 
     try {
-      const discoveryResult = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/AWSCloudDiscovery.psm1',
-        functionName: 'Invoke-AWSDiscovery',
+      await window.electron.executeDiscovery({
+        moduleName: 'AWSDiscovery',
         parameters: {
-          Regions: state.config.awsRegions,
-          AccessKeyId: state.config.accessKeyId,
-          SecretAccessKey: state.config.secretAccessKey,
-          ResourceTypes: state.config.resourceTypes,
-          IncludeTags: state.config.includeTagDetails,
-          IncludeCosts: state.config.includeCostEstimates,
-          IncludeSecurity: state.config.includeSecurityAnalysis,
-          CancellationToken: token,
-          StreamProgress: true,
+          regions: state.config.awsRegions,
+          accessKeyId: state.config.accessKeyId,
+          secretAccessKey: state.config.secretAccessKey,
+          resourceTypes: state.config.resourceTypes,
+          includeTagDetails: state.config.includeTagDetails,
+          includeCostEstimates: state.config.includeCostEstimates,
+          includeSecurityAnalysis: state.config.includeSecurityAnalysis,
         },
+        executionId: token,
       });
-
-      if (discoveryResult.success && discoveryResult.data) {
-        setState(prev => ({
-          ...prev,
-          result: discoveryResult.data,
-          isDiscovering: false,
-          progress: null,
-          cancellationToken: null,
-        }));
-      } else {
-        throw new Error(discoveryResult.error || 'Discovery failed');
-      }
     } catch (error: any) {
       setState(prev => ({
         ...prev,

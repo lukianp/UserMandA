@@ -21,31 +21,41 @@ import {
 import { renderWithRouter } from '../../test-utils/testWrappers';
 
 // Mock the hook
-jest.mock('../../hooks/useOverviewLogic', () => ({
-  useOverviewLogic: jest.fn(),
+jest.mock('../../hooks/useDashboardLogic', () => ({
+  useDashboardLogic: jest.fn(),
 }));
 
-import { useOverviewLogic } from '../../hooks/useOverviewLogic';
+import { useDashboardLogic } from '../../hooks/useDashboardLogic';
 
 describe('OverviewView', () => {
   const mockHookDefaults = {
-    
-    
-    
-    data: [] as any[],
-    selectedItems: [] as any[],
-    searchText: '',
+    stats: {
+      totalUsers: 0,
+      totalGroups: 0,
+      totalDevices: 0,
+      discoveryProgress: 0
+    },
+    project: {
+      name: 'Test Project',
+      timeline: [],
+      currentPhase: 'Discovery',
+      progress: 0
+    },
+    health: {
+      status: 'healthy',
+      alerts: [],
+      services: []
+    },
+    activity: [],
     isLoading: false,
     error: null as string | null,
-    loadData: jest.fn(),
-    exportData: jest.fn(),
-    refreshData: jest.fn(),
-    pagination: { page: 0, pageSize: 50, total: 0 },
+    reload: jest.fn(),
+    acknowledgeAlert: jest.fn(),
   };
 
   beforeEach(() => {
     resetAllMocks();
-    useOverviewLogic.mockReturnValue(mockHookDefaults);
+    useDashboardLogic.mockReturnValue(mockHookDefaults);
   });
 
   afterEach(() => {
@@ -87,7 +97,7 @@ describe('OverviewView', () => {
 
   describe('Loading State', () => {
     it('shows loading state when data is loading', () => {
-      useOverviewLogic.mockReturnValue({
+      useDashboardLogic.mockReturnValue({
         ...mockHookDefaults,
         isLoading: true,
       });
@@ -109,7 +119,7 @@ describe('OverviewView', () => {
 
   describe('Data Display', () => {
     it('displays data when loaded', () => {
-      useOverviewLogic.mockReturnValue({
+      useDashboardLogic.mockReturnValue({
         ...mockHookDefaults,
         data: mockDiscoveryData().users,
       });
@@ -119,7 +129,7 @@ describe('OverviewView', () => {
     });
 
     it('shows empty state when no data', () => {
-      useOverviewLogic.mockReturnValue({
+      useDashboardLogic.mockReturnValue({
         ...mockHookDefaults,
         data: [],
       });
@@ -146,7 +156,7 @@ describe('OverviewView', () => {
 
     it('handles search input changes', () => {
       const setSearchText = jest.fn();
-      useOverviewLogic.mockReturnValue({
+      useDashboardLogic.mockReturnValue({
         ...mockHookDefaults,
         setSearchText,
       });
@@ -166,7 +176,7 @@ describe('OverviewView', () => {
 
   describe('Item Selection', () => {
     it('allows selecting items', () => {
-      useOverviewLogic.mockReturnValue({
+      useDashboardLogic.mockReturnValue({
         ...mockHookDefaults,
         data: mockDiscoveryData().users,
       });
@@ -177,7 +187,7 @@ describe('OverviewView', () => {
     });
 
     it('displays selected count', () => {
-      useOverviewLogic.mockReturnValue({
+      useDashboardLogic.mockReturnValue({
         ...mockHookDefaults,
         selectedItems: mockDiscoveryData().users.slice(0, 2),
       });
@@ -206,7 +216,7 @@ describe('OverviewView', () => {
     
     it('calls exportData when export button clicked', () => {
       const exportData = jest.fn();
-      useOverviewLogic.mockReturnValue({
+      useDashboardLogic.mockReturnValue({
         ...mockHookDefaults,
         exportData,
         data: mockDiscoveryData().users,
@@ -222,7 +232,7 @@ describe('OverviewView', () => {
 
     it('calls refreshData when refresh button clicked', () => {
       const refreshData = jest.fn();
-      useOverviewLogic.mockReturnValue({
+      useDashboardLogic.mockReturnValue({
         ...mockHookDefaults,
         refreshData,
       });
@@ -243,7 +253,7 @@ describe('OverviewView', () => {
 
   describe('Error Handling', () => {
     it('displays error message when error occurs', () => {
-      useOverviewLogic.mockReturnValue({
+      useDashboardLogic.mockReturnValue({
         ...mockHookDefaults,
         error: 'Test error message',
       });
@@ -258,7 +268,7 @@ describe('OverviewView', () => {
     });
 
     it('shows error alert with proper styling', () => {
-      useOverviewLogic.mockReturnValue({
+      useDashboardLogic.mockReturnValue({
         ...mockHookDefaults,
         error: 'Test error',
       });
@@ -308,7 +318,7 @@ describe('OverviewView', () => {
       const exportData = jest.fn();
 
       // Initial state - loading
-      useOverviewLogic.mockReturnValue({
+      useDashboardLogic.mockReturnValue({
         ...mockHookDefaults,
         isLoading: true,
       });
@@ -317,7 +327,7 @@ describe('OverviewView', () => {
       expect(screen.queryAllByRole('status').length > 0 || screen.queryByText(/loading/i)).toBeInTheDocument();
 
       // Data loaded
-      useOverviewLogic.mockReturnValue({
+      useDashboardLogic.mockReturnValue({
         ...mockHookDefaults,
         data: mockDiscoveryData().users,
         refreshData,

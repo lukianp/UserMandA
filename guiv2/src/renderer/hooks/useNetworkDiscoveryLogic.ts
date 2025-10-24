@@ -203,10 +203,11 @@ export const useNetworkDiscoveryLogic = () => {
   // Filter data based on search text
   const filteredDevices = useMemo(() => {
     if (!result) return [];
-    if (!searchText) return result.devices;
+    const devices = result?.devices ?? [];
+    if (!searchText) return devices;
 
     const search = searchText.toLowerCase();
-    return result.devices.filter(
+    return devices.filter(
       (device) =>
         device.hostname.toLowerCase().includes(search) ||
         device.ipAddress.toLowerCase().includes(search) ||
@@ -216,10 +217,11 @@ export const useNetworkDiscoveryLogic = () => {
 
   const filteredSubnets = useMemo(() => {
     if (!result) return [];
-    if (!searchText) return result.subnets;
+    const subnets = result?.subnets ?? [];
+    if (!searchText) return subnets;
 
     const search = searchText.toLowerCase();
-    return result.subnets.filter(
+    return subnets.filter(
       (subnet) =>
         subnet.network.toLowerCase().includes(search) ||
         subnet.gateway?.toLowerCase().includes(search)
@@ -228,10 +230,11 @@ export const useNetworkDiscoveryLogic = () => {
 
   const filteredPorts = useMemo(() => {
     if (!result) return [];
-    if (!searchText) return result.ports;
+    const ports = result?.ports ?? [];
+    if (!searchText) return ports;
 
     const search = searchText.toLowerCase();
-    return result.ports.filter(
+    return ports.filter(
       (port: NetworkPort) =>
         port.portNumber.toString().includes(search) ||
         port.service?.toLowerCase().includes(search) ||
@@ -274,13 +277,14 @@ export const useNetworkDiscoveryLogic = () => {
   const stats = useMemo(() => {
     if (!result) return null;
 
-    const onlineDevices = result.devices.filter((d) => d.status === 'Online').length;
-    const totalDevices = result.devices.length;
-    const subnets = result.subnets.length;
-    const openPorts = result.ports.length;
-    const vulnerabilities = result.vulnerabilities?.length || 0;
-    const criticalVulns = result.vulnerabilities?.filter((v) => v.severity === 'Critical').length || 0;
-    const highVulns = result.vulnerabilities?.filter((v) => v.severity === 'High').length || 0;
+    const devices = result?.devices ?? [];
+    const onlineDevices = devices.filter((d) => d.status === 'Online').length;
+    const totalDevices = devices.length;
+    const subnets = result?.subnets?.length ?? 0;
+    const openPorts = result?.ports?.length ?? 0;
+    const vulnerabilities = result?.vulnerabilities?.length ?? 0;
+    const criticalVulns = (result?.vulnerabilities ?? []).filter((v) => v.severity === 'Critical').length;
+    const highVulns = (result?.vulnerabilities ?? []).filter((v) => v.severity === 'High').length;
 
     return {
       totalDevices,

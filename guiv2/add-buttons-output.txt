@@ -1,0 +1,79 @@
+Adding data-cy attributes to discovery views...
+
+============================================================
+ADDING start-discovery-btn
+============================================================
+⚠️  ApplicationDependencyMappingDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  ApplicationDiscoveryDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  AWSDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  AzureResourceDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  BackupRecoveryDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  CertificateAuthorityDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  CertificateDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  ConditionalAccessDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  DatabaseSchemaDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+✅ DataLossPreventionDiscoveryView.tsx: Added start-discovery-btn
+⚠️  DLPDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  DNSDHCPDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  EntraIDAppDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  EnvironmentDetectionDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  ExternalIdentityDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  FileServerDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  GCPDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+✅ GoogleWorkspaceDiscoveryView.tsx: Added start-discovery-btn
+⚠️  GPODiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  GraphDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  InfrastructureDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  MultiDomainForestDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  NetworkInfrastructureDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  PaloAltoDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  PanoramaInterrogationDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  PhysicalServerDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  PowerBIDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  PrinterDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  ScheduledTaskDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  SecurityGroupAnalysisDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  StorageArrayDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  VirtualizationDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+⚠️  WebServerConfigDiscoveryView.tsx: Could not add start-discovery-btn (no-match)
+
+============================================================
+ADDING export-results-btn
+============================================================
+✅ ActiveDirectoryDiscoveryView.tsx: Added export-results-btn
+⚠️  ApplicationDiscoveryView.tsx: Could not add export-results-btn
+✅ AWSCloudInfrastructureDiscoveryView.tsx: Added export-results-btn
+⚠️  AWSDiscoveryView.tsx: Could not add export-results-btn
+✅ AzureDiscoveryView.tsx: Added export-results-btn
+✅ ConditionalAccessPoliciesDiscoveryView.tsx: Added export-results-btn
+✅ DataLossPreventionDiscoveryView.tsx: Added export-results-btn
+✅ DomainDiscoveryView.tsx: Added export-results-btn
+✅ ExchangeDiscoveryView.tsx: Added export-results-btn
+✅ FileSystemDiscoveryView.tsx: Added export-results-btn
+✅ GoogleWorkspaceDiscoveryView.tsx: Added export-results-btn
+✅ HyperVDiscoveryView.tsx: Added export-results-btn
+✅ IdentityGovernanceDiscoveryView.tsx: Added export-results-btn
+✅ IntuneDiscoveryView.tsx: Added export-results-btn
+✅ LicensingDiscoveryView.tsx: Added export-results-btn
+✅ NetworkDiscoveryView.tsx: Added export-results-btn
+✅ Office365DiscoveryView.tsx: Added export-results-btn
+✅ OneDriveDiscoveryView.tsx: Added export-results-btn
+✅ PowerPlatformDiscoveryView.tsx: Added export-results-btn
+✅ SecurityInfrastructureDiscoveryView.tsx: Added export-results-btn
+✅ SharePointDiscoveryView.tsx: Added export-results-btn
+✅ SQLServerDiscoveryView.tsx: Added export-results-btn
+✅ TeamsDiscoveryView.tsx: Added export-results-btn
+✅ VMwareDiscoveryView.tsx: Added export-results-btn
+⚠️  WebServerConfigurationDiscoveryView.tsx: Could not add export-results-btn
+
+============================================================
+SUMMARY
+============================================================
+start-discovery-btn added: 2/33
+export-results-btn added: 22/25
+
+Total modifications: 24
+
+Next steps:
+1. Review changes: git diff src/renderer/views/discovery/
+2. Run tests: npm test -- src/renderer/views/discovery/ --no-cache

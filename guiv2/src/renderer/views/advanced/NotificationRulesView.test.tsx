@@ -353,4 +353,3 @@ describe('NotificationRulesView', () => {
 });
 
 
-export default NotificationRulesView.test;

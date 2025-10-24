@@ -78,7 +78,7 @@ const UsersView: React.FC = () => {
   }, [navigate]);
 
   return (
-    <div className="h-full flex flex-col p-6">
+    <div className="h-full flex flex-col p-6" data-cy="users-view" data-testid="users-view">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Users</h1>
@@ -142,7 +142,7 @@ const UsersView: React.FC = () => {
 
       {/* Error Message */}
       {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400" role="alert">
           {error}
         </div>
       )}

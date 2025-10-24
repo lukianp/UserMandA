@@ -20,31 +20,32 @@ import {
 import UsersView from './UsersView';
 
 // Mock the hook
-jest.mock('../../hooks/useUsersLogic', () => ({
-  useUsersLogic: jest.fn(),
+jest.mock('../../hooks/useUsersViewLogic', () => ({
+  useUsersViewLogic: jest.fn(),
 }));
 
-const { useUsersLogic } = require('../../hooks/useUsersLogic');
+const { useUsersViewLogic } = require('../../hooks/useUsersViewLogic');
 
 describe('UsersView', () => {
   const mockHookDefaults = {
-    
-    
-    
-    data: [],
-    selectedItems: [],
+    users: [],
+    allUsers: [],
+    selectedUsers: [],
     searchText: '',
     isLoading: false,
     error: null,
-    loadData: jest.fn(),
-    exportData: jest.fn(),
-    refreshData: jest.fn(),
-    pagination: { page: 0, pageSize: 50, total: 0 },
+    setSearchText: jest.fn(),
+    setSelectedUsers: jest.fn(),
+    loadUsers: jest.fn(),
+    handleExport: jest.fn(),
+    handleDelete: jest.fn(),
+    handleAddUser: jest.fn(),
+    columnDefs: [],
   };
 
   beforeEach(() => {
     resetAllMocks();
-    useUsersLogic.mockReturnValue(mockHookDefaults);
+    useUsersViewLogic.mockReturnValue(mockHookDefaults);
   });
 
   afterEach(() => {
@@ -69,7 +70,7 @@ describe('UsersView', () => {
     it('displays the view description', () => {
       render(<UsersView />);
       expect(
-        screen.getByText(/View and manage users/i)
+        screen.getByText(/Manage user accounts/i)
       ).toBeInTheDocument();
     });
 
@@ -86,13 +87,14 @@ describe('UsersView', () => {
 
   describe('Loading State', () => {
     it('shows loading state when data is loading', () => {
-      useUsersLogic.mockReturnValue({
+      useUsersViewLogic.mockReturnValue({
         ...mockHookDefaults,
         isLoading: true,
       });
 
       render(<UsersView />);
-      expect(screen.queryAllByRole('status').length > 0 || screen.queryByText(/loading/i)).toBeInTheDocument();
+      const hasLoadingIndicator = screen.queryAllByRole('status').length > 0 || screen.queryByText(/loading/i);
+      expect(hasLoadingIndicator).toBeTruthy();
     });
 
     it('does not show loading state when data is loaded', () => {
@@ -108,9 +110,9 @@ describe('UsersView', () => {
 
   describe('Data Display', () => {
     it('displays data when loaded', () => {
-      useUsersLogic.mockReturnValue({
+      useUsersViewLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: mockDiscoveryData().users,
+        users: mockDiscoveryData().users,
       });
 
       render(<UsersView />);
@@ -118,9 +120,9 @@ describe('UsersView', () => {
     });
 
     it('shows empty state when no data', () => {
-      useUsersLogic.mockReturnValue({
+      useUsersViewLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: [],
+        users: [],
       });
 
       render(<UsersView />);
@@ -145,7 +147,7 @@ describe('UsersView', () => {
 
     it('handles search input changes', () => {
       const setSearchText = jest.fn();
-      useUsersLogic.mockReturnValue({
+      useUsersViewLogic.mockReturnValue({
         ...mockHookDefaults,
         setSearchText,
       });
@@ -165,9 +167,9 @@ describe('UsersView', () => {
 
   describe('Item Selection', () => {
     it('allows selecting items', () => {
-      useUsersLogic.mockReturnValue({
+      useUsersViewLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: mockDiscoveryData().users,
+        users: mockDiscoveryData().users,
       });
 
       render(<UsersView />);
@@ -176,9 +178,9 @@ describe('UsersView', () => {
     });
 
     it('displays selected count', () => {
-      useUsersLogic.mockReturnValue({
+      useUsersViewLogic.mockReturnValue({
         ...mockHookDefaults,
-        selectedItems: mockDiscoveryData().users.slice(0, 2),
+        selectedUsers: mockDiscoveryData().users.slice(0, 2),
       });
 
       render(<UsersView />);
@@ -202,38 +204,38 @@ describe('UsersView', () => {
       expect(buttons.length).toBeGreaterThan(0);
     });
 
-    
-    it('calls exportData when export button clicked', () => {
-      const exportData = jest.fn();
-      useUsersLogic.mockReturnValue({
+
+    it('calls handleExport when export button clicked', () => {
+      const handleExport = jest.fn();
+      useUsersViewLogic.mockReturnValue({
         ...mockHookDefaults,
-        exportData,
-        data: mockDiscoveryData().users,
+        handleExport,
+        users: mockDiscoveryData().users,
       });
 
       render(<UsersView />);
       const exportButton = screen.queryByText(/Export/i);
       if (exportButton) {
         fireEvent.click(exportButton);
-        expect(exportData).toHaveBeenCalled();
+        expect(handleExport).toHaveBeenCalled();
       }
     });
 
-    it('calls refreshData when refresh button clicked', () => {
-      const refreshData = jest.fn();
-      useUsersLogic.mockReturnValue({
+    it('calls loadUsers when refresh button clicked', () => {
+      const loadUsers = jest.fn();
+      useUsersViewLogic.mockReturnValue({
         ...mockHookDefaults,
-        refreshData,
+        loadUsers,
       });
 
       render(<UsersView />);
       const refreshButton = screen.queryByText(/Refresh/i) || screen.queryByRole('button', { name: /refresh/i });
       if (refreshButton) {
         fireEvent.click(refreshButton);
-        expect(refreshData).toHaveBeenCalled();
+        expect(loadUsers).toHaveBeenCalled();
       }
     });
-    
+
   });
 
   // ============================================================================
@@ -242,7 +244,7 @@ describe('UsersView', () => {
 
   describe('Error Handling', () => {
     it('displays error message when error occurs', () => {
-      useUsersLogic.mockReturnValue({
+      useUsersViewLogic.mockReturnValue({
         ...mockHookDefaults,
         error: 'Test error message',
       });
@@ -257,7 +259,7 @@ describe('UsersView', () => {
     });
 
     it('shows error alert with proper styling', () => {
-      useUsersLogic.mockReturnValue({
+      useUsersViewLogic.mockReturnValue({
         ...mockHookDefaults,
         error: 'Test error',
       });
@@ -303,24 +305,25 @@ describe('UsersView', () => {
 
   describe('Integration', () => {
     it('handles complete workflow', async () => {
-      const refreshData = jest.fn();
-      const exportData = jest.fn();
+      const loadUsers = jest.fn();
+      const handleExport = jest.fn();
 
       // Initial state - loading
-      useUsersLogic.mockReturnValue({
+      useUsersViewLogic.mockReturnValue({
         ...mockHookDefaults,
         isLoading: true,
       });
 
       const { rerender } = render(<UsersView />);
-      expect(screen.queryAllByRole('status').length > 0 || screen.queryByText(/loading/i)).toBeInTheDocument();
+      const hasLoadingIndicator = screen.queryAllByRole('status').length > 0 || screen.queryByText(/loading/i);
+      expect(hasLoadingIndicator).toBeTruthy();
 
       // Data loaded
-      useUsersLogic.mockReturnValue({
+      useUsersViewLogic.mockReturnValue({
         ...mockHookDefaults,
-        data: mockDiscoveryData().users,
-        refreshData,
-        exportData,
+        users: mockDiscoveryData().users,
+        loadUsers,
+        handleExport,
       });
 
       rerender(<UsersView />);
@@ -330,14 +333,14 @@ describe('UsersView', () => {
       const refreshButton = screen.queryByText(/Refresh/i);
       if (refreshButton) {
         fireEvent.click(refreshButton);
-        expect(refreshData).toHaveBeenCalled();
+        expect(loadUsers).toHaveBeenCalled();
       }
 
       // Export data
       const exportButton = screen.queryByText(/Export/i);
       if (exportButton) {
         fireEvent.click(exportButton);
-        expect(exportData).toHaveBeenCalled();
+        expect(handleExport).toHaveBeenCalled();
       }
     });
   });

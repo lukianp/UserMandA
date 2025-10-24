@@ -16,11 +16,23 @@ const mockElectronAPI = {
   onProgress: jest.fn(() => jest.fn()),
 };
 
-// Setup window.electronAPI mock
+const mockElectron = {
+  executeDiscovery: jest.fn(),
+  cancelDiscovery: jest.fn(),
+  onDiscoveryProgress: jest.fn(() => jest.fn()),
+  onDiscoveryComplete: jest.fn(() => jest.fn()),
+  onDiscoveryError: jest.fn(() => jest.fn()),
+};
+
+// Setup window.electronAPI and window.electron mocks
 beforeAll(() => {
   Object.defineProperty(window, 'electronAPI', {
     writable: true,
     value: mockElectronAPI,
+  });
+  Object.defineProperty(window, 'electron', {
+    writable: true,
+    value: mockElectron,
   });
 });
 
@@ -218,7 +230,7 @@ describe('useExchangeDiscoveryLogic', () => {
 
   describe('Discovery Cancellation', () => {
     it('should cancel discovery successfully', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+      mockElectron.cancelDiscovery.mockResolvedValueOnce(undefined);
 
       const { result } = renderHook(() => useExchangeDiscoveryLogic());
 
@@ -226,14 +238,14 @@ describe('useExchangeDiscoveryLogic', () => {
         await result.current.cancelDiscovery();
       });
 
-      expect(mockElectronAPI.cancelExecution).toHaveBeenCalledWith('exchange-discovery');
+      expect(mockElectron.cancelDiscovery).toHaveBeenCalledWith('exchange-discovery');
       expect(result.current.isDiscovering).toBe(false);
       expect(result.current.progress).toBeNull();
     });
 
     it('should handle cancellation error gracefully', async () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-      mockElectronAPI.cancelExecution.mockRejectedValueOnce(new Error('Cancel failed'));
+      mockElectron.cancelDiscovery.mockRejectedValueOnce(new Error('Cancel failed'));
 
       const { result } = renderHook(() => useExchangeDiscoveryLogic());
 

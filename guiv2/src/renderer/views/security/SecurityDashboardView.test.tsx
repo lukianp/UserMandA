@@ -172,7 +172,7 @@ describe('SecurityDashboardView', () => {
       });
 
       render(<SecurityDashboardView />);
-      const exportButton = screen.getByTestId('export-btn');
+      const exportButton = screen.getByTestId('export-results-btn');
       fireEvent.click(exportButton);
       expect(handleExport).toHaveBeenCalled();
     });
@@ -293,7 +293,7 @@ describe('SecurityDashboardView', () => {
       expect(handleRefresh).toHaveBeenCalled();
 
       // Export data
-      const exportButton = screen.getByTestId('export-btn');
+      const exportButton = screen.getByTestId('export-results-btn');
       fireEvent.click(exportButton);
       expect(handleExport).toHaveBeenCalled();
     });

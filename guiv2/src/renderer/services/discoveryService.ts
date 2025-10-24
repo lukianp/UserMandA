@@ -36,6 +36,7 @@ class DiscoveryService {
   private activeDiscoveries: Map<string, AbortController>;
   private cronJobs: Map<string, cron.ScheduledTask>;
   private cacheService = getCacheService();
+  private eventCleanupFunctions: (() => void)[] = [];
 
   constructor() {
     this.discoveryHistory = new Map();
@@ -46,6 +47,68 @@ class DiscoveryService {
 
     // Load persisted data
     this.loadPersistedData();
+
+    // Setup real-time event listeners
+    this.setupEventListeners();
+  }
+
+  /**
+   * Setup real-time event listeners for discovery streaming
+   */
+  private setupEventListeners(): void {
+    // Listen for discovery output events
+    const outputCleanup = window.electron.onDiscoveryOutput((data: any) => {
+      const run = this.discoveryHistory.get(data.executionId);
+      if (run) {
+        // Update run with output data
+        if (!run.output) run.output = [];
+        run.output.push({
+          timestamp: new Date(data.timestamp),
+          level: data.level,
+          message: data.message,
+          source: data.source,
+        });
+      }
+    });
+
+    // Listen for discovery progress events
+    const progressCleanup = window.electron.onDiscoveryProgress((data: any) => {
+      const run = this.discoveryHistory.get(data.executionId);
+      if (run) {
+        run.progress = data.percentage;
+        run.currentPhase = data.currentPhase;
+        run.itemsProcessed = data.itemsProcessed;
+        run.totalItems = data.totalItems;
+      }
+    });
+
+    // Listen for discovery completion events
+    const completeCleanup = window.electron.onDiscoveryComplete((data: any) => {
+      const run = this.discoveryHistory.get(data.executionId);
+      if (run) {
+        run.endTime = new Date();
+        run.status = 'completed';
+        run.result = data.result;
+        run.progress = 100;
+        this.discoveryHistory.set(data.executionId, run);
+        this.saveDiscoveryHistory();
+      }
+    });
+
+    // Listen for discovery error events
+    const errorCleanup = window.electron.onDiscoveryError((data: any) => {
+      const run = this.discoveryHistory.get(data.executionId);
+      if (run) {
+        run.status = 'failed';
+        run.endTime = new Date();
+        run.error = data.error;
+        this.discoveryHistory.set(data.executionId, run);
+        this.saveDiscoveryHistory();
+      }
+    });
+
+    // Store cleanup functions
+    this.eventCleanupFunctions = [outputCleanup, progressCleanup, completeCleanup, errorCleanup];
   }
 
   // ==================== Discovery Orchestration ====================
@@ -153,62 +216,25 @@ class DiscoveryService {
   }
 
   /**
-   * Execute discovery based on type
+   * Execute discovery using window.electron.executeDiscovery API
    */
   private async executeDiscoveryByType(config: DiscoveryConfig, signal: AbortSignal): Promise<DiscoveryResult> {
     const startTime = new Date();
+    const executionId = crypto.randomUUID();
 
-    // Build module execution parameters based on discovery type
-    const moduleMapping: Record<string, { module: string; function: string }> = {
-      'active-directory': { module: 'Modules/Discovery/ActiveDirectoryDiscovery.psm1', function: 'Invoke-ADDiscovery' },
-      'azure': { module: 'Modules/Discovery/AzureDiscovery.psm1', function: 'Invoke-AzureDiscovery' },
-      'office365': { module: 'Modules/Discovery/Office365Discovery.psm1', function: 'Invoke-O365Discovery' },
-      'exchange': { module: 'Modules/Discovery/ExchangeDiscovery.psm1', function: 'Invoke-ExchangeDiscovery' },
-      'sharepoint': { module: 'Modules/Discovery/SharePointDiscovery.psm1', function: 'Invoke-SharePointDiscovery' },
-      'teams': { module: 'Modules/Discovery/TeamsDiscovery.psm1', function: 'Invoke-TeamsDiscovery' },
-      'intune': { module: 'Modules/Discovery/IntuneDiscovery.psm1', function: 'Invoke-IntuneDiscovery' },
-      'google-workspace': { module: 'Modules/Discovery/GoogleWorkspaceDiscovery.psm1', function: 'Invoke-GoogleWorkspaceDiscovery' },
-      'aws': { module: 'Modules/Discovery/AWSDiscovery.psm1', function: 'Invoke-AWSDiscovery' },
-      'vmware': { module: 'Modules/Discovery/VMwareDiscovery.psm1', function: 'Invoke-VMwareDiscovery' },
-      'hyperv': { module: 'Modules/Discovery/HyperVDiscovery.psm1', function: 'Invoke-HyperVDiscovery' },
-      'network': { module: 'Modules/Discovery/NetworkDiscovery.psm1', function: 'Invoke-NetworkDiscovery' },
-      'applications': { module: 'Modules/Discovery/ApplicationDiscovery.psm1', function: 'Invoke-ApplicationDiscovery' },
-      'filesystem': { module: 'Modules/Discovery/FileSystemDiscovery.psm1', function: 'Invoke-FileSystemDiscovery' },
-      'security-infrastructure': { module: 'Modules/Discovery/SecurityInfrastructureDiscovery.psm1', function: 'Invoke-SecurityInfrastructureDiscovery' },
-      'licensing': { module: 'Modules/Discovery/LicensingDiscovery.psm1', function: 'Invoke-LicensingDiscovery' },
-      'power-platform': { module: 'Modules/Discovery/PowerPlatformDiscovery.psm1', function: 'Invoke-PowerPlatformDiscovery' },
-      'sql-server': { module: 'Modules/Discovery/SQLServerDiscovery.psm1', function: 'Invoke-SQLServerDiscovery' },
-      'web-server': { module: 'Modules/Discovery/WebServerDiscovery.psm1', function: 'Invoke-WebServerDiscovery' },
-      'conditional-access': { module: 'Modules/Discovery/ConditionalAccessDiscovery.psm1', function: 'Invoke-ConditionalAccessDiscovery' },
-      'dlp': { module: 'Modules/Discovery/DLPDiscovery.psm1', function: 'Invoke-DLPDiscovery' },
-      'identity-governance': { module: 'Modules/Discovery/IdentityGovernanceDiscovery.psm1', function: 'Invoke-IdentityGovernanceDiscovery' },
-      'onedrive': { module: 'Modules/Discovery/OneDriveDiscovery.psm1', function: 'Invoke-OneDriveDiscovery' },
-      'environment-detection': { module: 'Modules/Discovery/EnvironmentDetection.psm1', function: 'Invoke-EnvironmentDetection' },
-    };
-
-    const configType = config.type ?? 'domain';
-    const moduleConfig = moduleMapping[configType];
-    if (!moduleConfig) {
-      throw new Error(`Unknown discovery type: ${configType}`);
-    }
-
-    // Execute via IPC
     try {
-      const psResult = await window.electronAPI.executeModule({
-        modulePath: moduleConfig.module,
-        functionName: moduleConfig.function,
+      // Use the new executeDiscovery API
+      const result = await window.electron.executeDiscovery({
+        moduleName: config.moduleName || config.type || 'domain',
         parameters: config.parameters ?? {},
-        options: {
-          timeout: config.timeout || 300000, // 5 minutes default
-          streamOutput: true,
-        },
+        executionId: executionId,
       });
 
       const endTime = new Date();
 
-      if (!psResult.success) {
+      if (!result.success) {
         return {
-          id: crypto.randomUUID(),
+          id: executionId,
           name: config.name || 'Discovery',
           moduleName: config.moduleName || config.type || 'unknown',
           displayName: config.name || 'Discovery',
@@ -220,19 +246,19 @@ class DiscoveryService {
           createdAt: endTime,
           success: false,
           summary: 'Discovery execution failed',
-          errorMessage: psResult.error || 'Discovery execution failed',
+          errorMessage: result.error || 'Discovery execution failed',
           additionalData: {},
           data: [],
-          errors: [psResult.error || 'Discovery execution failed'],
-          warnings: psResult.warnings?.map((w: any) => w) || [],
+          errors: [result.error || 'Discovery execution failed'],
+          warnings: [],
         };
       }
 
       // Parse result data
-      const data = Array.isArray(psResult.data) ? psResult.data : psResult.data ? [psResult.data] : [];
+      const data = Array.isArray(result.result) ? result.result : result.result ? [result.result] : [];
 
       return {
-        id: crypto.randomUUID(),
+        id: executionId,
         name: config.name || 'Discovery',
         moduleName: config.moduleName || config.type || 'unknown',
         displayName: config.name || 'Discovery',
@@ -248,9 +274,10 @@ class DiscoveryService {
         additionalData: {},
         data,
         errors: [],
-        warnings: psResult.warnings?.map((w: any) => w) || [],
+        warnings: [],
       };
     } catch (error: any) {
+      const endTime = new Date();
       throw new Error(`Discovery execution failed: ${error.message}`);
     }
   }
@@ -473,6 +500,43 @@ class DiscoveryService {
       async () => Array.from(this.discoveryTemplates.values()),
       { ttl: 5 * 60 * 1000 } // 5 minutes
     );
+  }
+
+  // ==================== Module Information ====================
+
+  /**
+   * Get list of available discovery modules
+   * @returns Array of discovery modules
+   */
+  async getDiscoveryModules(): Promise<any[]> {
+    try {
+      const result = await window.electron.getDiscoveryModules();
+      if (result.success) {
+        return result.modules || [];
+      }
+      return [];
+    } catch (error: any) {
+      console.error('Failed to get discovery modules:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get detailed information about a discovery module
+   * @param moduleName Module name
+   * @returns Module information
+   */
+  async getDiscoveryModuleInfo(moduleName: string): Promise<any | null> {
+    try {
+      const result = await window.electron.getDiscoveryModuleInfo(moduleName);
+      if (result.success) {
+        return result.info || null;
+      }
+      return null;
+    } catch (error: any) {
+      console.error(`Failed to get module info for ${moduleName}:`, error);
+      return null;
+    }
   }
 
   /**
@@ -746,7 +810,7 @@ class DiscoveryService {
   // ==================== Discovery Validation ====================
 
   /**
-   * Validate discovery configuration
+   * Validate discovery configuration against module schemas
    * @param config Discovery configuration
    * @returns Validation result
    */
@@ -763,14 +827,74 @@ class DiscoveryService {
       errors.push({ code: 'MISSING_TYPE', message: 'Discovery type is required', severity: 'error' });
     }
 
+    // Get module information for schema validation
+    try {
+      const moduleInfo = await window.electron.getDiscoveryModuleInfo(config.moduleName || config.type || 'domain');
+      if (moduleInfo.success && moduleInfo.info) {
+        const schema = moduleInfo.info.parameters;
+
+        // Validate parameters against schema
+        if (schema && config.parameters) {
+          for (const param of schema) {
+            const value = config.parameters[param.name];
+
+            // Check required parameters
+            if (param.required && (value === undefined || value === null || value === '')) {
+              errors.push({
+                code: 'MISSING_REQUIRED_PARAM',
+                message: `${param.name} is required`,
+                severity: 'error'
+              });
+            }
+
+            // Check parameter types (basic validation)
+            if (value !== undefined && value !== null) {
+              switch (param.type.toLowerCase()) {
+                case 'boolean':
+                  if (typeof value !== 'boolean') {
+                    errors.push({
+                      code: 'INVALID_PARAM_TYPE',
+                      message: `${param.name} must be a boolean`,
+                      severity: 'error'
+                    });
+                  }
+                  break;
+                case 'number':
+                  if (typeof value !== 'number' && isNaN(Number(value))) {
+                    errors.push({
+                      code: 'INVALID_PARAM_TYPE',
+                      message: `${param.name} must be a number`,
+                      severity: 'error'
+                    });
+                  }
+                  break;
+                case 'string':
+                  if (typeof value !== 'string') {
+                    errors.push({
+                      code: 'INVALID_PARAM_TYPE',
+                      message: `${param.name} must be a string`,
+                      severity: 'error'
+                    });
+                  }
+                  break;
+              }
+            }
+          }
+        }
+      } else {
+        // Fallback to basic validation if module info not available
+        if (config.type === 'active-directory' && config.parameters && !config.parameters.Domain && !config.parameters.Forest) {
+          errors.push({ code: 'MISSING_DOMAIN', message: 'Domain or Forest parameter is required for AD discovery', severity: 'error' });
+        }
+      }
+    } catch (error: any) {
+      console.warn('Failed to get module info for validation:', error);
+      // Continue with basic validation
+    }
+
     // Validate timeout
     if (config.timeout && config.timeout < 1000) {
       warnings.push({ code: 'LOW_TIMEOUT', message: 'Timeout is very low, may cause failures', severity: 'warning' });
-    }
-
-    // Validate parameters based on type
-    if (config.type === 'active-directory' && config.parameters && !config.parameters.Domain && !config.parameters.Forest) {
-      errors.push({ code: 'MISSING_DOMAIN', message: 'Domain or Forest parameter is required for AD discovery', severity: 'error' });
     }
 
     return {
@@ -923,6 +1047,33 @@ class DiscoveryService {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Cleanup all resources and event listeners
+   */
+  dispose(): void {
+    // Clean up event listeners
+    this.eventCleanupFunctions.forEach(cleanup => cleanup());
+
+    // Cancel all active discoveries
+    this.activeDiscoveries.forEach((controller, id) => {
+      try {
+        window.electron.cancelDiscovery(id);
+      } catch (error) {
+        console.error(`Failed to cancel discovery ${id}:`, error);
+      }
+    });
+    this.activeDiscoveries.clear();
+
+    // Stop all cron jobs
+    this.cronJobs.forEach(job => job.stop());
+    this.cronJobs.clear();
+
+    // Clear all data
+    this.discoveryHistory.clear();
+    this.discoveryTemplates.clear();
+    this.scheduledDiscoveries.clear();
   }
 }
 

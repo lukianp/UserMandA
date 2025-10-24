@@ -354,4 +354,3 @@ describe('CostOptimizationView', () => {
 });
 
 
-export default CostOptimizationView.test;

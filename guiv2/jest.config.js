@@ -1,6 +1,7 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
+  setupFiles: ['<rootDir>/src/test-utils/polyfills.js'],
   setupFilesAfterEnv: ['<rootDir>/src/test-utils/setupTests.ts'],
   testMatch: [
     '<rootDir>/src/**/*.(test|spec).(ts|tsx|js|jsx)',

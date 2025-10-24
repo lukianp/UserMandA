@@ -353,4 +353,3 @@ describe('SecurityPostureView', () => {
 });
 
 
-export default SecurityPostureView.test;

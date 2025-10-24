@@ -6,6 +6,236 @@
 import { Dictionary } from './common';
 
 /**
+ * Discovery execution result
+ */
+export interface DiscoveryExecutionResult {
+  success: boolean;
+  executionId?: string;
+  result?: any;
+  error?: string;
+}
+
+/**
+ * Discovery cancellation result
+ */
+export interface DiscoveryCancellationResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Discovery module list result
+ */
+export interface DiscoveryModuleListResult {
+  success: boolean;
+  modules?: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+    description: string;
+    category: string;
+    version: string;
+    parameters: Array<{
+      name: string;
+      type: string;
+      required: boolean;
+      default?: any;
+      description?: string;
+    }>;
+  }>;
+  error?: string;
+}
+
+/**
+ * Discovery module info result
+ */
+export interface DiscoveryModuleInfoResult {
+  success: boolean;
+  info?: {
+    id: string;
+    name: string;
+    displayName: string;
+    description: string;
+    version: string;
+    category: string;
+    parameters: Array<{
+      name: string;
+      type: string;
+      required: boolean;
+      default?: any;
+      description?: string;
+    }>;
+    outputs?: Array<{
+      name: string;
+      type: string;
+      description?: string;
+    }>;
+    examples?: Array<{
+      description: string;
+      code: string;
+    }>;
+  };
+  error?: string;
+}
+
+/**
+ * Connection test result
+ */
+export interface ConnectionTestResult {
+  success: boolean;
+  message?: string;
+  details?: any;
+  duration?: number;
+  timestamp?: Date;
+}
+
+/**
+ * Environment test configuration
+ */
+export interface EnvironmentTestConfig {
+  profileName: string;
+  domainController?: string;
+  exchangeServer?: string;
+  tenantId?: string;
+  clientId?: string;
+  clientSecret?: string;
+  credential?: { username: string; password: string };
+}
+
+/**
+ * Environment test result
+ */
+export interface EnvironmentTestResult {
+  success: boolean;
+  results?: {
+    activeDirectory?: ConnectionTestResult;
+    exchange?: ConnectionTestResult;
+    azureAD?: ConnectionTestResult;
+    overall?: {
+      success: boolean;
+      message: string;
+    };
+  };
+  error?: string;
+}
+
+/**
+ * Connection test statistics
+ */
+export interface ConnectionTestStatistics {
+  totalTests: number;
+  successfulTests: number;
+  failedTests: number;
+  averageResponseTime: number;
+  lastTestTimestamp?: Date;
+}
+
+/**
+ * Log entry structure
+ */
+export interface LogEntry {
+  id: string;
+  timestamp: Date;
+  level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
+  component: string;
+  message: string;
+  context?: Record<string, any>;
+  stack?: string;
+}
+
+/**
+ * Logging configuration
+ */
+export interface LoggingConfig {
+  level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
+  maxFiles?: number;
+  maxFileSize?: number;
+  console?: boolean;
+  file?: boolean;
+  format?: 'json' | 'text';
+}
+
+/**
+ * Logic Engine load result
+ */
+export interface LogicEngineLoadResult {
+  success: boolean;
+  statistics?: any;
+  error?: string;
+}
+
+/**
+ * Logic Engine user detail result
+ */
+export interface LogicEngineUserDetailResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+}
+
+/**
+ * Logic Engine statistics result
+ */
+export interface LogicEngineStatisticsResult {
+  success: boolean;
+  data?: {
+    statistics: any;
+    lastLoadTime?: Date;
+    isLoading: boolean;
+  };
+  error?: string;
+}
+
+/**
+ * Logic Engine cache result
+ */
+export interface LogicEngineCacheResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Migration complexity result
+ */
+export interface MigrationComplexityResult {
+  success: boolean;
+  data?: {
+    score: number;
+    level: 'Low' | 'Medium' | 'High';
+    factors: string[];
+  };
+  error?: string;
+}
+
+/**
+ * Migration complexity batch result
+ */
+export interface MigrationComplexityBatchResult {
+  success: boolean;
+  data?: Record<string, {
+    score: number;
+    level: 'Low' | 'Medium' | 'High';
+    factors: string[];
+  }>;
+  error?: string;
+}
+
+/**
+ * Migration complexity statistics result
+ */
+export interface MigrationComplexityStatisticsResult {
+  success: boolean;
+  data?: {
+    total: number;
+    low: number;
+    medium: number;
+    high: number;
+    analyzed: number;
+  };
+  error?: string;
+}
+
+/**
  * Execution options for PowerShell scripts
  */
 export interface ExecutionOptions {
@@ -232,6 +462,67 @@ export interface ElectronAPI {
   // ========================================
   // File Operations
   // ========================================
+
+  /**
+   * File system API for advanced operations
+   */
+  fs: {
+    /**
+     * Read a file from the file system
+     * @param path Absolute path to file
+     * @param encoding File encoding (default: 'utf8')
+     * @returns Promise resolving to file contents
+     */
+    readFile: (path: string, encoding?: string) => Promise<string>;
+
+    /**
+     * Write content to a file
+     * @param path Absolute path to file
+     * @param content Content to write
+     * @param encoding File encoding (default: 'utf8')
+     * @returns Promise resolving when write is complete
+     */
+    writeFile: (path: string, content: string, encoding?: string) => Promise<void>;
+
+    /**
+     * Check if a file exists
+     * @param path Absolute path to file
+     * @returns Promise resolving to true if file exists
+     */
+    fileExists: (path: string) => Promise<boolean>;
+
+    /**
+     * Get the raw data path for a profile
+     * @param companyName Company name
+     * @returns Promise resolving to raw data path
+     */
+    getRawDataPath: (companyName: string) => Promise<string>;
+
+    /**
+     * Get the CSV path for a profile and filename
+     * @param companyName Company name
+     * @param fileName CSV filename
+     * @returns Promise resolving to CSV file path
+     */
+    getCSVPath: (companyName: string, fileName: string) => Promise<string>;
+
+    /**
+     * Watch a directory for file changes
+     * @param path Directory path to watch
+     * @param pattern Optional glob pattern to match files (e.g., '*.csv')
+     * @param callback Function called when files change
+     * @returns Cleanup function to stop watching
+     */
+    watchDirectory: (path: string, pattern?: string, callback?: (filePath: string) => void) => () => void;
+
+    /**
+     * List files in a directory
+     * @param path Absolute path to directory
+     * @param pattern Optional glob pattern filter
+     * @returns Promise resolving to array of file paths
+     */
+    listFiles: (path: string, pattern?: string) => Promise<string[]>;
+  };
 
   /**
    * Read a file from the file system
@@ -760,80 +1051,27 @@ export interface ElectronAPI {
     moduleName: string;
     parameters: Record<string, any>;
     executionId?: string;
-  }) => Promise<{
-    success: boolean;
-    executionId?: string;
-    result?: any;
-    error?: string;
-  }>;
+  }) => Promise<DiscoveryExecutionResult>;
 
   /**
    * Cancel active discovery execution
    * @param executionId Execution ID to cancel
    * @returns Promise resolving to success status
    */
-  cancelDiscovery: (executionId: string) => Promise<{
-    success: boolean;
-    error?: string;
-  }>;
+  cancelDiscovery: (executionId: string) => Promise<DiscoveryCancellationResult>;
 
   /**
    * Get available discovery modules from registry
    * @returns Promise resolving to array of discovery modules
    */
-  getDiscoveryModules: () => Promise<{
-    success: boolean;
-    modules?: Array<{
-      id: string;
-      name: string;
-      displayName: string;
-      description: string;
-      category: string;
-      version: string;
-      parameters: Array<{
-        name: string;
-        type: string;
-        required: boolean;
-        default?: any;
-        description?: string;
-      }>;
-    }>;
-    error?: string;
-  }>;
+  getDiscoveryModules: () => Promise<DiscoveryModuleListResult>;
 
   /**
    * Get detailed information about a specific module
    * @param moduleName Module name/ID
    * @returns Promise resolving to module information
    */
-  getDiscoveryModuleInfo: (moduleName: string) => Promise<{
-    success: boolean;
-    info?: {
-      id: string;
-      name: string;
-      displayName: string;
-      description: string;
-      version: string;
-      category: string;
-      parameters: Array<{
-        name: string;
-        type: string;
-        required: boolean;
-        default?: any;
-        description?: string;
-      }>;
-      outputs?: Array<{
-        name: string;
-        type: string;
-        description?: string;
-      }>;
-      examples?: Array<{
-        description: string;
-        code: string;
-      }>;
-    };
-    error?: string;
-  }>;
+  getDiscoveryModuleInfo: (moduleName: string) => Promise<DiscoveryModuleInfoResult>;
 
   /**
    * Register a listener for discovery output events (all 6 PowerShell streams)
@@ -1039,6 +1277,196 @@ export interface ElectronAPI {
   };
 
   // ========================================
+  // Connection Testing API (Task 5)
+  // ========================================
+
+  connectionTest: {
+    /**
+     * Test Active Directory connection
+     * @param domainController - Domain controller hostname
+     * @param credential - Optional credentials
+     * @returns Promise with test result
+     */
+    testActiveDirectory: (domainController: string, credential?: { username: string; password: string }) =>
+      Promise<ConnectionTestResult>;
+
+    /**
+     * Test Exchange Server connection
+     * @param serverUrl - Exchange server URL
+     * @param credential - Optional credentials
+     * @returns Promise with test result
+     */
+    testExchange: (serverUrl: string, credential?: { username: string; password: string }) =>
+      Promise<ConnectionTestResult>;
+
+    /**
+     * Test Azure AD connection
+     * @param tenantId - Azure AD tenant ID
+     * @param clientId - Application client ID
+     * @param clientSecret - Application client secret
+     * @returns Promise with test result
+     */
+    testAzureAD: (tenantId: string, clientId: string, clientSecret: string) =>
+      Promise<ConnectionTestResult>;
+
+    /**
+     * Test comprehensive environment (T-000)
+     * @param config - Environment configuration
+     * @returns Promise with environment test result
+     */
+    testEnvironment: (config: EnvironmentTestConfig) =>
+      Promise<EnvironmentTestResult>;
+
+    /**
+     * Cancel active connection test
+     * @param testId - Test ID to cancel
+     * @returns Promise with success status
+     */
+    cancel: (testId: string) =>
+      Promise<{ success: boolean; error?: string }>;
+
+    /**
+     * Get connection test statistics
+     * @returns Promise with statistics
+     */
+    getStatistics: () =>
+      Promise<ConnectionTestStatistics>;
+
+    /**
+     * Listen for test started events
+     * @param callback - Called when test starts
+     * @returns Cleanup function
+     */
+    onTestStarted: (callback: (data: any) => void) => () => void;
+
+    /**
+     * Listen for test progress events
+     * @param callback - Called during test progress
+     * @returns Cleanup function
+     */
+    onTestProgress: (callback: (data: any) => void) => () => void;
+
+    /**
+     * Listen for test completed events
+     * @param callback - Called when test completes
+     * @returns Cleanup function
+     */
+    onTestCompleted: (callback: (data: any) => void) => () => void;
+
+    /**
+     * Listen for test failed events
+     * @param callback - Called when test fails
+     * @returns Cleanup function
+     */
+    onTestFailed: (callback: (data: any) => void) => () => void;
+
+    /**
+     * Listen for test cancelled events
+     * @param callback - Called when test is cancelled
+     * @returns Cleanup function
+     */
+    onTestCancelled: (callback: (data: any) => void) => () => void;
+  };
+
+  // ========================================
+  // Centralized Logging API
+  // ========================================
+
+  /**
+   * Centralized logging API for structured logging across the application
+   */
+  logging: {
+    /**
+     * Log debug message
+     * @param component - Component name
+     * @param message - Log message
+     * @param context - Additional context data
+     * @returns Promise resolving when logged
+     */
+    debug: (component: string, message: string, context?: Record<string, any>) => Promise<void>;
+
+    /**
+     * Log info message
+     * @param component - Component name
+     * @param message - Log message
+     * @param context - Additional context data
+     * @returns Promise resolving when logged
+     */
+    info: (component: string, message: string, context?: Record<string, any>) => Promise<void>;
+
+    /**
+     * Log warning message
+     * @param component - Component name
+     * @param message - Log message
+     * @param context - Additional context data
+     * @returns Promise resolving when logged
+     */
+    warn: (component: string, message: string, context?: Record<string, any>) => Promise<void>;
+
+    /**
+     * Log error message with optional stack trace
+     * @param component - Component name
+     * @param message - Error message
+     * @param stack - Optional stack trace
+     * @param context - Additional context data
+     * @returns Promise resolving when logged
+     */
+    error: (component: string, message: string, stack?: string, context?: Record<string, any>) => Promise<void>;
+
+    /**
+     * Log fatal error message
+     * @param component - Component name
+     * @param message - Fatal error message
+     * @param stack - Optional stack trace
+     * @param context - Additional context data
+     * @returns Promise resolving when logged
+     */
+    fatal: (component: string, message: string, stack?: string, context?: Record<string, any>) => Promise<void>;
+
+    /**
+     * Get recent log entries
+     * @param count - Number of entries to retrieve (default: 100)
+     * @returns Promise resolving to array of log entries
+     */
+    getRecent: (count?: number) => Promise<LogEntry[]>;
+
+    /**
+     * Get log entries by level
+     * @param level - Log level to filter by
+     * @param count - Number of entries to retrieve (default: 100)
+     * @returns Promise resolving to array of log entries
+     */
+    getByLevel: (level: string, count?: number) => Promise<LogEntry[]>;
+
+    /**
+     * Get log entries by component
+     * @param component - Component name to filter by
+     * @param count - Number of entries to retrieve (default: 100)
+     * @returns Promise resolving to array of log entries
+     */
+    getByComponent: (component: string, count?: number) => Promise<LogEntry[]>;
+
+    /**
+     * Clear all log entries
+     * @returns Promise resolving when cleared
+     */
+    clear: () => Promise<void>;
+
+    /**
+     * Update logging configuration
+     * @param config - New logging configuration
+     * @returns Promise resolving when updated
+     */
+    updateConfig: (config: LoggingConfig) => Promise<void>;
+
+    /**
+     * Get current logging configuration
+     * @returns Promise resolving to current configuration
+     */
+    getConfig: () => Promise<LoggingConfig>;
+  };
+
+  // ========================================
   // Logic Engine API (Epic 4)
   // ========================================
 
@@ -1051,45 +1479,26 @@ export interface ElectronAPI {
      * @param profilePath - Optional path to profile data directory
      * @returns Promise with success status and statistics
      */
-    loadAll: (profilePath?: string) => Promise<{
-      success: boolean;
-      statistics?: any;
-      error?: string;
-    }>;
+    loadAll: (profilePath?: string) => Promise<LogicEngineLoadResult>;
 
     /**
      * Get comprehensive user detail projection
      * @param userId - User SID or UPN
      * @returns Promise with UserDetailProjection
      */
-    getUserDetail: (userId: string) => Promise<{
-      success: boolean;
-      data?: any;
-      error?: string;
-    }>;
+    getUserDetail: (userId: string) => Promise<LogicEngineUserDetailResult>;
 
     /**
      * Get current data load statistics
      * @returns Promise with statistics object
      */
-    getStatistics: () => Promise<{
-      success: boolean;
-      data?: {
-        statistics: any;
-        lastLoadTime?: Date;
-        isLoading: boolean;
-      };
-      error?: string;
-    }>;
+    getStatistics: () => Promise<LogicEngineStatisticsResult>;
 
     /**
      * Invalidate cache and force reload on next access
      * @returns Promise with success status
      */
-    invalidateCache: () => Promise<{
-      success: boolean;
-      error?: string;
-    }>;
+    invalidateCache: () => Promise<LogicEngineCacheResult>;
 
     /**
      * Listen for load progress events
@@ -1117,46 +1526,20 @@ export interface ElectronAPI {
      * @param userId - User SID or UPN
      * @returns Promise with complexity score, level, and contributing factors
      */
-    analyzeMigrationComplexity: (userId: string) => Promise<{
-      success: boolean;
-      data?: {
-        score: number;
-        level: 'Low' | 'Medium' | 'High';
-        factors: string[];
-      };
-      error?: string;
-    }>;
+    analyzeMigrationComplexity: (userId: string) => Promise<MigrationComplexityResult>;
 
     /**
      * Batch analyze migration complexity for multiple users
      * @param userIds - Array of user SIDs or UPNs
      * @returns Promise with complexity results mapped by userId
      */
-    batchAnalyzeMigrationComplexity: (userIds: string[]) => Promise<{
-      success: boolean;
-      data?: Record<string, {
-        score: number;
-        level: 'Low' | 'Medium' | 'High';
-        factors: string[];
-      }>;
-      error?: string;
-    }>;
+    batchAnalyzeMigrationComplexity: (userIds: string[]) => Promise<MigrationComplexityBatchResult>;
 
     /**
      * Get complexity statistics for all analyzed users
      * @returns Promise with complexity statistics
      */
-    getComplexityStatistics: () => Promise<{
-      success: boolean;
-      data?: {
-        total: number;
-        low: number;
-        medium: number;
-        high: number;
-        analyzed: number;
-      };
-      error?: string;
-    }>;
+    getComplexityStatistics: () => Promise<MigrationComplexityStatisticsResult>;
   };
 }
 

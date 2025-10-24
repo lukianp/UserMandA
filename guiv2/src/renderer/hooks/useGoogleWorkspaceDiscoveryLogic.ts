@@ -67,20 +67,54 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
 
   // Real-time progress tracking via IPC
   useEffect(() => {
-    const unsubscribe = window.electronAPI?.onProgress?.((data: any) => {
-      if (data.type === 'google-workspace-discovery' && data.token === state.cancellationToken) {
+    const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
+      if (data.executionId === state.cancellationToken) {
         setState(prev => ({
           ...prev,
           progress: {
-            current: data.current || 0,
-            total: data.total || 100,
-            message: data.message || '',
+            current: data.itemsProcessed || 0,
+            total: data.totalItems || 100,
+            message: `${data.currentPhase} (${data.itemsProcessed || 0}/${data.totalItems || 0})`,
             percentage: data.percentage || 0
           }
         }));
       }
     });
-    return () => { if (unsubscribe) unsubscribe(); };
+
+    const unsubscribeOutput = window.electron.onDiscoveryOutput((data) => {
+      // Handle output if needed
+    });
+
+    const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
+      if (data.executionId === state.cancellationToken) {
+        setState(prev => ({
+          ...prev,
+          result: data.result,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 100, total: 100, message: 'Discovery completed', percentage: 100 }
+        }));
+      }
+    });
+
+    const unsubscribeError = window.electron.onDiscoveryError((data) => {
+      if (data.executionId === state.cancellationToken) {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          error: data.error,
+          progress: { current: 0, total: 100, message: 'Error occurred', percentage: 0 }
+        }));
+      }
+    });
+
+    return () => {
+      if (unsubscribeProgress) unsubscribeProgress();
+      if (unsubscribeOutput) unsubscribeOutput();
+      if (unsubscribeComplete) unsubscribeComplete();
+      if (unsubscribeError) unsubscribeError();
+    };
   }, [state.cancellationToken]);
 
   // Start discovery
@@ -95,31 +129,22 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
     }));
 
     try {
-      const discoveryResult = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/GoogleWorkspaceDiscovery.psm1',
-        functionName: 'Invoke-GoogleWorkspaceDiscovery',
+      await window.electron.executeDiscovery({
+        moduleName: 'GoogleWorkspaceDiscovery',
         parameters: {
-          Domain: state.config.domain,
-          AdminEmail: state.config.adminEmail,
-          ServiceAccountKey: state.config.serviceAccountKeyPath,
-          ServiceTypes: state.config.serviceTypes,
-          IncludeUserDetails: state.config.includeUserDetails,
-          IncludeGroupMembership: state.config.includeGroupMembership,
-          IncludeMailboxSize: state.config.includeMailboxSize,
-          IncludeDriveUsage: state.config.includeDriveUsage,
-          IncludeCalendarDetails: state.config.includeCalendarDetails,
-          OrgUnits: state.config.orgUnits,
-          cancellationToken: token
+          domain: state.config.domain,
+          adminEmail: state.config.adminEmail,
+          serviceAccountKeyPath: state.config.serviceAccountKeyPath,
+          serviceTypes: state.config.serviceTypes,
+          includeUserDetails: state.config.includeUserDetails,
+          includeGroupMembership: state.config.includeGroupMembership,
+          includeMailboxSize: state.config.includeMailboxSize,
+          includeDriveUsage: state.config.includeDriveUsage,
+          includeCalendarDetails: state.config.includeCalendarDetails,
+          orgUnits: state.config.orgUnits,
         },
+        executionId: token,
       });
-
-      setState(prev => ({
-        ...prev,
-        result: discoveryResult.data,
-        isDiscovering: false,
-        cancellationToken: null,
-        progress: { current: 100, total: 100, message: 'Discovery completed', percentage: 100 }
-      }));
     } catch (error: any) {
       console.error('Google Workspace discovery failed:', error);
       setState(prev => ({
@@ -135,7 +160,7 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
   const cancelDiscovery = useCallback(async () => {
     if (state.cancellationToken) {
       try {
-        await window.electronAPI.cancelExecution(state.cancellationToken);
+        await window.electron.cancelDiscovery(state.cancellationToken);
       } catch (error) {
         console.error('Failed to cancel discovery:', error);
       }
@@ -412,7 +437,6 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
     // State
     config: state.config,
     result: state.result,
-    currentResult: result,
     isDiscovering: state.isDiscovering,
     progress: state.progress,
     activeTab: state.activeTab,

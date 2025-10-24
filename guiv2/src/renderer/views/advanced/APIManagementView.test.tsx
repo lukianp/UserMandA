@@ -16,11 +16,7 @@ import {
 } from '../../test-utils/viewTestHelpers';
 
 // Mock the hook
-const mockUseAPIManagementLogic = jest.fn();
-
-jest.mock('../../hooks/useAPIManagementLogic', () => ({
-  useAPIManagementLogic: mockUseAPIManagementLogic,
-}));
+jest.mock('../../hooks/useAPIManagementLogic');
 
 import { useAPIManagementLogic } from '../../hooks/useAPIManagementLogic';
 
@@ -353,6 +349,3 @@ describe('APIManagementView', () => {
     });
   });
 });
-
-
-export default APIManagementView.test;

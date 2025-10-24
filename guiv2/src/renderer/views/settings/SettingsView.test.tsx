@@ -10,11 +10,12 @@ import '@testing-library/jest-dom';
 import {
   mockSuccessfulExecution,
   mockFailedExecution,
-  
-  
+
+
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 
 import SettingsView from './SettingsView';
 
@@ -26,7 +27,37 @@ jest.mock('../../hooks/useSettingsLogic', () => ({
 const { useSettingsLogic } = require('../../hooks/useSettingsLogic');
 
 describe('SettingsView', () => {
-  const mockHookDefaults = createUniversalDiscoveryHook();
+  const mockHookDefaults = {
+    settings: {
+      general: {
+        autoSave: true,
+        confirmBeforeClose: true,
+        checkForUpdates: true,
+      },
+      theme: {
+        isDarkTheme: false,
+        colorScheme: 'blue',
+        fontSize: 'medium',
+      },
+      discovery: {
+        defaultTimeout: 300,
+        maxResults: 10000,
+        autoRefresh: false,
+      },
+      export: {
+        defaultFormat: 'csv',
+        includeHeaders: true,
+        dateFormat: 'ISO',
+      },
+    },
+    updateSetting: jest.fn(),
+    updateThemeSetting: jest.fn(),
+    saveSettings: jest.fn(),
+    resetSettings: jest.fn(),
+    isSaving: false,
+    hasChanges: false,
+    saveSuccess: false,
+  };
 
   beforeEach(() => {
     resetAllMocks();

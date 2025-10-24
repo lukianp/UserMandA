@@ -31,7 +31,7 @@ const createWindow = (): void => {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: process.env.NODE_ENV === 'production',
     },
     backgroundColor: '#1a1a1a',
     show: true, // Changed to show immediately for debugging
@@ -57,6 +57,25 @@ const createWindow = (): void => {
         ]
       }
     });
+  });
+
+  // Note: Permission handler not available in this Electron version, but security is enforced via other means
+
+  // Disable dangerous features
+  mainWindow.webContents.session.setPreloads([]);
+  mainWindow.webContents.session.setSpellCheckerLanguages([]);
+  mainWindow.webContents.session.setSpellCheckerEnabled(false);
+
+  // Add security event handlers
+  mainWindow.webContents.setWindowOpenHandler(() => {
+    return { action: 'deny' }; // Block new windows
+  });
+
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    const parsedUrl = new URL(navigationUrl);
+    if (parsedUrl.origin !== 'file://' && parsedUrl.origin !== 'http://localhost:3000') {
+      event.preventDefault(); // Block external navigation except localhost for dev
+    }
   });
 
   // and load the index.html of the app.

@@ -105,7 +105,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     );
 
     return (
-      <div className={containerClasses} data-cy={dataCy}>
+      <div className={containerClasses}>
         {label && (
           <label htmlFor={inputId} className={labelClasses}>
             {label}
@@ -144,6 +144,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             }
             aria-required={required}
             disabled={disabled}
+            data-cy={dataCy}
             {...props}
           />
 

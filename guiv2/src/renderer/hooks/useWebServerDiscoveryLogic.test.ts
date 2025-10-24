@@ -127,12 +127,26 @@ describe('useWebServerDiscoveryLogic', () => {
   });
 
   it('should cancel discovery when token exists', async () => {
+    // Make executeModule delay to simulate ongoing discovery
+    mockElectronAPI.executeModule.mockImplementationOnce(() => new Promise((resolve) => {
+      setTimeout(() => resolve({ success: true, data: discoveryPayload }), 1000);
+    }));
     mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
 
     const { result } = renderHook(() => useWebServerDiscoveryLogic());
 
+    // Start discovery (won't complete immediately due to delay)
     await act(async () => {
-      await result.current.startDiscovery();
+      result.current.startDiscovery();
+    });
+
+    // Wait a tick for state to update
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    });
+
+    // Now cancel while discovery is running
+    await act(async () => {
       await result.current.cancelDiscovery();
     });
 

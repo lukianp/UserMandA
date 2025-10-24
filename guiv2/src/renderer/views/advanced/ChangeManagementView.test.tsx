@@ -343,4 +343,3 @@ describe('ChangeManagementView', () => {
 });
 
 
-export default ChangeManagementView.test;

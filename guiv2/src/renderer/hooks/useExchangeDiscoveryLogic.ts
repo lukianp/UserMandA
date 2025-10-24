@@ -53,6 +53,37 @@ export function useExchangeDiscoveryLogic() {
     loadTemplates();
   }, []);
 
+  // Event handlers for discovery
+  useEffect(() => {
+    const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
+      if (data.executionId === 'exchange-discovery') {
+        setProgress(data as unknown as ExchangeDiscoveryProgress);
+      }
+    });
+
+    const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
+      if (data.executionId === 'exchange-discovery') {
+        setResult(data.result as ExchangeDiscoveryResult);
+        setIsDiscovering(false);
+        setProgress(null);
+      }
+    });
+
+    const unsubscribeError = window.electron.onDiscoveryError((data) => {
+      if (data.executionId === 'exchange-discovery') {
+        setError(data.error);
+        setIsDiscovering(false);
+        setProgress(null);
+      }
+    });
+
+    return () => {
+      if (unsubscribeProgress) unsubscribeProgress();
+      if (unsubscribeComplete) unsubscribeComplete();
+      if (unsubscribeError) unsubscribeError();
+    };
+  }, []);
+
   const loadTemplates = async () => {
     try {
       const result = await window.electronAPI.executeModule({
@@ -84,34 +115,23 @@ export function useExchangeDiscoveryLogic() {
     });
 
     try {
-      // Set up progress listener
-      const unsubscribe = window.electronAPI.onProgress((data: ProgressData) => {
-        setProgress(data as unknown as ExchangeDiscoveryProgress);
-      });
-
-      // Execute discovery
-      const discoveryResult = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/ExchangeDiscovery.psm1',
-        functionName: 'Invoke-ExchangeDiscovery',
+      await window.electron.executeDiscovery({
+        moduleName: 'ExchangeDiscovery',
         parameters: {
-          Config: config,
+          config: config,
         },
+        executionId: 'exchange-discovery',
       });
-
-      setResult(discoveryResult.data as ExchangeDiscoveryResult);
-      setProgress(null);
-      unsubscribe();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Discovery failed');
-      setProgress(null);
-    } finally {
       setIsDiscovering(false);
+      setProgress(null);
     }
   }, [config]);
 
   const cancelDiscovery = useCallback(async () => {
     try {
-      await window.electronAPI.cancelExecution('exchange-discovery');
+      await window.electron.cancelDiscovery('exchange-discovery');
       setIsDiscovering(false);
       setProgress(null);
     } catch (err) {

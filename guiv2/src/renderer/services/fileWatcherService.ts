@@ -32,39 +32,10 @@ export class FileWatcherService {
   private watchers: Map<string, () => void> = new Map();
   private changeCallbacks: Map<string, (event: FileChangeEvent) => void> = new Map();
   private dataRefreshCallbacks: Set<(dataType: string) => void> = new Set();
+  private profileWatchers: Map<string, () => void> = new Map();
 
   constructor() {
-    this.setupEventListeners();
-  }
-
-  /**
-   * Setup event listeners for file change events from main process
-   */
-  private setupEventListeners(): void {
-    // Listen for file change events
-    const cleanup = window.electronAPI.onFileChanged((data: any) => {
-      const event: FileChangeEvent = {
-        type: data.type,
-        filePath: data.filePath,
-        fileName: data.fileName,
-        directory: data.directory,
-        profileId: data.profileId,
-        timestamp: new Date(data.timestamp),
-        fileSize: data.fileSize,
-        extension: data.extension,
-      };
-
-      // Notify all registered callbacks
-      this.changeCallbacks.forEach((callback) => {
-        callback(event);
-      });
-
-      // Trigger data refresh based on file type
-      this.triggerDataRefresh(event);
-    });
-
-    // Store cleanup function
-    this.watchers.set('global-file-listener', cleanup);
+    // No global event listeners needed - using direct fs.watchDirectory
   }
 
   /**
@@ -109,47 +80,80 @@ export class FileWatcherService {
   }
 
   /**
-   * Watch a directory for file changes
+   * Watch a directory for file changes using window.electron.fs.watchDirectory
    * Mirrors C# CacheAwareFileWatcherService.WatchDirectory pattern
    *
    * @param path Directory path to watch
    * @param onChange Callback function for file changes
    * @returns Cleanup function to stop watching
    */
-  watchDirectory(path: string, onChange: (filePath: string) => void): () => void {
+  async watchDirectory(path: string, onChange: (filePath: string) => void): Promise<() => void> {
     const watcherId = crypto.randomUUID();
 
-    // Create a wrapper callback that filters by path
-    const callback = (event: FileChangeEvent) => {
-      if (event.filePath.startsWith(path)) {
-        onChange(event.filePath);
-      }
-    };
+    try {
+      // Use window.electron.fs.watchDirectory for direct file watching
+      const unwatch = window.electron.fs.watchDirectory(path, '*.csv', (event) => {
+        // Event includes the file path that changed
+        onChange(event);
+      });
 
-    this.changeCallbacks.set(watcherId, callback);
+      this.watchers.set(watcherId, unwatch);
 
-    // Return cleanup function
-    return () => {
-      this.changeCallbacks.delete(watcherId);
-    };
+      // Return cleanup function
+      return () => {
+        const watcher = this.watchers.get(watcherId);
+        if (watcher) {
+          watcher();
+          this.watchers.delete(watcherId);
+        }
+      };
+    } catch (error: any) {
+      console.error(`Failed to start watching directory: ${path}`, error);
+      throw error;
+    }
   }
 
   /**
-   * Watch a specific profile's data directories
+   * Watch a specific profile's data directories using fs.watchDirectory
    * @param profileId Profile ID to watch
    * @returns Cleanup function
    */
   async watchProfile(profileId: string): Promise<() => void> {
     try {
-      const result = await window.electronAPI.startFileWatcher(profileId);
+      // Get the raw data path for the profile
+      const rawDataPath = await window.electron.fs.getRawDataPath(profileId);
 
-      if (!result.success) {
-        throw new Error(`Failed to start file watcher for profile: ${profileId}`);
-      }
+      // Start watching the raw directory for CSV files
+      const unwatch = window.electron.fs.watchDirectory(rawDataPath, '*.csv', (changedPath: string) => {
+        // Create file change event
+        const event: FileChangeEvent = {
+          type: 'changed', // Assume changed since we don't get specific type from fs API
+          filePath: changedPath,
+          fileName: changedPath.split(/[/\\]/).pop() || '',
+          directory: 'raw',
+          profileId: profileId,
+          timestamp: new Date(),
+          extension: changedPath.split('.').pop(),
+        };
 
-      // Return cleanup function that stops watching
-      return async () => {
-        await window.electronAPI.stopFileWatcher(profileId);
+        // Notify all registered callbacks
+        this.changeCallbacks.forEach((callback) => {
+          callback(event);
+        });
+
+        // Trigger data refresh based on file type
+        this.triggerDataRefresh(event);
+      });
+
+      // Store the watcher cleanup function
+      this.profileWatchers.set(profileId, unwatch);
+
+      return () => {
+        const watcher = this.profileWatchers.get(profileId);
+        if (watcher) {
+          watcher();
+          this.profileWatchers.delete(profileId);
+        }
       };
     } catch (error: any) {
       console.error(`Failed to start watching profile: ${profileId}`, error);
@@ -245,6 +249,11 @@ export class FileWatcherService {
     // Clean up all watchers
     this.watchers.forEach((cleanup) => cleanup());
     this.watchers.clear();
+
+    // Clean up profile watchers
+    this.profileWatchers.forEach((cleanup) => cleanup());
+    this.profileWatchers.clear();
+
     this.changeCallbacks.clear();
     this.dataRefreshCallbacks.clear();
   }

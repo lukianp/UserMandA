@@ -1,6 +1,9 @@
 const path = require('path');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
+const CspHtmlWebpackPlugin = require('csp-html-webpack-plugin');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+const CompressionPlugin = require('compression-webpack-plugin');
 
 const { rules } = require('./webpack.rules');
 const { plugins } = require('./webpack.plugins');
@@ -10,7 +13,28 @@ const rendererConfig = {
   module: {
     rules,
   },
-  plugins,
+  plugins: [
+    ...plugins,
+    new CspHtmlWebpackPlugin({
+      'default-src': ["'self'"],
+      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      'style-src': ["'self'", "'unsafe-inline'"],
+      'img-src': ["'self'", 'data:', 'blob:'],
+      'connect-src': ["'self'", 'ws:', 'wss:'],
+      'font-src': ["'self'", 'data:', 'blob:'],
+    }),
+    new BundleAnalyzerPlugin({
+      analyzerMode: 'static',
+      openAnalyzer: false,
+      reportFilename: 'bundle-analysis.html',
+    }),
+    new CompressionPlugin({
+      algorithm: 'gzip',
+      test: /\.js$|\.css$|\.html$|\.svg$/,
+      threshold: 10240,
+      minRatio: 0.8,
+    }),
+  ],
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css'],
     alias: {
@@ -93,6 +117,20 @@ const rendererConfig = {
           name: 'vendor-common',
           priority: 5,
           reuseExistingChunk: true,
+        },
+        discovery: {
+          test: /[\\/]src[\\/]renderer[\\/]views[\\/]discovery[\\/]/,
+          name: 'discovery',
+          priority: 20,
+          reuseExistingChunk: true,
+          enforce: true,
+        },
+        migration: {
+          test: /[\\/]src[\\/]renderer[\\/]views[\\/]migration[\\/]/,
+          name: 'migration',
+          priority: 20,
+          reuseExistingChunk: true,
+          enforce: true,
         },
         default: {
           minChunks: 2,

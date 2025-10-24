@@ -129,7 +129,7 @@ export const useVMwareDiscoveryLogic = () => {
     const headers = ['Type', 'Name', 'Cluster', 'Status', 'CPU', 'Memory', 'Details'];
     const rows: string[][] = [];
 
-    data.hosts.forEach((host) => {
+    (data?.hosts ?? []).forEach((host) => {
       rows.push([
         'Host',
         host.name ?? 'Unknown',
@@ -147,10 +147,11 @@ export const useVMwareDiscoveryLogic = () => {
   // Filter data based on search text
   const filteredHosts = useMemo(() => {
     if (!result) return [];
-    if (!searchText) return result.hosts;
+    const hosts = result?.hosts ?? [];
+    if (!searchText) return hosts;
 
     const search = searchText.toLowerCase();
-    return result.hosts.filter(
+    return hosts.filter(
       (host) =>
         host.name.toLowerCase().includes(search) ||
         host.cluster?.toLowerCase().includes(search) ||
@@ -160,10 +161,11 @@ export const useVMwareDiscoveryLogic = () => {
 
   const filteredVMs = useMemo(() => {
     if (!result) return [];
-    if (!searchText) return result.vms;
+    const vms = result?.vms ?? [];
+    if (!searchText) return vms;
 
     const search = searchText.toLowerCase();
-    return result.vms.filter(
+    return vms.filter(
       (vm) =>
         vm.name.toLowerCase().includes(search) ||
         vm.guestOS.toLowerCase().includes(search) ||
@@ -173,10 +175,11 @@ export const useVMwareDiscoveryLogic = () => {
 
   const filteredClusters = useMemo(() => {
     if (!result) return [];
-    if (!searchText) return result.clusters;
+    const clusters = result?.clusters ?? [];
+    if (!searchText) return clusters;
 
     const search = searchText.toLowerCase();
-    return result.clusters.filter((cluster) => cluster.name.toLowerCase().includes(search));
+    return clusters.filter((cluster) => cluster.name.toLowerCase().includes(search));
   }, [result, searchText]);
 
   // AG Grid column definitions
@@ -244,12 +247,12 @@ export const useVMwareDiscoveryLogic = () => {
   const stats = useMemo(() => {
     if (!result) return null;
 
-    const totalHosts = result.hosts.length;
-    const totalVMs = result.vms.length;
-    const poweredOnVMs = result.vms.filter((vm) => vm.powerState === 'PoweredOn').length;
-    const totalClusters = result.clusters.length;
-    const totalStorageTB = result.datastores?.reduce((sum, ds) => sum + ds.capacityGB, 0) / 1024 || 0;
-    const usedStorageTB = result.datastores?.reduce((sum, ds) => sum + (ds.capacityGB - (ds.freeGB || ds.freeSpaceGB)), 0) / 1024 || 0;
+    const totalHosts = result?.hosts?.length ?? 0;
+    const totalVMs = result?.vms?.length ?? 0;
+    const poweredOnVMs = (result?.vms ?? []).filter((vm) => vm.powerState === 'PoweredOn').length;
+    const totalClusters = result?.clusters?.length ?? 0;
+    const totalStorageTB = (result?.datastores ?? []).reduce((sum, ds) => sum + ds.capacityGB, 0) / 1024 || 0;
+    const usedStorageTB = (result?.datastores ?? []).reduce((sum, ds) => sum + (ds.capacityGB - (ds.freeGB || ds.freeSpaceGB)), 0) / 1024 || 0;
 
     return {
       totalHosts,
