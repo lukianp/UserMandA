@@ -438,3 +438,4 @@ Google Chrome,119.0,Google,Browser`;
     await fs.writeFile(path.join(testDataPath, csvFile), 'ID\n');
   }
 }
+

@@ -2,7 +2,7 @@
  * Unit Tests for ExchangeDiscoveryView
  */
 
-import React from 'react';
+import * as React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import {  createUniversalDiscoveryHook , createUniversalConfig } from '../../../test-utils/universalDiscoveryMocks';
@@ -365,3 +365,5 @@ describe('ExchangeDiscoveryView', () => {
     });
   });
 });
+
+

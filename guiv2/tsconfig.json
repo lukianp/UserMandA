@@ -22,7 +22,8 @@
       "@renderer/*": ["src/renderer/*"],
       "@shared/*": ["src/shared/*"]
     },
-    "types": ["node", "jest", "@testing-library/jest-dom"]
+    "typeRoots": ["src/renderer/types", "node_modules/@types"],
+    "types": []
   },
   "include": [
     "src/**/*",

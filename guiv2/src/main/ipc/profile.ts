@@ -1,4 +1,4 @@
-import { ProfileService } from '../services/profileService';
+import { ProfileService } from '../services/ProfileService';
 
 let profileService: ProfileService;
 

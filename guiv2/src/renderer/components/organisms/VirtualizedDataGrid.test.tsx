@@ -13,7 +13,7 @@
  * - Accessibility
  */
 
-import React from 'react';
+import * as React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ColDef } from 'ag-grid-community';
@@ -562,3 +562,5 @@ describe('VirtualizedDataGrid', () => {
     });
   });
 });
+
+

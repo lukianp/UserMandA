@@ -2,7 +2,7 @@
  * Unit Tests for ComplianceReportView
  */
 
-import React from 'react';
+import * as React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 import {  createUniversalDiscoveryHook , createUniversalStats } from '../../../test-utils/universalDiscoveryMocks';
@@ -38,7 +38,7 @@ describe('ComplianceReportView', () => {
   
     columns: [],
     filters: { searchText: '', deviceType: '', vendor: '', status: '', location: '' },
-    filterOptions: { deviceTypes: [], vendors: [], statuses: [], locations: [], categories: [] , departments: [], roles: [], types: []},
+    filterOptions: { deviceTypes: [], vendors: [], statuses: [], locations: [], categories: [], departments: [], roles: [], types: []},
     updateFilter: jest.fn(),
     clearFilters: jest.fn(),
     setSelectedItems: jest.fn(),
@@ -369,3 +369,5 @@ describe('ComplianceReportView', () => {
     });
   });
 });
+
+

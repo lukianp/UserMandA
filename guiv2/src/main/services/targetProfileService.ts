@@ -33,6 +33,20 @@ export interface TargetProfile {
   createdAt?: string;
 }
 
+export interface CreateTargetProfileRequest {
+  name: string;
+  companyName: string;
+  profileType: 'Azure' | 'Google' | 'AWS' | 'OnPrem';
+  id?: string;
+  sourceProfileId?: string;
+  targetEnvironment?: string;
+  // Azure-specific fields
+  tenantId?: string;
+  clientId?: string;
+  clientSecret?: string;
+  domain?: string;
+}
+
 export interface TargetProfileResult {
   success: boolean;
   profile?: TargetProfile;
@@ -100,7 +114,7 @@ async function saveTargetProfiles(profiles: TargetProfile[]): Promise<void> {
  * Pattern from GUI/Services/TargetProfileService.cs:CreateProfileAsync
  */
 export async function createTargetProfile(
-  profileData: Omit<TargetProfile, 'id' | 'createdAt'>
+  profileData: CreateTargetProfileRequest
 ): Promise<TargetProfileResult> {
   try {
     const profiles = await loadTargetProfiles();
@@ -119,7 +133,7 @@ export async function createTargetProfile(
       ...profileData,
       id: profileData.id || crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      created: profileData.created || new Date().toISOString(),
+      created: new Date().toISOString(),
       lastModified: new Date().toISOString(),
       isActive: false,
       isConnected: false

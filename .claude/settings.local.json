@@ -21,7 +21,9 @@
       "Bash(if [ -f jest-phase5-final.json ])",
       "Bash(then node -e \"const r=require(''./jest-phase5-final.json''); console.log(''=== PHASE 5 FINAL RESULTS ===''); console.log(''Tests Passing:'', r.numPassedTests, ''/'', r.numTotalTests, ''('' + ((r.numPassedTests/r.numTotalTests)*100).toFixed(1) + ''%)''); console.log(''Tests Failing:'', r.numFailedTests); console.log(''Suites Passing:'', r.numPassedTestSuites, ''/'', r.numTotalTestSuites); console.log(''''); console.log(''Progress from baseline (1,636):'', ''+'' + (r.numPassedTests - 1636), ''tests''); console.log(''Progress to 95% target (2,937):'', ((r.numPassedTests/2937)*100).toFixed(1) + ''%''); console.log(''Tests remaining to target:'', 2937 - r.numPassedTests);\")",
       "Bash(for file in jest-phase4-results.json jest-after-null-safety.json jest-phase5-final.json)",
-      "Bash(then echo \"$file:\")"
+      "Bash(then echo \"$file:\")",
+      "Bash(npm test:*)",
+      "Bash(node -e:*)"
     ],
     "deny": [],
     "ask": [],

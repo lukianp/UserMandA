@@ -2,7 +2,7 @@
  * Unit Tests for IntuneDiscoveryView
  */
 
-import React from 'react';
+import * as React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import {   createUniversalDiscoveryHook , createUniversalStats , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
@@ -415,3 +415,5 @@ describe('IntuneDiscoveryView', () => {
     });
   });
 });
+
+

@@ -139,3 +139,4 @@ describe('useSQLServerDiscoveryLogic', () => {
     expect(result.current.activeTab).toBe('databases');
   });
 });
+

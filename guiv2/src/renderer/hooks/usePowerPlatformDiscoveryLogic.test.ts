@@ -140,3 +140,4 @@ describe('usePowerPlatformDiscoveryLogic', () => {
     expect(typeof result.current.exportToExcel).toBe('function');
   });
 });
+

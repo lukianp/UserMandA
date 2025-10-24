@@ -21,7 +21,7 @@ import { MockLogicEngineService } from './services/mockLogicEngineService';
 import { LogicEngineService } from './services/logicEngineService';
 import { ProjectService } from './services/projectService';
 import { DashboardService } from './services/dashboardService';
-import { ProfileService } from './services/profileService';
+import { ProfileService } from './services/ProfileService';
 
 
 // Service instances
@@ -507,6 +507,145 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   });
 
   // ========================================
+  // Additional File System Handlers
+  // ========================================
+
+  ipcMain.handle('fs:readFile', async (_, args: { path: string; encoding?: string }) => {
+    try {
+      const { path: filePath, encoding = 'utf8' } = args;
+      const sanitized = sanitizePath(filePath);
+      console.log(`IPC: fs:readFile - ${sanitized}`);
+      const result = await fs.readFile(sanitized, encoding as BufferEncoding);
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      console.error(`fs:readFile error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  ipcMain.handle('fs:writeFile', async (_, args: { path: string; content: string; encoding?: string }) => {
+    try {
+      const { path: filePath, content, encoding = 'utf8' } = args;
+      const sanitized = sanitizePath(filePath);
+      console.log(`IPC: fs:writeFile - ${sanitized}`);
+      // Ensure directory exists
+      await fs.mkdir(path.dirname(sanitized), { recursive: true });
+      await fs.writeFile(sanitized, content, encoding as BufferEncoding);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error(`fs:writeFile error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  ipcMain.handle('fs:exists', async (_, args: { path: string }) => {
+    try {
+      const { path: filePath } = args;
+      const sanitized = sanitizePath(filePath);
+      await fs.access(sanitized);
+      return { success: true, exists: true };
+    } catch {
+      return { success: true, exists: false };
+    }
+  });
+
+  ipcMain.handle('fs:mkdir', async (_, args: { path: string; recursive?: boolean }) => {
+    try {
+      const { path: dirPath, recursive = false } = args;
+      const sanitized = sanitizePath(dirPath);
+      console.log(`IPC: fs:mkdir - ${sanitized}`);
+      await fs.mkdir(sanitized, { recursive });
+      return { success: true };
+    } catch (error: unknown) {
+      console.error(`fs:mkdir error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  ipcMain.handle('fs:rmdir', async (_, args: { path: string; recursive?: boolean }) => {
+    try {
+      const { path: dirPath, recursive = false } = args;
+      const sanitized = sanitizePath(dirPath);
+      console.log(`IPC: fs:rmdir - ${sanitized}`);
+      await fs.rm(sanitized, { recursive });
+      return { success: true };
+    } catch (error: unknown) {
+      console.error(`fs:rmdir error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  ipcMain.handle('fs:unlink', async (_, args: { path: string }) => {
+    try {
+      const { path: filePath } = args;
+      const sanitized = sanitizePath(filePath);
+      console.log(`IPC: fs:unlink - ${sanitized}`);
+      await fs.unlink(sanitized);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error(`fs:unlink error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  ipcMain.handle('fs:readdir', async (_, args: { path: string; options?: { withFileTypes?: boolean } }) => {
+    try {
+      const { path: dirPath, options } = args;
+      const sanitized = sanitizePath(dirPath);
+      console.log(`IPC: fs:readdir - ${sanitized}`);
+      const result = await fs.readdir(sanitized, options);
+      return { success: true, data: result };
+    } catch (error: unknown) {
+      console.error(`fs:readdir error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  ipcMain.handle('fs:stat', async (_, args: { path: string }) => {
+    try {
+      const { path: filePath } = args;
+      const sanitized = sanitizePath(filePath);
+      const stats = await fs.stat(sanitized);
+      return {
+        success: true,
+        data: {
+          size: stats.size,
+          isFile: stats.isFile(),
+          isDirectory: stats.isDirectory(),
+          isSymbolicLink: stats.isSymbolicLink(),
+          created: stats.birthtime,
+          modified: stats.mtime,
+          accessed: stats.atime,
+        }
+      };
+    } catch (error: unknown) {
+      console.error(`fs:stat error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  // ========================================
   // Configuration Handlers
   // ========================================
 
@@ -871,6 +1010,78 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
     } catch (error: unknown) {
       console.error(`showSaveDialog error: ${error instanceof Error ? error.message : String(error)}`);
       return null;
+    }
+  });
+
+  // ========================================
+  // Window Management Handlers
+  // ========================================
+
+  ipcMain.handle('window:minimize', async () => {
+    try {
+      if (mainWindow) {
+        mainWindow.minimize();
+        return { success: true };
+      }
+      return { success: false, error: 'Main window not available' };
+    } catch (error: unknown) {
+      console.error(`window:minimize error: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle('window:maximize', async () => {
+    try {
+      if (mainWindow) {
+        if (mainWindow.isMaximized()) {
+          mainWindow.unmaximize();
+        } else {
+          mainWindow.maximize();
+        }
+        return { success: true };
+      }
+      return { success: false, error: 'Main window not available' };
+    } catch (error: unknown) {
+      console.error(`window:maximize error: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle('window:close', async () => {
+    try {
+      if (mainWindow) {
+        mainWindow.close();
+        return { success: true };
+      }
+      return { success: false, error: 'Main window not available' };
+    } catch (error: unknown) {
+      console.error(`window:close error: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle('window:restore', async () => {
+    try {
+      if (mainWindow) {
+        mainWindow.restore();
+        return { success: true };
+      }
+      return { success: false, error: 'Main window not available' };
+    } catch (error: unknown) {
+      console.error(`window:restore error: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle('window:isMaximized', async () => {
+    try {
+      if (mainWindow) {
+        return { success: true, isMaximized: mainWindow.isMaximized() };
+      }
+      return { success: false, error: 'Main window not available' };
+    } catch (error: unknown) {
+      console.error(`window:isMaximized error: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   });
 
@@ -2142,6 +2353,271 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   });
 
   // ========================================
+  // Backup and Restore Handlers
+  // ========================================
+
+  /**
+   * IPC Handler: backup:create
+   *
+   * Create a new backup operation
+   */
+  ipcMain.handle('backup:create', async (_, args: { config: any }) => {
+    try {
+      const { config } = args;
+      console.log('IPC: backup:create', config);
+
+      // TODO: Implement backup creation service
+      // For now, return mock success
+      const operationId = `backup-${Date.now()}`;
+
+      return {
+        success: true,
+        operationId,
+        filePath: `backup-${operationId}.zip`
+      };
+    } catch (error: unknown) {
+      console.error('backup:create error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: backup:cancel
+   */
+  ipcMain.handle('backup:cancel', async (_, args: { operationId: string }) => {
+    try {
+      const { operationId } = args;
+      console.log('IPC: backup:cancel', operationId);
+
+      // TODO: Implement backup cancellation
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('backup:cancel error:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  /**
+   * IPC Handler: backup:list
+   */
+  ipcMain.handle('backup:list', async () => {
+    try {
+      console.log('IPC: backup:list');
+
+      // TODO: Implement backup listing
+      return { success: true, backups: [] };
+    } catch (error: unknown) {
+      console.error('backup:list error:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error), backups: [] };
+    }
+  });
+
+  /**
+   * IPC Handler: backup:delete
+   */
+  ipcMain.handle('backup:delete', async (_, args: { operationId: string }) => {
+    try {
+      const { operationId } = args;
+      console.log('IPC: backup:delete', operationId);
+
+      // TODO: Implement backup deletion
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('backup:delete error:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  /**
+   * IPC Handler: backup:validate
+   */
+  ipcMain.handle('backup:validate', async (_, args: { filePath: string }) => {
+    try {
+      const { filePath } = args;
+      console.log('IPC: backup:validate', filePath);
+
+      // TODO: Implement backup validation
+      return {
+        success: true,
+        isValid: true,
+        errors: [],
+        warnings: []
+      };
+    } catch (error: unknown) {
+      console.error('backup:validate error:', error);
+      return {
+        success: false,
+        isValid: false,
+        errors: [error instanceof Error ? error.message : String(error)],
+        warnings: []
+      };
+    }
+  });
+
+  // ========================================
+  // Restore Handlers
+  // ========================================
+
+  /**
+   * IPC Handler: restore:create
+   */
+  ipcMain.handle('restore:create', async (_, args: { backupFilePath: string; config: any }) => {
+    try {
+      const { backupFilePath, config } = args;
+      console.log('IPC: restore:create', backupFilePath, config);
+
+      // TODO: Implement restore creation service
+      const operationId = `restore-${Date.now()}`;
+
+      return {
+        success: true,
+        operationId
+      };
+    } catch (error: unknown) {
+      console.error('restore:create error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * IPC Handler: restore:cancel
+   */
+  ipcMain.handle('restore:cancel', async (_, args: { operationId: string }) => {
+    try {
+      const { operationId } = args;
+      console.log('IPC: restore:cancel', operationId);
+
+      // TODO: Implement restore cancellation
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('restore:cancel error:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // ========================================
+  // Migration Operation Handlers
+  // ========================================
+
+  /**
+   * IPC Handler: migration:plan
+   */
+  ipcMain.handle('migration:plan', async (_, args: { provider: string; profileId: string; args: any }) => {
+    try {
+      const { provider, profileId, args: migrationArgs } = args;
+      console.log('IPC: migration:plan', provider, profileId);
+
+      // TODO: Implement migration planning service
+      const runId = `migration-${Date.now()}`;
+
+      return { runId };
+    } catch (error: unknown) {
+      console.error('migration:plan error:', error);
+      throw new Error(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  /**
+   * IPC Handler: migration:execute
+   */
+  ipcMain.handle('migration:execute', async (_, args: { provider: string; profileId: string; runId?: string; args: any }) => {
+    try {
+      const { provider, profileId, runId, args: executionArgs } = args;
+      console.log('IPC: migration:execute', provider, profileId, runId);
+
+      // TODO: Implement migration execution service
+      const executionRunId = runId || `migration-${Date.now()}`;
+
+      return { runId: executionRunId };
+    } catch (error: unknown) {
+      console.error('migration:execute error:', error);
+      throw new Error(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  /**
+   * IPC Handler: migration:cancel
+   */
+  ipcMain.handle('migration:cancel', async (_, args: { runId: string }) => {
+    try {
+      const { runId } = args;
+      console.log('IPC: migration:cancel', runId);
+
+      // TODO: Implement migration cancellation
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('migration:cancel error:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  /**
+   * IPC Handler: migration:pause
+   */
+  ipcMain.handle('migration:pause', async (_, args: { runId: string }) => {
+    try {
+      const { runId } = args;
+      console.log('IPC: migration:pause', runId);
+
+      // TODO: Implement migration pause
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('migration:pause error:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  /**
+   * IPC Handler: migration:resume
+   */
+  ipcMain.handle('migration:resume', async (_, args: { runId: string }) => {
+    try {
+      const { runId } = args;
+      console.log('IPC: migration:resume', runId);
+
+      // TODO: Implement migration resume
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('migration:resume error:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  /**
+   * IPC Handler: migration:get-statistics
+   */
+  ipcMain.handle('migration:get-statistics', async (_, args: { runId: string }) => {
+    try {
+      const { runId } = args;
+      console.log('IPC: migration:get-statistics', runId);
+
+      // TODO: Implement migration statistics
+      return {
+        success: true,
+        statistics: {
+          totalItems: 0,
+          processedItems: 0,
+          successCount: 0,
+          errorCount: 0,
+          progressPercentage: 0
+        }
+      };
+    } catch (error: unknown) {
+      console.error('migration:get-statistics error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  // ========================================
   // Migration Plan Persistence (Epic 2)
   // ========================================
   const { registerMigrationHandlers } = await import('./ipcHandlers.migration');
@@ -2195,6 +2671,207 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   const { registerLoggingHandlers, initializeLogging } = await import('./ipc/loggingHandlers');
   await initializeLogging();
   registerLoggingHandlers();
+
+  // ========================================
+  // Webhook Handlers
+  // ========================================
+
+  ipcMain.handle('getWebhooks', async (_, args: { page?: number; limit?: number; search?: string } = {}) => {
+    try {
+      const { page = 1, limit = 20, search } = args;
+      const { webhookService } = await import('../renderer/services/webhookService');
+      const allWebhooks = webhookService.getAllWebhooks();
+
+      // Apply search filter
+      let filteredWebhooks = allWebhooks;
+      if (search) {
+        const searchLower = search.toLowerCase();
+        filteredWebhooks = allWebhooks.filter(webhook =>
+          webhook.name.toLowerCase().includes(searchLower) ||
+          webhook.url.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Apply pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedWebhooks = filteredWebhooks.slice(startIndex, endIndex);
+
+      return {
+        success: true,
+        data: {
+          webhooks: paginatedWebhooks,
+          total: filteredWebhooks.length,
+          page,
+          limit,
+          totalPages: Math.ceil(filteredWebhooks.length / limit)
+        }
+      };
+    } catch (error: unknown) {
+      console.error(`getWebhooks error: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle('createWebhook', async (_, webhookData: any) => {
+    try {
+      const { webhookService } = await import('../renderer/services/webhookService');
+      const webhook = webhookService.register(webhookData);
+      return { success: true, data: webhook };
+    } catch (error: unknown) {
+      console.error(`createWebhook error: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle('updateWebhook', async (_, args: { webhookId: string; updates: any }) => {
+    try {
+      const { webhookId, updates } = args;
+      const { webhookService } = await import('../renderer/services/webhookService');
+      const success = webhookService.update(webhookId, updates);
+      if (success) {
+        const webhook = webhookService.getWebhook(webhookId);
+        return { success: true, data: webhook };
+      } else {
+        return { success: false, error: 'Webhook not found or update failed' };
+      }
+    } catch (error: unknown) {
+      console.error(`updateWebhook error: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle('deleteWebhook', async (_, args: { webhookId: string }) => {
+    try {
+      const { webhookId } = args;
+      const { webhookService } = await import('../renderer/services/webhookService');
+      const success = webhookService.unregister(webhookId);
+      return { success };
+    } catch (error: unknown) {
+      console.error(`deleteWebhook error: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle('triggerWebhook', async (_, args: { webhookId: string; event: string; data?: any }) => {
+    try {
+      const { webhookId, event, data = {} } = args;
+      const { webhookService } = await import('../renderer/services/webhookService');
+      const webhook = webhookService.getWebhook(webhookId);
+      if (!webhook) {
+        return { success: false, error: 'Webhook not found' };
+      }
+      await webhookService.trigger(event, data);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error(`triggerWebhook error: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // ========================================
+  // Workflow Handlers
+  // ========================================
+
+  ipcMain.handle('getWorkflows', async (_, args: { page?: number; limit?: number; search?: string } = {}) => {
+    try {
+      const { page = 1, limit = 20, search } = args;
+
+      // For now, return a mock response since workflow service doesn't exist yet
+      // This should be replaced with actual workflow service integration
+      const mockWorkflows = [
+        {
+          id: 'workflow-1',
+          name: 'Sample Migration Workflow',
+          description: 'Automated user migration workflow',
+          status: 'active',
+          steps: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          executionCount: 0,
+          lastExecutedAt: null
+        }
+      ];
+
+      // Apply search filter
+      let filteredWorkflows = mockWorkflows;
+      if (search) {
+        const searchLower = search.toLowerCase();
+        filteredWorkflows = mockWorkflows.filter(workflow =>
+          workflow.name.toLowerCase().includes(searchLower) ||
+          workflow.description.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Apply pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedWorkflows = filteredWorkflows.slice(startIndex, endIndex);
+
+      return {
+        success: true,
+        data: {
+          workflows: paginatedWorkflows,
+          total: filteredWorkflows.length,
+          page,
+          limit,
+          totalPages: Math.ceil(filteredWorkflows.length / limit)
+        }
+      };
+    } catch (error: unknown) {
+      console.error(`getWorkflows error: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle('createWorkflow', async (_, workflowData: any) => {
+    try {
+      // For now, return mock success since workflow service doesn't exist yet
+      const mockWorkflow = {
+        id: `workflow-${Date.now()}`,
+        ...workflowData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        executionCount: 0,
+        lastExecutedAt: null
+      };
+
+      console.log(`Mock workflow created: ${mockWorkflow.id}`);
+      return { success: true, data: mockWorkflow };
+    } catch (error: unknown) {
+      console.error(`createWorkflow error: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle('executeWorkflow', async (_, args: { workflowId: string; parameters?: Record<string, any> }) => {
+    try {
+      const { workflowId, parameters = {} } = args;
+
+      // For now, return mock execution result since workflow service doesn't exist yet
+      const mockExecution = {
+        id: `execution-${Date.now()}`,
+        workflowId,
+        status: 'running',
+        startedAt: new Date().toISOString(),
+        parameters,
+        steps: [],
+        currentStep: null
+      };
+
+      console.log(`Mock workflow execution started: ${mockExecution.id}`);
+
+      // Simulate async execution completion
+      setTimeout(() => {
+        console.log(`Mock workflow execution completed: ${mockExecution.id}`);
+      }, 1000);
+
+      return { success: true, data: mockExecution };
+    } catch (error: unknown) {
+      console.error(`executeWorkflow error: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
 
   console.log('All IPC handlers registered successfully');
 }

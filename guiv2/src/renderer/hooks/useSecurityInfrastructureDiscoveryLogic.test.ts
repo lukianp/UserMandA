@@ -178,3 +178,4 @@ describe('useSecurityInfrastructureDiscoveryLogic', () => {
     expect(typeof result.current.exportResults).toBe('function');
   });
 });
+

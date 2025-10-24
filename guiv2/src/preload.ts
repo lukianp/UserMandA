@@ -23,6 +23,11 @@ import type {
 } from './shared/types';
 
 /**
+// ========================================
+// Window Management
+// ========================================
+
+/**
  * Expose secure Electron API to renderer process
  */
 const electronAPI: ElectronAPI = {
@@ -57,6 +62,60 @@ const electronAPI: ElectronAPI = {
   // ========================================
   // File Operations
   // ========================================
+
+  fs: {
+    readFile: (path: string, encoding?: string) => {
+      return ipcRenderer.invoke('file:read', path, encoding);
+    },
+
+    writeFile: (path: string, content: string, encoding?: string) => {
+      return ipcRenderer.invoke('file:write', path, content, encoding);
+    },
+
+    exists: (path: string) => {
+      return ipcRenderer.invoke('file:exists', path);
+    },
+
+    mkdir: (path: string) => {
+      return ipcRenderer.invoke('file:mkdir', path);
+    },
+
+    rmdir: (path: string) => {
+      return ipcRenderer.invoke('file:rmdir', path);
+    },
+
+    unlink: (path: string) => {
+      return ipcRenderer.invoke('file:delete', path);
+    },
+
+    readdir: (path: string) => {
+      return ipcRenderer.invoke('file:readdir', path);
+    },
+
+    stat: (path: string) => {
+      return ipcRenderer.invoke('file:stat', path);
+    },
+
+    getRawDataPath: (companyName: string) => {
+      return ipcRenderer.invoke('file:getRawDataPath', companyName);
+    },
+
+    getCSVPath: (companyName: string, fileName: string) => {
+      return ipcRenderer.invoke('file:getCSVPath', companyName, fileName);
+    },
+
+    watchDirectory: (path: string, pattern?: string, callback?: (filePath: string) => void) => {
+      const subscription = (_: any, filePath: string) => {
+        if (callback) callback(filePath);
+      };
+      ipcRenderer.on('file:changed', subscription);
+      return () => ipcRenderer.removeListener('file:changed', subscription);
+    },
+
+    listFiles: (path: string, pattern?: string) => {
+      return ipcRenderer.invoke('file:list', path, pattern);
+    },
+  },
 
   readFile: (path: string, encoding?: string) => {
     return ipcRenderer.invoke('file:read', path, encoding);
@@ -326,6 +385,32 @@ const electronAPI: ElectronAPI = {
     filters?: Array<{ name: string; extensions: string[] }>;
   }) => {
     return ipcRenderer.invoke('system:showSaveDialog', options);
+  },
+
+  // ========================================
+  // Window Management
+  // ========================================
+
+  window: {
+    minimize: () => {
+      return ipcRenderer.invoke('window:minimize');
+    },
+
+    maximize: () => {
+      return ipcRenderer.invoke('window:maximize');
+    },
+
+    close: () => {
+      return ipcRenderer.invoke('window:close');
+    },
+
+    restore: () => {
+      return ipcRenderer.invoke('window:restore');
+    },
+
+    isMaximized: () => {
+      return ipcRenderer.invoke('window:isMaximized');
+    },
   },
 
   // ========================================

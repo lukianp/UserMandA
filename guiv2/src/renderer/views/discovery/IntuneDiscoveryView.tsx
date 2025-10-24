@@ -235,7 +235,7 @@ const IntuneDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Monitor className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{((stats?.totalDevices ?? 0) ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{(typeof stats?.totalDevices === 'number' ? stats.totalDevices : 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Total Devices</div>
               </div>
             </div>

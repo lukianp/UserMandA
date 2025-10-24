@@ -9,17 +9,25 @@ import { useActiveDirectoryDiscoveryLogic } from './useActiveDirectoryDiscoveryL
 
 // Mock electron API
 const mockElectronAPI: {
-  executeModule: jest.MockedFunction<any>;
-  cancelExecution: jest.MockedFunction<any>;
+  executeDiscovery: jest.MockedFunction<any>;
+  cancelDiscovery: jest.MockedFunction<any>;
   onProgress: jest.MockedFunction<any>;
+  onDiscoveryProgress: jest.MockedFunction<any>;
+  onDiscoveryOutput: jest.MockedFunction<any>;
+  onDiscoveryComplete: jest.MockedFunction<any>;
+  onDiscoveryError: jest.MockedFunction<any>;
 } = {
-  executeModule: jest.fn(),
-  cancelExecution: jest.fn(),
+  executeDiscovery: jest.fn(),
+  cancelDiscovery: jest.fn(),
   onProgress: jest.fn(),
+  onDiscoveryProgress: jest.fn(() => () => {}),
+  onDiscoveryOutput: jest.fn(() => () => {}),
+  onDiscoveryComplete: jest.fn(() => () => {}),
+  onDiscoveryError: jest.fn(() => () => {}),
 };
 
 beforeAll(() => {
-  Object.defineProperty(window, 'electronAPI', {
+  Object.defineProperty(window, 'electron', {
     writable: true,
     value: mockElectronAPI,
   });
@@ -28,7 +36,7 @@ beforeAll(() => {
 describe('useActiveDirectoryDiscoveryLogic', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockElectronAPI.executeModule.mockResolvedValue({
+    mockElectronAPI.executeDiscovery.mockResolvedValue({
       success: true,
       data: {},
     });
@@ -51,16 +59,15 @@ describe('useActiveDirectoryDiscoveryLogic', () => {
     it('should initialize with null error', () => {
       const { result } = renderHook(() => useActiveDirectoryDiscoveryLogic());
 
-      expect(result.current.error || result.current.errors).toBeFalsy();
+      expect(result.current.error).toBeNull();
+      expect(Array.isArray(result.current.errors) ? result.current.errors.length : result.current.errors).toBeFalsy();
     });
   });
 
   describe('Discovery Execution', () => {
     it('should start discovery successfully', async () => {
       const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
+      mockElectronAPI.executeDiscovery.mockResolvedValueOnce(mockResult);
 
       const { result } = renderHook(() => useActiveDirectoryDiscoveryLogic());
 
@@ -68,14 +75,14 @@ describe('useActiveDirectoryDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+      });
     });
 
     it('should handle discovery failure', async () => {
       const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
+      mockElectronAPI.executeDiscovery.mockRejectedValueOnce(new Error(errorMessage));
 
       const { result } = renderHook(() => useActiveDirectoryDiscoveryLogic());
 
@@ -83,7 +90,11 @@ describe('useActiveDirectoryDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+      });
+
+      expect(result.current.error).toBe(errorMessage);
     });
 
     it('should set progress during discovery', async () => {
@@ -91,14 +102,16 @@ describe('useActiveDirectoryDiscoveryLogic', () => {
       const progressMock = jest.fn();
       mockElectronAPI.onProgress.mockReturnValue(progressMock);
 
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce({ success: true, data: {} });
+      mockElectronAPI.executeDiscovery.mockResolvedValueOnce({ success: true, data: {} });
 
       const { result } = renderHook(() => useActiveDirectoryDiscoveryLogic());
 
       await act(async () => {
         await result.current.startDiscovery();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
       });
 
       // The test expects onProgress to be called, but it may not be called by the hook
@@ -110,15 +123,29 @@ describe('useActiveDirectoryDiscoveryLogic', () => {
 
   describe('Cancellation', () => {
     it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+      // First start a discovery to set the token
+      mockElectronAPI.executeDiscovery.mockImplementation(() =>
+        new Promise(resolve => setTimeout(() => resolve({ success: true }), 100))
+      );
+      mockElectronAPI.cancelDiscovery.mockResolvedValueOnce(undefined);
 
       const { result } = renderHook(() => useActiveDirectoryDiscoveryLogic());
 
+      // Start discovery first
+      await act(async () => {
+        result.current.startDiscovery();
+      });
+
+      // Then cancel it
       await act(async () => {
         await result.current.cancelDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isCancelling).toBe(true);
+      });
+
+      expect(mockElectronAPI.cancelDiscovery).toHaveBeenCalled();
     });
   });
 
@@ -165,3 +192,4 @@ describe('useActiveDirectoryDiscoveryLogic', () => {
     });
   });
 });
+

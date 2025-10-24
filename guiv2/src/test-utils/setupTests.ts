@@ -233,6 +233,26 @@ jest.mock('src/renderer/services/errorHandlingService', () => ({
   },
 }));
 
+
+jest.mock('src/renderer/services/notificationService', () => {
+  const mockNotificationService = {
+    show: jest.fn(),
+    dismiss: jest.fn(),
+    clear: jest.fn(),
+    subscribe: jest.fn(() => jest.fn()), // Returns unsubscribe function
+    getAll: jest.fn(() => []),
+  };
+  return {
+    getNotificationService: jest.fn(() => mockNotificationService),
+    NotificationType: {
+      SUCCESS: 'success',
+      ERROR: 'error',
+      WARNING: 'warning',
+      INFO: 'info',
+    },
+  };
+});
+
 // Note: The following services are NOT mocked globally to allow direct testing:
 // - cacheService, themeService, performanceMonitoringService, webhookService
 // Individual tests should mock them if needed

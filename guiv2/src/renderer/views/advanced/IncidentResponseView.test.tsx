@@ -2,7 +2,7 @@
  * Unit Tests for IncidentResponseView
  */
 
-import React from 'react';
+import * as React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
@@ -348,5 +348,7 @@ describe.skip('IncidentResponseView', () => {
     });
   });
 });
+
+
 
 

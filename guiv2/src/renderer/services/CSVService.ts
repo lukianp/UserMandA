@@ -6,17 +6,9 @@ export class CSVService {
   private currentProfile: string | null = null;
   private watchers = new Map<string, () => void>();
 
-  async loadCSVData(fileName: string): Promise<any[]> {
-    const currentProfile = useProfileStore.getState().currentProfile;
-    if (!currentProfile) {
-      throw new Error('No active profile selected');
-    }
-
-    const filePath = await window.electron.fs.getCSVPath(currentProfile.companyName, fileName);
-    const fileContent = await window.electron.fs.readFile(filePath);
-
+  async parseCSV(csvContent: string): Promise<any[]> {
     return new Promise((resolve, reject) => {
-      Papa.parse(fileContent, {
+      Papa.parse(csvContent, {
         header: true,
         skipEmptyLines: true,
         transformHeader: (header) => header.trim(),
@@ -34,7 +26,18 @@ export class CSVService {
     });
   }
 
-  watchCSVFiles(callback: () => void): () => void {
+  async readCSVFile(fileName: string): Promise<any[]> {
+    const currentProfile = useProfileStore.getState().currentProfile;
+    if (!currentProfile) {
+      throw new Error('No active profile selected');
+    }
+
+    const filePath = await window.electron.fs.getCSVPath(currentProfile.companyName, fileName);
+    const fileContent = await window.electron.fs.readFile(filePath);
+    return this.parseCSV(fileContent);
+  }
+
+  async watchCSVFiles(callback: () => void): Promise<() => void> {
     const currentProfile = useProfileStore.getState().currentProfile;
     if (!currentProfile) {
       return () => {};

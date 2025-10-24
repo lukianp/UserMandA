@@ -10,6 +10,7 @@
  */
 
 import * as cron from 'node-cron';
+import { cacheService } from './cacheService';
 
 import {
   DiscoveryConfig,
@@ -23,7 +24,6 @@ import {
   HistoryFilter,
 } from '../types/models/discovery';
 
-import { getCacheService } from './cacheService';
 
 /**
  * Discovery Service Class
@@ -35,7 +35,7 @@ class DiscoveryService {
   private scheduledDiscoveries: Map<string, ScheduledDiscovery>;
   private activeDiscoveries: Map<string, AbortController>;
   private cronJobs: Map<string, cron.ScheduledTask>;
-  private cacheService = getCacheService();
+  private cacheService = cacheService;
   private eventCleanupFunctions: (() => void)[] = [];
 
   constructor() {

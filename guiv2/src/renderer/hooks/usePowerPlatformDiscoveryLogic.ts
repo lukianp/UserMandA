@@ -731,7 +731,7 @@ export const usePowerPlatformDiscoveryLogic = () => {
     // State
     config: state.config,
     result: state.result,
-    currentResult: result,
+    currentResult: state.result,
     isDiscovering: state.isDiscovering,
     progress: state.progress,
     activeTab: state.activeTab,

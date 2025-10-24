@@ -2,7 +2,7 @@
  * Unit Tests for Office365DiscoveryView
  */
 
-import React from 'react';
+import * as React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import {    createUniversalDiscoveryHook , createUniversalStats , createUniversalConfig , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
@@ -357,3 +357,5 @@ describe('Office365DiscoveryView', () => {
     });
   });
 });
+
+

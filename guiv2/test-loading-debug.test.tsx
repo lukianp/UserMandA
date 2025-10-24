@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { render, screen } from '@testing-library/react';
 
 // Mock components
@@ -46,3 +46,5 @@ describe('Loading State Debug', () => {
     expect(loadingEl).toBeInTheDocument();
   });
 });
+
+

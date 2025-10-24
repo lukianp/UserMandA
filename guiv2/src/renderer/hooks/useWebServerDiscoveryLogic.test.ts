@@ -171,3 +171,4 @@ describe('useWebServerDiscoveryLogic', () => {
     expect(typeof result.current.exportToExcel).toBe('function');
   });
 });
+

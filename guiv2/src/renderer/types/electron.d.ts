@@ -489,7 +489,49 @@ export interface ElectronAPI {
      * @param path Absolute path to file
      * @returns Promise resolving to true if file exists
      */
-    fileExists: (path: string) => Promise<boolean>;
+    exists: (path: string) => Promise<boolean>;
+
+    /**
+     * Create a directory
+     * @param path Absolute path to directory
+     * @returns Promise resolving when directory is created
+     */
+    mkdir: (path: string) => Promise<void>;
+
+    /**
+     * Remove a directory
+     * @param path Absolute path to directory
+     * @returns Promise resolving when directory is removed
+     */
+    rmdir: (path: string) => Promise<void>;
+
+    /**
+     * Delete a file
+     * @param path Absolute path to file
+     * @returns Promise resolving when file is deleted
+     */
+    unlink: (path: string) => Promise<void>;
+
+    /**
+     * Read directory contents
+     * @param path Absolute path to directory
+     * @returns Promise resolving to array of file/directory names
+     */
+    readdir: (path: string) => Promise<string[]>;
+
+    /**
+     * Get file/directory statistics
+     * @param path Absolute path to file or directory
+     * @returns Promise resolving to file stats
+     */
+    stat: (path: string) => Promise<{
+      size: number;
+      isFile: boolean;
+      isDirectory: boolean;
+      mtime: Date;
+      atime: Date;
+      ctime: Date;
+    }>;
 
     /**
      * Get the raw data path for a profile
@@ -932,6 +974,45 @@ export interface ElectronAPI {
     buttonLabel?: string;
     filters?: Array<{ name: string; extensions: string[] }>;
   }) => Promise<string | null>;
+
+  // ========================================
+  // Window Management
+  // ========================================
+
+  /**
+   * Window management API
+   */
+  window: {
+    /**
+     * Minimize the main window
+     * @returns Promise resolving when window is minimized
+     */
+    minimize: () => Promise<void>;
+
+    /**
+     * Maximize the main window
+     * @returns Promise resolving when window is maximized
+     */
+    maximize: () => Promise<void>;
+
+    /**
+     * Close the main window
+     * @returns Promise resolving when window is closed
+     */
+    close: () => Promise<void>;
+
+    /**
+     * Restore the main window (from minimized/maximized state)
+     * @returns Promise resolving when window is restored
+     */
+    restore: () => Promise<void>;
+
+    /**
+     * Check if the main window is currently maximized
+     * @returns Promise resolving to true if maximized
+     */
+    isMaximized: () => Promise<boolean>;
+  };
 
   // ========================================
   // Generic IPC Invoke (for custom handlers)
@@ -1540,6 +1621,186 @@ export interface ElectronAPI {
      * @returns Promise with complexity statistics
      */
     getComplexityStatistics: () => Promise<MigrationComplexityStatisticsResult>;
+  };
+
+  // ========================================
+  // Backup and Restore API
+  // ========================================
+
+  /**
+   * Backup and Restore API for data management
+   */
+  backup: {
+    /**
+     * Create a new backup
+     * @param config - Backup configuration
+     * @returns Promise with backup result
+     */
+    createBackup: (config: import('../../../renderer/types/models/backup').BackupConfiguration) =>
+      Promise<import('../../../renderer/types/models/backup').BackupResult>;
+
+    /**
+     * Cancel an active backup operation
+     * @param operationId - Backup operation ID
+     * @returns Promise with success status
+     */
+    cancelBackup: (operationId: string) => Promise<boolean>;
+
+    /**
+     * List all available backups
+     * @returns Promise with array of backup operations
+     */
+    listBackups: () => Promise<import('../../../renderer/types/models/backup').BackupOperation[]>;
+
+    /**
+     * Delete a backup
+     * @param operationId - Backup operation ID
+     * @returns Promise with success status
+     */
+    deleteBackup: (operationId: string) => Promise<boolean>;
+
+    /**
+     * Validate a backup file
+     * @param backupFilePath - Path to backup file
+     * @returns Promise with validation result
+     */
+    validateBackup: (backupFilePath: string) => Promise<{
+      isValid: boolean;
+      errors: string[];
+      warnings: string[];
+    }>;
+
+    /**
+     * Listen for backup progress events
+     * @param callback - Called with progress updates
+     * @returns Cleanup function
+     */
+    onBackupProgress: (callback: (progress: import('../../../renderer/types/models/backup').BackupRestoreProgress) => void) => () => void;
+
+    /**
+     * Listen for backup completion events
+     * @param callback - Called when backup completes
+     * @returns Cleanup function
+     */
+    onBackupComplete: (callback: (operation: import('../../../renderer/types/models/backup').BackupOperation) => void) => () => void;
+  };
+
+  /**
+   * Restore API for data recovery
+   */
+  restore: {
+    /**
+     * Restore from a backup file
+     * @param backupFilePath - Path to backup file
+     * @param config - Restore configuration
+     * @returns Promise with restore result
+     */
+    restoreFromBackup: (
+      backupFilePath: string,
+      config: import('../../../renderer/types/models/backup').RestoreConfiguration
+    ) => Promise<import('../../../renderer/types/models/backup').RestoreResult>;
+
+    /**
+     * Cancel an active restore operation
+     * @param operationId - Restore operation ID
+     * @returns Promise with success status
+     */
+    cancelRestore: (operationId: string) => Promise<boolean>;
+
+    /**
+     * Listen for restore progress events
+     * @param callback - Called with progress updates
+     * @returns Cleanup function
+     */
+    onRestoreProgress: (callback: (progress: import('../../../renderer/types/models/backup').BackupRestoreProgress) => void) => () => void;
+
+    /**
+     * Listen for restore completion events
+     * @param callback - Called when restore completes
+     * @returns Cleanup function
+     */
+    onRestoreComplete: (callback: (operation: import('../../../renderer/types/models/backup').RestoreOperation) => void) => () => void;
+  };
+
+  // ========================================
+  // Migration Operations API
+  // ========================================
+
+  /**
+   * Migration Operations API for advanced migration features
+   */
+  migration: {
+    /**
+     * Plan a migration operation
+     * @param config - Migration planning configuration
+     * @returns Promise with planning result
+     */
+    planMigration: (config: {
+      provider: string;
+      profileId: string;
+      args: Record<string, any>;
+    }) => Promise<{ runId: string }>;
+
+    /**
+     * Execute a planned migration
+     * @param config - Migration execution configuration
+     * @returns Promise with execution result
+     */
+    executeMigration: (config: {
+      provider: string;
+      profileId: string;
+      runId?: string;
+      args: Record<string, any>;
+    }) => Promise<{ runId: string }>;
+
+    /**
+     * Cancel an active migration
+     * @param config - Cancellation configuration
+     * @returns Promise with success status
+     */
+    cancelMigration: (config: { runId: string }) => Promise<{ success: boolean }>;
+
+    /**
+     * Pause an active migration
+     * @param config - Pause configuration
+     * @returns Promise with success status
+     */
+    pauseMigration: (config: { runId: string }) => Promise<{ success: boolean }>;
+
+    /**
+     * Resume a paused migration
+     * @param config - Resume configuration
+     * @returns Promise with success status
+     */
+    resumeMigration: (config: { runId: string }) => Promise<{ success: boolean }>;
+
+    /**
+     * Get migration statistics
+     * @param config - Statistics configuration
+     * @returns Promise with migration statistics
+     */
+    getMigrationStatistics: (config: { runId: string }) => Promise<any>;
+
+    /**
+     * Listen for migration progress events
+     * @param callback - Called with progress updates
+     * @returns Cleanup function
+     */
+    onMigrationProgress: (callback: (data: any) => void) => () => void;
+
+    /**
+     * Listen for migration result events
+     * @param callback - Called when migration completes
+     * @returns Cleanup function
+     */
+    onMigrationResult: (callback: (data: any) => void) => () => void;
+
+    /**
+     * Listen for migration error events
+     * @param callback - Called when migration fails
+     * @returns Cleanup function
+     */
+    onMigrationError: (callback: (data: any) => void) => () => void;
   };
 }
 

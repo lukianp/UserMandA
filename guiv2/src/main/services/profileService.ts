@@ -343,7 +343,7 @@ export class ProfileService {
 
       // Also check C:\DiscoveryData\Profiles\*
       const profilesDir = path.join(this.dataRootPath, 'Profiles');
-      const profileDirs = await glob(path.join(profilesDir, '*'), { onlyDirectories: true });
+      const profileDirs = await glob(path.join(profilesDir, '*'));
 
       for (const dir of profileDirs) {
         const companyName = path.basename(dir);

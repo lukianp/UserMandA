@@ -2,7 +2,7 @@
  * Unit Tests for RoleManagementView
  */
 
-import React from 'react';
+import * as React from 'react';
 import { render, screen } from '@testing-library/react';
 
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
@@ -165,3 +165,5 @@ describe('RoleManagementView', () => {
 
   
 });
+
+

@@ -29,6 +29,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
 
+  const [currentToken, setCurrentToken] = useState<string | null>(null);
   // Additional state for view compatibility
   const [config, setConfig] = useState<any>({
     includeUsers: true,
@@ -72,7 +73,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
     addLog('info', 'Starting Active Directory discovery...');
 
     try {
-      await window.electron.executeDiscovery({
+      const result = await window.electron.executeDiscovery({
         moduleName: 'ActiveDirectoryDiscovery',
         parameters: {
           includeUsers: config.includeUsers,
@@ -82,6 +83,13 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
         },
         executionId: token,
       });
+
+      // Discovery completed successfully
+      setResults(result);
+      addLog('info', 'Active Directory discovery completed successfully');
+      setIsRunning(false);
+      setCurrentToken(null);
+      setProgress(null);
     } catch (err: any) {
       const errorMessage = err.message || 'Unknown error occurred during discovery';
       setError(errorMessage);

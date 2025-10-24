@@ -150,3 +150,4 @@ describe('useVMwareDiscoveryLogic', () => {
     expect(result.current.activeTab).toBe('vms');
   });
 });
+

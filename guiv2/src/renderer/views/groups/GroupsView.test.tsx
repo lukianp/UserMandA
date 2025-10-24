@@ -2,7 +2,7 @@
  * Unit Tests for GroupsView
  */
 
-import React from 'react';
+import * as React from 'react';
 
 import { renderWithProviders as render, screen, fireEvent, waitFor } from '../../test-utils/testWrappers';
 
@@ -352,3 +352,5 @@ describe('GroupsView', () => {
   });
   
 });
+
+

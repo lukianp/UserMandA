@@ -2,7 +2,7 @@
  * Unit Tests for InfrastructureDiscoveryHubView
  */
 
-import React from 'react';
+import * as React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
@@ -349,3 +349,5 @@ describe('InfrastructureDiscoveryHubView', () => {
     });
   });
 });
+
+

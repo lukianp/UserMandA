@@ -2,7 +2,7 @@
  * Unit Tests for SecurityAuditView
  */
 
-import React from 'react';
+import * as React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 import {  createUniversalDiscoveryHook , createUniversalStats } from '../../../test-utils/universalDiscoveryMocks';
@@ -39,7 +39,7 @@ describe('SecurityAuditView', () => {
     columns: [],
     isLiveMode: false,
     filters: { searchText: '', deviceType: '', vendor: '', status: '', location: '' },
-    filterOptions: { deviceTypes: [], vendors: [], statuses: [], locations: [], categories: [] , departments: [], roles: [], types: []},
+    filterOptions: { deviceTypes: [], vendors: [], statuses: [], locations: [], categories: [], departments: [], roles: [], types: []},
     updateFilter: jest.fn(),
     clearFilters: jest.fn(),
     selectedEvents: null,
@@ -373,3 +373,5 @@ describe('SecurityAuditView', () => {
     });
   });
 });
+
+
