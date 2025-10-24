@@ -201,24 +201,24 @@ export const UserManagementView: React.FC = () => {
       <div className="grid grid-cols-4 gap-4">
         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
           <div className="text-sm text-blue-600 dark:text-blue-400">Total Users</div>
-          <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{users.length}</div>
+          <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{(users ?? []).length}</div>
         </div>
         <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
           <div className="text-sm text-green-600 dark:text-green-400">Active</div>
           <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-            {users.filter(u => u.status === 'Active').length}
+            {(users ?? []).filter(u => u.status === 'Active').length}
           </div>
         </div>
         <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
           <div className="text-sm text-yellow-600 dark:text-yellow-400">Administrators</div>
           <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
-            {users.filter(u => u.role === 'Administrator').length}
+            {(users ?? []).filter(u => u.role === 'Administrator').length}
           </div>
         </div>
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
           <div className="text-sm text-red-600 dark:text-red-400">Disabled</div>
           <div className="text-2xl font-bold text-red-900 dark:text-red-100">
-            {users.filter(u => u.status === 'Disabled').length}
+            {(users ?? []).filter(u => u.status === 'Disabled').length}
           </div>
         </div>
       </div>

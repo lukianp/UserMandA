@@ -191,8 +191,8 @@ describe('ProfileService', () => {
           id: '1',
           companyName: 'Old Name',
           description: 'Old desc',
-          created: '2023-01-01',
-          lastModified: '2023-01-01',
+          created: new Date('2023-01-01'),
+          lastModified: new Date('2023-01-01'),
         },
       ];
 
@@ -200,6 +200,8 @@ describe('ProfileService', () => {
         ...mockDb.data.profiles[0],
         companyName: 'New Name',
         description: 'New desc',
+        created: mockDb.data.profiles[0].created,
+        lastModified: mockDb.data.profiles[0].lastModified,
       };
 
       const result = await service.updateProfile(updatedProfile);
@@ -217,8 +219,8 @@ describe('ProfileService', () => {
         domainController: 'dc.test.com',
         tenantId: '12345678-1234-1234-1234-123456789abc',
         isActive: false,
-        created: '2023-01-01',
-        lastModified: '2023-01-01',
+        created: '2023-01-01T00:00:00.000Z',
+        lastModified: '2023-01-01T00:00:00.000Z',
         configuration: {},
       };
 
@@ -254,8 +256,8 @@ describe('ProfileService', () => {
         domainController: 'dc.valid.com',
         tenantId: '12345678-1234-1234-1234-123456789abc',
         isActive: false,
-        created: '2023-01-01',
-        lastModified: '2023-01-01',
+        created: '2023-01-01T00:00:00.000Z',
+        lastModified: '2023-01-01T00:00:00.000Z',
         configuration: {},
       };
 
@@ -273,8 +275,8 @@ describe('ProfileService', () => {
         domainController: 'dc.valid.com',
         tenantId: 'invalid-guid', // Invalid: not a GUID
         isActive: false,
-        created: '2023-01-01',
-        lastModified: '2023-01-01',
+        created: '2023-01-01T00:00:00.000Z',
+        lastModified: '2023-01-01T00:00:00.000Z',
         configuration: {},
       };
 

@@ -87,12 +87,12 @@ export const NotificationRulesView: React.FC = () => {
       width: '120px',
       cell: (value: any) => (
         <div className="flex gap-1">
-          {value.slice(0, 3).map((channel: string) => (
+          {(value ?? []).slice(0, 3).map((channel: string) => (
             <Badge key={channel} variant="info" className="text-xs">
               {channel}
             </Badge>
           ))}
-          {value.length > 3 && (
+          {(value ?? []).length > 3 && (
             <Badge variant="info" className="text-xs">
               +{value.length - 3}
             </Badge>
@@ -107,7 +107,7 @@ export const NotificationRulesView: React.FC = () => {
       sortable: false,
       width: '120px',
       cell: (value: any) => (
-        <span className="text-sm text-gray-600">{value.length} recipients</span>
+        <span className="text-sm text-gray-600">{(value ?? []).length} recipients</span>
       ),
     },
     {
@@ -161,7 +161,7 @@ export const NotificationRulesView: React.FC = () => {
     }
   }, [deleteRule]);
 
-  const filteredRules = rules.filter(rule =>
+  const filteredRules = (rules ?? []).filter(rule =>
     rule.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     rule.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     rule.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -213,27 +213,27 @@ export const NotificationRulesView: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border">
           <Bell className="w-8 h-8 text-blue-500 mb-3" />
           <h3 className="font-semibold text-sm text-gray-600 dark:text-gray-400 mb-1">Total Rules</h3>
-          <div className="text-2xl font-bold">{rules.length}</div>
+          <div className="text-2xl font-bold">{(rules ?? []).length}</div>
           <div className="text-xs text-gray-500 mt-1">
-            {rules.filter(r => r.enabled).length} enabled
+            {(rules ?? []).filter(r => r.enabled).length} enabled
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border">
           <Settings className="w-8 h-8 text-green-500 mb-3" />
           <h3 className="font-semibold text-sm text-gray-600 dark:text-gray-400 mb-1">Active Channels</h3>
-          <div className="text-2xl font-bold">{channels.filter(c => c.enabled).length}</div>
+          <div className="text-2xl font-bold">{(channels ?? []).filter(c => c.enabled).length}</div>
           <div className="text-xs text-gray-500 mt-1">
-            {channels.length} total configured
+            {(channels ?? []).length} total configured
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border">
           <AlertCircle className="w-8 h-8 text-purple-500 mb-3" />
           <h3 className="font-semibold text-sm text-gray-600 dark:text-gray-400 mb-1">Templates</h3>
-          <div className="text-2xl font-bold">{templates.length}</div>
+          <div className="text-2xl font-bold">{(templates ?? []).length}</div>
           <div className="text-xs text-gray-500 mt-1">
-            {escalations.length} escalation policies
+            {(escalations ?? []).length} escalation policies
           </div>
         </div>
       </div>
@@ -267,7 +267,7 @@ export const NotificationRulesView: React.FC = () => {
           columns={ruleColumns}
           loading={isLoading}
           selectable={true}
-          onSelectionChange={(selectedRows: any[]) => setSelectedRules(selectedRows.map(r => r.id))}
+          onSelectionChange={(selectedRows: any[]) => setSelectedRules((selectedRows ?? []).map(r => r.id))}
           emptyMessage="No notification rules found"
         />
       </div>

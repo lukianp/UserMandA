@@ -338,6 +338,35 @@ export const createUniversalDiscoveryHook = (overrides = {}) => ({
   stats: createUniversalStats(),
   statistics: createUniversalStats(),
 
+  // Selection
+  selectedItems: [],
+  setSelectedItems: jest.fn(),
+
+  // Operations (for BulkOperationsView, NotificationRulesView, etc.)
+  operations: [],
+  setOperations: jest.fn(),
+  selectItem: jest.fn(),
+  selectAll: jest.fn(),
+  clearSelection: jest.fn(),
+  startOperation: jest.fn(),
+  cancelOperation: jest.fn(),
+  retryOperation: jest.fn(),
+  clearCompleted: jest.fn(),
+  refreshOperations: jest.fn(),
+
+  // Notification Rules
+  rules: [],
+  channels: [],
+  templates: [],
+  escalations: [],
+  createRule: jest.fn(),
+  updateRule: jest.fn(),
+  deleteRule: jest.fn(),
+  enableRule: jest.fn(),
+  disableRule: jest.fn(),
+  testRule: jest.fn(),
+  validateRule: jest.fn(),
+
   // Actions - Core
   startDiscovery: jest.fn(),
   cancelDiscovery: jest.fn(),

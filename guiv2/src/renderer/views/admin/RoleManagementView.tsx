@@ -156,18 +156,18 @@ export const RoleManagementView: React.FC = () => {
       <div className="grid grid-cols-4 gap-4">
         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
           <div className="text-sm text-blue-600 dark:text-blue-400">Total Roles</div>
-          <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{roles.length}</div>
+          <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{(roles ?? []).length}</div>
         </div>
         <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
           <div className="text-sm text-purple-600 dark:text-purple-400">Built-in Roles</div>
           <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-            {roles.filter(r => r.isBuiltIn).length}
+            {(roles ?? []).filter(r => r.isBuiltIn).length}
           </div>
         </div>
         <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
           <div className="text-sm text-green-600 dark:text-green-400">Custom Roles</div>
           <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-            {roles.filter(r => !r.isBuiltIn).length}
+            {(roles ?? []).filter(r => !r.isBuiltIn).length}
           </div>
         </div>
         <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">

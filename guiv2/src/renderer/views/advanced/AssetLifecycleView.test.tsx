@@ -311,7 +311,7 @@ describe('AssetLifecycleView', () => {
       });
 
       const { rerender } = render(<AssetLifecycleView />);
-      expect(screen.queryAllByRole('status').length > 0 || screen.queryByText(/loading/i)).toBeInTheDocument();
+      expect(screen.queryAllByRole('status').length > 0 || screen.queryByText(/loading/i)).toBeTruthy();
 
       // Data loaded
       useAssetLifecycleLogic.mockReturnValue({

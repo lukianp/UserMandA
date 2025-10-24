@@ -321,8 +321,8 @@ export const useDataLossPreventionDiscoveryLogic = () => {
       .slice(0, 5);
 
     return {
-      totalPolicies: policies.length,
-      enabledPolicies: policies.filter(p => p.isEnabled).length,
+      totalPolicies: (policies ?? []).length,
+      enabledPolicies: (policies ?? []).filter(p => p.isEnabled).length,
       totalIncidents: incidents.length,
       incidentsBySeverity,
       topPoliciesByIncidents

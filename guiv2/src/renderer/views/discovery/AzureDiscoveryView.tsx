@@ -173,7 +173,7 @@ const AzureDiscoveryView: React.FC = () => {
                 <Input
                   label="Max Results"
                   type="number"
-                  value={formData.maxResults.toString()}
+                  value={formData.maxResults?.toString() ?? ''}
                   onChange={(e) => updateFormField('maxResults', parseInt(e.target.value) || 50000)}
                   disabled={isRunning}
                   min={1}
@@ -184,7 +184,7 @@ const AzureDiscoveryView: React.FC = () => {
                 <Input
                   label="Timeout (seconds)"
                   type="number"
-                  value={formData.timeout.toString()}
+                  value={formData.timeout?.toString() ?? ''}
                   onChange={(e) => updateFormField('timeout', parseInt(e.target.value) || 600)}
                   disabled={isRunning}
                   min={60}

@@ -179,6 +179,8 @@ describe('ConflictResolutionService', () => {
         success: false,
         data: null,
         error: 'PowerShell script execution failed',
+        duration: 0,
+        warnings: [],
       });
 
       const events: any[] = [];
@@ -397,6 +399,8 @@ describe('ConflictResolutionService', () => {
         success: false,
         data: null,
         error: 'Failed to apply resolution',
+        duration: 0,
+        warnings: [],
       });
 
       const events: any[] = [];
@@ -589,9 +593,9 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockImplementation(async () => {
         callCount++;
         if (callCount === 1) {
-          return { success: true, data: { result: 'Success' }, error: null };
+          return { success: true, data: { result: 'Success' }, error: undefined, duration: 0, warnings: [] };
         } else {
-          return { success: false, data: null, error: 'Resolution failed' };
+          return { success: false, data: null, error: 'Resolution failed', duration: 0, warnings: [] };
         }
       });
 
