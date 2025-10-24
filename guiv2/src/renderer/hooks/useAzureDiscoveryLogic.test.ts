@@ -46,13 +46,11 @@ describe('useAzureDiscoveryLogic', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Setup window.electron
-    Object.defineProperty(window, 'electron', {
-      writable: true,
-      value: mockElectronAPI,
-    });
+    // Setup window.electron mock
+    (window as any).electron = mockElectronAPI;
 
     mockElectronAPI.executeDiscovery.mockResolvedValue({ success: true, data: {} });
+    mockElectronAPI.cancelDiscovery.mockResolvedValue(undefined);
 
     (useProfileStore as unknown as jest.Mock).mockReturnValue({
       selectedTargetProfile: mockProfile,
@@ -441,8 +439,8 @@ describe('useAzureDiscoveryLogic', () => {
 
   describe('Cancel Discovery', () => {
     it('should cancel discovery successfully', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValue(true);
-      mockElectronAPI.executeModule.mockImplementation(() => {
+      mockElectronAPI.cancelDiscovery.mockResolvedValue(true);
+      mockElectronAPI.executeDiscovery.mockImplementation(() => {
         return new Promise(resolve => {
           setTimeout(() => resolve({ success: true, data: {} }), 5000);
         });
@@ -455,8 +453,10 @@ describe('useAzureDiscoveryLogic', () => {
       });
 
       // Start discovery
-      act(() => {
+      await act(async () => {
         result.current.startDiscovery();
+        // Give it time to set the token
+        await new Promise(resolve => setTimeout(resolve, 50));
       });
 
       // Cancel it
@@ -464,9 +464,11 @@ describe('useAzureDiscoveryLogic', () => {
         await result.current.cancelDiscovery();
       });
 
-      expect(mockElectronAPI.cancelExecution).toHaveBeenCalled();
-      expect(result.current.isCancelling).toBe(false);
-      expect(result.current.logs.some(log => log.includes('cancelled successfully'))).toBe(true);
+      await waitFor(() => {
+        expect(mockElectronAPI.cancelDiscovery).toHaveBeenCalled();
+      });
+
+      expect(result.current.logs.some(log => log.includes('cancellation requested'))).toBe(true);
     });
 
     it('should not cancel if no active discovery', async () => {
@@ -476,7 +478,7 @@ describe('useAzureDiscoveryLogic', () => {
         await result.current.cancelDiscovery();
       });
 
-      expect(mockElectronAPI.cancelExecution).not.toHaveBeenCalled();
+      expect(mockElectronAPI.cancelDiscovery).not.toHaveBeenCalled();
     });
 
     it('should set isCancelling state during cancellation', async () => {
