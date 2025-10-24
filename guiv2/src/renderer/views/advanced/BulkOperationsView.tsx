@@ -190,7 +190,7 @@ export const BulkOperationsView: React.FC = () => {
     }
   }, [operations, cancelOperation, retryOperation, clearCompleted]);
 
-  const filteredOperations = operations.filter(op => {
+  const filteredOperations = (operations ?? []).filter(op => {
     const matchesStatus = statusFilter === 'All' || op.status === statusFilter;
     const matchesSearch = op.name.toLowerCase().includes(searchText.toLowerCase()) ||
                          op.description.toLowerCase().includes(searchText.toLowerCase());

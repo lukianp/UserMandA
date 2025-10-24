@@ -32,7 +32,9 @@
       "Bash(npx tsc:*)",
       "Bash(git checkout:*)",
       "Bash(node fix-test-mock-mismatches.js:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(node comprehensive-test-fix.js:*)",
+      "Bash(node batch-null-safety-fix.js:*)"
     ],
     "deny": [],
     "ask": [],

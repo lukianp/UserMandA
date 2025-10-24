@@ -259,14 +259,15 @@ describe('useMigrationStore', () => {
       errors: [],
     };
 
-    const handler = progressHandler;
-
+    // Simulate the IPC progress event
     act(() => {
-      handler?.({
-        type: 'migration-progress',
-        waveId,
-        progress: progressUpdate,
-      });
+      if (progressHandler) {
+        progressHandler({
+          type: 'migration-progress',
+          waveId,
+          progress: progressUpdate,
+        });
+      }
     });
 
     expect(callback).toHaveBeenCalledWith(progressUpdate);

@@ -232,7 +232,7 @@ export const AssetLifecycleView: React.FC = () => {
     }
   }, [selectedItems]);
 
-  const filteredData = data.filter(asset => {
+  const filteredData = (data ?? []).filter(asset => {
     const matchesStatus = statusFilter === 'All' || asset.status === statusFilter;
     const matchesType = typeFilter === 'All' || asset.type === typeFilter;
     const matchesStage = stageFilter === 'All' || asset.lifecycleStage === stageFilter;
@@ -243,11 +243,11 @@ export const AssetLifecycleView: React.FC = () => {
 
   // Calculate statistics
   const stats = {
-    totalAssets: data.length,
-    activeAssets: data.filter(a => a.status === 'Active').length,
-    criticalAssets: data.filter(a => a.priority === 'Critical').length,
-    totalReplacementCost: data.reduce((sum, a) => sum + (a.replacementCost || 0), 0),
-    assetsNeedingReplacement: data.filter(a => (a.remainingLifespan || 0) <= 6).length,
+    totalAssets: (data ?? []).length,
+    activeAssets: (data ?? []).filter(a => a.status === 'Active').length,
+    criticalAssets: (data ?? []).filter(a => a.priority === 'Critical').length,
+    totalReplacementCost: (data ?? []).reduce((sum, a) => sum + (a.replacementCost || 0), 0),
+    assetsNeedingReplacement: (data ?? []).filter(a => (a.remainingLifespan || 0) <= 6).length,
   };
 
   return (
