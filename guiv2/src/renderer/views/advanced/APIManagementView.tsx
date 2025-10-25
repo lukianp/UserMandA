@@ -215,7 +215,7 @@ export const APIManagementView: React.FC = () => {
     }
   }, [selectedItems]);
 
-  const filteredData = data.filter(api => {
+  const filteredData = (data ?? []).filter(api => {
     const matchesStatus = statusFilter === 'All' || api.status === statusFilter;
     const matchesMethod = methodFilter === 'All' || api.method === methodFilter;
     const matchesSearch = api.name.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -268,7 +268,7 @@ export const APIManagementView: React.FC = () => {
             <Globe className="w-8 h-8 text-blue-500" />
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total APIs</p>
-              <p className="text-2xl font-bold">{data.length}</p>
+              <p className="text-2xl font-bold">{(data ?? []).length}</p>
             </div>
           </div>
         </ModernCard>
@@ -277,7 +277,7 @@ export const APIManagementView: React.FC = () => {
             <CheckCircle className="w-8 h-8 text-green-500" />
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active APIs</p>
-              <p className="text-2xl font-bold">{data.filter(api => api.status === 'Active').length}</p>
+              <p className="text-2xl font-bold">{(data ?? []).filter(api => api.status === 'Active').length}</p>
             </div>
           </div>
         </ModernCard>
@@ -287,7 +287,7 @@ export const APIManagementView: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Response Time</p>
               <p className="text-2xl font-bold">
-                {data.length > 0 ? Math.round(data.reduce((sum, api) => sum + (api.responseTime || 0), 0) / data.length) : 0}ms
+                {(data ?? []).length > 0 ? Math.round((data ?? []).reduce((sum, api) => sum + (api.responseTime || 0), 0) / (data ?? []).length) : 0}ms
               </p>
             </div>
           </div>
@@ -298,7 +298,7 @@ export const APIManagementView: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Error Rate</p>
               <p className="text-2xl font-bold">
-                {data.length > 0 ? (data.reduce((sum, api) => sum + (api.errorRate || 0), 0) / data.length * 100).toFixed(1) : 0}%
+                {(data ?? []).length > 0 ? ((data ?? []).reduce((sum, api) => sum + (api.errorRate || 0), 0) / (data ?? []).length * 100).toFixed(1) : 0}%
               </p>
             </div>
           </div>

@@ -581,7 +581,7 @@ const DataVisualizationView: React.FC = () => {
       case 'radar':
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={data.slice(0, 8)} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+            <RadarChart data={(data ?? []).slice(0, 8)} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
               <PolarGrid stroke="#e5e7eb" />
               <PolarAngleAxis dataKey={config.xAxis} tick={{ fontSize: 10 }} />
               <PolarRadiusAxis angle={90} domain={[0, 'auto']} tick={{ fontSize: 10 }} />

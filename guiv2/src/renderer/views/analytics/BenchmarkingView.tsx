@@ -55,7 +55,7 @@ export const BenchmarkingView: React.FC = () => {
     },
     {
       label: 'Benchmark Achievement',
-      value: (Array.isArray(data) && data.length > 0 ? Math.round((data.filter((d: any) => d.status === 'above').length / data.length) * 100) : 0),
+      value: (Array.isArray(data) && data.length > 0 ? Math.round(((data ?? []).filter((d: any) => d.status === 'above').length / (data ?? []).length) * 100) : 0),
       change: 0,
       icon: <Target className="w-6 h-6" />,
       color: 'green',
@@ -276,7 +276,7 @@ export const BenchmarkingView: React.FC = () => {
               ) : (
                 Array.isArray(data) && data.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={data.slice(0, 8)}>
+                    <BarChart data={(data ?? []).slice(0, 8)}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="metric" angle={-45} textAnchor="end" height={80} />
                       <YAxis />

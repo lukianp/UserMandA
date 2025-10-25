@@ -344,8 +344,8 @@ const OverviewTab: React.FC<{ userDetail: UserDetailProjection }> = React.memo((
       <div>
         <h4 className="font-semibold mb-3 text-gray-800 dark:text-gray-200">Resource Summary</h4>
         <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-          <li>Groups: {userDetail.groups.length}</li>
-          <li>Devices: {userDetail.devices.length}</li>
+          <li>Groups: {(userDetail.groups ?? []).length}</li>
+          <li>Devices: {(userDetail.devices ?? []).length}</li>
           <li>Applications: {userDetail.apps.length}</li>
           <li>File Access Entries: {userDetail.fileAccess.length}</li>
         </ul>
@@ -422,7 +422,7 @@ const DevicesTab: React.FC<{ devices: DeviceData[] }> = React.memo(({ devices })
     []
   );
 
-  if (devices.length === 0) {
+  if ((devices ?? []).length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-gray-600 dark:text-gray-400">This user has no associated devices.</p>
@@ -492,7 +492,7 @@ const GroupsTab: React.FC<{ groups: GroupData[] }> = React.memo(({ groups }) => 
     []
   );
 
-  if (groups.length === 0) {
+  if ((groups ?? []).length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-gray-600 dark:text-gray-400">This user is not a member of any groups.</p>

@@ -190,7 +190,7 @@ function convertToCSV(data: any[]): string {
   const headers = Object.keys(data[0]);
   const csvRows = [
     headers.join(','),
-    ...data.map((row) =>
+    ...(data ?? []).map((row) =>
       headers.map((header) => {
         const value = row[header];
         return typeof value === 'string' && value.includes(',') ? `"${value}"` : value;

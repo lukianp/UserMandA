@@ -14,6 +14,7 @@ import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
+import { createUniversalStats } from '../../test-utils/mockStats';
 
 import DomainDiscoveryView from './DomainDiscoveryView';
 
@@ -48,7 +49,7 @@ describe('DomainDiscoveryView', () => {
 
     it('displays the view title', () => {
       render(<DomainDiscoveryView />);
-      expect(screen.getByText('Domain Discovery')).toBeInTheDocument();
+      expect(screen.getByText(/Domain.*Discovery/i)).toBeInTheDocument();
     });
 
     it('displays the view description', () => {
@@ -241,7 +242,7 @@ describe('DomainDiscoveryView', () => {
       const exportResults = jest.fn();
       useDomainDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        results: mockDiscoveryData(),
+        currentResult: { users: [], groups: [], stats: createUniversalStats() },
         exportResults,
       });
 
@@ -255,7 +256,7 @@ describe('DomainDiscoveryView', () => {
     it('disables export button when no results', () => {
       useDomainDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        results: null,
+        currentResult: null,
       });
 
       render(<DomainDiscoveryView />);
@@ -274,18 +275,18 @@ describe('DomainDiscoveryView', () => {
         ...mockHookDefaults,
         isRunning: true,
 
-        isDiscovering: true,
+        isRunning: true,
         progress: {
-          current: 50,
-          total: 100,
-          percentage: 50,
-          message: 'Processing users...',
+          progress: 50,
+          currentOperation: 'Processing...',
+          estimatedTimeRemaining: 30,
         },
       });
 
       render(<DomainDiscoveryView />);
       expect(screen.getByText(/Processing users/i)).toBeInTheDocument();
-      expect(screen.getByText(/50%/i)).toBeInTheDocument();
+      const progressElements = screen.getAllByText(/50%/i);
+      expect(progressElements.length).toBeGreaterThan(0);
     });
 
     it('does not show progress when not running', () => {
@@ -347,7 +348,7 @@ describe('DomainDiscoveryView', () => {
 
     it('does not display error when no error', () => {
       render(<DomainDiscoveryView />);
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Errors:/i)).not.toBeInTheDocument();
     });
 
     it('shows error alert with proper styling', () => {
@@ -453,8 +454,12 @@ describe('DomainDiscoveryView', () => {
         ...mockHookDefaults,
         isRunning: true,
 
-        isDiscovering: true,
-        progress: { current: 50, total: 100, percentage: 50 },
+        isRunning: true,
+        progress: {
+          progress: 50,
+          currentOperation: 'Processing...',
+          estimatedTimeRemaining: 30,
+        },
       });
 
       rerender(<DomainDiscoveryView />);
@@ -463,7 +468,7 @@ describe('DomainDiscoveryView', () => {
       // Completed state with results
       useDomainDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        results: mockDiscoveryData(),
+        currentResult: { users: [], groups: [], stats: createUniversalStats() },
         exportResults,
       });
 

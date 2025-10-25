@@ -247,7 +247,7 @@ export const useConditionalAccessDiscoveryLogic = () => {
   const stats = useMemo<CAStats | null>(() => {
     if (!state.result?.policies) return null;
 
-    const policies = state.result.policies;
+    const policies = state.result.policies ?? [];
     const enabledCount = policies.filter(p => p.state === 'enabled').length;
     const reportOnlyCount = policies.filter(p => p.state === 'enabledForReportingButNotEnforced').length;
 

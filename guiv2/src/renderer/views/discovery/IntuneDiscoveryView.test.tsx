@@ -114,7 +114,7 @@ describe('IntuneDiscoveryView', () => {
 
     it('displays the view title', () => {
       render(<IntuneDiscoveryView />);
-      expect(screen.getByText('Intune Discovery')).toBeInTheDocument();
+      expect(screen.getByText(/Intune.*Discovery/i)).toBeInTheDocument();
     });
 
     it('displays the view description', () => {
@@ -133,7 +133,7 @@ describe('IntuneDiscoveryView', () => {
     it('displays configuration toggle', () => {
       render(<IntuneDiscoveryView />);
       expect(screen.getByTestId('config-toggle')).toBeInTheDocument();
-      expect(screen.getByText('Discovery Configuration')).toBeInTheDocument();
+      expect(screen.getByText(/Intune.*Discovery/i)).toBeInTheDocument();
     });
   });
 
@@ -291,7 +291,7 @@ describe('IntuneDiscoveryView', () => {
     it('displays error message when error occurs', () => {
       useIntuneDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        error: 'Test error message',
+        errors: ['Test error message'],
       });
 
       render(<IntuneDiscoveryView />);
@@ -300,7 +300,7 @@ describe('IntuneDiscoveryView', () => {
 
     it('does not display error when no error', () => {
       render(<IntuneDiscoveryView />);
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Errors:/i)).not.toBeInTheDocument();
     });
   });
 

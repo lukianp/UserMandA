@@ -71,7 +71,7 @@ export const NotificationRulesView: React.FC = () => {
         };
         return (
           <Badge
-            variant="secondary"
+            variant="info"
             className={`text-xs capitalize ${colors[value as keyof typeof colors] || 'bg-gray-500'}`}
           >
             {value}

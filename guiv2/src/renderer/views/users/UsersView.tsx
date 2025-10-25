@@ -98,7 +98,7 @@ const UsersView: React.FC = () => {
             data-cy="user-search"
           />
           <span className="text-sm text-gray-600 dark:text-gray-400">
-            {users.length} users
+            {(users ?? []).length} users
           </span>
         </div>
 

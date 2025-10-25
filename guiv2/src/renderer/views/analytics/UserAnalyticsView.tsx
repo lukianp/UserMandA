@@ -115,7 +115,7 @@ const ActivityHeatmap: React.FC<{ data: any[] }> = ({ data }) => {
             {days.map(day => (
               <div key={day} className="flex gap-1">
                 {hours.map(hour => {
-                  const item = data.find(d => d.day === day && d.hour === hour);
+                  const item = (data ?? []).find(d => d.day === day && d.hour === hour);
                   const activity = item?.activity || 0;
                   return (
                     <div

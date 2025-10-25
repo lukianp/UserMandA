@@ -107,7 +107,7 @@ const WaveTimeline: React.FC<{ data: any[] }> = ({ data }) => {
 
   return (
     <div className="space-y-4">
-      {data.map((wave, index) => (
+      {(data ?? []).map((wave, index) => (
         <div key={index} className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

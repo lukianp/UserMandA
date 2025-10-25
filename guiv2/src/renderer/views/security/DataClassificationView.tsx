@@ -217,7 +217,7 @@ export const DataClassificationView: React.FC = () => {
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
-            Policies ({policies.length})
+            Policies ({(policies ?? []).length})
           </button>
         </div>
       </div>
@@ -420,7 +420,7 @@ export const DataClassificationView: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900">Data Loss Prevention Policies</h3>
             </div>
             <div className="divide-y divide-gray-200">
-              {policies.map((policy) => (
+              {(policies ?? []).map((policy) => (
                 <div key={policy.policyId} className="p-4 hover:bg-gray-50">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-sm font-semibold text-gray-900">{policy.policyName}</h4>

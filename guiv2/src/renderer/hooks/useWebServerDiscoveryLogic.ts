@@ -516,7 +516,7 @@ export const useWebServerDiscoveryLogic = () => {
   const filteredServers = useMemo(() => {
     if (!state.result?.servers) return [];
 
-    return state.result.servers.filter(server => {
+    return (state.result.servers ?? []).filter(server => {
       if (filter.searchText) {
         const searchLower = filter.searchText.toLowerCase();
         const matchesSearch =

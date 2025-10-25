@@ -300,7 +300,7 @@ export const useDataLossPreventionDiscoveryLogic = () => {
     if (!state.result) return null;
 
     const policies = state.result.policies;
-    const incidents = state.result.incidents;
+    const incidents = state.result.incidents ?? [];
 
     const incidentsBySeverity: Record<string, number> = {
       critical: incidents.filter(i => i.severity === 'critical').length,

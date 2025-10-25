@@ -36,7 +36,10 @@
       "Bash(node comprehensive-test-fix.js:*)",
       "Bash(node batch-null-safety-fix.js:*)",
       "Bash(node:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(for file in src/renderer/views/discovery/Azure*.test.tsx src/renderer/views/discovery/Conditional*.test.tsx src/renderer/views/discovery/DataLoss*.test.tsx src/renderer/views/discovery/Domain*.test.tsx)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": [],

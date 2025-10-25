@@ -467,7 +467,7 @@ export const PerformanceDashboardView: React.FC = () => {
             <p className="text-sm text-gray-600 dark:text-gray-400">Uptime</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{alerts.filter(a => !a.resolved).length}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{(alerts ?? []).filter(a => !a.resolved).length}</p>
             <p className="text-sm text-gray-600 dark:text-gray-400">Active Alerts</p>
           </div>
           <div className="text-center">
@@ -672,7 +672,7 @@ export const PerformanceDashboardView: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5" />
-                Active Alerts ({alerts.filter(a => !a.resolved).length})
+                Active Alerts ({(alerts ?? []).filter(a => !a.resolved).length})
               </h3>
               <Button
                 size="sm"
@@ -683,13 +683,13 @@ export const PerformanceDashboardView: React.FC = () => {
               </Button>
             </div>
             <div className="space-y-3 max-h-80 overflow-y-auto">
-              {alerts.filter(a => !a.resolved).length === 0 ? (
+              {(alerts ?? []).filter(a => !a.resolved).length === 0 ? (
                 <div className="text-center py-8">
                   <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
                   <p className="text-gray-600 dark:text-gray-400">No active alerts</p>
                 </div>
               ) : (
-                alerts.filter(a => !a.resolved).map((alert) => (
+                (alerts ?? []).filter(a => !a.resolved).map((alert) => (
                   <AlertItem
                     key={alert.id}
                     alert={alert}
