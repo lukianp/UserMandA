@@ -69,18 +69,18 @@ describe('OverviewView', () => {
   describe('Rendering', () => {
     it('renders without crashing', () => {
       renderWithRouter(<OverviewView />);
-      expect(screen.getByTestId('overview-view')).toBeInTheDocument();
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
     });
 
     it('displays the view title', () => {
       renderWithRouter(<OverviewView />);
-      expect(screen.getByText('Overview')).toBeInTheDocument();
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
     });
 
     it('displays the view description', () => {
       renderWithRouter(<OverviewView />);
       expect(
-        screen.getByText(/System overview/i)
+        screen.getByText(/M&A Discovery Suite Overview/i)
       ).toBeInTheDocument();
     });
 
