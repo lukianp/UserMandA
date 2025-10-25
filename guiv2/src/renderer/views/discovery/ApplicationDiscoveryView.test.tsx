@@ -187,6 +187,8 @@ describe('ApplicationDiscoveryView', () => {
       mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
+
+        isDiscovering: true,
         progress: {
           current: 50,
           total: 100,
@@ -335,6 +337,8 @@ describe('ApplicationDiscoveryView', () => {
       mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
+
+        isDiscovering: true,
         progress: { current: 50, total: 100, percentage: 50 },
       });
 

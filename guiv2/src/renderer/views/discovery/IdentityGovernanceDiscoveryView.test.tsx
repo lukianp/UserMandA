@@ -154,6 +154,8 @@ describe('IdentityGovernanceDiscoveryView', () => {
       useIdentityGovernanceDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
+
+        isDiscovering: true,
         progress: {
           current: 50,
           total: 100,
@@ -302,6 +304,8 @@ describe('IdentityGovernanceDiscoveryView', () => {
       useIdentityGovernanceDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
+
+        isDiscovering: true,
         progress: { current: 50, total: 100, percentage: 50 },
       });
 

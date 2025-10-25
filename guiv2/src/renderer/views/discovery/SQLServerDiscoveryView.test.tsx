@@ -184,6 +184,8 @@ describe('SQLServerDiscoveryView', () => {
       useSQLServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
+
+        isDiscovering: true,
         progress: {
           current: 50,
           total: 100,
@@ -332,6 +334,8 @@ describe('SQLServerDiscoveryView', () => {
       useSQLServerDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
+
+        isDiscovering: true,
         progress: { current: 50, total: 100, percentage: 50 },
       });
 

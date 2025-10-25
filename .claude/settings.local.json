@@ -35,7 +35,8 @@
       "Bash(git commit:*)",
       "Bash(node comprehensive-test-fix.js:*)",
       "Bash(node batch-null-safety-fix.js:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": [],

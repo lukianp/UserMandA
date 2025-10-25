@@ -155,6 +155,8 @@ describe('AzureDiscoveryView', () => {
       useAzureDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
+
+        isDiscovering: true,
         progress: {
           current: 50,
           total: 100,
@@ -303,6 +305,8 @@ describe('AzureDiscoveryView', () => {
       useAzureDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isRunning: true,
+
+        isDiscovering: true,
         progress: { current: 50, total: 100, percentage: 50 },
       });
 
