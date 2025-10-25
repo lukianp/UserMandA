@@ -2601,4 +2601,3 @@ function getMockAlerts(): Promise<Alert[]> {
     },
   ]);
 }
-      resolved: incidents.filter(i => i.status === 'resolved').length

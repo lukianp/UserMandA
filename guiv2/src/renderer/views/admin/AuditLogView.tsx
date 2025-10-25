@@ -199,31 +199,31 @@ export const AuditLogView: React.FC = () => {
         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
           <div className="text-sm text-blue-600 dark:text-blue-400">Total Events</div>
           <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-            {auditLogs.length}
+            {(auditLogs ?? []).length}
           </div>
         </div>
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
           <div className="text-sm text-red-600 dark:text-red-400">Critical</div>
           <div className="text-2xl font-bold text-red-900 dark:text-red-100">
-            {auditLogs.filter(log => log.severity === 'Critical').length}
+            {(auditLogs ?? []).filter(log => log.severity === 'Critical').length}
           </div>
         </div>
         <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
           <div className="text-sm text-yellow-600 dark:text-yellow-400">Warnings</div>
           <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
-            {auditLogs.filter(log => log.severity === 'Warning').length}
+            {(auditLogs ?? []).filter(log => log.severity === 'Warning').length}
           </div>
         </div>
         <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
           <div className="text-sm text-green-600 dark:text-green-400">Success</div>
           <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-            {auditLogs.filter(log => log.success).length}
+            {(auditLogs ?? []).filter(log => log.success).length}
           </div>
         </div>
         <div className="bg-gray-50 dark:bg-gray-900/20 p-4 rounded-lg border border-gray-200 dark:border-gray-800">
           <div className="text-sm text-gray-600 dark:text-gray-400">Failed</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {auditLogs.filter(log => !log.success).length}
+            {(auditLogs ?? []).filter(log => !log.success).length}
           </div>
         </div>
       </div>

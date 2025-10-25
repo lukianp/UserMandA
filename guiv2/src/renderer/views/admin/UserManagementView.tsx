@@ -148,9 +148,9 @@ export const UserManagementView: React.FC = () => {
             variant="danger"
             icon={<Trash2 />}
             onClick={handleDeleteUsers}
-            disabled={selectedUsers.length === 0}
+            disabled={(selectedUsers ?? []).length === 0}
           >
-            Delete Selected ({selectedUsers.length})
+            Delete Selected ({(selectedUsers ?? []).length})
           </Button>
         </div>
       </div>

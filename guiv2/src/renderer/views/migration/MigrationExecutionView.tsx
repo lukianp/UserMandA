@@ -63,7 +63,7 @@ const MigrationExecutionView: React.FC = () => {
         <div className="w-1/3 bg-white rounded shadow-sm border p-4 overflow-y-auto">
           <h3 className="font-semibold mb-3">Live Logs</h3>
           <div className="space-y-1 font-mono text-xs">
-            {logic.logs.map((log, i) => (
+            {(logic.logs ?? []).map((log, i) => (
               <div key={i} className="text-gray-700">{log}</div>
             ))}
           </div>

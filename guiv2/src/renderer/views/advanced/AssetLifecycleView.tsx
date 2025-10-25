@@ -236,8 +236,8 @@ export const AssetLifecycleView: React.FC = () => {
     const matchesStatus = statusFilter === 'All' || asset.status === statusFilter;
     const matchesType = typeFilter === 'All' || asset.type === typeFilter;
     const matchesStage = stageFilter === 'All' || asset.lifecycleStage === stageFilter;
-    const matchesSearch = (asset.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
-                         (asset.type ?? '').toLowerCase().includes(searchText.toLowerCase());
+    const matchesSearch = (asset.name ?? '')?.toLowerCase() ?? "".includes(searchText?.toLowerCase() ?? "") ||
+                         (asset.type ?? '')?.toLowerCase() ?? "".includes(searchText?.toLowerCase() ?? "");
     return matchesStatus && matchesType && matchesStage && matchesSearch;
   });
 

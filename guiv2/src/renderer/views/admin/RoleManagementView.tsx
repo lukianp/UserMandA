@@ -130,9 +130,9 @@ export const RoleManagementView: React.FC = () => {
             variant="danger"
             icon={<Trash2 />}
             onClick={handleDeleteRoles}
-            disabled={selectedRoles.length === 0 || selectedRoles.some(r => r.isBuiltIn)}
+            disabled={(selectedRoles ?? []).length === 0 || (selectedRoles ?? []).some(r => r.isBuiltIn)}
           >
-            Delete Selected ({selectedRoles.length})
+            Delete Selected ({(selectedRoles ?? []).length})
           </Button>
         </div>
       </div>
