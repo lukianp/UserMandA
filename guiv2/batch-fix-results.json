@@ -1,33 +1,33 @@
 {
-  "filesProcessed": 7,
-  "transformationsApplied": 7,
+  "filesProcessed": 1,
+  "transformationsApplied": 1,
   "beforeCounts": {
     "src/renderer/views/discovery/TeamsDiscoveryView.test.tsx": {
-      "passed": 11,
+      "passed": 14,
       "failed": 1
     },
     "src/renderer/views/discovery/ExchangeDiscoveryView.test.tsx": {
-      "passed": 0,
+      "passed": 12,
       "failed": 1
     },
     "src/renderer/views/discovery/OneDriveDiscoveryView.test.tsx": {
-      "passed": 0,
+      "passed": 10,
       "failed": 1
     },
     "src/renderer/views/discovery/SharePointDiscoveryView.test.tsx": {
-      "passed": 0,
+      "passed": 9,
       "failed": 1
     },
     "src/renderer/views/discovery/AzureDiscoveryView.test.tsx": {
-      "passed": 0,
+      "passed": 20,
       "failed": 1
     },
     "src/renderer/views/discovery/PowerPlatformDiscoveryView.test.tsx": {
-      "passed": 0,
+      "passed": 12,
       "failed": 1
     },
     "src/renderer/views/discovery/HyperVDiscoveryView.test.tsx": {
-      "passed": 9,
+      "passed": 12,
       "failed": 1
     },
     "src/renderer/views/discovery/WebServerConfigurationDiscoveryView.test.tsx": {
@@ -36,32 +36,8 @@
     }
   },
   "afterCounts": {
-    "src/renderer/views/discovery/TeamsDiscoveryView.test.tsx": {
-      "passed": 11,
-      "failed": 1
-    },
-    "src/renderer/views/discovery/ExchangeDiscoveryView.test.tsx": {
-      "passed": 0,
-      "failed": 1
-    },
-    "src/renderer/views/discovery/OneDriveDiscoveryView.test.tsx": {
-      "passed": 0,
-      "failed": 1
-    },
-    "src/renderer/views/discovery/SharePointDiscoveryView.test.tsx": {
-      "passed": 0,
-      "failed": 1
-    },
-    "src/renderer/views/discovery/PowerPlatformDiscoveryView.test.tsx": {
-      "passed": 0,
-      "failed": 1
-    },
     "src/renderer/views/discovery/HyperVDiscoveryView.test.tsx": {
-      "passed": 9,
-      "failed": 1
-    },
-    "src/renderer/views/discovery/WebServerConfigurationDiscoveryView.test.tsx": {
-      "passed": 0,
+      "passed": 12,
       "failed": 1
     }
   },

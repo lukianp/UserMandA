@@ -39,7 +39,11 @@
       "Bash(cat:*)",
       "Bash(find:*)",
       "Bash(for file in src/renderer/views/discovery/Azure*.test.tsx src/renderer/views/discovery/Conditional*.test.tsx src/renderer/views/discovery/DataLoss*.test.tsx src/renderer/views/discovery/Domain*.test.tsx)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(timeout 300 npm test:*)",
+      "Bash(while read f)",
+      "Bash(do grep -q \"import.*waitFor\" \"$f\")",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": [],

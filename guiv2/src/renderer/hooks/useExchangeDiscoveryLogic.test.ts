@@ -37,13 +37,38 @@ beforeAll(() => {
 });
 
 describe('useExchangeDiscoveryLogic', () => {
+  let onProgressCallback: ((data: any) => void) | null = null;
+  let onCompleteCallback: ((data: any) => void) | null = null;
+  let onErrorCallback: ((data: any) => void) | null = null;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    onProgressCallback = null;
+    onCompleteCallback = null;
+    onErrorCallback = null;
+
     // Default mock for templates loading
     mockElectronAPI.executeModule.mockResolvedValue({
       success: true,
       data: { templates: [] },
     });
+
+    // Setup event listener mocks to capture callbacks
+    mockElectron.onDiscoveryProgress.mockImplementation((callback) => {
+      onProgressCallback = callback;
+      return jest.fn(); // unsubscribe function
+    });
+    mockElectron.onDiscoveryComplete.mockImplementation((callback) => {
+      onCompleteCallback = callback;
+      return jest.fn(); // unsubscribe function
+    });
+    mockElectron.onDiscoveryError.mockImplementation((callback) => {
+      onErrorCallback = callback;
+      return jest.fn(); // unsubscribe function
+    });
+
+    // Mock executeDiscovery to resolve immediately
+    mockElectron.executeDiscovery.mockResolvedValue(undefined);
   });
 
   // ============================================================================
@@ -133,20 +158,26 @@ describe('useExchangeDiscoveryLogic', () => {
         },
       };
 
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: { templates: [] } }) // Template load
-        .mockResolvedValueOnce({
-          success: true,
-          data: mockResult,
-        }); // Discovery
-
       const { result } = renderHook(() => useExchangeDiscoveryLogic());
 
       await act(async () => {
         await result.current.startDiscovery();
       });
 
-      expect(result.current.isDiscovering).toBe(false);
+      // Simulate discovery completion
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: mockResult,
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
+
       expect(result.current.result).toEqual(mockResult);
       expect(result.current.error).toBeNull();
     });
@@ -182,9 +213,7 @@ describe('useExchangeDiscoveryLogic', () => {
 
     it('should handle discovery failure', async () => {
       const errorMessage = 'Exchange server not reachable';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: { templates: [] } }) // Template load
-        .mockRejectedValueOnce(new Error(errorMessage)); // Discovery fails
+      mockElectron.executeDiscovery.mockRejectedValueOnce(new Error(errorMessage));
 
       const { result } = renderHook(() => useExchangeDiscoveryLogic());
 
@@ -192,16 +221,32 @@ describe('useExchangeDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
-      expect(result.current.isDiscovering).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
+
       expect(result.current.error).toBe(errorMessage);
       expect(result.current.result).toBeNull();
     });
 
     it('should clear error when starting new discovery', async () => {
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: { templates: [] } }) // Template load
+      const mockResult: ExchangeDiscoveryResult = {
+        mailboxes: [],
+        distributionGroups: [],
+        transportRules: [],
+        statistics: {
+          totalMailboxes: 0,
+          totalDistributionGroups: 0,
+          totalTransportRules: 0,
+          totalMailboxSize: 0,
+          inactiveMailboxes: 0,
+          ininactiveMailboxes: 0,
+        },
+      };
+
+      mockElectron.executeDiscovery
         .mockRejectedValueOnce(new Error('First error')) // First discovery fails
-        .mockResolvedValueOnce({ success: true, data: { mailboxes: [], distributionGroups: [], transportRules: [], statistics: {} } }); // Second discovery succeeds
+        .mockResolvedValueOnce(undefined); // Second discovery succeeds
 
       const { result } = renderHook(() => useExchangeDiscoveryLogic());
 
@@ -214,13 +259,29 @@ describe('useExchangeDiscoveryLogic', () => {
       await act(async () => {
         await result.current.startDiscovery();
       });
-      expect(result.current.error).toBe('First error');
+
+      await waitFor(() => {
+        expect(result.current.error).toBe('First error');
+      });
 
       // Second discovery succeeds
       await act(async () => {
         await result.current.startDiscovery();
       });
-      expect(result.current.error).toBeNull();
+
+      // Trigger completion event
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: mockResult,
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.error).toBeNull();
+      });
     });
   });
 
