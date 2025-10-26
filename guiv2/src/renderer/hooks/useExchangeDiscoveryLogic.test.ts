@@ -183,32 +183,30 @@ describe('useExchangeDiscoveryLogic', () => {
     });
 
     it('should set progress during discovery', async () => {
-      let progressCallback: any;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
-        progressCallback = cb;
-        return jest.fn();
-      });
-
-      mockElectronAPI.executeModule.mockImplementation(() => {
-        // Simulate progress updates
-        if (progressCallback) {
-          progressCallback({
-            message: 'Discovering mailboxes...',
-            percentage: 50,
-            itemsProcessed: 50,
-            totalItems: 100,
-          });
-        }
-        return Promise.resolve({ success: true, data: { mailboxes: [], distributionGroups: [], transportRules: [], statistics: {} } });
-      });
-
       const { result } = renderHook(() => useExchangeDiscoveryLogic());
 
       await act(async () => {
         await result.current.startDiscovery();
       });
 
-      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
+      // Simulate progress update
+      await act(async () => {
+        if (onProgressCallback) {
+          onProgressCallback({
+            executionId: 'exchange-discovery',
+            phase: 'discovering',
+            phaseLabel: 'Discovering mailboxes...',
+            percentComplete: 50,
+            itemsProcessed: 50,
+            totalItems: 100,
+            errors: 0,
+            warnings: 0,
+          });
+        }
+      });
+
+      expect(result.current.progress).toBeDefined();
+      expect(result.current.progress?.percentComplete).toBe(50);
     });
 
     it('should handle discovery failure', async () => {
@@ -433,6 +431,20 @@ describe('useExchangeDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+      // Simulate discovery completion
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: mockMailboxes, distributionGroups: [], transportRules: [], statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
+
       act(() => {
         result.current.setMailboxFilter({ searchText: 'john' });
       });
@@ -448,6 +460,19 @@ describe('useExchangeDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: mockMailboxes, distributionGroups: [], transportRules: [], statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
+
       act(() => {
         result.current.setMailboxFilter({ mailboxTypes: ['SharedMailbox'] });
       });
@@ -461,6 +486,19 @@ describe('useExchangeDiscoveryLogic', () => {
 
       await act(async () => {
         await result.current.startDiscovery();
+      });
+
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: mockMailboxes, distributionGroups: [], transportRules: [], statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
       });
 
       act(() => {
@@ -481,6 +519,19 @@ describe('useExchangeDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: mockMailboxes, distributionGroups: [], transportRules: [], statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
+
       act(() => {
         result.current.setMailboxFilter({ hasArchive: true });
       });
@@ -496,6 +547,19 @@ describe('useExchangeDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: mockMailboxes, distributionGroups: [], transportRules: [], statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
+
       act(() => {
         result.current.setMailboxFilter({ hasLitigationHold: true });
       });
@@ -509,6 +573,19 @@ describe('useExchangeDiscoveryLogic', () => {
 
       await act(async () => {
         await result.current.startDiscovery();
+      });
+
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: mockMailboxes, distributionGroups: [], transportRules: [], statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
       });
 
       act(() => {
@@ -569,6 +646,19 @@ describe('useExchangeDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: [], distributionGroups: mockGroups, transportRules: [], statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
+
       act(() => {
         result.current.setGroupFilter({ searchText: 'sales' });
       });
@@ -582,6 +672,19 @@ describe('useExchangeDiscoveryLogic', () => {
 
       await act(async () => {
         await result.current.startDiscovery();
+      });
+
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: [], distributionGroups: mockGroups, transportRules: [], statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
       });
 
       act(() => {
@@ -599,6 +702,19 @@ describe('useExchangeDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: [], distributionGroups: mockGroups, transportRules: [], statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
+
       act(() => {
         result.current.setGroupFilter({ minMemberCount: 20 });
       });
@@ -614,6 +730,19 @@ describe('useExchangeDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: [], distributionGroups: mockGroups, transportRules: [], statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
+
       act(() => {
         result.current.setGroupFilter({ moderationEnabled: true });
       });
@@ -627,6 +756,19 @@ describe('useExchangeDiscoveryLogic', () => {
 
       await act(async () => {
         await result.current.startDiscovery();
+      });
+
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: [], distributionGroups: mockGroups, transportRules: [], statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
       });
 
       act(() => {
@@ -685,6 +827,19 @@ describe('useExchangeDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: [], distributionGroups: [], transportRules: mockRules, statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
+
       act(() => {
         result.current.setRuleFilter({ searchText: 'disclaimer' });
       });
@@ -700,6 +855,19 @@ describe('useExchangeDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: [], distributionGroups: [], transportRules: mockRules, statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
+
       act(() => {
         result.current.setRuleFilter({ state: ['Enabled'] });
       });
@@ -713,6 +881,19 @@ describe('useExchangeDiscoveryLogic', () => {
 
       await act(async () => {
         await result.current.startDiscovery();
+      });
+
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: { mailboxes: [], distributionGroups: [], transportRules: mockRules, statistics: {} },
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
       });
 
       act(() => {
@@ -732,13 +913,27 @@ describe('useExchangeDiscoveryLogic', () => {
     it('should export data successfully', async () => {
       mockElectronAPI.executeModule
         .mockResolvedValueOnce({ success: true, data: { templates: [] } }) // Template load
-        .mockResolvedValueOnce({ success: true, data: { mailboxes: [], distributionGroups: [], transportRules: [], statistics: {} } }) // Discovery
         .mockResolvedValueOnce({ success: true }); // Export
+
+      const mockResult = { mailboxes: [], distributionGroups: [], transportRules: [], statistics: {} };
 
       const { result } = renderHook(() => useExchangeDiscoveryLogic());
 
       await act(async () => {
         await result.current.startDiscovery();
+      });
+
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: mockResult,
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
       });
 
       await act(async () => {
@@ -769,13 +964,27 @@ describe('useExchangeDiscoveryLogic', () => {
     it('should handle export failure', async () => {
       mockElectronAPI.executeModule
         .mockResolvedValueOnce({ success: true, data: { templates: [] } }) // Template load
-        .mockResolvedValueOnce({ success: true, data: { mailboxes: [], distributionGroups: [], transportRules: [], statistics: {} } }) // Discovery
         .mockRejectedValueOnce(new Error('Export failed')); // Export fails
+
+      const mockResult = { mailboxes: [], distributionGroups: [], transportRules: [], statistics: {} };
 
       const { result } = renderHook(() => useExchangeDiscoveryLogic());
 
       await act(async () => {
         await result.current.startDiscovery();
+      });
+
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: mockResult,
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
       });
 
       await expect(async () => {
@@ -859,20 +1068,30 @@ describe('useExchangeDiscoveryLogic', () => {
         ininactiveMailboxes: 10,
       };
 
-      mockElectronAPI.executeModule.mockResolvedValue({
-        success: true,
-        data: {
-          mailboxes: [],
-          distributionGroups: [],
-          transportRules: [],
-          statistics: mockStatistics,
-        },
-      });
+      const mockResult = {
+        mailboxes: [],
+        distributionGroups: [],
+        transportRules: [],
+        statistics: mockStatistics,
+      };
 
       const { result } = renderHook(() => useExchangeDiscoveryLogic());
 
       await act(async () => {
         await result.current.startDiscovery();
+      });
+
+      await act(async () => {
+        if (onCompleteCallback) {
+          onCompleteCallback({
+            executionId: 'exchange-discovery',
+            result: mockResult,
+          });
+        }
+      });
+
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
       });
 
       expect(result.current.statistics).toEqual(mockStatistics);
