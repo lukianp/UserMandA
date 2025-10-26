@@ -7,7 +7,8 @@
       "Bash(for view in ActiveDirectory Application AWS Exchange FileSystem Network SQLServer VMware)",
       "Bash(do npm test -- src/renderer/views/discovery/$view*DiscoveryView.test.tsx --no-coverage)",
       "Bash(for hook in useActiveDirectoryDiscoveryLogic useAzureDiscoveryLogic useExchangeDiscoveryLogic)",
-      "Bash(do echo \"=== $hook ===\")"
+      "Bash(do echo \"=== $hook ===\")",
+      "Bash(for file in src/renderer/views/discovery/*DiscoveryView.test.tsx)"
     ],
     "deny": [],
     "ask": [],

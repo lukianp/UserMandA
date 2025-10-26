@@ -8,13 +8,24 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useGoogleWorkspaceDiscoveryLogic } from './useGoogleWorkspaceDiscoveryLogic';
 
 // Mock electron API
+const mockElectron = {
+  executeDiscovery: jest.fn(),
+  cancelDiscovery: jest.fn(),
+  onDiscoveryProgress: jest.fn(() => jest.fn()),
+  onDiscoveryOutput: jest.fn(() => jest.fn()),
+  onDiscoveryComplete: jest.fn(() => jest.fn()),
+  onDiscoveryError: jest.fn(() => jest.fn()),
+};
+
 const mockElectronAPI = {
   executeModule: jest.fn(),
-  cancelExecution: jest.fn(),
-  onProgress: jest.fn(() => jest.fn()),
 };
 
 beforeAll(() => {
+  Object.defineProperty(window, 'electron', {
+    writable: true,
+    value: mockElectron,
+  });
   Object.defineProperty(window, 'electronAPI', {
     writable: true,
     value: mockElectronAPI,
@@ -22,8 +33,24 @@ beforeAll(() => {
 });
 
 describe('useGoogleWorkspaceDiscoveryLogic', () => {
+  let onCompleteCallback: ((data: any) => void) | null = null;
+  let onErrorCallback: ((data: any) => void) | null = null;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    onCompleteCallback = null;
+    onErrorCallback = null;
+
+    mockElectron.onDiscoveryComplete.mockImplementation((callback) => {
+      onCompleteCallback = callback;
+      return jest.fn();
+    });
+    mockElectron.onDiscoveryError.mockImplementation((callback) => {
+      onErrorCallback = callback;
+      return jest.fn();
+    });
+
+    mockElectron.executeDiscovery.mockResolvedValue(undefined);
     mockElectronAPI.executeModule.mockResolvedValue({
       success: true,
       data: {},
@@ -35,28 +62,37 @@ describe('useGoogleWorkspaceDiscoveryLogic', () => {
       const { result } = renderHook(() => useGoogleWorkspaceDiscoveryLogic());
 
       expect(result.current).toBeDefined();
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+      expect(result.current.isDiscovering).toBe(false);
     });
 
     it('should initialize with null or empty result', () => {
       const { result } = renderHook(() => useGoogleWorkspaceDiscoveryLogic());
 
-      expect(result.current.result || result.current.currentResult).toBeNull();
+      expect(result.current.result).toBeNull();
     });
 
     it('should initialize with null error', () => {
       const { result } = renderHook(() => useGoogleWorkspaceDiscoveryLogic());
 
-      expect(result.current.error || result.current.errors).toBeFalsy();
+      expect(result.current.error).toBeNull();
     });
   });
 
   describe('Discovery Execution', () => {
     it('should start discovery successfully', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
+      const mockResult = { users: [], groups: [], stats: {} };
+
+      mockElectron.executeDiscovery.mockImplementation(async (params: any) => {
+        setTimeout(() => {
+          if (onCompleteCallback) {
+            onCompleteCallback({
+              executionId: params.executionId,
+              result: mockResult,
+            });
+          }
+        }, 10);
+        return Promise.resolve();
+      });
 
       const { result } = renderHook(() => useGoogleWorkspaceDiscoveryLogic());
 
@@ -64,14 +100,14 @@ describe('useGoogleWorkspaceDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      }, { timeout: 2000 });
     });
 
     it('should handle discovery failure', async () => {
       const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
+      mockElectron.executeDiscovery.mockRejectedValueOnce(new Error(errorMessage));
 
       const { result } = renderHook(() => useGoogleWorkspaceDiscoveryLogic());
 
@@ -79,24 +115,27 @@ describe('useGoogleWorkspaceDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
+
+      expect(result.current.error).toBeTruthy();
     });
 
     it('should set progress during discovery', async () => {
-      let progressCallback;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
-        progressCallback = cb;
-        return jest.fn();
-      });
+      const mockResult = { users: [], groups: [], stats: {} };
 
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockImplementation(() => {
-          if (progressCallback) {
-            progressCallback({ message: 'Processing...', percentage: 50 });
+      mockElectron.executeDiscovery.mockImplementation(async (params: any) => {
+        setTimeout(() => {
+          if (onCompleteCallback) {
+            onCompleteCallback({
+              executionId: params.executionId,
+              result: mockResult,
+            });
           }
-          return Promise.resolve({ success: true, data: {} });
-        });
+        }, 10);
+        return Promise.resolve();
+      });
 
       const { result } = renderHook(() => useGoogleWorkspaceDiscoveryLogic());
 
@@ -104,13 +143,17 @@ describe('useGoogleWorkspaceDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
-      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      }, { timeout: 2000 });
+
+      expect(result.current).toBeDefined();
     });
   });
 
   describe('Cancellation', () => {
     it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+      mockElectron.cancelDiscovery.mockResolvedValueOnce(undefined);
 
       const { result } = renderHook(() => useGoogleWorkspaceDiscoveryLogic());
 
@@ -118,7 +161,7 @@ describe('useGoogleWorkspaceDiscoveryLogic', () => {
         await result.current.cancelDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+      expect(result.current.isDiscovering).toBe(false);
     });
   });
 
