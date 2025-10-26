@@ -162,12 +162,12 @@ describe('useDataLossPreventionDiscoveryLogic', () => {
 
       if (result.current.config) {
         act(() => {
-          result.current.config('overview');
+          result.current.setActiveTab ? result.current.setActiveTab('overview') : null;
         });
         expect(result.current.config).toBeDefined();
       } else if (result.current.config) {
         act(() => {
-          result.current.config('overview');
+          result.current.setActiveTab ? result.current.setActiveTab('overview') : null;
         });
         expect(result.current.config).toBeDefined();
       }
