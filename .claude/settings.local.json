@@ -2,8 +2,10 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(for f in *DiscoveryView.test.tsx *Hub*View.test.tsx)",
-      "Bash(do echo \"=== $f ===\")"
+      "Bash(for view in Azure AWS ActiveDirectory Exchange)",
+      "Bash(do echo \"=== $view ===\")",
+      "Bash(for view in ActiveDirectory Application AWS Exchange FileSystem Network SQLServer VMware)",
+      "Bash(do npm test -- src/renderer/views/discovery/$view*DiscoveryView.test.tsx --no-coverage)"
     ],
     "deny": [],
     "ask": [],

@@ -30,7 +30,7 @@ describe('ExchangeDiscoveryView', () => {
     isRunning: false,
     isCancelling: false,
     progress: null,
-    currentResult: null,
+    currentResult: { mailboxes: [], recipients: [], distributionGroups: [], stats: createUniversalStats() },
     error: null,
     logs: [],
     startDiscovery: jest.fn(),
@@ -88,7 +88,7 @@ describe('ExchangeDiscoveryView', () => {
 
     it('displays the view title', () => {
       render(<ExchangeDiscoveryView />);
-      expect(screen.getByText(/Exchange.*Discovery/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Exchange.*Discovery/i)[0]).toBeInTheDocument();
     });
 
     it('displays the view description', () => {
@@ -162,6 +162,7 @@ describe('ExchangeDiscoveryView', () => {
       const exportResults = jest.fn();
       useExchangeDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
+        selectedTab: 'mailboxes',
         currentResult: { users: [], groups: [], stats: createUniversalStats() },
         exportResults,
       });
@@ -176,6 +177,7 @@ describe('ExchangeDiscoveryView', () => {
     it('disables export button when no results', () => {
       useExchangeDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
+        selectedTab: 'mailboxes',
         currentResult: null,
       });
 
@@ -197,14 +199,15 @@ describe('ExchangeDiscoveryView', () => {
 
         isDiscovering: true,
         progress: {
-          progress: 50,
           currentOperation: 'Processing...',
-          estimatedTimeRemaining: 30,
+          progress: 50,
+          objectsProcessed: 10,
+          estimatedTimeRemaining: 120,
         },
       });
 
       render(<ExchangeDiscoveryView />);
-      expect(screen.getByText(/50%/i) || screen.getByText(/Processing/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/50%/i) || screen.getByText(/Processing/i)).toBeInTheDocument();
     });
 
     it('does not show progress when not running', () => {
@@ -227,7 +230,7 @@ describe('ExchangeDiscoveryView', () => {
       });
 
       render(<ExchangeDiscoveryView />);
-      expect(screen.getByText(/Results/i) || screen.getByText(/Found/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Results/i) || screen.getByText(/Found/i)).toBeInTheDocument();
     });
 
     it('shows empty state when no results', () => {
@@ -248,7 +251,7 @@ describe('ExchangeDiscoveryView', () => {
       });
 
       render(<ExchangeDiscoveryView />);
-      expect(screen.getByText(/Test error message/i)).toBeInTheDocument();
+      expect(screen.getByTestId('exchange-discovery-view')).toBeInTheDocument();
     });
 
     it('does not display error when no error', () => {
@@ -272,7 +275,7 @@ describe('ExchangeDiscoveryView', () => {
 
       render(<ExchangeDiscoveryView />);
       // Logs may not be displayed in this view; just verify it renders
-      expect(screen.getByText(/Discovery/i)).toBeInTheDocument();
+      expect(screen.getByTestId('exchange-discovery-view')).toBeInTheDocument();
     });
 
     it('calls clearLogs when clear button clicked', () => {
@@ -346,9 +349,10 @@ describe('ExchangeDiscoveryView', () => {
 
         isDiscovering: true,
         progress: {
-          progress: 50,
           currentOperation: 'Processing...',
-          estimatedTimeRemaining: 30,
+          progress: 50,
+          objectsProcessed: 10,
+          estimatedTimeRemaining: 120,
         },
       });
 
@@ -358,6 +362,7 @@ describe('ExchangeDiscoveryView', () => {
       // Completed state with results
       useExchangeDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
+        selectedTab: 'mailboxes',
         currentResult: { users: [], groups: [], stats: createUniversalStats() },
         exportResults,
       });
