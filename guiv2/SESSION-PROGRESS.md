@@ -30,6 +30,19 @@
 - Using targeted fix strategy
 - Validating incrementally
 - Committing after each successful fix
-- Pattern identified: data-cy mismatches (cancel-btn vs cancel-discovery-btn)
-- Pattern identified: progress props structure (overallProgress, accountsProcessed, etc.)
-- Pattern identified: result structure for specific discovery types
+
+## Key Patterns Identified
+1. **Data-cy Attribute Mismatches:** Component uses hyphenated names (sharepoint-discovery-view, not share-point-discovery-view)
+2. **Progress Object Structure:** Views use percentComplete/phaseLabel/itemsProcessed (not overallProgress/currentOperation)
+3. **Export Button Visibility:** Requires both `result` truthy AND `selectedTab !== 'overview'` in tab-based views
+4. **Filter Objects:** Must be objects with `searchText` property, not null
+5. **Array Properties:** columns/lists/members must be arrays ([]), not null
+6. **Export Function:** Discovery views use `exportData` not `exportResults`
+7. **Error Property:** Views use `error` (string), not `errors` (array)
+8. **Result Structure:** Each view has specific result shape (teams/channels/members vs sites/lists/permissions)
+
+## Next Steps for 95% Coverage
+- Apply same pattern to remaining 22 discovery view tests (~200-250 test fixes)
+- Office365, Azure, ActiveDirectory, Exchange views follow similar patterns
+- Can use automation for repetitive fixes
+- Estimated 10-15 hours to reach 2,937 tests (95%)
