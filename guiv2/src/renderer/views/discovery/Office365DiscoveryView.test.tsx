@@ -379,6 +379,7 @@ describe('Office365DiscoveryView', () => {
       useOffice365DiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         selectedTab: 'users',
+        selectedTab: 'users',
         currentResult: {
           users: [{ id: '1' }],
           guestUsers: [],
