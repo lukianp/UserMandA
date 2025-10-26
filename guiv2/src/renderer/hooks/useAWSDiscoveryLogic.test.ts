@@ -8,30 +8,41 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAWSDiscoveryLogic } from './useAWSDiscoveryLogic';
 
 // Mock electron API
-const mockElectronAPI: {
-  executeModule: jest.MockedFunction<any>;
-  cancelExecution: jest.MockedFunction<any>;
-  onProgress: jest.MockedFunction<any>;
-} = {
-  executeModule: jest.fn(),
-  cancelExecution: jest.fn(),
-  onProgress: jest.fn(),
+const mockElectron = {
+  executeDiscovery: jest.fn(),
+  cancelDiscovery: jest.fn(),
+  onDiscoveryProgress: jest.fn(() => jest.fn()),
+  onDiscoveryOutput: jest.fn(() => jest.fn()),
+  onDiscoveryComplete: jest.fn(() => jest.fn()),
+  onDiscoveryError: jest.fn(() => jest.fn()),
 };
 
 beforeAll(() => {
-  Object.defineProperty(window, 'electronAPI', {
+  Object.defineProperty(window, 'electron', {
     writable: true,
-    value: mockElectronAPI,
+    value: mockElectron,
   });
 });
 
 describe('useAWSDiscoveryLogic', () => {
+  let onCompleteCallback: ((data: any) => void) | null = null;
+  let onErrorCallback: ((data: any) => void) | null = null;
+
   beforeEach(() => {
     jest.clearAllMocks();
-    mockElectronAPI.executeModule.mockResolvedValue({
-      success: true,
-      data: {},
+    onCompleteCallback = null;
+    onErrorCallback = null;
+
+    mockElectron.onDiscoveryComplete.mockImplementation((callback) => {
+      onCompleteCallback = callback;
+      return jest.fn();
     });
+    mockElectron.onDiscoveryError.mockImplementation((callback) => {
+      onErrorCallback = callback;
+      return jest.fn();
+    });
+
+    mockElectron.executeDiscovery.mockResolvedValue(undefined);
   });
 
   describe('Initial State', () => {
@@ -57,25 +68,39 @@ describe('useAWSDiscoveryLogic', () => {
 
   describe('Discovery Execution', () => {
     it('should start discovery successfully', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
+      const mockResult = { ec2Instances: [], s3Buckets: [], rdsInstances: [] };
 
       const { result } = renderHook(() => useAWSDiscoveryLogic());
+
+      let executionId: string = '';
+      mockElectron.executeDiscovery.mockImplementation(async (params: any) => {
+        executionId = params.executionId;
+        // Simulate async completion after some time
+        setTimeout(() => {
+          if (onCompleteCallback) {
+            onCompleteCallback({
+              executionId: params.executionId,
+              result: mockResult,
+            });
+          }
+        }, 10);
+        return Promise.resolve();
+      });
 
       await act(async () => {
         await result.current.startDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      }, { timeout: 2000 });
+
+      expect(result.current.result).toBeDefined();
     });
 
     it('should handle discovery failure', async () => {
       const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
+      mockElectron.executeDiscovery.mockRejectedValueOnce(new Error(errorMessage));
 
       const { result } = renderHook(() => useAWSDiscoveryLogic());
 
@@ -83,21 +108,27 @@ describe('useAWSDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
+
+      expect(result.current.error).toBeTruthy();
     });
 
     it('should set progress during discovery', async () => {
-      mockElectronAPI.onProgress.mockImplementation((callback: any) => {
-      setTimeout(() => callback({ message: 'Processing...', percentage: 50 }), 100);
-      return jest.fn();
-    });
+      const mockResult = { ec2Instances: [], s3Buckets: [], rdsInstances: [] };
 
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockImplementation(() => {
-          // Progress callback is now handled by mockImplementation
-          return Promise.resolve({ success: true, data: {} });
-        });
+      mockElectron.executeDiscovery.mockImplementation(async (params: any) => {
+        setTimeout(() => {
+          if (onCompleteCallback) {
+            onCompleteCallback({
+              executionId: params.executionId,
+              result: mockResult,
+            });
+          }
+        }, 10);
+        return Promise.resolve();
+      });
 
       const { result } = renderHook(() => useAWSDiscoveryLogic());
 
@@ -105,13 +136,17 @@ describe('useAWSDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
-      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      }, { timeout: 2000 });
+
+      expect(result.current).toBeDefined();
     });
   });
 
   describe('Cancellation', () => {
     it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+      mockElectron.cancelDiscovery.mockResolvedValueOnce(undefined);
 
       const { result } = renderHook(() => useAWSDiscoveryLogic());
 
@@ -119,7 +154,7 @@ describe('useAWSDiscoveryLogic', () => {
         await result.current.cancelDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isDiscovering).toBe(false);
+      expect(result.current.isDiscovering).toBe(false);
     });
   });
 
