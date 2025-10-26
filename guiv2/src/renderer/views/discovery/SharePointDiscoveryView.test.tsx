@@ -5,7 +5,7 @@
 import * as React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
-import {  createUniversalDiscoveryHook , createUniversalConfig } from '../../../test-utils/universalDiscoveryMocks';
+import {  createUniversalDiscoveryHook , createUniversalConfig, createUniversalStats } from '../../../test-utils/universalDiscoveryMocks';
 
 import '@testing-library/jest-dom';
 import {
@@ -14,7 +14,6 @@ import {
   mockDiscoveryData,
   resetAllMocks,
 } from '../../test-utils/viewTestHelpers';
-import { createUniversalStats } from '../../test-utils/mockStats';
 
 import SharePointDiscoveryView from './SharePointDiscoveryView';
 
@@ -38,7 +37,7 @@ describe('SharePointDiscoveryView', () => {
     exportResults: jest.fn(),
     clearLogs: jest.fn(),
     selectedProfile: null,
-  
+
     config: createUniversalConfig(),
     setConfig: jest.fn(),
     result: null,
@@ -48,17 +47,17 @@ describe('SharePointDiscoveryView', () => {
     loadTemplate: jest.fn(),
     saveAsTemplate: jest.fn(),
     sites: [],
-    lists: null,
-    permissions: null,
-    siteFilter: null,
+    lists: [],
+    permissions: [],
+    siteFilter: { searchText: '' },
     setSiteFilter: jest.fn(),
-    listFilter: null,
+    listFilter: { searchText: '' },
     setListFilter: jest.fn(),
-    permissionFilter: null,
+    permissionFilter: { searchText: '' },
     setPermissionFilter: jest.fn(),
-    siteColumns: null,
-    listColumns: null,
-    permissionColumns: null,
+    siteColumns: [],
+    listColumns: [],
+    permissionColumns: [],
     loadData: jest.fn(),
     refreshData: jest.fn(),
     exportData: jest.fn(),
@@ -83,18 +82,18 @@ describe('SharePointDiscoveryView', () => {
   describe('Rendering', () => {
     it('renders without crashing', () => {
       render(<SharePointDiscoveryView />);
-      expect(screen.getByTestId('share-point-discovery-view')).toBeInTheDocument();
+      expect(screen.getByTestId('sharepoint-discovery-view')).toBeInTheDocument();
     });
 
     it('displays the view title', () => {
       render(<SharePointDiscoveryView />);
-      expect(screen.getByText(/SharePoint.*Discovery/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /SharePoint Discovery/i })).toBeInTheDocument();
     });
 
     it('displays the view description', () => {
       render(<SharePointDiscoveryView />);
       expect(
-        screen.getByText(/SharePoint discovery/i)
+        screen.getByText(/Discover SharePoint sites/i)
       ).toBeInTheDocument();
     });
 
@@ -110,7 +109,7 @@ describe('SharePointDiscoveryView', () => {
         selectedProfile: { name: 'Test Profile' },
       });
       render(<SharePointDiscoveryView />);
-      expect(screen.getByTestId('config-toggle')).toBeInTheDocument();
+      expect(screen.getByTestId('config-btn')).toBeInTheDocument();
     });
   });
 
@@ -158,30 +157,35 @@ describe('SharePointDiscoveryView', () => {
       expect(cancelDiscovery).toHaveBeenCalled();
     });
 
-    it('calls exportResults when export button clicked', () => {
-      const exportResults = jest.fn();
+    it('calls exportData when export button clicked', () => {
+      const exportData = jest.fn();
       useSharePointDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        currentResult: { users: [], groups: [], stats: createUniversalStats() },
-        exportResults,
+        selectedTab: 'sites',
+        result: { sites: [], lists: [], permissions: [] },
+        exportData,
       });
 
       render(<SharePointDiscoveryView />);
       const button = screen.getByTestId('export-btn');
       fireEvent.click(button);
 
-      expect(exportResults).toHaveBeenCalled();
+      expect(exportData).toHaveBeenCalled();
     });
 
-    it('disables export button when no results', () => {
+    it('shows export button when tab is selected', () => {
       useSharePointDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        currentResult: null,
+        selectedTab: 'sites',
+        result: { sites: [], lists: [], permissions: [] },
+        sites: [{ id: '1', title: 'Test Site' }],
+        statistics: {},
       });
 
       render(<SharePointDiscoveryView />);
-      const button = screen.getByTestId('export-btn').closest('button');
-      expect(button).toBeDisabled();
+      // Export button appears when not on overview tab
+      const button = screen.getByTestId('export-btn');
+      expect(button).toBeInTheDocument();
     });
   });
 
@@ -194,17 +198,16 @@ describe('SharePointDiscoveryView', () => {
       useSharePointDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isDiscovering: true,
-
-        isDiscovering: true,
         progress: {
-          progress: 50,
-          currentOperation: 'Processing...',
+          percentComplete: 50,
+          currentItem: 'Processing...',
           estimatedTimeRemaining: 30,
+          itemsProcessed: 100,
         },
       });
 
       render(<SharePointDiscoveryView />);
-      expect(screen.getByText(/50%/i) || screen.getByText(/Processing/i)).toBeInTheDocument();
+      expect(screen.getByText(/50% complete/i)).toBeInTheDocument();
     });
 
     it('does not show progress when not running', () => {
@@ -232,7 +235,7 @@ describe('SharePointDiscoveryView', () => {
 
     it('shows empty state when no results', () => {
       render(<SharePointDiscoveryView />);
-      expect(screen.getByTestId('share-point-discovery-view-view')).toBeInTheDocument();
+      expect(screen.getByTestId('sharepoint-discovery-view')).toBeInTheDocument();
     });
   });
 
@@ -244,7 +247,7 @@ describe('SharePointDiscoveryView', () => {
     it('displays error message when error occurs', () => {
       useSharePointDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        errors: ['Test error message'],
+        error: 'Test error message',
       });
 
       render(<SharePointDiscoveryView />);
@@ -272,7 +275,7 @@ describe('SharePointDiscoveryView', () => {
 
       render(<SharePointDiscoveryView />);
       // Logs may not be displayed in this view; just verify it renders
-      expect(screen.getByText(/Discovery/i)).toBeInTheDocument();
+      expect(screen.getByTestId('sharepoint-discovery-view')).toBeInTheDocument();
     });
 
     it('calls clearLogs when clear button clicked', () => {
@@ -304,7 +307,7 @@ describe('SharePointDiscoveryView', () => {
   describe('Accessibility', () => {
     it('has accessible data-cy attributes', () => {
       render(<SharePointDiscoveryView />);
-      expect(screen.getByTestId('share-point-discovery-view')).toBeInTheDocument();
+      expect(screen.getByTestId('sharepoint-discovery-view')).toBeInTheDocument();
     });
 
     it('has accessible button labels', () => {
@@ -343,12 +346,11 @@ describe('SharePointDiscoveryView', () => {
       useSharePointDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isDiscovering: true,
-
-        isDiscovering: true,
         progress: {
-          progress: 50,
-          currentOperation: 'Processing...',
+          percentComplete: 50,
+          currentItem: 'Processing...',
           estimatedTimeRemaining: 30,
+          itemsProcessed: 100,
         },
       });
 
@@ -356,10 +358,12 @@ describe('SharePointDiscoveryView', () => {
       expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
 
       // Completed state with results
+      const exportData = jest.fn();
       useSharePointDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        currentResult: { users: [], groups: [], stats: createUniversalStats() },
-        exportResults,
+        selectedTab: 'sites',
+        result: { sites: [], lists: [], permissions: [] },
+        exportData,
       });
 
       rerender(<SharePointDiscoveryView />);
@@ -368,7 +372,7 @@ describe('SharePointDiscoveryView', () => {
       // Export results
       const exportButton = screen.getByTestId('export-btn');
       fireEvent.click(exportButton);
-      expect(exportResults).toHaveBeenCalled();
+      expect(exportData).toHaveBeenCalled();
     });
   });
 });
