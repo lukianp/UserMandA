@@ -5,7 +5,7 @@
 import * as React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
-import {  createUniversalDiscoveryHook , createUniversalConfig } from '../../../test-utils/universalDiscoveryMocks';
+import {  createUniversalDiscoveryHook , createUniversalConfig, createUniversalStats } from '../../../test-utils/universalDiscoveryMocks';
 
 import '@testing-library/jest-dom';
 import {
@@ -62,7 +62,7 @@ describe('OneDriveDiscoveryView', () => {
   describe('Rendering', () => {
     it('renders without crashing', () => {
       render(<OneDriveDiscoveryView />);
-      expect(screen.getByTestId('one-drive-discovery-view')).toBeInTheDocument();
+      expect(screen.getByTestId('onedrive-discovery-view')).toBeInTheDocument();
     });
 
     it('displays the view title', () => {
@@ -73,7 +73,7 @@ describe('OneDriveDiscoveryView', () => {
     it('displays the view description', () => {
       render(<OneDriveDiscoveryView />);
       expect(
-        screen.getByText(/OneDrive content discovery/i)
+        screen.getByText(/Discover OneDrive accounts/i)
       ).toBeInTheDocument();
     });
 
@@ -89,7 +89,7 @@ describe('OneDriveDiscoveryView', () => {
         selectedProfile: { name: 'Test Profile' },
       });
       render(<OneDriveDiscoveryView />);
-      expect(screen.getByTestId('config-toggle')).toBeInTheDocument();
+      expect(screen.getByTestId('config-btn')).toBeInTheDocument();
     });
   });
 
@@ -119,7 +119,7 @@ describe('OneDriveDiscoveryView', () => {
       });
 
       render(<OneDriveDiscoveryView />);
-      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-btn')).toBeInTheDocument();
     });
 
     it('calls cancelDiscovery when stop button clicked', () => {
@@ -131,7 +131,7 @@ describe('OneDriveDiscoveryView', () => {
       });
 
       render(<OneDriveDiscoveryView />);
-      const button = screen.getByTestId('cancel-discovery-btn');
+      const button = screen.getByTestId('cancel-btn');
       fireEvent.click(button);
 
       expect(cancelDiscovery).toHaveBeenCalled();
@@ -141,7 +141,31 @@ describe('OneDriveDiscoveryView', () => {
       const exportResults = jest.fn();
       useOneDriveDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        currentResult: { users: [], groups: [], stats: createUniversalStats() },
+        currentResult: {
+          accounts: [],
+          files: [],
+          sharing: [],
+          statistics: {
+            totalAccounts: 0,
+            activeAccounts: 0,
+            totalStorageUsed: 0,
+            totalStorageQuota: 0,
+            totalStorageAvailable: 0,
+            averageStorageUsage: 0,
+            totalFiles: 0,
+            totalFolders: 0,
+            totalShares: 0,
+            externalShares: 0,
+            highRiskShares: 0,
+            filesWithExternalAccess: 0,
+            unlabeledFiles: 0,
+            staleFiles: 0,
+          },
+          configName: 'Test Config',
+          tenantName: 'Test Tenant',
+          startTime: Date.now(),
+          duration: 5000,
+        },
         exportResults,
       });
 
@@ -173,17 +197,18 @@ describe('OneDriveDiscoveryView', () => {
       useOneDriveDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isDiscovering: true,
-
-        isDiscovering: true,
         progress: {
-          progress: 50,
+          overallProgress: 50,
           currentOperation: 'Processing...',
           estimatedTimeRemaining: 30,
+          accountsProcessed: 10,
+          filesProcessed: 100,
+          sharesProcessed: 5,
         },
       });
 
       render(<OneDriveDiscoveryView />);
-      expect(screen.getByText(/50%/i) || screen.getByText(/Processing/i)).toBeInTheDocument();
+      expect(screen.getByText(/50% Complete/i)).toBeInTheDocument();
     });
 
     it('does not show progress when not running', () => {
@@ -211,7 +236,7 @@ describe('OneDriveDiscoveryView', () => {
 
     it('shows empty state when no results', () => {
       render(<OneDriveDiscoveryView />);
-      expect(screen.getByTestId('one-drive-discovery-view-view')).toBeInTheDocument();
+      expect(screen.getByTestId('onedrive-discovery-view')).toBeInTheDocument();
     });
   });
 
@@ -251,7 +276,7 @@ describe('OneDriveDiscoveryView', () => {
 
       render(<OneDriveDiscoveryView />);
       // Logs may not be displayed in this view; just verify it renders
-      expect(screen.getByText(/Discovery/i)).toBeInTheDocument();
+      expect(screen.getByTestId('onedrive-discovery-view')).toBeInTheDocument();
     });
 
     it('calls clearLogs when clear button clicked', () => {
@@ -283,7 +308,7 @@ describe('OneDriveDiscoveryView', () => {
   describe('Accessibility', () => {
     it('has accessible data-cy attributes', () => {
       render(<OneDriveDiscoveryView />);
-      expect(screen.getByTestId('one-drive-discovery-view')).toBeInTheDocument();
+      expect(screen.getByTestId('onedrive-discovery-view')).toBeInTheDocument();
     });
 
     it('has accessible button labels', () => {
@@ -322,22 +347,47 @@ describe('OneDriveDiscoveryView', () => {
       useOneDriveDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isDiscovering: true,
-
-        isDiscovering: true,
         progress: {
-          progress: 50,
+          overallProgress: 50,
           currentOperation: 'Processing...',
           estimatedTimeRemaining: 30,
+          accountsProcessed: 10,
+          filesProcessed: 100,
+          sharesProcessed: 5,
         },
       });
 
       rerender(<OneDriveDiscoveryView />);
-      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-btn')).toBeInTheDocument();
 
       // Completed state with results
       useOneDriveDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        currentResult: { users: [], groups: [], stats: createUniversalStats() },
+        currentResult: {
+          accounts: [],
+          files: [],
+          sharing: [],
+          statistics: {
+            totalAccounts: 0,
+            activeAccounts: 0,
+            totalStorageUsed: 0,
+            totalStorageQuota: 0,
+            totalStorageAvailable: 0,
+            averageStorageUsage: 0,
+            totalFiles: 0,
+            totalFolders: 0,
+            totalShares: 0,
+            externalShares: 0,
+            highRiskShares: 0,
+            filesWithExternalAccess: 0,
+            unlabeledFiles: 0,
+            staleFiles: 0,
+          },
+          configName: 'Test Config',
+          tenantName: 'Test Tenant',
+          startTime: Date.now(),
+          duration: 5000,
+        },
         exportResults,
       });
 
