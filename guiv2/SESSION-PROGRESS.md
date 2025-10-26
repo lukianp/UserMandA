@@ -11,19 +11,20 @@
 - [✓] useExchangeDiscoveryLogic.test.ts (+3 tests)
 - [✓] OneDriveDiscoveryView.test.tsx (+11 tests) - Fixed data-cy attributes, progress props, result structure
 - [✓] SharePointDiscoveryView.test.tsx (+12 tests) - Fixed data-cy, progress structure, export button tabs, filter objects
+- [✓] TeamsDiscoveryView.test.tsx (+8 tests) - Fixed filter objects, progress structure, export/result pattern
 
 ## In Progress
-- [ ] TeamsDiscoveryView.test.tsx (queued)
+- [ ] Office365DiscoveryView.test.tsx (next)
 
 ## Queued
-- [ ] Office365DiscoveryView.test.tsx
+- [ ] Remaining discovery view tests (20+ files)
 - [ ] Mock Not Called errors (45 failures)
 - [ ] Element Not Found errors (312 failures)
 - [ ] Assertion mismatches (217 failures)
 
 ## Current Count
-- Tests: 1,827 / 3,091 (59.1%)
-- Gain: +26 tests
+- Tests: 1,835 / 3,091 (59.4%)
+- Gain: +34 tests
 
 ## Session Notes
 - Using targeted fix strategy

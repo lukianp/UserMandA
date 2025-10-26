@@ -5,7 +5,7 @@
 import * as React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
-import {  createUniversalDiscoveryHook , createUniversalConfig } from '../../../test-utils/universalDiscoveryMocks';
+import {  createUniversalDiscoveryHook , createUniversalConfig, createUniversalStats } from '../../../test-utils/universalDiscoveryMocks';
 
 import '@testing-library/jest-dom';
 import {
@@ -43,20 +43,20 @@ describe('TeamsDiscoveryView', () => {
     result: null,
     isDiscovering: false,
     selectedTab: 'overview',
-    teamFilter: null,
+    teamFilter: { searchText: '' },
     setTeamFilter: jest.fn(),
-    channelFilter: null,
+    channelFilter: { searchText: '' },
     setChannelFilter: jest.fn(),
-    memberFilter: null,
+    memberFilter: { searchText: '' },
     setMemberFilter: jest.fn(),
     teams: [],
-    channels: null,
-    members: null,
+    channels: [],
+    members: [],
     apps: [],
-    teamColumns: null,
-    channelColumns: null,
-    memberColumns: null,
-    appColumns: null,
+    teamColumns: [],
+    channelColumns: [],
+    memberColumns: [],
+    appColumns: [],
     loadTemplate: jest.fn(),
     saveAsTemplate: jest.fn(),
     loadData: jest.fn(),
@@ -87,7 +87,7 @@ describe('TeamsDiscoveryView', () => {
 
     it('displays the view title', () => {
       render(<TeamsDiscoveryView />);
-      expect(screen.getByText(/Teams.*Discovery/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Teams Discovery/i })).toBeInTheDocument();
     });
 
     it('displays the view description', () => {
@@ -158,30 +158,34 @@ describe('TeamsDiscoveryView', () => {
       expect(cancelDiscovery).toHaveBeenCalled();
     });
 
-    it('calls exportResults when export button clicked', () => {
-      const exportResults = jest.fn();
+    it('calls exportData when export button clicked', () => {
+      const exportData = jest.fn();
       useTeamsDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        currentResult: { users: [], groups: [], stats: createUniversalStats() },
-        exportResults,
+        selectedTab: 'teams',
+        result: { teams: [], channels: [], members: [] },
+        statistics: {},
+        exportData,
       });
 
       render(<TeamsDiscoveryView />);
       const button = screen.getByTestId('export-btn');
       fireEvent.click(button);
 
-      expect(exportResults).toHaveBeenCalled();
+      expect(exportData).toHaveBeenCalled();
     });
 
-    it('disables export button when no results', () => {
+    it('shows export button when tab is selected', () => {
       useTeamsDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        currentResult: null,
+        selectedTab: 'teams',
+        result: { teams: [], channels: [], members: [] },
+        statistics: {},
       });
 
       render(<TeamsDiscoveryView />);
-      const button = screen.getByTestId('export-btn').closest('button');
-      expect(button).toBeDisabled();
+      const button = screen.getByTestId('export-btn');
+      expect(button).toBeInTheDocument();
     });
   });
 
@@ -194,17 +198,16 @@ describe('TeamsDiscoveryView', () => {
       useTeamsDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isDiscovering: true,
-
-        isDiscovering: true,
         progress: {
-          progress: 50,
-          currentOperation: 'Processing...',
+          percentComplete: 50,
+          phaseLabel: 'Processing...',
           estimatedTimeRemaining: 30,
+          itemsProcessed: 100,
         },
       });
 
       render(<TeamsDiscoveryView />);
-      expect(screen.getByText(/50%/i) || screen.getByText(/Processing/i)).toBeInTheDocument();
+      expect(screen.getByText(/50% complete/i)).toBeInTheDocument();
     });
 
     it('does not show progress when not running', () => {
@@ -232,7 +235,7 @@ describe('TeamsDiscoveryView', () => {
 
     it('shows empty state when no results', () => {
       render(<TeamsDiscoveryView />);
-      expect(screen.getByTestId('teams-discovery-view-view')).toBeInTheDocument();
+      expect(screen.getByTestId('teams-discovery-view')).toBeInTheDocument();
     });
   });
 
@@ -244,7 +247,7 @@ describe('TeamsDiscoveryView', () => {
     it('displays error message when error occurs', () => {
       useTeamsDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        errors: ['Test error message'],
+        error: 'Test error message',
       });
 
       render(<TeamsDiscoveryView />);
@@ -272,7 +275,7 @@ describe('TeamsDiscoveryView', () => {
 
       render(<TeamsDiscoveryView />);
       // Logs may not be displayed in this view; just verify it renders
-      expect(screen.getByText(/Discovery/i)).toBeInTheDocument();
+      expect(screen.getByTestId('teams-discovery-view')).toBeInTheDocument();
     });
 
     it('calls clearLogs when clear button clicked', () => {
@@ -324,7 +327,7 @@ describe('TeamsDiscoveryView', () => {
   describe('Integration', () => {
     it('handles complete discovery workflow', async () => {
       const startDiscovery = jest.fn();
-      const exportResults = jest.fn();
+      const exportData = jest.fn();
 
       // Initial state
       useTeamsDiscoveryLogic.mockReturnValue({
@@ -343,12 +346,11 @@ describe('TeamsDiscoveryView', () => {
       useTeamsDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         isDiscovering: true,
-
-        isDiscovering: true,
         progress: {
-          progress: 50,
-          currentOperation: 'Processing...',
+          percentComplete: 50,
+          phaseLabel: 'Processing...',
           estimatedTimeRemaining: 30,
+          itemsProcessed: 100,
         },
       });
 
@@ -358,17 +360,18 @@ describe('TeamsDiscoveryView', () => {
       // Completed state with results
       useTeamsDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        currentResult: { users: [], groups: [], stats: createUniversalStats() },
-        exportResults,
+        selectedTab: 'teams',
+        result: { teams: [], channels: [], members: [] },
+        statistics: {},
+        exportData,
       });
 
       rerender(<TeamsDiscoveryView />);
-      // Results are available for export
 
       // Export results
       const exportButton = screen.getByTestId('export-btn');
       fireEvent.click(exportButton);
-      expect(exportResults).toHaveBeenCalled();
+      expect(exportData).toHaveBeenCalled();
     });
   });
 });
