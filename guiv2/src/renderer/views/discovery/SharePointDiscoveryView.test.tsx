@@ -29,7 +29,7 @@ describe('SharePointDiscoveryView', () => {
     isRunning: false,
     isCancelling: false,
     progress: null,
-    currentResult: null,
+    results: null,
     error: null,
     logs: [],
     startDiscovery: jest.fn(),
@@ -167,7 +167,7 @@ describe('SharePointDiscoveryView', () => {
       });
 
       render(<SharePointDiscoveryView />);
-      const button = screen.getByTestId('export-btn');
+      const button = screen.getByTestId('export-results-btn');
       fireEvent.click(button);
 
       expect(exportData).toHaveBeenCalled();
@@ -184,7 +184,7 @@ describe('SharePointDiscoveryView', () => {
 
       render(<SharePointDiscoveryView />);
       // Export button appears when not on overview tab
-      const button = screen.getByTestId('export-btn');
+      const button = screen.getByTestId('export-results-btn');
       expect(button).toBeInTheDocument();
     });
   });
@@ -370,7 +370,7 @@ describe('SharePointDiscoveryView', () => {
       // Results are available for export
 
       // Export results
-      const exportButton = screen.getByTestId('export-btn');
+      const exportButton = screen.getByTestId('export-results-btn');
       fireEvent.click(exportButton);
       expect(exportData).toHaveBeenCalled();
     });

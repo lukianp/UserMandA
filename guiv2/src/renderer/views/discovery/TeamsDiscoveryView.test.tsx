@@ -29,7 +29,7 @@ describe('TeamsDiscoveryView', () => {
     isRunning: false,
     isCancelling: false,
     progress: null,
-    currentResult: null,
+    results: null,
     error: null,
     logs: [],
     startDiscovery: jest.fn(),
@@ -169,7 +169,7 @@ describe('TeamsDiscoveryView', () => {
       });
 
       render(<TeamsDiscoveryView />);
-      const button = screen.getByTestId('export-btn');
+      const button = screen.getByTestId('export-results-btn');
       fireEvent.click(button);
 
       expect(exportData).toHaveBeenCalled();
@@ -184,7 +184,7 @@ describe('TeamsDiscoveryView', () => {
       });
 
       render(<TeamsDiscoveryView />);
-      const button = screen.getByTestId('export-btn');
+      const button = screen.getByTestId('export-results-btn');
       expect(button).toBeInTheDocument();
     });
   });
@@ -369,7 +369,7 @@ describe('TeamsDiscoveryView', () => {
       rerender(<TeamsDiscoveryView />);
 
       // Export results
-      const exportButton = screen.getByTestId('export-btn');
+      const exportButton = screen.getByTestId('export-results-btn');
       fireEvent.click(exportButton);
       expect(exportData).toHaveBeenCalled();
     });

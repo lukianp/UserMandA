@@ -31,7 +31,7 @@ describe('ApplicationDiscoveryView', () => {
     // State
     config: createUniversalConfig(),
     templates: [],
-    currentResult: null,
+    results: null,
     isDiscovering: false,
     progress: createUniversalProgress(),
     selectedTab: 'overview',
@@ -48,7 +48,7 @@ describe('ApplicationDiscoveryView', () => {
     // Actions
     isRunning: false,
     isCancelling: false,
-    currentResult: null,
+    results: null,
     startDiscovery: jest.fn(),
     cancelDiscovery: jest.fn(),
     exportResults: jest.fn(),
@@ -166,19 +166,19 @@ describe('ApplicationDiscoveryView', () => {
       });
 
       render(<ApplicationDiscoveryView />);
-      const button = screen.getByTestId('export-btn');
+      const button = screen.getByTestId('export-results-btn');
       expect(button).toBeInTheDocument();
     });
 
     it('hides export button when no results', () => {
       mockUseApplicationDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        currentResult: null,
+        results: null,
       });
 
       render(<ApplicationDiscoveryView />);
       // Export button not shown when on overview tab or no results
-      expect(screen.queryByTestId('export-btn')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('export-results-btn')).not.toBeInTheDocument();
     });
   });
 
@@ -368,7 +368,7 @@ describe('ApplicationDiscoveryView', () => {
 
       rerender(<ApplicationDiscoveryView />);
       // Results are available for export
-      const exportButton = screen.getByTestId('export-btn');
+      const exportButton = screen.getByTestId('export-results-btn');
       expect(exportButton).toBeInTheDocument();
     });
   });

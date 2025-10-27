@@ -391,7 +391,7 @@ describe('DomainDiscoveryView', () => {
       });
 
       render(<DomainDiscoveryView />);
-      const button = screen.getByText(/Clear Logs/i);
+      const button = screen.getByTestId("clear-logs-btn");
       fireEvent.click(button);
 
       expect(clearLogs).toHaveBeenCalled();

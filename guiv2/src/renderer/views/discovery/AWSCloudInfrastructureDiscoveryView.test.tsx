@@ -31,7 +31,7 @@ describe('AWSCloudInfrastructureDiscoveryView', () => {
     isRunning: false,
     isCancelling: false,
     progress: null as any,
-    currentResult: null as any,
+    results: null as any,
     error: null as any,
     logs: [] as any[],
     startDiscovery: jest.fn(),
