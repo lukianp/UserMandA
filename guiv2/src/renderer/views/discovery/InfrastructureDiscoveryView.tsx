@@ -10,7 +10,7 @@ export default function InfrastructureDiscoveryView(){
   const [config, setConfig] = useState<Record<string, any>>({});
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-4 space-y-3" data-testid="infrastructure-discovery-view" data-cy="infrastructure-discovery-view">
       <h1 className="text-xl font-semibold">Infrastructure Discovery</h1>
       <form className="grid grid-cols-3 gap-2" onSubmit={(e)=>{ e.preventDefault(); start(config); }}>
         

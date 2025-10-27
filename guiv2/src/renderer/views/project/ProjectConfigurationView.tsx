@@ -63,7 +63,7 @@ export const ProjectConfigurationView: React.FC = () => {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
+    <div className="flex items-center justify-center h-full" data-testid="project-configuration-view" data-cy="project-configuration-view">
         <Spinner size="lg" />
         <span className="ml-3 text-lg">Loading project configuration...</span>
       </div>

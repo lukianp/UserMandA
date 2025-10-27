@@ -3,7 +3,7 @@ import { Activity, TrendingUp, DollarSign, Shield } from 'lucide-react';
 
 export const SecurityPostureView: React.FC = () => {
   return (
-    <div className="flex flex-col h-full p-6 space-y-6">
+    <div className="flex flex-col h-full p-6 space-y-6" data-testid="security-posture-view" data-cy="security-posture-view">
       <div>
         <h1 className="text-2xl font-bold">Security Posture</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">

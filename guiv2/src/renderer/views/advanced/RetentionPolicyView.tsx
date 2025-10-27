@@ -5,7 +5,7 @@ import { Button } from '../../components/atoms/Button';
 
 export const RetentionPolicyView: React.FC = () => {
   return (
-    <div className="flex flex-col h-full p-6 space-y-6">
+    <div className="flex flex-col h-full p-6 space-y-6" data-testid="retention-policy-view" data-cy="retention-policy-view">
       <div>
         <h1 className="text-2xl font-bold">Retention Policy</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">

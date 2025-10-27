@@ -10,7 +10,7 @@ export default function ExternalIdentityDiscoveryView(){
   const [config, setConfig] = useState<Record<string, any>>({});
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-4 space-y-3" data-testid="external-identity-discovery-view" data-cy="external-identity-discovery-view">
       <h1 className="text-xl font-semibold">ExternalIdentity Discovery</h1>
       <form className="grid grid-cols-3 gap-2" onSubmit={(e)=>{ e.preventDefault(); start(config); }}>
         

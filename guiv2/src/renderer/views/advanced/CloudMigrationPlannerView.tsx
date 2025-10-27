@@ -5,7 +5,7 @@ import { Button } from '../../components/atoms/Button';
 
 export const CloudMigrationPlannerView: React.FC = () => {
   return (
-    <div className="flex flex-col h-full p-6 space-y-6">
+    <div className="flex flex-col h-full p-6 space-y-6" data-testid="cloud-migration-planner-view" data-cy="cloud-migration-planner-view">
       <div>
         <h1 className="text-2xl font-bold">Cloud Migration Planner</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">

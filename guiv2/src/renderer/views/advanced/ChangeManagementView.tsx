@@ -3,7 +3,7 @@ import { Activity, TrendingUp, DollarSign, Shield } from 'lucide-react';
 
 export const ChangeManagementView: React.FC = () => {
   return (
-    <div className="flex flex-col h-full p-6 space-y-6">
+    <div className="flex flex-col h-full p-6 space-y-6" data-testid="change-management-view" data-cy="change-management-view">
       <div>
         <h1 className="text-2xl font-bold">Change Management</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">

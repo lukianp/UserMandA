@@ -8,7 +8,7 @@ export const IncidentResponseView: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
+    <div className="flex items-center justify-center h-full" data-testid="incident-response-view" data-cy="incident-response-view">
         <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
         <span className="ml-3 text-lg text-gray-600">Loading incidents...</span>
       </div>

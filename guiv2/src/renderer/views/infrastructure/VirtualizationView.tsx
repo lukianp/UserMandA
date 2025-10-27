@@ -57,7 +57,7 @@ const VirtualizationView: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 space-y-4" data-testid="virtualization-view" data-cy="virtualization-view">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Virtualization Infrastructure</h1>
         <Button onClick={reload} variant="secondary" size="sm" disabled={isLoading}>

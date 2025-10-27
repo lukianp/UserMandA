@@ -18,7 +18,7 @@ export const SystemConfigurationView: React.FC = () => {
   } = useSystemConfigLogic();
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-6 overflow-y-auto">
+    <div className="flex flex-col h-full p-6 space-y-6 overflow-y-auto" data-testid="system-configuration-view" data-cy="system-configuration-view">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">System Configuration</h1>

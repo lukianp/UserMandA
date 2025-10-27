@@ -127,7 +127,7 @@ export const UserManagementView: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-6">
+    <div className="flex flex-col h-full p-6 space-y-6" data-testid="user-management-view" data-cy="user-management-view">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

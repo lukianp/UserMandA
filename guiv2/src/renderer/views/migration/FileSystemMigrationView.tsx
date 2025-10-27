@@ -10,7 +10,7 @@ export default function FileSystemMigrationView(){
   const [config, setConfig] = useState<Record<string, any>>({});
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-4 space-y-3" data-testid="file-system-migration-view" data-cy="file-system-migration-view">
       <h1 className="text-xl font-semibold">FileSystem Migration</h1>
       <form className="grid grid-cols-3 gap-2" onSubmit={(e)=>{ e.preventDefault(); }}>
         <div className="col-span-3 text-sm text-neutral-600">No parameters</div>

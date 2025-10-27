@@ -140,7 +140,7 @@ const NetworkInfrastructureView: React.FC = () => {
         const row = info.row.original;
         const utilization = row.ports > 0 ? ((row.portsInUse / row.ports) * 100).toFixed(0) : '0';
         return (
-          <span className="text-gray-700 dark:text-gray-300">
+    <span className="text-gray-700 dark:text-gray-300" data-testid="network-infrastructure-view" data-cy="network-infrastructure-view">
             {row.portsInUse || 0}/{row.ports || 0} ({utilization}%)
           </span>
         );

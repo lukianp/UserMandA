@@ -127,7 +127,7 @@ export const NotificationRulesView: React.FC = () => {
       cell: (value: any) => {
         const rate = value.totalSent > 0 ? (value.totalDelivered / value.totalSent * 100) : 0;
         return (
-          <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1" data-testid="notification-rules-view" data-cy="notification-rules-view">
             <span className="text-sm">{Math.round(rate)}%</span>
             <div className="w-8 h-1 bg-gray-200 rounded">
               <div

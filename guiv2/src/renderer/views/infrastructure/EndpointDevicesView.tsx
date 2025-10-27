@@ -59,7 +59,7 @@ const EndpointDevicesView: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 space-y-4" data-testid="endpoint-devices-view" data-cy="endpoint-devices-view">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Endpoint Devices</h1>
         <Button onClick={reload} variant="secondary" size="sm" disabled={isLoading}>

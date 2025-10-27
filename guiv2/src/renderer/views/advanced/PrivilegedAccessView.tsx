@@ -5,7 +5,7 @@ import { Button } from '../../components/atoms/Button';
 
 export const PrivilegedAccessView: React.FC = () => {
   return (
-    <div className="flex flex-col h-full p-6 space-y-6">
+    <div className="flex flex-col h-full p-6 space-y-6" data-testid="privileged-access-view" data-cy="privileged-access-view">
       <div>
         <h1 className="text-2xl font-bold">Privileged Access</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">

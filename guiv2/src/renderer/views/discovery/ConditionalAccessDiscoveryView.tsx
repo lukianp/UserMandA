@@ -10,7 +10,7 @@ export default function ConditionalAccessDiscoveryView(){
   const [config, setConfig] = useState<Record<string, any>>({});
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-4 space-y-3" data-testid="conditional-access-discovery-view" data-cy="conditional-access-discovery-view">
       <h1 className="text-xl font-semibold">ConditionalAccess Discovery</h1>
       <form className="grid grid-cols-3 gap-2" onSubmit={(e)=>{ e.preventDefault(); start(config); }}>
         

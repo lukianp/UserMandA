@@ -3,7 +3,7 @@ import { Activity, TrendingUp, DollarSign, Shield } from 'lucide-react';
 
 export const TicketingSystemView: React.FC = () => {
   return (
-    <div className="flex flex-col h-full p-6 space-y-6">
+    <div className="flex flex-col h-full p-6 space-y-6" data-testid="ticketing-system-view" data-cy="ticketing-system-view">
       <div>
         <h1 className="text-2xl font-bold">Ticketing System</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">

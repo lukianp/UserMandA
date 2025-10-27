@@ -161,7 +161,7 @@ const AssetInventoryView: React.FC = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col p-6">
+    <div className="h-full flex flex-col p-6" data-testid="asset-inventory-view" data-cy="asset-inventory-view">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">

@@ -10,7 +10,7 @@ export default function DiscoveryModuleBaseDiscoveryView(){
   const [config, setConfig] = useState<Record<string, any>>({});
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-4 space-y-3" data-testid="discovery-module-base-discovery-view" data-cy="discovery-module-base-discovery-view">
       <h1 className="text-xl font-semibold">DiscoveryModuleBase Discovery</h1>
       <form className="grid grid-cols-3 gap-2" onSubmit={(e)=>{ e.preventDefault(); start(config); }}>
         <div className="col-span-3 text-sm text-neutral-600">No parameters</div>

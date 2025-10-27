@@ -42,7 +42,7 @@ export const PrivilegedAccessView: React.FC = () => {
   // Handle loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
+    <div className="flex items-center justify-center h-full" data-testid="privileged-access-view" data-cy="privileged-access-view">
         <div className="flex items-center space-x-3">
           <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
           <span className="text-lg text-gray-600">Loading privileged access data...</span>
