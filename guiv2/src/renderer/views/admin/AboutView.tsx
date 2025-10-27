@@ -37,7 +37,7 @@ export const AboutView: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-6 overflow-y-auto">
+    <div className="flex flex-col h-full p-6 space-y-6 overflow-y-auto" data-testid="about-view" data-cy="about-view">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-8 rounded-lg shadow-lg">
         <div className="flex items-center gap-4 mb-4">
