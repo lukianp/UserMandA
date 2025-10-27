@@ -35,19 +35,19 @@ describe('useIdentityGovernanceDiscoveryLogic', () => {
       const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
 
       expect(result.current).toBeDefined();
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+      expect(result.current.isDiscovering).toBe(false);
     });
 
     it('should initialize with null or empty result', () => {
       const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
 
-      expect(result.current.result || result.current.currentResult).toBeNull();
+      expect(result.current.result).toBeNull();
     });
 
     it('should initialize with null error', () => {
       const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
 
-      expect(result.current.error || result.current.errors).toBeFalsy();
+      expect(result.current.error).toBeFalsy();
     });
   });
 
@@ -64,7 +64,7 @@ describe('useIdentityGovernanceDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+      expect(result.current.isDiscovering).toBe(false);
     });
 
     it('should handle discovery failure', async () => {
@@ -79,7 +79,7 @@ describe('useIdentityGovernanceDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+      expect(result.current.isDiscovering).toBe(false);
     });
 
     it('should set progress during discovery', async () => {
@@ -118,7 +118,7 @@ describe('useIdentityGovernanceDiscoveryLogic', () => {
         await result.current.cancelDiscovery();
       });
 
-      expect(result.current.isDiscovering || result.current.isRunning).toBe(false);
+      expect(result.current.isDiscovering).toBe(false);
     });
   });
 
