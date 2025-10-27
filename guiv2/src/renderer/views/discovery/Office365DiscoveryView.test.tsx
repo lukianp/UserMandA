@@ -175,7 +175,7 @@ describe('Office365DiscoveryView', () => {
       });
 
       render(<Office365DiscoveryView />);
-      const button = screen.getByTestId('export-btn');
+      const button = screen.getByTestId('export-results-btn');
       fireEvent.click(button);
 
       expect(exportResults).toHaveBeenCalled();
@@ -196,7 +196,7 @@ describe('Office365DiscoveryView', () => {
 
       render(<Office365DiscoveryView />);
       // Export button is only shown when selectedTab !== 'overview'
-      const button = screen.queryByTestId('export-btn');
+      const button = screen.queryByTestId('export-results-btn');
       if (button) {
         expect(button.closest('button')).toBeInTheDocument();
       }
@@ -395,7 +395,7 @@ describe('Office365DiscoveryView', () => {
       // Results are available for export
 
       // Export results
-      const exportButton = screen.getByTestId('export-btn');
+      const exportButton = screen.getByTestId('export-results-btn');
       fireEvent.click(exportButton);
       expect(exportResults).toHaveBeenCalled();
     });

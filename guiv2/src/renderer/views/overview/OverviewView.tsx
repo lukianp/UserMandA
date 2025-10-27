@@ -82,7 +82,7 @@ const OverviewView: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6 overflow-auto" data-testid="overview-view">
+    <div className="p-6 space-y-6 overflow-auto" data-testid="overview-view" data-cy="overview-view">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

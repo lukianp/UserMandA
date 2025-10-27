@@ -17,7 +17,10 @@
       "Bash(do)",
       "Bash(if grep -q 'data-cy=\"\"export-btn\"\"' \"$file\")",
       "Bash(then)",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(for file in src/renderer/views/discovery/*DiscoveryView.test.tsx src/renderer/views/security/*View.test.tsx)",
+      "Bash(if [ -f \"$file\" ])",
+      "Bash(timeout 10 npm test:*)"
     ],
     "deny": [],
     "ask": [],

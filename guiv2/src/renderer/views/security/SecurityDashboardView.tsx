@@ -98,7 +98,7 @@ export const SecurityDashboardView: React.FC = () => {
           <Button
             variant="secondary"
             onClick={handleExport}
-            data-cy="export-btn"
+            data-cy="export-results-btn" data-testid="export-results-btn"
           >
             Export Report
           </Button>

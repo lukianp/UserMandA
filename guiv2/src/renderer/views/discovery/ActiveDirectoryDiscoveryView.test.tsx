@@ -165,13 +165,13 @@ describe('ActiveDirectoryDiscoveryView', () => {
       mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         currentResult: mockResult,
-        selectedTab: 'users', // export-btn only shows when not on overview tab
+        selectedTab: 'users', // export-results-btn only shows when not on overview tab
         results: [{ id: '1', name: 'Test' }],
         exportResults,
       } as any);
 
       render(<ActiveDirectoryDiscoveryView />);
-      const button = screen.getByTestId('export-btn');
+      const button = screen.getByTestId('export-results-btn');
       fireEvent.click(button);
 
       expect(exportResults).toHaveBeenCalled();
@@ -184,7 +184,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       });
 
       render(<ActiveDirectoryDiscoveryView />);
-      expect(screen.queryByTestId('export-btn')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('export-results-btn')).not.toBeInTheDocument();
     });
   });
 
@@ -371,7 +371,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       mockUseActiveDirectoryDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
         currentResult: mockResult,
-        selectedTab: 'users', // export-btn only shows when not on overview tab
+        selectedTab: 'users', // export-results-btn only shows when not on overview tab
         exportResults,
       });
 
@@ -379,7 +379,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
       // Results are available for export
 
       // Export results
-      const exportButton = screen.getByTestId('export-btn');
+      const exportButton = screen.getByTestId('export-results-btn');
       fireEvent.click(exportButton);
       expect(exportResults).toHaveBeenCalled();
     });
