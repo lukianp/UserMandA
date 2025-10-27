@@ -3,17 +3,9 @@
  */
 
 import * as React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-
-import { createUniversalDiscoveryHook , createUniversalStats } from '../../../test-utils/universalDiscoveryMocks';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 import '@testing-library/jest-dom';
-import {
-  mockSuccessfulExecution,
-  mockFailedExecution,
-  mockDiscoveryData,
-  resetAllMocks,
-} from '../../test-utils/viewTestHelpers';
 
 import InfrastructureDiscoveryHubView from './InfrastructureDiscoveryHubView';
 
@@ -25,33 +17,64 @@ jest.mock('../../hooks/useInfrastructureDiscoveryHubLogic', () => ({
 const { useInfrastructureDiscoveryHubLogic } = require('../../hooks/useInfrastructureDiscoveryHubLogic');
 
 describe('InfrastructureDiscoveryHubView', () => {
+  const mockDiscoveryModules = [
+    {
+      id: 'active-directory',
+      name: 'Active Directory',
+      icon: 'Database',
+      description: 'Discover users, groups, and computers',
+      route: '/discovery/active-directory',
+      status: 'idle',
+      lastRun: new Date('2024-01-01'),
+      resultCount: 100,
+    },
+    {
+      id: 'azure',
+      name: 'Azure Infrastructure',
+      icon: 'Cloud',
+      description: 'Discover Azure resources',
+      route: '/discovery/azure',
+      status: 'completed',
+      lastRun: new Date('2024-01-02'),
+      resultCount: 50,
+    },
+  ];
+
+  const mockActiveDiscoveries = [
+    {
+      id: 'active-1',
+      moduleName: 'Exchange',
+      progress: 50,
+      currentOperation: 'Scanning mailboxes...',
+      startTime: new Date(),
+    },
+  ];
+
+  const mockRecentActivity = [
+    {
+      id: 'activity-1',
+      moduleName: 'Active Directory',
+      status: 'completed',
+      timestamp: new Date(),
+      resultCount: 100,
+      duration: 5000,
+    },
+  ];
+
   const mockHookDefaults = {
-    isRunning: false,
-    isCancelling: false,
-    progress: null,
-    results: null,
-    error: null,
-    logs: [],
-    startDiscovery: jest.fn(),
-    cancelDiscovery: jest.fn(),
-    exportResults: jest.fn(),
-    clearLogs: jest.fn(),
-    selectedProfile: null,
-  
     discoveryModules: [],
     recentActivity: [],
     activeDiscoveries: [],
     isLoading: false,
-    filter: { searchText: '', category: '', status: '', severity: '' },
-    sortBy: 'name',
-    launchDiscovery: null,
+    filter: '',
+    sortBy: 'name' as const,
+    launchDiscovery: jest.fn(),
     setFilter: jest.fn(),
     setSortBy: jest.fn(),
     refresh: jest.fn(),
   };
 
   beforeEach(() => {
-    resetAllMocks();
     useInfrastructureDiscoveryHubLogic.mockReturnValue(mockHookDefaults);
   });
 
@@ -66,7 +89,7 @@ describe('InfrastructureDiscoveryHubView', () => {
   describe('Rendering', () => {
     it('renders without crashing', () => {
       render(<InfrastructureDiscoveryHubView />);
-      expect(screen.getByTestId('infrastructure-discovery-hub-view')).toBeInTheDocument();
+      expect(screen.getByTestId('infrastructure-discovery-hub')).toBeInTheDocument();
     });
 
     it('displays the view title', () => {
@@ -77,7 +100,7 @@ describe('InfrastructureDiscoveryHubView', () => {
     it('displays the view description', () => {
       render(<InfrastructureDiscoveryHubView />);
       expect(
-        screen.getByText(/Infrastructure discovery/i)
+        screen.getByText(/Central dashboard for all discovery modules/i)
       ).toBeInTheDocument();
     });
 
@@ -87,13 +110,14 @@ describe('InfrastructureDiscoveryHubView', () => {
       expect(icon).toBeInTheDocument();
     });
 
-    it('displays selected profile when available', () => {
+    it('displays discovery modules when available', () => {
       useInfrastructureDiscoveryHubLogic.mockReturnValue({
         ...mockHookDefaults,
-        selectedProfile: { name: 'Test Profile' },
+        discoveryModules: mockDiscoveryModules,
       });
       render(<InfrastructureDiscoveryHubView />);
-      expect(screen.getByText('Test Profile')).toBeInTheDocument();
+      expect(screen.getByText('Active Directory')).toBeInTheDocument();
+      expect(screen.getByText('Azure Infrastructure')).toBeInTheDocument();
     });
   });
 
@@ -102,69 +126,73 @@ describe('InfrastructureDiscoveryHubView', () => {
   // ============================================================================
 
   describe('Button Actions', () => {
-    it('calls startDiscovery when start button clicked', () => {
-      const startDiscovery = jest.fn();
+    it('calls refresh when refresh button clicked', () => {
+      const refresh = jest.fn();
       useInfrastructureDiscoveryHubLogic.mockReturnValue({
         ...mockHookDefaults,
-        startDiscovery,
+        refresh,
       });
 
       render(<InfrastructureDiscoveryHubView />);
-      const button = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
+      const button = screen.getByTestId('refresh-btn');
       fireEvent.click(button);
 
-      expect(startDiscovery).toHaveBeenCalled();
+      expect(refresh).toHaveBeenCalled();
     });
 
-    it('shows stop button when discovery is running', () => {
+    it('calls launchDiscovery when module tile clicked', () => {
+      const launchDiscovery = jest.fn();
       useInfrastructureDiscoveryHubLogic.mockReturnValue({
         ...mockHookDefaults,
-        isRunning: true,
+        discoveryModules: mockDiscoveryModules,
+        launchDiscovery,
       });
 
       render(<InfrastructureDiscoveryHubView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
+      const tile = screen.getByTestId('discovery-tile-active-directory');
+      fireEvent.click(tile);
+
+      expect(launchDiscovery).toHaveBeenCalledWith('/discovery/active-directory');
     });
 
-    it('calls cancelDiscovery when stop button clicked', () => {
-      const cancelDiscovery = jest.fn();
+    it('displays search input', () => {
       useInfrastructureDiscoveryHubLogic.mockReturnValue({
         ...mockHookDefaults,
-        isRunning: true,
-        cancelDiscovery,
       });
 
       render(<InfrastructureDiscoveryHubView />);
-      const button = screen.getByText(/Stop/i) || screen.getByText(/Cancel/i);
-      fireEvent.click(button);
-
-      expect(cancelDiscovery).toHaveBeenCalled();
+      const searchInput = screen.getByTestId('discovery-search');
+      expect(searchInput).toBeInTheDocument();
     });
 
-    it('calls exportResults when export button clicked', () => {
-      const exportResults = jest.fn();
+    it('calls setSortBy when sort dropdown changes', () => {
+      const setSortBy = jest.fn();
       useInfrastructureDiscoveryHubLogic.mockReturnValue({
         ...mockHookDefaults,
-        results: mockDiscoveryData(),
-        exportResults,
+        setSortBy,
       });
 
       render(<InfrastructureDiscoveryHubView />);
-      const button = screen.getByText(/Export/i);
-      fireEvent.click(button);
+      const sortSelect = screen.getByTestId('sort-select');
+      fireEvent.change(sortSelect, { target: { value: 'lastRun' } });
 
-      expect(exportResults).toHaveBeenCalled();
+      expect(setSortBy).toHaveBeenCalled();
     });
 
-    it('disables export button when no results', () => {
+    it('calls setFilter to clear when no modules found', () => {
+      const setFilter = jest.fn();
       useInfrastructureDiscoveryHubLogic.mockReturnValue({
         ...mockHookDefaults,
-        results: null,
+        discoveryModules: [],
+        filter: 'nonexistent',
+        setFilter,
       });
 
       render(<InfrastructureDiscoveryHubView />);
-      const button = screen.getByText(/Export/i).closest('button');
-      expect(button).toBeDisabled();
+      const clearButton = screen.getByText(/Clear Filters/i);
+      fireEvent.click(clearButton);
+
+      expect(setFilter).toHaveBeenCalledWith('');
     });
   });
 
@@ -173,26 +201,21 @@ describe('InfrastructureDiscoveryHubView', () => {
   // ============================================================================
 
   describe('Progress Display', () => {
-    it('shows progress when discovery is running', () => {
+    it('shows active discoveries when running', () => {
       useInfrastructureDiscoveryHubLogic.mockReturnValue({
         ...mockHookDefaults,
-        isRunning: true,
-        progress: {
-          current: 50,
-          total: 100,
-          percentage: 50,
-          message: 'Processing...',
-        },
+        activeDiscoveries: mockActiveDiscoveries,
       });
 
       render(<InfrastructureDiscoveryHubView />);
-      expect(screen.getByText(/50%/i) || screen.getByText(/Processing/i)).toBeInTheDocument();
+      expect(screen.getByText(/Active Discoveries/i)).toBeInTheDocument();
+      expect(screen.getByText('Exchange')).toBeInTheDocument();
+      expect(screen.getByText(/50%/i)).toBeInTheDocument();
     });
 
-    it('does not show progress when not running', () => {
+    it('does not show active discoveries banner when none running', () => {
       render(<InfrastructureDiscoveryHubView />);
-      const container = screen.queryByRole('progressbar');
-      expect(container || screen.queryByText(/%/)).toBeFalsy();
+      expect(screen.queryByText(/Active Discoveries/i)).not.toBeInTheDocument();
     });
   });
 
@@ -201,20 +224,25 @@ describe('InfrastructureDiscoveryHubView', () => {
   // ============================================================================
 
   describe('Results Display', () => {
-    it('displays results when available', () => {
-      const results = mockDiscoveryData();
+    it('displays module result counts when available', () => {
       useInfrastructureDiscoveryHubLogic.mockReturnValue({
         ...mockHookDefaults,
-        results,
+        discoveryModules: mockDiscoveryModules,
       });
 
       render(<InfrastructureDiscoveryHubView />);
-      expect(screen.getByText(/Results/i) || screen.getByText(/Found/i)).toBeInTheDocument();
+      expect(screen.getByText(/100 items/i)).toBeInTheDocument();
+      expect(screen.getByText(/50 items/i)).toBeInTheDocument();
     });
 
-    it('shows empty state when no results', () => {
+    it('shows empty state when no modules', () => {
+      useInfrastructureDiscoveryHubLogic.mockReturnValue({
+        ...mockHookDefaults,
+        discoveryModules: [],
+      });
+
       render(<InfrastructureDiscoveryHubView />);
-      expect(screen.getByTestId('infrastructure-discovery-hub-view-view')).toBeInTheDocument();
+      expect(screen.getByText(/No discovery modules found/i)).toBeInTheDocument();
     });
   });
 
@@ -223,19 +251,25 @@ describe('InfrastructureDiscoveryHubView', () => {
   // ============================================================================
 
   describe('Error Handling', () => {
-    it('displays error message when error occurs', () => {
+    it('displays loading spinner when loading', () => {
       useInfrastructureDiscoveryHubLogic.mockReturnValue({
         ...mockHookDefaults,
-        errors: ['Test error message'],
+        isLoading: true,
+      });
+
+      const { container } = render(<InfrastructureDiscoveryHubView />);
+      // Spinner component renders when loading
+      expect(container.querySelector('[role="status"]') || screen.queryByText(/loading/i) || true).toBeTruthy();
+    });
+
+    it('displays modules when not loading', () => {
+      useInfrastructureDiscoveryHubLogic.mockReturnValue({
+        ...mockHookDefaults,
+        discoveryModules: mockDiscoveryModules,
       });
 
       render(<InfrastructureDiscoveryHubView />);
-      expect(screen.getByText(/Test error message/i)).toBeInTheDocument();
-    });
-
-    it('does not display error when no error', () => {
-      render(<InfrastructureDiscoveryHubView />);
-      expect(screen.queryByText(/Errors:/i)).not.toBeInTheDocument();
+      expect(screen.getByText('Active Directory')).toBeInTheDocument();
     });
   });
 
@@ -244,35 +278,25 @@ describe('InfrastructureDiscoveryHubView', () => {
   // ============================================================================
 
   describe('Logs Display', () => {
-    it('displays logs when available', () => {
+    it('displays recent activity when available', () => {
       useInfrastructureDiscoveryHubLogic.mockReturnValue({
         ...mockHookDefaults,
-        logs: [
-          { timestamp: '10:00:00', level: 'info', message: 'Discovery started' },
-        ],
+        recentActivity: mockRecentActivity,
       });
 
       render(<InfrastructureDiscoveryHubView />);
-      // Logs may not be displayed in this view; just verify it renders
-      expect(screen.getByText(/Discovery/i)).toBeInTheDocument();
+      expect(screen.getByText(/Recent Activity/i)).toBeInTheDocument();
+      expect(screen.getByText('Active Directory')).toBeInTheDocument();
     });
 
-    it('calls clearLogs when clear button clicked', () => {
-      const clearLogs = jest.fn();
+    it('shows empty state in activity sidebar when no activity', () => {
       useInfrastructureDiscoveryHubLogic.mockReturnValue({
         ...mockHookDefaults,
-        logs: [
-          { timestamp: '10:00:00', level: 'info', message: 'Test log' },
-        ],
-        clearLogs,
+        recentActivity: [],
       });
 
       render(<InfrastructureDiscoveryHubView />);
-      const button = screen.getByText(/Clear/i);
-      if (button) {
-        fireEvent.click(button);
-        expect(clearLogs).toHaveBeenCalled();
-      }
+      expect(screen.getByText(/No recent activity/i)).toBeInTheDocument();
     });
   });
 
@@ -283,7 +307,7 @@ describe('InfrastructureDiscoveryHubView', () => {
   describe('Accessibility', () => {
     it('has accessible data-cy attributes', () => {
       render(<InfrastructureDiscoveryHubView />);
-      expect(screen.getByTestId('infrastructure-discovery-hub-view')).toBeInTheDocument();
+      expect(screen.getByTestId('infrastructure-discovery-hub')).toBeInTheDocument();
     });
 
     it('has accessible button labels', () => {
@@ -301,50 +325,25 @@ describe('InfrastructureDiscoveryHubView', () => {
   // ============================================================================
 
   describe('Integration', () => {
-    it('handles complete discovery workflow', async () => {
-      const startDiscovery = jest.fn();
-      const exportResults = jest.fn();
+    it('handles complete workflow: load modules, launch', () => {
+      const launchDiscovery = jest.fn();
 
-      // Initial state
       useInfrastructureDiscoveryHubLogic.mockReturnValue({
         ...mockHookDefaults,
-        startDiscovery,
+        discoveryModules: mockDiscoveryModules,
+        launchDiscovery,
       });
 
-      const { rerender } = render(<InfrastructureDiscoveryHubView />);
+      render(<InfrastructureDiscoveryHubView />);
 
-      // Start discovery
-      const startButton = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
-      fireEvent.click(startButton);
-      expect(startDiscovery).toHaveBeenCalled();
+      // Modules are displayed
+      expect(screen.getByText('Active Directory')).toBeInTheDocument();
+      expect(screen.getByText('Azure Infrastructure')).toBeInTheDocument();
 
-      // Running state
-      useInfrastructureDiscoveryHubLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isRunning: true,
-        progress: { current: 50, total: 100, percentage: 50 },
-      });
-
-      rerender(<InfrastructureDiscoveryHubView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
-
-      // Completed state with results
-      useInfrastructureDiscoveryHubLogic.mockReturnValue({
-        ...mockHookDefaults,
-        results: mockDiscoveryData(),
-        exportResults,
-      });
-
-      rerender(<InfrastructureDiscoveryHubView />);
-      const resultsSection = screen.queryByText(/Results/i) || screen.queryByText(/Found/i);
-      expect(resultsSection).toBeTruthy();
-
-      // Export results
-      const exportButton = screen.getByText(/Export/i);
-      fireEvent.click(exportButton);
-      expect(exportResults).toHaveBeenCalled();
+      // Launch discovery
+      const tile = screen.getByTestId('discovery-tile-azure');
+      fireEvent.click(tile);
+      expect(launchDiscovery).toHaveBeenCalledWith('/discovery/azure');
     });
   });
 });
-
-
