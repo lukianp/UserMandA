@@ -48,7 +48,7 @@ export const AssetInventoryView: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="asset-inventory-view">
+    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="asset-inventory-view" data-testid="asset-inventory-view">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -62,7 +62,7 @@ export const AssetInventoryView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="secondary" onClick={refreshData} disabled={isLoading} data-cy="refresh-btn">
+          <Button variant="secondary" onClick={refreshData} disabled={isLoading} data-cy="refresh-btn" data-testid="refresh-btn">
             Refresh
           </Button>
           <Button variant="primary" onClick={exportAssets} icon={<Download className="w-4 h-4" />} data-cy="export-btn">
@@ -110,7 +110,7 @@ export const AssetInventoryView: React.FC = () => {
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             className="pl-10"
-            data-cy="asset-search"
+            data-cy="asset-search" data-testid="asset-search"
           />
         </div>
       </div>

@@ -31,7 +31,7 @@ const PolicyManagementView: React.FC = () => {
   } = usePolicyManagementLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="policy-management-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="policy-management-view" data-testid="policy-management-view">
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -71,11 +71,11 @@ const PolicyManagementView: React.FC = () => {
           <Filter className="w-5 h-5 text-gray-600 dark:text-gray-400" />
           <h3 className="font-semibold text-gray-900 dark:text-white">Filters</h3>
           {(filters.category || filters.status || filters.compliance || filters.searchText) && (
-            <Button variant="ghost" size="sm" icon={<X className="w-4 h-4" />} onClick={clearFilters} data-cy="clear-filters-btn">Clear All</Button>
+            <Button variant="ghost" size="sm" icon={<X className="w-4 h-4" />} onClick={clearFilters} data-cy="clear-filters-btn" data-testid="clear-filters-btn">Clear All</Button>
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <Input placeholder="Search policies..." value={filters.searchText} onChange={(e) => updateFilter('searchText', e.target.value)} data-cy="search-input" />
+          <Input placeholder="Search policies..." value={filters.searchText} onChange={(e) => updateFilter('searchText', e.target.value)} data-cy="search-input" data-testid="search-input" />
           <Select
             value={filters.category}
             onChange={(value) => updateFilter('category', value)}
@@ -83,7 +83,7 @@ const PolicyManagementView: React.FC = () => {
               { value: '', label: 'All Categories' },
               ...(filterOptions?.categories ?? []).map((cat) => ({ value: cat, label: cat }))
             ]}
-            data-cy="category-select"
+            data-cy="category-select" data-testid="category-select"
           />
           <Select
             value={filters.status}
@@ -92,7 +92,7 @@ const PolicyManagementView: React.FC = () => {
               { value: '', label: 'All Statuses' },
               ...(filterOptions?.statuses ?? []).map((st) => ({ value: st, label: st }))
             ]}
-            data-cy="status-select"
+            data-cy="status-select" data-testid="status-select"
           />
           <Select
             value={filters.compliance}
@@ -101,7 +101,7 @@ const PolicyManagementView: React.FC = () => {
               { value: '', label: 'All Compliance' },
               ...(filterOptions?.compliance ?? []).map((comp) => ({ value: comp, label: comp }))
             ]}
-            data-cy="compliance-select"
+            data-cy="compliance-select" data-testid="compliance-select"
           />
         </div>
       </div>
@@ -109,15 +109,15 @@ const PolicyManagementView: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Button variant="primary" icon={<RefreshCw className="w-4 h-4" />} onClick={loadData} loading={isLoading} data-cy="refresh-btn">Refresh</Button>
+            <Button variant="primary" icon={<RefreshCw className="w-4 h-4" />} onClick={loadData} loading={isLoading} data-cy="refresh-btn" data-testid="refresh-btn">Refresh</Button>
             {selectedPolicies.length > 0 && (
               <>
-                <Button variant="secondary" icon={<Edit className="w-4 h-4" />} onClick={() => selectedPolicies[0] && editPolicy(selectedPolicies[0])} data-cy="edit-btn">Edit Policy</Button>
+                <Button variant="secondary" icon={<Edit className="w-4 h-4" />} onClick={() => selectedPolicies[0] && editPolicy(selectedPolicies[0])} data-cy="edit-btn" data-testid="edit-btn">Edit Policy</Button>
                 <Button variant="secondary" icon={<Eye className="w-4 h-4" />} onClick={() => selectedPolicies[0] && viewAuditTrail(selectedPolicies[0])} data-cy="audit-trail-btn">View Audit Trail</Button>
               </>
             )}
           </div>
-          <Button variant="secondary" icon={<Download className="w-4 h-4" />} disabled={(data?.length ?? 0) === 0} data-cy="export-btn">Export Policies</Button>
+          <Button variant="secondary" icon={<Download className="w-4 h-4" />} disabled={(data?.length ?? 0) === 0} data-cy="export-btn" data-testid="export-btn">Export Policies</Button>
         </div>
       </div>
 
@@ -128,7 +128,7 @@ const PolicyManagementView: React.FC = () => {
       )}
 
       <div className="flex-1 overflow-hidden p-6">
-        <VirtualizedDataGrid data={data} columns={columns} loading={isLoading} enableSelection={true} selectionMode="multiple" onSelectionChange={setSelectedPolicies} enableExport={true} enableFiltering={true} height="calc(100vh - 450px)" data-cy="policy-grid" />
+        <VirtualizedDataGrid data={data} columns={columns} loading={isLoading} enableSelection={true} selectionMode="multiple" onSelectionChange={setSelectedPolicies} enableExport={true} enableFiltering={true} height="calc(100vh - 450px)" data-cy="policy-grid" data-testid="policy-grid" />
       </div>
     </div>
   );

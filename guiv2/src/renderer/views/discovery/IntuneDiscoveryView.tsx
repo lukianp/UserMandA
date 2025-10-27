@@ -93,7 +93,7 @@ const IntuneDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="intune-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="intune-discovery-view" data-testid="intune-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={typeof progress?.percentage === 'number' ? progress.percentage : 0}
@@ -121,7 +121,7 @@ const IntuneDiscoveryView: React.FC = () => {
                 variant="secondary"
                 icon={<Download className="w-4 h-4" />}
                 aria-label="Export as CSV"
-                data-cy="export-csv-btn"
+                data-cy="export-csv-btn" data-testid="export-csv-btn"
               >
                 Export CSV
               </Button>
@@ -130,7 +130,7 @@ const IntuneDiscoveryView: React.FC = () => {
                 variant="secondary"
                 icon={<FileSpreadsheet className="w-4 h-4" />}
                 aria-label="Export as Excel"
-                data-cy="export-excel-btn"
+                data-cy="export-excel-btn" data-testid="export-excel-btn"
               >
                 Export Excel
               </Button>
@@ -141,7 +141,7 @@ const IntuneDiscoveryView: React.FC = () => {
             disabled={isDiscovering}
             variant="primary"
             aria-label="Start discovery"
-            data-cy="start-discovery-btn"
+            data-cy="start-discovery-btn" data-testid="start-discovery-btn"
           >
             {isDiscovering ? 'Discovering...' : 'Start Discovery'}
           </Button>
@@ -161,7 +161,7 @@ const IntuneDiscoveryView: React.FC = () => {
         <button
           onClick={() => setConfigExpanded(!configExpanded)}
           className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          data-cy="config-toggle"
+          data-cy="config-toggle" data-testid="config-toggle"
         >
           <span className="font-semibold text-gray-900 dark:text-white">Discovery Configuration</span>
           {configExpanded ? (
@@ -178,31 +178,31 @@ const IntuneDiscoveryView: React.FC = () => {
                 label="Include Devices"
                 checked={config.includeDevices}
                 onChange={(checked) => updateConfig({ includeDevices: checked })}
-                data-cy="include-devices-checkbox"
+                data-cy="include-devices-checkbox" data-testid="include-devices-checkbox"
               />
               <Checkbox
                 label="Include Applications"
                 checked={config.includeApplications}
                 onChange={(checked) => updateConfig({ includeApplications: checked })}
-                data-cy="include-applications-checkbox"
+                data-cy="include-applications-checkbox" data-testid="include-applications-checkbox"
               />
               <Checkbox
                 label="Include Configuration Policies"
                 checked={config.includeConfigurationPolicies}
                 onChange={(checked) => updateConfig({ includeConfigurationPolicies: checked })}
-                data-cy="include-config-policies-checkbox"
+                data-cy="include-config-policies-checkbox" data-testid="include-config-policies-checkbox"
               />
               <Checkbox
                 label="Include Compliance Policies"
                 checked={config.includeCompliancePolicies}
                 onChange={(checked) => updateConfig({ includeCompliancePolicies: checked })}
-                data-cy="include-compliance-policies-checkbox"
+                data-cy="include-compliance-policies-checkbox" data-testid="include-compliance-policies-checkbox"
               />
               <Checkbox
                 label="Include App Protection Policies"
                 checked={config.includeAppProtectionPolicies}
                 onChange={(checked) => updateConfig({ includeAppProtectionPolicies: checked })}
-                data-cy="include-app-protection-checkbox"
+                data-cy="include-app-protection-checkbox" data-testid="include-app-protection-checkbox"
               />
             </div>
 
@@ -221,7 +221,7 @@ const IntuneDiscoveryView: React.FC = () => {
                 min={60000}
                 max={1800000}
                 step={60000}
-                data-cy="timeout-input"
+                data-cy="timeout-input" data-testid="timeout-input"
               />
             </div>
           </div>
@@ -323,7 +323,7 @@ const IntuneDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-blue-600 text-blue-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-overview"
+            data-cy="tab-overview" data-testid="tab-overview"
           >
             <Monitor className="w-4 h-4" />
             Overview
@@ -335,7 +335,7 @@ const IntuneDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-blue-600 text-blue-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-devices"
+            data-cy="tab-devices" data-testid="tab-devices"
           >
             <Smartphone className="w-4 h-4" />
             Devices
@@ -348,7 +348,7 @@ const IntuneDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-blue-600 text-blue-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-applications"
+            data-cy="tab-applications" data-testid="tab-applications"
           >
             <Package className="w-4 h-4" />
             Applications
@@ -361,7 +361,7 @@ const IntuneDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-blue-600 text-blue-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-config-policies"
+            data-cy="tab-config-policies" data-testid="tab-config-policies"
           >
             <FileText className="w-4 h-4" />
             Config Policies
@@ -374,7 +374,7 @@ const IntuneDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-blue-600 text-blue-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-compliance-policies"
+            data-cy="tab-compliance-policies" data-testid="tab-compliance-policies"
           >
             <Shield className="w-4 h-4" />
             Compliance
@@ -387,7 +387,7 @@ const IntuneDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-blue-600 text-blue-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-app-protection"
+            data-cy="tab-app-protection" data-testid="tab-app-protection"
           >
             <ShieldCheck className="w-4 h-4" />
             App Protection
@@ -488,7 +488,7 @@ const IntuneDiscoveryView: React.FC = () => {
                   return () => clearTimeout(timeoutId);
                 }}
                 placeholder="Search..."
-                data-cy="search-input"
+                data-cy="search-input" data-testid="search-input"
               />
 
               {activeTab === 'devices' && (
@@ -557,7 +557,7 @@ const IntuneDiscoveryView: React.FC = () => {
                     label="Show Non-Compliant Devices Only"
                     checked={normalizedFilter.showNonCompliantOnly}
                     onChange={(checked) => updateFilter({ showNonCompliantOnly: checked })}
-                    data-cy="show-noncompliant-checkbox"
+                    data-cy="show-noncompliant-checkbox" data-testid="show-noncompliant-checkbox"
                   />
                 </div>
               )}

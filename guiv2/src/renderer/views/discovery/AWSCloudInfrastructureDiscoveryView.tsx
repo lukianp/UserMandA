@@ -102,7 +102,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="aws-cloud-infrastructure-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="aws-cloud-infrastructure-discovery-view" data-testid="aws-cloud-infrastructure-discovery-view">
       {/* Loading Overlay */}
       {isDiscovering && (
         <LoadingOverlay
@@ -141,7 +141,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
                    icon={<Download />}
                    onClick={() => exportToCSV()}
                    disabled={isDiscovering || exportPayload.length === 0}
-                   data-cy="export-csv-btn"
+                   data-cy="export-csv-btn" data-testid="export-csv-btn"
                  >
                    Export CSV
                  </Button>
@@ -150,7 +150,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
                    icon={<Download />}
                    onClick={() => exportToExcel()}
                    disabled={isDiscovering || exportPayload.length === 0}
-                   data-cy="export-excel-btn"
+                   data-cy="export-excel-btn" data-testid="export-excel-btn"
                  >
                    Export Excel
                  </Button>
@@ -162,7 +162,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
                 variant="primary"
                 icon={<Play />}
                 onClick={handleStartDiscovery}
-                data-cy="start-discovery-btn"
+                data-cy="start-discovery-btn" data-testid="start-discovery-btn"
               >
                 Start Discovery
               </Button>
@@ -171,7 +171,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
                 variant="danger"
                 icon={<Square />}
                 onClick={cancelDiscovery}
-                data-cy="cancel-discovery-btn"
+                data-cy="cancel-discovery-btn" data-testid="cancel-discovery-btn"
               >
                 Cancel
               </Button>
@@ -226,7 +226,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
         <button
           onClick={() => setShowConfig(!showConfig)}
           className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-          data-cy="config-toggle"
+          data-cy="config-toggle" data-testid="config-toggle"
         >
           <div className="flex items-center gap-2">
             <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -252,7 +252,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
                   placeholder="AKIA..."
                   required
                   disabled={isDiscovering}
-                  data-cy="access-key-input"
+                  data-cy="access-key-input" data-testid="access-key-input"
                 />
                 <Input
                   label="Secret Access Key"
@@ -262,7 +262,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
                   placeholder="Enter secret key"
                   required
                   disabled={isDiscovering}
-                  data-cy="secret-key-input"
+                  data-cy="secret-key-input" data-testid="secret-key-input"
                 />
               </div>
 
@@ -292,28 +292,28 @@ const AWSCloudInfrastructureDiscoveryView = () => {
                     checked={config.resourceTypes?.includes('ec2') || false}
                     onChange={() => toggleResourceType('ec2')}
                     disabled={isDiscovering}
-                    data-cy="resource-ec2"
+                    data-cy="resource-ec2" data-testid="resource-ec2"
                   />
                   <Checkbox
                     label="S3 Buckets"
                     checked={config.resourceTypes?.includes('s3') || false}
                     onChange={() => toggleResourceType('s3')}
                     disabled={isDiscovering}
-                    data-cy="resource-s3"
+                    data-cy="resource-s3" data-testid="resource-s3"
                   />
                   <Checkbox
                     label="RDS Databases"
                     checked={config.resourceTypes?.includes('rds') || false}
                     onChange={() => toggleResourceType('rds')}
                     disabled={isDiscovering}
-                    data-cy="resource-rds"
+                    data-cy="resource-rds" data-testid="resource-rds"
                   />
                   <Checkbox
                     label="Lambda Functions"
                     checked={config.resourceTypes?.includes('lambda') || false}
                     onChange={() => toggleResourceType('lambda')}
                     disabled={isDiscovering}
-                    data-cy="resource-lambda"
+                    data-cy="resource-lambda" data-testid="resource-lambda"
                   />
                 </div>
               </div>
@@ -327,21 +327,21 @@ const AWSCloudInfrastructureDiscoveryView = () => {
                     checked={config.includeTagDetails || false}
                     onChange={(checked) => setConfig({ includeTagDetails: checked })}
                     disabled={isDiscovering}
-                    data-cy="option-tags"
+                    data-cy="option-tags" data-testid="option-tags"
                   />
                   <Checkbox
                     label="Include Cost Estimates"
                     checked={config.includeCostEstimates || false}
                     onChange={(checked) => setConfig({ includeCostEstimates: checked })}
                     disabled={isDiscovering}
-                    data-cy="option-costs"
+                    data-cy="option-costs" data-testid="option-costs"
                   />
                   <Checkbox
                     label="Include Security Analysis"
                     checked={config.includeSecurityAnalysis || false}
                     onChange={(checked) => setConfig({ includeSecurityAnalysis: checked })}
                     disabled={isDiscovering}
-                    data-cy="option-security"
+                    data-cy="option-security" data-testid="option-security"
                   />
                 </div>
               </div>
@@ -403,28 +403,28 @@ const AWSCloudInfrastructureDiscoveryView = () => {
               onClick={() => setActiveTab('overview')}
               label="Overview"
               icon={<Cloud className="w-4 h-4" />}
-              data-cy="tab-overview"
+              data-cy="tab-overview" data-testid="tab-overview"
             />
             <TabButton
               active={activeTab === 'ec2'}
               onClick={() => setActiveTab('ec2')}
               label={`EC2 (${stats?.ec2Count || 0})`}
               icon={<Server className="w-4 h-4" />}
-              data-cy="tab-ec2"
+              data-cy="tab-ec2" data-testid="tab-ec2"
             />
             <TabButton
               active={activeTab === 's3'}
               onClick={() => setActiveTab('s3')}
               label={`S3 (${stats?.s3Count || 0})`}
               icon={<Database className="w-4 h-4" />}
-              data-cy="tab-s3"
+              data-cy="tab-s3" data-testid="tab-s3"
             />
             <TabButton
               active={activeTab === 'rds'}
               onClick={() => setActiveTab('rds')}
               label={`RDS (${stats?.rdsCount || 0})`}
               icon={<Database className="w-4 h-4" />}
-              data-cy="tab-rds"
+              data-cy="tab-rds" data-testid="tab-rds"
             />
           </div>
         </div>
@@ -440,7 +440,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
                   value={filter.searchText}
                   onChange={(e) => setFilter({ ...filter, searchText: e.target.value })}
                   placeholder={`Search ${activeTab}...`}
-                  data-cy="search-input"
+                  data-cy="search-input" data-testid="search-input"
                 />
               </div>
             </div>

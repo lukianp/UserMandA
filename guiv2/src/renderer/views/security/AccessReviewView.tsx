@@ -418,7 +418,7 @@ export const AccessReviewView: React.FC = () => {
   if (!reviewData) return null;
 
   return (
-    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="access-review-view">
+    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="access-review-view" data-testid="access-review-view">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">

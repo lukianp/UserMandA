@@ -119,18 +119,18 @@ describe('HyperVDiscoveryView', () => {
     });
 
     it('calls exportResults when export button clicked', () => {
-      const exportResults = jest.fn();
+      const exportToCSV = jest.fn();
       useHyperVDiscoveryLogic.mockReturnValue({
         ...mockHookDefaults,
-        results: [{ users: [], groups: [], stats: createUniversalStats() }],
-        exportResults,
+        result: { vms: [], virtualSwitches: [], vhds: [], hosts: [] },
+        exportToCSV,
       });
 
       render(<HyperVDiscoveryView />);
       const button = screen.getByTestId('export-results-btn');
       fireEvent.click(button);
 
-      expect(exportResults).toHaveBeenCalled();
+      expect(exportToCSV).toHaveBeenCalled();
     });
 
     it('does not show export button when no results', () => {

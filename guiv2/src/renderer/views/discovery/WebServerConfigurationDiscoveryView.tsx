@@ -101,7 +101,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="web-server-configuration-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="web-server-configuration-discovery-view" data-testid="web-server-configuration-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={progress}
@@ -126,7 +126,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
             onClick={() => handleExport('csv')}
             disabled={!stats || activeTab === 'overview'}
             variant="secondary"
-            data-cy="export-csv-btn"
+            data-cy="export-csv-btn" data-testid="export-csv-btn"
           >
             <Download className="w-4 h-4" />
             CSV
@@ -135,7 +135,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
             onClick={() => handleExport('excel')}
             disabled={!stats || activeTab === 'overview'}
             variant="secondary"
-            data-cy="export-excel-btn"
+            data-cy="export-excel-btn" data-testid="export-excel-btn"
           >
             <Download className="w-4 h-4" />
             Excel
@@ -144,7 +144,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
             onClick={startDiscovery}
             disabled={isDiscovering}
             variant="primary"
-            data-cy="start-discovery-btn"
+            data-cy="start-discovery-btn" data-testid="start-discovery-btn"
           >
             {isDiscovering ? 'Discovering...' : 'Start Discovery'}
           </Button>
@@ -184,7 +184,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
         <button
           onClick={() => setShowConfig(!showConfig)}
           className="w-full px-6 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          data-cy="toggle-config"
+          data-cy="toggle-config" data-testid="toggle-config"
         >
           <span className="font-medium text-gray-900 dark:text-white">Discovery Configuration</span>
           {showConfig ? (
@@ -205,7 +205,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
                   value={(config.serverAddresses || []).join(', ')}
                   onChange={(e) => updateConfig({ serverAddresses: e.target.value.split(',').map(s => s.trim()) })}
                   placeholder="server1.domain.com, 192.168.1.100"
-                  data-cy="server-addresses-input"
+                  data-cy="server-addresses-input" data-testid="server-addresses-input"
                 />
               </div>
               <div>
@@ -216,7 +216,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
                   type="number"
                   value={config.timeout || 300000}
                   onChange={(e) => updateConfig({ timeout: parseInt(e.target.value) })}
-                  data-cy="timeout-input"
+                  data-cy="timeout-input" data-testid="timeout-input"
                 />
               </div>
             </div>
@@ -230,19 +230,19 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
                   checked={config.includeBindings ?? true}
                   onChange={(checked) => updateConfig({ includeBindings: checked })}
                   label="Include Bindings"
-                  data-cy="include-bindings"
+                  data-cy="include-bindings" data-testid="include-bindings"
                 />
                 <Checkbox
                   checked={config.includeApplicationPools ?? true}
                   onChange={(checked) => updateConfig({ includeApplicationPools: checked })}
                   label="Include App Pools"
-                  data-cy="include-apppools"
+                  data-cy="include-apppools" data-testid="include-apppools"
                 />
                 <Checkbox
                   checked={config.includeCertificates ?? true}
                   onChange={(checked) => updateConfig({ includeCertificates: checked })}
                   label="Include Certificates"
-                  data-cy="include-certificates"
+                  data-cy="include-certificates" data-testid="include-certificates"
                 />
               </div>
             </div>
@@ -290,7 +290,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
               ? 'bg-white dark:bg-gray-800 text-sky-600 dark:text-sky-400 border-t-2 border-sky-600 font-medium'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
-          data-cy="tab-overview"
+          data-cy="tab-overview" data-testid="tab-overview"
         >
           <Globe className="w-4 h-4" />
           Overview
@@ -302,7 +302,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
               ? 'bg-white dark:bg-gray-800 text-sky-600 dark:text-sky-400 border-t-2 border-sky-600 font-medium'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
-          data-cy="tab-servers"
+          data-cy="tab-servers" data-testid="tab-servers"
         >
           <Server className="w-4 h-4" />
           Servers
@@ -315,7 +315,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
               ? 'bg-white dark:bg-gray-800 text-sky-600 dark:text-sky-400 border-t-2 border-sky-600 font-medium'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
-          data-cy="tab-sites"
+          data-cy="tab-sites" data-testid="tab-sites"
         >
           <FileCode className="w-4 h-4" />
           Sites
@@ -328,7 +328,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
               ? 'bg-white dark:bg-gray-800 text-sky-600 dark:text-sky-400 border-t-2 border-sky-600 font-medium'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
-          data-cy="tab-bindings"
+          data-cy="tab-bindings" data-testid="tab-bindings"
         >
           <Link2 className="w-4 h-4" />
           Bindings
@@ -341,7 +341,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
               ? 'bg-white dark:bg-gray-800 text-sky-600 dark:text-sky-400 border-t-2 border-sky-600 font-medium'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
-          data-cy="tab-apppools"
+          data-cy="tab-apppools" data-testid="tab-apppools"
         >
           <Database className="w-4 h-4" />
           App Pools
@@ -354,7 +354,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
               ? 'bg-white dark:bg-gray-800 text-sky-600 dark:text-sky-400 border-t-2 border-sky-600 font-medium'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
-          data-cy="tab-certificates"
+          data-cy="tab-certificates" data-testid="tab-certificates"
         >
           <Shield className="w-4 h-4" />
           Certificates
@@ -371,7 +371,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
               value={filter.searchText}
               onChange={(e) => updateFilter({ searchText: e.target.value })}
               placeholder={`Search ${activeTab}...`}
-              data-cy="search-input"
+              data-cy="search-input" data-testid="search-input"
             />
 
             {activeTab === 'servers' && (
@@ -427,7 +427,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
                 checked={filter.showOnlyExpiring}
                 onChange={(checked) => updateFilter({ showOnlyExpiring: checked })}
                 label="Show only expiring certificates (< 90 days)"
-                data-cy="show-expiring-only"
+                data-cy="show-expiring-only" data-testid="show-expiring-only"
               />
             )}
           </div>
@@ -491,7 +491,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
               columns={serverColumns}
               loading={isDiscovering}
               enableExport
-              data-cy="servers-grid"
+              data-cy="servers-grid" data-testid="servers-grid"
             />
           )}
 
@@ -501,7 +501,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
               columns={siteColumns}
               loading={isDiscovering}
               enableExport
-              data-cy="sites-grid"
+              data-cy="sites-grid" data-testid="sites-grid"
             />
           )}
 
@@ -511,7 +511,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
               columns={bindingColumns}
               loading={isDiscovering}
               enableExport
-              data-cy="bindings-grid"
+              data-cy="bindings-grid" data-testid="bindings-grid"
             />
           )}
 
@@ -521,7 +521,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
               columns={appPoolColumns}
               loading={isDiscovering}
               enableExport
-              data-cy="apppools-grid"
+              data-cy="apppools-grid" data-testid="apppools-grid"
             />
           )}
 
@@ -531,7 +531,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
               columns={certificateColumns}
               loading={isDiscovering}
               enableExport
-              data-cy="certificates-grid"
+              data-cy="certificates-grid" data-testid="certificates-grid"
             />
           )}
         </div>

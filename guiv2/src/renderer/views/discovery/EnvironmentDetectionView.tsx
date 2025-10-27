@@ -52,7 +52,7 @@ const EnvironmentDetectionView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="environment-detection-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="environment-detection-view" data-testid="environment-detection-view">
       {isDetecting && (
         <LoadingOverlay
           progress={progress.percentage}

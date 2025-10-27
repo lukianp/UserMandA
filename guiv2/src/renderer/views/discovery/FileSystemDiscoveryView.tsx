@@ -37,7 +37,7 @@ const FileSystemDiscoveryView: React.FC = () => {
   } = useFileSystemDiscoveryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="filesystem-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="filesystem-discovery-view" data-testid="filesystem-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -58,7 +58,7 @@ const FileSystemDiscoveryView: React.FC = () => {
                   variant="secondary"
                   icon={<Download className="w-4 h-4" />}
                   onClick={() => exportResults('CSV')}
-                  data-cy="export-csv-btn"
+                  data-cy="export-csv-btn" data-testid="export-csv-btn"
                 >
                   Export CSV
                 </Button>
@@ -66,7 +66,7 @@ const FileSystemDiscoveryView: React.FC = () => {
                   variant="secondary"
                   icon={<Download className="w-4 h-4" />}
                   onClick={() => exportResults('Excel')}
-                  data-cy="export-excel-btn"
+                  data-cy="export-excel-btn" data-testid="export-excel-btn"
                 >
                   Export Excel
                 </Button>
@@ -77,7 +77,7 @@ const FileSystemDiscoveryView: React.FC = () => {
                 variant="danger"
                 icon={<XCircle className="w-4 h-4" />}
                 onClick={cancelDiscovery}
-                data-cy="cancel-btn"
+                data-cy="cancel-btn" data-testid="cancel-btn"
               >
                 Cancel Discovery
               </Button>
@@ -87,7 +87,7 @@ const FileSystemDiscoveryView: React.FC = () => {
                 icon={<Play className="w-4 h-4" />}
                 onClick={startDiscovery}
                 disabled={(config.servers?.length ?? 0) === 0}
-                data-cy="start-discovery-btn"
+                data-cy="start-discovery-btn" data-testid="start-discovery-btn"
               >
                 Start Discovery
               </Button>
@@ -233,7 +233,7 @@ const FileSystemDiscoveryView: React.FC = () => {
           value={searchText}
           onChange={setSearchText}
           placeholder={`Search ${activeTab}...`}
-          data-cy="filesystem-search"
+          data-cy="filesystem-search" data-testid="filesystem-search"
         />
       </div>
 
@@ -313,7 +313,7 @@ const FileSystemDiscoveryView: React.FC = () => {
               onSelectionChange={setSelectedShares}
               enableExport
               enableGrouping
-              data-cy="shares-grid"
+              data-cy="shares-grid" data-testid="shares-grid"
             />
           </div>
         )}
@@ -326,7 +326,7 @@ const FileSystemDiscoveryView: React.FC = () => {
               loading={isRunning}
               onSelectionChange={setSelectedPermissions}
               enableExport
-              data-cy="permissions-grid"
+              data-cy="permissions-grid" data-testid="permissions-grid"
             />
           </div>
         )}
@@ -339,7 +339,7 @@ const FileSystemDiscoveryView: React.FC = () => {
               loading={isRunning}
               onSelectionChange={setSelectedLargeFiles}
               enableExport
-              data-cy="large-files-grid"
+              data-cy="large-files-grid" data-testid="large-files-grid"
             />
           </div>
         )}

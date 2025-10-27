@@ -59,7 +59,7 @@ const InfrastructureView: React.FC = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="infrastructure-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="infrastructure-view" data-testid="infrastructure-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -80,7 +80,7 @@ const InfrastructureView: React.FC = () => {
               onClick={loadInfrastructure}
               loading={isLoading}
               icon={<RefreshCw className="w-4 h-4" />}
-              data-cy="refresh-btn"
+              data-cy="refresh-btn" data-testid="refresh-btn"
             >
               Refresh
             </Button>
@@ -89,7 +89,7 @@ const InfrastructureView: React.FC = () => {
               onClick={handleExport}
               disabled={infrastructure.length === 0}
               icon={<Download className="w-4 h-4" />}
-              data-cy="export-btn"
+              data-cy="export-btn" data-testid="export-btn"
             >
               Export
             </Button>
@@ -105,7 +105,7 @@ const InfrastructureView: React.FC = () => {
               value={searchText}
               onChange={setSearchText}
               placeholder="Search by name or IP address..."
-              data-cy="infrastructure-search"
+              data-cy="infrastructure-search" data-testid="infrastructure-search"
             />
           </div>
           <div className="w-48">
@@ -119,7 +119,7 @@ const InfrastructureView: React.FC = () => {
                 { value: 'storage', label: 'Storage' },
                 { value: 'virtualization', label: 'Virtualization' },
               ]}
-              data-cy="type-filter"
+              data-cy="type-filter" data-testid="type-filter"
             />
           </div>
         </div>
@@ -134,7 +134,7 @@ const InfrastructureView: React.FC = () => {
             loading={isLoading}
             onSelectionChange={setSelectedItems}
             enableExport
-            data-cy="infrastructure-grid"
+            data-cy="infrastructure-grid" data-testid="infrastructure-grid"
           />
         </div>
       </div>

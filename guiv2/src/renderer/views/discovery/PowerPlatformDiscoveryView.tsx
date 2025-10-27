@@ -65,7 +65,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="power-platform-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="power-platform-discovery-view" data-testid="power-platform-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={progress.percentage}
@@ -92,7 +92,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
                 onClick={() => exportToCSV((result as any).data || result, `powerplatform-discovery-${new Date().toISOString().split('T')[0]}.csv`)}
                 variant="secondary"
                 icon={<Download className="w-4 h-4" />}
-                data-cy="export-csv-btn"
+                data-cy="export-csv-btn" data-testid="export-csv-btn"
               >
                 Export CSV
               </Button>
@@ -100,7 +100,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
                 onClick={() => exportToExcel((result as any).data || result, `powerplatform-discovery-${new Date().toISOString().split('T')[0]}.xlsx`)}
                 variant="secondary"
                 icon={<FileSpreadsheet className="w-4 h-4" />}
-                data-cy="export-excel-btn"
+                data-cy="export-excel-btn" data-testid="export-excel-btn"
               >
                 Export Excel
               </Button>
@@ -110,7 +110,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
             onClick={startDiscovery}
             disabled={isDiscovering}
             variant="primary"
-            data-cy="start-discovery-btn"
+            data-cy="start-discovery-btn" data-testid="start-discovery-btn"
           >
             {isDiscovering ? 'Discovering...' : 'Start Discovery'}
           </Button>
@@ -130,7 +130,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
         <button
           onClick={() => setConfigExpanded(!configExpanded)}
           className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-750 rounded-lg transition-colors"
-          data-cy="config-toggle"
+          data-cy="config-toggle" data-testid="config-toggle"
         >
           <span className="font-semibold text-gray-900 dark:text-white">Discovery Configuration</span>
           {configExpanded ? (
@@ -151,7 +151,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
                 value={config.tenantId || ''}
                 onChange={(e) => updateConfig({ tenantId: e.target.value })}
                 placeholder="Enter Tenant ID"
-                data-cy="tenant-id-input"
+                data-cy="tenant-id-input" data-testid="tenant-id-input"
               />
             </div>
 
@@ -160,25 +160,25 @@ const PowerPlatformDiscoveryView: React.FC = () => {
                 label="Include Apps"
                 checked={config.includeApps ?? true}
                 onChange={(checked) => updateConfig({ includeApps: checked })}
-                data-cy="include-apps-checkbox"
+                data-cy="include-apps-checkbox" data-testid="include-apps-checkbox"
               />
               <Checkbox
                 label="Include Flows"
                 checked={config.includeFlows ?? true}
                 onChange={(checked) => updateConfig({ includeFlows: checked })}
-                data-cy="include-flows-checkbox"
+                data-cy="include-flows-checkbox" data-testid="include-flows-checkbox"
               />
               <Checkbox
                 label="Include Connectors"
                 checked={config.includeConnectors ?? true}
                 onChange={(checked) => updateConfig({ includeConnectors: checked })}
-                data-cy="include-connectors-checkbox"
+                data-cy="include-connectors-checkbox" data-testid="include-connectors-checkbox"
               />
               <Checkbox
                 label="Include Environments"
                 checked={config.includeEnvironments ?? true}
                 onChange={(checked) => updateConfig({ includeEnvironments: checked })}
-                data-cy="include-environments-checkbox"
+                data-cy="include-environments-checkbox" data-testid="include-environments-checkbox"
               />
             </div>
 
@@ -193,7 +193,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
                 min={60000}
                 max={1800000}
                 step={60000}
-                data-cy="timeout-input"
+                data-cy="timeout-input" data-testid="timeout-input"
               />
             </div>
           </div>
@@ -275,7 +275,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-violet-600 text-violet-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-overview"
+            data-cy="tab-overview" data-testid="tab-overview"
           >
             <Zap className="w-4 h-4" />
             Overview
@@ -287,7 +287,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-violet-600 text-violet-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-environments"
+            data-cy="tab-environments" data-testid="tab-environments"
           >
             <Globe className="w-4 h-4" />
             Environments
@@ -300,7 +300,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-violet-600 text-violet-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-apps"
+            data-cy="tab-apps" data-testid="tab-apps"
           >
             <Smartphone className="w-4 h-4" />
             Apps
@@ -313,7 +313,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-violet-600 text-violet-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-flows"
+            data-cy="tab-flows" data-testid="tab-flows"
           >
             <Workflow className="w-4 h-4" />
             Flows
@@ -326,7 +326,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-violet-600 text-violet-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-connectors"
+            data-cy="tab-connectors" data-testid="tab-connectors"
           >
             <Plug className="w-4 h-4" />
             Connectors
@@ -436,7 +436,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
                 value={filter.searchText}
                 onChange={(e) => updateFilter({ searchText: e.target.value })}
                 placeholder="Search..."
-                data-cy="search-input"
+                data-cy="search-input" data-testid="search-input"
               />
 
               {activeTab === 'apps' && (

@@ -29,7 +29,7 @@ const SettingsView: React.FC = () => {
   const [isAppRegistrationDialogOpen, setIsAppRegistrationDialogOpen] = useState(false);
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="settings-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="settings-view" data-testid="settings-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -49,7 +49,7 @@ const SettingsView: React.FC = () => {
               variant="secondary"
               onClick={resetSettings}
               icon={<RotateCcw className="w-4 h-4" />}
-              data-cy="reset-btn"
+              data-cy="reset-btn" data-testid="reset-btn"
             >
               Reset to Defaults
             </Button>
@@ -59,7 +59,7 @@ const SettingsView: React.FC = () => {
               disabled={!hasChanges}
               loading={isSaving}
               icon={<Save className="w-4 h-4" />}
-              data-cy="save-btn"
+              data-cy="save-btn" data-testid="save-btn"
             >
               Save Changes
             </Button>
@@ -85,7 +85,7 @@ const SettingsView: React.FC = () => {
                 label="Dark Theme"
                 checked={settings.theme.isDarkTheme}
                 onChange={(checked) => updateThemeSetting('isDarkTheme', checked)}
-                data-cy="dark-theme-checkbox"
+                data-cy="dark-theme-checkbox" data-testid="dark-theme-checkbox"
               />
 
               <div className="grid grid-cols-2 gap-4">
@@ -94,7 +94,7 @@ const SettingsView: React.FC = () => {
                   type="color"
                   value={settings.theme.accentColor}
                   onChange={(e) => updateThemeSetting('accentColor', e.target.value)}
-                  data-cy="accent-color-input"
+                  data-cy="accent-color-input" data-testid="accent-color-input"
                 />
 
                 <Input
@@ -104,7 +104,7 @@ const SettingsView: React.FC = () => {
                   onChange={(e) => updateThemeSetting('fontSize', parseInt(e.target.value) || 14)}
                   min={10}
                   max={24}
-                  data-cy="font-size-input"
+                  data-cy="font-size-input" data-testid="font-size-input"
                 />
               </div>
 
@@ -112,14 +112,14 @@ const SettingsView: React.FC = () => {
                 label="Font Family"
                 value={settings.theme.fontFamily}
                 onChange={(e) => updateThemeSetting('fontFamily', e.target.value)}
-                data-cy="font-family-input"
+                data-cy="font-family-input" data-testid="font-family-input"
               />
 
               <Checkbox
                 label="Enable Animations"
                 checked={settings.theme.useAnimations}
                 onChange={(checked) => updateThemeSetting('useAnimations', checked)}
-                data-cy="animations-checkbox"
+                data-cy="animations-checkbox" data-testid="animations-checkbox"
               />
 
               <div>
@@ -134,7 +134,7 @@ const SettingsView: React.FC = () => {
                   value={settings.theme.windowOpacity}
                   onChange={(e) => updateThemeSetting('windowOpacity', parseFloat(e.target.value))}
                   className="w-full"
-                  data-cy="opacity-slider"
+                  data-cy="opacity-slider" data-testid="opacity-slider"
                 />
                 <span className="text-sm text-gray-600 dark:text-gray-400">
                   {Math.round(settings.theme.windowOpacity * 100)}%
@@ -153,7 +153,7 @@ const SettingsView: React.FC = () => {
                 label="Auto-refresh Dashboard"
                 checked={settings.autoRefreshDashboard}
                 onChange={(checked) => updateSetting('autoRefreshDashboard', checked)}
-                data-cy="auto-refresh-checkbox"
+                data-cy="auto-refresh-checkbox" data-testid="auto-refresh-checkbox"
               />
 
               {settings.autoRefreshDashboard && (
@@ -164,7 +164,7 @@ const SettingsView: React.FC = () => {
                   onChange={(e) => updateSetting('refreshInterval', parseInt(e.target.value) || 30)}
                   min={10}
                   max={300}
-                  data-cy="refresh-interval-input"
+                  data-cy="refresh-interval-input" data-testid="refresh-interval-input"
                 />
               )}
             </div>
@@ -180,7 +180,7 @@ const SettingsView: React.FC = () => {
               checked={settings.enableNotifications}
               onChange={(checked) => updateSetting('enableNotifications', checked)}
               description="Receive notifications for completed operations and errors"
-              data-cy="notifications-checkbox"
+              data-cy="notifications-checkbox" data-testid="notifications-checkbox"
             />
           </div>
 
@@ -198,7 +198,7 @@ const SettingsView: React.FC = () => {
                 { value: 'JSON', label: 'JSON (JavaScript Object Notation)' },
                 { value: 'XLSX', label: 'XLSX (Excel Workbook)' },
               ]}
-              data-cy="export-format-select"
+              data-cy="export-format-select" data-testid="export-format-select"
             />
           </div>
 
@@ -216,7 +216,7 @@ const SettingsView: React.FC = () => {
                 variant="primary"
                 onClick={() => setIsAppRegistrationDialogOpen(true)}
                 icon={<Cloud className="w-4 h-4" />}
-                data-cy="setup-app-registration-btn"
+                data-cy="setup-app-registration-btn" data-testid="setup-app-registration-btn"
               >
                 Setup Azure App Registration
               </Button>

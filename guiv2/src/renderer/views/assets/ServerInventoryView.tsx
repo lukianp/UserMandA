@@ -35,7 +35,7 @@ const ServerInventoryView: React.FC = () => {
   } = useServerInventoryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="server-inventory-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="server-inventory-view" data-testid="server-inventory-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -130,7 +130,7 @@ const ServerInventoryView: React.FC = () => {
               size="sm"
               icon={<X className="w-4 h-4" />}
               onClick={clearFilters}
-              data-cy="clear-filters-btn"
+              data-cy="clear-filters-btn" data-testid="clear-filters-btn"
             >
               Clear All
             </Button>
@@ -141,7 +141,7 @@ const ServerInventoryView: React.FC = () => {
             placeholder="Search name, IP, role..."
             value={filters.searchText}
             onChange={(e) => updateFilter('searchText', e.target.value)}
-            data-cy="search-input"
+            data-cy="search-input" data-testid="search-input"
           />
           <Select
             value={filters.role}
@@ -155,7 +155,7 @@ const ServerInventoryView: React.FC = () => {
           <Select
             value={filters.osType}
             onChange={(value) => updateFilter('osType', value)}
-            data-cy="os-type-select"
+            data-cy="os-type-select" data-testid="os-type-select"
             options={[
               { value: '', label: 'All OS Types' },
               ...(filterOptions?.osTypes ?? []).map((os) => ({ value: os, label: os }))
@@ -164,7 +164,7 @@ const ServerInventoryView: React.FC = () => {
           <Select
             value={filters.criticality}
             onChange={(value) => updateFilter('criticality', value)}
-            data-cy="criticality-select"
+            data-cy="criticality-select" data-testid="criticality-select"
             options={[
               { value: '', label: 'All Criticality Levels' },
               ...(filterOptions?.criticalities ?? []).map((crit) => ({ value: crit, label: crit }))
@@ -173,7 +173,7 @@ const ServerInventoryView: React.FC = () => {
           <Select
             value={filters.clusterMembership}
             onChange={(value) => updateFilter('clusterMembership', value)}
-            data-cy="cluster-select"
+            data-cy="cluster-select" data-testid="cluster-select"
             options={[
               { value: '', label: 'All Clusters' },
               ...(filterOptions?.clusters ?? []).map((cluster) => ({ value: cluster, label: cluster }))
@@ -191,7 +191,7 @@ const ServerInventoryView: React.FC = () => {
               icon={<RefreshCw className="w-4 h-4" />}
               onClick={loadData}
               loading={isLoading}
-              data-cy="refresh-btn"
+              data-cy="refresh-btn" data-testid="refresh-btn"
             >
               Refresh
             </Button>
@@ -201,7 +201,7 @@ const ServerInventoryView: React.FC = () => {
                   variant="secondary"
                   icon={<Eye className="w-4 h-4" />}
                   onClick={() => selectedServers[0] && viewServices(selectedServers[0])}
-                  data-cy="view-services-btn"
+                  data-cy="view-services-btn" data-testid="view-services-btn"
                 >
                   View Services ({selectedServers.length})
                 </Button>
@@ -209,7 +209,7 @@ const ServerInventoryView: React.FC = () => {
                   variant="secondary"
                   icon={<Activity className="w-4 h-4" />}
                   onClick={() => selectedServers[0] && healthCheck(selectedServers[0])}
-                  data-cy="health-check-btn"
+                  data-cy="health-check-btn" data-testid="health-check-btn"
                 >
                   Health Check
                 </Button>
@@ -222,7 +222,7 @@ const ServerInventoryView: React.FC = () => {
               icon={<Download className="w-4 h-4" />}
               onClick={exportData}
               disabled={(data?.length ?? 0) === 0}
-              data-cy="export-btn"
+              data-cy="export-btn" data-testid="export-btn"
             >
               Export CSV
             </Button>

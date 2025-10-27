@@ -310,7 +310,7 @@ const ScheduledReportsView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50" data-cy="scheduled-reports-view">
+    <div className="h-full flex flex-col bg-gray-50" data-cy="scheduled-reports-view" data-testid="scheduled-reports-view">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -358,7 +358,7 @@ const ScheduledReportsView: React.FC = () => {
           columns={columnDefs}
           loading={isLoading}
           enableExport
-          data-cy="scheduled-reports-grid"
+          data-cy="scheduled-reports-grid" data-testid="scheduled-reports-grid"
         />
       </div>
 
@@ -401,7 +401,7 @@ const ReportScheduleEditor: React.FC<ReportScheduleEditorProps> = ({ report, onS
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-cy="schedule-editor-modal">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-cy="schedule-editor-modal" data-testid="schedule-editor-modal">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="border-b border-gray-200 px-6 py-4">
           <h2 className="text-xl font-bold text-gray-900">{report.name ? 'Edit' : 'Create'} Scheduled Report</h2>

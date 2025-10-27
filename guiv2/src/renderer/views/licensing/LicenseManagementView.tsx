@@ -54,7 +54,7 @@ export const LicenseManagementView: React.FC = () => {
   ], []);
 
   return (
-    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="license-management-view">
+    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="license-management-view" data-testid="license-management-view">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
@@ -66,7 +66,7 @@ export const LicenseManagementView: React.FC = () => {
           </div>
         </div>
         <div className="flex gap-3">
-          <Button variant="primary" onClick={() => console.log('Optimize licenses')} data-cy="optimize-btn">
+          <Button variant="primary" onClick={() => console.log('Optimize licenses')} data-cy="optimize-btn" data-testid="optimize-btn">
             Optimize Licenses
           </Button>
           <Button variant="secondary" onClick={() => console.log('Export report')} data-cy="export-btn">

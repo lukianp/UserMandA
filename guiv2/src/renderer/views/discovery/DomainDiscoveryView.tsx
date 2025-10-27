@@ -31,7 +31,7 @@ const DomainDiscoveryView: React.FC = () => {
   } = useDomainDiscoveryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="domain-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="domain-discovery-view" data-testid="domain-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -72,7 +72,7 @@ const DomainDiscoveryView: React.FC = () => {
                   onChange={(e) => updateFormField('domainController', e.target.value)}
                   disabled={isRunning}
                   required
-                  data-cy="domain-controller-input"
+                  data-cy="domain-controller-input" data-testid="domain-controller-input"
                 />
 
                 {/* Search Base */}
@@ -83,7 +83,7 @@ const DomainDiscoveryView: React.FC = () => {
                   onChange={(e) => updateFormField('searchBase', e.target.value)}
                   disabled={isRunning}
                   helperText="Leave empty to search from root"
-                  data-cy="search-base-input"
+                  data-cy="search-base-input" data-testid="search-base-input"
                 />
 
                 {/* Object Types */}
@@ -96,28 +96,28 @@ const DomainDiscoveryView: React.FC = () => {
                     checked={formData.includeUsers}
                     onChange={(checked) => updateFormField('includeUsers', checked)}
                     disabled={isRunning}
-                    data-cy="include-users-checkbox"
+                    data-cy="include-users-checkbox" data-testid="include-users-checkbox"
                   />
                   <Checkbox
                     label="Groups"
                     checked={formData.includeGroups}
                     onChange={(checked) => updateFormField('includeGroups', checked)}
                     disabled={isRunning}
-                    data-cy="include-groups-checkbox"
+                    data-cy="include-groups-checkbox" data-testid="include-groups-checkbox"
                   />
                   <Checkbox
                     label="Computers"
                     checked={formData.includeComputers}
                     onChange={(checked) => updateFormField('includeComputers', checked)}
                     disabled={isRunning}
-                    data-cy="include-computers-checkbox"
+                    data-cy="include-computers-checkbox" data-testid="include-computers-checkbox"
                   />
                   <Checkbox
                     label="Organizational Units"
                     checked={formData.includeOUs}
                     onChange={(checked) => updateFormField('includeOUs', checked)}
                     disabled={isRunning}
-                    data-cy="include-ous-checkbox"
+                    data-cy="include-ous-checkbox" data-testid="include-ous-checkbox"
                   />
                 </div>
 
@@ -130,7 +130,7 @@ const DomainDiscoveryView: React.FC = () => {
                   disabled={isRunning}
                   min={1}
                   max={100000}
-                  data-cy="max-results-input"
+                  data-cy="max-results-input" data-testid="max-results-input"
                 />
 
                 <Input
@@ -141,7 +141,7 @@ const DomainDiscoveryView: React.FC = () => {
                   disabled={isRunning}
                   min={10}
                   max={3600}
-                  data-cy="timeout-input"
+                  data-cy="timeout-input" data-testid="timeout-input"
                 />
               </div>
 
@@ -155,7 +155,7 @@ const DomainDiscoveryView: React.FC = () => {
                       disabled={!isFormValid}
                       icon={<Play className="w-4 h-4" />}
                       className="w-full"
-                      data-cy="start-discovery-btn"
+                      data-cy="start-discovery-btn" data-testid="start-discovery-btn"
                     >
                       Start Discovery
                     </Button>
@@ -164,7 +164,7 @@ const DomainDiscoveryView: React.FC = () => {
                       onClick={resetForm}
                       icon={<RefreshCw className="w-4 h-4" />}
                       className="w-full"
-                      data-cy="reset-form-btn"
+                      data-cy="reset-form-btn" data-testid="reset-form-btn"
                     >
                       Reset Form
                     </Button>
@@ -177,7 +177,7 @@ const DomainDiscoveryView: React.FC = () => {
                     loading={isCancelling}
                     icon={<Square className="w-4 h-4" />}
                     className="w-full"
-                    data-cy="cancel-discovery-btn"
+                    data-cy="cancel-discovery-btn" data-testid="cancel-discovery-btn"
                   >
                     {isCancelling ? 'Cancelling...' : 'Cancel Discovery'}
                   </Button>
@@ -235,7 +235,7 @@ const DomainDiscoveryView: React.FC = () => {
                     size="sm"
                     onClick={exportResults}
                     icon={<Download className="w-4 h-4" />}
-                    data-cy="export-results-btn"
+                    data-cy="export-results-btn" data-testid="export-results-btn"
                   >
                     Export
                   </Button>
@@ -274,7 +274,7 @@ const DomainDiscoveryView: React.FC = () => {
                     size="sm"
                     onClick={clearLogs}
                     icon={<Trash2 className="w-4 h-4" />}
-                    data-cy="clear-logs-btn"
+                    data-cy="clear-logs-btn" data-testid="clear-logs-btn"
                   >
                     Clear
                   </Button>
@@ -282,7 +282,7 @@ const DomainDiscoveryView: React.FC = () => {
               </div>
               <div
                 className="bg-gray-900 dark:bg-black rounded-md p-4 h-96 overflow-auto font-mono text-xs"
-                data-cy="execution-log"
+                data-cy="execution-log" data-testid="execution-log"
               >
                 {(Array.isArray(logs) ? logs.length : 0) === 0 ? (
                   <p className="text-gray-500">No logs yet. Start discovery to see output.</p>

@@ -57,7 +57,7 @@ const OneDriveDiscoveryView: React.FC = () => {
   } = useOneDriveDiscoveryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="onedrive-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="onedrive-discovery-view" data-testid="onedrive-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between p-4">
@@ -96,7 +96,7 @@ const OneDriveDiscoveryView: React.FC = () => {
               icon={<Settings />}
               onClick={() => {/* TODO: Open config dialog */}}
               disabled={isDiscovering}
-              data-cy="config-btn"
+              data-cy="config-btn" data-testid="config-btn"
             >
               Configure
             </Button>
@@ -106,7 +106,7 @@ const OneDriveDiscoveryView: React.FC = () => {
               icon={<Save />}
               onClick={() => {/* TODO: Open save template dialog */}}
               disabled={isDiscovering}
-              data-cy="save-template-btn"
+              data-cy="save-template-btn" data-testid="save-template-btn"
             >
               Save Template
             </Button>
@@ -116,7 +116,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                 variant="danger"
                 icon={<Square />}
                 onClick={cancelDiscovery}
-                data-cy="cancel-btn"
+                data-cy="cancel-btn" data-testid="cancel-btn"
               >
                 Cancel
               </Button>
@@ -125,7 +125,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                 variant="primary"
                 icon={<Play />}
                 onClick={startDiscovery}
-                data-cy="start-discovery-btn"
+                data-cy="start-discovery-btn" data-testid="start-discovery-btn"
               >
                 Start Discovery
               </Button>
@@ -136,7 +136,7 @@ const OneDriveDiscoveryView: React.FC = () => {
               icon={<Download />}
               onClick={() => exportResults('excel')}
               disabled={!currentResult || isDiscovering}
-              data-cy="export-btn"
+              data-cy="export-results-btn" data-testid="export-results-btn"
             >
               Export
             </Button>
@@ -146,7 +146,7 @@ const OneDriveDiscoveryView: React.FC = () => {
         {/* Configuration Summary */}
         <div className="px-4 pb-4 flex flex-wrap gap-2">
           {config.discoverAccounts && (
-            <Badge variant="info" data-cy="config-accounts-badge">
+            <Badge variant="info" data-cy="config-accounts-badge" data-testid="config-accounts-badge">
               <Users className="w-3 h-3" /> Accounts
             </Badge>
           )}
@@ -156,17 +156,17 @@ const OneDriveDiscoveryView: React.FC = () => {
             </Badge>
           )}
           {config.discoverSharing && (
-            <Badge variant="info" data-cy="config-sharing-badge">
+            <Badge variant="info" data-cy="config-sharing-badge" data-testid="config-sharing-badge">
               <Share2 className="w-3 h-3" /> Sharing
             </Badge>
           )}
           {config.includeExternalShares && (
-            <Badge variant="warning" data-cy="config-external-badge">
+            <Badge variant="warning" data-cy="config-external-badge" data-testid="config-external-badge">
               <AlertTriangle className="w-3 h-3" /> External Shares
             </Badge>
           )}
           {config.scanForMalware && (
-            <Badge variant="success" data-cy="config-malware-badge">
+            <Badge variant="success" data-cy="config-malware-badge" data-testid="config-malware-badge">
               <Shield className="w-3 h-3" /> Malware Scan
             </Badge>
           )}
@@ -175,7 +175,7 @@ const OneDriveDiscoveryView: React.FC = () => {
 
       {/* Progress Indicator */}
       {isDiscovering && progress && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 p-4" data-cy="progress-section">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 p-4" data-cy="progress-section" data-testid="progress-section">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <RefreshCw className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
@@ -207,7 +207,7 @@ const OneDriveDiscoveryView: React.FC = () => {
 
       {/* Error Display */}
       {errors.length > 0 && (
-        <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 p-4" data-cy="error-section">
+        <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 p-4" data-cy="error-section" data-testid="error-section">
           <div className="flex items-start gap-2">
             <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -229,7 +229,7 @@ const OneDriveDiscoveryView: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
           <div className="grid grid-cols-5 gap-4">
             {/* Total Accounts */}
-            <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 rounded-lg p-4 border border-cyan-200 dark:border-cyan-800" data-cy="stat-accounts">
+            <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 rounded-lg p-4 border border-cyan-200 dark:border-cyan-800" data-cy="stat-accounts" data-testid="stat-accounts">
               <div className="flex items-center justify-between mb-2">
                 <Users className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
                 <Badge variant="info" className="text-xs">
@@ -245,7 +245,7 @@ const OneDriveDiscoveryView: React.FC = () => {
             </div>
 
             {/* Storage Used */}
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800" data-cy="stat-storage">
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800" data-cy="stat-storage" data-testid="stat-storage">
               <div className="flex items-center justify-between mb-2">
                 <Database className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 <Badge variant="info" className="text-xs">
@@ -261,7 +261,7 @@ const OneDriveDiscoveryView: React.FC = () => {
             </div>
 
             {/* Total Files */}
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800" data-cy="stat-files">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800" data-cy="stat-files" data-testid="stat-files">
               <div className="flex items-center justify-between mb-2">
                 <Files className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 <Badge variant="info" className="text-xs">
@@ -277,7 +277,7 @@ const OneDriveDiscoveryView: React.FC = () => {
             </div>
 
             {/* Shared Items */}
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800" data-cy="stat-sharing">
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800" data-cy="stat-sharing" data-testid="stat-sharing">
               <div className="flex items-center justify-between mb-2">
                 <Share2 className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                 <Badge variant="warning" className="text-xs">
@@ -293,7 +293,7 @@ const OneDriveDiscoveryView: React.FC = () => {
             </div>
 
             {/* Security Metrics */}
-            <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg p-4 border border-red-200 dark:border-red-800" data-cy="stat-security">
+            <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg p-4 border border-red-200 dark:border-red-800" data-cy="stat-security" data-testid="stat-security">
               <div className="flex items-center justify-between mb-2">
                 <Shield className="w-5 h-5 text-red-600 dark:text-red-400" />
                 <Badge variant="danger" className="text-xs">
@@ -326,7 +326,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                     ? 'border-cyan-600 text-cyan-600 dark:text-cyan-400'
                     : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
-                data-cy="tab-overview"
+                data-cy="tab-overview" data-testid="tab-overview"
               >
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4" />
@@ -343,7 +343,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                     ? 'border-cyan-600 text-cyan-600 dark:text-cyan-400'
                     : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
-                data-cy="tab-accounts"
+                data-cy="tab-accounts" data-testid="tab-accounts"
               >
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4" />
@@ -365,7 +365,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                     ? 'border-cyan-600 text-cyan-600 dark:text-cyan-400'
                     : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
-                data-cy="tab-files"
+                data-cy="tab-files" data-testid="tab-files"
               >
                 <div className="flex items-center gap-2">
                   <Files className="w-4 h-4" />
@@ -387,7 +387,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                     ? 'border-cyan-600 text-cyan-600 dark:text-cyan-400'
                     : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
-                data-cy="tab-sharing"
+                data-cy="tab-sharing" data-testid="tab-sharing"
               >
                 <div className="flex items-center gap-2">
                   <Share2 className="w-4 h-4" />
@@ -417,7 +417,7 @@ const OneDriveDiscoveryView: React.FC = () => {
         {/* Tab Content */}
         <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
           {selectedTab === 'overview' && currentResult ? (
-            <div className="h-full overflow-y-auto p-6" data-cy="overview-content">
+            <div className="h-full overflow-y-auto p-6" data-cy="overview-content" data-testid="overview-content">
               <div className="max-w-6xl mx-auto space-y-6">
                 {/* Discovery Summary */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

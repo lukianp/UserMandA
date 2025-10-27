@@ -15,18 +15,18 @@ const MigrationExecutionView: React.FC = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col" data-cy="execution-view">
+    <div className="h-full flex flex-col" data-cy="execution-view" data-testid="execution-view">
       <div className="flex items-center justify-between p-4 border-b bg-white dark:bg-gray-900">
         <div>
           <h1 className="text-2xl font-bold">Migration Execution</h1>
           <p className="text-sm text-gray-600 mt-1">{logic.selectedWave && logic.selectedWave.name}</p>
         </div>
         <div className="flex gap-2">
-          <Button icon={<Play />} onClick={logic.handleStart} disabled={logic.isExecuting} data-cy="start-btn">Start</Button>
+          <Button icon={<Play />} onClick={logic.handleStart} disabled={logic.isExecuting} data-cy="start-btn" data-testid="start-btn">Start</Button>
           <Button variant="secondary" icon={<Pause />} onClick={logic.handlePause} disabled={!logic.isExecuting} data-cy="pause-btn">Pause</Button>
-          <Button variant="secondary" icon={<Square />} onClick={logic.handleCancel} disabled={!logic.isExecuting} data-cy="cancel-btn">Cancel</Button>
+          <Button variant="secondary" icon={<Square />} onClick={logic.handleCancel} disabled={!logic.isExecuting} data-cy="cancel-btn" data-testid="cancel-btn">Cancel</Button>
           <Button variant="secondary" icon={<RotateCcw />} onClick={logic.handleRetry} data-cy="retry-btn">Retry</Button>
-          <Button variant="secondary" icon={<Save />} onClick={logic.handleCreateRollbackPoint} data-cy="rollback-btn">Rollback Point</Button>
+          <Button variant="secondary" icon={<Save />} onClick={logic.handleCreateRollbackPoint} data-cy="rollback-btn" data-testid="rollback-btn">Rollback Point</Button>
         </div>
       </div>
 
@@ -58,7 +58,7 @@ const MigrationExecutionView: React.FC = () => {
 
       <div className="flex-1 flex gap-4 p-4 overflow-hidden">
         <div className="flex-1 bg-white rounded shadow-sm border">
-          <VirtualizedDataGrid data={logic.executionProgress?.items || []} columns={columnDefs} loading={false} data-cy="items-grid" />
+          <VirtualizedDataGrid data={logic.executionProgress?.items || []} columns={columnDefs} loading={false} data-cy="items-grid" data-testid="items-grid" />
         </div>
         <div className="w-1/3 bg-white rounded shadow-sm border p-4 overflow-y-auto">
           <h3 className="font-semibold mb-3">Live Logs</h3>

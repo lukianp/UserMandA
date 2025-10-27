@@ -66,7 +66,7 @@ const HyperVDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="hyper-v-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="hyper-v-discovery-view" data-testid="hyper-v-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={progress.percentage}
@@ -90,7 +90,7 @@ const HyperVDiscoveryView: React.FC = () => {
         <div className="flex gap-3">
           {result && (
             <>
-              <Button variant="secondary" onClick={exportToCSV} icon={<Download className="w-4 h-4" />} data-cy="export-btn">Export CSV</Button>
+              <Button variant="secondary" onClick={exportToCSV} icon={<Download className="w-4 h-4" />} data-cy="export-results-btn" data-testid="export-results-btn">Export CSV</Button>
               <Button variant="secondary" onClick={exportToExcel} icon={<FileSpreadsheet className="w-4 h-4" />}>Export Excel</Button>
             </>
           )}
@@ -99,7 +99,7 @@ const HyperVDiscoveryView: React.FC = () => {
               variant="primary"
               onClick={handleStartDiscovery}
               icon={<Play className="w-4 h-4" />}
-              data-cy="start-discovery-btn"
+              data-cy="start-discovery-btn" data-testid="start-discovery-btn"
             >
               Start Discovery
             </Button>
@@ -108,7 +108,7 @@ const HyperVDiscoveryView: React.FC = () => {
               variant="danger"
               onClick={cancelDiscovery}
               icon={<XCircle className="w-4 h-4" />}
-              data-cy="cancel-discovery-btn"
+              data-cy="cancel-discovery-btn" data-testid="cancel-discovery-btn"
             >
               Cancel
             </Button>

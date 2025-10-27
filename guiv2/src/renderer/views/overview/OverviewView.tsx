@@ -82,7 +82,7 @@ const OverviewView: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6 overflow-auto">
+    <div className="p-6 space-y-6 overflow-auto" data-testid="overview-view">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -114,7 +114,7 @@ const OverviewView: React.FC = () => {
           migrated={stats?.migratedUsers}
           icon={<Users className="w-6 h-6" />}
           onClick={() => navigate('/users')}
-          data-cy="stats-users"
+          data-cy="stats-users" data-testid="stats-users"
         />
         <StatisticsCard
           title="Groups"
@@ -123,7 +123,7 @@ const OverviewView: React.FC = () => {
           migrated={stats?.migratedGroups}
           icon={<Layers className="w-6 h-6" />}
           onClick={() => navigate('/groups')}
-          data-cy="stats-groups"
+          data-cy="stats-groups" data-testid="stats-groups"
         />
         <StatisticsCard
           title="Computers"
@@ -131,14 +131,14 @@ const OverviewView: React.FC = () => {
           discovered={stats?.discoveredComputers}
           icon={<Monitor className="w-6 h-6" />}
           onClick={() => navigate('/computers')}
-          data-cy="stats-computers"
+          data-cy="stats-computers" data-testid="stats-computers"
         />
         <StatisticsCard
           title="Infrastructure"
           value={stats?.totalInfrastructure || 0}
           icon={<Server className="w-6 h-6" />}
           onClick={() => navigate('/infrastructure')}
-          data-cy="stats-infrastructure"
+          data-cy="stats-infrastructure" data-testid="stats-infrastructure"
         />
       </div>
 

@@ -12,7 +12,12 @@
       "Bash(for hook in useOneDriveDiscoveryLogic useHyperVDiscoveryLogic useSharePointDiscoveryLogic usePowerPlatformDiscoveryLogic useTeamsDiscoveryLogic useVMwareDiscoveryLogic)",
       "Bash(xargs -I {} bash -c 'echo \"\"\"\"{}:\"\"\"\" && npm test -- {} --no-coverage 2>&1 | grep \"\"\"\"Tests:\"\"\"\" || echo \"\"\"\"N/A\"\"\"\"')",
       "Bash(for file in useDataLossPreventionDiscoveryLogic.test.ts useOffice365DiscoveryLogic.test.ts usePowerPlatformDiscoveryLogic.test.ts)",
-      "Bash(do sed -i 's/result\\.current\\.config(\\x27overview\\x27);/result.current.setActiveTab ? result.current.setActiveTab(\\x27overview\\x27) : null;/g' \"$file\")"
+      "Bash(do sed -i 's/result\\.current\\.config(\\x27overview\\x27);/result.current.setActiveTab ? result.current.setActiveTab(\\x27overview\\x27) : null;/g' \"$file\")",
+      "Bash(do npm test -- \"$file\" --no-coverage)",
+      "Bash(do)",
+      "Bash(if grep -q 'data-cy=\"\"export-btn\"\"' \"$file\")",
+      "Bash(then)",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": [],

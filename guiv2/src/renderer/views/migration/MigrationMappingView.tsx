@@ -12,7 +12,7 @@ const MigrationMappingView: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="h-full flex flex-col" data-cy="migration-mapping-view">
+    <div className="h-full flex flex-col" data-cy="migration-mapping-view" data-testid="migration-mapping-view">
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Resource Mapping</h1>
@@ -21,10 +21,10 @@ const MigrationMappingView: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.json" onChange={logic.handleFileUpload} className="hidden" data-cy="file-input" />
+          <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.json" onChange={logic.handleFileUpload} className="hidden" data-cy="file-input" data-testid="file-input" />
           <Button variant="secondary" icon={<Upload className="w-4 h-4" />} onClick={() => fileInputRef.current?.click()} disabled={!logic.hasWaveSelected} data-cy="import-btn">Import</Button>
-          <Button variant="secondary" icon={<Download className="w-4 h-4" />} onClick={logic.handleExport} disabled={!logic.hasMappings} data-cy="export-btn">Export</Button>
-          <Button icon={<Wand2 className="w-4 h-4" />} onClick={logic.handleAutoMap} disabled={!logic.hasWaveSelected || logic.isLoading} loading={logic.isLoading} data-cy="automap-btn">Auto-Map</Button>
+          <Button variant="secondary" icon={<Download className="w-4 h-4" />} onClick={logic.handleExport} disabled={!logic.hasMappings} data-cy="export-btn" data-testid="export-btn">Export</Button>
+          <Button icon={<Wand2 className="w-4 h-4" />} onClick={logic.handleAutoMap} disabled={!logic.hasWaveSelected || logic.isLoading} loading={logic.isLoading} data-cy="automap-btn" data-testid="automap-btn">Auto-Map</Button>
         </div>
       </div>
       {logic.error && (
@@ -56,18 +56,18 @@ const MigrationMappingView: React.FC = () => {
         <div className="p-4 bg-white border-b">
           <div className="flex gap-4">
             <div className="flex-1">
-              <SearchBar value={logic.searchText} onChange={logic.setSearchText} placeholder="Search mappings..." data-cy="search" />
+              <SearchBar value={logic.searchText} onChange={logic.setSearchText} placeholder="Search mappings..." data-cy="search" data-testid="search" />
             </div>
             <Select value={logic.filterType} onChange={logic.setFilterType} options={[
               { value: 'all', label: 'All Types' },
               { value: 'user', label: 'Users' },
               { value: 'group', label: 'Groups' },
-            ]} data-cy="type-filter" />
+            ]} data-cy="type-filter" data-testid="type-filter" />
             <Select value={logic.filterStatus} onChange={logic.setFilterStatus} options={[
               { value: 'all', label: 'All' },
               { value: 'pending', label: 'Pending' },
               { value: 'mapped', label: 'Mapped' },
-            ]} data-cy="status-filter" />
+            ]} data-cy="status-filter" data-testid="status-filter" />
           </div>
         </div>
       )}

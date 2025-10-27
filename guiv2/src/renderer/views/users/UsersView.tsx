@@ -41,7 +41,7 @@ const DragHandleCell: React.FC<{ data: UserData }> = ({ data }) => {
         isDragging && 'opacity-50'
       )}
       title="Drag to add to migration wave"
-      data-cy="user-drag-handle"
+      data-cy="user-drag-handle" data-testid="user-drag-handle"
     >
       <GripVertical size={16} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
     </div>
@@ -95,7 +95,7 @@ const UsersView: React.FC = () => {
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             className="w-64"
-            data-cy="user-search"
+            data-cy="user-search" data-testid="user-search"
           />
           <span className="text-sm text-gray-600 dark:text-gray-400">
             {(users ?? []).length} users
@@ -108,7 +108,7 @@ const UsersView: React.FC = () => {
             variant="secondary"
             icon={<RefreshCw size={18} />}
             loading={isLoading}
-            data-cy="refresh-users"
+            data-cy="refresh-users" data-testid="refresh-users"
           >
             Refresh
           </Button>
@@ -116,7 +116,7 @@ const UsersView: React.FC = () => {
             onClick={handleAddUser}
             variant="primary"
             icon={<UserPlus size={18} />}
-            data-cy="add-user"
+            data-cy="add-user" data-testid="add-user"
           >
             Add User
           </Button>
@@ -124,7 +124,7 @@ const UsersView: React.FC = () => {
             onClick={handleExport}
             variant="secondary"
             icon={<Download size={18} />}
-            data-cy="export-users"
+            data-cy="export-users" data-testid="export-users"
           >
             Export
           </Button>
@@ -133,7 +133,7 @@ const UsersView: React.FC = () => {
             variant="danger"
             icon={<Trash size={18} />}
             disabled={selectedUsers.length === 0}
-            data-cy="delete-users"
+            data-cy="delete-users" data-testid="delete-users"
           >
             Delete ({selectedUsers.length})
           </Button>

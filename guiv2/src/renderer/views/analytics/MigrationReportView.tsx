@@ -218,7 +218,7 @@ const MigrationReportView: React.FC = () => {
 
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center" data-cy="report-error">
+      <div className="h-full flex items-center justify-center" data-cy="report-error" data-testid="report-error">
         <div className="text-center">
           <p className="text-red-600 dark:text-red-400 text-lg">{error}</p>
         </div>
@@ -235,7 +235,7 @@ const MigrationReportView: React.FC = () => {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="migration-report-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="migration-report-view" data-testid="migration-report-view">
       {/* Header */}
       <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div>
@@ -251,7 +251,7 @@ const MigrationReportView: React.FC = () => {
               value={selectedWave}
               onChange={(value) => setSelectedWave(value)}
               className="w-48"
-              data-cy="wave-filter"
+              data-cy="wave-filter" data-testid="wave-filter"
               options={[
                 { value: 'all', label: 'All Waves' },
                 ...availableWaves.map(wave => ({ value: wave.id, label: wave.name }))
@@ -264,7 +264,7 @@ const MigrationReportView: React.FC = () => {
             size="sm"
             icon={<Download className="w-4 h-4" />}
             disabled={isExporting}
-            data-cy="export-excel-btn"
+            data-cy="export-excel-btn" data-testid="export-excel-btn"
           >
             Export Excel
           </Button>
@@ -274,7 +274,7 @@ const MigrationReportView: React.FC = () => {
             size="sm"
             icon={<FileText className="w-4 h-4" />}
             disabled={isExporting}
-            data-cy="export-pdf-btn"
+            data-cy="export-pdf-btn" data-testid="export-pdf-btn"
           >
             Download PDF
           </Button>
@@ -291,7 +291,7 @@ const MigrationReportView: React.FC = () => {
             icon={<Clock className="w-6 h-6 text-white" />}
             color="bg-blue-500"
             subtitle="Attempted"
-            data-cy="stat-total"
+            data-cy="stat-total" data-testid="stat-total"
           />
           <StatCard
             title="Successful"
@@ -299,7 +299,7 @@ const MigrationReportView: React.FC = () => {
             icon={<CheckCircle className="w-6 h-6 text-white" />}
             color="bg-green-500"
             subtitle={`${reportData.statistics.successRate}% success rate`}
-            data-cy="stat-success"
+            data-cy="stat-success" data-testid="stat-success"
           />
           <StatCard
             title="Failed"
@@ -307,7 +307,7 @@ const MigrationReportView: React.FC = () => {
             icon={<XCircle className="w-6 h-6 text-white" />}
             color="bg-red-500"
             subtitle={`${reportData.statistics.totalErrors} errors`}
-            data-cy="stat-failed"
+            data-cy="stat-failed" data-testid="stat-failed"
           />
           <StatCard
             title="Avg. Duration"
@@ -315,7 +315,7 @@ const MigrationReportView: React.FC = () => {
             icon={<Clock className="w-6 h-6 text-white" />}
             color="bg-purple-500"
             subtitle="Per migration"
-            data-cy="stat-duration"
+            data-cy="stat-duration" data-testid="stat-duration"
           />
         </div>
 
@@ -452,7 +452,7 @@ const MigrationReportView: React.FC = () => {
                 size="lg"
                 icon={<FileText className="w-5 h-5" />}
                 disabled={isExporting}
-                data-cy="download-pdf-report"
+                data-cy="download-pdf-report" data-testid="download-pdf-report"
               >
                 {isExporting ? 'Generating...' : 'Download PDF Report'}
               </Button>
@@ -462,7 +462,7 @@ const MigrationReportView: React.FC = () => {
                 size="lg"
                 icon={<Download className="w-5 h-5" />}
                 disabled={isExporting}
-                data-cy="download-excel-report"
+                data-cy="download-excel-report" data-testid="download-excel-report"
               >
                 {isExporting ? 'Exporting...' : 'Export to Excel'}
               </Button>

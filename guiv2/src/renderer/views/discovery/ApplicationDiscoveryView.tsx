@@ -56,7 +56,7 @@ const ApplicationDiscoveryView: React.FC = () => {
   } = useApplicationDiscoveryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="app-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="app-discovery-view" data-testid="app-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between p-4">
@@ -95,7 +95,7 @@ const ApplicationDiscoveryView: React.FC = () => {
               icon={<Settings />}
               onClick={() => {/* TODO: Open config dialog */}}
               disabled={isDiscovering}
-              data-cy="config-btn"
+              data-cy="config-btn" data-testid="config-btn"
             >
               Configure
             </Button>
@@ -105,7 +105,7 @@ const ApplicationDiscoveryView: React.FC = () => {
               icon={<Save />}
               onClick={() => {/* TODO: Open save template dialog */}}
               disabled={isDiscovering}
-              data-cy="save-template-btn"
+              data-cy="save-template-btn" data-testid="save-template-btn"
             >
               Save Template
             </Button>
@@ -115,7 +115,7 @@ const ApplicationDiscoveryView: React.FC = () => {
                 variant="primary"
                 icon={<Play />}
                 onClick={startDiscovery}
-                data-cy="start-discovery-btn"
+                data-cy="start-discovery-btn" data-testid="start-discovery-btn"
               >
                 Start Discovery
               </Button>
@@ -124,7 +124,7 @@ const ApplicationDiscoveryView: React.FC = () => {
                 variant="danger"
                 icon={<Square />}
                 onClick={cancelDiscovery}
-                data-cy="cancel-discovery-btn"
+                data-cy="cancel-discovery-btn" data-testid="cancel-discovery-btn"
               >
                 Cancel
               </Button>
@@ -296,7 +296,7 @@ const ApplicationDiscoveryView: React.FC = () => {
                     value={searchText}
                     onChange={setSearchText}
                     placeholder={`Search ${selectedTab}...`}
-                    data-cy="app-search"
+                    data-cy="app-search" data-testid="app-search"
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -304,7 +304,7 @@ const ApplicationDiscoveryView: React.FC = () => {
                     variant="secondary"
                     icon={<RefreshCw />}
                     onClick={startDiscovery}
-                    data-cy="refresh-btn"
+                    data-cy="refresh-btn" data-testid="refresh-btn"
                   >
                     Refresh
                   </Button>
@@ -312,7 +312,7 @@ const ApplicationDiscoveryView: React.FC = () => {
                     variant="secondary"
                     icon={<Download />}
                     onClick={() => console.log('Export data')}
-                    data-cy="export-btn"
+                    data-cy="export-results-btn" data-testid="export-results-btn"
                   >
                     Export
                   </Button>

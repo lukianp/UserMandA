@@ -231,7 +231,7 @@ const CustomReportBuilderView: React.FC = () => {
   }, [reportConfig.fields, currentFields]);
 
   return (
-    <div className="h-full flex flex-col bg-gray-50" data-cy="custom-report-builder-view">
+    <div className="h-full flex flex-col bg-gray-50" data-cy="custom-report-builder-view" data-testid="custom-report-builder-view">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">

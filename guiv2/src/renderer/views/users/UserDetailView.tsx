@@ -116,7 +116,7 @@ export const UserDetailView: React.FC<UserDetailViewProps> = ({ userId }) => {
   }
 
   return (
-    <div className="relative h-full flex flex-col p-6" data-cy="user-detail-view">
+    <div className="relative h-full flex flex-col p-6" data-cy="user-detail-view" data-testid="user-detail-view">
       {/* Loading Overlay */}
       {isLoading && <LoadingOverlay message={loadingMessage} showCancel={false} />}
 
@@ -138,7 +138,7 @@ export const UserDetailView: React.FC<UserDetailViewProps> = ({ userId }) => {
             disabled={isLoading}
             title="Refresh user data (Ctrl+R)"
             aria-label="Refresh user data"
-            data-cy="refresh-user-detail"
+            data-cy="refresh-user-detail" data-testid="refresh-user-detail"
           >
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
@@ -150,7 +150,7 @@ export const UserDetailView: React.FC<UserDetailViewProps> = ({ userId }) => {
             disabled={isLoading || !userDetail}
             title="Add user to migration wave"
             aria-label="Add user to migration wave"
-            data-cy="add-to-wave"
+            data-cy="add-to-wave" data-testid="add-to-wave"
           >
             <UserPlus className="mr-2 h-4 w-4" />
             Add to Wave
@@ -162,7 +162,7 @@ export const UserDetailView: React.FC<UserDetailViewProps> = ({ userId }) => {
             disabled={isLoading || !userDetail}
             title="Export user details (Ctrl+E)"
             aria-label="Export user snapshot"
-            data-cy="export-user-detail"
+            data-cy="export-user-detail" data-testid="export-user-detail"
           >
             <Download className="mr-2 h-4 w-4" />
             Export
@@ -173,7 +173,7 @@ export const UserDetailView: React.FC<UserDetailViewProps> = ({ userId }) => {
             variant="danger"
             title="Close user details (Ctrl+W)"
             aria-label="Close user detail view"
-            data-cy="close-user-detail"
+            data-cy="close-user-detail" data-testid="close-user-detail"
           >
             <X className="mr-2 h-4 w-4" />
             Close
@@ -436,7 +436,7 @@ const DevicesTab: React.FC<{ devices: DeviceData[] }> = React.memo(({ devices })
       columns={columnDefs}
       loading={false}
       height="100%"
-      data-cy="devices-grid"
+      data-cy="devices-grid" data-testid="devices-grid"
     />
   );
 });
@@ -466,7 +466,7 @@ const AppsTab: React.FC<{ apps: ApplicationData[] }> = React.memo(({ apps }) => 
   }
 
   return (
-    <VirtualizedDataGrid data={apps} columns={columnDefs} loading={false} height="100%" data-cy="apps-grid" />
+    <VirtualizedDataGrid data={apps} columns={columnDefs} loading={false} height="100%" data-cy="apps-grid" data-testid="apps-grid" />
   );
 });
 
@@ -506,7 +506,7 @@ const GroupsTab: React.FC<{ groups: GroupData[] }> = React.memo(({ groups }) => 
       columns={columnDefs}
       loading={false}
       height="100%"
-      data-cy="groups-grid"
+      data-cy="groups-grid" data-testid="groups-grid"
     />
   );
 });
@@ -556,7 +556,7 @@ const GposTab: React.FC<{ gpoLinks: GpoData[]; gpoFilters: GpoData[] }> = React.
               columns={linkColumnDefs}
               loading={false}
               height="100%"
-              data-cy="gpo-links-grid"
+              data-cy="gpo-links-grid" data-testid="gpo-links-grid"
             />
           )}
         </div>
@@ -574,7 +574,7 @@ const GposTab: React.FC<{ gpoLinks: GpoData[]; gpoFilters: GpoData[] }> = React.
               columns={filterColumnDefs}
               loading={false}
               height="100%"
-              data-cy="gpo-filters-grid"
+              data-cy="gpo-filters-grid" data-testid="gpo-filters-grid"
             />
           )}
         </div>
@@ -629,7 +629,7 @@ const FileAccessTab: React.FC<{ fileAccess: FileAccessEntry[] }> = React.memo(({
       columns={columnDefs}
       loading={false}
       height="100%"
-      data-cy="file-access-grid"
+      data-cy="file-access-grid" data-testid="file-access-grid"
     />
   );
 });
@@ -699,7 +699,7 @@ const AzureRolesTab: React.FC<{ azureRoles: AzureRoleAssignment[] }> = React.mem
       columns={columnDefs}
       loading={false}
       height="100%"
-      data-cy="azure-roles-grid"
+      data-cy="azure-roles-grid" data-testid="azure-roles-grid"
     />
   );
 });
@@ -764,7 +764,7 @@ const SqlRisksTab: React.FC<{ sqlDatabases: SqlDatabaseData[]; risks: RiskItem[]
               columns={sqlColumnDefs}
               loading={false}
               height="100%"
-              data-cy="sql-databases-grid"
+              data-cy="sql-databases-grid" data-testid="sql-databases-grid"
             />
           )}
         </div>
@@ -782,7 +782,7 @@ const SqlRisksTab: React.FC<{ sqlDatabases: SqlDatabaseData[]; risks: RiskItem[]
               columns={riskColumnDefs}
               loading={false}
               height="100%"
-              data-cy="risks-grid"
+              data-cy="risks-grid" data-testid="risks-grid"
             />
           )}
         </div>

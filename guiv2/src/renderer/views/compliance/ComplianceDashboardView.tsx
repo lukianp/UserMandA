@@ -58,7 +58,7 @@ export const ComplianceDashboardView: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="compliance-dashboard-view">
+    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="compliance-dashboard-view" data-testid="compliance-dashboard-view">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -77,7 +77,7 @@ export const ComplianceDashboardView: React.FC = () => {
             onClick={handleRefresh}
             icon={<Activity className="w-4 h-4" />}
             disabled={isLoading}
-            data-cy="refresh-btn"
+            data-cy="refresh-btn" data-testid="refresh-btn"
           >
             Refresh
           </Button>
@@ -85,7 +85,7 @@ export const ComplianceDashboardView: React.FC = () => {
             variant="primary"
             onClick={handleRefresh}
             disabled={isLoading}
-            data-cy="run-audit-btn"
+            data-cy="run-audit-btn" data-testid="run-audit-btn"
           >
             Run Compliance Audit
           </Button>
@@ -93,7 +93,7 @@ export const ComplianceDashboardView: React.FC = () => {
             variant="secondary"
             onClick={() => handleExport('csv')}
             icon={<FileText className="w-4 h-4" />}
-            data-cy="export-btn"
+            data-cy="export-btn" data-testid="export-btn"
           >
             Export Report
           </Button>
@@ -216,7 +216,7 @@ export const ComplianceDashboardView: React.FC = () => {
           enableExport
           enableGrouping
           enableFiltering
-          data-cy="compliance-grid"
+          data-cy="compliance-grid" data-testid="compliance-grid"
         />
       </div>
     </div>

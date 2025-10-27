@@ -66,7 +66,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="security-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="security-discovery-view" data-testid="security-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between p-4">
@@ -105,7 +105,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
               icon={<Settings />}
               onClick={() => {/* TODO: Open config dialog */}}
               disabled={isDiscovering}
-              data-cy="config-btn"
+              data-cy="config-btn" data-testid="config-btn"
             >
               Configure
             </Button>
@@ -115,7 +115,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
               icon={<Save />}
               onClick={() => {/* TODO: Open save template dialog */}}
               disabled={isDiscovering}
-              data-cy="save-template-btn"
+              data-cy="save-template-btn" data-testid="save-template-btn"
             >
               Save Template
             </Button>
@@ -125,7 +125,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                 variant="danger"
                 icon={<Square />}
                 onClick={cancelDiscovery}
-                data-cy="cancel-btn"
+                data-cy="cancel-btn" data-testid="cancel-btn"
               >
                 Cancel
               </Button>
@@ -134,7 +134,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                 variant="primary"
                 icon={<Play />}
                 onClick={startDiscovery}
-                data-cy="start-discovery-btn"
+                data-cy="start-discovery-btn" data-testid="start-discovery-btn"
               >
                 Start Discovery
               </Button>
@@ -145,7 +145,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
               icon={<Download />}
               onClick={() => exportResults('excel')}
               disabled={!currentResult || isDiscovering}
-              data-cy="export-btn"
+              data-cy="export-results-btn" data-testid="export-results-btn"
             >
               Export
             </Button>
@@ -155,27 +155,27 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
         {/* Configuration Summary */}
         <div className="px-4 pb-4 flex flex-wrap gap-2">
           {config.discoverDevices && (
-            <Badge variant="info" data-cy="config-devices-badge">
+            <Badge variant="info" data-cy="config-devices-badge" data-testid="config-devices-badge">
               <Server className="w-3 h-3" /> Devices
             </Badge>
           )}
           {config.discoverPolicies && (
-            <Badge variant="info" data-cy="config-policies-badge">
+            <Badge variant="info" data-cy="config-policies-badge" data-testid="config-policies-badge">
               <FileText className="w-3 h-3" /> Policies
             </Badge>
           )}
           {config.discoverIncidents && (
-            <Badge variant="warning" data-cy="config-incidents-badge">
+            <Badge variant="warning" data-cy="config-incidents-badge" data-testid="config-incidents-badge">
               <AlertTriangle className="w-3 h-3" /> Incidents
             </Badge>
           )}
           {config.discoverVulnerabilities && (
-            <Badge variant="danger" data-cy="config-vulnerabilities-badge">
+            <Badge variant="danger" data-cy="config-vulnerabilities-badge" data-testid="config-vulnerabilities-badge">
               <Bug className="w-3 h-3" /> Vulnerabilities
             </Badge>
           )}
           {config.performVulnerabilityScan && (
-            <Badge variant="success" data-cy="config-scan-badge">
+            <Badge variant="success" data-cy="config-scan-badge" data-testid="config-scan-badge">
               <Shield className="w-3 h-3" /> Vulnerability Scan
             </Badge>
           )}
@@ -184,7 +184,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
 
       {/* Progress Indicator */}
       {isDiscovering && progress && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 p-4" data-cy="progress-section">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 p-4" data-cy="progress-section" data-testid="progress-section">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <RefreshCw className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
@@ -217,7 +217,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
 
       {/* Error Display */}
       {errors.length > 0 && (
-        <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 p-4" data-cy="error-section">
+        <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 p-4" data-cy="error-section" data-testid="error-section">
           <div className="flex items-start gap-2">
             <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -239,7 +239,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
           <div className="grid grid-cols-5 gap-4">
             {/* Security Devices */}
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800" data-cy="stat-devices">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800" data-cy="stat-devices" data-testid="stat-devices">
               <div className="flex items-center justify-between mb-2">
                 <Server className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 <Badge variant="info" className="text-xs">
@@ -255,7 +255,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
             </div>
 
             {/* Active Policies */}
-            <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg p-4 border border-green-200 dark:border-green-800" data-cy="stat-policies">
+            <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg p-4 border border-green-200 dark:border-green-800" data-cy="stat-policies" data-testid="stat-policies">
               <div className="flex items-center justify-between mb-2">
                 <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
                 <Badge variant="success" className="text-xs">
@@ -271,7 +271,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
             </div>
 
             {/* Open Incidents */}
-            <div className={`bg-gradient-to-br rounded-lg p-4 border ${getSeverityColor(currentResult.statistics.criticalIncidents > 0 ? 'critical' : 'medium')}`} data-cy="stat-incidents">
+            <div className={`bg-gradient-to-br rounded-lg p-4 border ${getSeverityColor(currentResult.statistics.criticalIncidents > 0 ? 'critical' : 'medium')}`} data-cy="stat-incidents" data-testid="stat-incidents">
               <div className="flex items-center justify-between mb-2">
                 <AlertTriangle className="w-5 h-5" />
                 <Badge variant="danger" className="text-xs">
@@ -287,7 +287,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
             </div>
 
             {/* Vulnerabilities */}
-            <div className={`bg-gradient-to-br rounded-lg p-4 border ${getSeverityColor(currentResult.statistics.criticalVulnerabilities > 0 ? 'critical' : 'high')}`} data-cy="stat-vulnerabilities">
+            <div className={`bg-gradient-to-br rounded-lg p-4 border ${getSeverityColor(currentResult.statistics.criticalVulnerabilities > 0 ? 'critical' : 'high')}`} data-cy="stat-vulnerabilities" data-testid="stat-vulnerabilities">
               <div className="flex items-center justify-between mb-2">
                 <Bug className="w-5 h-5" />
                 <Badge variant="danger" className="text-xs">
@@ -303,7 +303,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
             </div>
 
             {/* Compliance Score */}
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800" data-cy="stat-compliance">
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800" data-cy="stat-compliance" data-testid="stat-compliance">
               <div className="flex items-center justify-between mb-2">
                 <Award className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 <Badge
@@ -339,7 +339,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                     ? 'border-red-600 text-red-600 dark:text-red-400'
                     : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
-                data-cy="tab-overview"
+                data-cy="tab-overview" data-testid="tab-overview"
               >
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4" />
@@ -356,7 +356,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                     ? 'border-red-600 text-red-600 dark:text-red-400'
                     : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
-                data-cy="tab-devices"
+                data-cy="tab-devices" data-testid="tab-devices"
               >
                 <div className="flex items-center gap-2">
                   <Server className="w-4 h-4" />
@@ -378,7 +378,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                     ? 'border-red-600 text-red-600 dark:text-red-400'
                     : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
-                data-cy="tab-policies"
+                data-cy="tab-policies" data-testid="tab-policies"
               >
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4" />
@@ -400,7 +400,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                     ? 'border-red-600 text-red-600 dark:text-red-400'
                     : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
-                data-cy="tab-incidents"
+                data-cy="tab-incidents" data-testid="tab-incidents"
               >
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
@@ -422,7 +422,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                     ? 'border-red-600 text-red-600 dark:text-red-400'
                     : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
-                data-cy="tab-vulnerabilities"
+                data-cy="tab-vulnerabilities" data-testid="tab-vulnerabilities"
               >
                 <div className="flex items-center gap-2">
                   <Bug className="w-4 h-4" />
@@ -452,7 +452,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
         {/* Tab Content */}
         <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
           {selectedTab === 'overview' && currentResult ? (
-            <div className="h-full overflow-y-auto p-6" data-cy="overview-content">
+            <div className="h-full overflow-y-auto p-6" data-cy="overview-content" data-testid="overview-content">
               <div className="max-w-6xl mx-auto space-y-6">
                 {/* Discovery Summary */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

@@ -32,7 +32,7 @@ const ComputerInventoryView: React.FC = () => {
   } = useComputerInventoryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="computer-inventory-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="computer-inventory-view" data-testid="computer-inventory-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -99,7 +99,7 @@ const ComputerInventoryView: React.FC = () => {
               size="sm"
               icon={<X className="w-4 h-4" />}
               onClick={clearFilters}
-              data-cy="clear-filters-btn"
+              data-cy="clear-filters-btn" data-testid="clear-filters-btn"
             >
               Clear All
             </Button>
@@ -110,7 +110,7 @@ const ComputerInventoryView: React.FC = () => {
             placeholder="Search name, IP, serial..."
             value={filters.searchText}
             onChange={(e) => updateFilter('searchText', e.target.value)}
-            data-cy="search-input"
+            data-cy="search-input" data-testid="search-input"
           />
           <Select
             value={filters.osType}
@@ -124,7 +124,7 @@ const ComputerInventoryView: React.FC = () => {
           <Select
             value={filters.domain}
             onChange={(value) => updateFilter('domain', value)}
-            data-cy="domain-select"
+            data-cy="domain-select" data-testid="domain-select"
             options={[
               { value: '', label: 'All Domains' },
               ...(filterOptions?.domains ?? []).map((domain) => ({ value: domain, label: domain }))
@@ -133,7 +133,7 @@ const ComputerInventoryView: React.FC = () => {
           <Select
             value={filters.ou}
             onChange={(value) => updateFilter('ou', value)}
-            data-cy="ou-select"
+            data-cy="ou-select" data-testid="ou-select"
             options={[
               { value: '', label: 'All OUs' },
               ...(filterOptions?.ous ?? []).map((ou) => ({ value: ou, label: ou }))
@@ -142,7 +142,7 @@ const ComputerInventoryView: React.FC = () => {
           <Select
             value={filters.status}
             onChange={(value) => updateFilter('status', value)}
-            data-cy="status-select"
+            data-cy="status-select" data-testid="status-select"
             options={[
               { value: '', label: 'All Statuses' },
               ...(filterOptions?.statuses ?? []).map((status) => ({ value: status, label: status }))
@@ -160,7 +160,7 @@ const ComputerInventoryView: React.FC = () => {
               icon={<RefreshCw className="w-4 h-4" />}
               onClick={loadData}
               loading={isLoading}
-              data-cy="refresh-btn"
+              data-cy="refresh-btn" data-testid="refresh-btn"
             >
               Refresh
             </Button>
@@ -169,7 +169,7 @@ const ComputerInventoryView: React.FC = () => {
                 variant="secondary"
                 icon={<Eye className="w-4 h-4" />}
                 onClick={() => selectedComputers[0] && viewDetails(selectedComputers[0])}
-                data-cy="view-details-btn"
+                data-cy="view-details-btn" data-testid="view-details-btn"
               >
                 View Details ({selectedComputers.length})
               </Button>
@@ -181,7 +181,7 @@ const ComputerInventoryView: React.FC = () => {
               icon={<Download className="w-4 h-4" />}
               onClick={exportData}
               disabled={(data?.length ?? 0) === 0}
-              data-cy="export-btn"
+              data-cy="export-btn" data-testid="export-btn"
             >
               Export CSV
             </Button>

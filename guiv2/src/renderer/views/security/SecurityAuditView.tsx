@@ -35,7 +35,7 @@ const SecurityAuditView: React.FC = () => {
   } = useSecurityAuditLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="security-audit-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="security-audit-view" data-testid="security-audit-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -121,7 +121,7 @@ const SecurityAuditView: React.FC = () => {
               size="sm"
               icon={<X className="w-4 h-4" />}
               onClick={clearFilters}
-              data-cy="clear-filters-btn"
+              data-cy="clear-filters-btn" data-testid="clear-filters-btn"
             >
               Clear All
             </Button>
@@ -133,7 +133,7 @@ const SecurityAuditView: React.FC = () => {
             value={filters.searchText}
             onChange={(e) => updateFilter('searchText', e.target.value)}
             className="md:col-span-2"
-            data-cy="search-input"
+            data-cy="search-input" data-testid="search-input"
           />
           <Select
             value={filters.eventCategory}
@@ -142,7 +142,7 @@ const SecurityAuditView: React.FC = () => {
               { value: '', label: 'All Categories' },
               ...(filterOptions?.categories ?? []).map(cat => ({ value: cat, label: cat }))
             ]}
-            data-cy="category-select"
+            data-cy="category-select" data-testid="category-select"
           />
           <Select
             value={filters.severity}
@@ -151,7 +151,7 @@ const SecurityAuditView: React.FC = () => {
               { value: '', label: 'All Severities' },
               ...(filterOptions?.severities ?? []).map(sev => ({ value: sev, label: sev }))
             ]}
-            data-cy="severity-select"
+            data-cy="severity-select" data-testid="severity-select"
           />
           <Select
             value={filters.result}
@@ -160,27 +160,27 @@ const SecurityAuditView: React.FC = () => {
               { value: '', label: 'All Results' },
               ...(filterOptions?.results ?? []).map(res => ({ value: res, label: res }))
             ]}
-            data-cy="result-select"
+            data-cy="result-select" data-testid="result-select"
           />
           <Input
             type="date"
             placeholder="From Date"
             value={filters.dateFrom}
             onChange={(e) => updateFilter('dateFrom', e.target.value)}
-            data-cy="date-from-input"
+            data-cy="date-from-input" data-testid="date-from-input"
           />
           <Input
             type="date"
             placeholder="To Date"
             value={filters.dateTo}
             onChange={(e) => updateFilter('dateTo', e.target.value)}
-            data-cy="date-to-input"
+            data-cy="date-to-input" data-testid="date-to-input"
           />
           <Input
             placeholder="User..."
             value={filters.user}
             onChange={(e) => updateFilter('user', e.target.value)}
-            data-cy="user-input"
+            data-cy="user-input" data-testid="user-input"
           />
         </div>
       </div>
@@ -194,7 +194,7 @@ const SecurityAuditView: React.FC = () => {
               icon={<RefreshCw className="w-4 h-4" />}
               onClick={loadData}
               loading={isLoading}
-              data-cy="refresh-btn"
+              data-cy="refresh-btn" data-testid="refresh-btn"
             >
               Refresh
             </Button>
@@ -202,7 +202,7 @@ const SecurityAuditView: React.FC = () => {
               variant={isLiveMode ? 'secondary' : 'ghost'}
               icon={<Radio className="w-4 h-4" />}
               onClick={toggleLiveMode}
-              data-cy="live-mode-btn"
+              data-cy="live-mode-btn" data-testid="live-mode-btn"
             >
               {isLiveMode ? 'Stop Live' : 'Start Live'}
             </Button>
@@ -213,7 +213,7 @@ const SecurityAuditView: React.FC = () => {
               icon={<Download className="w-4 h-4" />}
               onClick={() => exportData('csv')}
               disabled={(data?.length ?? 0) === 0}
-              data-cy="export-csv-btn"
+              data-cy="export-csv-btn" data-testid="export-csv-btn"
             >
               Export CSV
             </Button>
@@ -222,7 +222,7 @@ const SecurityAuditView: React.FC = () => {
               icon={<Download className="w-4 h-4" />}
               onClick={() => exportData('json')}
               disabled={(data?.length ?? 0) === 0}
-              data-cy="export-json-btn"
+              data-cy="export-json-btn" data-testid="export-json-btn"
             >
               Export JSON
             </Button>
@@ -231,7 +231,7 @@ const SecurityAuditView: React.FC = () => {
               icon={<Download className="w-4 h-4" />}
               onClick={() => exportData('siem')}
               disabled={(data?.length ?? 0) === 0}
-              data-cy="export-siem-btn"
+              data-cy="export-siem-btn" data-testid="export-siem-btn"
             >
               Export SIEM/CEF
             </Button>

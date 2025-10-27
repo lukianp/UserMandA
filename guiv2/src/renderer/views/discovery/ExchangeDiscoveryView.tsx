@@ -66,7 +66,7 @@ const ExchangeDiscoveryView: React.FC = () => {
   } = useExchangeDiscoveryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="exchange-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="exchange-discovery-view" data-testid="exchange-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between p-4">
@@ -105,7 +105,7 @@ const ExchangeDiscoveryView: React.FC = () => {
               icon={<Settings />}
               onClick={() => {/* TODO: Open config dialog */}}
               disabled={isDiscovering}
-              data-cy="config-btn"
+              data-cy="config-btn" data-testid="config-btn"
             >
               Configure
             </Button>
@@ -115,7 +115,7 @@ const ExchangeDiscoveryView: React.FC = () => {
               icon={<Save />}
               onClick={() => {/* TODO: Open save template dialog */}}
               disabled={isDiscovering}
-              data-cy="save-template-btn"
+              data-cy="save-template-btn" data-testid="save-template-btn"
             >
               Save Template
             </Button>
@@ -125,7 +125,7 @@ const ExchangeDiscoveryView: React.FC = () => {
                 variant="primary"
                 icon={<Play />}
                 onClick={startDiscovery}
-                data-cy="start-discovery-btn"
+                data-cy="start-discovery-btn" data-testid="start-discovery-btn"
               >
                 Start Discovery
               </Button>
@@ -134,7 +134,7 @@ const ExchangeDiscoveryView: React.FC = () => {
                 variant="danger"
                 icon={<Square />}
                 onClick={cancelDiscovery}
-                data-cy="cancel-discovery-btn"
+                data-cy="cancel-discovery-btn" data-testid="cancel-discovery-btn"
               >
                 Cancel
               </Button>
@@ -296,7 +296,7 @@ const ExchangeDiscoveryView: React.FC = () => {
                   variant="secondary"
                   icon={<RefreshCw />}
                   onClick={startDiscovery}
-                  data-cy="refresh-btn"
+                  data-cy="refresh-btn" data-testid="refresh-btn"
                 >
                   Refresh
                 </Button>
@@ -304,7 +304,7 @@ const ExchangeDiscoveryView: React.FC = () => {
                   variant="secondary"
                   icon={<Download />}
                   onClick={() => exportData({ format: 'CSV', includeMailboxes: true, includeGroups: true, includeRules: true, includeConnectors: false, includePublicFolders: false, includeStatistics: true, splitByType: false })}
-                  data-cy="export-btn"
+                  data-cy="export-results-btn" data-testid="export-results-btn"
                 >
                   Export
                 </Button>

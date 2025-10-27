@@ -661,7 +661,7 @@ const DataVisualizationView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50" data-cy="data-visualization-view">
+    <div className="h-full flex flex-col bg-gray-50" data-cy="data-visualization-view" data-testid="data-visualization-view">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -677,7 +677,7 @@ const DataVisualizationView: React.FC = () => {
               icon={<RefreshCw className="w-4 h-4" />}
               onClick={handleRefresh}
               disabled={loading}
-              data-cy="refresh-button"
+              data-cy="refresh-button" data-testid="refresh-button"
             >
               Refresh
             </Button>
@@ -685,7 +685,7 @@ const DataVisualizationView: React.FC = () => {
               variant="secondary"
               icon={<FileImage className="w-4 h-4" />}
               onClick={handleExportPNG}
-              data-cy="export-png-button"
+              data-cy="export-png-button" data-testid="export-png-button"
             >
               Export PNG
             </Button>
@@ -693,7 +693,7 @@ const DataVisualizationView: React.FC = () => {
               variant="secondary"
               icon={<Download className="w-4 h-4" />}
               onClick={handleExportSVG}
-              data-cy="export-svg-button"
+              data-cy="export-svg-button" data-testid="export-svg-button"
             >
               Export SVG
             </Button>
@@ -714,7 +714,7 @@ const DataVisualizationView: React.FC = () => {
                 value: source,
                 label: source.charAt(0).toUpperCase() + source.slice(1)
               }))}
-              data-cy="data-source-select"
+              data-cy="data-source-select" data-testid="data-source-select"
             />
           </div>
 
@@ -733,7 +733,7 @@ const DataVisualizationView: React.FC = () => {
                 { value: 'radar', label: 'Radar Chart' },
                 { value: 'composed', label: 'Composed Chart' },
               ]}
-              data-cy="chart-type-select"
+              data-cy="chart-type-select" data-testid="chart-type-select"
             />
           </div>
 
@@ -745,7 +745,7 @@ const DataVisualizationView: React.FC = () => {
                 value={config.xAxis}
                 onChange={value => setConfig(prev => ({ ...prev, xAxis: value }))}
                 options={dataSourceFields[config.dataSource]}
-                data-cy="x-axis-select"
+                data-cy="x-axis-select" data-testid="x-axis-select"
               />
             </div>
           )}
@@ -765,7 +765,7 @@ const DataVisualizationView: React.FC = () => {
                 { value: '', label: 'Select field' },
                 ...numericFields
               ]}
-              data-cy="y-axis-select"
+              data-cy="y-axis-select" data-testid="y-axis-select"
             />
           </div>
 
@@ -782,7 +782,7 @@ const DataVisualizationView: React.FC = () => {
                 { value: 'quarter', label: 'Last 90 Days' },
                 { value: 'year', label: 'Last Year' },
               ]}
-              data-cy="date-range-select"
+              data-cy="date-range-select" data-testid="date-range-select"
             />
           </div>
 
@@ -803,7 +803,7 @@ const DataVisualizationView: React.FC = () => {
                 { value: 'professional', label: 'Professional' },
                 { value: 'monochrome', label: 'Monochrome' },
               ]}
-              data-cy="color-palette-select"
+              data-cy="color-palette-select" data-testid="color-palette-select"
             />
           </div>
         </div>
@@ -882,7 +882,7 @@ const DataVisualizationView: React.FC = () => {
 
       {/* Chart Container */}
       <div className="flex-1 p-6">
-        <div className="bg-white rounded-lg shadow h-full p-6" id="chart-container" data-cy="chart-container">
+        <div className="bg-white rounded-lg shadow h-full p-6" id="chart-container" data-cy="chart-container" data-testid="chart-container">
           {renderChart()}
         </div>
       </div>

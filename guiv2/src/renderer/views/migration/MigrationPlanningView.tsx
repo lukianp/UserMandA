@@ -108,7 +108,7 @@ const WaveDropZone: React.FC<WaveDropZoneProps> = ({
             }}
             className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
             title="Edit wave"
-            data-cy="edit-wave-btn"
+            data-cy="edit-wave-btn" data-testid="edit-wave-btn"
           >
             <Edit className="w-4 h-4 text-gray-600 dark:text-gray-400" />
           </button>
@@ -129,7 +129,7 @@ const WaveDropZone: React.FC<WaveDropZoneProps> = ({
             }}
             className="p-1 hover:bg-red-200 dark:hover:bg-red-900/50 rounded transition-colors"
             title="Delete wave"
-            data-cy="delete-wave-btn"
+            data-cy="delete-wave-btn" data-testid="delete-wave-btn"
           >
             <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
           </button>
@@ -414,7 +414,7 @@ const MigrationPlanningView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col" data-cy="migration-planning-view">
+    <div className="h-full flex flex-col" data-cy="migration-planning-view" data-testid="migration-planning-view">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div>
@@ -428,7 +428,7 @@ const MigrationPlanningView: React.FC = () => {
         <Button
           onClick={() => setShowWaveForm(true)}
           icon={<Plus className="w-4 h-4" />}
-          data-cy="create-wave-btn"
+          data-cy="create-wave-btn" data-testid="create-wave-btn"
         >
           Create Wave
         </Button>
@@ -588,7 +588,7 @@ const MigrationPlanningView: React.FC = () => {
             value={searchText}
             onChange={setSearchText}
             placeholder="Search waves..."
-            data-cy="wave-search"
+            data-cy="wave-search" data-testid="wave-search"
           />
 
           {isLoading && waves.length === 0 ? (
@@ -633,7 +633,7 @@ const MigrationPlanningView: React.FC = () => {
                 placeholder="e.g., Executive Team Migration"
                 required
                 fullWidth
-                data-cy="wave-name-input"
+                data-cy="wave-name-input" data-testid="wave-name-input"
               />
 
               <div>
@@ -649,7 +649,7 @@ const MigrationPlanningView: React.FC = () => {
                   value={formData.description || ''}
                   onChange={(value) => handleFieldChange('description', value)}
                   placeholder="Detailed description of this migration wave..."
-                  data-cy="wave-description-input"
+                  data-cy="wave-description-input" data-testid="wave-description-input"
                 />
               </div>
 
@@ -661,7 +661,7 @@ const MigrationPlanningView: React.FC = () => {
                   onChange={(e) => handleFieldChange('plannedStartDate', new Date(e.target.value).toISOString())
                   }
                   fullWidth
-                  data-cy="wave-start-input"
+                  data-cy="wave-start-input" data-testid="wave-start-input"
                 />
                 <Input
                   label="End Date & Time"
@@ -670,7 +670,7 @@ const MigrationPlanningView: React.FC = () => {
                   onChange={(e) => handleFieldChange('plannedEndDate', new Date(e.target.value).toISOString())
                   }
                   fullWidth
-                  data-cy="wave-end-input"
+                  data-cy="wave-end-input" data-testid="wave-end-input"
                 />
               </div>
 
@@ -684,7 +684,7 @@ const MigrationPlanningView: React.FC = () => {
                   { value: 'High', label: 'High' },
                   { value: 'Critical', label: 'Critical' },
                 ]}
-                data-cy="wave-priority-input"
+                data-cy="wave-priority-input" data-testid="wave-priority-input"
               />
 
               <div>
@@ -700,7 +700,7 @@ const MigrationPlanningView: React.FC = () => {
                   value={formData.notes || ''}
                   onChange={(value) => handleFieldChange('notes', value)}
                   placeholder="Additional notes or instructions..."
-                  data-cy="wave-notes-input"
+                  data-cy="wave-notes-input" data-testid="wave-notes-input"
                 />
               </div>
 
@@ -709,7 +709,7 @@ const MigrationPlanningView: React.FC = () => {
                   onClick={isEditing ? handleUpdateWave : handleCreateWave}
                   disabled={!canSave || isLoading}
                   loading={isLoading}
-                  data-cy="save-wave-btn"
+                  data-cy="save-wave-btn" data-testid="save-wave-btn"
                 >
                   {isEditing ? 'Update Wave' : 'Create Wave'}
                 </Button>
@@ -717,7 +717,7 @@ const MigrationPlanningView: React.FC = () => {
                   variant="secondary"
                   onClick={handleCancelForm}
                   disabled={isLoading}
-                  data-cy="cancel-wave-btn"
+                  data-cy="cancel-wave-btn" data-testid="cancel-wave-btn"
                 >
                   Cancel
                 </Button>

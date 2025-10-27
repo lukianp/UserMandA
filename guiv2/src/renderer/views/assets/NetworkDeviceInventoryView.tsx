@@ -37,7 +37,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
   } = useNetworkDeviceInventoryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="network-device-inventory-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="network-device-inventory-view" data-testid="network-device-inventory-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -141,7 +141,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
               size="sm"
               icon={<X className="w-4 h-4" />}
               onClick={clearFilters}
-              data-cy="clear-filters-btn"
+              data-cy="clear-filters-btn" data-testid="clear-filters-btn"
             >
               Clear All
             </Button>
@@ -152,7 +152,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
             placeholder="Search name, IP, MAC..."
             value={filters.searchText}
             onChange={(e) => updateFilter('searchText', e.target.value)}
-            data-cy="search-input"
+            data-cy="search-input" data-testid="search-input"
           />
           <Select
             value={filters.deviceType}
@@ -166,7 +166,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
           <Select
             value={filters.vendor}
             onChange={(value) => updateFilter('vendor', value)}
-            data-cy="vendor-select"
+            data-cy="vendor-select" data-testid="vendor-select"
             options={[
               { value: '', label: 'All Vendors' },
               ...(filterOptions?.vendors ?? []).map((vendor) => ({ value: vendor, label: vendor }))
@@ -175,7 +175,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
           <Select
             value={filters.status}
             onChange={(value) => updateFilter('status', value)}
-            data-cy="status-select"
+            data-cy="status-select" data-testid="status-select"
             options={[
               { value: '', label: 'All Statuses' },
               ...(filterOptions?.statuses ?? []).map((status) => ({ value: status, label: status }))
@@ -184,7 +184,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
           <Select
             value={filters.location}
             onChange={(value) => updateFilter('location', value)}
-            data-cy="location-select"
+            data-cy="location-select" data-testid="location-select"
             options={[
               { value: '', label: 'All Locations' },
               ...(filterOptions?.locations ?? []).map((location) => ({ value: location, label: location }))
@@ -202,7 +202,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
               icon={<RefreshCw className="w-4 h-4" />}
               onClick={loadData}
               loading={isLoading}
-              data-cy="refresh-btn"
+              data-cy="refresh-btn" data-testid="refresh-btn"
             >
               Refresh
             </Button>
@@ -212,7 +212,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
                   variant="secondary"
                   icon={<Activity className="w-4 h-4" />}
                   onClick={() => selectedDevices[0] && pingTest(selectedDevices[0])}
-                  data-cy="ping-test-btn"
+                  data-cy="ping-test-btn" data-testid="ping-test-btn"
                 >
                   Ping Test ({selectedDevices.length})
                 </Button>
@@ -220,7 +220,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
                   variant="secondary"
                   icon={<Eye className="w-4 h-4" />}
                   onClick={() => selectedDevices[0] && viewConfiguration(selectedDevices[0])}
-                  data-cy="view-config-btn"
+                  data-cy="view-config-btn" data-testid="view-config-btn"
                 >
                   View Configuration
                 </Button>
@@ -233,7 +233,7 @@ const NetworkDeviceInventoryView: React.FC = () => {
               icon={<Download className="w-4 h-4" />}
               onClick={exportData}
               disabled={(data?.length ?? 0) === 0}
-              data-cy="export-btn"
+              data-cy="export-btn" data-testid="export-btn"
             >
               Export CSV
             </Button>

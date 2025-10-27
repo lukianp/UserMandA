@@ -102,7 +102,7 @@ export const GroupAnalyticsView: React.FC = () => {
   const { metrics, sizeDistribution, typeBreakdown, topGroups, membershipTrends } = analyticsData;
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-6 overflow-y-auto" data-cy="group-analytics-view">
+    <div className="flex flex-col h-full p-6 space-y-6 overflow-y-auto" data-cy="group-analytics-view" data-testid="group-analytics-view">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

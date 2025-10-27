@@ -55,7 +55,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="conditional-access-policies-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="conditional-access-policies-discovery-view" data-testid="conditional-access-policies-discovery-view">
       {/* Loading Overlay */}
       {isDiscovering && (
         <LoadingOverlay
@@ -84,7 +84,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
                 variant="secondary"
                 onClick={exportToCSV}
                 icon={<Download className="w-4 h-4" />}
-                data-cy="export-csv-btn"
+                data-cy="export-csv-btn" data-testid="export-csv-btn"
               >
                 Export CSV
               </Button>
@@ -92,7 +92,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
                 variant="secondary"
                 onClick={exportToExcel}
                 icon={<FileSpreadsheet className="w-4 h-4" />}
-                data-cy="export-excel-btn"
+                data-cy="export-excel-btn" data-testid="export-excel-btn"
               >
                 Export Excel
               </Button>
@@ -103,7 +103,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
             onClick={handleStartDiscovery}
             disabled={isDiscovering}
             icon={isDiscovering ? <XCircle className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            data-cy="start-discovery-btn"
+            data-cy="start-discovery-btn" data-testid="start-discovery-btn"
           >
             {isDiscovering ? 'Discovering...' : 'Start Discovery'}
           </Button>
@@ -115,7 +115,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
         <button
           onClick={() => setShowConfig(!showConfig)}
           className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-          data-cy="toggle-config-btn"
+          data-cy="toggle-config-btn" data-testid="toggle-config-btn"
         >
           <span className="font-medium text-gray-900 dark:text-white">Discovery Configuration</span>
           {showConfig ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -132,7 +132,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
                   onChange={(e) => updateConfig({ tenantId: e.target.value })}
                   placeholder="e.g., contoso.onmicrosoft.com or tenant GUID"
                   error={validationErrors.includes('Tenant ID is required') ? 'Tenant ID is required' : undefined}
-                  data-cy="tenant-id-input"
+                  data-cy="tenant-id-input" data-testid="tenant-id-input"
                 />
               </div>
 
@@ -143,19 +143,19 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
                   label="Include policy assignments"
                   checked={config.includeAssignments || false}
                   onChange={(checked) => updateConfig({ includeAssignments: checked })}
-                  data-cy="include-assignments-checkbox"
+                  data-cy="include-assignments-checkbox" data-testid="include-assignments-checkbox"
                 />
                 <Checkbox
                   label="Include policy conditions"
                   checked={config.includeConditions || false}
                   onChange={(checked) => updateConfig({ includeConditions: checked })}
-                  data-cy="include-conditions-checkbox"
+                  data-cy="include-conditions-checkbox" data-testid="include-conditions-checkbox"
                 />
                 <Checkbox
                   label="Include policy controls"
                   checked={config.includeControls || false}
                   onChange={(checked) => updateConfig({ includeControls: checked })}
-                  data-cy="include-controls-checkbox"
+                  data-cy="include-controls-checkbox" data-testid="include-controls-checkbox"
                 />
               </div>
 
@@ -167,7 +167,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
                   type="number"
                   value={((config.timeout || 300000) / 1000).toString()}
                   onChange={(e) => updateConfig({ timeout: parseInt(e.target.value) * 1000 })}
-                  data-cy="timeout-input"
+                  data-cy="timeout-input" data-testid="timeout-input"
                 />
               </div>
             </div>
@@ -214,7 +214,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
               value={stats?.totalPolicies ?? 0}
               label="Total Policies"
               color="indigo"
-              data-cy="stat-total-policies"
+              data-cy="stat-total-policies" data-testid="stat-total-policies"
             />
             <StatCard
               value={stats?.enabledPolicies ?? 0}
@@ -226,25 +226,25 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
               value={stats?.reportOnlyPolicies ?? 0}
               label="Report Only"
               color="yellow"
-              data-cy="stat-report-only"
+              data-cy="stat-report-only" data-testid="stat-report-only"
             />
             <StatCard
               value={(stats?.policiesByCondition ?? 0)['With MFA'] || 0}
               label="With MFA"
               color="blue"
-              data-cy="stat-with-mfa"
+              data-cy="stat-with-mfa" data-testid="stat-with-mfa"
             />
             <StatCard
               value={(stats?.policiesByCondition ?? 0)['Block Access'] || 0}
               label="Block Access"
               color="red"
-              data-cy="stat-block-access"
+              data-cy="stat-block-access" data-testid="stat-block-access"
             />
             <StatCard
               value={result?.namedLocations?.length || 0}
               label="Named Locations"
               color="purple"
-              data-cy="stat-named-locations"
+              data-cy="stat-named-locations" data-testid="stat-named-locations"
             />
           </div>
         </div>
@@ -257,28 +257,28 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
           active={activeTab === 'overview'}
           onClick={() => setActiveTab('overview')}
           count={result ? stats?.totalPolicies : undefined}
-          data-cy="tab-overview"
+          data-cy="tab-overview" data-testid="tab-overview"
         />
         <TabButton
           label="Policies"
           active={activeTab === 'policies'}
           onClick={() => setActiveTab('policies')}
           count={result?.policies?.length}
-          data-cy="tab-policies"
+          data-cy="tab-policies" data-testid="tab-policies"
         />
         <TabButton
           label="Named Locations"
           active={activeTab === 'locations'}
           onClick={() => setActiveTab('locations')}
           count={result?.namedLocations?.length}
-          data-cy="tab-locations"
+          data-cy="tab-locations" data-testid="tab-locations"
         />
         <TabButton
           label="Assignments"
           active={activeTab === 'assignments'}
           onClick={() => setActiveTab('assignments')}
           count={result?.policies?.length}
-          data-cy="tab-assignments"
+          data-cy="tab-assignments" data-testid="tab-assignments"
         />
       </div>
 
@@ -288,7 +288,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
           value={filter.searchText}
           onChange={(e) => updateFilter({ searchText: e.target.value })}
           placeholder={`Search ${activeTab}...`}
-          data-cy="search-input"
+          data-cy="search-input" data-testid="search-input"
         />
       </div>
 

@@ -64,7 +64,7 @@ export const SecurityDashboardView: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="security-dashboard-view">
+    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="security-dashboard-view" data-testid="security-dashboard-view">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -83,7 +83,7 @@ export const SecurityDashboardView: React.FC = () => {
             onClick={handleRefresh}
             icon={<Activity className="w-4 h-4" />}
             disabled={isLoading}
-            data-cy="refresh-btn"
+            data-cy="refresh-btn" data-testid="refresh-btn"
           >
             Refresh
           </Button>
@@ -91,7 +91,7 @@ export const SecurityDashboardView: React.FC = () => {
             variant="danger"
             onClick={handleRunScan}
             disabled={isLoading}
-            data-cy="run-scan-btn"
+            data-cy="run-scan-btn" data-testid="run-scan-btn"
           >
             Run Security Scan
           </Button>

@@ -57,7 +57,7 @@ const LicensingDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="licensing-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="licensing-discovery-view" data-testid="licensing-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={progress.percentage}
@@ -84,7 +84,7 @@ const LicensingDiscoveryView: React.FC = () => {
                 onClick={() => exportToCSV((result as any).data || result, `licensing-discovery-${new Date().toISOString().split('T')[0]}.csv`)}
                 variant="secondary"
                 icon={<Download className="w-4 h-4" />}
-                data-cy="export-csv-btn"
+                data-cy="export-csv-btn" data-testid="export-csv-btn"
               >
                 Export CSV
               </Button>
@@ -92,7 +92,7 @@ const LicensingDiscoveryView: React.FC = () => {
                 onClick={() => exportToExcel((result as any).data || result, `licensing-discovery-${new Date().toISOString().split('T')[0]}.xlsx`)}
                 variant="secondary"
                 icon={<FileSpreadsheet className="w-4 h-4" />}
-                data-cy="export-excel-btn"
+                data-cy="export-excel-btn" data-testid="export-excel-btn"
               >
                 Export Excel
               </Button>
@@ -102,7 +102,7 @@ const LicensingDiscoveryView: React.FC = () => {
             onClick={startDiscovery}
             disabled={isDiscovering}
             variant="primary"
-            data-cy="start-discovery-btn"
+            data-cy="start-discovery-btn" data-testid="start-discovery-btn"
           >
             {isDiscovering ? 'Discovering...' : 'Start Discovery'}
           </Button>
@@ -122,7 +122,7 @@ const LicensingDiscoveryView: React.FC = () => {
         <button
           onClick={() => setConfigExpanded(!configExpanded)}
           className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-750 rounded-lg transition-colors"
-          data-cy="config-toggle"
+          data-cy="config-toggle" data-testid="config-toggle"
         >
           <span className="font-semibold text-gray-900 dark:text-white">Discovery Configuration</span>
           {configExpanded ? (
@@ -139,31 +139,31 @@ const LicensingDiscoveryView: React.FC = () => {
                 label="Include Microsoft 365"
                 checked={config.includeMicrosoft365 ?? true}
                 onChange={(checked) => updateConfig({ includeMicrosoft365: checked })}
-                data-cy="include-m365-checkbox"
+                data-cy="include-m365-checkbox" data-testid="include-m365-checkbox"
               />
               <Checkbox
                 label="Include Azure"
                 checked={config.includeAzure ?? true}
                 onChange={(checked) => updateConfig({ includeAzure: checked })}
-                data-cy="include-azure-checkbox"
+                data-cy="include-azure-checkbox" data-testid="include-azure-checkbox"
               />
               <Checkbox
                 label="Include Office"
                 checked={config.includeOffice ?? true}
                 onChange={(checked) => updateConfig({ includeOffice: checked })}
-                data-cy="include-office-checkbox"
+                data-cy="include-office-checkbox" data-testid="include-office-checkbox"
               />
               <Checkbox
                 label="Include Windows"
                 checked={config.includeWindows ?? true}
                 onChange={(checked) => updateConfig({ includeWindows: checked })}
-                data-cy="include-windows-checkbox"
+                data-cy="include-windows-checkbox" data-testid="include-windows-checkbox"
               />
               <Checkbox
                 label="Include Third Party"
                 checked={config.includeThirdParty ?? false}
                 onChange={(checked) => updateConfig({ includeThirdParty: checked })}
-                data-cy="include-thirdparty-checkbox"
+                data-cy="include-thirdparty-checkbox" data-testid="include-thirdparty-checkbox"
               />
             </div>
 
@@ -176,7 +176,7 @@ const LicensingDiscoveryView: React.FC = () => {
                 value={config.tenantId || ''}
                 onChange={(e) => updateConfig({ tenantId: e.target.value })}
                 placeholder="Enter Tenant ID"
-                data-cy="tenant-id-input"
+                data-cy="tenant-id-input" data-testid="tenant-id-input"
               />
             </div>
 
@@ -191,7 +191,7 @@ const LicensingDiscoveryView: React.FC = () => {
                 min={60000}
                 max={1800000}
                 step={60000}
-                data-cy="timeout-input"
+                data-cy="timeout-input" data-testid="timeout-input"
               />
             </div>
           </div>
@@ -293,7 +293,7 @@ const LicensingDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-yellow-600 text-yellow-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-overview"
+            data-cy="tab-overview" data-testid="tab-overview"
           >
             <Package className="w-4 h-4" />
             Overview
@@ -305,7 +305,7 @@ const LicensingDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-yellow-600 text-yellow-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-licenses"
+            data-cy="tab-licenses" data-testid="tab-licenses"
           >
             <Key className="w-4 h-4" />
             Licenses
@@ -318,7 +318,7 @@ const LicensingDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-yellow-600 text-yellow-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-assignments"
+            data-cy="tab-assignments" data-testid="tab-assignments"
           >
             <Users className="w-4 h-4" />
             Assignments
@@ -331,7 +331,7 @@ const LicensingDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-yellow-600 text-yellow-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-subscriptions"
+            data-cy="tab-subscriptions" data-testid="tab-subscriptions"
           >
             <Package className="w-4 h-4" />
             Subscriptions
@@ -343,7 +343,7 @@ const LicensingDiscoveryView: React.FC = () => {
                 ? 'border-b-2 border-yellow-600 text-yellow-600'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-compliance"
+            data-cy="tab-compliance" data-testid="tab-compliance"
           >
             <CheckCircle className="w-4 h-4" />
             Compliance
@@ -510,7 +510,7 @@ const LicensingDiscoveryView: React.FC = () => {
                 value={filter.searchText}
                 onChange={(e) => updateFilter({ searchText: e.target.value })}
                 placeholder="Search..."
-                data-cy="search-input"
+                data-cy="search-input" data-testid="search-input"
               />
 
               {activeTab === 'licenses' && (
@@ -540,13 +540,13 @@ const LicensingDiscoveryView: React.FC = () => {
                       label="Show Only Expiring Soon (30 days)"
                       checked={filter.showOnlyExpiring}
                       onChange={(checked) => updateFilter({ showOnlyExpiring: checked })}
-                      data-cy="show-expiring-checkbox"
+                      data-cy="show-expiring-checkbox" data-testid="show-expiring-checkbox"
                     />
                     <Checkbox
                       label="Show Only Unassigned Licenses"
                       checked={filter.showOnlyUnassigned}
                       onChange={(checked) => updateFilter({ showOnlyUnassigned: checked })}
-                      data-cy="show-unassigned-checkbox"
+                      data-cy="show-unassigned-checkbox" data-testid="show-unassigned-checkbox"
                     />
                   </div>
                 </div>

@@ -285,7 +285,7 @@ export const ComplianceDashboardView: React.FC = () => {
   if (!dashboardData) return null;
 
   return (
-    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="compliance-dashboard-view">
+    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="compliance-dashboard-view" data-testid="compliance-dashboard-view">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">

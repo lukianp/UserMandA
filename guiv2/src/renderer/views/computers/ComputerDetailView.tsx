@@ -114,7 +114,7 @@ export const ComputerDetailView: React.FC<ComputerDetailViewProps> = ({ computer
   }
 
   return (
-    <div className="relative h-full flex flex-col p-6" data-cy="computer-detail-view">
+    <div className="relative h-full flex flex-col p-6" data-cy="computer-detail-view" data-testid="computer-detail-view">
       {/* Loading Overlay */}
       {isLoading && <LoadingOverlay message={loadingMessage} />}
 
@@ -136,7 +136,7 @@ export const ComputerDetailView: React.FC<ComputerDetailViewProps> = ({ computer
             variant="secondary"
             disabled={isLoading}
             title="Refresh computer data (Ctrl+R)"
-            data-cy="refresh-computer-detail"
+            data-cy="refresh-computer-detail" data-testid="refresh-computer-detail"
           >
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
@@ -147,7 +147,7 @@ export const ComputerDetailView: React.FC<ComputerDetailViewProps> = ({ computer
             variant="secondary"
             disabled={isLoading || !computerDetail}
             title="Remote connect (Ctrl+C)"
-            data-cy="remote-connect"
+            data-cy="remote-connect" data-testid="remote-connect"
           >
             <MonitorPlay className="mr-2 h-4 w-4" />
             Connect
@@ -158,7 +158,7 @@ export const ComputerDetailView: React.FC<ComputerDetailViewProps> = ({ computer
             variant="secondary"
             disabled={isLoading || !computerDetail}
             title="Add computer to migration wave"
-            data-cy="add-to-wave"
+            data-cy="add-to-wave" data-testid="add-to-wave"
           >
             <UserPlus className="mr-2 h-4 w-4" />
             Add to Wave
@@ -169,7 +169,7 @@ export const ComputerDetailView: React.FC<ComputerDetailViewProps> = ({ computer
             variant="secondary"
             disabled={isLoading || !computerDetail}
             title="Export computer details (Ctrl+E)"
-            data-cy="export-computer-detail"
+            data-cy="export-computer-detail" data-testid="export-computer-detail"
           >
             <Download className="mr-2 h-4 w-4" />
             Export
@@ -179,7 +179,7 @@ export const ComputerDetailView: React.FC<ComputerDetailViewProps> = ({ computer
             onClick={closeView}
             variant="danger"
             title="Close computer details (Ctrl+W)"
-            data-cy="close-computer-detail"
+            data-cy="close-computer-detail" data-testid="close-computer-detail"
           >
             <X className="mr-2 h-4 w-4" />
             Close

@@ -34,7 +34,7 @@ const AzureDiscoveryView: React.FC = () => {
   } = useAzureDiscoveryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="azure-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="azure-discovery-view" data-testid="azure-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -87,7 +87,7 @@ const AzureDiscoveryView: React.FC = () => {
                   disabled={isRunning}
                   required
                   helperText="Your Azure AD Tenant ID or domain name"
-                  data-cy="tenant-id-input"
+                  data-cy="tenant-id-input" data-testid="tenant-id-input"
                 />
 
                 {/* Test Connection Button */}
@@ -98,7 +98,7 @@ const AzureDiscoveryView: React.FC = () => {
                   loading={connectionStatus === 'connecting'}
                   icon={<CheckCircle className="w-4 h-4" />}
                   className="w-full"
-                  data-cy="test-connection-btn"
+                  data-cy="test-connection-btn" data-testid="test-connection-btn"
                 >
                   Test Connection
                 </Button>
@@ -117,21 +117,21 @@ const AzureDiscoveryView: React.FC = () => {
                       checked={formData.includeUsers}
                       onChange={(checked) => updateFormField('includeUsers', checked)}
                       disabled={isRunning}
-                      data-cy="include-users-checkbox"
+                      data-cy="include-users-checkbox" data-testid="include-users-checkbox"
                     />
                     <Checkbox
                       label="Groups"
                       checked={formData.includeGroups}
                       onChange={(checked) => updateFormField('includeGroups', checked)}
                       disabled={isRunning}
-                      data-cy="include-groups-checkbox"
+                      data-cy="include-groups-checkbox" data-testid="include-groups-checkbox"
                     />
                     <Checkbox
                       label="Licenses"
                       checked={formData.includeLicenses}
                       onChange={(checked) => updateFormField('includeLicenses', checked)}
                       disabled={isRunning}
-                      data-cy="include-licenses-checkbox"
+                      data-cy="include-licenses-checkbox" data-testid="include-licenses-checkbox"
                     />
                   </div>
 
@@ -143,28 +143,28 @@ const AzureDiscoveryView: React.FC = () => {
                       checked={formData.includeTeams}
                       onChange={(checked) => updateFormField('includeTeams', checked)}
                       disabled={isRunning}
-                      data-cy="include-teams-checkbox"
+                      data-cy="include-teams-checkbox" data-testid="include-teams-checkbox"
                     />
                     <Checkbox
                       label="SharePoint Online"
                       checked={formData.includeSharePoint}
                       onChange={(checked) => updateFormField('includeSharePoint', checked)}
                       disabled={isRunning}
-                      data-cy="include-sharepoint-checkbox"
+                      data-cy="include-sharepoint-checkbox" data-testid="include-sharepoint-checkbox"
                     />
                     <Checkbox
                       label="OneDrive for Business"
                       checked={formData.includeOneDrive}
                       onChange={(checked) => updateFormField('includeOneDrive', checked)}
                       disabled={isRunning}
-                      data-cy="include-onedrive-checkbox"
+                      data-cy="include-onedrive-checkbox" data-testid="include-onedrive-checkbox"
                     />
                     <Checkbox
                       label="Exchange Online"
                       checked={formData.includeExchange}
                       onChange={(checked) => updateFormField('includeExchange', checked)}
                       disabled={isRunning}
-                      data-cy="include-exchange-checkbox"
+                      data-cy="include-exchange-checkbox" data-testid="include-exchange-checkbox"
                     />
                   </div>
                 </div>
@@ -178,7 +178,7 @@ const AzureDiscoveryView: React.FC = () => {
                   disabled={isRunning}
                   min={1}
                   max={100000}
-                  data-cy="max-results-input"
+                  data-cy="max-results-input" data-testid="max-results-input"
                 />
 
                 <Input
@@ -190,7 +190,7 @@ const AzureDiscoveryView: React.FC = () => {
                   min={60}
                   max={3600}
                   helperText="Recommended: 600s (10 min) for large tenants"
-                  data-cy="timeout-input"
+                  data-cy="timeout-input" data-testid="timeout-input"
                 />
               </div>
 
@@ -204,7 +204,7 @@ const AzureDiscoveryView: React.FC = () => {
                       disabled={!isFormValid}
                       icon={<Play className="w-4 h-4" />}
                       className="w-full"
-                      data-cy="start-discovery-btn"
+                      data-cy="start-discovery-btn" data-testid="start-discovery-btn"
                     >
                       Start Discovery
                     </Button>
@@ -213,7 +213,7 @@ const AzureDiscoveryView: React.FC = () => {
                       onClick={resetForm}
                       icon={<RefreshCw className="w-4 h-4" />}
                       className="w-full"
-                      data-cy="reset-form-btn"
+                      data-cy="reset-form-btn" data-testid="reset-form-btn"
                     >
                       Reset Form
                     </Button>
@@ -226,7 +226,7 @@ const AzureDiscoveryView: React.FC = () => {
                     loading={isCancelling}
                     icon={<Square className="w-4 h-4" />}
                     className="w-full"
-                    data-cy="cancel-discovery-btn"
+                    data-cy="cancel-discovery-btn" data-testid="cancel-discovery-btn"
                   >
                     {isCancelling ? 'Cancelling...' : 'Cancel Discovery'}
                   </Button>
@@ -284,7 +284,7 @@ const AzureDiscoveryView: React.FC = () => {
                     size="sm"
                     onClick={exportResults}
                     icon={<Download className="w-4 h-4" />}
-                    data-cy="export-results-btn"
+                    data-cy="export-results-btn" data-testid="export-results-btn"
                   >
                     Export
                   </Button>
@@ -325,7 +325,7 @@ const AzureDiscoveryView: React.FC = () => {
                     size="sm"
                     onClick={clearLogs}
                     icon={<Trash2 className="w-4 h-4" />}
-                    data-cy="clear-logs-btn"
+                    data-cy="clear-logs-btn" data-testid="clear-logs-btn"
                   >
                     Clear
                   </Button>
@@ -333,7 +333,7 @@ const AzureDiscoveryView: React.FC = () => {
               </div>
               <div
                 className="bg-gray-900 dark:bg-black rounded-md p-4 h-96 overflow-auto font-mono text-xs"
-                data-cy="execution-log"
+                data-cy="execution-log" data-testid="execution-log"
               >
                 {(Array.isArray(logs) ? logs.length : 0) === 0 ? (
                   <p className="text-gray-500">No logs yet. Start discovery to see output.</p>

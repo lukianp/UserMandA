@@ -118,7 +118,7 @@ export const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId }) => 
   }
 
   return (
-    <div className="relative h-full flex flex-col p-6" data-cy="group-detail-view">
+    <div className="relative h-full flex flex-col p-6" data-cy="group-detail-view" data-testid="group-detail-view">
       {/* Loading Overlay */}
       {isLoading && <LoadingOverlay message={loadingMessage} />}
 
@@ -140,7 +140,7 @@ export const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId }) => 
             variant="secondary"
             disabled={isLoading}
             title="Refresh group data (Ctrl+R)"
-            data-cy="refresh-group-detail"
+            data-cy="refresh-group-detail" data-testid="refresh-group-detail"
           >
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
@@ -151,7 +151,7 @@ export const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId }) => 
             variant="secondary"
             disabled={isLoading || !groupDetail}
             title="Edit group (Ctrl+E)"
-            data-cy="edit-group"
+            data-cy="edit-group" data-testid="edit-group"
           >
             <Edit className="mr-2 h-4 w-4" />
             Edit
@@ -162,7 +162,7 @@ export const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId }) => 
             variant="secondary"
             disabled={isLoading || !groupDetail}
             title="Add member (Ctrl+M)"
-            data-cy="add-member"
+            data-cy="add-member" data-testid="add-member"
           >
             <Users className="mr-2 h-4 w-4" />
             Add Member
@@ -173,7 +173,7 @@ export const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId }) => 
             variant="secondary"
             disabled={isLoading || !groupDetail}
             title="Add group to migration wave"
-            data-cy="add-to-wave"
+            data-cy="add-to-wave" data-testid="add-to-wave"
           >
             <UserPlus className="mr-2 h-4 w-4" />
             Add to Wave
@@ -184,7 +184,7 @@ export const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId }) => 
             variant="secondary"
             disabled={isLoading || !groupDetail}
             title="Export group details (Ctrl+X)"
-            data-cy="export-group-detail"
+            data-cy="export-group-detail" data-testid="export-group-detail"
           >
             <Download className="mr-2 h-4 w-4" />
             Export
@@ -194,7 +194,7 @@ export const GroupDetailView: React.FC<GroupDetailViewProps> = ({ groupId }) => 
             onClick={closeView}
             variant="danger"
             title="Close group details (Ctrl+W)"
-            data-cy="close-group-detail"
+            data-cy="close-group-detail" data-testid="close-group-detail"
           >
             <X className="mr-2 h-4 w-4" />
             Close

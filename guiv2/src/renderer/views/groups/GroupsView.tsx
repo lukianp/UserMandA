@@ -44,7 +44,7 @@ const DragHandleCell: React.FC<{ data: GroupData }> = ({ data }) => {
         isDragging && 'opacity-50'
       )}
       title="Drag to add to migration wave"
-      data-cy="group-drag-handle"
+      data-cy="group-drag-handle" data-testid="group-drag-handle"
     >
       <GripVertical size={16} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
     </div>
@@ -108,7 +108,7 @@ export const GroupsView: React.FC = () => {
             onClick={() => handleViewDetails(params.data)}
             variant="secondary"
             size="sm"
-            data-cy="view-group-details"
+            data-cy="view-group-details" data-testid="view-group-details"
           >
             <Eye className="mr-1 h-3 w-3" />
             View Details
@@ -183,7 +183,7 @@ export const GroupsView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="groups-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="groups-view" data-testid="groups-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -206,7 +206,7 @@ export const GroupsView: React.FC = () => {
               size="md"
               icon={<RefreshCw className={clsx('h-4 w-4', { 'animate-spin': isLoading })} />}
               disabled={isLoading}
-              data-cy="refresh-btn"
+              data-cy="refresh-btn" data-testid="refresh-btn"
             >
               Refresh
             </Button>
@@ -217,7 +217,7 @@ export const GroupsView: React.FC = () => {
               size="md"
               icon={<Download className="h-4 w-4" />}
               disabled={isLoading}
-              data-cy="export-btn"
+              data-cy="export-btn" data-testid="export-btn"
             >
               Export
             </Button>
@@ -228,7 +228,7 @@ export const GroupsView: React.FC = () => {
               size="md"
               icon={<Trash2 className="h-4 w-4" />}
               disabled={selectedGroups.length === 0 || isLoading}
-              data-cy="delete-btn"
+              data-cy="delete-btn" data-testid="delete-btn"
             >
               Delete ({selectedGroups.length})
             </Button>
@@ -243,7 +243,7 @@ export const GroupsView: React.FC = () => {
               size="md"
               icon={<Plus className="h-4 w-4" />}
               disabled={isLoading}
-              data-cy="create-btn"
+              data-cy="create-btn" data-testid="create-btn"
             >
               Create Group
             </Button>
@@ -260,7 +260,7 @@ export const GroupsView: React.FC = () => {
               onChange={setSearchText}
               placeholder="Search groups by name, email, or description..."
               disabled={isLoading}
-              data-cy="group-search"
+              data-cy="group-search" data-testid="group-search"
             />
           </div>
         </div>
@@ -271,7 +271,7 @@ export const GroupsView: React.FC = () => {
           onReset={handleResetFilters}
           title="Advanced Filters"
           defaultCollapsed={true}
-          data-cy="group-filters"
+          data-cy="group-filters" data-testid="group-filters"
         />
       </div>
 

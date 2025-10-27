@@ -132,10 +132,10 @@ const ExecutiveDashboardView: React.FC = () => {
 
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center" data-cy="dashboard-error">
+      <div className="h-full flex items-center justify-center" data-cy="dashboard-error" data-testid="dashboard-error">
         <div className="text-center">
           <p className="text-red-600 dark:text-red-400 text-lg mb-4">{error}</p>
-          <Button onClick={handleRefresh} variant="primary" data-cy="retry-btn">
+          <Button onClick={handleRefresh} variant="primary" data-cy="retry-btn" data-testid="retry-btn">
             Retry
           </Button>
         </div>
@@ -152,7 +152,7 @@ const ExecutiveDashboardView: React.FC = () => {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="executive-dashboard-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="executive-dashboard-view" data-testid="executive-dashboard-view">
       {/* Header */}
       <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div>
@@ -166,7 +166,7 @@ const ExecutiveDashboardView: React.FC = () => {
             onClick={toggleAutoRefresh}
             variant={autoRefresh ? 'primary' : 'secondary'}
             size="sm"
-            data-cy="auto-refresh-toggle"
+            data-cy="auto-refresh-toggle" data-testid="auto-refresh-toggle"
           >
             {autoRefresh ? 'Auto-Refresh On' : 'Auto-Refresh Off'}
           </Button>
@@ -175,7 +175,7 @@ const ExecutiveDashboardView: React.FC = () => {
             variant="secondary"
             size="sm"
             icon={<RefreshCw className="w-4 h-4" />}
-            data-cy="refresh-btn"
+            data-cy="refresh-btn" data-testid="refresh-btn"
           >
             Refresh
           </Button>
@@ -191,14 +191,14 @@ const ExecutiveDashboardView: React.FC = () => {
             value={dashboardData.kpis.totalUsers}
             icon={<Users className="w-6 h-6" />}
             trend={dashboardData.kpis.userTrend}
-            data-cy="kpi-users"
+            data-cy="kpi-users" data-testid="kpi-users"
           />
           <KpiCard
             title="Total Groups"
             value={dashboardData.kpis.totalGroups}
             icon={<FolderTree className="w-6 h-6" />}
             trend={dashboardData.kpis.groupTrend}
-            data-cy="kpi-groups"
+            data-cy="kpi-groups" data-testid="kpi-groups"
           />
           <KpiCard
             title="Data Volume"
@@ -206,14 +206,14 @@ const ExecutiveDashboardView: React.FC = () => {
             suffix="TB"
             icon={<HardDrive className="w-6 h-6" />}
             trend={dashboardData.kpis.dataVolumeTrend}
-            data-cy="kpi-data-volume"
+            data-cy="kpi-data-volume" data-testid="kpi-data-volume"
           />
           <KpiCard
             title="Est. Timeline"
             value={dashboardData.kpis.estimatedTimelineDays}
             suffix="days"
             icon={<Calendar className="w-6 h-6" />}
-            data-cy="kpi-timeline"
+            data-cy="kpi-timeline" data-testid="kpi-timeline"
           />
         </div>
 

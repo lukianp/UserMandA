@@ -42,7 +42,7 @@ const DragHandleCell: React.FC<{ data: { id?: string; name?: string } }> = ({ da
         isDragging && 'opacity-50'
       )}
       title="Drag to add to migration wave"
-      data-cy="computer-drag-handle"
+      data-cy="computer-drag-handle" data-testid="computer-drag-handle"
     >
       <GripVertical size={16} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
     </div>
@@ -117,7 +117,7 @@ export const ComputersView: React.FC = () => {
       headerName: 'Actions',
       width: 150,
       cellRenderer: (params: { data: { id: string } }) => (
-        <Button onClick={() => handleViewDetails(params.data)} variant="secondary" size="sm" data-cy="view-computer-details">
+        <Button onClick={() => handleViewDetails(params.data)} variant="secondary" size="sm" data-cy="view-computer-details" data-testid="view-computer-details">
           <Eye className="mr-1 h-3 w-3" />
           View Details
         </Button>
@@ -126,7 +126,7 @@ export const ComputersView: React.FC = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="computers-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="computers-view" data-testid="computers-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -164,7 +164,7 @@ export const ComputersView: React.FC = () => {
             enableExport={true}
             enableGrouping={true}
             enableFiltering={true}
-            data-cy="computers-grid"
+            data-cy="computers-grid" data-testid="computers-grid"
           />
         </div>
       </div>

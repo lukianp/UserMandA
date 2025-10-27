@@ -58,7 +58,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="identity-governance-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="identity-governance-discovery-view" data-testid="identity-governance-discovery-view">
       {/* FULLY FUNCTIONAL Loading Overlay with real progress */}
       {isDiscovering && (
         <LoadingOverlay
@@ -87,7 +87,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
                 variant="secondary"
                 onClick={exportToCSV}
                 icon={<Download className="w-4 h-4" />}
-                data-cy="export-csv-btn"
+                data-cy="export-csv-btn" data-testid="export-csv-btn"
               >
                 Export CSV
               </Button>
@@ -95,7 +95,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
                 variant="secondary"
                 onClick={exportToExcel}
                 icon={<FileSpreadsheet className="w-4 h-4" />}
-                data-cy="export-excel-btn"
+                data-cy="export-excel-btn" data-testid="export-excel-btn"
               >
                 Export Excel
               </Button>
@@ -106,7 +106,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
             onClick={handleStartDiscovery}
             disabled={isDiscovering}
             icon={isDiscovering ? <XCircle className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            data-cy="start-discovery-btn"
+            data-cy="start-discovery-btn" data-testid="start-discovery-btn"
           >
             {isDiscovering ? 'Discovering...' : 'Start Discovery'}
           </Button>
@@ -118,7 +118,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
         <button
           onClick={() => setShowConfig(!showConfig)}
           className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-          data-cy="toggle-config-btn"
+          data-cy="toggle-config-btn" data-testid="toggle-config-btn"
         >
           <span className="font-medium text-gray-900 dark:text-white">Discovery Configuration</span>
           {showConfig ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
@@ -135,7 +135,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
                   onChange={(e) => updateConfig({ tenantId: e.target.value })}
                   placeholder="e.g., contoso.onmicrosoft.com or tenant GUID"
                   error={validationErrors.find(e => e.includes('Tenant ID'))}
-                  data-cy="tenant-id-input"
+                  data-cy="tenant-id-input" data-testid="tenant-id-input"
                 />
               </div>
 
@@ -146,19 +146,19 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
                   label="Include Access Reviews"
                   checked={config.includeAccessReviews || false}
                   onChange={(checked) => updateConfig({ includeAccessReviews: checked })}
-                  data-cy="include-access-reviews-checkbox"
+                  data-cy="include-access-reviews-checkbox" data-testid="include-access-reviews-checkbox"
                 />
                 <Checkbox
                   label="Include Entitlement Packages"
                   checked={config.includeEntitlements || false}
                   onChange={(checked) => updateConfig({ includeEntitlements: checked })}
-                  data-cy="include-entitlements-checkbox"
+                  data-cy="include-entitlements-checkbox" data-testid="include-entitlements-checkbox"
                 />
                 <Checkbox
                   label="Include PIM Roles"
                   checked={config.includePIM || false}
                   onChange={(checked) => updateConfig({ includePIM: checked })}
-                  data-cy="include-pim-checkbox"
+                  data-cy="include-pim-checkbox" data-testid="include-pim-checkbox"
                 />
               </div>
 
@@ -172,7 +172,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
                   onChange={(e) => updateConfig({ timeout: parseInt(e.target.value) * 1000 })}
                   min="30"
                   max="600"
-                  data-cy="timeout-input"
+                  data-cy="timeout-input" data-testid="timeout-input"
                 />
               </div>
             </div>
@@ -219,19 +219,19 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
               value={stats?.totalAccessReviews ?? 0}
               label="Access Reviews"
               color="purple"
-              data-cy="stat-access-reviews"
+              data-cy="stat-access-reviews" data-testid="stat-access-reviews"
             />
             <StatCard
               value={stats?.activeReviews ?? 0}
               label="Active Reviews"
               color="green"
-              data-cy="stat-active-reviews"
+              data-cy="stat-active-reviews" data-testid="stat-active-reviews"
             />
             <StatCard
               value={stats?.totalEntitlements ?? 0}
               label="Entitlements"
               color="blue"
-              data-cy="stat-entitlements"
+              data-cy="stat-entitlements" data-testid="stat-entitlements"
             />
             <StatCard
               value={stats?.totalPIMRoles ?? 0}
@@ -243,7 +243,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
               value={(stats as any).eligibleRoles || 0}
               label="Eligible"
               color="yellow"
-              data-cy="stat-eligible-roles"
+              data-cy="stat-eligible-roles" data-testid="stat-eligible-roles"
             />
             <StatCard
               value={(stats as any).activeRoles || 0}
@@ -262,28 +262,28 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
           active={activeTab === 'overview'}
           onClick={() => setActiveTab('overview')}
           count={stats ? (stats?.totalAccessReviews ?? 0) + (stats?.totalEntitlements ?? 0) + (stats?.totalPIMRoles ?? 0) : undefined}
-          data-cy="tab-overview"
+          data-cy="tab-overview" data-testid="tab-overview"
         />
         <TabButton
           label="Access Reviews"
           active={activeTab === 'access-reviews'}
           onClick={() => setActiveTab('access-reviews')}
           count={result?.accessReviews?.length}
-          data-cy="tab-access-reviews"
+          data-cy="tab-access-reviews" data-testid="tab-access-reviews"
         />
         <TabButton
           label="Entitlements"
           active={activeTab === 'entitlements'}
           onClick={() => setActiveTab('entitlements')}
           count={result?.entitlementPackages?.length}
-          data-cy="tab-entitlements"
+          data-cy="tab-entitlements" data-testid="tab-entitlements"
         />
         <TabButton
           label="PIM Roles"
           active={activeTab === 'pim-roles'}
           onClick={() => setActiveTab('pim-roles')}
           count={result?.pimRoles?.length}
-          data-cy="tab-pim-roles"
+          data-cy="tab-pim-roles" data-testid="tab-pim-roles"
         />
       </div>
 
@@ -293,7 +293,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
           value={filter?.searchText ?? ''}
           onChange={(e) => updateFilter({ searchText: e.target.value })}
           placeholder={`Search ${activeTab.replace('-', ' ')}...`}
-          data-cy="search-input"
+          data-cy="search-input" data-testid="search-input"
         />
       </div>
 

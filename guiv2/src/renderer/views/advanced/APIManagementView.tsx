@@ -224,7 +224,7 @@ export const APIManagementView: React.FC = () => {
   });
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-6" data-cy="api-management-view">
+    <div className="flex flex-col h-full p-6 space-y-6" data-cy="api-management-view" data-testid="api-management-view">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -238,7 +238,7 @@ export const APIManagementView: React.FC = () => {
             variant="secondary"
             icon={<Upload className="w-4 h-4" />}
             onClick={() => console.log('Import APIs')}
-            data-cy="import-apis"
+            data-cy="import-apis" data-testid="import-apis"
           >
             Import
           </Button>
@@ -246,7 +246,7 @@ export const APIManagementView: React.FC = () => {
             variant="secondary"
             icon={<Download className="w-4 h-4" />}
             onClick={exportData}
-            data-cy="export-apis"
+            data-cy="export-apis" data-testid="export-apis"
           >
             Export
           </Button>
@@ -254,7 +254,7 @@ export const APIManagementView: React.FC = () => {
             variant="primary"
             icon={<Plus className="w-4 h-4" />}
             onClick={handleCreateAPI}
-            data-cy="create-api"
+            data-cy="create-api" data-testid="create-api"
           >
             Create API
           </Button>
@@ -325,7 +325,7 @@ export const APIManagementView: React.FC = () => {
                 onChange={(e) => setSearchText(e.target.value)}
                 placeholder="Search APIs..."
                 startIcon={<Search className="w-4 h-4" />}
-                data-cy="search-apis"
+                data-cy="search-apis" data-testid="search-apis"
               />
             </div>
             <Select
@@ -337,7 +337,7 @@ export const APIManagementView: React.FC = () => {
                 { value: 'Inactive', label: 'Inactive' },
                 { value: 'Deprecated', label: 'Deprecated' },
               ]}
-              data-cy="status-filter"
+              data-cy="status-filter" data-testid="status-filter"
             />
             <Select
               value={methodFilter}
@@ -349,7 +349,7 @@ export const APIManagementView: React.FC = () => {
                 { value: 'PUT', label: 'PUT' },
                 { value: 'DELETE', label: 'DELETE' },
               ]}
-              data-cy="method-filter"
+              data-cy="method-filter" data-testid="method-filter"
             />
             {selectedItems.length > 0 && (
               <div className="flex items-center gap-2">
@@ -365,7 +365,7 @@ export const APIManagementView: React.FC = () => {
                     { value: 'delete', label: 'Delete' },
                   ]}
                   placeholder="Bulk Actions"
-                  data-cy="bulk-actions"
+                  data-cy="bulk-actions" data-testid="bulk-actions"
                 />
               </div>
             )}
@@ -383,7 +383,7 @@ export const APIManagementView: React.FC = () => {
             onViewDetails={(api) => handleEditAPI(api)}
             getDetailViewTitle={(api) => `Edit API: ${api.name}`}
             detailViewComponent="APIDesignerView"
-            data-cy="apis-table"
+            data-cy="apis-table" data-testid="apis-table"
           />
         </div>
       </ModernCard>

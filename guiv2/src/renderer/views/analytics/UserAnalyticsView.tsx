@@ -191,7 +191,7 @@ const UserAnalyticsView: React.FC = () => {
 
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center" data-cy="analytics-error">
+      <div className="h-full flex items-center justify-center" data-cy="analytics-error" data-testid="analytics-error">
         <div className="text-center">
           <p className="text-red-600 dark:text-red-400 text-lg">{error}</p>
         </div>
@@ -208,7 +208,7 @@ const UserAnalyticsView: React.FC = () => {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="user-analytics-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="user-analytics-view" data-testid="user-analytics-view">
       {/* Header */}
       <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">User Analytics</h1>
@@ -219,7 +219,7 @@ const UserAnalyticsView: React.FC = () => {
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value as any)}
               className="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm"
-              data-cy="date-range-select"
+              data-cy="date-range-select" data-testid="date-range-select"
             >
               <option value="7">Last 7 days</option>
               <option value="30">Last 30 days</option>
@@ -232,7 +232,7 @@ const UserAnalyticsView: React.FC = () => {
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
               className="w-40 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm"
-              data-cy="department-filter"
+              data-cy="department-filter" data-testid="department-filter"
             >
               <option value="all">All Departments</option>
               {availableDepartments.map(dept => (
@@ -248,7 +248,7 @@ const UserAnalyticsView: React.FC = () => {
             size="sm"
             icon={<Download className="w-4 h-4" />}
             disabled={isExporting}
-            data-cy="export-excel-btn"
+            data-cy="export-excel-btn" data-testid="export-excel-btn"
           >
             Export Excel
           </Button>
@@ -258,7 +258,7 @@ const UserAnalyticsView: React.FC = () => {
             size="sm"
             icon={<FileText className="w-4 h-4" />}
             disabled={isExporting}
-            data-cy="export-pdf-btn"
+            data-cy="export-pdf-btn" data-testid="export-pdf-btn"
           >
             Export PDF
           </Button>
@@ -274,28 +274,28 @@ const UserAnalyticsView: React.FC = () => {
             value={analyticsData.metrics.activeUsers}
             icon={<UserCheck className="w-6 h-6 text-white" />}
             color="bg-green-500"
-            data-cy="stat-active-users"
+            data-cy="stat-active-users" data-testid="stat-active-users"
           />
           <StatCard
             title="Inactive Users"
             value={analyticsData.metrics.inactiveUsers}
             icon={<UserX className="w-6 h-6 text-white" />}
             color="bg-red-500"
-            data-cy="stat-inactive-users"
+            data-cy="stat-inactive-users" data-testid="stat-inactive-users"
           />
           <StatCard
             title="Avg. Login Frequency"
             value={`${analyticsData.metrics.averageLoginFrequency}/week`}
             icon={<Users className="w-6 h-6 text-white" />}
             color="bg-blue-500"
-            data-cy="stat-login-frequency"
+            data-cy="stat-login-frequency" data-testid="stat-login-frequency"
           />
           <StatCard
             title="Peak Activity Time"
             value={analyticsData.metrics.peakActivityTime}
             icon={<Clock className="w-6 h-6 text-white" />}
             color="bg-purple-500"
-            data-cy="stat-peak-time"
+            data-cy="stat-peak-time" data-testid="stat-peak-time"
           />
         </div>
 

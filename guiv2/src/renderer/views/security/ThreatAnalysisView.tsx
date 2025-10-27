@@ -30,7 +30,7 @@ const ThreatAnalysisView: React.FC = () => {
   } = useThreatAnalysisLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="threat-analysis-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="threat-analysis-view" data-testid="threat-analysis-view">
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -70,11 +70,11 @@ const ThreatAnalysisView: React.FC = () => {
           <Filter className="w-5 h-5 text-gray-600 dark:text-gray-400" />
           <h3 className="font-semibold text-gray-900 dark:text-white">Filters</h3>
           {(filters.threatType || filters.severity || filters.status || filters.searchText) && (
-            <Button variant="ghost" size="sm" icon={<X className="w-4 h-4" />} onClick={clearFilters} data-cy="clear-filters-btn">Clear All</Button>
+            <Button variant="ghost" size="sm" icon={<X className="w-4 h-4" />} onClick={clearFilters} data-cy="clear-filters-btn" data-testid="clear-filters-btn">Clear All</Button>
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <Input placeholder="Search threats..." value={filters.searchText} onChange={(e) => updateFilter('searchText', e.target.value)} data-cy="search-input" />
+          <Input placeholder="Search threats..." value={filters.searchText} onChange={(e) => updateFilter('searchText', e.target.value)} data-cy="search-input" data-testid="search-input" />
           <Select
             value={filters.threatType || ''}
             onChange={(value) => updateFilter('threatType', value)}
@@ -87,7 +87,7 @@ const ThreatAnalysisView: React.FC = () => {
           <Select
             value={filters.severity}
             onChange={(value) => updateFilter('severity', value)}
-            data-cy="severity-select"
+            data-cy="severity-select" data-testid="severity-select"
             options={[
               { value: '', label: 'All Severities' },
               ...(filterOptions?.severities ?? []).map((sev) => ({ value: sev || '', label: sev || 'Unknown' }))
@@ -96,7 +96,7 @@ const ThreatAnalysisView: React.FC = () => {
           <Select
             value={filters.status || ''}
             onChange={(value) => updateFilter('status', value)}
-            data-cy="status-select"
+            data-cy="status-select" data-testid="status-select"
             options={[
               { value: '', label: 'All Statuses' },
               ...(filterOptions?.statuses ?? []).map((st) => ({ value: st || '', label: st || 'Unknown' }))
@@ -108,10 +108,10 @@ const ThreatAnalysisView: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Button variant="primary" icon={<RefreshCw className="w-4 h-4" />} onClick={loadData} loading={isLoading} data-cy="refresh-btn">Refresh</Button>
+            <Button variant="primary" icon={<RefreshCw className="w-4 h-4" />} onClick={loadData} loading={isLoading} data-cy="refresh-btn" data-testid="refresh-btn">Refresh</Button>
             <Button variant="secondary" icon={<Scan className="w-4 h-4" />} onClick={runSecurityScan} data-cy="scan-btn">Run Security Scan</Button>
           </div>
-          <Button variant="secondary" icon={<Download className="w-4 h-4" />} disabled={(data?.length ?? 0) === 0} data-cy="export-btn">Export Threats</Button>
+          <Button variant="secondary" icon={<Download className="w-4 h-4" />} disabled={(data?.length ?? 0) === 0} data-cy="export-btn" data-testid="export-btn">Export Threats</Button>
         </div>
       </div>
 

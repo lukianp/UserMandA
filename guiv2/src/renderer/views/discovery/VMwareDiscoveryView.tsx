@@ -126,7 +126,7 @@ const VMwareDiscoveryView: React.FC = () => {
   } = useVMwareDiscoveryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="vmware-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="vmware-discovery-view" data-testid="vmware-discovery-view">
       {/* Header */}
       <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
@@ -147,19 +147,19 @@ const VMwareDiscoveryView: React.FC = () => {
               { value: '', label: 'Select Template...' },
               ...templates.map((template) => ({ value: template.id, label: template.name }))
             ]}
-            data-cy="template-select"
+            data-cy="template-select" data-testid="template-select"
           />
           <Button
             onClick={handleStartDiscovery}
             disabled={isLoading}
             variant="primary"
             icon={<Play />}
-            data-cy="start-discovery-btn"
+            data-cy="start-discovery-btn" data-testid="start-discovery-btn"
           >
             {isLoading ? 'Discovering...' : 'Start Discovery'}
           </Button>
           {result && (
-            <Button onClick={handleExport} icon={<Download />} data-cy="export-btn">
+            <Button onClick={handleExport} icon={<Download />} data-cy="export-results-btn" data-testid="export-results-btn">
               Export
             </Button>
           )}
@@ -273,7 +273,7 @@ const VMwareDiscoveryView: React.FC = () => {
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                         className="flex-1"
-                        data-cy="search-input"
+                        data-cy="search-input" data-testid="search-input"
                       />
                     </div>
 
@@ -285,7 +285,7 @@ const VMwareDiscoveryView: React.FC = () => {
                           columns={hostColumns}
                           loading={isLoading}
                           enableExport
-                          data-cy="vmware-hosts-grid"
+                          data-cy="vmware-hosts-grid" data-testid="vmware-hosts-grid"
                         />
                       )}
                       {activeTab === 'vms' && (
@@ -294,7 +294,7 @@ const VMwareDiscoveryView: React.FC = () => {
                           columns={vmColumns}
                           loading={isLoading}
                           enableExport
-                          data-cy="vmware-vms-grid"
+                          data-cy="vmware-vms-grid" data-testid="vmware-vms-grid"
                         />
                       )}
                       {activeTab === 'clusters' && (
@@ -303,7 +303,7 @@ const VMwareDiscoveryView: React.FC = () => {
                           columns={clusterColumns}
                           loading={isLoading}
                           enableExport
-                          data-cy="vmware-clusters-grid"
+                          data-cy="vmware-clusters-grid" data-testid="vmware-clusters-grid"
                         />
                       )}
                     </div>

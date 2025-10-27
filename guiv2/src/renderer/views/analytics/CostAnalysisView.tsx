@@ -44,7 +44,7 @@ export const CostAnalysisView: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="cost-analysis-view">
+    <div className="flex flex-col h-full p-6 bg-gray-50 dark:bg-gray-900" data-cy="cost-analysis-view" data-testid="cost-analysis-view">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
@@ -69,7 +69,7 @@ export const CostAnalysisView: React.FC = () => {
               </Button>
             ))}
           </div>
-          <Button variant="primary" onClick={refreshData} data-cy="forecast-btn">
+          <Button variant="primary" onClick={refreshData} data-cy="forecast-btn" data-testid="forecast-btn">
             Refresh Data
           </Button>
           <Button variant="secondary" onClick={refreshData} data-cy="export-btn">

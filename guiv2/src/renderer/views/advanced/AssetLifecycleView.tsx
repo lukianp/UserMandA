@@ -251,7 +251,7 @@ export const AssetLifecycleView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-6" data-cy="asset-lifecycle-view">
+    <div className="flex flex-col h-full p-6 space-y-6" data-cy="asset-lifecycle-view" data-testid="asset-lifecycle-view">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -265,7 +265,7 @@ export const AssetLifecycleView: React.FC = () => {
             variant="secondary"
             icon={<DollarSign className="w-4 h-4" />}
             onClick={() => console.log('Cost analysis')}
-            data-cy="cost-analysis"
+            data-cy="cost-analysis" data-testid="cost-analysis"
           >
             Cost Analysis
           </Button>
@@ -273,7 +273,7 @@ export const AssetLifecycleView: React.FC = () => {
             variant="secondary"
             icon={<Download className="w-4 h-4" />}
             onClick={exportData}
-            data-cy="export-assets"
+            data-cy="export-assets" data-testid="export-assets"
           >
             Export
           </Button>
@@ -281,7 +281,7 @@ export const AssetLifecycleView: React.FC = () => {
             variant="primary"
             icon={<Plus className="w-4 h-4" />}
             onClick={handleCreateAsset}
-            data-cy="create-asset"
+            data-cy="create-asset" data-testid="create-asset"
           >
             Add Asset
           </Button>
@@ -357,7 +357,7 @@ export const AssetLifecycleView: React.FC = () => {
                 onChange={(e) => setSearchText(e.target.value)}
                 placeholder="Search assets..."
                 startIcon={<Search className="w-4 h-4" />}
-                data-cy="search-assets"
+                data-cy="search-assets" data-testid="search-assets"
               />
             </div>
             <Select
@@ -370,7 +370,7 @@ export const AssetLifecycleView: React.FC = () => {
                 { value: 'Planned', label: 'Planned' },
                 { value: 'Retired', label: 'Retired' },
               ]}
-              data-cy="status-filter"
+              data-cy="status-filter" data-testid="status-filter"
             />
             <Select
               value={typeFilter}
@@ -382,7 +382,7 @@ export const AssetLifecycleView: React.FC = () => {
                 { value: 'Cloud Service', label: 'Cloud Service' },
                 { value: 'License', label: 'License' },
               ]}
-              data-cy="type-filter"
+              data-cy="type-filter" data-testid="type-filter"
             />
             <Select
               value={stageFilter}
@@ -396,7 +396,7 @@ export const AssetLifecycleView: React.FC = () => {
                 { value: 'End of Life', label: 'End of Life' },
                 { value: 'Retirement', label: 'Retirement' },
               ]}
-              data-cy="stage-filter"
+              data-cy="stage-filter" data-testid="stage-filter"
             />
             {selectedItems.length > 0 && (
               <div className="flex items-center gap-2">
@@ -412,7 +412,7 @@ export const AssetLifecycleView: React.FC = () => {
                     { value: 'delete', label: 'Delete' },
                   ]}
                   placeholder="Bulk Actions"
-                  data-cy="bulk-actions"
+                  data-cy="bulk-actions" data-testid="bulk-actions"
                 />
               </div>
             )}
@@ -430,7 +430,7 @@ export const AssetLifecycleView: React.FC = () => {
             onViewDetails={(asset) => handleEditAsset(asset)}
             getDetailViewTitle={(asset) => `Edit Asset: ${asset.name}`}
             detailViewComponent="AssetDesignerView"
-            data-cy="assets-table"
+            data-cy="assets-table" data-testid="assets-table"
           />
         </div>
       </ModernCard>

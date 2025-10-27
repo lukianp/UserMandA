@@ -91,7 +91,7 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
   } = useInfrastructureDiscoveryHubLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="infrastructure-discovery-hub">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="infrastructure-discovery-hub" data-testid="infrastructure-discovery-hub">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between p-4">
@@ -113,7 +113,7 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
               size="sm"
               icon={<RefreshCw className="w-4 h-4" />}
               onClick={refresh}
-              data-cy="refresh-btn"
+              data-cy="refresh-btn" data-testid="refresh-btn"
             >
               Refresh
             </Button>
@@ -127,7 +127,7 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
               value={filter}
               onChange={setFilter}
               placeholder="Search discovery modules..."
-              data-cy="discovery-search"
+              data-cy="discovery-search" data-testid="discovery-search"
             />
           </div>
 
@@ -137,7 +137,7 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
               value={sortBy}
               onChange={(value) => setSortBy(value as any)}
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              data-cy="sort-select"
+              data-cy="sort-select" data-testid="sort-select"
             >
               <option value="name">Name</option>
               <option value="lastRun">Last Run</option>

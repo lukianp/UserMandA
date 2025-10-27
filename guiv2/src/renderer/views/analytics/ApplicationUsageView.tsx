@@ -122,7 +122,7 @@ export const ApplicationUsageView: React.FC = () => {
   const { metrics, topApplications, unusedApplications, categoryDistribution, licenseUsageTrends, adoptionMetrics } = usageData;
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-6 overflow-y-auto" data-cy="application-usage-view">
+    <div className="flex flex-col h-full p-6 space-y-6 overflow-y-auto" data-cy="application-usage-view" data-testid="application-usage-view">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

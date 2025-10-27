@@ -313,7 +313,7 @@ export const WebhooksView: React.FC = () => {
   }, [selectedWebhooks, deleteWebhook, bulkToggleStatus]);
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-6" data-cy="webhooks-view">
+    <div className="flex flex-col h-full p-6 space-y-6" data-cy="webhooks-view" data-testid="webhooks-view">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -327,7 +327,7 @@ export const WebhooksView: React.FC = () => {
             variant="secondary"
             icon={<Upload className="w-4 h-4" />}
             onClick={() => console.log('Import webhooks')}
-            data-cy="import-webhooks"
+            data-cy="import-webhooks" data-testid="import-webhooks"
           >
             Import
           </Button>
@@ -335,7 +335,7 @@ export const WebhooksView: React.FC = () => {
             variant="secondary"
             icon={<Download className="w-4 h-4" />}
             onClick={exportWebhooks}
-            data-cy="export-webhooks"
+            data-cy="export-webhooks" data-testid="export-webhooks"
           >
             Export
           </Button>
@@ -343,7 +343,7 @@ export const WebhooksView: React.FC = () => {
             variant="primary"
             icon={<Plus className="w-4 h-4" />}
             onClick={handleCreateWebhook}
-            data-cy="create-webhook"
+            data-cy="create-webhook" data-testid="create-webhook"
           >
             Create Webhook
           </Button>
@@ -401,7 +401,7 @@ export const WebhooksView: React.FC = () => {
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
           onClick={() => setActiveTab('webhooks')}
-          data-cy="webhooks-tab"
+          data-cy="webhooks-tab" data-testid="webhooks-tab"
         >
           Webhooks ({webhooks.length})
         </button>
@@ -412,7 +412,7 @@ export const WebhooksView: React.FC = () => {
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
           onClick={() => setActiveTab('deliveries')}
-          data-cy="deliveries-tab"
+          data-cy="deliveries-tab" data-testid="deliveries-tab"
         >
           Deliveries ({deliveries.length})
         </button>
@@ -423,7 +423,7 @@ export const WebhooksView: React.FC = () => {
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
           onClick={() => setActiveTab('statistics')}
-          data-cy="statistics-tab"
+          data-cy="statistics-tab" data-testid="statistics-tab"
         >
           Statistics
         </button>
@@ -451,7 +451,7 @@ export const WebhooksView: React.FC = () => {
                     onChange={(e) => setSearchText(e.target.value)}
                     placeholder="Search webhooks..."
                     startIcon={<Search className="w-4 h-4" />}
-                    data-cy="search-webhooks"
+                    data-cy="search-webhooks" data-testid="search-webhooks"
                   />
                 </div>
                 <Select
@@ -464,7 +464,7 @@ export const WebhooksView: React.FC = () => {
                     { value: 'failed', label: 'Failed' },
                     { value: 'pending', label: 'Pending' },
                   ]}
-                  data-cy="status-filter"
+                  data-cy="status-filter" data-testid="status-filter"
                 />
                 <Select
                   value={eventFilter}
@@ -478,7 +478,7 @@ export const WebhooksView: React.FC = () => {
                     { value: 'report.generated', label: 'Report Generated' },
                     { value: 'alert.triggered', label: 'Alert Triggered' },
                   ]}
-                  data-cy="event-filter"
+                  data-cy="event-filter" data-testid="event-filter"
                 />
                 {selectedWebhooks.length > 0 && (
                   <div className="flex items-center gap-2">
@@ -494,7 +494,7 @@ export const WebhooksView: React.FC = () => {
                         { value: 'delete', label: 'Delete' },
                       ]}
                       placeholder="Bulk Actions"
-                      data-cy="bulk-actions"
+                      data-cy="bulk-actions" data-testid="bulk-actions"
                     />
                   </div>
                 )}
@@ -512,7 +512,7 @@ export const WebhooksView: React.FC = () => {
                 onViewDetails={(webhook) => handleEditWebhook(webhook)}
                 getDetailViewTitle={(webhook) => `Edit Webhook: ${webhook.name}`}
                 detailViewComponent="WebhookDesignerView"
-                data-cy="webhooks-table"
+                data-cy="webhooks-table" data-testid="webhooks-table"
               />
             </div>
           </ModernCard>
@@ -526,7 +526,7 @@ export const WebhooksView: React.FC = () => {
                   variant="secondary"
                   icon={<Activity className="w-4 h-4" />}
                   onClick={() => loadDeliveries()}
-                  data-cy="refresh-deliveries"
+                  data-cy="refresh-deliveries" data-testid="refresh-deliveries"
                 >
                   Refresh
                 </Button>
@@ -539,7 +539,7 @@ export const WebhooksView: React.FC = () => {
                 loading={isLoading}
                 emptyMessage="No deliveries found"
                 contextMenu={true}
-                data-cy="deliveries-table"
+                data-cy="deliveries-table" data-testid="deliveries-table"
               />
             </div>
           </ModernCard>

@@ -410,7 +410,7 @@ export const PerformanceDashboardView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-6 overflow-y-auto" data-cy="performance-dashboard-view">
+    <div className="flex flex-col h-full p-6 space-y-6 overflow-y-auto" data-cy="performance-dashboard-view" data-testid="performance-dashboard-view">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

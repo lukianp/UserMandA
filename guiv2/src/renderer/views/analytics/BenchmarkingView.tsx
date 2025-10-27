@@ -137,7 +137,7 @@ export const BenchmarkingView: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900" data-cy="benchmarking-view">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900" data-cy="benchmarking-view" data-testid="benchmarking-view">
       {/* Header */}
       <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-4">
@@ -155,7 +155,7 @@ export const BenchmarkingView: React.FC = () => {
             variant="secondary"
             onClick={refreshData}
             loading={isLoading}
-            data-cy="refresh-btn"
+            data-cy="refresh-btn" data-testid="refresh-btn"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
@@ -163,7 +163,7 @@ export const BenchmarkingView: React.FC = () => {
           <Button
             variant="primary"
             onClick={exportData}
-            data-cy="export-btn"
+            data-cy="export-btn" data-testid="export-btn"
           >
             <Download className="w-4 h-4 mr-2" />
             Export Report
@@ -195,14 +195,14 @@ export const BenchmarkingView: React.FC = () => {
                 value={(typeof safeFilters.category === 'string' ? safeFilters.category : '')}
                 onChange={handleCategoryFilter}
                 options={categoryOptions}
-                data-cy="category-filter"
+                data-cy="category-filter" data-testid="category-filter"
               />
               <Select
                 label="Status"
                 value={(typeof safeFilters.status === 'string' ? safeFilters.status : '')}
                 onChange={handleStatusFilter}
                 options={statusOptions}
-                data-cy="status-filter"
+                data-cy="status-filter" data-testid="status-filter"
               />
               <Input
                 label="Search Metrics"
@@ -306,7 +306,7 @@ export const BenchmarkingView: React.FC = () => {
             columns={columns}
             loading={isLoading}
             height="500px"
-            data-cy="benchmarking-table"
+            data-cy="benchmarking-table" data-testid="benchmarking-table"
           />
         </ModernCard>
       </div>

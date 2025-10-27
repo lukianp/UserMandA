@@ -198,7 +198,7 @@ export const BulkOperationsView: React.FC = () => {
   });
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-6" data-cy="bulk-operations-view">
+    <div className="flex flex-col h-full p-6 space-y-6" data-cy="bulk-operations-view" data-testid="bulk-operations-view">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -212,7 +212,7 @@ export const BulkOperationsView: React.FC = () => {
             variant="secondary"
             icon={<Upload className="w-4 h-4" />}
             onClick={() => console.log('Import operations')}
-            data-cy="import-operations"
+            data-cy="import-operations" data-testid="import-operations"
           >
             Import
           </Button>
@@ -220,7 +220,7 @@ export const BulkOperationsView: React.FC = () => {
             variant="secondary"
             icon={<Download className="w-4 h-4" />}
             onClick={() => console.log('Export operations')}
-            data-cy="export-operations"
+            data-cy="export-operations" data-testid="export-operations"
           >
             Export
           </Button>
@@ -229,7 +229,7 @@ export const BulkOperationsView: React.FC = () => {
             icon={<Plus className="w-4 h-4" />}
             onClick={handleStartBulkOperation}
             disabled={selectedItems.length === 0}
-            data-cy="start-bulk-operation"
+            data-cy="start-bulk-operation" data-testid="start-bulk-operation"
           >
             Start Operation
           </Button>
@@ -296,7 +296,7 @@ export const BulkOperationsView: React.FC = () => {
                 onChange={(e) => setSearchText(e.target.value)}
                 placeholder="Search operations..."
                 startIcon={<Search className="w-4 h-4" />}
-                data-cy="search-operations"
+                data-cy="search-operations" data-testid="search-operations"
               />
             </div>
             <Select
@@ -309,7 +309,7 @@ export const BulkOperationsView: React.FC = () => {
                 { value: 'completed', label: 'Completed' },
                 { value: 'failed', label: 'Failed' },
               ]}
-              data-cy="status-filter"
+              data-cy="status-filter" data-testid="status-filter"
             />
             {operations.some(op => op.status === 'running' || op.status === 'failed') && (
               <Select
@@ -321,7 +321,7 @@ export const BulkOperationsView: React.FC = () => {
                   { value: 'clear', label: 'Clear Completed' },
                 ]}
                 placeholder="Bulk Actions"
-                data-cy="bulk-actions"
+                data-cy="bulk-actions" data-testid="bulk-actions"
               />
             )}
           </div>
@@ -333,7 +333,7 @@ export const BulkOperationsView: React.FC = () => {
             loading={isLoading}
             emptyMessage="No operations found"
             contextMenu={true}
-            data-cy="operations-table"
+            data-cy="operations-table" data-testid="operations-table"
           />
         </div>
       </ModernCard>

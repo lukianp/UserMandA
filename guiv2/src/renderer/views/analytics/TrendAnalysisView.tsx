@@ -140,7 +140,7 @@ export const TrendAnalysisView: React.FC = () => {
   const { primaryTrend, comparativeTrends, summaries, correlations } = trendData;
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-6 overflow-y-auto" data-cy="trend-analysis-view">
+    <div className="flex flex-col h-full p-6 space-y-6 overflow-y-auto" data-cy="trend-analysis-view" data-testid="trend-analysis-view">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

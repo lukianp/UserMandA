@@ -52,7 +52,7 @@ const GoogleWorkspaceDiscoveryView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="google-workspace-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="google-workspace-discovery-view" data-testid="google-workspace-discovery-view">
       {isDiscovering && (
         <LoadingOverlay
           progress={progress.percentage}

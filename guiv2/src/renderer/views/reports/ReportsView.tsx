@@ -25,7 +25,7 @@ const ReportsView: React.FC = () => {
   } = useReportsLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="reports-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="reports-view" data-testid="reports-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center gap-3">
@@ -49,7 +49,7 @@ const ReportsView: React.FC = () => {
               value={searchText}
               onChange={setSearchText}
               placeholder="Search report templates..."
-              data-cy="reports-search"
+              data-cy="reports-search" data-testid="reports-search"
             />
           </div>
           <div className="w-48">
@@ -63,7 +63,7 @@ const ReportsView: React.FC = () => {
                 { value: 'Migration', label: 'Migration' },
                 { value: 'Licensing', label: 'Licensing' },
               ]}
-              data-cy="category-filter"
+              data-cy="category-filter" data-testid="category-filter"
             />
           </div>
         </div>

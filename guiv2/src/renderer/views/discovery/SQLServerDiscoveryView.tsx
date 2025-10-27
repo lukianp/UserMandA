@@ -122,7 +122,7 @@ const SQLServerDiscoveryView: React.FC = () => {
   } = useSQLServerDiscoveryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="sqlserver-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="sqlserver-discovery-view" data-testid="sqlserver-discovery-view">
       {/* Header */}
       <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
@@ -146,19 +146,19 @@ const SQLServerDiscoveryView: React.FC = () => {
                 label: template.name,
               })),
             ]}
-            data-cy="template-select"
+            data-cy="template-select" data-testid="template-select"
           />
           <Button
             onClick={handleStartDiscovery}
             disabled={isLoading}
             variant="primary"
             icon={<Play />}
-            data-cy="start-discovery-btn"
+            data-cy="start-discovery-btn" data-testid="start-discovery-btn"
           >
             {isLoading ? 'Discovering...' : 'Start Discovery'}
           </Button>
           {result && (
-            <Button onClick={handleExport} icon={<Download />} data-cy="export-btn">
+            <Button onClick={handleExport} icon={<Download />} data-cy="export-results-btn" data-testid="export-results-btn">
               Export
             </Button>
           )}
@@ -270,7 +270,7 @@ const SQLServerDiscoveryView: React.FC = () => {
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                         className="flex-1"
-                        data-cy="search-input"
+                        data-cy="search-input" data-testid="search-input"
                       />
                     </div>
 
@@ -282,7 +282,7 @@ const SQLServerDiscoveryView: React.FC = () => {
                           columns={instanceColumns}
                           loading={isLoading}
                           enableExport
-                          data-cy="sqlserver-instances-grid"
+                          data-cy="sqlserver-instances-grid" data-testid="sqlserver-instances-grid"
                         />
                       )}
                       {activeTab === 'databases' && (
@@ -291,7 +291,7 @@ const SQLServerDiscoveryView: React.FC = () => {
                           columns={databaseColumns}
                           loading={isLoading}
                           enableExport
-                          data-cy="sqlserver-databases-grid"
+                          data-cy="sqlserver-databases-grid" data-testid="sqlserver-databases-grid"
                         />
                       )}
                     </div>

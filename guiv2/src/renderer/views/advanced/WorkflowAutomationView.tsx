@@ -316,7 +316,7 @@ export const WorkflowAutomationView: React.FC = () => {
   }, [selectedWorkflows, deleteWorkflow, bulkToggleStatus]);
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-6" data-cy="workflow-automation-view">
+    <div className="flex flex-col h-full p-6 space-y-6" data-cy="workflow-automation-view" data-testid="workflow-automation-view">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -330,7 +330,7 @@ export const WorkflowAutomationView: React.FC = () => {
             variant="secondary"
             icon={<Upload className="w-4 h-4" />}
             onClick={() => importWorkflow('')}
-            data-cy="import-workflows"
+            data-cy="import-workflows" data-testid="import-workflows"
           >
             Import
           </Button>
@@ -338,7 +338,7 @@ export const WorkflowAutomationView: React.FC = () => {
             variant="secondary"
             icon={<Download className="w-4 h-4" />}
             onClick={exportWorkflows}
-            data-cy="export-workflows"
+            data-cy="export-workflows" data-testid="export-workflows"
           >
             Export
           </Button>
@@ -346,7 +346,7 @@ export const WorkflowAutomationView: React.FC = () => {
             variant="primary"
             icon={<Plus className="w-4 h-4" />}
             onClick={handleCreateWorkflow}
-            data-cy="create-workflow"
+            data-cy="create-workflow" data-testid="create-workflow"
           >
             Create Workflow
           </Button>
@@ -404,7 +404,7 @@ export const WorkflowAutomationView: React.FC = () => {
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
           onClick={() => setActiveTab('workflows')}
-          data-cy="workflows-tab"
+          data-cy="workflows-tab" data-testid="workflows-tab"
         >
           Workflows ({workflows.length})
         </button>
@@ -415,7 +415,7 @@ export const WorkflowAutomationView: React.FC = () => {
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
           onClick={() => setActiveTab('executions')}
-          data-cy="executions-tab"
+          data-cy="executions-tab" data-testid="executions-tab"
         >
           Executions ({executions.length})
         </button>
@@ -426,7 +426,7 @@ export const WorkflowAutomationView: React.FC = () => {
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
           onClick={() => setActiveTab('statistics')}
-          data-cy="statistics-tab"
+          data-cy="statistics-tab" data-testid="statistics-tab"
         >
           Statistics
         </button>
@@ -454,7 +454,7 @@ export const WorkflowAutomationView: React.FC = () => {
                     onChange={(e) => setSearchText(e.target.value)}
                     placeholder="Search workflows..."
                     startIcon={<Search className="w-4 h-4" />}
-                    data-cy="search-workflows"
+                    data-cy="search-workflows" data-testid="search-workflows"
                   />
                 </div>
                 <Select
@@ -466,7 +466,7 @@ export const WorkflowAutomationView: React.FC = () => {
                     { value: 'inactive', label: 'Inactive' },
                     { value: 'draft', label: 'Draft' },
                   ]}
-                  data-cy="status-filter"
+                  data-cy="status-filter" data-testid="status-filter"
                 />
                 <Select
                   value={triggerFilter}
@@ -479,7 +479,7 @@ export const WorkflowAutomationView: React.FC = () => {
                     { value: 'webhook', label: 'Webhook' },
                     { value: 'api', label: 'API' },
                   ]}
-                  data-cy="trigger-filter"
+                  data-cy="trigger-filter" data-testid="trigger-filter"
                 />
                 {selectedWorkflows.length > 0 && (
                   <div className="flex items-center gap-2">
@@ -495,7 +495,7 @@ export const WorkflowAutomationView: React.FC = () => {
                         { value: 'delete', label: 'Delete' },
                       ]}
                       placeholder="Bulk Actions"
-                      data-cy="bulk-actions"
+                      data-cy="bulk-actions" data-testid="bulk-actions"
                     />
                   </div>
                 )}
@@ -513,7 +513,7 @@ export const WorkflowAutomationView: React.FC = () => {
                 onViewDetails={(workflow) => handleEditWorkflow(workflow)}
                 getDetailViewTitle={(workflow) => `Edit Workflow: ${workflow.name}`}
                 detailViewComponent="WorkflowDesignerView"
-                data-cy="workflows-table"
+                data-cy="workflows-table" data-testid="workflows-table"
               />
             </div>
           </ModernCard>
@@ -527,7 +527,7 @@ export const WorkflowAutomationView: React.FC = () => {
                   variant="secondary"
                   icon={<Activity className="w-4 h-4" />}
                   onClick={() => loadExecutions()}
-                  data-cy="refresh-executions"
+                  data-cy="refresh-executions" data-testid="refresh-executions"
                 >
                   Refresh
                 </Button>
@@ -540,7 +540,7 @@ export const WorkflowAutomationView: React.FC = () => {
                 loading={isLoading}
                 emptyMessage="No executions found"
                 contextMenu={true}
-                data-cy="executions-table"
+                data-cy="executions-table" data-testid="executions-table"
               />
             </div>
           </ModernCard>
