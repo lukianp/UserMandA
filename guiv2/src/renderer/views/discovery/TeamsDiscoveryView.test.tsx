@@ -165,6 +165,7 @@ describe('TeamsDiscoveryView', () => {
         selectedTab: 'teams',
         result: { teams: [], channels: [], members: [] },
         statistics: {},
+        results: [{ id: '1', name: 'Test' }],
         exportData,
       });
 

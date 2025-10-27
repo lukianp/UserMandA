@@ -170,6 +170,7 @@ describe('Office365DiscoveryView', () => {
           services: [],
           stats: createUniversalStats(),
         },
+        results: [{ id: '1', name: 'Test' }],
         exportResults,
       });
 

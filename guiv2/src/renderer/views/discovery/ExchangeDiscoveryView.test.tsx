@@ -164,6 +164,7 @@ describe('ExchangeDiscoveryView', () => {
         ...mockHookDefaults,
         selectedTab: 'mailboxes',
         currentResult: { users: [], groups: [], stats: createUniversalStats() },
+        results: [{ id: '1', name: 'Test' }],
         exportResults,
       });
 

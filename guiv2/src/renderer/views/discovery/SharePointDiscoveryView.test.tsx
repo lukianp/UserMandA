@@ -163,6 +163,7 @@ describe('SharePointDiscoveryView', () => {
         ...mockHookDefaults,
         selectedTab: 'sites',
         result: { sites: [], lists: [], permissions: [] },
+        results: [{ id: '1', name: 'Test' }],
         exportData,
       });
 

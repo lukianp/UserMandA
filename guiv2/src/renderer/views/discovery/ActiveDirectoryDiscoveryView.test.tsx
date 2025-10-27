@@ -166,6 +166,7 @@ describe('ActiveDirectoryDiscoveryView', () => {
         ...mockHookDefaults,
         currentResult: mockResult,
         selectedTab: 'users', // export-btn only shows when not on overview tab
+        results: [{ id: '1', name: 'Test' }],
         exportResults,
       } as any);
 
