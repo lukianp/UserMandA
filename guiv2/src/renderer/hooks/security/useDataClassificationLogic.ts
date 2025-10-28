@@ -353,7 +353,7 @@ export const useDataClassificationLogic = () => {
       }
 
       // Search term
-      if (filter.searchText && !item.name.toLowerCase().includes(filter.searchText.toLowerCase())) {
+      if (filter.searchText && !(item.name ?? '').toLowerCase().includes(filter.searchText.toLowerCase())) {
         return false;
       }
 

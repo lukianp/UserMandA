@@ -5,7 +5,7 @@
  * Handles 100,000+ rows with virtual scrolling at 60 FPS
  */
 
-import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect } from 'react';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef, GridApi, GridReadyEvent, SelectionChangedEvent, RowClickedEvent } from 'ag-grid-community';
 import 'ag-grid-enterprise';
@@ -67,30 +67,37 @@ export interface VirtualizedDataGridProps<T = any> {
   'data-cy'?: string;
 }
 
+type VirtualizedDataGridComponent = <T = any>(
+  props: VirtualizedDataGridProps<T> & React.RefAttributes<HTMLDivElement>
+) => JSX.Element;
+
 /**
  * High-performance data grid component
  */
-export function VirtualizedDataGrid<T = any>({
-  data,
-  columns,
-  loading = false,
-  virtualRowHeight = 32,
-  enableColumnReorder = true,
-  enableColumnResize = true,
-  enableExport = true,
-  enablePrint = true,
-  enableGrouping = false,
-  enableFiltering = true,
-  enableSelection = true,
-  selectionMode = 'multiple',
-  pagination = true,
-  paginationPageSize = 100,
-  onRowClick,
-  onSelectionChange,
-  className,
-  height = '600px',
-  'data-cy': dataCy,
-}: VirtualizedDataGridProps<T>) {
+function VirtualizedDataGridInner<T = any>(
+  {
+    data,
+    columns,
+    loading = false,
+    virtualRowHeight = 32,
+    enableColumnReorder = true,
+    enableColumnResize = true,
+    enableExport = true,
+    enablePrint = true,
+    enableGrouping = false,
+    enableFiltering = true,
+    enableSelection = true,
+    selectionMode = 'multiple',
+    pagination = true,
+    paginationPageSize = 100,
+    onRowClick,
+    onSelectionChange,
+    className,
+    height = '600px',
+    'data-cy': dataCy,
+  }: VirtualizedDataGridProps<T>,
+  ref: React.ForwardedRef<HTMLDivElement>
+) {
   const gridRef = useRef<AgGridReact>(null);
   const [gridApi, setGridApi] = React.useState<GridApi | null>(null);
   const [showColumnPanel, setShowColumnPanel] = React.useState(false);
@@ -233,7 +240,7 @@ export function VirtualizedDataGrid<T = any>({
   );
 
   return (
-    <div className={containerClasses} data-cy={dataCy}>
+    <div ref={ref} className={containerClasses} data-cy={dataCy}>
       {/* Toolbar */}
       <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
@@ -390,3 +397,7 @@ export function VirtualizedDataGrid<T = any>({
     </div>
   );
 }
+
+export const VirtualizedDataGrid = React.forwardRef(VirtualizedDataGridInner) as VirtualizedDataGridComponent;
+
+VirtualizedDataGrid.displayName = 'VirtualizedDataGrid';

@@ -142,8 +142,8 @@ export const useAssetInventoryLogic = () => {
     return assets.filter(asset => {
       // Search filter
       const matchesSearch = !searchText ||
-        asset.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        asset.type.toLowerCase().includes(searchText.toLowerCase()) ||
+        (asset.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (asset.type ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
         asset.manufacturer?.toLowerCase().includes(searchText.toLowerCase()) ||
         asset.model?.toLowerCase().includes(searchText.toLowerCase()) ||
         asset.ipAddress?.toLowerCase().includes(searchText.toLowerCase());

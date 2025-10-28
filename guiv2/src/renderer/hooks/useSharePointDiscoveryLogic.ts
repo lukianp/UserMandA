@@ -165,12 +165,12 @@ export function useSharePointDiscoveryLogic() {
   const filteredSites = useMemo(() => {
     if (!result?.sites) return [];
 
-    return result.sites.filter((site) => {
+    return result?.sites?.filter((site) => {
       if (siteFilter.searchText) {
         const search = siteFilter.searchText.toLowerCase();
         const matches =
-          site.title.toLowerCase().includes(search) ||
-          site.url.toLowerCase().includes(search) ||
+          (site.title ?? '').toLowerCase().includes(search) ||
+          (site.url ?? '').toLowerCase().includes(search) ||
           site.description?.toLowerCase().includes(search);
         if (!matches) return false;
       }
@@ -207,12 +207,12 @@ export function useSharePointDiscoveryLogic() {
   const filteredLists = useMemo(() => {
     if (!result?.lists) return [];
 
-    return result.lists.filter((list) => {
+    return result?.lists?.filter((list) => {
       if (listFilter.searchText) {
         const search = listFilter.searchText.toLowerCase();
         const matches =
-          list.title.toLowerCase().includes(search) ||
-          list.listUrl.toLowerCase().includes(search) ||
+          (list.title ?? '').toLowerCase().includes(search) ||
+          (list.listUrl ?? '').toLowerCase().includes(search) ||
           list.description?.toLowerCase().includes(search);
         if (!matches) return false;
       }
@@ -248,13 +248,13 @@ export function useSharePointDiscoveryLogic() {
   const filteredPermissions = useMemo(() => {
     if (!result?.permissions) return [];
 
-    return result.permissions.filter((permission) => {
+    return result?.permissions?.filter((permission) => {
       if (permissionFilter.searchText) {
         const search = permissionFilter.searchText.toLowerCase();
         const matches =
-          permission.principalName.toLowerCase().includes(search) ||
+          (permission.principalName ?? '').toLowerCase().includes(search) ||
           permission.principalEmail?.toLowerCase().includes(search) ||
-          permission.scopeUrl.toLowerCase().includes(search);
+          (permission.scopeUrl ?? '').toLowerCase().includes(search);
         if (!matches) return false;
       }
 
@@ -318,7 +318,7 @@ export function useSharePointDiscoveryLogic() {
         headerName: 'Storage (MB)',
         sortable: true,
         filter: 'agNumberColumnFilter',
-        valueFormatter: (params) => params.value.toFixed(2),
+        valueFormatter: (params) => (params.value ?? 0).toFixed(2),
         width: 120,
       },
       {
@@ -326,7 +326,7 @@ export function useSharePointDiscoveryLogic() {
         headerName: 'Quota (MB)',
         sortable: true,
         filter: 'agNumberColumnFilter',
-        valueFormatter: (params) => params.value.toFixed(2),
+        valueFormatter: (params) => (params.value ?? 0).toFixed(2),
         width: 120,
       },
       {

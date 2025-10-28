@@ -7,7 +7,7 @@ r.testResults.forEach(s => {
       t.failureMessages?.forEach(m => {
         const match = m.match(/Unable to find an element.*data-cy="([^"]+)"/);
         if (match) {
-          const file = s.name.replace(/\/g, '/').split('/src/renderer/views/')[1]?.replace('.test.tsx', '');
+          const file = s.name.replace(/\\/g, '/').split('/src/renderer/views/')[1]?.replace('.test.tsx', '');
           if (file) {
             if (!missing[file]) missing[file] = new Set();
             missing[file].add(match[1]);

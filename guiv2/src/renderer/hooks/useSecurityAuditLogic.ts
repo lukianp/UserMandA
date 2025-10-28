@@ -177,12 +177,12 @@ export const useSecurityAuditLogic = () => {
     }
 
     if (filters.user) {
-      result = result.filter((item) => item.user.toLowerCase().includes(filters.user.toLowerCase()));
+      result = result.filter((item) => (item.user ?? '').toLowerCase().includes(filters.user.toLowerCase()));
     }
 
     if (filters.resource) {
       result = result.filter((item) =>
-        item.resource.toLowerCase().includes(filters.resource.toLowerCase())
+        (item.resource ?? '').toLowerCase().includes(filters.resource.toLowerCase())
       );
     }
 
@@ -205,10 +205,10 @@ export const useSecurityAuditLogic = () => {
       const search = filters.searchText.toLowerCase();
       result = result.filter(
         (item) =>
-          item.eventType.toLowerCase().includes(search) ||
-          item.user.toLowerCase().includes(search) ||
-          item.action.toLowerCase().includes(search) ||
-          item.details.toLowerCase().includes(search)
+          (item.eventType ?? '').toLowerCase().includes(search) ||
+          (item.user ?? '').toLowerCase().includes(search) ||
+          (item.action ?? '').toLowerCase().includes(search) ||
+          (item.details ?? '').toLowerCase().includes(search)
       );
     }
 

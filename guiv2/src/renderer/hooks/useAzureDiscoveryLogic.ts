@@ -124,7 +124,7 @@ export const useAzureDiscoveryLogic = () => {
         if (data.level === 'error') {
           addLog(`[ERROR] ${data.message}`);
         } else {
-          addLog(`[${data.level.toUpperCase()}] ${data.message}`);
+          addLog(`[${data?.level?.toUpperCase()}] ${data.message}`);
         }
       }
     });
@@ -136,13 +136,13 @@ export const useAzureDiscoveryLogic = () => {
           name: 'Azure Discovery',
           moduleName: 'AzureDiscovery',
           displayName: 'Microsoft 365 / Azure AD Discovery',
-          itemCount: data.result.totalItems || 0,
+          itemCount: data?.result?.totalItems || 0,
           discoveryTime: new Date().toISOString(),
           duration: data.duration || 0,
           status: 'Completed',
-          filePath: data.result.outputPath || '',
+          filePath: data?.result?.outputPath || '',
           success: true,
-          summary: `Discovered ${data.result.totalItems || 0} items from tenant ${formData.tenantId}`,
+          summary: `Discovered ${data?.result?.totalItems || 0} items from tenant ${formData.tenantId}`,
           errorMessage: '',
           additionalData: data.result,
           createdAt: new Date().toISOString(),
@@ -150,7 +150,7 @@ export const useAzureDiscoveryLogic = () => {
 
         setResults([discoveryResult]);
         addResult(discoveryResult);
-        addLog(`Discovery completed successfully! Found ${data.result.totalItems} items.`);
+        addLog(`Discovery completed successfully! Found ${data?.result?.totalItems} items.`);
         setIsRunning(false);
         setCurrentToken(null);
         setLocalProgress(null);

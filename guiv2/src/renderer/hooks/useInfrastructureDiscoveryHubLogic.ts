@@ -320,8 +320,8 @@ export const useInfrastructureDiscoveryHubLogic = () => {
       const searchLower = state.filter.toLowerCase();
       filtered = filtered.filter(
         module =>
-          module.name.toLowerCase().includes(searchLower) ||
-          module.description.toLowerCase().includes(searchLower)
+          (module.name ?? '').toLowerCase().includes(searchLower) ||
+          (module.description ?? '').toLowerCase().includes(searchLower)
       );
     }
 

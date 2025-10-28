@@ -20,6 +20,7 @@ import type { ProgressData } from '../../shared/types';
 export interface UseFileSystemDiscoveryLogicReturn {
   // Discovery state
   result: FileSystemDiscoveryResult | null;
+  currentResult: FileSystemDiscoveryResult | null;
   isRunning: boolean;
   progress: FileSystemProgress | null;
   error: string | null;
@@ -110,7 +111,7 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     setProgress({
       phase: 'initializing',
       serversCompleted: 0,
-      totalServers: config.servers.length,
+      totalServers: config?.servers?.length,
       sharesCompleted: 0,
       totalShares: 0,
       percentComplete: 0,
@@ -277,8 +278,8 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     if (shareFilter.searchText) {
       const search = shareFilter.searchText.toLowerCase();
       filtered = filtered.filter(s =>
-        s.name.toLowerCase().includes(search) ||
-        s.path.toLowerCase().includes(search) ||
+        (s.name ?? '').toLowerCase().includes(search) ||
+        (s.path ?? '').toLowerCase().includes(search) ||
         s.description?.toLowerCase().includes(search)
       );
     }
@@ -286,8 +287,8 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     if (searchText) {
       const search = searchText.toLowerCase();
       filtered = filtered.filter(s =>
-        s.name.toLowerCase().includes(search) ||
-        s.path.toLowerCase().includes(search)
+        (s.name ?? '').toLowerCase().includes(search) ||
+        (s.path ?? '').toLowerCase().includes(search)
       );
     }
 
@@ -312,16 +313,16 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     if (permissionFilter.searchText) {
       const search = permissionFilter.searchText.toLowerCase();
       filtered = filtered.filter(p =>
-        p.principal.name.toLowerCase().includes(search) ||
-        p.shareName.toLowerCase().includes(search)
+        (p.principal?.name ?? '').toLowerCase().includes(search) ||
+        (p.shareName ?? '').toLowerCase().includes(search)
       );
     }
 
     if (searchText) {
       const search = searchText.toLowerCase();
       filtered = filtered.filter(p =>
-        p.principal.name.toLowerCase().includes(search) ||
-        p.shareName.toLowerCase().includes(search)
+        (p.principal?.name ?? '').toLowerCase().includes(search) ||
+        (p.shareName ?? '').toLowerCase().includes(search)
       );
     }
 
@@ -350,16 +351,16 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     if (largeFileFilter.searchText) {
       const search = largeFileFilter.searchText.toLowerCase();
       filtered = filtered.filter(f =>
-        f.name.toLowerCase().includes(search) ||
-        f.path.toLowerCase().includes(search)
+        (f.name ?? '').toLowerCase().includes(search) ||
+        (f.path ?? '').toLowerCase().includes(search)
       );
     }
 
     if (searchText) {
       const search = searchText.toLowerCase();
       filtered = filtered.filter(f =>
-        f.name.toLowerCase().includes(search) ||
-        f.path.toLowerCase().includes(search)
+        (f.name ?? '').toLowerCase().includes(search) ||
+        (f.path ?? '').toLowerCase().includes(search)
       );
     }
 

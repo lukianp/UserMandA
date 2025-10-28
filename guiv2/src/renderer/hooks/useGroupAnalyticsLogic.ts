@@ -321,7 +321,7 @@ export const useGroupAnalyticsLogic = () => {
 
     // Filter top groups by type
     const filteredTopGroups = analyticsData.topGroups.filter(
-      group => group.type.toLowerCase().includes(selectedGroupType.toLowerCase())
+      group => (group.type ?? '').toLowerCase().includes(selectedGroupType.toLowerCase())
     );
 
     return {

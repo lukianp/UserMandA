@@ -635,7 +635,7 @@ export const useWebServerDiscoveryLogic = () => {
       return flattened;
     };
 
-    const flattenedData = data.map(item => flattenObject(item));
+    const flattenedData = (data ?? []).map(item => flattenObject(item));
     const headers = Array.from(new Set(flattenedData.flatMap(obj => Object.keys(obj))));
 
     const csvRows = [

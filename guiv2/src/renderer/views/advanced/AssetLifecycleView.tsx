@@ -196,7 +196,9 @@ export const AssetLifecycleView: React.FC = () => {
             icon={<MoreHorizontal className="w-4 h-4" />}
             onClick={() => handleAssetActions(row)}
             data-cy={`more-actions-${row.id}`}
-          />
+          >
+            <span className="sr-only">More actions</span>
+          </Button>
         </div>
       ),
     },
@@ -232,12 +234,16 @@ export const AssetLifecycleView: React.FC = () => {
     }
   }, [selectedItems]);
 
-  const filteredData = (data ?? []).filter(asset => {
+  const filteredData = (data ?? []).filter((asset) => {
     const matchesStatus = statusFilter === 'All' || asset.status === statusFilter;
     const matchesType = typeFilter === 'All' || asset.type === typeFilter;
     const matchesStage = stageFilter === 'All' || asset.lifecycleStage === stageFilter;
-    const matchesSearch = (asset.name ?? '')?.toLowerCase() ?? "".includes(searchText?.toLowerCase() ?? "") ||
-                         (asset.type ?? '')?.toLowerCase() ?? "".includes(searchText?.toLowerCase() ?? "");
+    const normalizedSearch = searchText.trim().toLowerCase();
+    const matchesSearch =
+      normalizedSearch.length === 0 ||
+      (asset.name ?? '').toLowerCase().includes(normalizedSearch) ||
+      (asset.type ?? '').toLowerCase().includes(normalizedSearch);
+
     return matchesStatus && matchesType && matchesStage && matchesSearch;
   });
 

@@ -465,7 +465,7 @@ export const useIdentityGovernanceLogic = () => {
    * Filter access reviews based on current filter state
    */
   const filteredAccessReviews = data?.accessReviews.filter((review) => {
-    if (filter.searchText && !review.displayName.toLowerCase().includes(filter.searchText.toLowerCase())) {
+    if (filter.searchText && !(review.displayName ?? '').toLowerCase().includes(filter.searchText.toLowerCase())) {
       return false;
     }
     if (filter.selectedStatuses.length > 0 && !filter.selectedStatuses.includes(review.status)) {

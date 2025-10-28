@@ -168,13 +168,13 @@ export function useTeamsDiscoveryLogic() {
   const filteredTeams = useMemo(() => {
     if (!result?.teams) return [];
 
-    return result.teams.filter((team) => {
+    return result?.teams?.filter((team) => {
       if (teamFilter.searchText) {
         const search = teamFilter.searchText.toLowerCase();
         const matches =
-          team.displayName.toLowerCase().includes(search) ||
+          (team.displayName ?? '').toLowerCase().includes(search) ||
           team.description?.toLowerCase().includes(search) ||
-          team.mailNickname.toLowerCase().includes(search);
+          (team.mailNickname ?? '').toLowerCase().includes(search);
         if (!matches) return false;
       }
 
@@ -195,7 +195,7 @@ export function useTeamsDiscoveryLogic() {
       }
 
       if (teamFilter.hasGuests !== undefined) {
-        const hasGuests = team.guestCount > 0;
+        const hasGuests = (team.guestCount ?? 0) > 0;
         if (hasGuests !== teamFilter.hasGuests) return false;
       }
 
@@ -212,11 +212,11 @@ export function useTeamsDiscoveryLogic() {
   const filteredChannels = useMemo(() => {
     if (!result?.channels) return [];
 
-    return result.channels.filter((channel) => {
+    return result?.channels?.filter((channel) => {
       if (channelFilter.searchText) {
         const search = channelFilter.searchText.toLowerCase();
         const matches =
-          channel.displayName.toLowerCase().includes(search) ||
+          (channel.displayName ?? '').toLowerCase().includes(search) ||
           channel.description?.toLowerCase().includes(search);
         if (!matches) return false;
       }
@@ -241,13 +241,13 @@ export function useTeamsDiscoveryLogic() {
   const filteredMembers = useMemo(() => {
     if (!result?.members) return [];
 
-    return result.members.filter((member) => {
+    return result?.members?.filter((member) => {
       if (memberFilter.searchText) {
         const search = memberFilter.searchText.toLowerCase();
         const matches =
-          member.displayName.toLowerCase().includes(search) ||
-          member.email.toLowerCase().includes(search) ||
-          member.userPrincipalName.toLowerCase().includes(search);
+          (member.displayName ?? '').toLowerCase().includes(search) ||
+          (member.email ?? '').toLowerCase().includes(search) ||
+          (member.userPrincipalName ?? '').toLowerCase().includes(search);
         if (!matches) return false;
       }
 
@@ -264,7 +264,7 @@ export function useTeamsDiscoveryLogic() {
       }
 
       if (memberFilter.hasLicense !== undefined) {
-        const hasLicense = member.assignedLicenses.length > 0;
+        const hasLicense = (member.assignedLicenses?.length ?? 0) > 0;
         if (hasLicense !== memberFilter.hasLicense) return false;
       }
 
@@ -275,10 +275,10 @@ export function useTeamsDiscoveryLogic() {
   const filteredApps = useMemo(() => {
     if (!result?.apps) return [];
 
-    return result.apps.filter((app) => {
+    return result?.apps?.filter((app) => {
       if (appFilter.searchText) {
         const search = appFilter.searchText.toLowerCase();
-        const matches = app.displayName.toLowerCase().includes(search);
+        const matches = (app.displayName ?? '').toLowerCase().includes(search);
         if (!matches) return false;
       }
 

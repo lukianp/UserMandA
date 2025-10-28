@@ -3,7 +3,7 @@
  * Tests core business logic for network discovery functionality
  */
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 
 import { useNetworkDiscoveryLogic } from './useNetworkDiscoveryLogic';

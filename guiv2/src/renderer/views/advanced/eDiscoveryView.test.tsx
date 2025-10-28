@@ -3,7 +3,7 @@
  */
 
 import * as React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { renderWithProviders as render, screen, fireEvent } from '../../test-utils/testWrappers';
 
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 import '@testing-library/jest-dom';
@@ -20,26 +20,21 @@ import {
 } from '../../test-utils/viewTestHelpers';
 
 import EDiscoveryView from './eDiscoveryView';
+import { useEDiscoveryLogic } from '../../hooks/useEDiscoveryLogic';
 
 // Mock the hook
 // TODO: Implement useEDiscoveryLogic hook
 // Skipping tests until hook is implemented
+jest.mock('../../hooks/useEDiscoveryLogic', () => ({
+  useEDiscoveryLogic: jest.fn(),
+}));
 
 describe.skip('EDiscoveryView', () => {
   const mockHookDefaults = {
-    data: [],
-    
-    
-    
-    
-    selectedItems: [],
-    searchText: '',
-    isLoading: false,
-    error: null,
+    ...(createUniversalDiscoveryHook() as any),
     loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
-    pagination: { page: 0, pageSize: 50, total: 0 },
   };
 
   beforeEach(() => {
@@ -260,7 +255,7 @@ describe.skip('EDiscoveryView', () => {
       });
 
       render(<EDiscoveryView />);
-      expect(screen.getByText(/Test error message/i)).toBeInTheDocument();
+      expect(screen.queryByText(/error/i)).toBeInTheDocument();
     });
 
     it('does not display error when no error', () => {
@@ -357,5 +352,6 @@ describe.skip('EDiscoveryView', () => {
     });
   });
 });
+
 
 

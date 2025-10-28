@@ -190,9 +190,9 @@ export function useAuditTrailLogic(): AuditTrailLogicReturn {
       await new Promise(resolve => setTimeout(resolve, 300));
 
       const searchResults = events.filter(event =>
-        event.userName.toLowerCase().includes(query.toLowerCase()) ||
-        event.action.toLowerCase().includes(query.toLowerCase()) ||
-        event.resourceName.toLowerCase().includes(query.toLowerCase()) ||
+        (event.userName ?? '').toLowerCase().includes(query.toLowerCase()) ||
+        (event.action ?? '').toLowerCase().includes(query.toLowerCase()) ||
+        (event.resourceName ?? '').toLowerCase().includes(query.toLowerCase()) ||
         event.details.toString().toLowerCase().includes(query.toLowerCase())
       );
 

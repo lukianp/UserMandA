@@ -82,8 +82,8 @@ export const usePolicyManagementLogic = () => {
     if (filters.searchText) {
       const search = filters.searchText.toLowerCase();
       result = result.filter((item) =>
-        item.name.toLowerCase().includes(search) ||
-        item.description.toLowerCase().includes(search)
+        (item.name ?? '').toLowerCase().includes(search) ||
+        (item.description ?? '').toLowerCase().includes(search)
       );
     }
     return result;

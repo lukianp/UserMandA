@@ -477,7 +477,7 @@ export const usePrivilegedAccessLogic = () => {
    * Filter privileged accounts
    */
   const filteredAccounts = data?.privilegedAccounts.filter((account) => {
-    if (filter.searchText && !account.accountName.toLowerCase().includes(filter.searchText.toLowerCase())) {
+    if (filter.searchText && !(account.accountName ?? '').toLowerCase().includes(filter.searchText.toLowerCase())) {
       return false;
     }
     if (filter.accountType && account.accountType !== filter.accountType) {

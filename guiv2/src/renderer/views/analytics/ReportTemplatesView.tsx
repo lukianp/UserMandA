@@ -355,6 +355,8 @@ const ReportTemplatesView: React.FC = () => {
               placeholder="Search templates..."
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
+              data-cy="search-templates"
+              data-testid="search-input"
             />
           </div>
           <div className="w-64">

@@ -325,7 +325,8 @@ export const APIManagementView: React.FC = () => {
                 onChange={(e) => setSearchText(e.target.value)}
                 placeholder="Search APIs..."
                 startIcon={<Search className="w-4 h-4" />}
-                data-cy="search-apis" data-testid="search-apis"
+                data-cy="search-apis"
+                data-testid="search-apis"
               />
             </div>
             <Select

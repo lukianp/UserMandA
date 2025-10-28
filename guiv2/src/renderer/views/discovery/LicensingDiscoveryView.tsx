@@ -63,7 +63,7 @@ const LicensingDiscoveryView: React.FC = () => {
           progress={progress.percentage}
           onCancel={cancelDiscovery}
           message={progress.message || 'Discovering licenses...'}
-        />
+         data-testid="loading-overlay"/>
       )}
 
       {/* Header */}

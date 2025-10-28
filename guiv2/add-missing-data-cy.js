@@ -3,29 +3,7 @@
  * Based on data-cy-fix-list.json analysis
  */
 
-const fs = require('fs');
-const path = require('path');
-
-// Map of expected data-cy attributes for discovery views
-const discoveryViewPatterns = {
-  // Main view container - normalize to match test expectations
-  viewContainer: [
-    { find: /data-cy="ad-discovery-view"/, replace: 'data-cy="active-directory-discovery-view"' },
-    { find: /data-cy="azure-discovery-view"/, replace: 'data-cy="azure-discovery-view"' },
-    { find: /data-cy="exchange-discovery-view"/, replace: 'data-cy="exchange-discovery-view"' },
-  ],
-
-  // Common buttons that should be present in all discovery views
-  commonButtons: {
-    'export-results-btn': ['Export Results', 'Export', 'Export to CSV', 'Export Data'],
-    'cancel-discovery-btn': ['Cancel Discovery', 'Cancel', 'Stop'],
-    'start-discovery-btn': ['Start Discovery', 'Start', 'Run Discovery'],
-    'refresh-data-btn': ['Refresh', 'Reload', 'Refresh Data'],
-    'clear-logs-btn': ['Clear Logs', 'Clear', 'Clear All'],
-    'clear-filters-btn': ['Clear Filters', 'Reset Filters', 'Reset'],
-    'config-toggle': ['Configure', 'Settings', 'Configuration'],
-  }
-};
+// Map of expected data-cy attributes for discovery views - commented out as unused
 
 // Helper to add data-cy to Button components
 function addDataCyToButtons(content, filePath) {

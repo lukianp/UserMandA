@@ -43,9 +43,9 @@ function addMissingDataCy(file) {
   let modified = false;
   const newLines = [];
 
-  let inStartButton = false;
-  let inExportButton = false;
-  let inCancelButton = false;
+  // let inStartButton = false;
+  // let inExportButton = false;
+  // let inCancelButton = false;
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];

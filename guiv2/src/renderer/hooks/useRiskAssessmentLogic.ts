@@ -61,14 +61,14 @@ export const useRiskAssessmentLogic = () => {
   const filteredData = useMemo(() => {
     let result = [...data];
     if (filters.riskLevel) result = result.filter((item) => item.riskLevel === filters.riskLevel);
-    if (filters.category) result = result.filter((item) => item.category.toLowerCase().includes(filters.category.toLowerCase()));
+    if (filters.category) result = result.filter((item) => (item.category ?? '').toLowerCase().includes(filters.category.toLowerCase()));
     if (filters.status) result = result.filter((item) => item.status === filters.status);
-    if (filters.owner) result = result.filter((item) => item.owner.toLowerCase().includes(filters.owner.toLowerCase()));
+    if (filters.owner) result = result.filter((item) => (item.owner ?? '').toLowerCase().includes(filters.owner.toLowerCase()));
     if (filters.searchText) {
       const search = filters.searchText.toLowerCase();
       result = result.filter((item) =>
-        item.resourceName.toLowerCase().includes(search) ||
-        item.description.toLowerCase().includes(search)
+        (item.resourceName ?? '').toLowerCase().includes(search) ||
+        (item.description ?? '').toLowerCase().includes(search)
       );
     }
     return result;
@@ -76,9 +76,9 @@ export const useRiskAssessmentLogic = () => {
 
   const filterOptions = useMemo(() => ({
     riskLevels: ['Critical', 'High', 'Medium', 'Low'],
-    categories: [...new Set(data.map((d) => d.category))].sort(),
-    statuses: [...new Set(data.map((d) => d.status))].sort(),
-    owners: [...new Set(data.map((d) => d.owner))].sort(),
+    categories: [...new Set((data ?? []).map((d) => d.category))].sort(),
+    statuses: [...new Set((data ?? []).map((d) => d.status))].sort(),
+    owners: [...new Set((data ?? []).map((d) => d.owner))].sort(),
   }), [data]);
 
   const loadData = useCallback(async () => {

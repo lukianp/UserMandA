@@ -5,6 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const glob = require('glob');
 
 const pattern = 'src/renderer/hooks/use*DiscoveryLogic.test.ts';

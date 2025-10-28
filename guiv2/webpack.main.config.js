@@ -10,13 +10,49 @@ const mainConfig = {
    */
   entry: './src/index.ts',
   mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+  target: 'electron-main', // CRITICAL: Specify electron-main target
   // Put your normal webpack config below here
+  output: {
+    publicPath: '', // Prevent automatic publicPath
+  },
   module: {
     rules,
   },
   plugins,
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json'],
+    fallback: {
+      fs: false,
+      path: require.resolve('path-browserify'),
+      crypto: require.resolve('crypto-browserify'),
+      stream: require.resolve('stream-browserify'),
+      os: require.resolve('os-browserify'),
+      child_process: false,
+      'fs/promises': false,
+      vm: require.resolve('vm-browserify'),
+      url: require.resolve('url'),
+      util: require.resolve('util'),
+      buffer: require.resolve('buffer'),
+      assert: require.resolve('assert'),
+      constants: require.resolve('constants-browserify'),
+      querystring: require.resolve('querystring-es3')
+    }
+  },
+  externals: {
+    electron: 'commonjs electron',
+    // External packages that should not be bundled
+    chokidar: 'commonjs chokidar',
+    glob: 'commonjs glob',
+    // Node built-in modules (with node: prefix)
+    'node:fs': 'commonjs fs',
+    'node:path': 'commonjs path',
+    'node:url': 'commonjs url',
+    'node:events': 'commonjs events',
+    'node:stream': 'commonjs stream',
+    'node:fs/promises': 'commonjs fs/promises',
+    'node:string_decoder': 'commonjs string_decoder',
+    'node:util': 'commonjs util',
+    'node:buffer': 'commonjs buffer'
   },
   infrastructureLogging: {
     level: 'error', // Reduce logging to avoid colorette issues
@@ -49,4 +85,4 @@ const mainConfig = {
   },
 };
 
-module.exports = { mainConfig };
+module.exports = mainConfig;

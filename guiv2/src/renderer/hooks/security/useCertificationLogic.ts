@@ -99,7 +99,7 @@ export const useCertificationLogic = () => {
   }, [loadCertifications]);
 
   const filteredCertifications = data?.certifications.filter(cert => {
-    if (filter.searchText && !cert.name.toLowerCase().includes(filter.searchText.toLowerCase())) return false;
+    if (filter.searchText && !(cert.name ?? '').toLowerCase().includes(filter.searchText.toLowerCase())) return false;
     if (filter.type && cert.type !== filter.type) return false;
     if (filter.status && cert.status !== filter.status) return false;
     return true;

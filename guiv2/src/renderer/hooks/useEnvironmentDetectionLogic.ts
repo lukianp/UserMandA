@@ -218,13 +218,13 @@ export const useEnvironmentDetectionLogic = () => {
       case 'services':
         data = state.result?.detectedServices || [];
         if (state.filter.selectedProviders.length > 0) {
-          data = data.filter((s: DetectedService) => state.filter.selectedProviders.includes(s.provider));
+          data = (data ?? []).filter((s: DetectedService) => state.filter.selectedProviders.includes(s.provider));
         }
         if (state.filter.selectedStatuses.length > 0) {
-          data = data.filter((s: DetectedService) => state.filter.selectedStatuses.includes(s.status));
+          data = (data ?? []).filter((s: DetectedService) => state.filter.selectedStatuses.includes(s.status));
         }
         if (state.filter.showOnlyAvailable) {
-          data = data.filter((s: DetectedService) => s.detected);
+          data = (data ?? []).filter((s: DetectedService) => s.detected);
         }
         break;
       case 'recommendations':
@@ -241,7 +241,7 @@ export const useEnvironmentDetectionLogic = () => {
 
     if (state.filter.searchText) {
       const searchLower = state.filter.searchText.toLowerCase();
-      data = data.filter(item => JSON.stringify(item).toLowerCase().includes(searchLower));
+      data = (data ?? []).filter(item => JSON.stringify(item).toLowerCase().includes(searchLower));
     }
 
     return data;
@@ -321,7 +321,7 @@ function convertToCSV(data: any[]): string {
     }, {});
   };
 
-  const flatData = data.map(item => flattenObject(item));
+  const flatData = (data ?? []).map(item => flattenObject(item));
   const headers = Object.keys(flatData[0]);
   const rows = flatData.map(item =>
     headers.map(header => {

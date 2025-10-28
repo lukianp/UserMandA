@@ -187,7 +187,7 @@ export const useNetworkDiscoveryLogic = () => {
     const headers = ['Type', 'Name', 'IP Address', 'Status', 'Details'];
     const rows: string[][] = [];
 
-    data.devices.forEach((device) => {
+    data?.devices?.forEach((device) => {
       rows.push([
         'Device',
         device.hostname,
@@ -209,9 +209,9 @@ export const useNetworkDiscoveryLogic = () => {
     const search = searchText.toLowerCase();
     return devices.filter(
       (device) =>
-        device.hostname.toLowerCase().includes(search) ||
-        device.ipAddress.toLowerCase().includes(search) ||
-        device.type.toLowerCase().includes(search)
+        (device.hostname ?? '').toLowerCase().includes(search) ||
+        (device.ipAddress ?? '').toLowerCase().includes(search) ||
+        (device.type ?? '').toLowerCase().includes(search)
     );
   }, [result, searchText]);
 
@@ -223,7 +223,7 @@ export const useNetworkDiscoveryLogic = () => {
     const search = searchText.toLowerCase();
     return subnets.filter(
       (subnet) =>
-        subnet.network.toLowerCase().includes(search) ||
+        (subnet.network ?? '').toLowerCase().includes(search) ||
         subnet.gateway?.toLowerCase().includes(search)
     );
   }, [result, searchText]);
@@ -238,7 +238,7 @@ export const useNetworkDiscoveryLogic = () => {
       (port: NetworkPort) =>
         port.portNumber.toString().includes(search) ||
         port.service?.toLowerCase().includes(search) ||
-        port.protocol.toLowerCase().includes(search)
+        (port.protocol ?? '').toLowerCase().includes(search)
     );
   }, [result, searchText]);
 

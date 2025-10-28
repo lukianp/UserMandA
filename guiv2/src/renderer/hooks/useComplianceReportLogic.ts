@@ -156,10 +156,10 @@ export const useComplianceReportLogic = () => {
   }, [data, filters]);
 
   const filterOptions = useMemo(() => {
-    const frameworks = [...new Set(data.map((d) => d.framework).filter(Boolean))].sort();
-    const statuses = [...new Set(data.map((d) => d.status).filter(Boolean))].sort();
+    const frameworks = [...new Set((data ?? []).map((d) => d.framework).filter(Boolean))].sort();
+    const statuses = [...new Set((data ?? []).map((d) => d.status).filter(Boolean))].sort();
     const riskLevels = ['Critical', 'High', 'Medium', 'Low'];
-    const owners = [...new Set(data.map((d) => d.owner).filter(Boolean))].sort();
+    const owners = [...new Set((data ?? []).map((d) => d.owner).filter(Boolean))].sort();
     return { frameworks, statuses, riskLevels, owners };
   }, [data]);
 

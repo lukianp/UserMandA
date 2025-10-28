@@ -639,7 +639,7 @@ export const useLicensingDiscoveryLogic = () => {
       return flattened;
     };
 
-    const flattenedData = data.map(item => flattenObject(item));
+    const flattenedData = (data ?? []).map(item => flattenObject(item));
     const headers = Object.keys(flattenedData[0]);
 
     const csvContent = [

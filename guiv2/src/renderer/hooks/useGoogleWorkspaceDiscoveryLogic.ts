@@ -342,11 +342,11 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
         data = state.result?.users || [];
         // Filter by org units
         if (state.filter.selectedOrgUnits.length > 0) {
-          data = data.filter((u: GoogleUser) => state.filter.selectedOrgUnits.includes(u.orgUnitPath));
+          data = (data ?? []).filter((u: GoogleUser) => state.filter.selectedOrgUnits.includes(u.orgUnitPath));
         }
         // Filter by status
         if (state.filter.selectedStatuses.length > 0) {
-          data = data.filter((u: GoogleUser) => {
+          data = (data ?? []).filter((u: GoogleUser) => {
             if (u.suspended && state.filter.selectedStatuses.includes('suspended')) return true;
             if (u.archived && state.filter.selectedStatuses.includes('archived')) return true;
             if (!u.suspended && !u.archived && state.filter.selectedStatuses.includes('active')) return true;
@@ -355,7 +355,7 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
         }
         // Filter by admin status
         if (state.filter.showOnlyAdmins) {
-          data = data.filter((u: GoogleUser) => u.isAdmin);
+          data = (data ?? []).filter((u: GoogleUser) => u.isAdmin);
         }
         break;
       case 'groups':
@@ -380,7 +380,7 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
     // Apply search filter
     if (state.filter.searchText) {
       const searchLower = state.filter.searchText.toLowerCase();
-      data = data.filter(item =>
+      data = (data ?? []).filter(item =>
         JSON.stringify(item).toLowerCase().includes(searchLower)
       );
     }
@@ -485,7 +485,7 @@ function convertToCSV(data: any[]): string {
     }, {});
   };
 
-  const flatData = data.map(item => flattenObject(item));
+  const flatData = (data ?? []).map(item => flattenObject(item));
   const headers = Object.keys(flatData[0]);
 
   const rows = flatData.map(item =>

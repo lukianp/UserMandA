@@ -308,7 +308,7 @@ export const useOneDriveDiscoveryLogic = () => {
     // Apply search filter
     if (debouncedSearch) {
       const searchLower = debouncedSearch.toLowerCase();
-      data = data.filter((item: any) =>
+      data = (data ?? []).filter((item: any) =>
         Object.values(item).some(value =>
           String(value).toLowerCase().includes(searchLower)
         )
@@ -317,19 +317,19 @@ export const useOneDriveDiscoveryLogic = () => {
 
     // Apply filters based on tab
     if (state.selectedTab === 'accounts' && state.filter.accountStatus) {
-      data = data.filter((account: OneDriveAccount) =>
+      data = (data ?? []).filter((account: OneDriveAccount) =>
         state.filter.accountStatus?.includes(account.status)
       );
     }
 
     if (state.selectedTab === 'files' && state.filter.fileTypes) {
-      data = data.filter((file: OneDriveFile) =>
+      data = (data ?? []).filter((file: OneDriveFile) =>
         state.filter.fileTypes?.includes(file.extension)
       );
     }
 
     if (state.selectedTab === 'sharing' && state.filter.riskLevel) {
-      data = data.filter((share: OneDriveSharing) =>
+      data = (data ?? []).filter((share: OneDriveSharing) =>
         state.filter.riskLevel?.includes(share.securityRisk)
       );
     }

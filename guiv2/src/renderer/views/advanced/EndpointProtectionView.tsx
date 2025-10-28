@@ -1,5 +1,16 @@
 import React from 'react';
-import { Shield, Lock, Cloud, FileText, AlertCircle, Settings, Play, Plus, Search, RefreshCw } from 'lucide-react';
+import {
+  Shield,
+  Lock,
+  Cloud,
+  FileText,
+  AlertCircle,
+  Settings,
+  Play,
+  Plus,
+  Search,
+  RefreshCw,
+} from 'lucide-react';
 
 import { Button } from '../../components/atoms/Button';
 import DataTableOrganism from '../../components/organisms/DataTable';
@@ -34,11 +45,17 @@ export const EndpointProtectionView: React.FC = () => {
       sortable: true,
       cell: (value: any, row: any) => (
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${
-            row.status === 'online' ? 'bg-green-500' :
-            row.status === 'offline' ? 'bg-gray-500' :
-            row.status === 'quarantined' ? 'bg-red-500' : 'bg-orange-500'
-          }`} />
+          <div
+            className={`w-2 h-2 rounded-full ${
+              row.status === 'online'
+                ? 'bg-green-500'
+                : row.status === 'offline'
+                ? 'bg-gray-500'
+                : row.status === 'quarantined'
+                ? 'bg-red-500'
+                : 'bg-orange-500'
+            }`}
+          />
           <span className="font-medium">{value}</span>
         </div>
       ),
@@ -102,15 +119,21 @@ export const EndpointProtectionView: React.FC = () => {
     },
   ];
 
-  const handleQuarantine = React.useCallback(async (endpointId: string) => {
-    await quarantineEndpoint(endpointId, 'Manual quarantine from UI');
-    refreshData();
-  }, [quarantineEndpoint, refreshData]);
+  const handleQuarantine = React.useCallback(
+    async (endpointId: string) => {
+      await quarantineEndpoint(endpointId, 'Manual quarantine from UI');
+      refreshData();
+    },
+    [quarantineEndpoint, refreshData],
+  );
 
-  const handleScan = React.useCallback(async (endpointId: string) => {
-    await scanEndpoint(endpointId, 'full');
-    refreshData();
-  }, [scanEndpoint, refreshData]);
+  const handleScan = React.useCallback(
+    async (endpointId: string) => {
+      await scanEndpoint(endpointId, 'full');
+      refreshData();
+    },
+    [scanEndpoint, refreshData],
+  );
 
   const handleBulkScan = React.useCallback(async () => {
     for (const endpointId of selectedEndpoints) {
@@ -120,11 +143,17 @@ export const EndpointProtectionView: React.FC = () => {
 
   if (error) {
     return (
-    <div className="flex flex-col h-full p-6" data-testid="endpoint-protection-view" data-cy="endpoint-protection-view">
+      <div
+        className="flex flex-col h-full p-6"
+        data-testid="endpoint-protection-view"
+        data-cy="endpoint-protection-view"
+      >
         <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <AlertCircle className="w-5 h-5 text-red-500" />
           <div>
-            <p className="font-medium text-red-800 dark:text-red-200">Error loading endpoint protection data</p>
+            <p className="font-medium text-red-800 dark:text-red-200">
+              Error loading endpoint protection data
+            </p>
             <p className="text-sm text-red-600 dark:text-red-300">{error}</p>
           </div>
         </div>
@@ -155,17 +184,23 @@ export const EndpointProtectionView: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border">
           <Shield className="w-8 h-8 text-blue-500 mb-3" />
-          <h3 className="font-semibold text-sm text-gray-600 dark:text-gray-400 mb-1">Total Endpoints</h3>
+          <h3 className="font-semibold text-sm text-gray-600 dark:text-gray-400 mb-1">
+            Total Endpoints
+          </h3>
           <div className="text-2xl font-bold">{metrics.endpoints.total}</div>
           <div className="text-xs text-gray-500 mt-1">
-            {metrics.endpoints.online} online • {metrics.endpoints.offline} offline
+            {metrics.endpoints.online} online / {metrics.endpoints.offline} offline
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border">
           <Lock className="w-8 h-8 text-green-500 mb-3" />
-          <h3 className="font-semibold text-sm text-gray-600 dark:text-gray-400 mb-1">Compliance Score</h3>
-          <div className="text-2xl font-bold">{Math.round(metrics.compliance.overallScore)}%</div>
+          <h3 className="font-semibold text-sm text-gray-600 dark:text-gray-400 mb-1">
+            Compliance Score
+          </h3>
+          <div className="text-2xl font-bold">
+            {Math.round(metrics.compliance.overallScore)}%
+          </div>
           <div className="text-xs text-gray-500 mt-1">
             {metrics.compliance.compliantEndpoints} compliant
           </div>
@@ -173,7 +208,9 @@ export const EndpointProtectionView: React.FC = () => {
 
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border">
           <AlertCircle className="w-8 h-8 text-orange-500 mb-3" />
-          <h3 className="font-semibold text-sm text-gray-600 dark:text-gray-400 mb-1">Active Threats</h3>
+          <h3 className="font-semibold text-sm text-gray-600 dark:text-gray-400 mb-1">
+            Active Threats
+          </h3>
           <div className="text-2xl font-bold">{metrics.threats.active}</div>
           <div className="text-xs text-gray-500 mt-1">
             {metrics.threats.contained} contained
@@ -182,7 +219,9 @@ export const EndpointProtectionView: React.FC = () => {
 
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border">
           <FileText className="w-8 h-8 text-purple-500 mb-3" />
-          <h3 className="font-semibold text-sm text-gray-600 dark:text-gray-400 mb-1">Open Vulnerabilities</h3>
+          <h3 className="font-semibold text-sm text-gray-600 dark:text-gray-400 mb-1">
+            Open Vulnerabilities
+          </h3>
           <div className="text-2xl font-bold">{metrics.vulnerabilities.total}</div>
           <div className="text-xs text-gray-500 mt-1">
             {metrics.vulnerabilities.critical} critical
@@ -198,6 +237,7 @@ export const EndpointProtectionView: React.FC = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             startIcon={<Search className="w-4 h-4" />}
+            data-testid="search-input"
           />
         </div>
         <div className="flex gap-2">
@@ -218,21 +258,25 @@ export const EndpointProtectionView: React.FC = () => {
       {/* Endpoints Table */}
       <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg border overflow-hidden">
         <DataTableOrganism
-          data={endpoints.filter(endpoint =>
-            endpoint.hostname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            endpoint.ipAddress.includes(searchTerm) ||
-            endpoint.osType.toLowerCase().includes(searchTerm.toLowerCase())
+          data={endpoints.filter(
+            (endpoint) =>
+              endpoint.hostname
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase()) ||
+              endpoint.ipAddress.includes(searchTerm) ||
+              endpoint.osType.toLowerCase().includes(searchTerm.toLowerCase()),
           )}
           columns={endpointColumns}
           loading={isLoading}
           selectable={true}
-          onSelectionChange={(selectedRows: any[]) => setSelectedEndpoints(selectedRows.map(r => r.id))}
+          onSelectionChange={(selectedRows: any[]) =>
+            setSelectedEndpoints(selectedRows.map((r) => r.id))
+          }
           emptyMessage="No endpoints found"
         />
       </div>
     </div>
   );
 };
-
 
 export default EndpointProtectionView;

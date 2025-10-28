@@ -61,13 +61,13 @@ export const useMigrationMappingLogic = () => {
     }
 
     // Search filter
-    if (searchText.trim()) {
+    if ((searchText ?? '').trim()) {
       const searchLower = searchText.toLowerCase();
       result = result.filter(
         m =>
-          m.sourceName.toLowerCase().includes(searchLower) ||
+          (m.sourceName ?? '').toLowerCase().includes(searchLower) ||
           m.targetName?.toLowerCase().includes(searchLower) ||
-          m.sourceId.toLowerCase().includes(searchLower)
+          (m.sourceId ?? '').toLowerCase().includes(searchLower)
       );
     }
 

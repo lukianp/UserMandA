@@ -1,0 +1,3 @@
+{
+  "extends": "./guiv2/tsconfig.json"
+}

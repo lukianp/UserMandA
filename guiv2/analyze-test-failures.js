@@ -18,13 +18,13 @@ console.log('='.repeat(80));
 console.log();
 
 console.log('OVERALL SUMMARY:');
-console.log(\`  Total Suites: \${report.numTotalTestSuites}\`);
-console.log(\`  Failed Suites: \${report.numFailedTestSuites}\`);
-console.log(\`  Passed Suites: \${report.numPassedTestSuites}\`);
-console.log(\`  Total Tests: \${report.numTotalTests}\`);
-console.log(\`  Failed Tests: \${report.numFailedTests}\`);
-console.log(\`  Passed Tests: \${report.numPassedTests}\`);
-console.log(\`  Pass Rate: \${((report.numPassedTests / report.numTotalTests) * 100).toFixed(1)}%\`);
+console.log(`  Total Suites: ${report.numTotalTestSuites}`);
+console.log(`  Failed Suites: ${report.numFailedTestSuites}`);
+console.log(`  Passed Suites: ${report.numPassedTestSuites}`);
+console.log(`  Total Tests: ${report.numTotalTests}`);
+console.log(`  Failed Tests: ${report.numFailedTests}`);
+console.log(`  Passed Tests: ${report.numPassedTests}`);
+console.log(`  Pass Rate: ${((report.numPassedTests / report.numTotalTests) * 100).toFixed(1)}%`);
 console.log();
 
 // Analyze failure patterns
@@ -68,16 +68,16 @@ if (report.testResults) {
 console.log('ERROR PATTERNS:');
 const sortedPatterns = Object.entries(errorPatterns).sort((a, b) => b[1] - a[1]);
 sortedPatterns.forEach(([pattern, count]) => {
-  console.log(\`  \${pattern}: \${count}\`);
+  console.log(`  ${pattern}: ${count}`);
 });
 console.log();
 
-console.log(\`FAILED SUITES (\${failedSuites.length}):\`);
+console.log(`FAILED SUITES (${failedSuites.length}):`);
 failedSuites.slice(0, 20).forEach(suite => {
-  console.log(\`  - \${suite}\`);
+  console.log(`  - ${suite}`);
 });
 if (failedSuites.length > 20) {
-  console.log(\`  ... and \${failedSuites.length - 20} more\`);
+  console.log(`  ... and ${failedSuites.length - 20} more`);
 }
 
 const detailedReport = {

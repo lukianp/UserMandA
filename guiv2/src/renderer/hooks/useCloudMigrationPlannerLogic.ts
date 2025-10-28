@@ -62,11 +62,11 @@ export const useCloudMigrationPlannerLogic = () => {
    * Filter data based on search
    */
   const filteredData = useCallback(() => {
-    return data.filter(migration => {
+    return (data ?? []).filter(migration => {
       return !searchText ||
-        migration.application.toLowerCase().includes(searchText.toLowerCase()) ||
-        migration.targetCloud.toLowerCase().includes(searchText.toLowerCase()) ||
-        migration.status.toLowerCase().includes(searchText.toLowerCase());
+        (migration.application ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (migration.targetCloud ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (migration.status ?? '').toLowerCase().includes(searchText.toLowerCase());
     });
   }, [data, searchText]);
 

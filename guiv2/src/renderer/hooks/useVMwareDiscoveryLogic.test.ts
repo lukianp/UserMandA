@@ -3,7 +3,7 @@
  * Ensures VMware discovery logic exposes expected API
  */
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 
 import { useVMwareDiscoveryLogic } from './useVMwareDiscoveryLogic';

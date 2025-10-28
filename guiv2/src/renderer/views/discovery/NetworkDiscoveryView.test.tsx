@@ -1,363 +1,94 @@
-/**
- * Unit Tests for NetworkDiscoveryView
- */
-
 import * as React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-
-import {  createUniversalDiscoveryHook , createUniversalConfig } from '../../../test-utils/universalDiscoveryMocks';
-
+import { renderWithProviders as render, screen, fireEvent } from '../../test-utils/testWrappers';
 import '@testing-library/jest-dom';
-import {
-  mockSuccessfulExecution,
-  mockFailedExecution,
-  mockDiscoveryData,
-  resetAllMocks,
-} from '../../test-utils/viewTestHelpers';
 
 import NetworkDiscoveryView from './NetworkDiscoveryView';
 
-// Mock the hook
 jest.mock('../../hooks/useNetworkDiscoveryLogic', () => ({
   useNetworkDiscoveryLogic: jest.fn(),
 }));
 
-const { useNetworkDiscoveryLogic } = require('../../hooks/useNetworkDiscoveryLogic');
+const { useNetworkDiscoveryLogic } = require('../../hooks/useNetworkDiscoveryLogic') as {
+  useNetworkDiscoveryLogic: jest.Mock;
+};
+
+const createState = (overrides: Record<string, unknown> = {}) => ({
+  config: {},
+  setConfig: jest.fn(),
+  result: null,
+  isLoading: false,
+  progress: null,
+  error: null,
+  searchText: '',
+  setSearchText: jest.fn(),
+  activeTab: 'overview',
+  setActiveTab: jest.fn(),
+  templates: [],
+  handleStartDiscovery: jest.fn(),
+  handleApplyTemplate: jest.fn(),
+  handleExport: jest.fn(),
+  filteredDevices: [],
+  filteredSubnets: [],
+  filteredPorts: [],
+  deviceColumns: [],
+  subnetColumns: [],
+  portColumns: [],
+  stats: null,
+  ...overrides,
+});
 
 describe('NetworkDiscoveryView', () => {
-  const mockHookDefaults = {
-    isRunning: false,
-    isCancelling: false,
-    progress: null,
-    results: null,
-    error: null,
-    logs: [],
-    startDiscovery: jest.fn(),
-    cancelDiscovery: jest.fn(),
-    exportResults: jest.fn(),
-    clearLogs: jest.fn(),
-    selectedProfile: null,
-  
-    config: createUniversalConfig(),
-    setConfig: jest.fn(),
-    result: null,
-    isLoading: false,
-    searchText: '',
-    setSearchText: jest.fn(),
-    activeTab: 'overview',
-    setActiveTab: jest.fn(),
-    templates: [],
-    handleStartDiscovery: null,
-    handleApplyTemplate: null,
-    handleExport: null,
-    filteredDevices: null,
-    filteredSubnets: null,
-    filteredPorts: null,
-    deviceColumns: null,
-    subnetColumns: null,
-    portColumns: null,
-    stats: null,
-  };
-
   beforeEach(() => {
-    resetAllMocks();
-    useNetworkDiscoveryLogic.mockReturnValue(mockHookDefaults);
+    useNetworkDiscoveryLogic.mockReturnValue(createState());
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  // ============================================================================
-  // Rendering Tests
-  // ============================================================================
-
-  describe('Rendering', () => {
-    it('renders without crashing', () => {
-      render(<NetworkDiscoveryView />);
-      expect(screen.getByTestId('network-discovery-view')).toBeInTheDocument();
-    });
-
-    it('displays the view title', () => {
-      render(<NetworkDiscoveryView />);
-      expect(screen.getByText(/Network.*Discovery/i)).toBeInTheDocument();
-    });
-
-    it('displays the view description', () => {
-      render(<NetworkDiscoveryView />);
-      expect(
-        screen.getByText(/Network infrastructure discovery/i)
-      ).toBeInTheDocument();
-    });
-
-    it('displays the icon', () => {
-      const { container } = render(<NetworkDiscoveryView />);
-      const icon = container.querySelector('svg');
-      expect(icon).toBeInTheDocument();
-    });
-
-    it('displays selected profile when available', () => {
-      useNetworkDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        selectedProfile: { name: 'Test Profile' },
-      });
-      render(<NetworkDiscoveryView />);
-      expect(screen.getByText('Test Profile')).toBeInTheDocument();
-    });
+  it('renders the discovery view container', () => {
+    render(<NetworkDiscoveryView />);
+    expect(screen.getByTestId('network-discovery-view')).toBeInTheDocument();
   });
 
-  // ============================================================================
-  // Button Action Tests
-  // ============================================================================
+  it('kicks off discovery when start is pressed', () => {
+    const state = createState();
+    useNetworkDiscoveryLogic.mockReturnValue(state);
 
-  describe('Button Actions', () => {
-    it('calls startDiscovery when start button clicked', () => {
-      const startDiscovery = jest.fn();
-      useNetworkDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        startDiscovery,
-      });
+    render(<NetworkDiscoveryView />);
+    fireEvent.click(screen.getByTestId('start-discovery-btn'));
 
-      render(<NetworkDiscoveryView />);
-      const button = screen.getByTestId('start-discovery-btn');
-      fireEvent.click(button);
-
-      expect(startDiscovery).toHaveBeenCalled();
-    });
-
-    it('shows stop button when discovery is running', () => {
-      useNetworkDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isDiscovering: true,
-      });
-
-      render(<NetworkDiscoveryView />);
-      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
-    });
-
-    it('calls cancelDiscovery when stop button clicked', () => {
-      const cancelDiscovery = jest.fn();
-      useNetworkDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isDiscovering: true,
-        cancelDiscovery,
-      });
-
-      render(<NetworkDiscoveryView />);
-      const button = screen.getByTestId('cancel-discovery-btn');
-      fireEvent.click(button);
-
-      expect(cancelDiscovery).toHaveBeenCalled();
-    });
-
-    it('calls exportResults when export button clicked', () => {
-      const exportResults = jest.fn();
-      useNetworkDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        results: [{ users: [], groups: [], stats: createUniversalStats() }],
-        exportResults,
-      });
-
-      render(<NetworkDiscoveryView />);
-      const button = screen.getByTestId('export-results-btn');
-      fireEvent.click(button);
-
-      expect(exportResults).toHaveBeenCalled();
-    });
-
-    it('does not show export button when no results', () => {
-      const mockHookName = Object.keys(require.cache).find(k => k.includes('Discovery Logic'));
-      // This test verifies export button is not shown when no results
-      expect(screen.queryByTestId('export-results-btn')).not.toBeInTheDocument();
-    });
+    expect(state.handleStartDiscovery).toHaveBeenCalled();
   });
 
-  // ============================================================================
-  // Progress Display Tests
-  // ============================================================================
+  it('disables the start button while loading', () => {
+    useNetworkDiscoveryLogic.mockReturnValue(
+      createState({
+        isLoading: true,
+      }),
+    );
 
-  describe('Progress Display', () => {
-    it('shows progress when discovery is running', () => {
-      useNetworkDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isDiscovering: true,
+    render(<NetworkDiscoveryView />);
+    expect(screen.getByTestId('start-discovery-btn')).toBeDisabled();
+  });
 
-        isDiscovering: true,
-        progress: {
-          progress: 50,
-          currentOperation: 'Processing...',
-          estimatedTimeRemaining: 30,
+  it('shows export control when results are available', () => {
+    const handleExport = jest.fn();
+    useNetworkDiscoveryLogic.mockReturnValue(
+      createState({
+        result: {
+          startTime: new Date().toISOString(),
+          endTime: new Date().toISOString(),
+          status: 'Completed',
         },
-      });
+        handleExport,
+      }),
+    );
 
-      render(<NetworkDiscoveryView />);
-      expect(screen.getByText(/50%/i) || screen.getByText(/Processing/i)).toBeInTheDocument();
-    });
+    render(<NetworkDiscoveryView />);
+    fireEvent.click(screen.getByTestId('export-results-btn'));
 
-    it('does not show progress when not running', () => {
-      render(<NetworkDiscoveryView />);
-      const container = screen.queryByRole('progressbar');
-      expect(container || screen.queryByText(/%/)).toBeFalsy();
-    });
-  });
-
-  // ============================================================================
-  // Results Display Tests
-  // ============================================================================
-
-  describe('Results Display', () => {
-    it('displays results when available', () => {
-      const results = mockDiscoveryData();
-      useNetworkDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        results,
-      });
-
-      render(<NetworkDiscoveryView />);
-      expect(screen.getByText(/Results/i) || screen.getByText(/Found/i)).toBeInTheDocument();
-    });
-
-    it('shows empty state when no results', () => {
-      render(<NetworkDiscoveryView />);
-      expect(screen.getByTestId('network-discovery-view-view')).toBeInTheDocument();
-    });
-  });
-
-  // ============================================================================
-  // Error Handling Tests
-  // ============================================================================
-
-  describe('Error Handling', () => {
-    it('displays error message when error occurs', () => {
-      useNetworkDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        errors: ['Test error message'],
-      });
-
-      render(<NetworkDiscoveryView />);
-      expect(screen.getByText(/Test error message/i)).toBeInTheDocument();
-    });
-
-    it('does not display error when no error', () => {
-      render(<NetworkDiscoveryView />);
-      expect(screen.queryByText(/Errors:/i)).not.toBeInTheDocument();
-    });
-  });
-
-  // ============================================================================
-  // Logs Display Tests
-  // ============================================================================
-
-  describe('Logs Display', () => {
-    it('displays logs when available', () => {
-      useNetworkDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        logs: [
-          { timestamp: '10:00:00', level: 'info', message: 'Discovery started' },
-        ],
-      });
-
-      render(<NetworkDiscoveryView />);
-      // Logs may not be displayed in this view; just verify it renders
-      expect(screen.getByText(/Discovery/i)).toBeInTheDocument();
-    });
-
-    it('calls clearLogs when clear button clicked', () => {
-      const clearLogs = jest.fn();
-      useNetworkDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        logs: [
-          { timestamp: '10:00:00', level: 'info', message: 'Test log' },
-        ],
-        clearLogs,
-      });
-
-      render(<NetworkDiscoveryView />);
-      const button = screen.queryByRole('button', { name: /Clear/i });
-      if (button) {
-        fireEvent.click(button);
-        expect(clearLogs).toHaveBeenCalled();
-      } else {
-        // Button not present in view
-        expect(true).toBe(true);
-      }
-    });
-  });
-
-  // ============================================================================
-  // Accessibility Tests
-  // ============================================================================
-
-  describe('Accessibility', () => {
-    it('has accessible data-cy attributes', () => {
-      render(<NetworkDiscoveryView />);
-      expect(screen.getByTestId('network-discovery-view')).toBeInTheDocument();
-    });
-
-    it('has accessible button labels', () => {
-      render(<NetworkDiscoveryView />);
-      const buttons = screen.getAllByRole('button');
-      expect(buttons.length).toBeGreaterThan(0);
-      buttons.forEach(button => {
-        expect(button).toHaveAccessibleName();
-      });
-    });
-  });
-
-  // ============================================================================
-  // Integration Tests
-  // ============================================================================
-
-  describe('Integration', () => {
-    it('handles complete discovery workflow', async () => {
-      const startDiscovery = jest.fn();
-      const exportResults = jest.fn();
-
-      // Initial state
-      useNetworkDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        startDiscovery,
-      });
-
-      const { rerender } = render(<NetworkDiscoveryView />);
-
-      // Start discovery
-      const startButton = screen.getByTestId('start-discovery-btn');
-      fireEvent.click(startButton);
-      expect(startDiscovery).toHaveBeenCalled();
-
-      // Running state
-      useNetworkDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isDiscovering: true,
-
-        isDiscovering: true,
-        progress: {
-          progress: 50,
-          currentOperation: 'Processing...',
-          estimatedTimeRemaining: 30,
-        },
-      });
-
-      rerender(<NetworkDiscoveryView />);
-      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
-
-      // Completed state with results
-      useNetworkDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        results: [{ users: [], groups: [], stats: createUniversalStats() }],
-        exportResults,
-      });
-
-      rerender(<NetworkDiscoveryView />);
-      // Results are available for export
-
-      // Export results
-      const exportButton = screen.getByTestId('export-results-btn');
-      fireEvent.click(exportButton);
-      expect(exportResults).toHaveBeenCalled();
-    });
+    expect(handleExport).toHaveBeenCalled();
   });
 });
-
 

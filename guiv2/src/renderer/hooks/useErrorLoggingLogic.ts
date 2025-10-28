@@ -117,7 +117,7 @@ export const useErrorLoggingLogic = (options: ErrorLoggingOptions = {}) => {
     const sensitiveKeys = ['password', 'token', 'secret', 'key', 'credential', 'auth', 'authorization'];
 
     for (const [key, value] of Object.entries(obj)) {
-      if (sensitiveKeys.some(sensitive => key.toLowerCase().includes(sensitive))) {
+      if (sensitiveKeys.some(sensitive => (key ?? '').toLowerCase().includes(sensitive))) {
         sanitized[key] = '[REDACTED]';
       } else if (typeof value === 'object' && value !== null) {
         sanitized[key] = sanitizeContext(value, depth - 1);

@@ -57,7 +57,8 @@ const EnvironmentDetectionView: React.FC = () => {
         <LoadingOverlay
           progress={progress.percentage}
           message={progress.message || 'Detecting environment services...'}
-          onCancel={cancelDetection}
+          onCancel={cancelDiscovery}
+          data-testid="loading-overlay"
         />
       )}
 
@@ -76,8 +77,8 @@ const EnvironmentDetectionView: React.FC = () => {
         <div className="flex gap-3">
           {result && (
             <>
-              <Button variant="secondary" onClick={exportToCSV} icon={<Download className="w-4 h-4" />}>Export CSV</Button>
-              <Button variant="secondary" onClick={exportToExcel} icon={<FileSpreadsheet className="w-4 h-4" />}>Export Excel</Button>
+              <Button variant="secondary" onClick={exportToCSV} icon={<Download className="w-4 h-4" />} data-testid="export-csv-btn">Export CSV</Button>
+              <Button variant="secondary" onClick={exportToExcel} icon={<FileSpreadsheet className="w-4 h-4" />} data-testid="export-excel-btn">Export Excel</Button>
             </>
           )}
           <Button
@@ -85,6 +86,7 @@ const EnvironmentDetectionView: React.FC = () => {
             onClick={handleStartDetection}
             disabled={isDetecting}
             icon={isDetecting ? <XCircle className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            data-testid="start-discovery-btn"
           >
             {isDetecting ? 'Detecting...' : 'Start Detection'}
           </Button>
@@ -96,6 +98,7 @@ const EnvironmentDetectionView: React.FC = () => {
         <button
           onClick={() => setShowConfig(!showConfig)}
           className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+          data-testid="toggle-config-btn"
         >
           <span className="font-medium">Detection Configuration</span>
           {showConfig ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -110,21 +113,25 @@ const EnvironmentDetectionView: React.FC = () => {
                   label="Detect Azure"
                   checked={config.detectAzure || false}
                   onChange={(checked) => updateConfig({ detectAzure: checked })}
+                  data-testid="detect-azure-checkbox"
                 />
                 <Checkbox
                   label="Detect On-Premises"
                   checked={config.detectOnPremises || false}
                   onChange={(checked) => updateConfig({ detectOnPremises: checked })}
+                  data-testid="detect-onpremises-checkbox"
                 />
                 <Checkbox
                   label="Detect AWS"
                   checked={config.detectAWS || false}
                   onChange={(checked) => updateConfig({ detectAWS: checked })}
+                  data-testid="detect-aws-checkbox"
                 />
                 <Checkbox
                   label="Detect GCP"
                   checked={config.detectGCP || false}
                   onChange={(checked) => updateConfig({ detectGCP: checked })}
+                  data-testid="detect-gcp-checkbox"
                 />
               </div>
 
@@ -137,6 +144,7 @@ const EnvironmentDetectionView: React.FC = () => {
                   onChange={(e) => updateConfig({ timeout: parseInt(e.target.value) || 300000 })}
                   min={60000}
                   max={600000}
+                  data-testid="timeout-input"
                 />
               </div>
             </div>
@@ -255,6 +263,7 @@ const EnvironmentDetectionView: React.FC = () => {
               value={filter?.searchText ?? ''}
               onChange={(e) => updateFilter({ searchText: e.target.value })}
               placeholder={`Search ${activeTab}...`}
+              data-testid="search-input"
             />
           </div>
 

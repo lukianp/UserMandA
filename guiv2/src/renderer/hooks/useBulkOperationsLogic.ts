@@ -56,10 +56,10 @@ export function useBulkOperationsLogic(): BulkOperationsLogicReturn {
     const operation: BulkOperation = {
       id: `op-${Date.now()}`,
       name,
-      description: `Bulk operation on ${items.length} items`,
+      description: `Bulk operation on ${(items ?? []).length} items`,
       status: 'pending',
       progress: 0,
-      affectedItems: items.length,
+      affectedItems: (items ?? []).length,
       startTime: new Date(),
     };
 

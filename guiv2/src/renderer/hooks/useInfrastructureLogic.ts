@@ -69,7 +69,7 @@ export const useInfrastructureLogic = () => {
 
   const filteredInfrastructure = infrastructure.filter(item => {
     const matchesSearch = !searchText ||
-      item.name.toLowerCase().includes(searchText.toLowerCase()) ||
+      (item.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
       item.ipAddress.includes(searchText);
     const matchesType = filterType === 'all' || item.type === filterType;
     return matchesSearch && matchesType;

@@ -5,15 +5,164 @@
 
 import { renderHook, act, waitFor } from '@testing-library/react';
 
-import type { SharePointDiscoveryResult, SharePointSite, SharePointList, SharePointPermission } from '../types/models/sharepoint';
+import type {
+  SharePointDiscoveryResult,
+  SharePointSite,
+  SharePointList,
+  SharePointPermission,
+  SharePointDiscoveryStatistics,
+  SharePointDiscoveryTemplate,
+  SharePointDiscoveryConfig,
+  SharePointExportOptions,
+} from '../types/models/sharepoint';
+import { DEFAULT_SHAREPOINT_CONFIG } from '../types/models/sharepoint';
+import type { ProgressData } from '../../shared/types';
 
 import { useSharePointDiscoveryLogic } from './useSharePointDiscoveryLogic';
 
+const baseStatistics: SharePointDiscoveryStatistics = {
+  totalSites: 0,
+  totalStorage: 0,
+  averageStoragePerSite: 0,
+  hubSites: 0,
+  groupConnectedSites: 0,
+  personalSites: 0,
+  totalLists: 0,
+  documentLibraries: 0,
+  totalDocuments: 0,
+  totalListItems: 0,
+  uniquePermissions: 0,
+  brokenInheritanceCount: 0,
+  externallySharedSites: 0,
+  externallySharedLists: 0,
+  customContentTypes: 0,
+  activeWorkflows: 0,
+  runningWorkflowInstances: 0,
+};
+
+const createStatistics = (
+  overrides: Partial<SharePointDiscoveryStatistics> = {}
+): SharePointDiscoveryStatistics => ({
+  ...baseStatistics,
+  ...overrides,
+});
+
+const createSite = (overrides: Partial<SharePointSite> = {}): SharePointSite => ({
+  id: 'site-base',
+  url: 'https://contoso.sharepoint.com/sites/base',
+  title: 'Base Site',
+  description: 'Base site description',
+  template: 'STS#0',
+  templateName: 'STS#0',
+  owner: 'owner@contoso.com',
+  ownerEmail: 'owner@contoso.com',
+  siteAdmins: ['owner@contoso.com'],
+  storageUsage: 1000,
+  storageQuota: 5000,
+  storageWarningLevel: 4000,
+  isHubSite: false,
+  hubSiteId: undefined,
+  sensitivityLabel: undefined,
+  classification: undefined,
+  groupId: undefined,
+  sharingCapability: 'Disabled',
+  externalSharingEnabled: false,
+  allowDownloadingNonWebViewableFiles: true,
+  conditionalAccessPolicy: 'AllowFullAccess',
+  subsiteCount: 0,
+  subsites: [],
+  listCount: 0,
+  documentLibraryCount: 0,
+  lists: [],
+  lastItemModifiedDate: new Date('2024-01-01T00:00:00Z'),
+  lastItemUserModifiedDate: undefined,
+  pageViews: undefined,
+  uniqueVisitors: undefined,
+  created: new Date('2023-01-01T00:00:00Z'),
+  modified: new Date('2024-01-01T00:00:00Z'),
+  timeZoneId: 13,
+  lcid: 1033,
+  ...overrides,
+});
+
+const createList = (overrides: Partial<SharePointList> = {}): SharePointList => ({
+  id: 'list-base',
+  title: 'Documents',
+  description: 'Base list',
+  siteUrl: 'https://contoso.sharepoint.com/sites/base',
+  listUrl: 'https://contoso.sharepoint.com/sites/base/Documents',
+  baseTemplate: 101,
+  baseType: 'DocumentLibrary',
+  itemCount: 0,
+  folderCount: 0,
+  documentCount: 0,
+  totalFileSize: 0,
+  enableVersioning: true,
+  majorVersionLimit: undefined,
+  minorVersionLimit: undefined,
+  contentTypesEnabled: true,
+  contentTypes: [],
+  hasUniquePermissions: false,
+  permissions: [],
+  enableFolderCreation: true,
+  enableAttachments: true,
+  enableModeration: false,
+  requireCheckout: false,
+  created: new Date('2023-01-01T00:00:00Z'),
+  modified: new Date('2024-01-01T00:00:00Z'),
+  lastItemModifiedDate: new Date('2024-01-01T00:00:00Z'),
+  lastItemDeletedDate: undefined,
+  defaultViewUrl: 'https://contoso.sharepoint.com/sites/base/Documents/AllItems.aspx',
+  viewCount: 1,
+  ...overrides,
+});
+
+const createDiscoveryResult = (
+  overrides: Partial<SharePointDiscoveryResult> = {}
+): SharePointDiscoveryResult => ({
+  id: 'result-1',
+  startTime: new Date('2024-01-01T00:00:00Z'),
+  endTime: new Date('2024-01-01T01:00:00Z'),
+  duration: 3600,
+  status: 'completed',
+  config: DEFAULT_SHAREPOINT_CONFIG,
+  sites: [],
+  lists: [],
+  permissions: [],
+  contentTypes: [],
+  workflows: [],
+  statistics: createStatistics(),
+  errors: [],
+  warnings: [],
+  discoveredBy: 'tester@contoso.com',
+  environment: 'Online',
+  tenantUrl: 'https://contoso.sharepoint.com',
+  ...overrides,
+});
+
+const createExportOptions = (
+  overrides: Partial<SharePointExportOptions> = {}
+): SharePointExportOptions => ({
+  format: 'CSV',
+  includeSites: true,
+  includeLists: true,
+  includePermissions: true,
+  includeContentTypes: false,
+  includeWorkflows: false,
+  includeStatistics: true,
+  splitByType: false,
+  fileName: undefined,
+  ...overrides,
+});
+
 // Mock electron API
+const mockOnProgress = jest.fn<jest.Mock, [(data: ProgressData) => void]>();
+mockOnProgress.mockReturnValue(jest.fn());
+
 const mockElectronAPI = {
   executeModule: jest.fn(),
   cancelExecution: jest.fn(),
-  onProgress: jest.fn(() => jest.fn()),
+  onProgress: mockOnProgress,
 };
 
 // Setup window.electronAPI mock
@@ -93,36 +242,40 @@ describe('useSharePointDiscoveryLogic', () => {
 
   describe('Discovery Execution', () => {
     it('should start discovery successfully', async () => {
-      const mockResult: SharePointDiscoveryResult = {
+      const mockResult: SharePointDiscoveryResult = createDiscoveryResult({
         sites: [
-          {
+          createSite({
             id: 'site1',
             title: 'Team Site',
             url: 'https://contoso.sharepoint.com/sites/team',
+            template: 'STS#3',
             templateName: 'STS#3',
             owner: 'admin@contoso.com',
+            ownerEmail: 'admin@contoso.com',
+            siteAdmins: ['admin@contoso.com'],
             storageUsage: 5000.5,
             storageQuota: 10000.0,
+            storageWarningLevel: 9000,
             isHubSite: true,
             groupId: 'grp123',
             subsiteCount: 3,
             listCount: 15,
+            documentLibraryCount: 7,
             externalSharingEnabled: false,
-            lastItemModifiedDate: '2024-01-15T10:00:00Z',
+            sharingCapability: 'Disabled',
+            lastItemModifiedDate: new Date('2024-01-15T10:00:00Z'),
             description: 'Main team site',
-          },
+          }),
         ],
-        lists: [],
-        permissions: [],
-        statistics: {
+        statistics: createStatistics({
           totalSites: 1,
           totalLists: 0,
-          totalPermissions: 0,
+          uniquePermissions: 0,
           totalStorage: 5000.5,
           hubSites: 1,
-          sitesWithExternalSharing: 0,
-        },
-      };
+          externallySharedSites: 0,
+        }),
+      });
 
       mockElectronAPI.executeModule
         .mockResolvedValueOnce({ success: true, data: { templates: [] } }) // Template load
@@ -137,7 +290,9 @@ describe('useSharePointDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+    await waitFor(() => {
       expect(result.current.isDiscovering).toBe(false);
+    });
       expect(result.current.result).toEqual(mockResult);
       expect(result.current.error).toBeNull();
     });
@@ -154,7 +309,9 @@ describe('useSharePointDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+    await waitFor(() => {
       expect(result.current.isDiscovering).toBe(false);
+    });
       expect(result.current.error).toBe(errorMessage);
       expect(result.current.result).toBeNull();
     });
@@ -177,8 +334,8 @@ describe('useSharePointDiscoveryLogic', () => {
     });
 
     it('should set progress during discovery', async () => {
-      let progressCallback: any;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
+      let progressCallback: ((data: ProgressData) => void) | undefined;
+      mockElectronAPI.onProgress.mockImplementation((cb: (data: ProgressData) => void) => {
         progressCallback = cb;
         return jest.fn();
       });
@@ -186,13 +343,14 @@ describe('useSharePointDiscoveryLogic', () => {
       mockElectronAPI.executeModule.mockImplementation(() => {
         if (progressCallback) {
           progressCallback({
+            executionId: 'progress-1',
             message: 'Scanning sites...',
             percentage: 40,
             itemsProcessed: 40,
             totalItems: 100,
           });
         }
-        return Promise.resolve({ success: true, data: { sites: [], lists: [], permissions: [], statistics: {} } });
+        return Promise.resolve({ success: true, data: { sites: [], lists: [], permissions: [], statistics: createStatistics() } });
       });
 
       const { result } = renderHook(() => useSharePointDiscoveryLogic());
@@ -245,17 +403,27 @@ describe('useSharePointDiscoveryLogic', () => {
 
   describe('Template Management', () => {
     it('should load template and apply config', () => {
-      const template = {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      const templateConfig: SharePointDiscoveryConfig = {
+        ...result.current.config,
+        siteUrlPattern: 'https://contoso.sharepoint.com',
+      };
+
+      const template: SharePointDiscoveryTemplate = {
         id: 'tpl1',
         name: 'Custom Template',
         description: 'Test template',
-        config: { siteUrl: 'https://contoso.sharepoint.com' },
+        config: templateConfig,
+        createdBy: 'tester@contoso.com',
+        createdDate: new Date('2024-01-01T00:00:00Z'),
+        modifiedDate: new Date('2024-01-02T00:00:00Z'),
+        isDefault: false,
+        tags: ['unit-test'],
       };
 
-      const { result } = renderHook(() => useSharePointDiscoveryLogic());
-
       act(() => {
-        result.current.loadTemplate(template as any);
+        result.current.loadTemplate(template);
       });
 
       expect(result.current.selectedTemplate).toEqual(template);
@@ -292,38 +460,50 @@ describe('useSharePointDiscoveryLogic', () => {
 
   describe('Site Filtering', () => {
     const mockSites: SharePointSite[] = [
-      {
+      createSite({
         id: 'site1',
         title: 'Marketing Site',
         url: 'https://contoso.sharepoint.com/sites/marketing',
+        template: 'STS#3',
         templateName: 'STS#3',
         owner: 'marketing@contoso.com',
+        ownerEmail: 'marketing@contoso.com',
+        siteAdmins: ['marketing@contoso.com'],
         storageUsage: 8000,
         storageQuota: 10000,
+        storageWarningLevel: 9000,
         isHubSite: true,
         groupId: 'grp1',
         subsiteCount: 5,
         listCount: 20,
+        documentLibraryCount: 12,
         externalSharingEnabled: true,
-        lastItemModifiedDate: '2024-01-15T10:00:00Z',
+        sharingCapability: 'ExternalUserAndGuestSharing',
+        lastItemModifiedDate: new Date('2024-01-15T10:00:00Z'),
         description: 'Marketing team site',
-      },
-      {
+      }),
+      createSite({
         id: 'site2',
         title: 'HR Site',
         url: 'https://contoso.sharepoint.com/sites/hr',
+        template: 'STS#0',
         templateName: 'STS#0',
         owner: 'hr@contoso.com',
+        ownerEmail: 'hr@contoso.com',
+        siteAdmins: ['hr@contoso.com'],
         storageUsage: 2000,
         storageQuota: 5000,
+        storageWarningLevel: 4000,
         isHubSite: false,
         groupId: undefined,
         subsiteCount: 2,
         listCount: 10,
+        documentLibraryCount: 4,
         externalSharingEnabled: false,
-        lastItemModifiedDate: '2024-01-10T10:00:00Z',
+        sharingCapability: 'Disabled',
+        lastItemModifiedDate: new Date('2024-01-10T10:00:00Z'),
         description: 'HR department site',
-      },
+      }),
     ];
 
     beforeEach(() => {
@@ -333,7 +513,7 @@ describe('useSharePointDiscoveryLogic', () => {
           sites: mockSites,
           lists: [],
           permissions: [],
-          statistics: {},
+          statistics: createStatistics(),
         },
       });
     });
@@ -435,36 +615,43 @@ describe('useSharePointDiscoveryLogic', () => {
 
   describe('List Filtering', () => {
     const mockLists: SharePointList[] = [
-      {
+      createList({
         id: 'list1',
         title: 'Documents',
         listUrl: 'https://contoso.sharepoint.com/sites/team/Documents',
         siteUrl: 'https://contoso.sharepoint.com/sites/team',
+        baseTemplate: 101,
         baseType: 'DocumentLibrary',
         itemCount: 500,
+        folderCount: 25,
         documentCount: 450,
         totalFileSize: 1024 * 1024 * 500,
         enableVersioning: true,
         enableModeration: false,
         hasUniquePermissions: true,
-        lastItemModifiedDate: '2024-01-15T10:00:00Z',
+        permissions: [],
+        lastItemModifiedDate: new Date('2024-01-15T10:00:00Z'),
         description: 'Team documents',
-      },
-      {
+      }),
+      createList({
         id: 'list2',
         title: 'Tasks',
         listUrl: 'https://contoso.sharepoint.com/sites/team/Tasks',
         siteUrl: 'https://contoso.sharepoint.com/sites/team',
+        baseTemplate: 100,
         baseType: 'GenericList',
         itemCount: 50,
+        folderCount: 5,
         documentCount: 0,
         totalFileSize: 0,
         enableVersioning: false,
         enableModeration: true,
         hasUniquePermissions: false,
-        lastItemModifiedDate: '2024-01-10T10:00:00Z',
+        contentTypesEnabled: false,
+        contentTypes: [],
+        lastItemModifiedDate: new Date('2024-01-10T10:00:00Z'),
         description: 'Team tasks',
-      },
+      }),
     ];
 
     beforeEach(() => {
@@ -474,7 +661,7 @@ describe('useSharePointDiscoveryLogic', () => {
           sites: [],
           lists: mockLists,
           permissions: [],
-          statistics: {},
+          statistics: createStatistics(),
         },
       });
     });
@@ -578,20 +765,24 @@ describe('useSharePointDiscoveryLogic', () => {
     const mockPermissions: SharePointPermission[] = [
       {
         id: 'perm1',
+        principalId: 'user1',
         principalName: 'John Doe',
         principalEmail: 'john@contoso.com',
         principalType: 'User',
         permissionLevel: 'Full Control',
+        permissionLevels: ['Full Control'],
         scope: 'Site',
         scopeUrl: 'https://contoso.sharepoint.com/sites/team',
         directPermission: true,
       },
       {
         id: 'perm2',
+        principalId: 'group1',
         principalName: 'Marketing Group',
         principalEmail: 'marketing@contoso.com',
-        principalType: 'Group',
+        principalType: 'SharePointGroup',
         permissionLevel: 'Contribute',
+        permissionLevels: ['Contribute'],
         scope: 'List',
         scopeUrl: 'https://contoso.sharepoint.com/sites/team/Documents',
         directPermission: false,
@@ -605,7 +796,7 @@ describe('useSharePointDiscoveryLogic', () => {
           sites: [],
           lists: [],
           permissions: mockPermissions,
-          statistics: {},
+          statistics: createStatistics(),
         },
       });
     });
@@ -633,11 +824,11 @@ describe('useSharePointDiscoveryLogic', () => {
       });
 
       act(() => {
-        result.current.setPermissionFilter({ principalTypes: ['Group'] });
+        result.current.setPermissionFilter({ principalTypes: ['SharePointGroup'] });
       });
 
       expect(result.current.permissions).toHaveLength(1);
-      expect(result.current.permissions[0].principalType).toBe('Group');
+      expect(result.current.permissions[0].principalType).toBe('SharePointGroup');
     });
 
     it('should filter permissions by permission level', async () => {
@@ -694,7 +885,7 @@ describe('useSharePointDiscoveryLogic', () => {
     it('should export data successfully', async () => {
       mockElectronAPI.executeModule
         .mockResolvedValueOnce({ success: true, data: { templates: [] } }) // Template load
-        .mockResolvedValueOnce({ success: true, data: { sites: [], lists: [], permissions: [], statistics: {} } }) // Discovery
+        .mockResolvedValueOnce({ success: true, data: { sites: [], lists: [], permissions: [], statistics: createStatistics() } }) // Discovery
         .mockResolvedValueOnce({ success: true }); // Export
 
       const { result } = renderHook(() => useSharePointDiscoveryLogic());
@@ -703,8 +894,10 @@ describe('useSharePointDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+      const exportOptions = createExportOptions({ format: 'Excel' });
+
       await act(async () => {
-        await result.current.exportData({ format: 'excel', includeSites: true });
+        await result.current.exportData(exportOptions);
       });
 
       expect(mockElectronAPI.executeModule).toHaveBeenLastCalledWith({
@@ -712,7 +905,7 @@ describe('useSharePointDiscoveryLogic', () => {
         functionName: 'Export-SharePointDiscoveryData',
         parameters: {
           Result: expect.any(Object),
-          Options: { format: 'excel', includeSites: true },
+          Options: exportOptions,
         },
       });
     });
@@ -720,8 +913,10 @@ describe('useSharePointDiscoveryLogic', () => {
     it('should not export when no result available', async () => {
       const { result } = renderHook(() => useSharePointDiscoveryLogic());
 
+      const exportOptions = createExportOptions({ format: 'CSV' });
+
       await act(async () => {
-        await result.current.exportData({ format: 'csv' });
+        await result.current.exportData(exportOptions);
       });
 
       expect(mockElectronAPI.executeModule).toHaveBeenCalledTimes(1);
@@ -776,10 +971,13 @@ describe('useSharePointDiscoveryLogic', () => {
     it('should update config', () => {
       const { result } = renderHook(() => useSharePointDiscoveryLogic());
 
-      const newConfig = { ...result.current.config, siteUrl: 'https://custom.sharepoint.com' };
+      const newConfig: SharePointDiscoveryConfig = {
+        ...result.current.config,
+        siteUrlPattern: 'https://custom.sharepoint.com',
+      };
 
       act(() => {
-        result.current.setConfig(newConfig as any);
+        result.current.setConfig(newConfig);
       });
 
       expect(result.current.config).toEqual(newConfig);
@@ -792,14 +990,14 @@ describe('useSharePointDiscoveryLogic', () => {
 
   describe('Statistics', () => {
     it('should expose statistics from result', async () => {
-      const mockStatistics = {
+      const mockStatistics = createStatistics({
         totalSites: 50,
         totalLists: 250,
-        totalPermissions: 1500,
+        uniquePermissions: 1500,
         totalStorage: 50000.75,
         hubSites: 5,
-        sitesWithExternalSharing: 10,
-      };
+        externallySharedSites: 10,
+      });
 
       mockElectronAPI.executeModule.mockResolvedValue({
         success: true,

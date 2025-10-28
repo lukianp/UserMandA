@@ -68,9 +68,9 @@ export const useThreatAnalysisLogic = () => {
   }, [data, filters]);
 
   const filterOptions = useMemo(() => ({
-    threatTypes: [...new Set(data.map((d) => d.threatType).filter(Boolean))].sort(),
+    threatTypes: [...new Set((data ?? []).map((d) => d.threatType).filter(Boolean))].sort(),
     severities: ['Critical', 'High', 'Medium', 'Low'],
-    statuses: [...new Set(data.map((d) => d.status).filter(Boolean))].sort(),
+    statuses: [...new Set((data ?? []).map((d) => d.status).filter(Boolean))].sort(),
   }), [data]);
 
   const loadData = useCallback(async () => {

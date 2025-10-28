@@ -248,8 +248,8 @@ export const useGroupsViewLogic = () => {
       const searchLower = debouncedSearch.toLowerCase();
       result = result.filter(
         (g) =>
-          g.name.toLowerCase().includes(searchLower) ||
-          g.displayName.toLowerCase().includes(searchLower) ||
+          (g.name ?? '').toLowerCase().includes(searchLower) ||
+          (g.displayName ?? '').toLowerCase().includes(searchLower) ||
           g.description?.toLowerCase().includes(searchLower) ||
           g.email?.toLowerCase().includes(searchLower)
       );
@@ -362,7 +362,7 @@ export const useGroupsViewLogic = () => {
       'Created Date',
     ];
 
-    const rows = data.map((g) => [
+    const rows = (data ?? []).map((g) => [
       g.name,
       g.displayName,
       g.groupType,

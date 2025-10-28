@@ -168,8 +168,8 @@ export const useRoleManagementLogic = () => {
   const getFilteredRoles = () => {
     return roles.filter(role =>
       searchQuery === '' ||
-      role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      role.description.toLowerCase().includes(searchQuery.toLowerCase())
+      (role.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (role.description ?? '').toLowerCase().includes(searchQuery.toLowerCase())
     );
   };
 

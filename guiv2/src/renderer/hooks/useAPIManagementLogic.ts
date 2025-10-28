@@ -58,10 +58,10 @@ export const useAPIManagementLogic = () => {
    * Filter data based on search
    */
   const filteredData = useCallback(() => {
-    return data.filter(api => {
+    return (data ?? []).filter(api => {
       return !searchText ||
-        api.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        api.endpoint.toLowerCase().includes(searchText.toLowerCase());
+        (api.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (api.endpoint ?? '').toLowerCase().includes(searchText.toLowerCase());
     });
   }, [data, searchText]);
 

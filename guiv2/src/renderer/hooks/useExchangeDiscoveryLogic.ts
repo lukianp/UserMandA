@@ -173,14 +173,14 @@ export function useExchangeDiscoveryLogic() {
   const filteredMailboxes = useMemo(() => {
     if (!result?.mailboxes) return [];
 
-    return result.mailboxes.filter((mailbox) => {
+    return result?.mailboxes?.filter((mailbox) => {
       // Search text
       if (mailboxFilter.searchText) {
         const search = mailboxFilter.searchText.toLowerCase();
         const matches =
-          mailbox.displayName.toLowerCase().includes(search) ||
-          mailbox.userPrincipalName.toLowerCase().includes(search) ||
-          mailbox.primarySmtpAddress.toLowerCase().includes(search);
+          (mailbox.displayName ?? '').toLowerCase().includes(search) ||
+          (mailbox.userPrincipalName ?? '').toLowerCase().includes(search) ||
+          (mailbox.primarySmtpAddress ?? '').toLowerCase().includes(search);
         if (!matches) return false;
       }
 
@@ -219,13 +219,13 @@ export function useExchangeDiscoveryLogic() {
   const filteredGroups = useMemo(() => {
     if (!result?.distributionGroups) return [];
 
-    return result.distributionGroups.filter((group) => {
+    return result?.distributionGroups?.filter((group) => {
       if (groupFilter.searchText) {
         const search = groupFilter.searchText.toLowerCase();
         const matches =
-          group.displayName.toLowerCase().includes(search) ||
-          group.primarySmtpAddress.toLowerCase().includes(search) ||
-          group.alias.toLowerCase().includes(search);
+          (group.displayName ?? '').toLowerCase().includes(search) ||
+          (group.primarySmtpAddress ?? '').toLowerCase().includes(search) ||
+          (group.alias ?? '').toLowerCase().includes(search);
         if (!matches) return false;
       }
 
@@ -256,11 +256,11 @@ export function useExchangeDiscoveryLogic() {
   const filteredRules = useMemo(() => {
     if (!result?.transportRules) return [];
 
-    return result.transportRules.filter((rule) => {
+    return result?.transportRules?.filter((rule) => {
       if (ruleFilter.searchText) {
         const search = ruleFilter.searchText.toLowerCase();
         const matches =
-          rule.name.toLowerCase().includes(search) ||
+          (rule.name ?? '').toLowerCase().includes(search) ||
           rule.description?.toLowerCase().includes(search);
         if (!matches) return false;
       }

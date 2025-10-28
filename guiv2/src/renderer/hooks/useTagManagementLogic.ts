@@ -326,8 +326,8 @@ export const useTagManagementLogic = () => {
     if (state.levelFilter !== 'all' && tag.level !== state.levelFilter) return false;
     if (state.searchTerm) {
       const searchLower = state.searchTerm.toLowerCase();
-      return tag.name.toLowerCase().includes(searchLower) ||
-             tag.description.toLowerCase().includes(searchLower);
+      return (tag.name ?? '').toLowerCase().includes(searchLower) ||
+             (tag.description ?? '').toLowerCase().includes(searchLower);
     }
     return true;
   }).sort((a, b) => {

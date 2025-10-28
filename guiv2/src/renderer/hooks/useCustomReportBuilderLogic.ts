@@ -106,7 +106,7 @@ export const FILTER_OPERATORS = [
 function applyFilters(data: any[], filters: ReportFilter[]): any[] {
   if (filters.length === 0) return data;
 
-  return data.filter(item => {
+  return (data ?? []).filter(item => {
     return filters.every(filter => {
       const value = item[filter.field];
       const filterValue = filter.value;

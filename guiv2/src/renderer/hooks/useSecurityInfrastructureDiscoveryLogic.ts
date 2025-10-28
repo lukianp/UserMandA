@@ -312,7 +312,7 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
     // Apply search filter
     if (debouncedSearch) {
       const searchLower = debouncedSearch.toLowerCase();
-      data = data.filter((item: any) =>
+      data = (data ?? []).filter((item: any) =>
         Object.values(item).some(value =>
           String(value).toLowerCase().includes(searchLower)
         )
@@ -322,25 +322,25 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
     // Apply filters based on tab
     if (state.selectedTab === 'devices') {
       if (state.filter.deviceTypes) {
-        data = data.filter((device: SecurityDevice) =>
+        data = (data ?? []).filter((device: SecurityDevice) =>
           state.filter.deviceTypes?.includes(device.deviceType)
         );
       }
       if (state.filter.deviceStatus) {
-        data = data.filter((device: SecurityDevice) =>
+        data = (data ?? []).filter((device: SecurityDevice) =>
           state.filter.deviceStatus?.includes(device.operationalStatus)
         );
       }
     }
 
     if (state.selectedTab === 'incidents' && state.filter.incidentSeverity) {
-      data = data.filter((incident: SecurityIncident) =>
+      data = (data ?? []).filter((incident: SecurityIncident) =>
         state.filter.incidentSeverity?.includes(incident.severity)
       );
     }
 
     if (state.selectedTab === 'vulnerabilities' && state.filter.vulnerabilitySeverity) {
-      data = data.filter((vuln: VulnerabilityAssessment) =>
+      data = (data ?? []).filter((vuln: VulnerabilityAssessment) =>
         state.filter.vulnerabilitySeverity?.includes(vuln.severity)
       );
     }

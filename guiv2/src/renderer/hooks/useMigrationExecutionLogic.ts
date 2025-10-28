@@ -35,7 +35,7 @@ export const useMigrationExecutionLogic = () => {
     if (!executionProgress) return { total: 0, completed: 0, failed: 0, inProgress: 0, pending: 0 };
     const items = executionProgress.items || [];
     return {
-      total: items.length,
+      total: (items ?? []).length,
       completed: items.filter((i: any) => i.status === 'completed').length,
       failed: items.filter((i: any) => i.status === 'failed').length,
       inProgress: items.filter((i: any) => i.status === 'in-progress').length,

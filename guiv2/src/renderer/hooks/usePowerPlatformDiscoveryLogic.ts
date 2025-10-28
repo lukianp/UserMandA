@@ -573,7 +573,7 @@ export const usePowerPlatformDiscoveryLogic = () => {
     // For other tabs, just apply search filter
     if (state.filter.searchText) {
       const search = state.filter.searchText.toLowerCase();
-      return data.filter((item: any) =>
+      return (data ?? []).filter((item: any) =>
         JSON.stringify(item).toLowerCase().includes(search)
       );
     }
@@ -681,7 +681,7 @@ export const usePowerPlatformDiscoveryLogic = () => {
       return flattened;
     };
 
-    const flattenedData = data.map(item => flattenObject(item));
+    const flattenedData = (data ?? []).map(item => flattenObject(item));
     const headers = Object.keys(flattenedData[0]);
 
     const csvContent = [

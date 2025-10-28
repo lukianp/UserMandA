@@ -65,6 +65,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
           progress={progress.percentage}
           message={progress.message || 'Discovering Identity Governance configurations...'}
           onCancel={cancelDiscovery}
+          data-testid="loading-overlay"
         />
       )}
 

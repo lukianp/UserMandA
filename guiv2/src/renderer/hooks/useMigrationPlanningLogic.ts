@@ -58,9 +58,9 @@ export const useMigrationPlanningLogic = () => {
     const lower = searchText.toLowerCase();
     return waves.filter(
       w =>
-        w.name.toLowerCase().includes(lower) ||
-        w.description.toLowerCase().includes(lower) ||
-        w.status.toLowerCase().includes(lower)
+        (w.name ?? '').toLowerCase().includes(lower) ||
+        (w.description ?? '').toLowerCase().includes(lower) ||
+        (w.status ?? '').toLowerCase().includes(lower)
     );
   }, [waves, searchText]);
 

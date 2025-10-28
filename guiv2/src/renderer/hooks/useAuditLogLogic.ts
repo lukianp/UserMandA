@@ -98,9 +98,9 @@ export const useAuditLogLogic = () => {
     return auditLogs.filter(log => {
       const matchesSearch =
         searchQuery === '' ||
-        log.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        log.details.toLowerCase().includes(searchQuery.toLowerCase());
+        (log.user ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (log.action ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (log.details ?? '').toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesAction = actionFilter === '' || log.action === actionFilter;
       const matchesSeverity = severityFilter === '' || log.severity === severityFilter;

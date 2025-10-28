@@ -33,11 +33,11 @@ describe('useAWSDiscoveryLogic', () => {
     onCompleteCallback = null;
     onErrorCallback = null;
 
-    mockElectron.onDiscoveryComplete.mockImplementation((callback) => {
+    mockElectron.onDiscoveryComplete.mockImplementation((callback: (data: any) => void) => {
       onCompleteCallback = callback;
       return jest.fn();
     });
-    mockElectron.onDiscoveryError.mockImplementation((callback) => {
+    mockElectron.onDiscoveryError.mockImplementation((callback: (data: any) => void) => {
       onErrorCallback = callback;
       return jest.fn();
     });
@@ -154,7 +154,9 @@ describe('useAWSDiscoveryLogic', () => {
         await result.current.cancelDiscovery();
       });
 
-      expect(result.current.isDiscovering).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isDiscovering).toBe(false);
+      });
     });
   });
 
@@ -174,12 +176,8 @@ describe('useAWSDiscoveryLogic', () => {
       const { result } = renderHook(() => useAWSDiscoveryLogic());
 
       await act(async () => {
-      try {
-        if (result.current.exportResults) {
-          await result.current.exportResults('csv');
-        } else if (result.current.exportData) {
-          await result.current.exportData('csv');
-        }
+        await result.current.exportToCSV();
+        await result.current.exportToExcel();
       } catch (e) {
         // Expected when no results
       }

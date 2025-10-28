@@ -201,13 +201,13 @@ export const useNetworkDeviceInventoryLogic = () => {
 
     if (filters.deviceType) {
       result = result.filter((item) =>
-        item.deviceType.toLowerCase().includes(filters.deviceType.toLowerCase())
+        (item.deviceType ?? '').toLowerCase().includes(filters.deviceType.toLowerCase())
       );
     }
 
     if (filters.vendor) {
       result = result.filter((item) =>
-        item.manufacturer.toLowerCase().includes(filters.vendor.toLowerCase())
+        (item.manufacturer ?? '').toLowerCase().includes(filters.vendor.toLowerCase())
       );
     }
 
@@ -217,7 +217,7 @@ export const useNetworkDeviceInventoryLogic = () => {
 
     if (filters.location) {
       result = result.filter((item) =>
-        item.location.toLowerCase().includes(filters.location.toLowerCase())
+        (item.location ?? '').toLowerCase().includes(filters.location.toLowerCase())
       );
     }
 
@@ -225,9 +225,9 @@ export const useNetworkDeviceInventoryLogic = () => {
       const search = filters.searchText.toLowerCase();
       result = result.filter(
         (item) =>
-          item.deviceName.toLowerCase().includes(search) ||
-          item.ipAddress.toLowerCase().includes(search) ||
-          item.macAddress.toLowerCase().includes(search)
+          (item.deviceName ?? '').toLowerCase().includes(search) ||
+          (item.ipAddress ?? '').toLowerCase().includes(search) ||
+          (item.macAddress ?? '').toLowerCase().includes(search)
       );
     }
 
@@ -236,10 +236,10 @@ export const useNetworkDeviceInventoryLogic = () => {
 
   // Filter options
   const filterOptions = useMemo(() => {
-    const deviceTypes = [...new Set(data.map((d) => d.deviceType))].sort();
-    const vendors = [...new Set(data.map((d) => d.manufacturer))].sort();
-    const statuses = [...new Set(data.map((d) => d.status))].sort();
-    const locations = [...new Set(data.map((d) => d.location))].sort();
+    const deviceTypes = [...new Set((data ?? []).map((d) => d.deviceType))].sort();
+    const vendors = [...new Set((data ?? []).map((d) => d.manufacturer))].sort();
+    const statuses = [...new Set((data ?? []).map((d) => d.status))].sort();
+    const locations = [...new Set((data ?? []).map((d) => d.location))].sort();
 
     return { deviceTypes, vendors, statuses, locations };
   }, [data]);

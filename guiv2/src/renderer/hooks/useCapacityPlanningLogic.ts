@@ -61,11 +61,11 @@ export const useCapacityPlanningLogic = () => {
    * Filter data based on search
    */
   const filteredData = useCallback(() => {
-    return data.filter(resource => {
+    return (data ?? []).filter(resource => {
       return !searchText ||
-        resource.resource.toLowerCase().includes(searchText.toLowerCase()) ||
-        resource.type.toLowerCase().includes(searchText.toLowerCase()) ||
-        resource.status.toLowerCase().includes(searchText.toLowerCase());
+        (resource.resource ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (resource.type ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (resource.status ?? '').toLowerCase().includes(searchText.toLowerCase());
     });
   }, [data, searchText]);
 

@@ -232,7 +232,11 @@ const AssetInventoryView: React.FC = () => {
           </div>
 
           {/* Type Filter */}
+          <label htmlFor="asset-type-filter" className="sr-only">
+            Filter assets by type
+          </label>
           <select
+            id="asset-type-filter"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
@@ -248,7 +252,11 @@ const AssetInventoryView: React.FC = () => {
           </select>
 
           {/* Status Filter */}
+          <label htmlFor="asset-status-filter" className="sr-only">
+            Filter assets by status
+          </label>
           <select
+            id="asset-status-filter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg

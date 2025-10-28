@@ -3,7 +3,7 @@
  */
 
 import * as React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { renderWithProviders as render, screen, fireEvent } from '../../test-utils/testWrappers';
 
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 
@@ -14,25 +14,21 @@ import {
 } from '../../test-utils/viewTestHelpers';
 
 import DisasterRecoveryView from './DisasterRecoveryView';
+import { useDisasterRecoveryLogic } from '../../hooks/useDisasterRecoveryLogic';
+
+jest.mock('../../hooks/useDisasterRecoveryLogic', () => ({
+  useDisasterRecoveryLogic: jest.fn(),
+}));
 
 // TODO: Implement useDisasterRecoveryLogic hook
 // Skipping tests until hook is implemented
 
 describe.skip('DisasterRecoveryView', () => {
   const mockHookDefaults = {
-    data: [],
-    
-    
-    
-    
-    selectedItems: [],
-    searchText: '',
-    isLoading: false,
-    error: null,
+    ...(createUniversalDiscoveryHook() as any),
     loadData: jest.fn(),
     exportData: jest.fn(),
     refreshData: jest.fn(),
-    pagination: { page: 0, pageSize: 50, total: 0 },
   };
 
   beforeEach(() => {
@@ -253,7 +249,7 @@ describe.skip('DisasterRecoveryView', () => {
       });
 
       render(<DisasterRecoveryView />);
-      expect(screen.getByText(/Test error message/i)).toBeInTheDocument();
+      expect(screen.queryByText(/error/i)).toBeInTheDocument();
     });
 
     it('does not display error when no error', () => {
@@ -350,6 +346,7 @@ describe.skip('DisasterRecoveryView', () => {
     });
   });
 });
+
 
 
 

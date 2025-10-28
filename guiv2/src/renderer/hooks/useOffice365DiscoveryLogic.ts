@@ -288,7 +288,7 @@ export const useOffice365DiscoveryLogic = () => {
 
     // Apply search text filter
     if (debouncedSearch) {
-      data = data.filter((item: any) => {
+      data = (data ?? []).filter((item: any) => {
         const searchLower = debouncedSearch.toLowerCase();
         return (
           item.displayName?.toLowerCase().includes(searchLower) ||
@@ -303,19 +303,19 @@ export const useOffice365DiscoveryLogic = () => {
 
     // Apply user type filter
     if (state.selectedTab === 'users' && filter.userType !== 'all') {
-      data = data.filter((item: any) => item.userType === filter.userType);
+      data = (data ?? []).filter((item: any) => item.userType === filter.userType);
     }
 
     // Apply account status filter
     if (state.selectedTab === 'users' && filter.accountStatus !== 'all') {
       const enabled = filter.accountStatus === 'enabled';
-      data = data.filter((item: any) => item.accountEnabled === enabled);
+      data = (data ?? []).filter((item: any) => item.accountEnabled === enabled);
     }
 
     // Apply MFA status filter
     if (state.selectedTab === 'users' && filter.mfaStatus !== 'all') {
       const mfaEnabled = filter.mfaStatus === 'enabled';
-      data = data.filter((item: any) => {
+      data = (data ?? []).filter((item: any) => {
         const hasMFA = item.mfaStatus?.state === 'enabled' || item.mfaStatus?.state === 'enforced';
         return hasMFA === mfaEnabled;
       });
@@ -324,7 +324,7 @@ export const useOffice365DiscoveryLogic = () => {
     // Apply license status filter
     if (state.selectedTab === 'users' && filter.licenseStatus !== 'all') {
       const isLicensed = filter.licenseStatus === 'licensed';
-      data = data.filter((item: any) => {
+      data = (data ?? []).filter((item: any) => {
         const hasLicense = item.licenses && item.licenses.length > 0;
         return hasLicense === isLicensed;
       });
@@ -333,7 +333,7 @@ export const useOffice365DiscoveryLogic = () => {
     // Apply admin status filter
     if (state.selectedTab === 'users' && filter.adminStatus !== 'all') {
       const isAdmin = filter.adminStatus === 'admin';
-      data = data.filter((item: any) => item.isAdmin === isAdmin);
+      data = (data ?? []).filter((item: any) => item.isAdmin === isAdmin);
     }
 
     return data;

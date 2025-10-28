@@ -5,23 +5,238 @@
 
 import { renderHook, act, waitFor } from '@testing-library/react';
 
-import type { TeamsDiscoveryResult, Team, TeamChannel, TeamMember, TeamApp } from '../types/models/teams';
+import { DEFAULT_TEAMS_CONFIG } from '../types/models/teams';
+import type {
+  TeamsDiscoveryResult,
+  Team,
+  TeamChannel,
+  TeamMember,
+  TeamApp,
+  TeamsDiscoveryStatistics,
+  TeamsExportOptions,
+} from '../types/models/teams';
 
 import { useTeamsDiscoveryLogic } from './useTeamsDiscoveryLogic';
 
-// Mock electron API
+type ProgressCallback = (data: any) => void;
+
 const mockElectronAPI = {
-  executeModule: jest.fn(),
-  cancelExecution: jest.fn(),
-  onProgress: jest.fn(() => jest.fn()),
+  executeModule: jest.fn<Promise<any>, [any]>(),
+  cancelExecution: jest.fn<Promise<void>, [any]>(),
+  onProgress: jest.fn<jest.Mock, [ProgressCallback]>(() => jest.fn()),
 };
 
 // Setup window.electronAPI mock
 beforeAll(() => {
   Object.defineProperty(window, 'electronAPI', {
     writable: true,
-    value: mockElectronAPI,
+    value: mockElectronAPI as unknown as Window['electronAPI'],
   });
+});
+
+const createTeam = (overrides: Partial<Team> = {}): Team => {
+  const defaults: Team = {
+    id: 'team-1',
+    displayName: 'Team 1',
+    description: 'Team description',
+    visibility: 'Public',
+    classification: 'General',
+    specialization: 'None',
+    memberCount: 0,
+    ownerCount: 0,
+    guestCount: 0,
+    members: [],
+    channelCount: 0,
+    privateChannelCount: 0,
+    channels: [],
+    memberSettings: {
+      allowCreateUpdateChannels: true,
+      allowCreatePrivateChannels: true,
+      allowDeleteChannels: true,
+      allowAddRemoveApps: true,
+      allowCreateUpdateRemoveTabs: true,
+      allowCreateUpdateRemoveConnectors: true,
+    },
+    guestSettings: {
+      allowCreateUpdateChannels: false,
+      allowDeleteChannels: false,
+    },
+    messagingSettings: {
+      allowUserEditMessages: true,
+      allowUserDeleteMessages: true,
+      allowOwnerDeleteMessages: true,
+      allowTeamMentions: true,
+      allowChannelMentions: true,
+    },
+    funSettings: {
+      allowGiphy: true,
+      giphyContentRating: 'Moderate',
+      allowStickersAndMemes: true,
+      allowCustomMemes: true,
+    },
+    discoverySettings: {
+      showInTeamsSearchAndSuggestions: true,
+    },
+    groupId: 'group-1',
+    mailNickname: 'team1',
+    mail: 'team1@example.com',
+    webUrl: 'https://teams.microsoft.com/team1',
+    sharepointSiteUrl: 'https://contoso.sharepoint.com/sites/team1',
+    lastActivityDate: '2024-01-01T00:00:00Z',
+    messageCount: 0,
+    reactionCount: 0,
+    mentionCount: 0,
+    installedApps: [],
+    tabs: [],
+    createdDateTime: '2023-01-01T00:00:00Z',
+    archivedDateTime: undefined,
+    isArchived: false,
+    internalId: 'internal-team-1',
+    tenantId: 'tenant-1',
+  };
+
+  return {
+    ...defaults,
+    ...overrides,
+    memberSettings: overrides.memberSettings ?? defaults.memberSettings,
+    guestSettings: overrides.guestSettings ?? defaults.guestSettings,
+    messagingSettings: overrides.messagingSettings ?? defaults.messagingSettings,
+    funSettings: overrides.funSettings ?? defaults.funSettings,
+    discoverySettings: overrides.discoverySettings ?? defaults.discoverySettings,
+    members: overrides.members ?? defaults.members,
+    channels: overrides.channels ?? defaults.channels,
+    installedApps: overrides.installedApps ?? defaults.installedApps,
+    tabs: overrides.tabs ?? defaults.tabs,
+  };
+};
+
+const createChannel = (overrides: Partial<TeamChannel> = {}): TeamChannel => {
+  const defaults: TeamChannel = {
+    id: 'channel-1',
+    teamId: 'team-1',
+    displayName: 'General',
+    description: 'Channel description',
+    channelType: 'Standard',
+    email: 'general@contoso.com',
+    webUrl: 'https://teams.microsoft.com/l/channel/1',
+    membershipType: 'Standard',
+    memberCount: 0,
+    ownerCount: 0,
+    messageCount: 0,
+    replyCount: 0,
+    mentionCount: 0,
+    tabs: [],
+    apps: [],
+    filesFolder: undefined,
+    fileCount: 0,
+    lastMessageDate: '2024-01-01T00:00:00Z',
+    lastActivityDate: '2024-01-01T00:00:00Z',
+    isFavoriteByDefault: false,
+    moderationSettings: undefined,
+    createdDateTime: '2023-01-01T00:00:00Z',
+  };
+
+  return {
+    ...defaults,
+    ...overrides,
+    tabs: overrides.tabs ?? defaults.tabs,
+    apps: overrides.apps ?? defaults.apps,
+  };
+};
+
+const createMember = (overrides: Partial<TeamMember> = {}): TeamMember => ({
+  id: 'member-1',
+  userId: 'user-1',
+  displayName: 'John Doe',
+  email: 'john.doe@contoso.com',
+  userPrincipalName: 'john.doe@contoso.com',
+  role: 'Member',
+  isGuest: false,
+  accountEnabled: true,
+  assignedLicenses: [],
+  lastActiveDate: '2024-01-01T00:00:00Z',
+  messageCount: 0,
+  reactionCount: 0,
+  ...overrides,
+});
+
+const createApp = (overrides: Partial<TeamApp> = {}): TeamApp => ({
+  id: 'app-1',
+  teamsAppId: 'teams-app-1',
+  displayName: 'Sample App',
+  version: '1.0.0',
+  distributionMethod: 'Store',
+  installedBy: 'admin@contoso.com',
+  installedDate: '2024-01-01T00:00:00Z',
+  resourceSpecificPermissions: [],
+  ...overrides,
+});
+
+const createStatistics = (overrides: Partial<TeamsDiscoveryStatistics> = {}): TeamsDiscoveryStatistics => ({
+  totalTeams: 0,
+  activeTeams: 0,
+  archivedTeams: 0,
+  publicTeams: 0,
+  privateTeams: 0,
+  totalMembers: 0,
+  totalOwners: 0,
+  totalGuests: 0,
+  averageMembersPerTeam: 0,
+  totalChannels: 0,
+  standardChannels: 0,
+  privateChannels: 0,
+  sharedChannels: 0,
+  averageChannelsPerTeam: 0,
+  totalApps: 0,
+  customApps: 0,
+  thirdPartyApps: 0,
+  mostUsedApps: [],
+  totalMessages: 0,
+  totalReactions: 0,
+  totalMentions: 0,
+  ...overrides,
+});
+
+const createResult = (overrides: Partial<TeamsDiscoveryResult> = {}): TeamsDiscoveryResult => {
+  const defaultResult: TeamsDiscoveryResult = {
+    id: 'result-1',
+    startTime: '2024-01-01T00:00:00Z',
+    endTime: '2024-01-01T01:00:00Z',
+    duration: 3600,
+    status: 'completed',
+    config: DEFAULT_TEAMS_CONFIG,
+    teams: [],
+    channels: [],
+    members: [],
+    apps: [],
+    statistics: createStatistics(),
+    errors: [],
+    warnings: [],
+    discoveredBy: 'tester@contoso.com',
+    tenantId: 'tenant-1',
+  };
+
+  return {
+    ...defaultResult,
+    ...overrides,
+    teams: overrides.teams ?? defaultResult.teams,
+    channels: overrides.channels ?? defaultResult.channels,
+    members: overrides.members ?? defaultResult.members,
+    apps: overrides.apps ?? defaultResult.apps,
+    statistics: overrides.statistics ?? defaultResult.statistics,
+  };
+};
+
+const createExportOptions = (overrides: Partial<TeamsExportOptions> = {}): TeamsExportOptions => ({
+  format: 'json',
+  includeTeams: true,
+  includeChannels: true,
+  includeMembers: true,
+  includeApps: true,
+  includeStatistics: true,
+  splitByType: false,
+  fileName: undefined,
+  ...overrides,
 });
 
 describe('useTeamsDiscoveryLogic', () => {
@@ -94,9 +309,9 @@ describe('useTeamsDiscoveryLogic', () => {
 
   describe('Discovery Execution', () => {
     it('should start discovery successfully', async () => {
-      const mockResult: TeamsDiscoveryResult = {
+      const mockResult = createResult({
         teams: [
-          {
+          createTeam({
             id: 'team1',
             displayName: 'Sales Team',
             description: 'Sales department collaboration',
@@ -106,25 +321,23 @@ describe('useTeamsDiscoveryLogic', () => {
             ownerCount: 3,
             guestCount: 2,
             channelCount: 8,
+            privateChannelCount: 2,
             isArchived: false,
             classification: 'General',
             lastActivityDate: '2024-01-15T10:00:00Z',
             createdDateTime: '2023-01-01T00:00:00Z',
-          },
+          }),
         ],
-        channels: [],
-        members: [],
-        apps: [],
-        statistics: {
+        statistics: createStatistics({
           totalTeams: 1,
           totalChannels: 0,
           totalMembers: 0,
           totalApps: 0,
           activeTeams: 1,
           archivedTeams: 0,
-          teamsWithGuests: 1,
-        },
-      };
+          privateTeams: 1,
+        }),
+      });
 
       mockElectronAPI.executeModule
         .mockResolvedValueOnce({ success: true, data: { templates: [] } }) // Template load
@@ -139,7 +352,9 @@ describe('useTeamsDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+    await waitFor(() => {
       expect(result.current.isDiscovering).toBe(false);
+    });
       expect(result.current.result).toEqual(mockResult);
       expect(result.current.error).toBeNull();
     });
@@ -156,7 +371,9 @@ describe('useTeamsDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+    await waitFor(() => {
       expect(result.current.isDiscovering).toBe(false);
+    });
       expect(result.current.error).toBe(errorMessage);
       expect(result.current.result).toBeNull();
     });
@@ -179,8 +396,8 @@ describe('useTeamsDiscoveryLogic', () => {
     });
 
     it('should set progress during discovery', async () => {
-      let progressCallback: any;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
+      let progressCallback: ((data: any) => void) | undefined;
+      mockElectronAPI.onProgress.mockImplementation((cb: (data: any) => void) => {
         progressCallback = cb;
         return jest.fn();
       });
@@ -194,7 +411,7 @@ describe('useTeamsDiscoveryLogic', () => {
             totalItems: 100,
           });
         }
-        return Promise.resolve({ success: true, data: { teams: [], channels: [], members: [], apps: [], statistics: {} } });
+        return Promise.resolve({ success: true, data: createResult() });
       });
 
       const { result } = renderHook(() => useTeamsDiscoveryLogic());
@@ -294,7 +511,7 @@ describe('useTeamsDiscoveryLogic', () => {
 
   describe('Team Filtering', () => {
     const mockTeams: Team[] = [
-      {
+      createTeam({
         id: 'team1',
         displayName: 'Marketing Team',
         description: 'Marketing collaboration',
@@ -304,12 +521,13 @@ describe('useTeamsDiscoveryLogic', () => {
         ownerCount: 5,
         guestCount: 10,
         channelCount: 15,
+        privateChannelCount: 3,
         isArchived: false,
         classification: 'General',
         lastActivityDate: '2024-01-15T10:00:00Z',
         createdDateTime: '2023-01-01T00:00:00Z',
-      },
-      {
+      }),
+      createTeam({
         id: 'team2',
         displayName: 'Engineering Team',
         description: 'Engineering projects',
@@ -319,23 +537,18 @@ describe('useTeamsDiscoveryLogic', () => {
         ownerCount: 3,
         guestCount: 0,
         channelCount: 20,
+        privateChannelCount: 5,
         isArchived: true,
         classification: 'Confidential',
         lastActivityDate: '2023-12-01T10:00:00Z',
         createdDateTime: '2022-06-01T00:00:00Z',
-      },
+      }),
     ];
 
     beforeEach(() => {
       mockElectronAPI.executeModule.mockResolvedValue({
         success: true,
-        data: {
-          teams: mockTeams,
-          channels: [],
-          members: [],
-          apps: [],
-          statistics: {},
-        },
+        data: createResult({ teams: mockTeams }),
       });
     });
 
@@ -436,7 +649,7 @@ describe('useTeamsDiscoveryLogic', () => {
 
   describe('Channel Filtering', () => {
     const mockChannels: TeamChannel[] = [
-      {
+      createChannel({
         id: 'ch1',
         displayName: 'General',
         description: 'General discussion',
@@ -447,8 +660,9 @@ describe('useTeamsDiscoveryLogic', () => {
         memberCount: 50,
         fileCount: 100,
         lastActivityDate: '2024-01-15T10:00:00Z',
-      },
-      {
+        mentionCount: 120,
+      }),
+      createChannel({
         id: 'ch2',
         displayName: 'Project Alpha',
         description: 'Alpha project channel',
@@ -459,19 +673,14 @@ describe('useTeamsDiscoveryLogic', () => {
         memberCount: 10,
         fileCount: 25,
         lastActivityDate: '2024-01-10T10:00:00Z',
-      },
+        mentionCount: 45,
+      }),
     ];
 
     beforeEach(() => {
       mockElectronAPI.executeModule.mockResolvedValue({
         success: true,
-        data: {
-          teams: [],
-          channels: mockChannels,
-          members: [],
-          apps: [],
-          statistics: {},
-        },
+        data: createResult({ channels: mockChannels }),
       });
     });
 
@@ -541,44 +750,38 @@ describe('useTeamsDiscoveryLogic', () => {
 
   describe('Member Filtering', () => {
     const mockMembers: TeamMember[] = [
-      {
+      createMember({
         id: 'mem1',
+        userId: 'user1',
         displayName: 'John Doe',
         email: 'john@contoso.com',
         userPrincipalName: 'john@contoso.com',
-        teamId: 'team1',
         role: 'Owner',
         isGuest: false,
         accountEnabled: true,
         assignedLicenses: ['E5'],
         messageCount: 500,
         lastActiveDate: '2024-01-15T10:00:00Z',
-      },
-      {
+      }),
+      createMember({
         id: 'mem2',
+        userId: 'user2',
         displayName: 'Jane Smith',
         email: 'jane@external.com',
         userPrincipalName: 'jane_external#EXT#@contoso.com',
-        teamId: 'team1',
         role: 'Member',
         isGuest: true,
         accountEnabled: true,
         assignedLicenses: [],
         messageCount: 50,
         lastActiveDate: '2024-01-10T10:00:00Z',
-      },
+      }),
     ];
 
     beforeEach(() => {
       mockElectronAPI.executeModule.mockResolvedValue({
         success: true,
-        data: {
-          teams: [],
-          channels: [],
-          members: mockMembers,
-          apps: [],
-          statistics: {},
-        },
+        data: createResult({ members: mockMembers }),
       });
     });
 
@@ -663,36 +866,30 @@ describe('useTeamsDiscoveryLogic', () => {
 
   describe('App Filtering', () => {
     const mockApps: TeamApp[] = [
-      {
+      createApp({
         id: 'app1',
+        teamsAppId: 'planner',
         displayName: 'Planner',
-        teamId: 'team1',
         version: '1.0.0',
         distributionMethod: 'Store',
         installedBy: 'admin@contoso.com',
         installedDate: '2023-01-15T10:00:00Z',
-      },
-      {
+      }),
+      createApp({
         id: 'app2',
+        teamsAppId: 'custom-crm',
         displayName: 'Custom CRM',
-        teamId: 'team1',
         version: '2.5.1',
         distributionMethod: 'Sideloaded',
         installedBy: 'dev@contoso.com',
         installedDate: '2023-06-01T10:00:00Z',
-      },
+      }),
     ];
 
     beforeEach(() => {
       mockElectronAPI.executeModule.mockResolvedValue({
         success: true,
-        data: {
-          teams: [],
-          channels: [],
-          members: [],
-          apps: mockApps,
-          statistics: {},
-        },
+        data: createResult({ apps: mockApps }),
       });
     });
 
@@ -735,7 +932,7 @@ describe('useTeamsDiscoveryLogic', () => {
     it('should export data successfully', async () => {
       mockElectronAPI.executeModule
         .mockResolvedValueOnce({ success: true, data: { templates: [] } }) // Template load
-        .mockResolvedValueOnce({ success: true, data: { teams: [], channels: [], members: [], apps: [], statistics: {} } }) // Discovery
+        .mockResolvedValueOnce({ success: true, data: createResult() }) // Discovery
         .mockResolvedValueOnce({ success: true }); // Export
 
       const { result } = renderHook(() => useTeamsDiscoveryLogic());
@@ -744,8 +941,10 @@ describe('useTeamsDiscoveryLogic', () => {
         await result.current.startDiscovery();
       });
 
+      const exportOptions = createExportOptions({ format: 'json', includeTeams: true });
+
       await act(async () => {
-        await result.current.exportData({ format: 'json', includeTeams: true });
+        await result.current.exportData(exportOptions);
       });
 
       expect(mockElectronAPI.executeModule).toHaveBeenLastCalledWith({
@@ -753,7 +952,7 @@ describe('useTeamsDiscoveryLogic', () => {
         functionName: 'Export-TeamsDiscoveryData',
         parameters: {
           Result: expect.any(Object),
-          Options: { format: 'json', includeTeams: true },
+          Options: exportOptions,
         },
       });
     });
@@ -762,7 +961,7 @@ describe('useTeamsDiscoveryLogic', () => {
       const { result } = renderHook(() => useTeamsDiscoveryLogic());
 
       await act(async () => {
-        await result.current.exportData({ format: 'csv' });
+        await result.current.exportData(createExportOptions({ format: 'csv' }));
       });
 
       expect(mockElectronAPI.executeModule).toHaveBeenCalledTimes(1);
@@ -841,25 +1040,32 @@ describe('useTeamsDiscoveryLogic', () => {
 
   describe('Statistics', () => {
     it('should expose statistics from result', async () => {
-      const mockStatistics = {
+      const mockStatistics = createStatistics({
         totalTeams: 100,
         totalChannels: 500,
+        standardChannels: 350,
+        privateChannels: 100,
+        sharedChannels: 50,
+        averageChannelsPerTeam: 5,
         totalMembers: 2500,
+        totalOwners: 200,
+        totalGuests: 35,
+        averageMembersPerTeam: 25,
         totalApps: 150,
+        customApps: 40,
+        thirdPartyApps: 60,
         activeTeams: 90,
         archivedTeams: 10,
-        teamsWithGuests: 35,
-      };
+        publicTeams: 55,
+        privateTeams: 45,
+        totalMessages: 10000,
+        totalReactions: 2000,
+        totalMentions: 1500,
+      });
 
       mockElectronAPI.executeModule.mockResolvedValue({
         success: true,
-        data: {
-          teams: [],
-          channels: [],
-          members: [],
-          apps: [],
-          statistics: mockStatistics,
-        },
+        data: createResult({ statistics: mockStatistics }),
       });
 
       const { result } = renderHook(() => useTeamsDiscoveryLogic());

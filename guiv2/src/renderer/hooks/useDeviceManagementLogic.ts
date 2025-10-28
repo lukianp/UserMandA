@@ -58,8 +58,8 @@ export const useDeviceManagementLogic = () => {
   const filteredDevices = data?.devices.filter(device => {
     if (filter.searchText) {
       const search = filter.searchText.toLowerCase();
-      if (!device.deviceName.toLowerCase().includes(search) &&
-          !device.owner.toLowerCase().includes(search)) {
+      if (!(device.deviceName ?? '').toLowerCase().includes(search) &&
+          !(device.owner ?? '').toLowerCase().includes(search)) {
         return false;
       }
     }

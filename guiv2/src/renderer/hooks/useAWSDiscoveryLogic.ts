@@ -307,7 +307,7 @@ export const useAWSDiscoveryLogic = () => {
     { field: 'vpcId', headerName: 'VPC', sortable: true, filter: true, flex: 1 },
     { field: 'subnetId', headerName: 'Subnet', sortable: true, filter: true, flex: 1 },
     { field: 'estimatedMonthlyCost', headerName: 'Est. Monthly Cost', sortable: true,
-      valueFormatter: (p) => p.value ? `$${p.value.toFixed(2)}` : '-', flex: 1 },
+      valueFormatter: (p) => p.value ? `$${(p.value ?? 0).toFixed(2)}` : '-', flex: 1 },
     { field: 'launchTime', headerName: 'Launch Time', sortable: true,
       valueFormatter: (p) => p.value ? new Date(p.value).toLocaleString() : '-', flex: 1 },
   ], []);
@@ -331,7 +331,7 @@ export const useAWSDiscoveryLogic = () => {
     { field: 'objectCount', headerName: 'Objects', sortable: true,
       valueFormatter: (p) => p.value ? p.value.toLocaleString() : '-', flex: 1 },
     { field: 'estimatedMonthlyCost', headerName: 'Est. Monthly Cost', sortable: true,
-      valueFormatter: (p) => p.value ? `$${p.value.toFixed(2)}` : '-', flex: 1 },
+      valueFormatter: (p) => p.value ? `$${(p.value ?? 0).toFixed(2)}` : '-', flex: 1 },
   ], []);
 
   /**
@@ -357,7 +357,7 @@ export const useAWSDiscoveryLogic = () => {
       cellRenderer: (params: any) => params.value ? 'Yes' : 'No' },
     { field: 'allocatedStorage', headerName: 'Storage (GB)', sortable: true, flex: 1 },
     { field: 'estimatedMonthlyCost', headerName: 'Est. Monthly Cost', sortable: true,
-      valueFormatter: (p) => p.value ? `$${p.value.toFixed(2)}` : '-', flex: 1 },
+      valueFormatter: (p) => p.value ? `$${(p.value ?? 0).toFixed(2)}` : '-', flex: 1 },
   ], []);
 
   /**
@@ -481,7 +481,7 @@ export const useAWSDiscoveryLogic = () => {
  * Filter data based on filter state and search text
  */
 function filterData(data: any[], filter: AWSFilterState, searchText: string): any[] {
-  return data.filter(item => {
+  return (data ?? []).filter(item => {
     // Search text filter
     if (searchText) {
       const searchLower = searchText.toLowerCase();

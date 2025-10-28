@@ -198,7 +198,7 @@ export const useBenchmarkingLogic = () => {
    * Filter data based on current filters
    */
   const getFilteredData = useCallback(() => {
-    return data.filter(item => {
+    return (data ?? []).filter(item => {
       if (filters.category && item.category !== filters.category) return false;
       if (filters.status && item.status !== filters.status) return false;
       if (filters.dateRange) {
@@ -420,7 +420,7 @@ function convertBenchmarkingToCSV(data: BenchmarkingData[]): string {
     'ID', 'Metric', 'Current Value', 'Benchmark Value', 'Status', 'Category', 'Date'
   ];
 
-  const rows = data.map(item => [
+  const rows = (data ?? []).map(item => [
     item.id,
     item.metric,
     item.currentValue.toString(),

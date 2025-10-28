@@ -231,18 +231,18 @@ export const useComputerInventoryLogic = () => {
 
     if (filters.osType) {
       result = result.filter((item) =>
-        item.operatingSystem.toLowerCase().includes(filters.osType.toLowerCase())
+        (item.operatingSystem ?? '').toLowerCase().includes(filters.osType.toLowerCase())
       );
     }
 
     if (filters.domain) {
       result = result.filter((item) =>
-        item.domain.toLowerCase().includes(filters.domain.toLowerCase())
+        (item.domain ?? '').toLowerCase().includes(filters.domain.toLowerCase())
       );
     }
 
     if (filters.ou) {
-      result = result.filter((item) => item.ou.toLowerCase().includes(filters.ou.toLowerCase()));
+      result = result.filter((item) => (item.ou ?? '').toLowerCase().includes(filters.ou.toLowerCase()));
     }
 
     if (filters.status) {
@@ -253,9 +253,9 @@ export const useComputerInventoryLogic = () => {
       const search = filters.searchText.toLowerCase();
       result = result.filter(
         (item) =>
-          item.name.toLowerCase().includes(search) ||
-          item.ipAddress.toLowerCase().includes(search) ||
-          item.serialNumber.toLowerCase().includes(search)
+          (item.name ?? '').toLowerCase().includes(search) ||
+          (item.ipAddress ?? '').toLowerCase().includes(search) ||
+          (item.serialNumber ?? '').toLowerCase().includes(search)
       );
     }
 
@@ -264,9 +264,9 @@ export const useComputerInventoryLogic = () => {
 
   // Unique values for filter dropdowns
   const filterOptions = useMemo(() => {
-    const osTypes = [...new Set(data.map((d) => d.operatingSystem))].sort();
-    const domains = [...new Set(data.map((d) => d.domain))].sort();
-    const ous = [...new Set(data.map((d) => d.ou))].sort();
+    const osTypes = [...new Set((data ?? []).map((d) => d.operatingSystem))].sort();
+    const domains = [...new Set((data ?? []).map((d) => d.domain))].sort();
+    const ous = [...new Set((data ?? []).map((d) => d.ou))].sort();
     const statuses = ['Online', 'Offline', 'Unknown'];
 
     return { osTypes, domains, ous, statuses };

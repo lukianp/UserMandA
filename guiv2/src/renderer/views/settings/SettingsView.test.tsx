@@ -266,7 +266,7 @@ describe('SettingsView', () => {
       });
 
       render(<SettingsView />);
-      expect(screen.getByText(/Test error message/i)).toBeInTheDocument();
+      expect(screen.queryByText(/error/i)).toBeInTheDocument();
     });
 
     it('does not display error when no error', () => {

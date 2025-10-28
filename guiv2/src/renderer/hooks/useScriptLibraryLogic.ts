@@ -542,9 +542,9 @@ export const useScriptLibraryLogic = (): UseScriptLibraryLogicReturn => {
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         filtered = filtered.filter(s =>
-          s.metadata.title.toLowerCase().includes(searchLower) ||
-          s.metadata.description.toLowerCase().includes(searchLower) ||
-          s.metadata.tags.some(tag => tag.toLowerCase().includes(searchLower))
+          (s.metadata?.title ?? '').toLowerCase().includes(searchLower) ||
+          (s.metadata?.description ?? '').toLowerCase().includes(searchLower) ||
+          (s.metadata?.tags ?? []).some(tag => (tag ?? '').toLowerCase().includes(searchLower))
         );
       }
     }

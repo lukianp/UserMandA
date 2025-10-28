@@ -153,9 +153,9 @@ export const useVMwareDiscoveryLogic = () => {
     const search = searchText.toLowerCase();
     return hosts.filter(
       (host) =>
-        host.name.toLowerCase().includes(search) ||
+        (host.name ?? '').toLowerCase().includes(search) ||
         host.cluster?.toLowerCase().includes(search) ||
-        host.version.toLowerCase().includes(search)
+        (host.version ?? '').toLowerCase().includes(search)
     );
   }, [result, searchText]);
 
@@ -167,9 +167,9 @@ export const useVMwareDiscoveryLogic = () => {
     const search = searchText.toLowerCase();
     return vms.filter(
       (vm) =>
-        vm.name.toLowerCase().includes(search) ||
-        vm.guestOS.toLowerCase().includes(search) ||
-        vm.powerState.toLowerCase().includes(search)
+        (vm.name ?? '').toLowerCase().includes(search) ||
+        (vm.guestOS ?? '').toLowerCase().includes(search) ||
+        (vm.powerState ?? '').toLowerCase().includes(search)
     );
   }, [result, searchText]);
 
@@ -179,7 +179,7 @@ export const useVMwareDiscoveryLogic = () => {
     if (!searchText) return clusters;
 
     const search = searchText.toLowerCase();
-    return clusters.filter((cluster) => cluster.name.toLowerCase().includes(search));
+    return clusters.filter((cluster) => (cluster.name ?? '').toLowerCase().includes(search));
   }, [result, searchText]);
 
   // AG Grid column definitions

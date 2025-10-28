@@ -60,11 +60,11 @@ export const useAssetLifecycleLogic = () => {
    * Filter data based on search
    */
   const filteredData = useCallback(() => {
-    return data.filter(asset => {
+    return (data ?? []).filter(asset => {
       return !searchText ||
-        asset.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        asset.type.toLowerCase().includes(searchText.toLowerCase()) ||
-        asset.lifecycleStage.toLowerCase().includes(searchText.toLowerCase());
+        (asset.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (asset.type ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (asset.lifecycleStage ?? '').toLowerCase().includes(searchText.toLowerCase());
     });
   }, [data, searchText]);
 

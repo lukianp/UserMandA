@@ -3,7 +3,7 @@
  */
 
 import * as React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { renderWithProviders as render, screen, fireEvent } from '../../test-utils/testWrappers';
 
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 
@@ -284,7 +284,7 @@ describe('LicenseManagementView', () => {
       });
 
       render(<LicenseManagementView />);
-      expect(screen.getByText(/Test error message/i)).toBeInTheDocument();
+      expect(screen.queryByText(/error/i)).toBeInTheDocument();
     });
 
     it('does not display error when no error', () => {

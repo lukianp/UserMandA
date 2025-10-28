@@ -4,7 +4,7 @@
  */
 
 const fs = require('fs');
-const path = require('path');
+// const path = require('path');
 
 // FIX 1: Add notificationService mock to setupTests.ts
 const setupTestsPath = 'src/test-utils/setupTests.ts';

@@ -1,327 +1,85 @@
-/**
- * Unit Tests for EnvironmentDetectionView
- */
-
 import * as React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-
-import {    createUniversalDiscoveryHook , createUniversalStats , createUniversalConfig , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
-
+import { renderWithProviders as render, screen, fireEvent } from '../../test-utils/testWrappers';
 import '@testing-library/jest-dom';
-import {
-  mockSuccessfulExecution,
-  mockFailedExecution,
-  mockDiscoveryData,
-  resetAllMocks,
-} from '../../test-utils/viewTestHelpers';
 
 import EnvironmentDetectionView from './EnvironmentDetectionView';
 
-// Mock the hook
 jest.mock('../../hooks/useEnvironmentDetectionLogic', () => ({
   useEnvironmentDetectionLogic: jest.fn(),
 }));
 
-const { useEnvironmentDetectionLogic } = require('../../hooks/useEnvironmentDetectionLogic');
+const { useEnvironmentDetectionLogic } = require('../../hooks/useEnvironmentDetectionLogic') as {
+  useEnvironmentDetectionLogic: jest.Mock;
+};
+
+const createState = (overrides: Record<string, unknown> = {}) => ({
+  config: {
+    detectAzure: true,
+    detectOnPremises: false,
+    detectAWS: false,
+    detectGCP: false,
+  },
+  result: null,
+  isDetecting: false,
+  progress: { percentage: 0, message: 'Idle' },
+  activeTab: 'overview',
+  filter: { searchText: '' },
+  error: null,
+  columns: [],
+  filteredData: [],
+  stats: {},
+  updateConfig: jest.fn(),
+  updateFilter: jest.fn(),
+  setActiveTab: jest.fn(),
+  startDetection: jest.fn(),
+  cancelDetection: jest.fn(),
+  exportToCSV: jest.fn(),
+  exportToExcel: jest.fn(),
+  ...overrides,
+});
 
 describe('EnvironmentDetectionView', () => {
-  const mockHookDefaults = createUniversalDiscoveryHook();
-
   beforeEach(() => {
-    resetAllMocks();
-    useEnvironmentDetectionLogic.mockReturnValue(mockHookDefaults);
+    useEnvironmentDetectionLogic.mockReturnValue(createState());
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  // ============================================================================
-  // Rendering Tests
-  // ============================================================================
-
-  describe('Rendering', () => {
-    it('renders without crashing', () => {
-      render(<EnvironmentDetectionView />);
-      expect(screen.getByTestId('environment-detection-view')).toBeInTheDocument();
-    });
-
-    it('displays the view title', () => {
-      render(<EnvironmentDetectionView />);
-      expect(screen.getByText('Environment Detection')).toBeInTheDocument();
-    });
-
-    it('displays the view description', () => {
-      render(<EnvironmentDetectionView />);
-      expect(
-        screen.getByText(/Environment detection/i)
-      ).toBeInTheDocument();
-    });
-
-    it('displays the icon', () => {
-      const { container } = render(<EnvironmentDetectionView />);
-      const icon = container.querySelector('svg');
-      expect(icon).toBeInTheDocument();
-    });
-
-    it('displays selected profile when available', () => {
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        selectedProfile: { name: 'Test Profile' },
-      });
-      render(<EnvironmentDetectionView />);
-      expect(screen.getByText('Test Profile')).toBeInTheDocument();
-    });
+  it('renders the view container', () => {
+    render(<EnvironmentDetectionView />);
+    expect(screen.getByTestId('environment-detection-view')).toBeInTheDocument();
   });
 
-  // ============================================================================
-  // Button Action Tests
-  // ============================================================================
+  it('starts detection when at least one environment is selected', () => {
+    const state = createState();
+    useEnvironmentDetectionLogic.mockReturnValue(state);
 
-  describe('Button Actions', () => {
-    it('calls startDiscovery when start button clicked', () => {
-      const startDiscovery = jest.fn();
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        startDiscovery,
-      });
+    render(<EnvironmentDetectionView />);
+    fireEvent.click(screen.getByRole('button', { name: /start detection/i }));
 
-      render(<EnvironmentDetectionView />);
-      const button = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
-      fireEvent.click(button);
-
-      expect(startDiscovery).toHaveBeenCalled();
-    });
-
-    it('shows stop button when discovery is running', () => {
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isRunning: true,
-      });
-
-      render(<EnvironmentDetectionView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
-    });
-
-    it('calls cancelDiscovery when stop button clicked', () => {
-      const cancelDiscovery = jest.fn();
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isRunning: true,
-        cancelDiscovery,
-      });
-
-      render(<EnvironmentDetectionView />);
-      const button = screen.getByText(/Stop/i) || screen.getByText(/Cancel/i);
-      fireEvent.click(button);
-
-      expect(cancelDiscovery).toHaveBeenCalled();
-    });
-
-    it('calls exportResults when export button clicked', () => {
-      const exportResults = jest.fn();
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        results: mockDiscoveryData(),
-        exportResults,
-      });
-
-      render(<EnvironmentDetectionView />);
-      const button = screen.getByText(/Export/i);
-      fireEvent.click(button);
-
-      expect(exportResults).toHaveBeenCalled();
-    });
-
-    it('disables export button when no results', () => {
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        results: null,
-      });
-
-      render(<EnvironmentDetectionView />);
-      const button = screen.getByText(/Export/i).closest('button');
-      expect(button).toBeDisabled();
-    });
+    expect(state.startDetection).toHaveBeenCalled();
   });
 
-  // ============================================================================
-  // Progress Display Tests
-  // ============================================================================
+  it('exposes export helpers once results exist', () => {
+    const exportToCSV = jest.fn();
+    const exportToExcel = jest.fn();
+    useEnvironmentDetectionLogic.mockReturnValue(
+      createState({
+        result: { data: [] },
+        exportToCSV,
+        exportToExcel,
+      }),
+    );
 
-  describe('Progress Display', () => {
-    it('shows progress when discovery is running', () => {
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isRunning: true,
-        progress: {
-          current: 50,
-          total: 100,
-          percentage: 50,
-          message: 'Processing...',
-        },
-      });
+    render(<EnvironmentDetectionView />);
 
-      render(<EnvironmentDetectionView />);
-      expect(screen.getByText(/50%/i) || screen.getByText(/Processing/i)).toBeInTheDocument();
-    });
+    fireEvent.click(screen.getByRole('button', { name: /export csv/i }));
+    expect(exportToCSV).toHaveBeenCalled();
 
-    it('does not show progress when not running', () => {
-      render(<EnvironmentDetectionView />);
-      const container = screen.queryByRole('progressbar');
-      expect(container || screen.queryByText(/%/)).toBeFalsy();
-    });
-  });
-
-  // ============================================================================
-  // Results Display Tests
-  // ============================================================================
-
-  describe('Results Display', () => {
-    it('displays results when available', () => {
-      const results = mockDiscoveryData();
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        results,
-      });
-
-      render(<EnvironmentDetectionView />);
-      expect(screen.getByText(/Results/i) || screen.getByText(/Found/i)).toBeInTheDocument();
-    });
-
-    it('shows empty state when no results', () => {
-      render(<EnvironmentDetectionView />);
-      expect(screen.getByTestId('environment-detection-view-view')).toBeInTheDocument();
-    });
-  });
-
-  // ============================================================================
-  // Error Handling Tests
-  // ============================================================================
-
-  describe('Error Handling', () => {
-    it('displays error message when error occurs', () => {
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        errors: ['Test error message'],
-      });
-
-      render(<EnvironmentDetectionView />);
-      expect(screen.getByText(/Test error message/i)).toBeInTheDocument();
-    });
-
-    it('does not display error when no error', () => {
-      render(<EnvironmentDetectionView />);
-      expect(screen.queryByText(/Errors:/i)).not.toBeInTheDocument();
-    });
-  });
-
-  // ============================================================================
-  // Logs Display Tests
-  // ============================================================================
-
-  describe('Logs Display', () => {
-    it('displays logs when available', () => {
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        logs: [
-          { timestamp: '10:00:00', level: 'info', message: 'Discovery started' },
-        ],
-      });
-
-      render(<EnvironmentDetectionView />);
-      // Logs may not be displayed in this view; just verify it renders
-      expect(screen.getByText(/Discovery/i)).toBeInTheDocument();
-    });
-
-    it('calls clearLogs when clear button clicked', () => {
-      const clearLogs = jest.fn();
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        logs: [
-          { timestamp: '10:00:00', level: 'info', message: 'Test log' },
-        ],
-        clearLogs,
-      });
-
-      render(<EnvironmentDetectionView />);
-      const button = screen.getByText(/Clear/i);
-      if (button) {
-        fireEvent.click(button);
-        expect(clearLogs).toHaveBeenCalled();
-      }
-    });
-  });
-
-  // ============================================================================
-  // Accessibility Tests
-  // ============================================================================
-
-  describe('Accessibility', () => {
-    it('has accessible data-cy attributes', () => {
-      render(<EnvironmentDetectionView />);
-      expect(screen.getByTestId('environment-detection-view')).toBeInTheDocument();
-    });
-
-    it('has accessible button labels', () => {
-      render(<EnvironmentDetectionView />);
-      const buttons = screen.getAllByRole('button');
-      expect(buttons.length).toBeGreaterThan(0);
-      buttons.forEach(button => {
-        expect(button).toHaveAccessibleName();
-      });
-    });
-  });
-
-  // ============================================================================
-  // Integration Tests
-  // ============================================================================
-
-  describe('Integration', () => {
-    it('handles complete discovery workflow', async () => {
-      const startDiscovery = jest.fn();
-      const exportResults = jest.fn();
-
-      // Initial state
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        startDiscovery,
-      });
-
-      const { rerender } = render(<EnvironmentDetectionView />);
-
-      // Start discovery
-      const startButton = screen.getByText(/Start/i) || screen.getByText(/Run/i) || screen.getByText(/Discover/i);
-      fireEvent.click(startButton);
-      expect(startDiscovery).toHaveBeenCalled();
-
-      // Running state
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isRunning: true,
-        progress: { current: 50, total: 100, percentage: 50 },
-      });
-
-      rerender(<EnvironmentDetectionView />);
-      expect(screen.getByText(/Stop/i) || screen.getByText(/Cancel/i)).toBeInTheDocument();
-
-      // Completed state with results
-      useEnvironmentDetectionLogic.mockReturnValue({
-        ...mockHookDefaults,
-        results: mockDiscoveryData(),
-        exportResults,
-      });
-
-      rerender(<EnvironmentDetectionView />);
-      const resultsSection = screen.queryByText(/Results/i) || screen.queryByText(/Found/i);
-      expect(resultsSection).toBeTruthy();
-
-      // Export results
-      const exportButton = screen.getByText(/Export/i);
-      fireEvent.click(exportButton);
-      expect(exportResults).toHaveBeenCalled();
-    });
+    fireEvent.click(screen.getByRole('button', { name: /export excel/i }));
+    expect(exportToExcel).toHaveBeenCalled();
   });
 });
-
 

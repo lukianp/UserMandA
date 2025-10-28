@@ -231,9 +231,9 @@ export const useUserManagementLogic = () => {
     return users.filter(user => {
       const matchesSearch =
         searchQuery === '' ||
-        user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase());
+        (user.username ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (user.displayName ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (user.email ?? '').toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesRole = roleFilter === '' || user.role === roleFilter;
       const matchesStatus = statusFilter === '' || user.status === statusFilter;

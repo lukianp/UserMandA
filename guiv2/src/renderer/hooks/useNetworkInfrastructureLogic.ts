@@ -119,7 +119,7 @@ export const useNetworkInfrastructureLogic = () => {
   const filteredDevices = useCallback(() => {
     return devices.filter(device => {
       const matchesSearch = !searchText ||
-        device.name.toLowerCase().includes(searchText.toLowerCase()) ||
+        (device.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
         device.ipAddress?.toLowerCase().includes(searchText.toLowerCase()) ||
         device.manufacturer?.toLowerCase().includes(searchText.toLowerCase());
 

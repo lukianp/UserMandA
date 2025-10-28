@@ -107,7 +107,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
           progress={progress}
           onCancel={cancelDiscovery}
           message="Discovering web servers..."
-        />
+         data-testid="loading-overlay"/>
       )}
 
       {/* Header */}

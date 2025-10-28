@@ -249,7 +249,7 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
         data = state.result?.accessReviews || [];
         // Filter by status
         if (state.filter.selectedStatuses.length > 0) {
-          data = data.filter((review: AccessReview) =>
+          data = (data ?? []).filter((review: AccessReview) =>
             state.filter.selectedStatuses.includes(review.status)
           );
         }
@@ -261,7 +261,7 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
         data = state.result?.pimRoles || [];
         // Filter by assignment state
         if (state.filter.selectedStatuses.length > 0) {
-          data = data.filter((role: PIMRole) =>
+          data = (data ?? []).filter((role: PIMRole) =>
             state.filter.selectedStatuses.includes(role.assignmentState)
           );
         }
@@ -273,7 +273,7 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
     // Apply search filter across all fields
     if (state.filter.searchText) {
       const searchLower = state.filter.searchText.toLowerCase();
-      data = data.filter(item =>
+      data = (data ?? []).filter(item =>
         JSON.stringify(item).toLowerCase().includes(searchLower)
       );
     }
@@ -366,7 +366,7 @@ function convertToCSV(data: any[]): string {
     }, {});
   };
 
-  const flatData = data.map(item => flattenObject(item));
+  const flatData = (data ?? []).map(item => flattenObject(item));
   const headers = Object.keys(flatData[0]);
 
   const rows = flatData.map(item =>

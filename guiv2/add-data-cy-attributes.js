@@ -77,20 +77,7 @@ const attributeToComponentMap = {
   'save-settings-button': '*View.tsx',
 };
 
-// JSX patterns to look for when adding attributes
-const jsxPatterns = [
-  { pattern: /<button[^>]*onClick/, attrPosition: 'button', elementType: 'button' },
-  { pattern: /<Button[^>]*onClick/, attrPosition: 'Button', elementType: 'Button' },
-  { pattern: /<input[^>]*type=/, attrPosition: 'input', elementType: 'input' },
-  { pattern: /<Input[^>]*/, attrPosition: 'Input', elementType: 'Input' },
-  { pattern: /<select[^>]*/, attrPosition: 'select', elementType: 'select' },
-  { pattern: /<textarea[^>]*/, attrPosition: 'textarea', elementType: 'textarea' },
-  { pattern: /<div[^>]*className="[^"]*loading/, attrPosition: 'div', elementType: 'loading-div' },
-  { pattern: /<div[^>]*className="[^"]*error/, attrPosition: 'div', elementType: 'error-div' },
-  { pattern: /<div[^>]*className="[^"]*grid/, attrPosition: 'div', elementType: 'grid-div' },
-];
-
-// Function to find component files matching a pattern
+ // Function to find component files matching a pattern
 function findComponents(pattern, baseDir = 'src/renderer') {
   const glob = require('glob');
   const fullPattern = path.join(baseDir, '**', pattern);
@@ -98,7 +85,7 @@ function findComponents(pattern, baseDir = 'src/renderer') {
 }
 
 // Function to add data-cy attribute to JSX element
-function addDataCyAttribute(content, attribute, elementType) {
+function addDataCyAttribute(content, attribute, _elementType) {
   // Don't add if already exists
   if (content.includes(`data-cy="${attribute}"`)) {
     return { modified: false, content };

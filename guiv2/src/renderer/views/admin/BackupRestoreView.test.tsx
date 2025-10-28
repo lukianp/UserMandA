@@ -3,7 +3,7 @@
  */
 
 import * as React from 'react';
-import { render, screen } from '@testing-library/react';
+import { renderWithProviders as render, screen } from '../../test-utils/testWrappers';
 
 import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
 

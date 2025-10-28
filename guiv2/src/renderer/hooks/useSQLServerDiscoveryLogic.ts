@@ -195,9 +195,9 @@ export const useSQLServerDiscoveryLogic = () => {
     const search = searchText.toLowerCase();
     return instances.filter(
       (instance) =>
-        instance.instanceName.toLowerCase().includes(search) ||
-        instance.version.toLowerCase().includes(search) ||
-        instance.edition.toLowerCase().includes(search)
+        (instance.instanceName ?? '').toLowerCase().includes(search) ||
+        (instance.version ?? '').toLowerCase().includes(search) ||
+        (instance.edition ?? '').toLowerCase().includes(search)
     );
   }, [result, searchText]);
 
@@ -209,9 +209,9 @@ export const useSQLServerDiscoveryLogic = () => {
     const search = searchText.toLowerCase();
     return databases.filter(
       (db) =>
-        db.name.toLowerCase().includes(search) ||
-        db.owner.toLowerCase().includes(search) ||
-        db.recoveryModel.toLowerCase().includes(search)
+        (db.name ?? '').toLowerCase().includes(search) ||
+        (db.owner ?? '').toLowerCase().includes(search) ||
+        (db.recoveryModel ?? '').toLowerCase().includes(search)
     );
   }, [result, searchText]);
 
@@ -277,9 +277,9 @@ export const useSQLServerDiscoveryLogic = () => {
     const databases = result?.databases ?? [];
     const totalInstances = instances.length;
     const activeInstances = instances.filter((i) => i.isSysAdmin).length; // Use isSysAdmin as proxy for "active"
-    const totalDatabases = databases.length;
-    const totalStorageMB = databases.reduce((sum, db) => sum + (db.size?.totalMB || 0), 0);
-    const outdatedBackups = databases.filter((db) => {
+    const totalDatabases = (databases.length ?? 0);
+    const totalStorageMB = (databases ?? []).reduce((sum, db) => sum + (db.size?.totalMB || 0), 0);
+    const outdatedBackups = (databases ?? []).filter((db) => {
       if (!db.lastBackup?.date) return true;
       const daysSinceBackup = (Date.now() - new Date(db.lastBackup.date).getTime()) / (1000 * 60 * 60 * 24);
       return daysSinceBackup > 1;

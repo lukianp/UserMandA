@@ -63,12 +63,12 @@ export const useCustomFieldsLogic = () => {
    * Filter data based on search
    */
   const filteredData = useCallback(() => {
-    return data.filter(field => {
+    return (data ?? []).filter(field => {
       return !searchText ||
-        field.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        field.label.toLowerCase().includes(searchText.toLowerCase()) ||
-        field.entityType.toLowerCase().includes(searchText.toLowerCase()) ||
-        field.type.toLowerCase().includes(searchText.toLowerCase());
+        (field.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (field.label ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (field.entityType ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (field.type ?? '').toLowerCase().includes(searchText.toLowerCase());
     });
   }, [data, searchText]);
 

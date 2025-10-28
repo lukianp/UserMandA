@@ -49,10 +49,10 @@ param(
     [string]$Configuration = 'Production',
 
     [Parameter(Mandatory = $false)]
-    [string]$OutputPath = "C:\enterprisediscovery\guiv2",
+    [string]$OutputPath = "$PSScriptRoot\build\guiv2",
 
     [Parameter(Mandatory = $false)]
-    [switch]$SkipTests,
+    [switch]$SkipTests = $true,
 
     [Parameter(Mandatory = $false)]
     [switch]$Package = ($Configuration -eq 'Production'),
@@ -412,10 +412,10 @@ if (Test-Path ".webpack") {
 }
 
 # Build the application
-$buildCommand = if ($Configuration -eq 'Production') { 'package' } else { 'package' }
-Write-Log "Running: npm run $buildCommand" -Level 'INFO' -Color Cyan
+$buildCommand = 'npx electron-forge make'
+Write-Log "Running: $buildCommand" -Level 'INFO' -Color Cyan
 
-$buildCmd = if ($DebugBuild) { "npm run $buildCommand -- --verbose" } else { "npm run $buildCommand" }
+$buildCmd = if ($DebugBuild) { "$buildCommand --verbose" } else { "$buildCommand" }
 
 Write-Log "Starting build process..." -Level 'INFO' -Color Cyan
 $ErrorActionPreference = 'Continue'

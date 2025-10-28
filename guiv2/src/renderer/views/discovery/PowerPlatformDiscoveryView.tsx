@@ -71,7 +71,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
           progress={progress.percentage}
           onCancel={cancelDiscovery}
           message={progress.message || 'Discovering Power Platform resources...'}
-        />
+         data-testid="loading-overlay"/>
       )}
 
       {/* Header */}

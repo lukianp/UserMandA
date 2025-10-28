@@ -56,8 +56,8 @@ export const useReportsLogic = () => {
 
   const filteredTemplates = templates.filter(template => {
     const matchesSearch = !searchText ||
-      template.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      template.description.toLowerCase().includes(searchText.toLowerCase());
+      (template.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+      (template.description ?? '').toLowerCase().includes(searchText.toLowerCase());
     const matchesCategory = filterCategory === 'all' || template.category === filterCategory;
     return matchesSearch && matchesCategory;
   });

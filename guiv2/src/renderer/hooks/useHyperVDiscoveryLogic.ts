@@ -277,7 +277,7 @@ export const useHyperVDiscoveryLogic = () => {
         data = state.result?.hosts || [];
         // Filter by selected hosts
         if (state.filter.selectedHosts.length > 0) {
-          data = data.filter((h: HyperVHost) => state.filter.selectedHosts.includes(h.name));
+          data = (data ?? []).filter((h: HyperVHost) => state.filter.selectedHosts.includes(h.name));
         }
         break;
       case 'vms':
@@ -286,15 +286,15 @@ export const useHyperVDiscoveryLogic = () => {
         ) || [];
         // Filter by state
         if (state.filter.selectedStates.length > 0) {
-          data = data.filter((vm: any) => state.filter.selectedStates.includes(vm.state));
+          data = (data ?? []).filter((vm: any) => state.filter.selectedStates.includes(vm.state));
         }
         // Filter by running only
         if (state.filter.showOnlyRunning) {
-          data = data.filter((vm: any) => vm.state === 'running');
+          data = (data ?? []).filter((vm: any) => vm.state === 'running');
         }
         // Filter by host
         if (state.filter.selectedHosts.length > 0) {
-          data = data.filter((vm: any) => state.filter.selectedHosts.includes(vm.hostName));
+          data = (data ?? []).filter((vm: any) => state.filter.selectedHosts.includes(vm.hostName));
         }
         break;
       case 'switches':
@@ -302,7 +302,7 @@ export const useHyperVDiscoveryLogic = () => {
           h.virtualSwitches.map(sw => ({ ...sw, hostName: h.name }))
         ) || [];
         if (state.filter.selectedHosts.length > 0) {
-          data = data.filter((sw: any) => state.filter.selectedHosts.includes(sw.hostName));
+          data = (data ?? []).filter((sw: any) => state.filter.selectedHosts.includes(sw.hostName));
         }
         break;
       case 'checkpoints':
@@ -312,7 +312,7 @@ export const useHyperVDiscoveryLogic = () => {
           )
         ) || [];
         if (state.filter.selectedHosts.length > 0) {
-          data = data.filter((cp: any) => state.filter.selectedHosts.includes(cp.hostName));
+          data = (data ?? []).filter((cp: any) => state.filter.selectedHosts.includes(cp.hostName));
         }
         break;
       default:
@@ -322,7 +322,7 @@ export const useHyperVDiscoveryLogic = () => {
     // Apply search filter
     if (state.filter.searchText) {
       const searchLower = state.filter.searchText.toLowerCase();
-      data = data.filter(item =>
+      data = (data ?? []).filter(item =>
         JSON.stringify(item).toLowerCase().includes(searchLower)
       );
     }
@@ -432,7 +432,7 @@ function convertToCSV(data: any[]): string {
     }, {});
   };
 
-  const flatData = data.map(item => flattenObject(item));
+  const flatData = (data ?? []).map(item => flattenObject(item));
   const headers = Object.keys(flatData[0]);
 
   const rows = flatData.map(item =>

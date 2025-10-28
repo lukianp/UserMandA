@@ -1,5 +1,6 @@
-const fs = require('fs');
-const data = JSON.parse(fs.readFileSync('baseline-batch5.json', 'utf8'));
+/* eslint-env node */
+                                                                                                                                                                  const fs = require('fs');
+const data = JSON.parse(fs.readFileSync('current-progress.json', 'utf8'));
 
 const errorPatterns = {};
 

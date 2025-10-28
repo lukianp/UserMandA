@@ -6,6 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const glob = require('glob');
 
 // Map of discovery hooks to their mock creator functions
@@ -19,7 +20,7 @@ const hookToMockMap = {
   'useSQLServerDiscoveryLogic.test.ts': 'sqlServer',
 };
 
-function addMockImport(content, mockType) {
+function addMockImport(content, _mockType) {
   // Check if import already exists
   if (content.includes('mockDiscoveryCreators')) {
     return content;

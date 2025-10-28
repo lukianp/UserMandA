@@ -331,9 +331,9 @@ export const useKnowledgeBaseLogic = () => {
     try {
       let filteredArticles = articles.filter(article => {
         const matchesQuery = query === '' ||
-          article.title.toLowerCase().includes(query.toLowerCase()) ||
-          article.content.toLowerCase().includes(query.toLowerCase()) ||
-          article.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase()));
+          (article.title ?? '').toLowerCase().includes(query.toLowerCase()) ||
+          (article.content ?? '').toLowerCase().includes(query.toLowerCase()) ||
+          article.tags.some(tag => (tag ?? '').toLowerCase().includes(query.toLowerCase()));
 
         const matchesCategory = !filters?.category || article.category === filters.category;
         const matchesStatus = !filters?.status || article.status === filters.status;
@@ -344,8 +344,8 @@ export const useKnowledgeBaseLogic = () => {
 
       let filteredFAQs = faqs.filter(faq => {
         const matchesQuery = query === '' ||
-          faq.question.toLowerCase().includes(query.toLowerCase()) ||
-          faq.answer.toLowerCase().includes(query.toLowerCase());
+          (faq.question ?? '').toLowerCase().includes(query.toLowerCase()) ||
+          (faq.answer ?? '').toLowerCase().includes(query.toLowerCase());
 
         const matchesCategory = !filters?.category || faq.category === filters.category;
 
@@ -354,11 +354,11 @@ export const useKnowledgeBaseLogic = () => {
 
       // Sort by relevance (simplified)
       filteredArticles.sort((a, b) => {
-        const aScore = (a.title.toLowerCase().includes(query.toLowerCase()) ? 3 : 0) +
-                      (a.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase())) ? 2 : 0) +
+        const aScore = ((a.title ?? '').toLowerCase().includes(query.toLowerCase()) ? 3 : 0) +
+                      (a.tags.some(tag => (tag ?? '').toLowerCase().includes(query.toLowerCase())) ? 2 : 0) +
                       a.viewCount * 0.1;
-        const bScore = (b.title.toLowerCase().includes(query.toLowerCase()) ? 3 : 0) +
-                      (b.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase())) ? 2 : 0) +
+        const bScore = ((b.title ?? '').toLowerCase().includes(query.toLowerCase()) ? 3 : 0) +
+                      (b.tags.some(tag => (tag ?? '').toLowerCase().includes(query.toLowerCase())) ? 2 : 0) +
                       b.viewCount * 0.1;
         return bScore - aScore;
       });

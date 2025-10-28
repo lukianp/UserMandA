@@ -1535,13 +1535,16 @@ export const useEndpointProtectionLogic = (): UseEndpointProtectionLogicReturn =
             riskScore: 7.5,
           };
           break;
-        case 'compliance_trends':
+        case 'compliance_trends': {
+          const complianceStatuses = protectionData?.complianceStatuses ?? [];
+          const totalScore = complianceStatuses.reduce((sum, cs) => sum + cs.score, 0);
           analytics[metric] = {
-            averageScore: protectionData?.complianceStatuses.reduce((sum, cs) => sum + cs.score, 0) / (protectionData?.complianceStatuses.length || 1) || 0,
+            averageScore: complianceStatuses.length > 0 ? totalScore / complianceStatuses.length : 0,
             trend: 'stable',
             changePercent: 2,
           };
           break;
+        }
         default:
           analytics[metric] = {};
       }
@@ -1677,7 +1680,7 @@ export const useEndpointProtectionLogic = (): UseEndpointProtectionLogicReturn =
     } else {
       // Simple CSV conversion
       const headers = Object.keys(data[0] || {}).join(',');
-      const rows = data.map(item =>
+      const rows = (data ?? []).map(item =>
         Object.values(item).map(val =>
           typeof val === 'object' ? JSON.stringify(val) : String(val)
         ).join(',')

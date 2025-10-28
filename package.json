@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "lint": "eslint 'src/**/*.{ts,tsx,js}'"
+  },
   "dependencies": {
     "@tanstack/react-table": "^8.21.3"
   },

@@ -55,6 +55,7 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
           progress={progress.percentage}
           message={progress.message || 'Discovering DLP policies and incidents...'}
           onCancel={cancelDiscovery}
+          data-testid="loading-overlay"
         />
       )}
 
@@ -73,8 +74,12 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
         <div className="flex gap-3">
           {result && (
             <>
-              <Button variant="secondary" onClick={exportToCSV} icon={<Download className="w-4 h-4" />}>Export CSV</Button>
-              <Button variant="secondary" onClick={exportToExcel} icon={<FileSpreadsheet className="w-4 h-4" />}>Export Excel</Button>
+              <Button variant="secondary" onClick={exportToCSV} icon={<Download className="w-4 h-4" />} data-cy="export-csv-btn" data-testid="export-csv-btn">
+                Export CSV
+              </Button>
+              <Button variant="secondary" onClick={exportToExcel} icon={<FileSpreadsheet className="w-4 h-4" />} data-cy="export-excel-btn" data-testid="export-excel-btn">
+                Export Excel
+              </Button>
             </>
           )}
           <Button
@@ -82,6 +87,8 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
             onClick={handleStartDiscovery}
             disabled={isDiscovering}
             icon={isDiscovering ? <XCircle className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            data-cy="start-discovery-btn"
+            data-testid="start-discovery-btn"
           >
             {isDiscovering ? 'Discovering...' : 'Start Discovery'}
           </Button>
@@ -93,7 +100,7 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
         <button
           onClick={() => setShowConfig(!showConfig)}
           className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-        >
+         data-testid="toggle-config-btn">
           <span className="font-medium">Discovery Configuration</span>
           {showConfig ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </button>

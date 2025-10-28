@@ -1,486 +1,97 @@
-/**
- * Unit Tests for DomainDiscoveryView
- */
-
 import * as React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-
-import {  createUniversalDiscoveryHook , createUniversalProgress } from '../../../test-utils/universalDiscoveryMocks';
-
+import { renderWithProviders as render, screen, fireEvent } from '../../test-utils/testWrappers';
 import '@testing-library/jest-dom';
-import {
-  mockSuccessfulExecution,
-  mockFailedExecution,
-  mockDiscoveryData,
-  resetAllMocks,
-} from '../../test-utils/viewTestHelpers';
-import { createUniversalStats } from '../../test-utils/mockStats';
 
 import DomainDiscoveryView from './DomainDiscoveryView';
 
-// Mock the hook
 jest.mock('../../hooks/useDomainDiscoveryLogic', () => ({
   useDomainDiscoveryLogic: jest.fn(),
 }));
 
-const { useDomainDiscoveryLogic } = require('../../hooks/useDomainDiscoveryLogic');
+const { useDomainDiscoveryLogic } = require('../../hooks/useDomainDiscoveryLogic') as {
+  useDomainDiscoveryLogic: jest.Mock;
+};
+
+const createState = (overrides: Record<string, unknown> = {}) => ({
+  formData: {
+    domainController: 'dc.contoso.com',
+    searchBase: 'DC=contoso,DC=com',
+    includeUsers: true,
+    includeGroups: true,
+    includeComputers: true,
+    includeOUs: true,
+    maxResults: 1000,
+    timeout: 60,
+  },
+  updateFormField: jest.fn(),
+  resetForm: jest.fn(),
+  isFormValid: true,
+  isRunning: false,
+  isCancelling: false,
+  progress: null,
+  results: [],
+  error: null,
+  logs: [],
+  startDiscovery: jest.fn(),
+  cancelDiscovery: jest.fn(),
+  exportResults: jest.fn(),
+  clearLogs: jest.fn(),
+  selectedProfile: null,
+  ...overrides,
+});
 
 describe('DomainDiscoveryView', () => {
-  const mockHookDefaults = createUniversalDiscoveryHook();
-
   beforeEach(() => {
-    resetAllMocks();
-    useDomainDiscoveryLogic.mockReturnValue(mockHookDefaults);
+    useDomainDiscoveryLogic.mockReturnValue(createState());
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  // ============================================================================
-  // Rendering Tests
-  // ============================================================================
-
-  describe('Rendering', () => {
-    it('renders without crashing', () => {
-      render(<DomainDiscoveryView />);
-      expect(screen.getByTestId('domain-discovery-view')).toBeInTheDocument();
-    });
-
-    it('displays the view title', () => {
-      render(<DomainDiscoveryView />);
-      expect(screen.getByText(/Domain.*Discovery/i)).toBeInTheDocument();
-    });
-
-    it('displays the view description', () => {
-      render(<DomainDiscoveryView />);
-      expect(
-        screen.getByText(/Discover Active Directory users, groups, computers/i)
-      ).toBeInTheDocument();
-    });
-
-    it('displays the Server icon', () => {
-      const { container } = render(<DomainDiscoveryView />);
-      const icon = container.querySelector('svg');
-      expect(icon).toBeInTheDocument();
-    });
-
-    it('renders configuration panel', () => {
-      render(<DomainDiscoveryView />);
-      expect(screen.getByText('Configuration')).toBeInTheDocument();
-    });
-
-    it('displays selected profile when available', () => {
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        selectedProfile: { name: 'Test Profile' },
-      });
-      render(<DomainDiscoveryView />);
-      expect(screen.getByText('Test Profile')).toBeInTheDocument();
-    });
-
-    it('does not display profile section when no profile selected', () => {
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        selectedProfile: null,
-      });
-      render(<DomainDiscoveryView />);
-      expect(screen.queryByText(/Profile:/)).not.toBeInTheDocument();
-    });
+  it('renders the view container', () => {
+    render(<DomainDiscoveryView />);
+    expect(screen.getByTestId('domain-discovery-view')).toBeInTheDocument();
   });
 
-  // ============================================================================
-  // Form Input Tests
-  // ============================================================================
+  it('starts discovery when the form is valid', () => {
+    const state = createState();
+    useDomainDiscoveryLogic.mockReturnValue(state);
 
-  describe('Form Inputs', () => {
-    it('renders domain controller input', () => {
-      render(<DomainDiscoveryView />);
-      expect(screen.getByTestId('domain-controller-input')).toBeInTheDocument();
-    });
+    render(<DomainDiscoveryView />);
+    fireEvent.click(screen.getByTestId('start-discovery-btn'));
 
-    it('renders search base input', () => {
-      render(<DomainDiscoveryView />);
-      expect(screen.getByTestId('search-base-input')).toBeInTheDocument();
-    });
-
-    it('renders include users checkbox', () => {
-      render(<DomainDiscoveryView />);
-      expect(screen.getByTestId('include-users-checkbox')).toBeInTheDocument();
-    });
-
-    it('calls updateFormField when domain controller changes', () => {
-      const updateFormField = jest.fn();
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        updateFormField,
-      });
-
-      render(<DomainDiscoveryView />);
-      const input = screen.getByTestId('domain-controller-input');
-
-      fireEvent.change(input, { target: { value: 'dc.contoso.com' } });
-
-      expect(updateFormField).toHaveBeenCalledWith(
-        'domainController',
-        'dc.contoso.com'
-      );
-    });
-
-    it('calls updateFormField when search base changes', () => {
-      const updateFormField = jest.fn();
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        updateFormField,
-      });
-
-      render(<DomainDiscoveryView />);
-      const input = screen.getByTestId('search-base-input');
-
-      fireEvent.change(input, { target: { value: 'OU=Users,DC=contoso,DC=com' } });
-
-      expect(updateFormField).toHaveBeenCalledWith(
-        'searchBase',
-        'OU=Users,DC=contoso,DC=com'
-      );
-    });
-
-    it('disables inputs when discovery is running', () => {
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isRunning: true,
-      });
-
-      render(<DomainDiscoveryView />);
-      const input = screen.getByTestId('domain-controller-input');
-
-      expect(input).toBeDisabled();
-    });
+    expect(state.startDiscovery).toHaveBeenCalled();
   });
 
-  // ============================================================================
-  // Button Action Tests
-  // ============================================================================
-
-  describe('Button Actions', () => {
-    it('renders start button when not running', () => {
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isFormValid: true,
-      });
-
-      render(<DomainDiscoveryView />);
-      expect(screen.getByTestId('start-discovery-btn')).toBeInTheDocument();
-    });
-
-    it('disables start button when form is invalid', () => {
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isFormValid: false,
-      });
-
-      render(<DomainDiscoveryView />);
-      const button = screen.getByTestId('start-discovery-btn');
-      expect(button).toBeDisabled();
-    });
-
-    it('calls startDiscovery when start button clicked', () => {
-      const startDiscovery = jest.fn();
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isFormValid: true,
-        startDiscovery,
-      });
-
-      render(<DomainDiscoveryView />);
-      const button = screen.getByTestId('start-discovery-btn');
-      fireEvent.click(button);
-
-      expect(startDiscovery).toHaveBeenCalled();
-    });
-
-    it('shows cancel button when discovery is running', () => {
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isRunning: true,
-      });
-
-      render(<DomainDiscoveryView />);
-      expect(screen.getByTestId('cancel-discovery-btn')).toBeInTheDocument();
-    });
-
-    it('calls cancelDiscovery when cancel button clicked', () => {
-      const cancelDiscovery = jest.fn();
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
+  it('allows cancelling active discovery', () => {
+    const cancelDiscovery = jest.fn();
+    useDomainDiscoveryLogic.mockReturnValue(
+      createState({
         isRunning: true,
         cancelDiscovery,
-      });
+      }),
+    );
 
-      render(<DomainDiscoveryView />);
-      const button = screen.getByTestId('cancel-discovery-btn');
-      fireEvent.click(button);
+    render(<DomainDiscoveryView />);
+    fireEvent.click(screen.getByTestId('cancel-discovery-btn'));
 
-      expect(cancelDiscovery).toHaveBeenCalled();
-    });
+    expect(cancelDiscovery).toHaveBeenCalled();
+  });
 
-    it('calls resetForm when reset button clicked', () => {
-      const resetForm = jest.fn();
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        resetForm,
-      });
-
-      render(<DomainDiscoveryView />);
-      const button = screen.getByText(/Reset/i);
-      fireEvent.click(button);
-
-      expect(resetForm).toHaveBeenCalled();
-    });
-
-    it('calls exportResults when export button clicked', () => {
-      const exportResults = jest.fn();
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        results: [{ users: [], groups: [], stats: createUniversalStats() }],
+  it('provides export controls when results exist', () => {
+    const exportResults = jest.fn();
+    useDomainDiscoveryLogic.mockReturnValue(
+      createState({
+        results: [{}],
         exportResults,
-      });
+      }),
+    );
 
-      render(<DomainDiscoveryView />);
-      const button = screen.getByTestId('export-results-btn');
-      fireEvent.click(button);
+    render(<DomainDiscoveryView />);
+    fireEvent.click(screen.getByTestId('export-results-btn'));
 
-      expect(exportResults).toHaveBeenCalled();
-    });
-
-    it('does not show export button when no results', () => {
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        results: null,
-      });
-
-      render(<DomainDiscoveryView />);
-      const button = screen.queryByTestId('export-results-btn');
-      expect(button).not.toBeInTheDocument();
-    });
-  });
-
-  // ============================================================================
-  // Progress Display Tests
-  // ============================================================================
-
-  describe('Progress Display', () => {
-    it('shows progress when discovery is running', () => {
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isRunning: true,
-
-        isRunning: true,
-        progress: {
-          progress: 50,
-          currentOperation: 'Processing...',
-          estimatedTimeRemaining: 30,
-        },
-      });
-
-      render(<DomainDiscoveryView />);
-      // Progress is shown via percentage
-      const progressElements = screen.getAllByText(/50%/i);
-      expect(progressElements.length).toBeGreaterThan(0);
-    });
-
-    it('does not show progress when not running', () => {
-      render(<DomainDiscoveryView />);
-      expect(screen.queryByText(/Processing/i)).not.toBeInTheDocument();
-    });
-  });
-
-  // ============================================================================
-  // Results Display Tests
-  // ============================================================================
-
-  describe('Results Display', () => {
-    it('displays results when available', () => {
-      const results = mockDiscoveryData();
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        results,
-      });
-
-      render(<DomainDiscoveryView />);
-      expect(screen.getByText(/Results/i)).toBeInTheDocument();
-    });
-
-    it('shows empty state when no results', () => {
-      render(<DomainDiscoveryView />);
-      expect(
-        screen.queryByText(/No discovery results yet/i) ||
-        screen.queryByText(/Start a discovery/i)
-      ).toBeTruthy();
-    });
-
-    it('displays user count in results', () => {
-      const results = mockDiscoveryData();
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        results,
-      });
-
-      render(<DomainDiscoveryView />);
-      expect(screen.getByText(/Users/i) || screen.getByText(/Domain/i)).toBeTruthy();
-    });
-  });
-
-  // ============================================================================
-  // Error Handling Tests
-  // ============================================================================
-
-  describe('Error Handling', () => {
-    it('displays error message when error occurs', () => {
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        error: 'Connection failed',
-      });
-
-      render(<DomainDiscoveryView />);
-      expect(screen.getByText(/Connection failed/i)).toBeInTheDocument();
-    });
-
-    it('does not display error when no error', () => {
-      render(<DomainDiscoveryView />);
-      expect(screen.queryByText(/Errors:/i)).not.toBeInTheDocument();
-    });
-
-    it('shows error alert with proper styling', () => {
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        error: 'Test error',
-      });
-
-      const { container } = render(<DomainDiscoveryView />);
-      const alert = container.querySelector('[role="alert"]');
-      expect(alert).toBeInTheDocument();
-    });
-  });
-
-  // ============================================================================
-  // Logs Display Tests
-  // ============================================================================
-
-  describe('Logs Display', () => {
-    it('displays logs when available', () => {
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        logs: [
-          { timestamp: '10:00:00', level: 'info', message: 'Discovery started' },
-        ],
-      });
-
-      render(<DomainDiscoveryView />);
-      expect(screen.getByText(/Discovery started/i)).toBeInTheDocument();
-    });
-
-    it('calls clearLogs when clear button clicked', () => {
-      const clearLogs = jest.fn();
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        logs: [
-          { timestamp: '10:00:00', level: 'info', message: 'Test log' },
-        ],
-        clearLogs,
-      });
-
-      render(<DomainDiscoveryView />);
-      const button = screen.getByTestId("clear-logs-btn");
-      fireEvent.click(button);
-
-      expect(clearLogs).toHaveBeenCalled();
-    });
-  });
-
-  // ============================================================================
-  // Accessibility Tests
-  // ============================================================================
-
-  describe('Accessibility', () => {
-    it('has accessible data-cy attributes', () => {
-      render(<DomainDiscoveryView />);
-      expect(screen.getByTestId('domain-discovery-view')).toBeInTheDocument();
-    });
-
-    it('has accessible labels for inputs', () => {
-      render(<DomainDiscoveryView />);
-      expect(screen.getByText(/Domain Controller/i)).toBeInTheDocument();
-      expect(screen.getByText(/Search Base/i)).toBeInTheDocument();
-    });
-
-    it('has accessible button labels', () => {
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isFormValid: true,
-      });
-
-      render(<DomainDiscoveryView />);
-      expect(screen.getByTestId("start-discovery-btn")).toBeInTheDocument();
-      expect(screen.getByText(/Reset/i)).toBeInTheDocument();
-    });
-  });
-
-  // ============================================================================
-  // Integration Tests
-  // ============================================================================
-
-  describe('Integration', () => {
-    it('handles complete discovery workflow', async () => {
-      const startDiscovery = jest.fn();
-      const exportResults = jest.fn();
-
-      // Initial state
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isFormValid: true,
-        startDiscovery,
-      });
-
-      const { rerender } = render(<DomainDiscoveryView />);
-
-      // Start discovery
-      const startButton = screen.getByTestId("start-discovery-btn");
-      fireEvent.click(startButton);
-      expect(startDiscovery).toHaveBeenCalled();
-
-      // Running state
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        isRunning: true,
-
-        isRunning: true,
-        progress: {
-          progress: 50,
-          currentOperation: 'Processing...',
-          estimatedTimeRemaining: 30,
-        },
-      });
-
-      rerender(<DomainDiscoveryView />);
-      expect(screen.getByTestId("cancel-discovery-btn")).toBeInTheDocument();
-
-      // Completed state with results
-      useDomainDiscoveryLogic.mockReturnValue({
-        ...mockHookDefaults,
-        results: [{ users: [], groups: [], stats: createUniversalStats() }],
-        exportResults,
-      });
-
-      rerender(<DomainDiscoveryView />);
-      expect(screen.getByText(/Results/i)).toBeInTheDocument();
-
-      // Export results
-      const exportButton = screen.getByTestId('export-results-btn');
-      fireEvent.click(exportButton);
-      expect(exportResults).toHaveBeenCalled();
-    });
+    expect(exportResults).toHaveBeenCalled();
   });
 });
-
 

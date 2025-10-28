@@ -34,17 +34,23 @@ import {
   Clock,
   AlertCircle,
   BarChart3,
-  Webhook
+  Webhook as WebhookIcon
 } from 'lucide-react';
 
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { Select } from '../../components/atoms/Select';
 import { ModernCard } from '../../components/atoms/ModernCard';
-import DataTable from '../../components/organisms/DataTable';
-import { LoadingSpinner } from '../../components/atoms/LoadingSpinner';
+import DataTable, { type DataTableColumn } from '../../components/organisms/DataTable';
+import LoadingSpinner from '../../components/atoms/LoadingSpinner';
 
-import { useWebhooksLogic } from '../../hooks/useWebhooksLogic';
+import {
+  useWebhooksLogic,
+  type Webhook,
+  type WebhookDelivery,
+  type WebhookDeliveryStatus,
+  type WebhookEvent,
+} from '../../hooks/useWebhooksLogic';
 
 export const WebhooksView: React.FC = () => {
   const {
@@ -78,13 +84,13 @@ export const WebhooksView: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Webhook table columns
-  const webhookColumns = [
+  const webhookColumns: DataTableColumn<Webhook>[] = [
     {
       id: 'name',
       header: 'Name',
-      accessor: 'name',
+      accessor: (row) => row.name,
       sortable: true,
-      cell: (value: string, row: any) => (
+      cell: (value: string, row: Webhook) => (
         <div>
           <div className="font-medium text-gray-900 dark:text-white">{value}</div>
           <div className="text-sm text-gray-500 dark:text-gray-400">{row.url}</div>
@@ -94,18 +100,20 @@ export const WebhooksView: React.FC = () => {
     {
       id: 'status',
       header: 'Status',
-      accessor: 'status',
+      accessor: (row) => row.status,
       sortable: true,
       cell: (value: string) => (
-        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-          value === 'active'
-            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-            : value === 'inactive'
-            ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-            : value === 'failed'
-            ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-            : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-        }`}>
+        <span
+          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+            value === 'active'
+              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+              : value === 'inactive'
+              ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+              : value === 'failed'
+              ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+              : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+          }`}
+        >
           {value}
         </span>
       ),
@@ -113,53 +121,60 @@ export const WebhooksView: React.FC = () => {
     {
       id: 'method',
       header: 'Method',
-      accessor: 'method',
+      accessor: (row) => row.method,
       sortable: true,
     },
     {
       id: 'events',
       header: 'Events',
-      accessor: 'events',
-      cell: (value: string[]) => (
-        <div className="flex flex-wrap gap-1">
-          {value.slice(0, 2).map(event => (
-            <span key={event} className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
-              {event}
-            </span>
-          ))}
-          {value.length > 2 && (
-            <span className="inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 rounded">
-              +{value.length - 2}
-            </span>
-          )}
-        </div>
-      ),
+      accessor: (row) => row.events,
+      cell: (value: WebhookEvent[] = []) => {
+        const events = value ?? [];
+        return (
+          <div className="flex flex-wrap gap-1">
+            {events.slice(0, 2).map((event) => (
+              <span
+                key={event}
+                className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded"
+              >
+                {event}
+              </span>
+            ))}
+            {events.length > 2 && (
+              <span className="inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 rounded">
+                +{events.length - 2}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: 'deliveryCount',
       header: 'Deliveries',
-      accessor: 'deliveryCount',
+      accessor: (row) => row.deliveryCount,
       sortable: true,
-      align: 'right' as const,
+      align: 'right',
     },
     {
       id: 'failureCount',
       header: 'Failures',
-      accessor: 'failureCount',
+      accessor: (row) => row.failureCount,
       sortable: true,
-      align: 'right' as const,
+      align: 'right',
     },
     {
       id: 'lastDeliveryAt',
       header: 'Last Delivery',
-      accessor: 'lastDeliveryAt',
+      accessor: (row) => row.lastDeliveryAt,
       sortable: true,
-      cell: (value: string) => value ? new Date(value).toLocaleDateString() : 'Never',
+      cell: (value: string | undefined) => (value ? new Date(value).toLocaleDateString() : 'Never'),
     },
     {
       id: 'actions',
       header: 'Actions',
-      cell: (_: any, row: any) => (
+      accessor: (row) => row.id,
+      cell: (_: string, row: Webhook) => (
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"
@@ -185,32 +200,34 @@ export const WebhooksView: React.FC = () => {
             icon={<MoreHorizontal className="w-4 h-4" />}
             onClick={() => handleWebhookActions(row)}
             data-cy={`more-actions-${row.id}`}
-          />
+          >
+            <span className="sr-only">More actions</span>
+          </Button>
         </div>
       ),
     },
   ];
 
   // Delivery table columns
-  const deliveryColumns = [
+  const deliveryColumns: DataTableColumn<WebhookDelivery>[] = [
     {
       id: 'webhookName',
       header: 'Webhook',
-      accessor: (row: any) => webhooks.find(w => w.id === row.webhookId)?.name || 'Unknown',
+      accessor: (row) => webhooks.find((w) => w.id === row.webhookId)?.name ?? 'Unknown',
       sortable: true,
     },
     {
       id: 'event',
       header: 'Event',
-      accessor: 'event',
+      accessor: (row) => row.event,
       sortable: true,
     },
     {
       id: 'status',
       header: 'Status',
-      accessor: 'status',
+      accessor: (row) => row.status,
       sortable: true,
-      cell: (value: string) => (
+      cell: (value: WebhookDeliveryStatus) => (
         <div className="flex items-center gap-2">
           {value === 'success' && <CheckCircle className="w-4 h-4 text-green-500" />}
           {value === 'failed' && <XCircle className="w-4 h-4 text-red-500" />}
@@ -233,16 +250,16 @@ export const WebhooksView: React.FC = () => {
     {
       id: 'responseStatus',
       header: 'Response',
-      accessor: 'responseStatus',
+      accessor: (row) => row.responseStatus,
       sortable: true,
-      align: 'right' as const,
+      align: 'right',
     },
     {
       id: 'deliveredAt',
       header: 'Delivered At',
-      accessor: 'deliveredAt',
+      accessor: (row) => row.deliveredAt,
       sortable: true,
-      cell: (value: string) => value ? new Date(value).toLocaleString() : '-',
+      cell: (value: string | undefined) => (value ? new Date(value).toLocaleString() : '-'),
     },
     {
       id: 'duration',
@@ -255,6 +272,7 @@ export const WebhooksView: React.FC = () => {
     {
       id: 'actions',
       header: 'Actions',
+      accessor: (row) => row.id,
       cell: (_: any, row: any) => (
         <div className="flex items-center gap-2">
           {row.status === 'failed' && (
@@ -355,7 +373,7 @@ export const WebhooksView: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <ModernCard variant="metric">
             <div className="flex items-center gap-3">
-              <Webhook className="w-8 h-8 text-blue-500" />
+                <WebhookIcon className="w-8 h-8 text-blue-500" />
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Webhooks</p>
                 <p className="text-2xl font-bold">{statistics.totalWebhooks}</p>
@@ -451,7 +469,8 @@ export const WebhooksView: React.FC = () => {
                     onChange={(e) => setSearchText(e.target.value)}
                     placeholder="Search webhooks..."
                     startIcon={<Search className="w-4 h-4" />}
-                    data-cy="search-webhooks" data-testid="search-webhooks"
+                    data-cy="search-webhooks"
+                    data-testid="search-webhooks"
                   />
                 </div>
                 <Select

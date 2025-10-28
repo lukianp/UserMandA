@@ -3,7 +3,7 @@
  * Validates core discovery workflow and exposed helpers
  */
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 
 import { useSQLServerDiscoveryLogic } from './useSQLServerDiscoveryLogic';

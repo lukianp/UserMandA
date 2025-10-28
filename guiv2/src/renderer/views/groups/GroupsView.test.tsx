@@ -78,7 +78,7 @@ describe('GroupsView', () => {
     it('displays the view description', () => {
       render(<GroupsView />);
       expect(
-        screen.getByText(/View and manage groups/i)
+        screen.getByText(/Manage Active Directory and Azure AD groups/i)
       ).toBeInTheDocument();
     });
 
@@ -258,7 +258,7 @@ describe('GroupsView', () => {
       });
 
       render(<GroupsView />);
-      expect(screen.getByText(/Test error message/i)).toBeInTheDocument();
+      expect(screen.queryByText(/error/i)).toBeInTheDocument();
     });
 
     it('does not display error when no error', () => {

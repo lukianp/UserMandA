@@ -228,14 +228,14 @@ export const useConditionalAccessDiscoveryLogic = () => {
     // Apply search filter
     if (state.filter.searchText) {
       const searchLower = state.filter.searchText.toLowerCase();
-      data = data.filter(item =>
+      data = (data ?? []).filter(item =>
         JSON.stringify(item).toLowerCase().includes(searchLower)
       );
     }
 
     // Apply state filter for policies
     if (state.activeTab === 'policies' && state.filter.selectedStates.length > 0) {
-      data = data.filter((policy: ConditionalAccessPolicy) =>
+      data = (data ?? []).filter((policy: ConditionalAccessPolicy) =>
         state.filter.selectedStates.includes(policy.state)
       );
     }
@@ -312,7 +312,7 @@ function convertToCSV(data: any[]): string {
   if (!data || data.length === 0) return '';
 
   const headers = Object.keys(data[0]);
-  const rows = data.map(item =>
+  const rows = (data ?? []).map(item =>
     headers.map(header => {
       const value = item[header];
       if (typeof value === 'object') return JSON.stringify(value);

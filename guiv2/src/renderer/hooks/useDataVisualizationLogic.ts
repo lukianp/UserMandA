@@ -178,7 +178,7 @@ function generateMockVisualizationKpis(): VisualizationKpi[] {
 function convertVisualizationToCSV(data: ChartDataPoint[]): string {
   const headers = ['X', 'Y', 'Label', 'Category'];
 
-  const rows = data.map(item => [
+  const rows = (data ?? []).map(item => [
     item.x.toString(),
     item.y.toString(),
     item.label || '',

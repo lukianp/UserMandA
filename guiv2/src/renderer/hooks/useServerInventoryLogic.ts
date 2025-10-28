@@ -240,12 +240,12 @@ export const useServerInventoryLogic = () => {
     let result = [...data];
 
     if (filters.role) {
-      result = result.filter((item) => item.role.toLowerCase().includes(filters.role.toLowerCase()));
+      result = result.filter((item) => (item.role ?? '').toLowerCase().includes(filters.role.toLowerCase()));
     }
 
     if (filters.osType) {
       result = result.filter((item) =>
-        item.operatingSystem.toLowerCase().includes(filters.osType.toLowerCase())
+        (item.operatingSystem ?? '').toLowerCase().includes(filters.osType.toLowerCase())
       );
     }
 
@@ -255,7 +255,7 @@ export const useServerInventoryLogic = () => {
 
     if (filters.clusterMembership) {
       result = result.filter((item) =>
-        item.clusterMembership.toLowerCase().includes(filters.clusterMembership.toLowerCase())
+        (item.clusterMembership ?? '').toLowerCase().includes(filters.clusterMembership.toLowerCase())
       );
     }
 
@@ -263,9 +263,9 @@ export const useServerInventoryLogic = () => {
       const search = filters.searchText.toLowerCase();
       result = result.filter(
         (item) =>
-          item.name.toLowerCase().includes(search) ||
-          item.ipAddress.toLowerCase().includes(search) ||
-          item.role.toLowerCase().includes(search)
+          (item.name ?? '').toLowerCase().includes(search) ||
+          (item.ipAddress ?? '').toLowerCase().includes(search) ||
+          (item.role ?? '').toLowerCase().includes(search)
       );
     }
 
@@ -274,10 +274,10 @@ export const useServerInventoryLogic = () => {
 
   // Filter options
   const filterOptions = useMemo(() => {
-    const roles = [...new Set(data.map((d) => d.role))].sort();
-    const osTypes = [...new Set(data.map((d) => d.operatingSystem))].sort();
+    const roles = [...new Set((data ?? []).map((d) => d.role))].sort();
+    const osTypes = [...new Set((data ?? []).map((d) => d.operatingSystem))].sort();
     const criticalities = ['Critical', 'High', 'Medium', 'Low'];
-    const clusters = [...new Set(data.map((d) => d.clusterMembership).filter((c) => c))].sort();
+    const clusters = [...new Set((data ?? []).map((d) => d.clusterMembership).filter((c) => c))].sort();
 
     return { roles, osTypes, criticalities, clusters };
   }, [data]);

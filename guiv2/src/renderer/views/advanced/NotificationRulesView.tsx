@@ -246,6 +246,7 @@ export const NotificationRulesView: React.FC = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             startIcon={<Search className="w-4 h-4" />}
+            data-testid="search-input"
           />
         </div>
         <div className="flex gap-2">

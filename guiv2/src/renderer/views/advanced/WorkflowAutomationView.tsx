@@ -43,9 +43,11 @@ import { Input } from '../../components/atoms/Input';
 import { Select } from '../../components/atoms/Select';
 import { ModernCard } from '../../components/atoms/ModernCard';
 import DataTable from '../../components/organisms/DataTable';
-import { LoadingSpinner } from '../../components/atoms/LoadingSpinner';
+import type { DataTableColumn } from '../../components/organisms/DataTable';
+import LoadingSpinner from '../../components/atoms/LoadingSpinner';
 
 import { useWorkflowAutomationLogic } from '../../hooks/useWorkflowAutomationLogic';
+import type { Workflow, WorkflowExecution } from '../../hooks/useWorkflowAutomationLogic';
 
 export const WorkflowAutomationView: React.FC = () => {
   const {
@@ -85,13 +87,13 @@ export const WorkflowAutomationView: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Workflow table columns
-  const workflowColumns = [
+  const workflowColumns: DataTableColumn<Workflow>[] = [
     {
       id: 'name',
       header: 'Name',
       accessor: 'name',
       sortable: true,
-      cell: (value: string, row: any) => (
+      cell: (value: Workflow['name'], row: Workflow) => (
         <div>
           <div className="font-medium text-gray-900 dark:text-white">{value}</div>
           <div className="text-sm text-gray-500 dark:text-gray-400">{row.description}</div>
@@ -103,7 +105,7 @@ export const WorkflowAutomationView: React.FC = () => {
       header: 'Status',
       accessor: 'status',
       sortable: true,
-      cell: (value: string) => (
+      cell: (value: Workflow['status']) => (
         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
           value === 'active'
             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
@@ -118,7 +120,7 @@ export const WorkflowAutomationView: React.FC = () => {
     {
       id: 'trigger',
       header: 'Trigger',
-      accessor: (row: any) => row.trigger.type,
+      accessor: (row: Workflow) => row.trigger.type,
       sortable: true,
     },
     {
@@ -134,19 +136,20 @@ export const WorkflowAutomationView: React.FC = () => {
       accessor: 'successRate',
       sortable: true,
       align: 'right' as const,
-      cell: (value: number) => `${(value * 100).toFixed(1)}%`,
+      cell: (value: Workflow['successRate']) => `${(value * 100).toFixed(1)}%`,
     },
     {
       id: 'lastExecutedAt',
       header: 'Last Executed',
       accessor: 'lastExecutedAt',
       sortable: true,
-      cell: (value: string) => value ? new Date(value).toLocaleDateString() : 'Never',
+      cell: (value: Workflow['lastExecutedAt']) => (value ? new Date(value).toLocaleDateString() : 'Never'),
     },
     {
       id: 'actions',
       header: 'Actions',
-      cell: (_: any, row: any) => (
+      accessor: 'id',
+      cell: (_: Workflow['id'], row: Workflow) => (
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"
@@ -172,18 +175,20 @@ export const WorkflowAutomationView: React.FC = () => {
             icon={<MoreHorizontal className="w-4 h-4" />}
             onClick={() => handleWorkflowActions(row)}
             data-cy={`more-actions-${row.id}`}
-          />
+          >
+            <span className="sr-only">More actions</span>
+          </Button>
         </div>
       ),
     },
   ];
 
   // Execution table columns
-  const executionColumns = [
+  const executionColumns: DataTableColumn<WorkflowExecution>[] = [
     {
       id: 'workflowName',
       header: 'Workflow',
-      accessor: (row: any) => workflows.find(w => w.id === row.workflowId)?.name || 'Unknown',
+      accessor: (row: WorkflowExecution) => workflows.find(w => w.id === row.workflowId)?.name || 'Unknown',
       sortable: true,
     },
     {
@@ -191,7 +196,7 @@ export const WorkflowAutomationView: React.FC = () => {
       header: 'Status',
       accessor: 'status',
       sortable: true,
-      cell: (value: string) => (
+      cell: (value: WorkflowExecution['status']) => (
         <div className="flex items-center gap-2">
           {value === 'completed' && <CheckCircle className="w-4 h-4 text-green-500" />}
           {value === 'running' && <Activity className="w-4 h-4 text-blue-500 animate-pulse" />}
@@ -215,7 +220,7 @@ export const WorkflowAutomationView: React.FC = () => {
     {
       id: 'trigger',
       header: 'Trigger',
-      accessor: (row: any) => row.trigger.type,
+      accessor: (row: WorkflowExecution) => row.trigger.type,
       sortable: true,
     },
     {
@@ -223,7 +228,7 @@ export const WorkflowAutomationView: React.FC = () => {
       header: 'Started',
       accessor: 'startedAt',
       sortable: true,
-      cell: (value: string) => new Date(value).toLocaleString(),
+      cell: (value: WorkflowExecution['startedAt']) => new Date(value).toLocaleString(),
     },
     {
       id: 'duration',
@@ -231,12 +236,13 @@ export const WorkflowAutomationView: React.FC = () => {
       accessor: 'duration',
       sortable: true,
       align: 'right' as const,
-      cell: (value: number) => value ? `${(value / 1000).toFixed(1)}s` : '-',
+      cell: (value: WorkflowExecution['duration']) => (value ? `${(value / 1000).toFixed(1)}s` : '-'),
     },
     {
       id: 'actions',
       header: 'Actions',
-      cell: (_: any, row: any) => (
+      accessor: 'id',
+      cell: (_: WorkflowExecution['id'], row: WorkflowExecution) => (
         <div className="flex items-center gap-2">
           {row.status === 'running' && (
             <>
@@ -290,17 +296,17 @@ export const WorkflowAutomationView: React.FC = () => {
     setShowCreateModal(true);
   }, []);
 
-  const handleEditWorkflow = useCallback((workflow: any) => {
+  const handleEditWorkflow = useCallback((workflow: Workflow) => {
     // Implementation for editing workflow
     console.log('Edit workflow:', workflow);
   }, []);
 
-  const handleWorkflowActions = useCallback((workflow: any) => {
+  const handleWorkflowActions = useCallback((workflow: Workflow) => {
     // Implementation for workflow actions menu
     console.log('Workflow actions:', workflow);
   }, []);
 
-  const handleViewExecution = useCallback((execution: any) => {
+  const handleViewExecution = useCallback((execution: WorkflowExecution) => {
     // Implementation for viewing execution details
     console.log('View execution:', execution);
   }, []);
@@ -454,7 +460,8 @@ export const WorkflowAutomationView: React.FC = () => {
                     onChange={(e) => setSearchText(e.target.value)}
                     placeholder="Search workflows..."
                     startIcon={<Search className="w-4 h-4" />}
-                    data-cy="search-workflows" data-testid="search-workflows"
+                    data-cy="search-workflows"
+                    data-testid="search-workflows"
                   />
                 </div>
                 <Select

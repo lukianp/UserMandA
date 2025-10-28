@@ -27,7 +27,10 @@
   },
   "include": [
     "src/**/*",
-    "forge.config.ts"
+    "forge.config.ts",
+    "bulk-fix-null-safety.js",
+    "batch-fix-tests.js",
+    "*.js"
   ],
   "exclude": [
     "node_modules",

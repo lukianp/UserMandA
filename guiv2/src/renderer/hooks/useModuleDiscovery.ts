@@ -95,8 +95,8 @@ export function useModuleDiscovery() {
       const lowerQuery = query.toLowerCase();
       return state.modules.filter(
         m =>
-          m.name.toLowerCase().includes(lowerQuery) ||
-          m.description.toLowerCase().includes(lowerQuery)
+          (m.name ?? '').toLowerCase().includes(lowerQuery) ||
+          (m.description ?? '').toLowerCase().includes(lowerQuery)
       );
     },
     [state.modules]
