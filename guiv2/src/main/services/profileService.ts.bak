@@ -409,14 +409,9 @@ export class ProfileService {
 
   private async hasCSVFiles(dirPath: string): Promise<boolean> {
     try {
-      // Normalize path for glob (use forward slashes on Windows)
-      const normalizedPath = path.join(dirPath, '*.csv').split(path.sep).join('/');
-      console.log('[ProfileService] hasCSVFiles checking:', normalizedPath);
-      const csvFiles = await glob(normalizedPath);
-      console.log('[ProfileService]   Found:', csvFiles.length, 'files');
+      const csvFiles = await glob(path.join(dirPath, '*.csv'));
       return csvFiles.length > 0;
-    } catch (error) {
-      console.log('[ProfileService] hasCSVFiles error:', error);
+    } catch {
       return false;
     }
   }

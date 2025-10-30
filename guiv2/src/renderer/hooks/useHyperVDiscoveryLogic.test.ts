@@ -1,174 +1,149 @@
-/**
- * Unit Tests for useHyperVDiscoveryLogic Hook
- * Tests all business logic for HyperV discovery functionality
- */
-
 import { renderHook, act, waitFor } from '@testing-library/react';
 
 import { useHyperVDiscoveryLogic } from './useHyperVDiscoveryLogic';
 
-// Mock electron API
-const mockElectronAPI = {
-  executeModule: jest.fn(),
-  cancelExecution: jest.fn(),
-  onProgress: jest.fn(() => jest.fn()),
-};
-
-beforeAll(() => {
-  Object.defineProperty(window, 'electronAPI', {
-    writable: true,
-    value: mockElectronAPI,
-  });
-});
+type ProgressCallback = (data: any) => void;
 
 describe('useHyperVDiscoveryLogic', () => {
+  let progressCallback: ProgressCallback | undefined;
+  let executeModuleMock: jest.Mock;
+  let cancelExecutionMock: jest.Mock;
+
   beforeEach(() => {
     jest.clearAllMocks();
-    mockElectronAPI.executeModule.mockResolvedValue({
-      success: true,
-      data: {},
+    progressCallback = undefined;
+
+    executeModuleMock = jest.fn().mockResolvedValue({ success: true, data: { hosts: [] } });
+    cancelExecutionMock = jest.fn().mockResolvedValue(undefined);
+
+    const electronAPIMock: any = {
+      executeModule: executeModuleMock,
+      cancelExecution: cancelExecutionMock,
+      onProgress: jest.fn((cb: ProgressCallback) => {
+        progressCallback = cb;
+        return jest.fn();
+      }),
+    };
+
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: electronAPIMock,
     });
   });
 
-  describe('Initial State', () => {
-    it('should initialize with default state', () => {
-      const { result } = renderHook(() => useHyperVDiscoveryLogic());
-
-      expect(result.current).toBeDefined();
-      expect(result.current.isDiscovering).toBe(false);
-    });
-
-    it('should initialize with null or empty result', () => {
-      const { result } = renderHook(() => useHyperVDiscoveryLogic());
-
-      expect(result.current.result).toBeNull();
-    });
-
-    it('should initialize with null error', () => {
-      const { result } = renderHook(() => useHyperVDiscoveryLogic());
-
-      expect(result.current.error).toBeNull();
-    });
+  afterEach(() => {
+    delete (window as any).electronAPI;
   });
 
-  describe('Discovery Execution', () => {
-    it('should start discovery successfully', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
+  it('exposes default configuration and state', () => {
+    const { result } = renderHook(() => useHyperVDiscoveryLogic());
 
-      const { result } = renderHook(() => useHyperVDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      await waitFor(() => {
-        expect(result.current.isDiscovering).toBe(false);
-      });
+    expect(result.current.config).toMatchObject({
+      includeVMs: true,
+      includeVirtualSwitches: true,
+      includeVHDs: true,
     });
-
-    it('should handle discovery failure', async () => {
-      const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
-
-      const { result } = renderHook(() => useHyperVDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      await waitFor(() => {
-        expect(result.current.isDiscovering).toBe(false);
-      });
-    });
-
-    it('should set progress during discovery', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
-
-      const { result } = renderHook(() => useHyperVDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      await waitFor(() => {
-        expect(result.current.isDiscovering).toBe(false);
-      });
-
-      expect(result.current).toBeDefined();
-    });
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.activeTab).toBe('overview');
   });
 
-  describe('Cancellation', () => {
-    it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+  it('invokes discovery and consumes progress updates', async () => {
+    let resolveExecution: ((value: any) => void) | undefined;
+    executeModuleMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveExecution = resolve;
+        }),
+    );
 
-      const { result } = renderHook(() => useHyperVDiscoveryLogic());
+    const { result } = renderHook(() => useHyperVDiscoveryLogic());
 
-      await act(async () => {
-        await result.current.cancelDiscovery();
-      });
-
-      expect(result.current.isDiscovering).toBe(false);
+    let startPromise: Promise<unknown> | undefined;
+    await act(async () => {
+      startPromise = result.current.startDiscovery();
     });
+
+    await waitFor(() => expect(progressCallback).toBeDefined());
+
+    const callArgs = executeModuleMock.mock.calls[0][0];
+
+    await act(async () => {
+      progressCallback?.({
+        type: 'hyperv-discovery',
+        token: callArgs.parameters.cancellationToken,
+        current: 40,
+        total: 100,
+        percentage: 40,
+        message: 'Scanning hosts',
+      });
+    });
+
+    expect(result.current.progress.percentage).toBe(40);
+
+    await act(async () => {
+      resolveExecution?.({ success: true, data: { hosts: [] } });
+      await startPromise;
+    });
+
+    expect(executeModuleMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modulePath: 'Modules/Discovery/HyperVDiscovery.psm1',
+        functionName: 'Invoke-HyperVDiscovery',
+      }),
+    );
+
+    expect(result.current.progress.percentage).toBe(100);
+    expect(result.current.isDiscovering).toBe(false);
   });
 
-  describe('Configuration', () => {
-    it('should allow config updates', () => {
-      const { result } = renderHook(() => useHyperVDiscoveryLogic());
+  it('cancels discovery when requested', async () => {
+    let resolveExecution: ((value: any) => void) | undefined;
+    let rejectExecution: ((reason: any) => void) | undefined;
+    executeModuleMock.mockImplementation(
+      () =>
+        new Promise((resolve, reject) => {
+          resolveExecution = resolve;
+          rejectExecution = reject;
+        }),
+    );
 
-      act(() => {
-        if (result.current.updateConfig) {
-          result.current.updateConfig({ test: true });
-        } else if (result.current.setConfig) {
-          result.current.setConfig({ ...result.current.config, test: true });
-        }
-      });
+    const { result } = renderHook(() => useHyperVDiscoveryLogic());
 
-      expect(result.current.config).toBeDefined();
+    let startPromise: Promise<unknown> | undefined;
+    await act(async () => {
+      startPromise = result.current.startDiscovery();
     });
-  });
 
-  describe('Export', () => {
-    it('should handle export when no results', async () => {
-      const { result } = renderHook(() => useHyperVDiscoveryLogic());
+    await waitFor(() => expect(progressCallback).toBeDefined());
 
-      await act(async () => {
-        if (result.current.exportResults) {
-          await result.current.exportResults('csv');
-        } else if (result.current.exportData) {
-          await result.current.exportData({ format: 'csv' });
-        }
-      });
-
-      // Should not crash when no results
-      expect(true).toBe(true);
+    await act(async () => {
+      await result.current.cancelDiscovery();
     });
-  });
 
-  describe('UI State', () => {
-    it('should update tab selection', () => {
-      const { result } = renderHook(() => useHyperVDiscoveryLogic());
+    expect(cancelExecutionMock).toHaveBeenCalledTimes(1);
 
-      if (result.current.setSelectedTab) {
-        act(() => {
-          result.current.setSelectedTab('overview');
-        });
-        expect(result.current.selectedTab).toBeDefined();
-      } else if (result.current.setActiveTab) {
-        act(() => {
-          result.current.setActiveTab('overview');
-        });
-        expect(result.current.activeTab).toBeDefined();
+    await act(async () => {
+      rejectExecution?.(new Error('cancelled'));
+      try {
+        await startPromise;
+      } catch {
+        // Expected due to cancellation
       }
     });
+
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.progress.message).toBe('Cancelled');
+  });
+
+  it('updates configuration and active tab helpers', () => {
+    const { result } = renderHook(() => useHyperVDiscoveryLogic());
+
+    act(() => {
+      result.current.updateConfig({ includeVMs: false });
+      result.current.setActiveTab('vms');
+    });
+
+    expect(result.current.config.includeVMs).toBe(false);
+    expect(result.current.activeTab).toBe('vms');
   });
 });
-

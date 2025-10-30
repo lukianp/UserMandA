@@ -90,8 +90,7 @@ function Write-Log {
     }
 }
 
-# Initialize logging]
-
+# Initialize logging
 if ($DebugBuild) {
     $logDir = Split-Path -Parent $LogPath
     if (!(Test-Path $logDir)) {

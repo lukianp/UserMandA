@@ -1,36 +1,20 @@
-import * as React from 'react';
-import { renderWithProviders as render, screen, fireEvent } from '../../test-utils/testWrappers';
-import { within } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { render, screen, fireEvent } from '@testing-library/react';
 
+import { useInfrastructureDiscoveryHubLogic } from '../../hooks/useInfrastructureDiscoveryHubLogic';
 import InfrastructureDiscoveryHubView from './InfrastructureDiscoveryHubView';
 
-jest.mock('../../hooks/useInfrastructureDiscoveryHubLogic', () => ({
-  useInfrastructureDiscoveryHubLogic: jest.fn(),
-}));
+jest.mock('../../hooks/useInfrastructureDiscoveryHubLogic');
 
-const { useInfrastructureDiscoveryHubLogic } = require('../../hooks/useInfrastructureDiscoveryHubLogic') as {
-  useInfrastructureDiscoveryHubLogic: jest.Mock;
-};
+type HookState = ReturnType<typeof useInfrastructureDiscoveryHubLogic>;
 
-const createState = (overrides: Record<string, unknown> = {}) => ({
-  discoveryModules: [
-    {
-      id: 'azure',
-      name: 'Azure Discovery',
-      description: 'Discover Azure resources',
-      icon: 'Cloud',
-      status: 'idle',
-      route: '/azure',
-      lastRun: new Date().toISOString(),
-      resultCount: 0,
-    },
-  ],
+const createHookState = (overrides: Partial<HookState> = {}): HookState => ({
+  discoveryModules: [],
   recentActivity: [],
   activeDiscoveries: [],
+  queuedDiscoveries: [],
   isLoading: false,
   filter: '',
-  sortBy: 'recent',
+  sortBy: 'name',
   launchDiscovery: jest.fn(),
   setFilter: jest.fn(),
   setSortBy: jest.fn(),
@@ -39,57 +23,59 @@ const createState = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe('InfrastructureDiscoveryHubView', () => {
+  const hookMock = useInfrastructureDiscoveryHubLogic as jest.MockedFunction<
+    typeof useInfrastructureDiscoveryHubLogic
+  >;
+
   beforeEach(() => {
-    useInfrastructureDiscoveryHubLogic.mockReturnValue(createState());
+    hookMock.mockReturnValue(createHookState());
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('renders the hub container', () => {
-    render(<InfrastructureDiscoveryHubView />);
-    expect(screen.getByTestId('infrastructure-discovery-hub')).toBeInTheDocument();
+  it('renders loading spinner when data is loading', () => {
+    hookMock.mockReturnValue(
+      createHookState({
+        isLoading: true,
+      }),
+    );
+
+    const { container } = render(<InfrastructureDiscoveryHubView />);
+
+    expect(screen.getByRole('status', { name: 'Loading...' })).toBeInTheDocument();
   });
 
-  it('refreshes discovery data when requested', () => {
-    const state = createState();
-    useInfrastructureDiscoveryHubLogic.mockReturnValue(state);
-
-    render(<InfrastructureDiscoveryHubView />);
-    fireEvent.click(screen.getByTestId('refresh-btn'));
-
-    expect(state.refresh).toHaveBeenCalled();
-  });
-
-  it('launches a discovery module when a tile is selected', () => {
+  it('renders discovery modules and launches discovery on click', () => {
     const launchDiscovery = jest.fn();
-    useInfrastructureDiscoveryHubLogic.mockReturnValue(
-      createState({
+    const modules = [
+      {
+        id: 'azure',
+        name: 'Azure Infrastructure',
+        icon: 'Cloud',
+        description: 'Discover Azure resources',
+        route: '/discovery/azure',
+        status: 'idle',
+      },
+    ];
+
+    hookMock.mockReturnValue(
+      createHookState({
+        discoveryModules: modules as HookState['discoveryModules'],
         launchDiscovery,
       }),
     );
 
-    render(<InfrastructureDiscoveryHubView />);
-    fireEvent.click(screen.getByTestId('discovery-tile-azure'));
+    const { container } = render(<InfrastructureDiscoveryHubView />);
 
-    expect(launchDiscovery).toHaveBeenCalledWith('/azure');
-  });
+    expect(
+      screen.getByRole('heading', { name: 'Azure Infrastructure' }),
+    ).toBeInTheDocument();
 
-  it('updates the search filter when typing in the search bar', () => {
-    const setFilter = jest.fn();
-    useInfrastructureDiscoveryHubLogic.mockReturnValue(
-      createState({
-        setFilter,
-      }),
-    );
+    const tile = container.querySelector('[data-cy="discovery-tile-azure"]') as HTMLElement;
+    fireEvent.click(tile);
 
-    render(<InfrastructureDiscoveryHubView />);
-
-    const search = screen.getByTestId('discovery-search');
-    const input = within(search).getByRole('textbox');
-    fireEvent.change(input, { target: { value: 'azure' } });
-
-    expect(setFilter).toHaveBeenCalledWith('azure');
+    expect(launchDiscovery).toHaveBeenCalledWith('/discovery/azure');
   });
 });

@@ -16,9 +16,7 @@ export class ProfileService {
 
   constructor() {
     this.profilesPath = path.join(app.getPath('appData'), 'MandADiscoverySuite', 'profiles.json');
-    // Use MANDA_DISCOVERY_PATH env var if set, otherwise default
-    this.dataRootPath = process.env.MANDA_DISCOVERY_PATH ||
-      (process.platform === 'win32' ? path.join('C:', 'DiscoveryData') : path.join(app.getPath('userData'), 'DiscoveryData'));
+    this.dataRootPath = process.platform === 'win32' ? 'C:\\DiscoveryData' : path.join(app.getPath('userData'), 'DiscoveryData');
   }
 
   async initialize(): Promise<void> {
@@ -30,11 +28,8 @@ export class ProfileService {
     this.db = new Low(adapter, { profiles: [], version: 1 });
 
     await this.db.read();
-    this.ensureData();
-    // Ensure data is initialized after read (file might not exist yet)
-    this.db.data = this.db.data || { profiles: [], version: 1 };
 
-    if (!(this.db.data?.profiles?.length ?? 0)) {
+    if (!this.db.data.profiles.length) {
       await this.autoDiscoverProfiles();
     }
 
@@ -56,24 +51,10 @@ export class ProfileService {
     ipcMain.handle('profile:getConnectionConfig', (_, profileId: string) => this.getConnectionConfig(profileId));
     ipcMain.handle('profile:setConnectionConfig', (_, profileId: string, config: ConnectionConfig) => this.setConnectionConfig(profileId, config));
   }
-  private ensureData(): void {
-    // Ensure data is initialized (file might not exist or be corrupted)
-    if (!this.db.data) {
-      this.db.data = { profiles: [], version: 1 };
-    }
-    if (!this.db.data.profiles) {
-      this.db.data.profiles = [];
-    }
-    if (!this.db.data.version) {
-      this.db.data.version = 1;
-    }
-  }
-
 
   async getProfiles(): Promise<CompanyProfile[]> {
     await this.db.read();
-    this.ensureData();
-    return [...(this.db.data?.profiles ?? [])].sort((a, b) => a.companyName.localeCompare(b.companyName));
+    return [...this.db.data.profiles].sort((a, b) => a.companyName.localeCompare(b.companyName));
   }
 
   async getCurrentProfile(): Promise<CompanyProfile | null> {
@@ -83,7 +64,6 @@ export class ProfileService {
 
   async setCurrentProfile(profileId: string): Promise<boolean> {
     await this.db.read();
-    this.ensureData();
 
     const profiles = this.db.data.profiles;
     const targetProfile = profiles.find(p => p.id === profileId || p.companyName === profileId);
@@ -107,7 +87,6 @@ export class ProfileService {
 
   async createProfile(profileData: Omit<CompanyProfile, 'id' | 'created' | 'lastModified'>): Promise<CompanyProfile> {
     await this.db.read();
-    this.ensureData();
 
     // Validate unique company name
     const existing = this.db.data.profiles.find(p =>
@@ -140,7 +119,6 @@ export class ProfileService {
 
   async updateProfile(profile: CompanyProfile): Promise<CompanyProfile> {
     await this.db.read();
-    this.ensureData();
 
     const index = this.db.data.profiles.findIndex(p => p.id === profile.id);
     if (index === -1) {
@@ -181,7 +159,6 @@ export class ProfileService {
 
   async deleteProfile(profileId: string): Promise<boolean> {
     await this.db.read();
-    this.ensureData();
 
     const index = this.db.data.profiles.findIndex(p => p.id === profileId);
     if (index === -1) return false;
@@ -222,7 +199,6 @@ export class ProfileService {
     let counter = 1;
 
     await this.db.read();
-    this.ensureData();
     while (this.db.data.profiles.some(p => p.companyName.toLowerCase() === companyName.toLowerCase())) {
       companyName = `${importedProfile.companyName} (${counter})`;
       counter++;
@@ -409,14 +385,9 @@ export class ProfileService {
 
   private async hasCSVFiles(dirPath: string): Promise<boolean> {
     try {
-      // Normalize path for glob (use forward slashes on Windows)
-      const normalizedPath = path.join(dirPath, '*.csv').split(path.sep).join('/');
-      console.log('[ProfileService] hasCSVFiles checking:', normalizedPath);
-      const csvFiles = await glob(normalizedPath);
-      console.log('[ProfileService]   Found:', csvFiles.length, 'files');
+      const csvFiles = await glob(path.join(dirPath, '*.csv'));
       return csvFiles.length > 0;
-    } catch (error) {
-      console.log('[ProfileService] hasCSVFiles error:', error);
+    } catch {
       return false;
     }
   }

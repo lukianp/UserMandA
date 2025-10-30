@@ -34,6 +34,7 @@ import { Button } from '../../components/atoms/Button';
 import { Spinner } from '../../components/atoms/Spinner';
 import Badge from '../../components/atoms/Badge';
 import StatusIndicator from '../../components/atoms/StatusIndicator';
+import './InfrastructureDiscoveryHubView.css';
 
 /**
  * Icon mapping for discovery modules
@@ -132,11 +133,18 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600 dark:text-gray-400">Sort by:</label>
+            <label
+              htmlFor="infrastructure-sort-select"
+              className="text-sm text-gray-600 dark:text-gray-400"
+            >
+              Sort by:
+            </label>
             <select
+              id="infrastructure-sort-select"
               value={sortBy}
               onChange={(value) => setSortBy(value as any)}
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              aria-label="Sort discovery modules"
               data-cy="sort-select" data-testid="sort-select"
             >
               <option value="name">Name</option>
@@ -191,12 +199,12 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
                               {active.progress}%
                             </span>
                           </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${active.progress}%` }}
-                            />
-                          </div>
+                          <progress
+                            className="infrastructure-progress w-full"
+                            value={active.progress}
+                            max={100}
+                            aria-label={`${active.moduleName} progress`}
+                          />
                         </div>
                       </div>
                     ))}

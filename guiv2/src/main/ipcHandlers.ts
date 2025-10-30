@@ -510,21 +510,21 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   // Additional File System Handlers
   // ========================================
 
-  ipcMain.handle('fs:readFile', async (_, args: { path: string; encoding?: string }) => {
-    try {
-      const { path: filePath, encoding = 'utf8' } = args;
-      const sanitized = sanitizePath(filePath);
-      console.log(`IPC: fs:readFile - ${sanitized}`);
-      const result = await fs.readFile(sanitized, encoding as BufferEncoding);
-      return { success: true, data: result };
-    } catch (error: unknown) {
-      console.error(`fs:readFile error: ${error instanceof Error ? error.message : String(error)}`);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
+  // DUPLICATE:   ipcMain.handle('fs:readFile', async (_, args: { path: string; encoding?: string }) => {
+  // DUPLICATE:     try {
+  // DUPLICATE:       const { path: filePath, encoding = 'utf8' } = args;
+  // DUPLICATE:       const sanitized = sanitizePath(filePath);
+  // DUPLICATE:       console.log(`IPC: fs:readFile - ${sanitized}`);
+  // DUPLICATE:       const result = await fs.readFile(sanitized, encoding as BufferEncoding);
+  // DUPLICATE:       return { success: true, data: result };
+  // DUPLICATE:     } catch (error: unknown) {
+  // DUPLICATE:       console.error(`fs:readFile error: ${error instanceof Error ? error.message : String(error)}`);
+  // DUPLICATE:       return {
+  // DUPLICATE:         success: false,
+  // DUPLICATE:         error: error instanceof Error ? error.message : String(error)
+  // DUPLICATE:       };
+  // DUPLICATE:     }
+  // DUPLICATE:   });
 
   ipcMain.handle('fs:writeFile', async (_, args: { path: string; content: string; encoding?: string }) => {
     try {
@@ -804,21 +804,22 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
   /**
    * Set active target profile
+   * DUPLICATE - handler in src/main/ipc/targetProfileHandlers.ts is active
    */
-  ipcMain.handle('profile:setActiveTarget', async (_, profileId: string) => {
-    try {
-      const profileService = getProfileService();
-      await profileService.setActiveTargetProfile(profileId);
-      console.log(`Set active target profile: ${profileId}`);
-      return { success: true };
-    } catch (error: unknown) {
-      console.error(`setActiveTarget error: ${error instanceof Error ? error.message : String(error)}`);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
+  // DUPLICATE: ipcMain.handle('profile:setActiveTarget', async (_, profileId: string) => {
+  //   try {
+  //     const profileService = getProfileService();
+  //     await profileService.setActiveTargetProfile(profileId);
+  //     console.log(`Set active target profile: ${profileId}`);
+  //     return { success: true };
+  //   } catch (error: unknown) {
+  //     console.error(`setActiveTarget error: ${error instanceof Error ? error.message : String(error)}`);
+  //     return {
+  //       success: false,
+  //       error: error instanceof Error ? error.message : String(error)
+  //     };
+  //   }
+  // });
 
   /**
    * Refresh profiles (re-run auto-discovery)
@@ -2590,32 +2591,32 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   });
 
   /**
-   * IPC Handler: migration:get-statistics
-   */
-  ipcMain.handle('migration:get-statistics', async (_, args: { runId: string }) => {
-    try {
-      const { runId } = args;
-      console.log('IPC: migration:get-statistics', runId);
-
-      // TODO: Implement migration statistics
-      return {
-        success: true,
-        statistics: {
-          totalItems: 0,
-          processedItems: 0,
-          successCount: 0,
-          errorCount: 0,
-          progressPercentage: 0
-        }
-      };
-    } catch (error: unknown) {
-      console.error('migration:get-statistics error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
+  // DUPLICATE:    * IPC Handler: migration:get-statistics
+  // DUPLICATE:    */
+  // DUPLICATE:   ipcMain.handle('migration:get-statistics', async (_, args: { runId: string }) => {
+  // DUPLICATE:     try {
+  // DUPLICATE:       const { runId } = args;
+  // DUPLICATE:       console.log('IPC: migration:get-statistics', runId);
+  // DUPLICATE: 
+  // DUPLICATE:       // TODO: Implement migration statistics
+  // DUPLICATE:       return {
+  // DUPLICATE:         success: true,
+  // DUPLICATE:         statistics: {
+  // DUPLICATE:           totalItems: 0,
+  // DUPLICATE:           processedItems: 0,
+  // DUPLICATE:           successCount: 0,
+  // DUPLICATE:           errorCount: 0,
+  // DUPLICATE:           progressPercentage: 0
+  // DUPLICATE:         }
+  // DUPLICATE:       };
+  // DUPLICATE:     } catch (error: unknown) {
+  // DUPLICATE:       console.error('migration:get-statistics error:', error);
+  // DUPLICATE:       return {
+  // DUPLICATE:         success: false,
+  // DUPLICATE:         error: error instanceof Error ? error.message : String(error)
+  // DUPLICATE:       };
+  // DUPLICATE:     }
+  // DUPLICATE:   });
 
   // ========================================
   // Migration Plan Persistence (Epic 2)
@@ -2680,84 +2681,85 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
   // ========================================
   // Webhook Handlers (Legacy - moved to handlers.ts)
+  // DUPLICATES COMMENTED OUT - handlers in src/main/ipc/handlers.ts are active
   // ========================================
 
-  ipcMain.handle('getWebhooks', async (_, args: { page?: number; limit?: number; search?: string } = {}) => {
-    try {
-      const { page = 1, limit = 20, search } = args;
-      const { webhookService } = await import('../renderer/services/webhookService');
-      const allWebhooks = webhookService.getAllWebhooks();
+  // DUPLICATE: ipcMain.handle('getWebhooks', async (_, args: { page?: number; limit?: number; search?: string } = {}) => {
+  //   try {
+  //     const { page = 1, limit = 20, search } = args;
+  //     const { webhookService } = await import('../renderer/services/webhookService');
+  //     const allWebhooks = webhookService.getAllWebhooks();
+  //
+  //     // Apply search filter
+  //     let filteredWebhooks = allWebhooks;
+  //     if (search) {
+  //       const searchLower = search.toLowerCase();
+  //       filteredWebhooks = allWebhooks.filter(webhook =>
+  //         webhook.name.toLowerCase().includes(searchLower) ||
+  //         webhook.url.toLowerCase().includes(searchLower)
+  //       );
+  //     }
+  //
+  //     // Apply pagination
+  //     const startIndex = (page - 1) * limit;
+  //     const endIndex = startIndex + limit;
+  //     const paginatedWebhooks = filteredWebhooks.slice(startIndex, endIndex);
+  //
+  //     return {
+  //       success: true,
+  //       data: {
+  //         webhooks: paginatedWebhooks,
+  //         total: filteredWebhooks.length,
+  //         page,
+  //         limit,
+  //         totalPages: Math.ceil(filteredWebhooks.length / limit)
+  //       }
+  //     };
+  //   } catch (error: unknown) {
+  //     console.error(`getWebhooks error: ${error instanceof Error ? error.message : String(error)}`);
+  //     return { success: false, error: error instanceof Error ? error.message : String(error) };
+  //   }
+  // });
 
-      // Apply search filter
-      let filteredWebhooks = allWebhooks;
-      if (search) {
-        const searchLower = search.toLowerCase();
-        filteredWebhooks = allWebhooks.filter(webhook =>
-          webhook.name.toLowerCase().includes(searchLower) ||
-          webhook.url.toLowerCase().includes(searchLower)
-        );
-      }
+  // DUPLICATE: ipcMain.handle('createWebhook', async (_, webhookData: any) => {
+  //   try {
+  //     const { webhookService } = await import('../renderer/services/webhookService');
+  //     const webhook = webhookService.register(webhookData);
+  //     return { success: true, data: webhook };
+  //   } catch (error: unknown) {
+  //     console.error(`createWebhook error: ${error instanceof Error ? error.message : String(error)}`);
+  //     return { success: false, error: error instanceof Error ? error.message : String(error) };
+  //   }
+  // });
 
-      // Apply pagination
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedWebhooks = filteredWebhooks.slice(startIndex, endIndex);
+  // DUPLICATE: ipcMain.handle('updateWebhook', async (_, args: { webhookId: string; updates: any }) => {
+  //   try {
+  //     const { webhookId, updates } = args;
+  //     const { webhookService } = await import('../renderer/services/webhookService');
+  //     const success = webhookService.update(webhookId, updates);
+  //     if (success) {
+  //       const webhook = webhookService.getWebhook(webhookId);
+  //       return { success: true, data: webhook };
+  //     } else {
+  //       return { success: false, error: 'Webhook not found or update failed' };
+  //     }
+  //   } catch (error: unknown) {
+  //     console.error(`updateWebhook error: ${error instanceof Error ? error.message : String(error)}`);
+  //     return { success: false, error: error instanceof Error ? error.message : String(error) };
+  //   }
+  // });
 
-      return {
-        success: true,
-        data: {
-          webhooks: paginatedWebhooks,
-          total: filteredWebhooks.length,
-          page,
-          limit,
-          totalPages: Math.ceil(filteredWebhooks.length / limit)
-        }
-      };
-    } catch (error: unknown) {
-      console.error(`getWebhooks error: ${error instanceof Error ? error.message : String(error)}`);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
-
-  ipcMain.handle('createWebhook', async (_, webhookData: any) => {
-    try {
-      const { webhookService } = await import('../renderer/services/webhookService');
-      const webhook = webhookService.register(webhookData);
-      return { success: true, data: webhook };
-    } catch (error: unknown) {
-      console.error(`createWebhook error: ${error instanceof Error ? error.message : String(error)}`);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
-
-  ipcMain.handle('updateWebhook', async (_, args: { webhookId: string; updates: any }) => {
-    try {
-      const { webhookId, updates } = args;
-      const { webhookService } = await import('../renderer/services/webhookService');
-      const success = webhookService.update(webhookId, updates);
-      if (success) {
-        const webhook = webhookService.getWebhook(webhookId);
-        return { success: true, data: webhook };
-      } else {
-        return { success: false, error: 'Webhook not found or update failed' };
-      }
-    } catch (error: unknown) {
-      console.error(`updateWebhook error: ${error instanceof Error ? error.message : String(error)}`);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
-
-  ipcMain.handle('deleteWebhook', async (_, args: { webhookId: string }) => {
-    try {
-      const { webhookId } = args;
-      const { webhookService } = await import('../renderer/services/webhookService');
-      const success = webhookService.unregister(webhookId);
-      return { success };
-    } catch (error: unknown) {
-      console.error(`deleteWebhook error: ${error instanceof Error ? error.message : String(error)}`);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
+  // DUPLICATE: ipcMain.handle('deleteWebhook', async (_, args: { webhookId: string }) => {
+  //   try {
+  //     const { webhookId } = args;
+  //     const { webhookService } = await import('../renderer/services/webhookService');
+  //     const success = webhookService.unregister(webhookId);
+  //     return { success };
+  //   } catch (error: unknown) {
+  //     console.error(`deleteWebhook error: ${error instanceof Error ? error.message : String(error)}`);
+  //     return { success: false, error: error instanceof Error ? error.message : String(error) };
+  //   }
+  // });
 
   ipcMain.handle('triggerWebhook', async (_, args: { webhookId: string; event: string; data?: any }) => {
     try {
@@ -2777,107 +2779,108 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
   // ========================================
   // Workflow Handlers
+  // DUPLICATES COMMENTED OUT - handlers in src/main/ipc/handlers.ts are active
   // ========================================
 
-  ipcMain.handle('getWorkflows', async (_, args: { page?: number; limit?: number; search?: string } = {}) => {
-    try {
-      const { page = 1, limit = 20, search } = args;
+  // DUPLICATE: ipcMain.handle('getWorkflows', async (_, args: { page?: number; limit?: number; search?: string } = {}) => {
+  //   try {
+  //     const { page = 1, limit = 20, search } = args;
+  //
+  //     // For now, return a mock response since workflow service doesn't exist yet
+  //     // This should be replaced with actual workflow service integration
+  //     const mockWorkflows = [
+  //       {
+  //         id: 'workflow-1',
+  //         name: 'Sample Migration Workflow',
+  //         description: 'Automated user migration workflow',
+  //         status: 'active',
+  //         steps: [],
+  //         createdAt: new Date().toISOString(),
+  //         updatedAt: new Date().toISOString(),
+  //         executionCount: 0,
+  //         lastExecutedAt: null
+  //       }
+  //     ];
+  //
+  //     // Apply search filter
+  //     let filteredWorkflows = mockWorkflows;
+  //     if (search) {
+  //       const searchLower = search.toLowerCase();
+  //       filteredWorkflows = mockWorkflows.filter(workflow =>
+  //         workflow.name.toLowerCase().includes(searchLower) ||
+  //         workflow.description.toLowerCase().includes(searchLower)
+  //       );
+  //     }
+  //
+  //     // Apply pagination
+  //     const startIndex = (page - 1) * limit;
+  //     const endIndex = startIndex + limit;
+  //     const paginatedWorkflows = filteredWorkflows.slice(startIndex, endIndex);
+  //
+  //     return {
+  //       success: true,
+  //       data: {
+  //         workflows: paginatedWorkflows,
+  //         total: filteredWorkflows.length,
+  //         page,
+  //         limit,
+  //         totalPages: Math.ceil(filteredWorkflows.length / limit)
+  //       }
+  //     };
+  //   } catch (error: unknown) {
+  //     console.error(`getWorkflows error: ${error instanceof Error ? error.message : String(error)}`);
+  //     return { success: false, error: error instanceof Error ? error.message : String(error) };
+  //   }
+  // });
 
-      // For now, return a mock response since workflow service doesn't exist yet
-      // This should be replaced with actual workflow service integration
-      const mockWorkflows = [
-        {
-          id: 'workflow-1',
-          name: 'Sample Migration Workflow',
-          description: 'Automated user migration workflow',
-          status: 'active',
-          steps: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          executionCount: 0,
-          lastExecutedAt: null
-        }
-      ];
+  // DUPLICATE: ipcMain.handle('createWorkflow', async (_, workflowData: any) => {
+  //   try {
+  //     // For now, return mock success since workflow service doesn't exist yet
+  //     const mockWorkflow = {
+  //       id: `workflow-${Date.now()}`,
+  //       ...workflowData,
+  //       createdAt: new Date().toISOString(),
+  //       updatedAt: new Date().toISOString(),
+  //       executionCount: 0,
+  //       lastExecutedAt: null
+  //     };
+  //
+  //     console.log(`Mock workflow created: ${mockWorkflow.id}`);
+  //     return { success: true, data: mockWorkflow };
+  //   } catch (error: unknown) {
+  //     console.error(`createWorkflow error: ${error instanceof Error ? error.message : String(error)}`);
+  //     return { success: false, error: error instanceof Error ? error.message : String(error) };
+  //   }
+  // });
 
-      // Apply search filter
-      let filteredWorkflows = mockWorkflows;
-      if (search) {
-        const searchLower = search.toLowerCase();
-        filteredWorkflows = mockWorkflows.filter(workflow =>
-          workflow.name.toLowerCase().includes(searchLower) ||
-          workflow.description.toLowerCase().includes(searchLower)
-        );
-      }
-
-      // Apply pagination
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedWorkflows = filteredWorkflows.slice(startIndex, endIndex);
-
-      return {
-        success: true,
-        data: {
-          workflows: paginatedWorkflows,
-          total: filteredWorkflows.length,
-          page,
-          limit,
-          totalPages: Math.ceil(filteredWorkflows.length / limit)
-        }
-      };
-    } catch (error: unknown) {
-      console.error(`getWorkflows error: ${error instanceof Error ? error.message : String(error)}`);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
-
-  ipcMain.handle('createWorkflow', async (_, workflowData: any) => {
-    try {
-      // For now, return mock success since workflow service doesn't exist yet
-      const mockWorkflow = {
-        id: `workflow-${Date.now()}`,
-        ...workflowData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        executionCount: 0,
-        lastExecutedAt: null
-      };
-
-      console.log(`Mock workflow created: ${mockWorkflow.id}`);
-      return { success: true, data: mockWorkflow };
-    } catch (error: unknown) {
-      console.error(`createWorkflow error: ${error instanceof Error ? error.message : String(error)}`);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
-
-  ipcMain.handle('executeWorkflow', async (_, args: { workflowId: string; parameters?: Record<string, any> }) => {
-    try {
-      const { workflowId, parameters = {} } = args;
-
-      // For now, return mock execution result since workflow service doesn't exist yet
-      const mockExecution = {
-        id: `execution-${Date.now()}`,
-        workflowId,
-        status: 'running',
-        startedAt: new Date().toISOString(),
-        parameters,
-        steps: [],
-        currentStep: null
-      };
-
-      console.log(`Mock workflow execution started: ${mockExecution.id}`);
-
-      // Simulate async execution completion
-      setTimeout(() => {
-        console.log(`Mock workflow execution completed: ${mockExecution.id}`);
-      }, 1000);
-
-      return { success: true, data: mockExecution };
-    } catch (error: unknown) {
-      console.error(`executeWorkflow error: ${error instanceof Error ? error.message : String(error)}`);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
-    }
-  });
+  // DUPLICATE: ipcMain.handle('executeWorkflow', async (_, args: { workflowId: string; parameters?: Record<string, any> }) => {
+  //   try {
+  //     const { workflowId, parameters = {} } = args;
+  //
+  //     // For now, return mock execution result since workflow service doesn't exist yet
+  //     const mockExecution = {
+  //       id: `execution-${Date.now()}`,
+  //       workflowId,
+  //       status: 'running',
+  //       startedAt: new Date().toISOString(),
+  //       parameters,
+  //       steps: [],
+  //       currentStep: null
+  //     };
+  //
+  //     console.log(`Mock workflow execution started: ${mockExecution.id}`);
+  //
+  //     // Simulate async execution completion
+  //     setTimeout(() => {
+  //       console.log(`Mock workflow execution completed: ${mockExecution.id}`);
+  //     }, 1000);
+  //
+  //     return { success: true, data: mockExecution };
+  //   } catch (error: unknown) {
+  //     console.error(`executeWorkflow error: ${error instanceof Error ? error.message : String(error)}`);
+  //     return { success: false, error: error instanceof Error ? error.message : String(error) };
+  //   }
+  // });
 
   console.log('All IPC handlers registered successfully');
 }

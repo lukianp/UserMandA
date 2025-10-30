@@ -1,176 +1,149 @@
-/**
- * Unit Tests for useIdentityGovernanceDiscoveryLogic Hook
- * Tests all business logic for IdentityGovernance discovery functionality
- */
-
 import { renderHook, act, waitFor } from '@testing-library/react';
 
 import { useIdentityGovernanceDiscoveryLogic } from './useIdentityGovernanceDiscoveryLogic';
 
-// Mock electron API
-const mockElectronAPI = {
-  executeModule: jest.fn(),
-  cancelExecution: jest.fn(),
-  onProgress: jest.fn(() => jest.fn()),
-};
-
-beforeAll(() => {
-  Object.defineProperty(window, 'electronAPI', {
-    writable: true,
-    value: mockElectronAPI,
-  });
-});
+type ProgressCallback = (data: any) => void;
 
 describe('useIdentityGovernanceDiscoveryLogic', () => {
+  let progressCallback: ProgressCallback | undefined;
+  let executeModuleMock: jest.Mock;
+  let cancelExecutionMock: jest.Mock;
+
   beforeEach(() => {
     jest.clearAllMocks();
-    mockElectronAPI.executeModule.mockResolvedValue({
-      success: true,
-      data: {},
-    });
-  });
+    progressCallback = undefined;
 
-  describe('Initial State', () => {
-    it('should initialize with default state', () => {
-      const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
+    executeModuleMock = jest.fn().mockResolvedValue({ success: true, data: { accessReviews: [] } });
+    cancelExecutionMock = jest.fn().mockResolvedValue(undefined);
 
-      expect(result.current).toBeDefined();
-      expect(result.current.isDiscovering).toBe(false);
-    });
-
-    it('should initialize with null or empty result', () => {
-      const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
-
-      expect(result.current.result).toBeNull();
-    });
-
-    it('should initialize with null error', () => {
-      const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
-
-      expect(result.current.error).toBeFalsy();
-    });
-  });
-
-  describe('Discovery Execution', () => {
-    it('should start discovery successfully', async () => {
-      const mockResult = { success: true, data: { items: [] } };
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockResolvedValueOnce(mockResult);
-
-      const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering).toBe(false);
-    });
-
-    it('should handle discovery failure', async () => {
-      const errorMessage = 'Discovery failed';
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockRejectedValueOnce(new Error(errorMessage));
-
-      const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(result.current.isDiscovering).toBe(false);
-    });
-
-    it('should set progress during discovery', async () => {
-      let progressCallback;
-      mockElectronAPI.onProgress.mockImplementation((cb) => {
+    const electronAPIMock: any = {
+      executeModule: executeModuleMock,
+      cancelExecution: cancelExecutionMock,
+      onProgress: jest.fn((cb: ProgressCallback) => {
         progressCallback = cb;
         return jest.fn();
-      });
+      }),
+    };
 
-      mockElectronAPI.executeModule
-        .mockResolvedValueOnce({ success: true, data: {} })
-        .mockImplementation(() => {
-          if (progressCallback) {
-            progressCallback({ message: 'Processing...', percentage: 50 });
-          }
-          return Promise.resolve({ success: true, data: {} });
-        });
-
-      const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.startDiscovery();
-      });
-
-      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: electronAPIMock,
     });
   });
 
-  describe('Cancellation', () => {
-    it('should cancel discovery', async () => {
-      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
-
-      const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
-
-      await act(async () => {
-        await result.current.cancelDiscovery();
-      });
-
-      expect(result.current.isDiscovering).toBe(false);
-    });
+  afterEach(() => {
+    delete (window as any).electronAPI;
   });
 
-  describe('Configuration', () => {
-    it('should allow config updates', () => {
-      const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
+  it('exposes baseline configuration and state', () => {
+    const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
 
-      act(() => {
-        if (result.current.updateConfig) {
-          result.current.updateConfig({ test: true });
-        } else if (result.current.setConfig) {
-          result.current.setConfig({ ...result.current.config, test: true });
-        }
-      });
-
-      expect(result.current.config).toBeDefined();
+    expect(result.current.config).toMatchObject({
+      includeAccessReviews: true,
+      includeEntitlements: true,
+      includePIM: true,
     });
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.activeTab).toBe('overview');
   });
 
-  describe('Export', () => {
-    it('should handle export when no results', async () => {
-      const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
+  it('starts discovery and handles progress updates', async () => {
+    let resolveExecution: ((value: any) => void) | undefined;
+    executeModuleMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveExecution = resolve;
+        }),
+    );
 
-      await act(async () => {
-        if (result.current.exportResults) {
-          await result.current.exportResults('csv');
-        } else if (result.current.exportData) {
-          await result.current.exportData({ format: 'csv' });
-        }
-      });
+    const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
 
-      // Should not crash when no results
-      expect(true).toBe(true);
+    let startPromise: Promise<unknown> | undefined;
+    await act(async () => {
+      startPromise = result.current.startDiscovery();
     });
+
+    await waitFor(() => expect(progressCallback).toBeDefined());
+
+    const callArgs = executeModuleMock.mock.calls[0][0];
+
+    await act(async () => {
+      progressCallback?.({
+        type: 'ig-discovery',
+        token: callArgs.parameters.cancellationToken,
+        current: 20,
+        total: 100,
+        percentage: 20,
+        message: 'Gathering access reviews',
+      });
+    });
+
+    expect(result.current.progress.percentage).toBe(20);
+
+    await act(async () => {
+      resolveExecution?.({ success: true, data: { accessReviews: [] } });
+      await startPromise;
+    });
+
+    expect(executeModuleMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modulePath: 'Modules/Discovery/IdentityGovernanceDiscovery.psm1',
+        functionName: 'Invoke-IGDiscovery',
+      }),
+    );
+
+    expect(result.current.progress.percentage).toBe(100);
+    expect(result.current.isDiscovering).toBe(false);
   });
 
-  describe('UI State', () => {
-    it('should update tab selection', () => {
-      const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
+  it('cancels discovery and resets state', async () => {
+    let resolveExecution: ((value: any) => void) | undefined;
+    let rejectExecution: ((reason: any) => void) | undefined;
+    executeModuleMock.mockImplementation(
+      () =>
+        new Promise((resolve, reject) => {
+          resolveExecution = resolve;
+          rejectExecution = reject;
+        }),
+    );
 
-      if (result.current.setSelectedTab) {
-        act(() => {
-          result.current.setSelectedTab('overview');
-        });
-        expect(result.current.selectedTab).toBeDefined();
-      } else if (result.current.setActiveTab) {
-        act(() => {
-          result.current.setActiveTab('overview');
-        });
-        expect(result.current.activeTab).toBeDefined();
+    const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
+
+    let startPromise: Promise<unknown> | undefined;
+    await act(async () => {
+      startPromise = result.current.startDiscovery();
+    });
+
+    await waitFor(() => expect(progressCallback).toBeDefined());
+
+    await act(async () => {
+      await result.current.cancelDiscovery();
+    });
+
+    expect(cancelExecutionMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      rejectExecution?.(new Error('cancelled'));
+      try {
+        await startPromise;
+      } catch {
+        // Expected rejection after cancellation
       }
     });
+
+    expect(result.current.isDiscovering).toBe(false);
+    expect(result.current.progress.message).toBe('Cancelled by user');
+  });
+
+  it('updates configuration and active tab helpers', () => {
+    const { result } = renderHook(() => useIdentityGovernanceDiscoveryLogic());
+
+    act(() => {
+      result.current.updateConfig({ includeAccessReviews: false });
+      result.current.setActiveTab('access-reviews');
+    });
+
+    expect(result.current.config.includeAccessReviews).toBe(false);
+    expect(result.current.activeTab).toBe('access-reviews');
   });
 });
-
