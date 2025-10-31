@@ -12,10 +12,6 @@ import App from './renderer/App';
 
 console.log('🚀 M&A Discovery Suite - Renderer Process Starting...');
 
-// Debug: Check what electronAPI is available
-console.log('window.electronAPI:', window.electronAPI);
-console.log('window.electronAPI keys:', window.electronAPI ? Object.keys(window.electronAPI) : 'UNDEFINED');
-
 // Wait for DOM to be ready
 const rootElement = document.getElementById('root');
 

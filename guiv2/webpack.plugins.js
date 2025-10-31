@@ -19,8 +19,6 @@ const plugins = [
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
     '__DEV__': JSON.stringify(process.env.NODE_ENV !== 'production'),
     '__PROD__': JSON.stringify(process.env.NODE_ENV === 'production'),
-    'MAIN_WINDOW_WEBPACK_ENTRY': JSON.stringify('file://' + path.resolve(__dirname, '.webpack/renderer/main_window/index.html')),
-    'MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY': JSON.stringify(path.resolve(__dirname, '.webpack/preload/index.js')),
   }),
   new webpack.IgnorePlugin({
     resourceRegExp: /^colorette$/,

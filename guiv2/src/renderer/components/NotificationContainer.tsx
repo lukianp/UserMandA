@@ -7,14 +7,12 @@
 import React, { useEffect, useState } from 'react';
 import { X, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
 
-import { getNotificationService, Notification, NotificationType } from '../services/notificationService';
+import { notificationService, Notification, NotificationType } from '../services/notificationService';
 
 export const NotificationContainer: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
-    const notificationService = getNotificationService();
-
     const unsubscribe = notificationService.subscribe((notification) => {
       setNotifications(prev => [...prev, notification]);
     });
@@ -24,7 +22,7 @@ export const NotificationContainer: React.FC = () => {
 
   const handleDismiss = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
-    getNotificationService().dismiss(id);
+    notificationService.dismiss(id);
   };
 
   const getIcon = (type: NotificationType) => {

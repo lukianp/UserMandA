@@ -1,20 +1,37 @@
 const path = require('path');
+const webpack = require('webpack');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const CspHtmlWebpackPlugin = require('csp-html-webpack-plugin');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const CompressionPlugin = require('compression-webpack-plugin');
 
-const { rules } = require('./webpack.rules');
+const { rules: baseRules } = require('./webpack.rules');
 const { plugins } = require('./webpack.plugins');
+
+// Renderer-specific rules (exclude asset-relocator-loader for browser context)
+const rendererRules = baseRules.filter(rule =>
+  rule.use?.loader !== '@vercel/webpack-asset-relocator-loader'
+);
 
 const rendererConfig = {
   mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   module: {
-    rules,
+    rules: rendererRules,  // Use filtered rules without asset-relocator
   },
   plugins: [
     ...plugins,
+    // Provide global polyfills for renderer process
+    new webpack.ProvidePlugin({
+      process: 'process/browser',
+      Buffer: ['buffer', 'Buffer'],
+    }),
+    // Define global as window for renderer context
+    new webpack.DefinePlugin({
+      'global': 'window',
+      '__dirname': JSON.stringify(''),
+      'module': JSON.stringify({}),  // Polyfill for asset-relocator-loader
+    }),
     new CspHtmlWebpackPlugin({
       'default-src': ["'self'"],
       'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
@@ -46,6 +63,11 @@ const rendererConfig = {
       '@services': path.resolve(__dirname, 'src/renderer/services'),
       '@types': path.resolve(__dirname, 'src/renderer/types'),
       '@lib': path.resolve(__dirname, 'src/renderer/lib'),
+    },
+    fallback: {
+      'process/browser': false,  // Browser doesn't need process
+      'process': false,
+      'buffer': false,
     },
   },
   infrastructureLogging: {

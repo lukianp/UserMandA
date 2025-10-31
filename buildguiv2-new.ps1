@@ -65,20 +65,28 @@ if ($Production) {
         npm ci
     }
 
-    Write-Host "Building..." -ForegroundColor Yellow
+    Write-Host "Building main process..." -ForegroundColor Yellow
     $env:NODE_ENV = "production"
-    npm run build
+    npm run build  # Builds main only
 
     if (-not (Test-Path ".webpack\main\main.js")) {
-        Write-Host "ERROR: Build failed" -ForegroundColor Red
+        Write-Host "ERROR: Main build failed" -ForegroundColor Red
         exit 1
     }
+
+    # Note: Renderer and preload will be built in C:\enterprisediscovery after deployment
+    Write-Host "Main build complete. Renderer will be built in deployment directory." -ForegroundColor Cyan
 
     Write-Host "Deploying to $CanonicalDir..." -ForegroundColor Yellow
     if (-not (Test-Path $CanonicalDir)) { New-Item -ItemType Directory $CanonicalDir | Out-Null }
 
+    # Copy webpack bundles
     Copy-Item -Recurse -Force ".webpack" "$CanonicalDir\"
+
+    # Copy all config files and source needed for rebuilds
     Copy-Item -Force "package.json", "package-lock.json" $CanonicalDir
+    Copy-Item -Force "webpack.*.js", "forge.config.js", "tailwind.config.js", "postcss.config.js" $CanonicalDir -ErrorAction SilentlyContinue
+    if (Test-Path "src") { Copy-Item -Recurse -Force "src" "$CanonicalDir\" }
 
     if (Test-Path $ModulesSourceDir) {
         Copy-Item -Recurse -Force $ModulesSourceDir "$CanonicalDir\Modules"
@@ -87,6 +95,19 @@ if ($Production) {
     Push-Location $CanonicalDir
     Write-Host "Installing runtime dependencies (including electron)..." -ForegroundColor Yellow
     npm ci 2>&1 | Out-Null
+
+    # Build renderer and preload in the deployment directory if source exists
+    if (Test-Path "src\renderer.tsx") {
+        Write-Host "Building renderer bundles in deployment directory..." -ForegroundColor Yellow
+        $env:NODE_ENV = "production"
+
+        # Try to build using webpack configs if they exist
+        if (Test-Path "webpack.renderer.config.js") {
+            & ".\node_modules\.bin\webpack.cmd" --config webpack.renderer-standalone.config.js --mode=production 2>&1 | Out-Null
+        }
+
+        Write-Host "Renderer build complete" -ForegroundColor Cyan
+    }
     Pop-Location
 
     Write-Host "SUCCESS: Deployed" -ForegroundColor Green
