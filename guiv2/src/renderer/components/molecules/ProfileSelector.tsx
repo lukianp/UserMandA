@@ -5,7 +5,7 @@
  * Integrates with useProfileStore for state management.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { Plus, Trash2, TestTube, RefreshCw } from 'lucide-react';
 
@@ -62,6 +62,13 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
 
   const profiles = type === 'source' ? sourceProfiles : targetProfiles;
   const selectedProfile = type === 'source' ? selectedSourceProfile : selectedTargetProfile;
+
+  // Auto-load profiles on component mount
+  useEffect(() => {
+    if (type === 'source' && sourceProfiles.length === 0) {
+      loadSourceProfiles();
+    }
+  }, [type]); // Only run when type changes or on mount
 
   const handleProfileChange = (profileId: string) => {
     if (!profileId) return;
