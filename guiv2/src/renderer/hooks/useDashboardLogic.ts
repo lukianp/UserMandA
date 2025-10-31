@@ -61,7 +61,7 @@ export const useDashboardLogic = (): UseDashboardLogicReturn => {
         setIsLoading(false);
         return;
       }
-      const profileName = currentProfile.name;
+      const profileName = currentProfile.companyName;
       console.log('[useDashboardLogic] profileName extracted:', profileName);
 
       // Get electronAPI with fallback
