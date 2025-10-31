@@ -223,6 +223,17 @@ const electronAPI: ElectronAPI = {
     }
   },
 
+  // Backwards compatibility aliases for profile loading
+  loadSourceProfiles: () => ipcRenderer.invoke('profile:getAll'),
+  loadTargetProfiles: () => ipcRenderer.invoke('profile:getAll'),
+  updateSourceProfile: (id: string, updates: any) => ipcRenderer.invoke('profile:update', { id, ...updates }),
+  updateTargetProfile: (id: string, updates: any) => ipcRenderer.invoke('profile:update', { id, ...updates }),
+  deleteSourceProfile: (id: string) => ipcRenderer.invoke('profile:delete', id),
+  deleteTargetProfile: (id: string) => ipcRenderer.invoke('profile:delete', id),
+  createSourceProfile: (profile: any) => ipcRenderer.invoke('profile:create', profile),
+  createTargetProfile: (profile: any) => ipcRenderer.invoke('profile:create', profile),
+  setActiveProfile: (id: string) => ipcRenderer.invoke('profile:setCurrent', id),
+
   // ========================================
   // Credential Management
   // ========================================
@@ -944,6 +955,7 @@ const electronAPI: ElectronAPI = {
 
 // Expose the API to the renderer process
 contextBridge.exposeInMainWorld('electron', electronAPI);
+contextBridge.exposeInMainWorld('electronAPI', electronAPI);
 
 console.log('========================================');
 console.log('[PRELOAD] ✅ Preload script loaded successfully - Secure bridge established');
