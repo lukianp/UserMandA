@@ -5,13 +5,34 @@
  * Wraps the application with error handling and notification systems.
  */
 
-import React, { ErrorInfo } from 'react';
+import React, { ErrorInfo, useEffect } from 'react';
 import { HashRouter, useRoutes } from 'react-router-dom';
 
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NotificationContainer } from './components/NotificationContainer';
+import { ModalContainer } from './components/organisms/ModalContainer';
 import { MainLayout } from './components/layouts/MainLayout';
+import { useThemeStore } from './store/useThemeStore';
 import routes from './routes';
+
+/**
+ * Theme Initializer - Ensures theme is applied on mount
+ */
+const ThemeInitializer: React.FC = () => {
+  const { mode, actualMode } = useThemeStore();
+
+  useEffect(() => {
+    // Apply theme to DOM on mount
+    const root = document.documentElement;
+    if (actualMode === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [mode, actualMode]);
+
+  return null;
+};
 
 /**
  * AppContent - Renders routes within MainLayout
@@ -47,7 +68,9 @@ const App: React.FC = () => {
 
   return (
     <ErrorBoundary onError={handleError} showDetails={true}>
+      <ThemeInitializer />
       <NotificationContainer />
+      <ModalContainer />
       <HashRouter>
         <AppContent />
       </HashRouter>

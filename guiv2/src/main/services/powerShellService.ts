@@ -362,7 +362,10 @@ class PowerShellExecutionService extends EventEmitter {
           ...args,
         ];
 
-        const childProcess = spawn('pwsh', pwshArgs, {
+        // Use powershell.exe on Windows (fallback from pwsh if not installed)
+        const powershellExecutable = process.platform === 'win32' ? 'powershell.exe' : 'pwsh';
+
+        const childProcess = spawn(powershellExecutable, pwshArgs, {
           cwd: options.workingDirectory || this.config.scriptsBaseDir,
           env: {
             ...process.env,

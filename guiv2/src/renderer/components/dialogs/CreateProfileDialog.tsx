@@ -27,7 +27,9 @@ const CreateProfileDialog: React.FC = () => {
   const { modals, closeModal } = useModalStore();
   const { createSourceProfile, testConnection } = useProfileStore();
 
-  const isOpen = modals.some((m) => m.id === 'createProfile') || false;
+  // Find the actual modal instance to get its ID
+  const modal = modals.find((m) => m.type === 'createProfile');
+  const isOpen = !!modal;
 
   const [formData, setFormData] = useState<ProfileFormData>({
     name: '',
@@ -55,6 +57,8 @@ const CreateProfileDialog: React.FC = () => {
     setIsTesting(true);
     setTestResult(null);
 
+    console.log(`[CreateProfileDialog] Testing connection for new profile: ${formData.name}`);
+
     try {
       const profile: any = {
         id: '',
@@ -68,14 +72,18 @@ const CreateProfileDialog: React.FC = () => {
 
       const result = await testConnection(profile);
 
+      console.log('[CreateProfileDialog] Test connection result:', result);
+
       setTestResult({
         success: result.success,
-        message: result.message || (result.success ? 'Connection successful!' : 'Connection failed'),
+        message: result.message || (result.success ? 'Connection successful! Credentials are valid.' : 'Connection failed'),
       });
     } catch (error) {
+      console.error('[CreateProfileDialog] Test connection error:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
       setTestResult({
         success: false,
-        message: error instanceof Error ? error.message : 'Unknown error occurred',
+        message: errorMsg,
       });
     } finally {
       setIsTesting(false);
@@ -112,13 +120,13 @@ const CreateProfileDialog: React.FC = () => {
         password: '',
       });
       setTestResult(null);
-      closeModal('createProfile');
+      if (modal) closeModal(modal.id);
     } catch (error) {
       console.error('Failed to create profile:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [formData, createSourceProfile, closeModal]);
+  }, [formData, createSourceProfile, closeModal, modal]);
 
   const handleClose = useCallback(() => {
     setFormData({
@@ -131,8 +139,8 @@ const CreateProfileDialog: React.FC = () => {
       password: '',
     });
     setTestResult(null);
-    closeModal('createProfile');
-  }, [closeModal]);
+    if (modal) closeModal(modal.id);
+  }, [closeModal, modal]);
 
   const isFormValid = formData.name && formData.server && formData.username;
 

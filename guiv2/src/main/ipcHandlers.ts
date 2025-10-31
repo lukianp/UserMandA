@@ -720,6 +720,157 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   });
 
   /**
+   * Test connection for a profile
+   * Validates Azure credentials by making actual API call to Microsoft Graph
+   */
+  ipcMain.handle('profile:testConnection', async (_, profileId: string) => {
+    try {
+      console.log(`[IPC profile:testConnection] Testing connection for profile: ${profileId}`);
+
+      const { CredentialService } = await import('./services/credentialService');
+      const credService = new CredentialService();
+      await credService.initialize();
+
+      // First check if credentials exist at all
+      const hasCredentials = await credService.hasCredential(profileId);
+      if (!hasCredentials) {
+        console.log(`[IPC profile:testConnection] No credential files found for profile: ${profileId}`);
+        console.log(`[IPC profile:testConnection] Checked locations:`);
+        console.log(`  - ENV variables: AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET`);
+        console.log(`  - safeStorage: ${credService['credentialsPath']}`);
+        console.log(`  - Legacy file: C:\\DiscoveryData\\${profileId}\\Credentials\\discoverycredentials.config`);
+        return {
+          success: false,
+          error: `No credentials configured for profile '${profileId}'. Please create a credential file first using the Azure setup script.`
+        };
+      }
+
+      const creds = await credService.getCredential(profileId);
+
+      if (!creds) {
+        console.log(`[IPC profile:testConnection] Credentials exist but could not be loaded for profile: ${profileId}`);
+        return {
+          success: false,
+          error: 'Credentials exist but could not be loaded. Please check the credential file format.'
+        };
+      }
+
+      // Validate required Azure fields
+      const hasTenantId = !!(creds.tenantId);
+      const hasClientId = !!(creds.clientId || creds.username);
+      const hasClientSecret = !!(creds.clientSecret || creds.password);
+
+      if (!hasTenantId || !hasClientId || !hasClientSecret) {
+        const missingFields = [];
+        if (!hasTenantId) missingFields.push('TenantId');
+        if (!hasClientId) missingFields.push('ClientId');
+        if (!hasClientSecret) missingFields.push('ClientSecret');
+
+        console.log(`[IPC profile:testConnection] Missing required fields: ${missingFields.join(', ')}`);
+        return {
+          success: false,
+          error: `Missing required Azure credentials: ${missingFields.join(', ')}`
+        };
+      }
+
+      console.log(`[IPC profile:testConnection] Credentials found, testing with Azure API...`);
+
+      // Actually test the credentials by getting an Azure token
+      const testScript = `
+        $tenantId = "${creds.tenantId}"
+        $clientId = "${creds.clientId || creds.username}"
+        $clientSecret = "${creds.clientSecret || creds.password}"
+
+        try {
+          $body = @{
+            grant_type    = "client_credentials"
+            scope         = "https://graph.microsoft.com/.default"
+            client_id     = $clientId
+            client_secret = $clientSecret
+          }
+
+          $response = Invoke-RestMethod \`
+            -Method Post \`
+            -Uri "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token" \`
+            -Body $body \`
+            -ErrorAction Stop
+
+          if ($response.access_token) {
+            Write-Output "SUCCESS: Token acquired"
+          } else {
+            Write-Error "No access token in response"
+            exit 1
+          }
+        } catch {
+          Write-Error $_.Exception.Message
+          exit 1
+        }
+      `;
+
+      // Use the already-initialized psService instance from module scope
+      // Write script to temp file since executeScript expects a file path
+      const os = await import('os');
+      const tmpPath = path.join(os.tmpdir(), `test-azure-creds-${Date.now()}.ps1`);
+
+      try {
+        await fs.writeFile(tmpPath, testScript, 'utf-8');
+
+        const result = await psService.executeScript(tmpPath, [], {
+          timeout: 30000,
+        });
+
+        // Clean up temp file
+        try {
+          await fs.unlink(tmpPath);
+        } catch (cleanupError) {
+          console.warn('[IPC profile:testConnection] Failed to delete temp script file:', cleanupError);
+        }
+
+        // Check if the script executed successfully
+        // PowerShellService tries to parse all output as JSON and sets success=false when it fails
+        // But that doesn't mean the script failed - check exit code and stdout content instead
+        const scriptSucceeded = result.exitCode === 0 && result.stdout?.includes('SUCCESS');
+
+        if (!scriptSucceeded) {
+          // Script actually failed - check stderr for error message
+          const errorMsg = result.stderr || result.error || 'Failed to authenticate with Azure';
+          console.log(`[IPC profile:testConnection] ❌ Azure authentication failed: ${errorMsg}`);
+          return {
+            success: false,
+            error: `Azure authentication failed: ${errorMsg}`
+          };
+        }
+
+        console.log(`[IPC profile:testConnection] ✅ Successfully validated credentials with Azure API`);
+        return {
+          success: true,
+          message: 'Successfully authenticated with Azure',
+          data: {
+            connectionType: creds.connectionType,
+            tenantId: creds.tenantId,
+            clientId: creds.clientId || creds.username,
+            hasSecret: true
+          }
+        };
+      } catch (scriptError) {
+        // Clean up temp file on error too
+        try {
+          await fs.unlink(tmpPath);
+        } catch (cleanupError) {
+          // Ignore cleanup errors
+        }
+        throw scriptError;
+      }
+    } catch (error: unknown) {
+      console.error(`[IPC profile:testConnection] Error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
    * Create a new source profile
    */
   ipcMain.handle('profile:createSource', async (_, profile: any) => {
@@ -1386,6 +1537,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('dashboard:getStats', async (_, profileName: string) => {
     try {
+      console.log('[IPC dashboard:getStats] Received profileName:', profileName, 'type:', typeof profileName);
       const stats = await dashboardService.getStats(profileName);
       return { success: true, data: stats };
     } catch (error: unknown) {
@@ -1404,6 +1556,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('dashboard:getProjectTimeline', async (_, profileName: string) => {
     try {
+      console.log('[IPC dashboard:getProjectTimeline] Received profileName:', profileName, 'type:', typeof profileName);
       const timeline = await dashboardService.getProjectTimeline(profileName);
       return { success: true, data: timeline };
     } catch (error: unknown) {

@@ -18,16 +18,11 @@ import {
   ArrowRightLeft,
   FileText,
   Settings,
-  Sun,
-  Moon,
-  Monitor,
   Search,
   ChevronRight,
 } from 'lucide-react';
 
 import { useProfileStore } from '../../store/useProfileStore';
-import { useThemeStore } from '../../store/useThemeStore';
-import { Button } from '../atoms/Button';
 import { SystemStatus } from '../molecules/SystemStatus';
 import { ProfileSelector } from '../molecules/ProfileSelector';
 import { useSystemHealthLogic } from '../../hooks/useSystemHealthLogic';
@@ -47,7 +42,6 @@ interface NavItem {
  */
 export const Sidebar: React.FC = () => {
   const { selectedSourceProfile, selectedTargetProfile } = useProfileStore();
-  const { mode, setMode } = useThemeStore();
   const { systemStatus } = useSystemHealthLogic();
 
   // Navigation items
@@ -104,44 +98,11 @@ export const Sidebar: React.FC = () => {
     },
   ];
 
-  // Theme toggle
-  const cycleTheme = () => {
-    const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
-    const currentIndex = themes.indexOf(mode || 'light');
-    const nextIndex = (currentIndex + 1) % themes.length;
-    setMode(themes[nextIndex]);
-  };
-
-  // Get theme icon
-  const getThemeIcon = () => {
-    switch (mode) {
-      case 'dark':
-        return <Moon size={18} />;
-      case 'system':
-        return <Monitor size={18} />;
-      default:
-        return <Sun size={18} />;
-    }
-  };
-
-  // Get theme label
-  const getThemeLabel = () => {
-    switch (mode) {
-      case 'dark':
-        return 'Dark';
-      case 'system':
-        return 'System';
-      default:
-        return 'Light';
-    }
-  };
-
   return (
-    <aside className="w-64 bg-gray-900 text-white flex flex-col">
+    <aside className="w-64 bg-gray-900 text-white flex flex-col relative z-50">
       {/* Logo/Title */}
       <div className="p-4 border-b border-gray-800">
-        <h1 className="text-xl font-bold">M&A Discovery Suite v2</h1>
-        <p className="text-xs text-gray-400 mt-1">v2.0.0</p>
+        <h1 className="text-xl font-bold">M&A Discovery Suite</h1>
       </div>
 
       {/* Profile Section */}
@@ -212,20 +173,6 @@ export const Sidebar: React.FC = () => {
       {/* System Status Section */}
       <div className="p-4 border-t border-gray-800">
         <SystemStatus indicators={systemStatus} showLastSync={true} />
-      </div>
-
-      {/* Footer - Theme Toggle */}
-      <div className="p-4 border-t border-gray-800">
-        <Button
-          variant="ghost"
-          size="sm"
-          fullWidth
-          icon={getThemeIcon()}
-          onClick={cycleTheme}
-          className="justify-start text-gray-300 hover:text-white"
-        >
-          {getThemeLabel()} Theme
-        </Button>
       </div>
     </aside>
   );

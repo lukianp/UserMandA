@@ -436,9 +436,10 @@ export class LogicEngineService extends EventEmitter {
   private parseUserFromCsv(row: any): UserDto | null {
     try {
       // Required fields
-      const sid = row.Sid || row.SID || row.ObjectSid;
-      const sam = row.Sam || row.SamAccountName || row.SAMAccountName || '';
       const upn = row.UPN || row.UserPrincipalName || row.Mail || '';
+      const sam = row.Sam || row.SamAccountName || row.SAMAccountName || '';
+      // Use UserPrincipalName as fallback SID if SID not provided (for test/synthetic data)
+      const sid = row.Sid || row.SID || row.ObjectSid || upn || sam;
 
       if (!sid) {
         return null; // Skip incomplete records
@@ -520,8 +521,9 @@ export class LogicEngineService extends EventEmitter {
 
   private parseGroupFromCsv(row: any): GroupDto | null {
     try {
-      const sid = row.Sid || row.SID || row.ObjectSid;
-      const name = row.Name || row.GroupName || row.CN || '';
+      // Use Id/PrimarySmtpAddress as fallback SID if SID not provided (for Exchange/synthetic data)
+      const sid = row.Sid || row.SID || row.ObjectSid || row.Id || row.PrimarySmtpAddress || row.Alias;
+      const name = row.Name || row.GroupName || row.CN || row.DisplayName || row.Alias || '';
 
       if (!sid || !name) {
         return null;

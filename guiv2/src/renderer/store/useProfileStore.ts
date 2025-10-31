@@ -51,6 +51,7 @@ interface ProfileState {
   connectionStatus: ConnectionStatus;
   isLoading: boolean;
   error: string | null;
+  connectionHeartbeatTimer: NodeJS.Timeout | null;
 
   // Actions - mirrors C# ProfileService methods
   loadSourceProfiles: () => Promise<void>;
@@ -64,6 +65,8 @@ interface ProfileState {
   setSelectedSourceProfile: (profile: CompanyProfile | null) => Promise<void>;
   setSelectedTargetProfile: (profile: TargetProfile | null) => void;
   testConnection: (profile: CompanyProfile) => Promise<any>;
+  startConnectionHeartbeat: (profile: CompanyProfile) => void;
+  stopConnectionHeartbeat: () => void;
   clearError: () => void;
 
   // Helper methods (mirrors C# ProfileService.CurrentProfile pattern)
@@ -84,6 +87,7 @@ export const useProfileStore = create<ProfileState>()(
     connectionStatus: 'disconnected',
     isLoading: false,
     error: null,
+    connectionHeartbeatTimer: null,
 
     // Actions
 
@@ -205,20 +209,28 @@ export const useProfileStore = create<ProfileState>()(
      * Mirrors C# ProfileService.SetCurrentProfileAsync
      *
      * When profile changes:
-     * 1. Calls IPC to set active profile (reinitializes LogicEngine with new data path)
-     * 2. Triggers LogicEngine to reload ALL CSV data for the new profile
-     * 3. Updates local state (triggers all views subscribed to selectedSourceProfile to reload)
+     * 1. Stops any active connection heartbeat
+     * 2. Calls IPC to set active profile (reinitializes LogicEngine with new data path)
+     * 3. Triggers LogicEngine to reload ALL CSV data for the new profile
+     * 4. Updates local state (triggers all views subscribed to selectedSourceProfile to reload)
      *
      * This replicates /gui/ behavior where ProfileService.CurrentProfile setter
      * triggers CsvDataService reload and raises ProfilesChanged event.
      */
     setSelectedSourceProfile: async (profile) => {
       if (!profile) {
-        set({ selectedSourceProfile: null });
+        // Stop heartbeat when clearing profile
+        get().stopConnectionHeartbeat();
+        set({ selectedSourceProfile: null, connectionStatus: 'disconnected' });
         return;
       }
 
       console.log(`[ProfileStore] Changing active source profile to: ${profile.companyName}`);
+
+      // Stop any existing heartbeat before switching profiles
+      get().stopConnectionHeartbeat();
+      set({ connectionStatus: 'disconnected' });
+
       const electronAPI = getElectronAPI();
 
       // Step 1: Set active profile (this reinitializes LogicEngine with new data path)
@@ -308,31 +320,81 @@ export const useProfileStore = create<ProfileState>()(
 
     /**
      * Test connection to a profile
-     * Mirrors C# connection testing functionality
+     * Validates Azure credentials for the profile
+     * Starts a 15-minute heartbeat on successful connection
      */
     testConnection: async (profile) => {
       set({ connectionStatus: 'connecting' });
       try {
         const electronAPI = getElectronAPI();
 
-        // Execute PowerShell connection test
-        const result = await electronAPI.executeModule({
-          modulePath: 'Modules/Connection/Test-Connection.psm1',
-          functionName: 'Test-ProfileConnection',
-          parameters: { profileId: profile.id },
-        });
+        // Test connection using profile.testConnection API
+        // Use companyName since credentials are stored in C:\DiscoveryData\{companyName}\Credentials\
+        const result = await electronAPI.profile.testConnection(profile.companyName);
 
         if (result.success) {
           set({ connectionStatus: 'connected' });
-          return (result as any).data;
+          console.log('[ProfileStore] Connection test successful:', result.data);
+
+          // Start heartbeat to maintain connection status
+          get().startConnectionHeartbeat(profile);
+
+          return result.data;
         } else {
           set({ connectionStatus: 'error', error: result.error || 'Connection test failed' });
           throw new Error(result.error || 'Connection test failed');
         }
       } catch (error: any) {
-        console.error('Connection test failed:', error);
+        console.error('[ProfileStore] Connection test failed:', error);
         set({ connectionStatus: 'error', error: error.message });
         throw error;
+      }
+    },
+
+    /**
+     * Start 15-minute heartbeat to maintain connection status
+     * Automatically tests connection every 15 minutes to verify Azure/on-premises connectivity
+     */
+    startConnectionHeartbeat: (profile) => {
+      // Stop any existing heartbeat
+      get().stopConnectionHeartbeat();
+
+      console.log(`[ProfileStore] Starting connection heartbeat for profile: ${profile.companyName}`);
+
+      // Test connection every 15 minutes (900000ms)
+      const timer = setInterval(async () => {
+        console.log('[ProfileStore] Running heartbeat connection test...');
+        try {
+          const electronAPI = getElectronAPI();
+          const result = await electronAPI.profile.testConnection(profile.companyName);
+
+          if (result.success) {
+            console.log('[ProfileStore] Heartbeat: Connection still alive');
+            set({ connectionStatus: 'connected' });
+          } else {
+            console.warn('[ProfileStore] Heartbeat: Connection lost');
+            set({ connectionStatus: 'error', error: 'Connection lost - heartbeat failed' });
+            get().stopConnectionHeartbeat();
+          }
+        } catch (error: any) {
+          console.error('[ProfileStore] Heartbeat failed:', error);
+          set({ connectionStatus: 'error', error: 'Connection lost - heartbeat failed' });
+          get().stopConnectionHeartbeat();
+        }
+      }, 15 * 60 * 1000); // 15 minutes
+
+      set({ connectionHeartbeatTimer: timer });
+    },
+
+    /**
+     * Stop connection heartbeat timer
+     */
+    stopConnectionHeartbeat: () => {
+      const timer = get().connectionHeartbeatTimer;
+      if (timer) {
+        console.log('[ProfileStore] Stopping connection heartbeat');
+        clearInterval(timer);
+        set({ connectionHeartbeatTimer: null });
       }
     },
 

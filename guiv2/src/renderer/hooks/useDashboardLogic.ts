@@ -45,6 +45,9 @@ export const useDashboardLogic = (): UseDashboardLogicReturn => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Subscribe to profile changes
+  const selectedSourceProfile = useProfileStore(state => state.selectedSourceProfile);
+
   /**
    * Load all dashboard data from backend services
    */
@@ -53,15 +56,14 @@ export const useDashboardLogic = (): UseDashboardLogicReturn => {
       setIsLoading(true);
       setError(null);
 
-      // Get current profile name
-      const currentProfile = useProfileStore.getState().getCurrentSourceProfile();
-      console.log('[useDashboardLogic] currentProfile:', currentProfile);
-      if (!currentProfile) {
+      // Get current profile name from the hook subscription
+      console.log('[useDashboardLogic] selectedSourceProfile:', selectedSourceProfile);
+      if (!selectedSourceProfile) {
         setError('No active profile selected');
         setIsLoading(false);
         return;
       }
-      const profileName = currentProfile.companyName;
+      const profileName = selectedSourceProfile.companyName;
       console.log('[useDashboardLogic] profileName extracted:', profileName);
 
       // Get electronAPI with fallback
@@ -95,7 +97,7 @@ export const useDashboardLogic = (): UseDashboardLogicReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedSourceProfile]);
 
   /**
    * Acknowledge a system alert
@@ -109,10 +111,7 @@ export const useDashboardLogic = (): UseDashboardLogicReturn => {
     } catch (err: any) {
       console.error('Failed to acknowledge alert:', err);
     }
-  }, []); // loadDashboardData is stable, no need to include
-
-  // Subscribe to profile changes
-  const selectedSourceProfile = useProfileStore(state => state.selectedSourceProfile);
+  }, [loadDashboardData]);
 
   /**
    * Initial load and auto-refresh setup

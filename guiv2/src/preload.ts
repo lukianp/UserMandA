@@ -217,6 +217,13 @@ const electronAPI: ElectronAPI = {
     validate: (profile: any) => ipcRenderer.invoke('profile:validate', profile),
     getConnectionConfig: (profileId: string) => ipcRenderer.invoke('profile:getConnectionConfig', profileId),
     setConnectionConfig: (profileId: string, config: any) => ipcRenderer.invoke('profile:setConnectionConfig', profileId, config),
+    /**
+     * Test connection for a profile
+     * Validates Azure credentials and connectivity
+     * @param profileId - Profile ID to test
+     * @returns Promise with test result
+     */
+    testConnection: (profileId: string) => ipcRenderer.invoke('profile:testConnection', profileId),
     onProfileChanged: (callback: () => void) => {
       ipcRenderer.on('profile:changed', callback);
       return () => ipcRenderer.removeListener('profile:changed', callback);
@@ -228,11 +235,13 @@ const electronAPI: ElectronAPI = {
   loadTargetProfiles: () => ipcRenderer.invoke('profile:getAll'),
   updateSourceProfile: (id: string, updates: any) => ipcRenderer.invoke('profile:update', { id, ...updates }),
   updateTargetProfile: (id: string, updates: any) => ipcRenderer.invoke('profile:update', { id, ...updates }),
-  deleteSourceProfile: (id: string) => ipcRenderer.invoke('profile:delete', id),
-  deleteTargetProfile: (id: string) => ipcRenderer.invoke('profile:delete', id),
-  createSourceProfile: (profile: any) => ipcRenderer.invoke('profile:create', profile),
-  createTargetProfile: (profile: any) => ipcRenderer.invoke('profile:create', profile),
+  deleteSourceProfile: (id: string) => ipcRenderer.invoke('profile:deleteSource', id),
+  deleteTargetProfile: (id: string) => ipcRenderer.invoke('profile:deleteTarget', id),
+  createSourceProfile: (profile: any) => ipcRenderer.invoke('profile:createSource', profile),
+  createTargetProfile: (profile: any) => ipcRenderer.invoke('profile:createTarget', profile),
   setActiveProfile: (id: string) => ipcRenderer.invoke('profile:setCurrent', id),
+  setActiveSourceProfile: (id: string) => ipcRenderer.invoke('profile:setActiveSource', id),
+  setActiveTargetProfile: (id: string) => ipcRenderer.invoke('profile:setActiveTarget', id),
 
   // ========================================
   // Credential Management
@@ -700,17 +709,19 @@ const electronAPI: ElectronAPI = {
   dashboard: {
     /**
      * Get dashboard statistics from Logic Engine
+     * @param profileName - Profile name to get stats for
      * @returns Promise with DashboardStats
      */
-    getStats: () =>
-      ipcRenderer.invoke('dashboard:getStats'),
+    getStats: (profileName: string) =>
+      ipcRenderer.invoke('dashboard:getStats', profileName),
 
     /**
      * Get project timeline and wave information
+     * @param profileName - Profile name to get timeline for
      * @returns Promise with ProjectTimeline
      */
-    getProjectTimeline: () =>
-      ipcRenderer.invoke('dashboard:getProjectTimeline'),
+    getProjectTimeline: (profileName: string) =>
+      ipcRenderer.invoke('dashboard:getProjectTimeline', profileName),
 
     /**
      * Get system health metrics

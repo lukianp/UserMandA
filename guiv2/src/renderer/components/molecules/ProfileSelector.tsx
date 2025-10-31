@@ -70,49 +70,81 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
     }
   }, [type]); // Only run when type changes or on mount
 
-  const handleProfileChange = (profileId: string) => {
+  const handleProfileChange = async (profileId: string) => {
     if (!profileId) return;
 
     const profile = profiles.find(p => p.id === profileId);
-    if (!profile) return;
+    if (!profile) {
+      console.error(`[ProfileSelector] Profile not found: ${profileId}`);
+      return;
+    }
 
-    if (type === 'source') {
-      setSelectedSourceProfile(profile as CompanyProfile);
-    } else {
-      setSelectedTargetProfile(profile as TargetProfile);
+    console.log(`[ProfileSelector] Switching to profile: ${getProfileDisplayName(profile)}`);
+
+    try {
+      if (type === 'source') {
+        await setSelectedSourceProfile(profile as CompanyProfile);
+        console.log(`[ProfileSelector] Successfully switched to source profile: ${getProfileDisplayName(profile)}`);
+      } else {
+        setSelectedTargetProfile(profile as TargetProfile);
+        console.log(`[ProfileSelector] Successfully switched to target profile: ${getProfileDisplayName(profile)}`);
+      }
+    } catch (error) {
+      console.error('[ProfileSelector] Failed to switch profile:', error);
     }
   };
 
   const handleTestConnection = async () => {
-    if (!selectedProfile) return;
+    if (!selectedProfile) {
+      console.warn('[ProfileSelector] No profile selected for testing');
+      return;
+    }
+
+    const profileName = getProfileDisplayName(selectedProfile);
+    console.log(`[ProfileSelector] Testing connection for profile: ${profileName}`);
 
     setIsTesting(true);
     try {
-      await testConnection(selectedProfile as CompanyProfile);
+      const result = await testConnection(selectedProfile as CompanyProfile);
+      console.log('[ProfileSelector] ✅ Connection test successful:', result);
+      alert(`✅ Connection test successful for profile "${profileName}"\n\nCredentials are valid and Azure API is accessible.`);
     } catch (error) {
-      console.error('Connection test failed:', error);
+      console.error('[ProfileSelector] ❌ Connection test failed:', error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      alert(`❌ Connection test failed for profile "${profileName}"\n\n${errorMsg}`);
     } finally {
       setIsTesting(false);
     }
   };
 
   const handleDeleteProfile = async () => {
-    if (!selectedProfile) return;
+    if (!selectedProfile) {
+      console.warn('[ProfileSelector] No profile selected for deletion');
+      return;
+    }
 
-    // Get profile display name
     const profileName = getProfileDisplayName(selectedProfile);
+    const profileId = selectedProfile.id;
 
-    if (confirm(`Are you sure you want to delete profile "${profileName}"?`)) {
-      try {
-        if (type === 'source') {
-          await deleteSourceProfile(selectedProfile.id);
-        } else {
-          // TODO: Add deleteTargetProfile action to store
-          console.warn('Target profile deletion not yet implemented');
-        }
-      } catch (error) {
-        console.error('Failed to delete profile:', error);
+    if (!confirm(`Are you sure you want to delete profile "${profileName}"?\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      if (type === 'source') {
+        await deleteSourceProfile(profileId);
+        console.log(`[ProfileSelector] ✅ Successfully deleted profile: ${profileName}`);
+
+        // Reload profiles to update UI
+        await loadSourceProfiles();
+      } else {
+        // TODO: Add deleteTargetProfile action to store
+        console.warn('[ProfileSelector] Target profile deletion not yet implemented');
+        alert('Target profile deletion is not yet implemented');
       }
+    } catch (error) {
+      console.error('[ProfileSelector] Failed to delete profile:', error);
+      alert(`Failed to delete profile: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 

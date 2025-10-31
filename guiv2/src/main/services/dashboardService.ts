@@ -83,7 +83,7 @@ export class DashboardService {
     const startDate = new Date(projectConfig.startDate);
 
     // Find next wave
-    const upcomingWaves = projectConfig.waves
+    const upcomingWaves = (projectConfig.waves ?? [])
       .filter(w => w.status === 'Scheduled' && new Date(w.scheduledDate) > now)
       .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime());
 
@@ -97,12 +97,13 @@ export class DashboardService {
     const daysElapsed = this.calculateDaysDifference(startDate, now);
 
     // Calculate progress
-    const completedWaves = projectConfig.waves.filter(w => w.status === 'Complete').length;
-    const activeWaveIndex = projectConfig.waves.findIndex(w => w.status === 'InProgress');
+    const waves = projectConfig.waves ?? [];
+    const completedWaves = waves.filter(w => w.status === 'Complete').length;
+    const activeWaveIndex = waves.findIndex(w => w.status === 'InProgress');
     const phaseProgress = this.calculatePhaseProgress(projectConfig.currentPhase, daysElapsed, projectConfig.estimatedDuration);
-    const waveProgress = activeWaveIndex >= 0 ? this.calculateWaveProgress(projectConfig.waves[activeWaveIndex]) : 0;
-    const overallProgress = projectConfig.waves.length > 0
-      ? Math.round((completedWaves / projectConfig.waves.length) * 100)
+    const waveProgress = activeWaveIndex >= 0 ? this.calculateWaveProgress(waves[activeWaveIndex]) : 0;
+    const overallProgress = waves.length > 0
+      ? Math.round((completedWaves / waves.length) * 100)
       : 0;
 
     return {
@@ -117,7 +118,7 @@ export class DashboardService {
       daysElapsed,
       currentPhase: projectConfig.currentPhase,
       phaseProgress,
-      totalWaves: projectConfig.waves.length,
+      totalWaves: waves.length,
       completedWaves,
       activeWave: activeWaveIndex >= 0 ? activeWaveIndex + 1 : undefined,
       waveProgress,

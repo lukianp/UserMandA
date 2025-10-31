@@ -27,6 +27,9 @@ interface StoredCredential {
   connectionType: 'ActiveDirectory' | 'AzureAD' | 'Exchange' | 'SharePoint';
   createdAt: string;
   lastUsed?: string;
+  // Azure-specific fields (for AzureAD connection type)
+  tenantId?: string;
+  clientId?: string;
 }
 
 interface CredentialStore {
@@ -105,7 +108,9 @@ export class CredentialService {
     username: string,
     password: string,
     connectionType: 'ActiveDirectory' | 'AzureAD' | 'Exchange' | 'SharePoint',
-    domain?: string
+    domain?: string,
+    tenantId?: string,
+    clientId?: string
   ): Promise<void> {
     await this.ensureInitialized();
 
@@ -129,6 +134,8 @@ export class CredentialService {
       domain,
       connectionType,
       createdAt: new Date().toISOString(),
+      tenantId,
+      clientId,
     });
 
     await this.save();
@@ -178,6 +185,9 @@ export class CredentialService {
           password,
           domain: credential.domain,
           connectionType: credential.connectionType,
+          tenantId: credential.tenantId,
+          clientId: credential.clientId,
+          clientSecret: password,
         };
       } catch (error) {
         console.error('Error decrypting credential:', error);
@@ -245,7 +255,13 @@ export class CredentialService {
       const legacyPath = path.join('C:', 'DiscoveryData', profileId, 'Credentials', 'discoverycredentials.config');
       console.log(`[CredentialService] Checking legacy credentials at: ${legacyPath}`);
 
-      const data = await fs.readFile(legacyPath, 'utf-8');
+      let data = await fs.readFile(legacyPath, 'utf-8');
+
+      // Strip BOM (Byte Order Mark) if present - PowerShell often adds UTF-8 BOM
+      if (data.charCodeAt(0) === 0xFEFF) {
+        data = data.slice(1);
+      }
+
       const creds = JSON.parse(data) as LegacyDiscoveryCredential;
 
       // Validate required fields
@@ -275,7 +291,9 @@ export class CredentialService {
         legacyCreds.ClientId,
         legacyCreds.ClientSecret,
         'AzureAD',
-        legacyCreds.Domain
+        legacyCreds.Domain,
+        legacyCreds.TenantId,
+        legacyCreds.ClientId
       );
 
       console.log(`[CredentialService] ✅ Successfully migrated credentials for profile: ${profileId}`);
@@ -299,10 +317,24 @@ export class CredentialService {
 
   /**
    * Check if credentials exist for a profile
+   * Checks all sources: ENV, safeStorage, and legacy files
    */
   async hasCredential(profileId: string): Promise<boolean> {
     await this.ensureInitialized();
-    return this.store.credentials.some((c) => c.profileId === profileId);
+
+    // Check ENV variables
+    if (this.getCredentialsFromEnv()) {
+      return true;
+    }
+
+    // Check safeStorage
+    if (this.store.credentials.some((c) => c.profileId === profileId)) {
+      return true;
+    }
+
+    // Check legacy file
+    const legacyCreds = await this.loadLegacyCredentials(profileId);
+    return legacyCreds !== null;
   }
 
   /**

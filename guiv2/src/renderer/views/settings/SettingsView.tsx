@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Save, RotateCcw, Settings as SettingsIcon, CheckCircle, Cloud } from 'lucide-react';
 
 import { useSettingsLogic } from '../../hooks/useSettingsLogic';
+import { useThemeStore } from '../../store/useThemeStore';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { Select } from '../../components/atoms/Select';
@@ -26,6 +27,7 @@ const SettingsView: React.FC = () => {
     saveSuccess,
   } = useSettingsLogic();
 
+  const { mode, setMode } = useThemeStore();
   const [isAppRegistrationDialogOpen, setIsAppRegistrationDialogOpen] = useState(false);
 
   return (
@@ -81,11 +83,16 @@ const SettingsView: React.FC = () => {
               Appearance
             </h2>
             <div className="space-y-4">
-              <Checkbox
-                label="Dark Theme"
-                checked={settings.theme.isDarkTheme}
-                onChange={(checked) => updateThemeSetting('isDarkTheme', checked)}
-                data-cy="dark-theme-checkbox" data-testid="dark-theme-checkbox"
+              <Select
+                label="Theme Mode"
+                value={mode}
+                onChange={(value) => setMode(value as 'light' | 'dark' | 'system')}
+                options={[
+                  { value: 'light', label: 'Light' },
+                  { value: 'dark', label: 'Dark (Default)' },
+                  { value: 'system', label: 'System' },
+                ]}
+                data-cy="theme-mode-select" data-testid="theme-mode-select"
               />
 
               <div className="grid grid-cols-2 gap-4">
