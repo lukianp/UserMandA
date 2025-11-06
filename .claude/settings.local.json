@@ -11,7 +11,15 @@
       "Bash(Select-String -Pattern \"^d|^\\-\")",
       "Bash(Select-Object -First 200)",
       "Bash(npm run build:*)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(taskkill:*)",
+      "Bash($null)",
+      "Bash(Start-Sleep -Seconds 2)",
+      "Bash(Remove-Item -Recurse -Force .webpack -ErrorAction SilentlyContinue)",
+      "Bash(Start-Sleep -Seconds 10)",
+      "Bash(cat:*)",
+      "Bash(npx electron-forge start)",
+      "Bash(npx webpack:*)"
     ],
     "deny": [],
     "ask": [],

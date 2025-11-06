@@ -257,14 +257,10 @@ export const useAzureDiscoveryLogic = () => {
     });
 
     try {
-      // Get electron API with fallback
-      const electronAPI = getElectronAPI();
-
-      // Execute discovery module with credentials from the profile
-      const result = await electronAPI.executeDiscoveryModule(
-        'Azure',
-        selectedSourceProfile.companyName,
-        {
+      // Use the correct discovery:execute handler that emits streaming events
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'Azure',
+        parameters: {
           IncludeUsers: formData.includeUsers,
           IncludeGroups: formData.includeGroups,
           IncludeTeams: formData.includeTeams,
@@ -273,24 +269,15 @@ export const useAzureDiscoveryLogic = () => {
           IncludeExchange: formData.includeExchange,
           IncludeLicenses: formData.includeLicenses,
           MaxResults: formData.maxResults,
-        },
-        {
           timeout: formData.timeout * 1000, // Convert to milliseconds
-        }
-      );
+        },
+        executionId: token, // Pass the token so events are matched correctly
+      });
 
-      if (result.success) {
-        addLog('Azure discovery completed successfully');
-        addLog(`Results saved to C:\\DiscoveryData\\${selectedSourceProfile.companyName}\\Raw`);
-      } else {
-        const errorMessage = result.error || 'Discovery failed';
-        setError(errorMessage);
-        addLog(`ERROR: ${errorMessage}`);
-      }
+      console.log('[AzureDiscoveryHook] Discovery execution completed:', result);
 
-      setIsRunning(false);
-      setCurrentToken(null);
-      setLocalProgress(null);
+      // Note: Completion will be handled by the discovery:complete event listener
+      // Don't set isRunning to false here as the event listener will do it
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
