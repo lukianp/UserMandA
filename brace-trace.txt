@@ -1,0 +1,420 @@
+Finding all brace transitions from line 160 to end...
+
+ 182: 2->3 OPEN | if (-not (Test-AzureModules)) {
+ 184: 3->2 CLOSE | }
+ 188: 2->3 OPEN | if ($azureConnection) {
+ 190: 3->3 OPEN CLOSE | } else {
+ 191: 3->3 OPEN CLOSE | $Result.AddWarning("Could not establish Azure connection, will use Graph API where possible", @{Error="All authentication strategies failed"})
+ 192: 3->2 CLOSE | }
+ 197: 2->3 OPEN | try {
+ 202: 3->4 OPEN | do {
+ 206: 4->3 CLOSE | } while ($userUri)
+ 208: 3->4 OPEN | foreach ($user in $users) {
+ 215: 4->5 OPEN | try {
+ 218: 5->5 OPEN CLOSE | $groupMemberships = $groupsResponse.value | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' }
+ 220: 5->5 OPEN CLOSE | } catch {
+ 222: 5->4 CLOSE | }
+ 226: 4->5 OPEN | try {
+ 230: 5->5 OPEN CLOSE | } catch {
+ 232: 5->4 CLOSE | }
+ 235: 4->4 OPEN CLOSE | $signInActivity = if ($user.signInActivity) { $user.signInActivity } else { $null }
+ 238: 4->5 OPEN | $userData = [PSCustomObject]@{
+ 269: 5->5 OPEN CLOSE | AssignedLicenses = ($user.assignedLicenses | ForEach-Object { $_.skuId }) -join '; '
+ 270: 5->5 OPEN CLOSE | AssignedPlans = ($user.assignedPlans | ForEach-Object { $_.servicePlanId }) -join '; '
+ 282: 5->5 OPEN CLOSE | LastSignInDateTime = if ($signInActivity) { $signInActivity.lastSignInDateTime } else { $null }
+ 285: 5->5 OPEN CLOSE | ManagerUPN = if ($user.manager) { $user.manager.userPrincipalName } else { $null }
+ 286: 5->5 OPEN CLOSE | ManagerId = if ($user.manager) { $user.manager.id } else { $null }
+ 287: 5->5 OPEN CLOSE | ManagerDisplayName = if ($user.manager) { $user.manager.displayName } else { $null }
+ 291: 5->5 OPEN CLOSE | GroupMemberships = ($groupMemberships | ForEach-Object { $_.displayName }) -join '; '
+ 296: 5->4 CLOSE | }
+ 298: 4->3 CLOSE | }
+ 303: 3->3 OPEN CLOSE | } catch {
+ 304: 3->3 OPEN CLOSE | $Result.AddError("Failed to discover users: $($_.Exception.Message)", $_.Exception, @{Section="Users"})
+ 305: 3->2 CLOSE | }
+ 311: 2->3 OPEN | try {
+ 315: 3->4 OPEN | do {
+ 319: 4->3 CLOSE | } while ($appUri)
+ 321: 3->4 OPEN | foreach ($app in $applications) {
+ 325: 4->5 OPEN | try {
+ 330: 5->5 OPEN CLOSE | } catch {
+ 332: 5->4 CLOSE | }
+ 336: 4->5 OPEN | try {
+ 337: 5->6 OPEN | foreach ($owner in $owners) {
+ 338: 6->7 OPEN | $ownerObj = [PSCustomObject]@{
+ 341: 7->7 OPEN CLOSE | DisplayName = if ($owner.displayName) { $owner.displayName } else { $null }
+ 342: 7->7 OPEN CLOSE | UserPrincipalName = if ($owner.userPrincipalName) { $owner.userPrincipalName } else { $null }
+ 343: 7->6 CLOSE | }
+ 345: 6->5 CLOSE | }
+ 346: 5->5 OPEN CLOSE | } catch {
+ 348: 5->4 CLOSE | }
+ 360: 4->5 OPEN | if ($app.requiredResourceAccess) {
+ 361: 5->6 OPEN | foreach ($resource in $app.requiredResourceAccess) {
+ 362: 6->7 OPEN | foreach ($permission in $resource.resourceAccess) {
+ 364: 7->8 OPEN | foreach ($privilegePattern in $highPrivilegePermissions) {
+ 365: 8->9 OPEN | if ($permission.id -match $privilegePattern -or $permission.type -eq 'Role') {
+ 368: 9->8 CLOSE | }
+ 369: 8->7 CLOSE | }
+ 370: 7->8 OPEN | if ($hasHighPrivilege) {
+ 373: 8->7 CLOSE | }
+ 374: 7->6 CLOSE | }
+ 375: 6->5 CLOSE | }
+ 376: 5->4 CLOSE | }
+ 378: 4->5 OPEN | $appData = [PSCustomObject]@{
+ 396: 5->5 OPEN CLOSE | AppRoleCount = if ($app.appRoles) { $app.appRoles.Count } else { 0 }
+ 397: 5->5 OPEN CLOSE | OAuth2PermissionScopeCount = if ($app.api -and $app.api.oauth2PermissionScopes) { $app.api.oauth2PermissionScopes.Count } else { 0 }
+ 400: 5->4 CLOSE | }
+ 402: 4->3 CLOSE | }
+ 407: 3->3 OPEN CLOSE | } catch {
+ 408: 3->3 OPEN CLOSE | $Result.AddError("Failed to discover applications: $($_.Exception.Message)", $_.Exception, @{Section="Applications"})
+ 409: 3->2 CLOSE | }
+ 415: 2->3 OPEN | try {
+ 425: 3->4 OPEN | do {
+ 429: 4->3 CLOSE | } while ($appsWithCredsUri)
+ 431: 3->3 OPEN CLOSE | $appsWithCreds = $appsWithCreds | Where-Object { $_.keyCredentials -or $_.passwordCredentials }
+ 433: 3->4 OPEN | foreach ($app in $appsWithCreds) {
+ 435: 4->5 OPEN | if ($app.keyCredentials) {
+ 436: 5->6 OPEN | foreach ($keyCred in $app.keyCredentials) {
+ 438: 6->7 OPEN | $daysUntilExpiry = if ($keyCred.endDateTime) {
+ 440: 7->6 OPEN CLOSE | } else { -1 }
+ 442: 6->6 OPEN CLOSE | $status = if ($daysUntilExpiry -lt 0) { 'Expired' }
+ 443: 6->6 OPEN CLOSE | elseif ($daysUntilExpiry -lt 30) { 'ExpiringSoon' }
+ 444: 6->6 OPEN CLOSE | elseif ($daysUntilExpiry -lt 90) { 'ExpiringInQuarter' }
+ 445: 6->6 OPEN CLOSE | else { 'Valid' }
+ 447: 6->6 OPEN CLOSE | if ($status -eq 'Expired') { $expiredCount++ }
+ 448: 6->6 OPEN CLOSE | elseif ($status -eq 'ExpiringSoon') { $expiringSoonCount++ }
+ 450: 6->7 OPEN | $certObj = [PSCustomObject]@{
+ 462: 7->8 OPEN | CustomKeyIdentifier = if ($keyCred.customKeyIdentifier) {
+ 464: 8->7 OPEN CLOSE | } else { $null }
+ 467: 7->6 CLOSE | }
+ 470: 6->5 CLOSE | }
+ 471: 5->4 CLOSE | }
+ 474: 4->5 OPEN | if ($app.passwordCredentials) {
+ 475: 5->6 OPEN | foreach ($passwordCred in $app.passwordCredentials) {
+ 477: 6->7 OPEN | $daysUntilExpiry = if ($passwordCred.endDateTime) {
+ 479: 7->6 OPEN CLOSE | } else { -1 }
+ 481: 6->6 OPEN CLOSE | $status = if (-not $passwordCred.endDateTime) { 'NeverExpires' }
+ 482: 6->6 OPEN CLOSE | elseif ($daysUntilExpiry -lt 0) { 'Expired' }
+ 483: 6->6 OPEN CLOSE | elseif ($daysUntilExpiry -lt 30) { 'ExpiringSoon' }
+ 484: 6->6 OPEN CLOSE | elseif ($daysUntilExpiry -lt 90) { 'ExpiringInQuarter' }
+ 485: 6->6 OPEN CLOSE | else { 'Valid' }
+ 487: 6->6 OPEN CLOSE | if ($status -eq 'Expired') { $expiredCount++ }
+ 488: 6->6 OPEN CLOSE | elseif ($status -eq 'ExpiringSoon') { $expiringSoonCount++ }
+ 490: 6->7 OPEN | $secretObj = [PSCustomObject]@{
+ 504: 7->6 CLOSE | }
+ 507: 6->5 CLOSE | }
+ 508: 5->4 CLOSE | }
+ 509: 4->3 CLOSE | }
+ 517: 3->3 OPEN CLOSE | } catch {
+ 518: 3->3 OPEN CLOSE | $Result.AddWarning("Failed to analyze application credentials: $($_.Exception.Message)", @{Operation = "GetApplicationCredentials"})
+ 519: 3->2 CLOSE | }
+ 525: 2->3 OPEN | try {
+ 529: 3->4 OPEN | do {
+ 533: 4->3 CLOSE | } while ($spUri)
+ 535: 3->4 OPEN | foreach ($sp in $servicePrincipals) {
+ 539: 4->5 OPEN | try {
+ 544: 5->5 OPEN CLOSE | } catch {
+ 546: 5->4 CLOSE | }
+ 548: 4->5 OPEN | $spData = [PSCustomObject]@{
+ 564: 5->4 CLOSE | }
+ 566: 4->3 CLOSE | }
+ 571: 3->3 OPEN CLOSE | } catch {
+ 572: 3->3 OPEN CLOSE | $Result.AddError("Failed to discover service principals: $($_.Exception.Message)", $_.Exception, @{Section="ServicePrincipals"})
+ 573: 3->2 CLOSE | }
+ 579: 2->3 OPEN | try {
+ 583: 3->4 OPEN | do {
+ 587: 4->3 CLOSE | } while ($groupUri)
+ 589: 3->4 OPEN | foreach ($group in $groups) {
+ 593: 4->5 OPEN | try {
+ 598: 5->5 OPEN CLOSE | } catch {
+ 600: 5->4 CLOSE | }
+ 605: 4->5 OPEN | try {
+ 612: 5->6 OPEN | if ($membersResponse.'@odata.count') {
+ 614: 6->5 CLOSE | }
+ 615: 5->5 OPEN CLOSE | } catch {
+ 617: 5->4 CLOSE | }
+ 621: 4->4 OPEN CLOSE | if ($group.groupTypes -contains 'Unified') { $groupType = 'Microsoft365Group' }
+ 622: 4->4 OPEN CLOSE | if ($group.mailEnabled -and -not $group.securityEnabled) { $groupType = 'DistributionList' }
+ 627: 4->5 OPEN | $groupData = [PSCustomObject]@{
+ 645: 5->5 OPEN CLOSE | ProxyAddresses = if ($group.proxyAddresses) { ($group.proxyAddresses -join ';') } else { $null }
+ 650: 5->6 OPEN | Owners = ($owners | ForEach-Object {
+ 651: 6->6 OPEN CLOSE | if ($_.displayName) { $_.displayName }
+ 652: 6->6 OPEN CLOSE | elseif ($_.userPrincipalName) { $_.userPrincipalName }
+ 653: 6->6 OPEN CLOSE | else { $_.id }
+ 654: 6->5 CLOSE | }) -join '; '
+ 656: 5->6 OPEN | SampleMembers = ($members | ForEach-Object {
+ 657: 6->6 OPEN CLOSE | if ($_.displayName) { $_.displayName }
+ 658: 6->6 OPEN CLOSE | elseif ($_.userPrincipalName) { $_.userPrincipalName }
+ 659: 6->6 OPEN CLOSE | else { $_.id }
+ 660: 6->5 CLOSE | }) -join '; '
+ 665: 5->4 CLOSE | }
+ 667: 4->3 CLOSE | }
+ 672: 3->3 OPEN CLOSE | } catch {
+ 673: 3->3 OPEN CLOSE | $Result.AddError("Failed to discover groups: $($_.Exception.Message)", $_.Exception, @{Section="Groups"})
+ 674: 3->2 CLOSE | }
+ 680: 2->3 OPEN | try {
+ 684: 3->4 OPEN | do {
+ 688: 4->3 CLOSE | } while ($roleUri)
+ 690: 3->4 OPEN | foreach ($role in $directoryRoles) {
+ 693: 4->5 OPEN | try {
+ 697: 5->5 OPEN CLOSE | } catch {
+ 699: 5->4 CLOSE | }
+ 701: 4->5 OPEN | $roleData = [PSCustomObject]@{
+ 710: 5->4 CLOSE | }
+ 712: 4->3 CLOSE | }
+ 717: 3->3 OPEN CLOSE | } catch {
+ 718: 3->3 OPEN CLOSE | $Result.AddError("Failed to discover directory roles: $($_.Exception.Message)", $_.Exception, @{Section="DirectoryRoles"})
+ 719: 3->2 CLOSE | }
+ 725: 2->3 OPEN | try {
+ 730: 3->4 OPEN | do {
+ 734: 4->3 CLOSE | } while ($aadDeviceUri)
+ 736: 3->4 OPEN | foreach ($device in $aadDevices) {
+ 737: 4->5 OPEN | $deviceData = [PSCustomObject]@{
+ 754: 5->4 CLOSE | }
+ 756: 4->3 CLOSE | }
+ 761: 3->3 OPEN CLOSE | } catch {
+ 762: 3->3 OPEN CLOSE | $Result.AddError("Failed to discover Azure AD devices: $($_.Exception.Message)", $_.Exception, @{Section="AzureDevices"})
+ 763: 3->2 CLOSE | }
+ 766: 2->3 OPEN | try {
+ 770: 3->4 OPEN | do {
+ 774: 4->3 CLOSE | } while ($managedDeviceUri)
+ 776: 3->4 OPEN | foreach ($device in $managedDevices) {
+ 778: 4->5 OPEN | $totalStorageGB = if ($device.totalStorageSpaceInBytes) {
+ 780: 5->4 OPEN CLOSE | } else { $null }
+ 782: 4->5 OPEN | $freeStorageGB = if ($device.freeStorageSpaceInBytes) {
+ 784: 5->4 OPEN CLOSE | } else { $null }
+ 786: 4->5 OPEN | $deviceData = [PSCustomObject]@{
+ 805: 5->6 OPEN | HardwareInformation = if ($device.hardwareInformation) {
+ 807: 6->5 OPEN CLOSE | } else { $null }
+ 870: 5->4 CLOSE | }
+ 872: 4->3 CLOSE | }
+ 877: 3->3 OPEN CLOSE | } catch {
+ 878: 3->3 OPEN CLOSE | $Result.AddWarning("Failed to discover Intune managed devices: $($_.Exception.Message)", @{Operation = "GetManagedDevices"})
+ 879: 3->2 CLOSE | }
+ 885: 2->3 OPEN | try {
+ 889: 3->4 OPEN | do {
+ 893: 4->3 CLOSE | } while ($caUri)
+ 895: 3->4 OPEN | foreach ($policy in $caPolicies) {
+ 896: 4->5 OPEN | $policyData = [PSCustomObject]@{
+ 927: 5->4 CLOSE | }
+ 929: 4->3 CLOSE | }
+ 934: 3->3 OPEN CLOSE | } catch {
+ 935: 3->3 OPEN CLOSE | $Result.AddError("Failed to discover Conditional Access policies: $($_.Exception.Message)", $_.Exception, @{Section="ConditionalAccess"})
+ 936: 3->2 CLOSE | }
+ 942: 2->3 OPEN | try {
+ 946: 3->4 OPEN | do {
+ 950: 4->3 CLOSE | } while ($auUri)
+ 952: 3->4 OPEN | foreach ($au in $adminUnits) {
+ 956: 4->5 OPEN | try {
+ 961: 5->5 OPEN CLOSE | } catch {
+ 963: 5->4 CLOSE | }
+ 968: 4->5 OPEN | try {
+ 973: 5->5 OPEN CLOSE | } catch {
+ 975: 5->4 CLOSE | }
+ 977: 4->5 OPEN | $auData = [PSCustomObject]@{
+ 990: 5->4 CLOSE | }
+ 992: 4->3 CLOSE | }
+ 997: 3->3 OPEN CLOSE | } catch {
+ 998: 3->3 OPEN CLOSE | $Result.AddError("Failed to discover Administrative Units: $($_.Exception.Message)", $_.Exception, @{Section="AdministrativeUnits"})
+ 999: 3->2 CLOSE | }
+1005: 2->3 OPEN | try {
+1012: 3->4 OPEN | foreach ($org in $organization) {
+1013: 4->5 OPEN | $orgData = [PSCustomObject]@{
+1027: 5->5 OPEN CLOSE | VerifiedDomains = ($org.verifiedDomains | ForEach-Object { "$($_.name):$($_.isDefault)" }) -join '; '
+1030: 5->4 CLOSE | }
+1032: 4->3 CLOSE | }
+1037: 3->3 OPEN CLOSE | } catch {
+1038: 3->3 OPEN CLOSE | $Result.AddError("Failed to discover tenant information: $($_.Exception.Message)", $_.Exception, @{Section="Tenant"})
+1039: 3->2 CLOSE | }
+1045: 2->3 OPEN | try {
+1050: 3->4 OPEN | try {
+1054: 4->5 OPEN | foreach ($sub in $subscriptions) {
+1055: 5->6 OPEN | $subData = [PSCustomObject]@{
+1064: 6->5 CLOSE | }
+1066: 5->4 CLOSE | }
+1070: 4->4 OPEN CLOSE | } catch {
+1072: 4->3 CLOSE | }
+1074: 3->3 OPEN CLOSE | } catch {
+1075: 3->3 OPEN CLOSE | $Result.AddWarning("Failed to discover subscriptions via Graph API: $($_.Exception.Message)", @{Section="Subscriptions"})
+1076: 3->2 CLOSE | }
+1082: 2->3 OPEN | try {
+1087: 3->4 OPEN | try {
+1089: 4->5 OPEN | if ($response.value) {
+1092: 5->6 OPEN | foreach ($sub in $azureSubscriptions) {
+1093: 6->7 OPEN | $subData = [PSCustomObject]@{
+1101: 7->6 CLOSE | }
+1103: 6->5 CLOSE | }
+1106: 5->4 CLOSE | }
+1107: 4->4 OPEN CLOSE | } catch {
+1109: 4->3 CLOSE | }
+1111: 3->3 OPEN CLOSE | } catch {
+1112: 3->3 OPEN CLOSE | $Result.AddWarning("Failed to discover Azure subscriptions via Graph Beta: $($_.Exception.Message)", @{Section="AzureSubscriptions"})
+1113: 3->2 CLOSE | }
+1119: 2->3 OPEN | if (-not $azureConnection) {
+1121: 3->4 OPEN | try {
+1125: 4->5 OPEN | try {
+1127: 5->6 OPEN | if ($response.value) {
+1130: 6->7 OPEN | foreach ($rg in $resourceGroups) {
+1131: 7->8 OPEN | $rgData = [PSCustomObject]@{
+1141: 8->7 CLOSE | }
+1143: 7->6 CLOSE | }
+1146: 6->5 CLOSE | }
+1147: 5->5 OPEN CLOSE | } catch {
+1149: 5->4 CLOSE | }
+1151: 4->4 OPEN CLOSE | } catch {
+1152: 4->4 OPEN CLOSE | $Result.AddWarning("Failed to discover resource groups via Graph Beta: $($_.Exception.Message)", @{Section="ResourceGroups"})
+1153: 4->3 CLOSE | }
+1154: 3->2 CLOSE | }
+1158: 2->3 OPEN | if ($azureConnection) {
+1162: 3->4 OPEN | try {
+1163: 4->4 OPEN CLOSE | $subscriptions = Get-AzSubscription -ErrorAction Stop | Where-Object { $_.State -eq 'Enabled' }
+1169: 4->5 OPEN | try {
+1171: 5->6 OPEN | try {
+1177: 6->7 OPEN | foreach ($mailbox in $mailboxes) {
+1178: 7->8 OPEN | $mailboxData = [PSCustomObject]@{
+1187: 8->7 CLOSE | }
+1189: 7->6 CLOSE | }
+1192: 6->6 OPEN CLOSE | } catch {
+1194: 6->5 CLOSE | }
+1197: 5->6 OPEN | try {
+1203: 6->7 OPEN | foreach ($site in $sites) {
+1204: 7->8 OPEN | $siteData = [PSCustomObject]@{
+1214: 8->7 CLOSE | }
+1216: 7->6 CLOSE | }
+1219: 6->6 OPEN CLOSE | } catch {
+1221: 6->5 CLOSE | }
+1224: 5->6 OPEN | try {
+1230: 6->7 OPEN | foreach ($team in $teams) {
+1231: 7->8 OPEN | $teamData = [PSCustomObject]@{
+1240: 8->7 CLOSE | }
+1242: 7->6 CLOSE | }
+1245: 6->6 OPEN CLOSE | } catch {
+1247: 6->5 CLOSE | }
+1249: 5->5 OPEN CLOSE | } catch {
+1250: 5->5 OPEN CLOSE | $Result.AddWarning("Failed to discover Microsoft 365 workloads: $($_.Exception.Message)", @{Section="M365Workloads"})
+1251: 5->4 CLOSE | }
+1257: 4->5 OPEN | try {
+1259: 5->6 OPEN | try {
+1263: 6->7 OPEN | do {
+1267: 7->6 CLOSE | } while ($complianceUri)
+1269: 6->7 OPEN | foreach ($policy in $compliancePolicies) {
+1272: 7->8 OPEN | try {
+1276: 8->7 OPEN CLOSE | } catch {}
+1278: 7->8 OPEN | $policyData = [PSCustomObject]@{
+1292: 8->7 CLOSE | }
+1294: 7->6 CLOSE | }
+1297: 6->6 OPEN CLOSE | } catch {
+1299: 6->5 CLOSE | }
+1302: 5->6 OPEN | try {
+1306: 6->7 OPEN | do {
+1310: 7->6 CLOSE | } while ($configUri)
+1312: 6->7 OPEN | foreach ($policy in $configPolicies) {
+1315: 7->8 OPEN | try {
+1319: 8->7 OPEN CLOSE | } catch {}
+1321: 7->8 OPEN | $policyData = [PSCustomObject]@{
+1335: 8->7 CLOSE | }
+1337: 7->6 CLOSE | }
+1340: 6->6 OPEN CLOSE | } catch {
+1342: 6->5 CLOSE | }
+1345: 5->6 OPEN | try {
+1351: 6->6 OPEN CLOSE | $appProtectionPolicies += $iosResponse.value | ForEach-Object { $_ | Add-Member -NotePropertyName Platform -NotePropertyValue "iOS" -PassThru }
+1356: 6->6 OPEN CLOSE | $appProtectionPolicies += $androidResponse.value | ForEach-Object { $_ | Add-Member -NotePropertyName Platform -NotePropertyValue "Android" -PassThru }
+1358: 6->7 OPEN | foreach ($policy in $appProtectionPolicies) {
+1359: 7->8 OPEN | $policyData = [PSCustomObject]@{
+1371: 8->7 CLOSE | }
+1373: 7->6 CLOSE | }
+1376: 6->6 OPEN CLOSE | } catch {
+1378: 6->5 CLOSE | }
+1380: 5->5 OPEN CLOSE | } catch {
+1381: 5->5 OPEN CLOSE | $Result.AddWarning("Failed to discover Intune policies: $($_.Exception.Message)", @{Section="IntunePolicies"})
+1382: 5->4 CLOSE | }
+1386: 4->5 OPEN | if ($azureConnection) {
+1389: 5->6 OPEN | try {
+1392: 6->7 OPEN | foreach ($sub in $subscriptions) {
+1395: 7->8 OPEN | $subData = [PSCustomObject]@{
+1403: 8->7 CLOSE | }
+1409: 7->8 OPEN | try {
+1412: 8->9 OPEN | foreach ($vm in $vms) {
+1415: 9->10 OPEN | foreach ($nicRef in $vm.NetworkProfile.NetworkInterfaces) {
+1417: 10->11 OPEN | $nicDetails += @{
+1420: 11->12 OPEN | PublicIpAddress = if ($nic.IpConfigurations[0].PublicIpAddress) {
+1422: 12->11 OPEN CLOSE | } else { $null }
+1423: 11->10 CLOSE | }
+1424: 10->9 CLOSE | }
+1426: 9->10 OPEN | $vmData = [PSCustomObject]@{
+1448: 10->9 CLOSE | }
+1450: 9->8 CLOSE | }
+1454: 8->8 OPEN CLOSE | } catch {
+1455: 8->8 OPEN CLOSE | $Result.AddWarning("Failed to discover VMs in subscription $($sub.Name): $($_.Exception.Message)", @{Subscription=$sub.Name})
+1456: 8->7 CLOSE | }
+1462: 7->8 OPEN | try {
+1465: 8->9 OPEN | foreach ($nsg in $nsgs) {
+1470: 9->10 OPEN | foreach ($rule in $nsg.SecurityRules) {
+1471: 10->11 OPEN | $ruleData = @{
+1481: 11->10 CLOSE | }
+1483: 10->11 OPEN | if ($rule.Direction -eq 'Inbound') {
+1485: 11->11 OPEN CLOSE | } else {
+1487: 11->10 CLOSE | }
+1488: 10->9 CLOSE | }
+1490: 9->10 OPEN | $nsgData = [PSCustomObject]@{
+1506: 10->9 CLOSE | }
+1508: 9->8 CLOSE | }
+1512: 8->8 OPEN CLOSE | } catch {
+1513: 8->8 OPEN CLOSE | $Result.AddWarning("Failed to discover NSGs in subscription $($sub.Name): $($_.Exception.Message)", @{Subscription=$sub.Name})
+1514: 8->7 CLOSE | }
+1520: 7->8 OPEN | try {
+1523: 8->9 OPEN | foreach ($lb in $loadBalancers) {
+1524: 9->10 OPEN | $lbData = [PSCustomObject]@{
+1531: 10->10 OPEN CLOSE | Type = if ($lb.FrontendIpConfigurations[0].PublicIpAddress) { "Public" } else { "Internal" }
+1542: 10->9 CLOSE | }
+1544: 9->8 CLOSE | }
+1548: 8->8 OPEN CLOSE | } catch {
+1549: 8->8 OPEN CLOSE | $Result.AddWarning("Failed to discover Load Balancers in subscription $($sub.Name): $($_.Exception.Message)", @{Subscription=$sub.Name})
+1550: 8->7 CLOSE | }
+1556: 7->8 OPEN | try {
+1559: 8->9 OPEN | foreach ($sa in $storageAccounts) {
+1561: 9->10 OPEN | $saData = [PSCustomObject]@{
+1585: 10->9 CLOSE | }
+1587: 9->8 CLOSE | }
+1591: 8->8 OPEN CLOSE | } catch {
+1592: 8->8 OPEN CLOSE | $Result.AddWarning("Failed to discover Storage Accounts in subscription $($sub.Name): $($_.Exception.Message)", @{Subscription=$sub.Name})
+1593: 8->7 CLOSE | }
+1599: 7->8 OPEN | try {
+1602: 8->9 OPEN | foreach ($kv in $keyVaults) {
+1608: 9->10 OPEN | foreach ($policy in $kvDetail.AccessPolicies) {
+1609: 10->11 OPEN | $accessPolicies += @{
+1616: 11->10 CLOSE | }
+1617: 10->9 CLOSE | }
+1619: 9->10 OPEN | $kvData = [PSCustomObject]@{
+1641: 10->9 CLOSE | }
+1643: 9->8 CLOSE | }
+1647: 8->8 OPEN CLOSE | } catch {
+1648: 8->8 OPEN CLOSE | $Result.AddWarning("Failed to discover Key Vaults in subscription $($sub.Name): $($_.Exception.Message)", @{Subscription=$sub.Name})
+1649: 8->7 CLOSE | }
+1655: 7->8 OPEN | try {
+1659: 8->9 OPEN | foreach ($mysql in $mySqlServers) {
+1660: 9->10 OPEN | $mysqlData = [PSCustomObject]@{
+1683: 10->9 CLOSE | }
+1685: 9->8 CLOSE | }
+1689: 8->8 OPEN CLOSE | } catch {
+1690: 8->8 OPEN CLOSE | $Result.AddWarning("Failed to discover MySQL Flexible Servers in subscription $($sub.Name): $($_.Exception.Message)", @{Subscription=$sub.Name})
+1691: 8->7 CLOSE | }
+1697: 7->8 OPEN | try {
+1700: 8->9 OPEN | foreach ($ra in $roleAssignments) {
+1701: 9->10 OPEN | $raData = [PSCustomObject]@{
+1718: 10->9 CLOSE | }
+1720: 9->8 CLOSE | }
+1724: 8->8 OPEN CLOSE | } catch {
+1725: 8->8 OPEN CLOSE | $Result.AddWarning("Failed to discover RBAC assignments in subscription $($sub.Name): $($_.Exception.Message)", @{Subscription=$sub.Name})
+1726: 8->7 CLOSE | }
+1728: 7->6 CLOSE | }
+1730: 6->6 OPEN CLOSE | } catch {
+1731: 6->6 OPEN CLOSE | $Result.AddError("Failed to enumerate Azure subscriptions: $($_.Exception.Message)", $_.Exception, @{Section="Subscriptions"})
+1732: 6->5 CLOSE | }
+1733: 5->4 CLOSE | }
+1739: 4->4 OPEN CLOSE | } catch {
+1740: 4->4 OPEN CLOSE | $Result.AddWarning("Process Azure infrastructure discovery failed", @{Error=$_.Exception.Message})
+1741: 4->3 CLOSE | }
+1745: 3->2 CLOSE | }
+1754: 2->1 CLOSE | }
+
+Final balance: 1 (should be 0)

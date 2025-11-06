@@ -134,4 +134,4 @@ public class AuthSession : IDisposable {
 # Export the class
 Export-ModuleMember -Variable @()
 
-Write-Host "[AuthSession.psm1] Thread-safe authentication session class loaded" -ForegroundColor Green
+Write-Verbose "[AuthSession.psm1] Thread-safe authentication session class loaded"

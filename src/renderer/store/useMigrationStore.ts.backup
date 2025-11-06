@@ -1,0 +1,348 @@
+/**
+ * Migration Store
+ *
+ * Manages migration operations, progress tracking, and results.
+ * Handles user, group, and data migration workflows.
+ */
+
+import { create } from 'zustand';
+import { devtools, subscribeWithSelector } from 'zustand/middleware';
+import { MigrationPlan, MigrationTask, MigrationStatus } from '../types/models/migration';
+
+export interface MigrationOperation {
+  /** Unique operation identifier */
+  id: string;
+  /** Migration plan being executed */
+  plan: MigrationPlan;
+  /** Current status */
+  status: MigrationStatus;
+  /** Overall progress percentage (0-100) */
+  progress: number;
+  /** Current task index */
+  currentTaskIndex: number;
+  /** Task results */
+  taskResults: Map<string, any>;
+  /** Failed tasks */
+  failedTasks: string[];
+  /** Start timestamp */
+  startedAt: number;
+  /** Completion timestamp */
+  completedAt?: number;
+  /** Cancellation token */
+  cancellationToken: string;
+}
+
+interface MigrationState {
+  // State
+  operations: Map<string, MigrationOperation>;
+  plans: MigrationPlan[];
+  selectedPlan: MigrationPlan | null;
+  isMigrating: boolean;
+
+  // Actions
+  createPlan: (plan: Omit<MigrationPlan, 'id' | 'createdAt'>) => void;
+  updatePlan: (planId: string, updates: Partial<MigrationPlan>) => void;
+  deletePlan: (planId: string) => void;
+  startMigration: (planId: string) => Promise<string>;
+  cancelMigration: (operationId: string) => Promise<void>;
+  updateProgress: (operationId: string, taskIndex: number, progress: number) => void;
+  completeTask: (operationId: string, taskId: string, result: any) => void;
+  failTask: (operationId: string, taskId: string, error: string) => void;
+  completeMigration: (operationId: string) => void;
+  clearOperation: (operationId: string) => void;
+  getOperation: (operationId: string) => MigrationOperation | undefined;
+}
+
+export const useMigrationStore = create<MigrationState>()(
+  devtools(
+    subscribeWithSelector((set, get) => ({
+      // Initial state
+      operations: new Map(),
+      plans: [],
+      selectedPlan: null,
+      isMigrating: false,
+
+      // Actions
+
+      /**
+       * Create a new migration plan
+       */
+      createPlan: (planData) => {
+        const newPlan: MigrationPlan = {
+          ...planData,
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+        } as MigrationPlan;
+
+        set((state) => ({
+          plans: [...state.plans, newPlan],
+          selectedPlan: newPlan,
+        }));
+      },
+
+      /**
+       * Update an existing migration plan
+       */
+      updatePlan: (planId, updates) => {
+        set((state) => ({
+          plans: state.plans.map(p =>
+            p.id === planId ? { ...p, ...updates } : p
+          ),
+          selectedPlan: state.selectedPlan?.id === planId
+            ? { ...state.selectedPlan, ...updates }
+            : state.selectedPlan,
+        }));
+      },
+
+      /**
+       * Delete a migration plan
+       */
+      deletePlan: (planId) => {
+        set((state) => ({
+          plans: state.plans.filter(p => p.id !== planId),
+          selectedPlan: state.selectedPlan?.id === planId ? null : state.selectedPlan,
+        }));
+      },
+
+      /**
+       * Start executing a migration plan
+       */
+      startMigration: async (planId) => {
+        const plan = get().plans.find(p => p.id === planId);
+        if (!plan) {
+          throw new Error(`Migration plan ${planId} not found`);
+        }
+
+        const operationId = crypto.randomUUID();
+        const cancellationToken = crypto.randomUUID();
+
+        const operation: MigrationOperation = {
+          id: operationId,
+          plan,
+          status: 'pending',
+          progress: 0,
+          currentTaskIndex: 0,
+          taskResults: new Map(),
+          failedTasks: [],
+          startedAt: Date.now(),
+          cancellationToken,
+        };
+
+        // Add operation to state
+        set((state) => {
+          const newOperations = new Map(state.operations);
+          newOperations.set(operationId, operation);
+          return {
+            operations: newOperations,
+            isMigrating: true,
+          };
+        });
+
+        // Setup progress listener
+        const progressCleanup = window.electronAPI.onProgress((data) => {
+          if (data.executionId === cancellationToken) {
+            const currentTask = get().operations.get(operationId)?.currentTaskIndex || 0;
+            get().updateProgress(operationId, currentTask, data.percentage);
+          }
+        });
+
+        try {
+          // Execute migration tasks sequentially
+          for (let i = 0; i < plan.tasks.length; i++) {
+            const task = plan.tasks[i];
+
+            // Update operation status
+            set((state) => {
+              const newOperations = new Map(state.operations);
+              const op = newOperations.get(operationId);
+              if (op) {
+                op.status = 'running';
+                op.currentTaskIndex = i;
+              }
+              return { operations: newOperations };
+            });
+
+            try {
+              // Execute task via PowerShell
+              const result = await window.electronAPI.executeModule({
+                modulePath: `Modules/Migration/${task.type}.psm1`,
+                functionName: `Invoke-${task.type}`,
+                parameters: task.parameters,
+                options: {
+                  cancellationToken,
+                  streamOutput: true,
+                  timeout: task.timeout || 600000, // 10 minutes default
+                },
+              });
+
+              if (result.success) {
+                get().completeTask(operationId, task.id, result.data);
+              } else {
+                get().failTask(operationId, task.id, result.error || 'Task failed');
+
+                // Stop on critical task failure
+                if (task.critical) {
+                  throw new Error(`Critical task failed: ${task.name}`);
+                }
+              }
+            } catch (error: any) {
+              get().failTask(operationId, task.id, error.message);
+
+              if (task.critical) {
+                throw error;
+              }
+            }
+          }
+
+          // Cleanup and complete
+          progressCleanup();
+          get().completeMigration(operationId);
+        } catch (error: any) {
+          progressCleanup();
+          console.error('Migration failed:', error);
+
+          set((state) => {
+            const newOperations = new Map(state.operations);
+            const op = newOperations.get(operationId);
+            if (op) {
+              op.status = 'failed';
+              op.completedAt = Date.now();
+            }
+            return {
+              operations: newOperations,
+              isMigrating: false,
+            };
+          });
+        }
+
+        return operationId;
+      },
+
+      /**
+       * Cancel a running migration
+       */
+      cancelMigration: async (operationId) => {
+        const operation = get().operations.get(operationId);
+        if (!operation || operation.status !== 'running') {
+          return;
+        }
+
+        try {
+          await window.electronAPI.cancelExecution(operation.cancellationToken);
+
+          set((state) => {
+            const newOperations = new Map(state.operations);
+            const op = newOperations.get(operationId);
+            if (op) {
+              op.status = 'cancelled';
+              op.completedAt = Date.now();
+            }
+            return {
+              operations: newOperations,
+              isMigrating: false,
+            };
+          });
+        } catch (error: any) {
+          console.error('Failed to cancel migration:', error);
+        }
+      },
+
+      /**
+       * Update progress for current task
+       */
+      updateProgress: (operationId, taskIndex, progress) => {
+        set((state) => {
+          const newOperations = new Map(state.operations);
+          const operation = newOperations.get(operationId);
+
+          if (operation) {
+            // Calculate overall progress
+            const tasksCompleted = taskIndex;
+            const totalTasks = operation.plan.tasks.length;
+            const taskProgress = progress / 100;
+            const overallProgress = ((tasksCompleted + taskProgress) / totalTasks) * 100;
+
+            operation.progress = Math.min(100, Math.round(overallProgress));
+          }
+
+          return { operations: newOperations };
+        });
+      },
+
+      /**
+       * Mark a task as completed
+       */
+      completeTask: (operationId, taskId, result) => {
+        set((state) => {
+          const newOperations = new Map(state.operations);
+          const operation = newOperations.get(operationId);
+
+          if (operation) {
+            operation.taskResults.set(taskId, result);
+          }
+
+          return { operations: newOperations };
+        });
+      },
+
+      /**
+       * Mark a task as failed
+       */
+      failTask: (operationId, taskId, error) => {
+        set((state) => {
+          const newOperations = new Map(state.operations);
+          const operation = newOperations.get(operationId);
+
+          if (operation) {
+            operation.failedTasks.push(taskId);
+            operation.taskResults.set(taskId, { error });
+          }
+
+          return { operations: newOperations };
+        });
+      },
+
+      /**
+       * Mark migration as completed
+       */
+      completeMigration: (operationId) => {
+        set((state) => {
+          const newOperations = new Map(state.operations);
+          const operation = newOperations.get(operationId);
+
+          if (operation) {
+            operation.status = operation.failedTasks.length > 0 ? 'completed_with_errors' : 'completed';
+            operation.progress = 100;
+            operation.completedAt = Date.now();
+          }
+
+          return {
+            operations: newOperations,
+            isMigrating: false,
+          };
+        });
+      },
+
+      /**
+       * Clear a migration operation
+       */
+      clearOperation: (operationId) => {
+        set((state) => {
+          const newOperations = new Map(state.operations);
+          newOperations.delete(operationId);
+          return { operations: newOperations };
+        });
+      },
+
+      /**
+       * Get a specific operation
+       */
+      getOperation: (operationId) => {
+        return get().operations.get(operationId);
+      },
+    })),
+    {
+      name: 'MigrationStore',
+    }
+  )
+);

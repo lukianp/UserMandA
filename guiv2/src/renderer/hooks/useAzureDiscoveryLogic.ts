@@ -15,7 +15,6 @@ import {
 import type { ProgressData, OutputData } from '../../shared/types';
 
 export interface AzureDiscoveryFormData {
-  tenantId: string;
   includeUsers: boolean;
   includeGroups: boolean;
   includeTeams: boolean;
@@ -28,11 +27,10 @@ export interface AzureDiscoveryFormData {
 }
 
 export const useAzureDiscoveryLogic = () => {
-  const { selectedTargetProfile } = useProfileStore();
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const { addResult, setProgress } = useDiscoveryStore();
   // Form state
   const [formData, setFormData] = useState<AzureDiscoveryFormData>({
-    tenantId: '',
     includeUsers: true,
     includeGroups: true,
     includeTeams: false,
@@ -41,7 +39,7 @@ export const useAzureDiscoveryLogic = () => {
     includeExchange: false,
     includeLicenses: true,
     maxResults: 50000,
-    timeout: 600, // 10 minutes
+    timeout: 1800, // 30 minutes (allows time for module installation on first run)
   });
 
   // Execution state
@@ -56,12 +54,12 @@ export const useAzureDiscoveryLogic = () => {
 
   // Validation
   const isFormValid = useMemo(() => {
-    if (!formData.tenantId) return false;
+    if (!selectedSourceProfile) return false;
     const hasService = formData.includeUsers || formData.includeGroups ||
                       formData.includeTeams || formData.includeSharePoint ||
                       formData.includeOneDrive || formData.includeExchange;
     return hasService;
-  }, [formData]);
+  }, [formData, selectedSourceProfile]);
 
   // Form handlers
   const [config, setConfig] = useState<any>({});
@@ -75,7 +73,6 @@ export const useAzureDiscoveryLogic = () => {
 
   const resetForm = useCallback(() => {
     setFormData({
-      tenantId: '',
       includeUsers: true,
       includeGroups: true,
       includeTeams: false,
@@ -142,7 +139,7 @@ export const useAzureDiscoveryLogic = () => {
           status: 'Completed',
           filePath: data?.result?.outputPath || '',
           success: true,
-          summary: `Discovered ${data?.result?.totalItems || 0} items from tenant ${formData.tenantId}`,
+          summary: `Discovered ${data?.result?.totalItems || 0} items from ${selectedSourceProfile?.companyName || 'tenant'}`,
           errorMessage: '',
           additionalData: data.result,
           createdAt: new Date().toISOString(),
@@ -173,38 +170,55 @@ export const useAzureDiscoveryLogic = () => {
       if (unsubscribeComplete) unsubscribeComplete();
       if (unsubscribeError) unsubscribeError();
     };
-  }, [currentToken, setProgress, addResult, formData.tenantId, addLog]);
+  }, [currentToken, setProgress, addResult, selectedSourceProfile, addLog]);
 
   // Test connection to Azure
   const testConnection = useCallback(async () => {
+    if (!selectedSourceProfile) {
+      setConnectionStatus('error');
+      addLog('No company profile selected');
+      return;
+    }
+
     setConnectionStatus('connecting');
     addLog('Testing connection to Azure AD...');
 
     try {
-      await window.electron.executeDiscovery({
-        moduleName: 'AzureDiscovery',
-        parameters: {
-          tenantId: formData.tenantId,
-          testConnection: true,
-        },
-        executionId: `test-connection-${Date.now()}`,
-      });
+      const electronAPI = getElectronAPI();
 
-      // Handle connection test results via events (would be implemented in event handlers)
+      await electronAPI.executeDiscoveryModule(
+        'Azure',
+        selectedSourceProfile.companyName,
+        {
+          TestConnection: true,
+        },
+        {
+          timeout: 30000,
+        }
+      );
+
       setConnectionStatus('connected');
-      addLog(`Connection successful! Tenant: ${formData.tenantId}`);
+      addLog(`Connection successful! Tenant: ${selectedSourceProfile.tenantId || selectedSourceProfile.companyName}`);
     } catch (err) {
       setConnectionStatus('error');
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
       addLog(`Connection failed: ${errorMessage}`);
     }
-  }, [formData.tenantId, addLog]);
+  }, [selectedSourceProfile, addLog]);
 
   // Start discovery
   const startDiscovery = useCallback(async () => {
+    // Check if a profile is selected
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setError(errorMessage);
+      addLog(errorMessage);
+      return;
+    }
+
     if (!isFormValid) {
-      setError('Please fill in all required fields and select at least one service');
+      setError('Please select at least one service to discover');
       return;
     }
 
@@ -217,8 +231,9 @@ export const useAzureDiscoveryLogic = () => {
     const token = `azure-discovery-${Date.now()}`;
     setCurrentToken(token);
 
-    addLog('Starting Azure discovery...');
-    addLog(`Tenant ID: ${formData.tenantId}`);
+    console.log(`[AzureDiscoveryHook] Starting Azure discovery for company: ${selectedSourceProfile.companyName}`);
+    addLog(`Starting Azure discovery for ${selectedSourceProfile.companyName}...`);
+    addLog(`Tenant ID: ${selectedSourceProfile.tenantId || 'N/A'}`);
 
     // Log selected services
     const services: string[] = [];
@@ -231,28 +246,60 @@ export const useAzureDiscoveryLogic = () => {
     if (formData.includeLicenses) services.push('Licenses');
     addLog(`Services: ${services.join(', ')}`);
 
+    console.log(`[AzureDiscoveryHook] Parameters:`, {
+      includeUsers: formData.includeUsers,
+      includeGroups: formData.includeGroups,
+      includeTeams: formData.includeTeams,
+      includeSharePoint: formData.includeSharePoint,
+      includeOneDrive: formData.includeOneDrive,
+      includeExchange: formData.includeExchange,
+      includeLicenses: formData.includeLicenses,
+    });
+
     try {
-      await window.electron.executeDiscovery({
-        moduleName: 'AzureDiscovery',
-        parameters: {
-          tenantId: formData.tenantId,
-          includeUsers: formData.includeUsers,
-          includeGroups: formData.includeGroups,
-          includeTeams: formData.includeTeams,
-          includeSharePoint: formData.includeSharePoint,
-          includeOneDrive: formData.includeOneDrive,
-          includeExchange: formData.includeExchange,
-          includeLicenses: formData.includeLicenses,
-          maxResults: formData.maxResults,
+      // Get electron API with fallback
+      const electronAPI = getElectronAPI();
+
+      // Execute discovery module with credentials from the profile
+      const result = await electronAPI.executeDiscoveryModule(
+        'Azure',
+        selectedSourceProfile.companyName,
+        {
+          IncludeUsers: formData.includeUsers,
+          IncludeGroups: formData.includeGroups,
+          IncludeTeams: formData.includeTeams,
+          IncludeSharePoint: formData.includeSharePoint,
+          IncludeOneDrive: formData.includeOneDrive,
+          IncludeExchange: formData.includeExchange,
+          IncludeLicenses: formData.includeLicenses,
+          MaxResults: formData.maxResults,
         },
-        executionId: token,
-      });
+        {
+          timeout: formData.timeout * 1000, // Convert to milliseconds
+        }
+      );
+
+      if (result.success) {
+        addLog('Azure discovery completed successfully');
+        addLog(`Results saved to C:\\DiscoveryData\\${selectedSourceProfile.companyName}\\Raw`);
+      } else {
+        const errorMessage = result.error || 'Discovery failed';
+        setError(errorMessage);
+        addLog(`ERROR: ${errorMessage}`);
+      }
+
+      setIsRunning(false);
+      setCurrentToken(null);
+      setLocalProgress(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
       addLog(`ERROR: ${errorMessage}`);
+      setIsRunning(false);
+      setCurrentToken(null);
+      setLocalProgress(null);
     }
-  }, [formData, isFormValid, addResult, setProgress, addLog]);
+  }, [formData, isFormValid, selectedSourceProfile, addLog]);
 
   // Cancel discovery
   const cancelDiscovery = useCallback(async () => {
@@ -312,8 +359,12 @@ export const useAzureDiscoveryLogic = () => {
     clearLogs,
 
     // Profile info
-    selectedProfile: selectedTargetProfile,
+    selectedProfile: selectedSourceProfile,
     config,
-    setConfig
+    setConfig,
+
+    // Additional properties for view compatibility
+    isDiscovering: isRunning,
+    currentResult: results,
   };
 };

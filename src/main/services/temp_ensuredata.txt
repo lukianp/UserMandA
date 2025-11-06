@@ -1,0 +1,12 @@
+  private ensureData(): void {
+    // Ensure data is initialized (file might not exist or be corrupted)
+    if (!this.db.data) {
+      this.db.data = { profiles: [], version: 1 };
+    }
+    if (!this.db.data.profiles) {
+      this.db.data.profiles = [];
+    }
+    if (!this.db.data.version) {
+      this.db.data.version = 1;
+    }
+  }

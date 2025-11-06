@@ -157,6 +157,129 @@ function Connect-AzureWithMultipleStrategies {
 
     return $null
 }
+function Start-AzureDiscovery {
+    <#
+    .SYNOPSIS
+        Entry point for Azure Discovery called by the GUI/PowerShellService
+    .DESCRIPTION
+        Standalone discovery function that connects directly using provided credentials
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [string]$CompanyName,
+
+        [Parameter(Mandatory=$false)]
+        [string]$TenantId,
+
+        [Parameter(Mandatory=$false)]
+        [string]$ClientId,
+
+        [Parameter(Mandatory=$false)]
+        [string]$ClientSecret,
+
+        [Parameter(Mandatory=$false)]
+        [string]$OutputPath,
+
+        [Parameter(Mandatory=$false)]
+        [hashtable]$AdditionalParams = @{}
+    )
+
+    Write-Host "[AzureDiscovery] Starting Azure discovery for $CompanyName..." -ForegroundColor Cyan
+    Write-Host "[AzureDiscovery] Tenant ID: $TenantId" -ForegroundColor Gray
+
+    # Initialize result
+    $result = [PSCustomObject]@{
+        Success = $false
+        RecordCount = 0
+        Errors = @()
+        Warnings = @()
+        Metadata = @{}
+        Data = $null
+        StartTime = Get-Date
+        EndTime = $null
+        Duration = $null
+    }
+
+    try {
+        # Ensure output paths exist
+        if (-not (Test-Path $OutputPath)) {
+            New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
+        }
+
+        $logsPath = Join-Path (Split-Path $OutputPath -Parent) "Logs"
+        if (-not (Test-Path $logsPath)) {
+            New-Item -Path $logsPath -ItemType Directory -Force | Out-Null
+        }
+
+        # Test and install Microsoft.Graph module if needed
+        Write-Host "[AzureDiscovery] Checking for Microsoft.Graph module..." -ForegroundColor Yellow
+        if (-not (Get-Module -ListAvailable -Name Microsoft.Graph.Authentication)) {
+            Write-Host "[AzureDiscovery] Installing Microsoft.Graph module..." -ForegroundColor Yellow
+            Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope CurrentUser -Repository PSGallery
+        }
+
+        # Import Microsoft.Graph modules
+        Import-Module Microsoft.Graph.Authentication -Force
+
+        # Connect to Microsoft Graph
+        Write-Host "[AzureDiscovery] Connecting to Microsoft Graph..." -ForegroundColor Yellow
+
+        if ($ClientId -and $ClientSecret -and $TenantId) {
+            $secureSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($ClientId, $secureSecret)
+            Connect-MgGraph -TenantId $TenantId -ClientSecretCredential $credential -NoWelcome
+            Write-Host "[AzureDiscovery] Connected to Microsoft Graph successfully" -ForegroundColor Green
+        } else {
+            Write-Host "[AzureDiscovery] Using interactive authentication..." -ForegroundColor Yellow
+            Connect-MgGraph -TenantId $TenantId -Scopes "User.Read.All","Group.Read.All","Directory.Read.All" -NoWelcome
+            Write-Host "[AzureDiscovery] Connected to Microsoft Graph successfully" -ForegroundColor Green
+        }
+
+        # Generate session ID for output files
+        $sessionId = [guid]::NewGuid().ToString()
+
+        # Build configuration for the discovery script
+        $config = @{
+            CompanyName = $CompanyName
+            TenantId = $TenantId
+            ClientId = $ClientId
+            ClientSecret = $ClientSecret
+        }
+
+        foreach ($key in $AdditionalParams.Keys) {
+            $config[$key] = $AdditionalParams[$key]
+        }
+
+        $context = @{
+            Paths = @{
+                RawDataOutput = $OutputPath
+                Logs = $logsPath
+            }
+        }
+
+        # Call Invoke-AzureDiscovery with proper setup
+        $discoveryResult = Invoke-AzureDiscovery -Configuration $config -Context $context -SessionId $sessionId
+
+        # Disconnect
+        Disconnect-MgGraph | Out-Null
+
+        # Return the result
+        return $discoveryResult
+
+    } catch {
+        Write-Host "[AzureDiscovery] ERROR: $($_.Exception.Message)" -ForegroundColor Red
+        $result.Errors += @{
+            Message = $_.Exception.Message
+            Exception = $_
+        }
+        $result.EndTime = Get-Date
+        $duration = $result.EndTime - $result.StartTime
+        $result | Add-Member -MemberType NoteProperty -Name "Duration" -Value $duration -Force
+        return $result
+    }
+}
+
 function Invoke-AzureDiscovery {
 
     [CmdletBinding()]
@@ -166,7 +289,7 @@ function Invoke-AzureDiscovery {
 
         [Parameter(Mandatory=$true)]
         [hashtable]$Context,
-        
+
         [Parameter(Mandatory=$true)]
         [string]$SessionId
     )
@@ -1161,8 +1284,13 @@ function Invoke-AzureDiscovery {
             # Process subscriptions for infrastructure resources
             try {
                 $subscriptions = Get-AzSubscription -ErrorAction Stop | Where-Object { $_.State -eq 'Enabled' }
-        
-        
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Found $($subscriptions.Count) enabled subscriptions" -Level "INFO"
+            } catch {
+                $Result.AddWarning("Failed to enumerate Azure subscriptions for infrastructure discovery: $($_.Exception.Message)", @{Section="AzureInfrastructure"})
+            }
+        }
+        #endregion
+
         #region Microsoft 365 Workloads Discovery via Graph API
         Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Microsoft 365 Workloads..." -Level "INFO"
         
@@ -1736,24 +1864,66 @@ function Invoke-AzureDiscovery {
         # Store all discovered data
         $Result.RecordCount = $allDiscoveredData.Count
 
-        } catch {
-            $Result.AddWarning("Process Azure infrastructure discovery failed", @{Error=$_.Exception.Message})
-        }
-
-# Return data grouped by type
-return $allDiscoveredData | Group-Object -Property _DataType
-
+        # Return data grouped by type
+        return $allDiscoveredData | Group-Object -Property _DataType
     }
-    # Execute discovery using the base module
-    Start-DiscoveryModule `
-        -ModuleName "AzureDiscovery" `
-        -DiscoveryScript $discoveryScript `
-        -Configuration $Configuration `
-        -Context $Context `
-        -SessionId $SessionId `
-        -RequiredServices @("Graph")
-}
+
+    # Initialize result using DiscoveryResult class if available, otherwise use hashtable
+    try {
+        $Result = [DiscoveryResult]::new("AzureDiscovery")
+    } catch {
+        $Result = [PSCustomObject]@{
+            ModuleName = "AzureDiscovery"
+            Success = $true
+            RecordCount = 0
+            Errors = @()
+            Warnings = @()
+            Metadata = @{}
+            Data = $null
+            StartTime = Get-Date
+            EndTime = $null
+            Duration = $null
+        }
+        # Add helper methods
+        $Result | Add-Member -MemberType ScriptMethod -Name "AddError" -Value {
+            param($message, $exception = $null, $context = @{})
+            $this.Errors += @{ Message = $message; Exception = $exception; Context = $context }
+            $this.Success = $false
+        }
+        $Result | Add-Member -MemberType ScriptMethod -Name "AddWarning" -Value {
+            param($message, $context = @{})
+            $this.Warnings += @{ Message = $message; Context = $context }
+        }
+    }
+
+    try {
+        # Execute the discovery script directly (we're already authenticated by Start-AzureDiscovery)
+        Write-Host "[AzureDiscovery] Executing discovery logic..." -ForegroundColor Yellow
+        $discoveredData = & $discoveryScript -Configuration $Configuration -Context $Context -SessionId $SessionId -Connections @{} -Result $Result
+
+        # Store results
+        $Result.Data = $discoveredData
+        $Result.RecordCount = if ($discoveredData) {
+            ($discoveredData | ForEach-Object { $_.Count } | Measure-Object -Sum).Sum
+        } else { 0 }
+        $Result.Success = ($Result.Errors.Count -eq 0)
+
+    } catch {
+        Write-Host "[AzureDiscovery] ERROR during discovery execution: $($_.Exception.Message)" -ForegroundColor Red
+        $Result.AddError("Discovery execution failed", $_.Exception, @{Phase = "Execution"})
+    } finally {
+        $Result.EndTime = Get-Date
+        $duration = $Result.EndTime - $Result.StartTime
+        # Add or update Duration property
+        if ($Result.PSObject.Properties.Name -contains "Duration") {
+            $Result.Duration = $duration
+        } else {
+            $Result | Add-Member -MemberType NoteProperty -Name "Duration" -Value $duration -Force
+        }
+    }
+
+    return $Result
 }
 
-# Export the module function
-Export-ModuleMember -Function Invoke-AzureDiscovery
+# Export the module functions
+Export-ModuleMember -Function Start-AzureDiscovery, Invoke-AzureDiscovery

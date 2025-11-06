@@ -324,4 +324,4 @@ Export-ModuleMember -Function @(
     'Invoke-SessionMaintenance'
 ) -Cmdlet * -Variable *
 
-Write-Host "[SessionManager.psm1] Thread-safe session manager loaded" -ForegroundColor Green
+Write-Verbose "[SessionManager.psm1] Thread-safe session manager loaded"

@@ -11,6 +11,9 @@ import type {
   IntuneDiscoveryConfig
 } from '../types/models/intune';
 
+import { useProfileStore } from '../store/useProfileStore';
+import { getElectronAPI } from '../lib/electron-api-fallback';
+
 type TabType = 'overview' | 'devices' | 'applications' | 'config-policies' | 'compliance-policies' | 'app-protection';
 
 interface IntuneDiscoveryState {
@@ -53,6 +56,9 @@ interface IntuneStats {
 }
 
 export const useIntuneDiscoveryLogic = () => {
+  // Get selected profile from store
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+
   const [state, setState] = useState<IntuneDiscoveryState>({
     config: {
       id: 'default-intune-config',
@@ -112,6 +118,13 @@ export const useIntuneDiscoveryLogic = () => {
   }, [state.cancellationToken]);
 
   const startDiscovery = useCallback(async () => {
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setState(prev => ({ ...prev, error: errorMessage }));
+      console.error('[IntuneDiscovery]', errorMessage);
+      return;
+    }
+
     const token = `intune-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     setState(prev => ({
@@ -122,40 +135,49 @@ export const useIntuneDiscoveryLogic = () => {
       progress: { current: 0, total: 100, message: 'Starting Intune discovery...', percentage: 0 }
     }));
 
+    console.log(`[IntuneDiscovery] Starting discovery for company: ${selectedSourceProfile.companyName}`);
+    console.log(`[IntuneDiscovery] Parameters:`, {
+      IncludeDevices: state.config.includeDevices,
+      IncludeApplications: state.config.includeApplications,
+      IncludeConfigurationPolicies: state.config.includeConfigurationPolicies,
+      IncludeCompliancePolicies: state.config.includeCompliancePolicies,
+      IncludeAppProtectionPolicies: state.config.includeAppProtectionPolicies
+    });
+
     try {
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/IntuneDiscovery.psm1',
-        functionName: 'Invoke-IntuneDiscovery',
-        parameters: {
+      const electronAPI = getElectronAPI();
+      const discoveryResult = await electronAPI.executeDiscoveryModule(
+        'Intune',
+        selectedSourceProfile.companyName,
+        {
           IncludeDevices: state.config.includeDevices,
           IncludeApplications: state.config.includeApplications,
           IncludeConfigurationPolicies: state.config.includeConfigurationPolicies,
           IncludeCompliancePolicies: state.config.includeCompliancePolicies,
-          IncludeAppProtectionPolicies: state.config.includeAppProtectionPolicies,
-          Timeout: state.config.timeout,
-          CancellationToken: token
+          IncludeAppProtectionPolicies: state.config.includeAppProtectionPolicies
         },
-        options: {
-          timeout: state.config.timeout,
-          streamOutput: true
-        }
-      });
+        { timeout: state.config.timeout || 600000 }
+      );
 
       setState(prev => ({
         ...prev,
-        result: result.data,
+        result: discoveryResult.data || discoveryResult,
         isDiscovering: false,
-        progress: { current: 100, total: 100, message: 'Discovery completed', percentage: 100 }
+        cancellationToken: null,
+        progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
       }));
+
+      console.log(`[IntuneDiscovery] Discovery completed successfully`);
     } catch (error: any) {
+      console.error('[IntuneDiscovery] Discovery failed:', error);
       setState(prev => ({
         ...prev,
         isDiscovering: false,
-        error: error.message || 'Discovery failed',
-        progress: { current: 0, total: 100, message: 'Discovery failed', percentage: 0 }
+        cancellationToken: null,
+        error: error.message || 'Discovery failed'
       }));
     }
-  }, [state.config]);
+  }, [selectedSourceProfile, state.config]);
 
   const cancelDiscovery = useCallback(async () => {
     if (state.cancellationToken) {

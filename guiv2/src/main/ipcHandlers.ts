@@ -49,6 +49,11 @@ async function initializeServices(): Promise<void> {
   console.log('Initializing IPC services...');
 
   // Initialize PowerShell Execution Service
+  // Determine base directory: if running from guiv2, go up one level; otherwise use cwd
+  const cwd = process.cwd();
+  const baseDir = cwd.endsWith('guiv2') ? path.join(cwd, '..') : cwd;
+  console.log(`[IPC] PowerShell scripts base directory: ${baseDir}`);
+
   psService = new PowerShellExecutionService({
     maxPoolSize: 10,
     minPoolSize: 2,
@@ -56,7 +61,7 @@ async function initializeServices(): Promise<void> {
     queueSize: 100,
     enableModuleCaching: true,
     defaultTimeout: 60000, // 1 minute
-    scriptsBaseDir: path.join(process.cwd(), '..'),
+    scriptsBaseDir: baseDir,
   });
   await psService.initialize();
 
@@ -281,6 +286,27 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       );
     } catch (error: unknown) {
       console.error(`executeModule error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        duration: 0,
+        warnings: [] as string[],
+      };
+    }
+  });
+
+  // Discovery module execution with credentials
+  ipcMain.handle('powershell:executeDiscoveryModule', async (_, params: { moduleName: string; companyName: string; additionalParams?: Record<string, any>; options?: ExecutionOptions }) => {
+    try {
+      console.log(`[IPC] executeDiscoveryModule - ${params.moduleName} for ${params.companyName}`);
+      return await psService.executeDiscoveryModule(
+        params.moduleName,
+        params.companyName,
+        params.additionalParams || {},
+        params.options
+      );
+    } catch (error: unknown) {
+      console.error(`executeDiscoveryModule error: ${error instanceof Error ? error.message : String(error)}`);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -1806,6 +1832,24 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   });
 
   /**
+   * IPC Handler: logicEngine:getAllMailboxes
+   *
+   * Get all mailboxes from Logic Engine
+   */
+  ipcMain.handle('logicEngine:getAllMailboxes', async () => {
+    try {
+      const mailboxes = logicEngineService.getAllMailboxes();
+      return { success: true, data: mailboxes };
+    } catch (error: unknown) {
+      console.error('logicEngine:getAllMailboxes error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
    * IPC Handler: project:getConfiguration
    *
    * Get project configuration for a profile
@@ -2345,18 +2389,40 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       outputListeners.push(() => psService.off('stream:debug', onDebugStream));
       outputListeners.push(() => psService.off('stream:information', onInformationStream));
 
-      // Execute PowerShell module
-      const result = await psService.executeScript(
+      // Get active profile to determine company name
+      const activeProfile = await profileService.getCurrentProfile();
+      if (!activeProfile) {
+        throw new Error('No active profile selected. Please select a company profile first.');
+      }
+
+      console.log(`[IPC:discovery:execute] Starting ${moduleName} discovery`);
+      console.log(`[IPC:discovery:execute] Company: ${activeProfile.companyName}`);
+      console.log(`[IPC:discovery:execute] Execution ID: ${execId}`);
+      console.log(`[IPC:discovery:execute] Parameters:`, JSON.stringify(parameters, null, 2));
+      console.log(`[IPC:discovery:execute] Profile credentials loaded:`, {
+        tenantId: activeProfile.tenantId || 'N/A',
+        clientId: activeProfile.clientId || 'N/A',
+        hasClientSecret: !!(activeProfile.clientSecret || activeProfile.password),
+      });
+
+      // Execute discovery module with credentials from profile
+      const result = await psService.executeDiscoveryModule(
         moduleName,
-        Object.entries(parameters).map(([key, value]) => `-${key} ${JSON.stringify(value)}`),
+        activeProfile.companyName,
+        parameters,
         {
           cancellationToken: execId,
           streamOutput: true,
+          timeout: parameters.timeout || 300000,
         }
       );
 
       // Cleanup listeners
       outputListeners.forEach(cleanup => cleanup());
+
+      console.log(`[IPC:discovery:execute] ✅ ${moduleName} completed successfully`);
+      console.log(`[IPC:discovery:execute] Duration: ${Date.now() - execution.startTime}ms`);
+      console.log(`[IPC:discovery:execute] Result:`, result.success ? 'SUCCESS' : 'FAILED');
 
       // Send completion event
       if (mainWindow) {
@@ -2374,7 +2440,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       };
 
     } catch (error: unknown) {
-      console.error('discovery:execute error:', error);
+      console.error('[IPC:discovery:execute] ❌ Error:', error);
 
       // Send error event
       if (mainWindow && executionId) {

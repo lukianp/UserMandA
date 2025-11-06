@@ -21,6 +21,7 @@ import type {
   ProgressData,
   OutputData
 } from './shared/types';
+import type { ExecutionOptions } from './types/shared';
 
 /**
 // ========================================
@@ -41,6 +42,10 @@ const electronAPI: ElectronAPI = {
 
   executeModule: <T = unknown>(params: ModuleExecutionParams) => {
     return ipcRenderer.invoke('powershell:executeModule', params);
+  },
+
+  executeDiscoveryModule: (moduleName: string, companyName: string, additionalParams?: Record<string, any>, options?: ExecutionOptions) => {
+    return ipcRenderer.invoke('powershell:executeDiscoveryModule', { moduleName, companyName, additionalParams, options });
   },
 
   cancelExecution: (token: string) => {

@@ -77,31 +77,24 @@ const AzureDiscoveryView: React.FC = () => {
                 Configuration
               </h2>
 
-              <div className="space-y-4">
-                {/* Tenant ID */}
-                <Input
-                  label="Tenant ID"
-                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  value={formData?.tenantId ?? ''}
-                  onChange={(e) => updateFormField('tenantId', e.target.value)}
-                  disabled={isRunning}
-                  required
-                  helperText="Your Azure AD Tenant ID or domain name"
-                  data-cy="tenant-id-input" data-testid="tenant-id-input"
-                />
+              {/* Show profile info */}
+              {selectedProfile && (
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold">Profile:</span> {selectedProfile.name}
+                  </p>
+                  {selectedProfile.credentials?.azureTenantId && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      <span className="font-semibold">Tenant:</span> {selectedProfile.credentials.azureTenantId}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                    Using credentials from company profile
+                  </p>
+                </div>
+              )}
 
-                {/* Test Connection Button */}
-                <Button
-                  variant="secondary"
-                  onClick={testConnection}
-                  disabled={!(formData?.tenantId ?? '') || (connectionStatus === 'connecting')}
-                  loading={connectionStatus === 'connecting'}
-                  icon={<CheckCircle className="w-4 h-4" />}
-                  className="w-full"
-                  data-cy="test-connection-btn" data-testid="test-connection-btn"
-                >
-                  Test Connection
-                </Button>
+              <div className="space-y-4">
 
                 {/* Services to Discover */}
                 <div className="space-y-2">

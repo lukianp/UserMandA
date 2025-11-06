@@ -21,6 +21,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 
 import { ExecutionOptions, ExecutionResult, OutputData, ModuleInfo, ScriptTask } from '../../types/shared';
+import { CredentialService } from './credentialService';
 
 /**
  * Custom PowerShell Error Types
@@ -141,8 +142,9 @@ class PowerShellExecutionService extends EventEmitter {
   private cleanupInterval: NodeJS.Timeout | null;
   private initialized: boolean;
   private queuePaused: boolean;
+  private credentialService: CredentialService;
 
-  constructor(config: Partial<PowerShellServiceConfig> = {}) {
+  constructor(config: Partial<PowerShellServiceConfig> = {}, credentialService?: CredentialService) {
     super();
 
     this.config = {
@@ -163,6 +165,7 @@ class PowerShellExecutionService extends EventEmitter {
     this.cleanupInterval = null;
     this.initialized = false;
     this.queuePaused = false;
+    this.credentialService = credentialService || new CredentialService();
 
     // Bind methods
     this.processQueue = this.processQueue.bind(this);
@@ -850,6 +853,81 @@ class PowerShellExecutionService extends EventEmitter {
       return {
         success: false,
         error: `Module execution error: ${error.message}`,
+        duration: 0,
+        warnings: [],
+      };
+    }
+  }
+
+  /**
+   * Execute a discovery module with credentials from the profile
+   * @param moduleName Name of the discovery module (e.g., "ActiveDirectory", "Azure")
+   * @param companyName Company profile name to load credentials for
+   * @param additionalParams Additional parameters to pass to the module
+   * @param options Execution options
+   * @returns Execution result
+   */
+  async executeDiscoveryModule(
+    moduleName: string,
+    companyName: string,
+    additionalParams: Record<string, any> = {},
+    options: ExecutionOptions = {}
+  ): Promise<ExecutionResult> {
+    try {
+      // Load credentials for the company profile
+      console.log(`[PowerShellService] Loading credentials for company: ${companyName}`);
+      const credentials = await this.credentialService.getCredential(companyName);
+
+      if (!credentials) {
+        return {
+          success: false,
+          error: `No credentials found for company "${companyName}". Please configure credentials first.`,
+          duration: 0,
+          warnings: [],
+        };
+      }
+
+      // Prepare discovery parameters with credentials
+      const discoveryParams = {
+        CompanyName: companyName,
+        TenantId: credentials.tenantId,
+        ClientId: credentials.clientId,
+        ClientSecret: credentials.clientSecret,
+        OutputPath: `C:\\DiscoveryData\\${companyName}\\Raw`,
+        ...additionalParams,
+      };
+
+      console.log(`[PowerShellService] Executing ${moduleName} discovery for ${companyName}`);
+      console.log(`[PowerShellService] Output path: ${discoveryParams.OutputPath}`);
+
+      // Construct module path and function name
+      const modulePath = path.join(this.config.scriptsBaseDir, 'Modules', 'Discovery', `${moduleName}Discovery.psm1`);
+      const functionName = `Start-${moduleName}Discovery`;
+
+      // Execute the discovery module
+      const result = await this.executeModule(modulePath, functionName, discoveryParams, {
+        ...options,
+        timeout: options.timeout || 1800000, // Default 30 minutes for discovery (allows time for module installation)
+      });
+
+      if (result.success) {
+        console.log(`[PowerShellService] ✅ ${moduleName} discovery completed successfully`);
+      } else {
+        console.error(`[PowerShellService] ❌ ${moduleName} discovery failed:`, result.error);
+        if (result.stderr) {
+          console.error(`[PowerShellService] PowerShell Error Output:\n${result.stderr}`);
+        }
+        if (result.stdout) {
+          console.log(`[PowerShellService] PowerShell Standard Output:\n${result.stdout}`);
+        }
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error(`[PowerShellService] Discovery module execution error:`, error);
+      return {
+        success: false,
+        error: `Discovery module execution error: ${error.message}`,
         duration: 0,
         warnings: [],
       };
