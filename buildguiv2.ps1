@@ -2,627 +2,279 @@
 
 <#
 .SYNOPSIS
-    Builds the M&A Discovery Suite GUI v2 (Electron) application with enhanced debugging
+    Builds the M&A Discovery Suite GUI v2 (Electron) application in deployment directory
 
 .DESCRIPTION
-    This script compiles the Electron/React/TypeScript application with comprehensive
-    logging, debug output, and verbose mode for troubleshooting.
+    This script syncs the guiv2 source to the deployment directory (C:\enterprisediscovery),
+    builds all required webpack bundles (main, renderer, preload), and optionally runs the app.
+
+.PARAMETER Clean
+    Remove all build artifacts before building (default: true)
+
+.PARAMETER SkipSync
+    Skip syncing files from development to deployment directory (default: false)
+
+.PARAMETER Run
+    Start the application after building (default: false)
 
 .PARAMETER Configuration
-    Build configuration: Development or Production (default: Production)
-
-.PARAMETER OutputPath
-    Output path for the compiled application (default: C:\enterprisediscovery\guiv2)
-
-.PARAMETER SkipTests
-    Skip running tests before building (default: false)
-
-.PARAMETER Package
-    Create distributable package (default: true for Production)
-
-.PARAMETER DebugBuild
-    Enable debug mode with verbose logging and debug console window
-
-.PARAMETER LogPath
-    Path to save build logs (default: C:\enterprisediscovery\logs\build-{timestamp}.log)
-
-.PARAMETER OpenDevTools
-    Automatically open Electron DevTools on launch (default: true in Debug mode)
+    Build mode: production or development (default: production)
 
 .EXAMPLE
-    .\buildguiv2-enhanced.ps1
-    Standard production build
+    .\buildguiv2.ps1
+    Standard build with sync and clean
 
 .EXAMPLE
-    .\buildguiv2-enhanced.ps1 -DebugBuild
-    Build with verbose logging and debug console window
+    .\buildguiv2.ps1 -Run
+    Build and immediately run the application
 
 .EXAMPLE
-    .\buildguiv2-enhanced.ps1 -Configuration Development -DebugBuild -OpenDevTools
-    Development build with full debugging enabled
+    .\buildguiv2.ps1 -SkipSync -Configuration development
+    Development build without syncing files
 #>
 
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [ValidateSet('Development', 'Production')]
-    [string]$Configuration = 'Production',
+    [switch]$Clean = $true,
 
     [Parameter(Mandatory = $false)]
-    [string]$OutputPath = "$PSScriptRoot\build\guiv2",
+    [switch]$SkipSync = $false,
 
     [Parameter(Mandatory = $false)]
-    [switch]$SkipTests = $true,
+    [switch]$Run = $false,
 
     [Parameter(Mandatory = $false)]
-    [switch]$Package = ($Configuration -eq 'Production'),
-
-    [Parameter(Mandatory = $false)]
-    [switch]$DebugBuild,
-
-    [Parameter(Mandatory = $false)]
-    [string]$LogPath = "C:\enterprisediscovery\logs\build-$(Get-Date -Format 'yyyyMMdd-HHmmss').log",
-
-    [Parameter(Mandatory = $false)]
-    [switch]$OpenDevTools = $DebugBuild
+    [ValidateSet('production', 'development')]
+    [string]$Configuration = 'production'
 )
 
-# Set-StrictMode -Version 3.0  # Disabled - causes issues with external command output piping
 $ErrorActionPreference = 'Stop'
 
-# Setup logging
-function Write-Log {
+# Configuration
+$DevDir = Join-Path $PSScriptRoot "guiv2"
+$DeployDir = "C:\enterprisediscovery"
+
+# Helper function for logging
+function Write-Step {
     param(
         [string]$Message,
-        [string]$Level = 'INFO',
-        [ConsoleColor]$Color = 'White'
+        [string]$Level = 'INFO'
     )
 
-    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    $logMessage = "[$timestamp] [$Level] $Message"
-
-    # Write to console
-    Write-Host $logMessage -ForegroundColor $Color
-
-    # Write to log file if logging is enabled
-    if ($script:LogFileHandle) {
-        Add-Content -Path $LogPath -Value $logMessage
+    $color = switch ($Level) {
+        'SUCCESS' { 'Green' }
+        'WARNING' { 'Yellow' }
+        'ERROR' { 'Red' }
+        'INFO' { 'Cyan' }
+        default { 'White' }
     }
+
+    $prefix = switch ($Level) {
+        'SUCCESS' { '[✓]' }
+        'WARNING' { '[!]' }
+        'ERROR' { '[✗]' }
+        'INFO' { '[→]' }
+        default { '[·]' }
+    }
+
+    Write-Host "$prefix $Message" -ForegroundColor $color
 }
 
-# Initialize logging]
+# Header
+Write-Host ""
+Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host " M&A Discovery Suite - GUI v2 Build Script" -ForegroundColor Green
+Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host ""
+Write-Step "Development Directory: $DevDir" -Level 'INFO'
+Write-Step "Deployment Directory: $DeployDir" -Level 'INFO'
+Write-Step "Configuration: $Configuration" -Level 'INFO'
+Write-Host ""
 
-if ($DebugBuild) {
-    $logDir = Split-Path -Parent $LogPath
-    if (!(Test-Path $logDir)) {
-        New-Item -Path $logDir -ItemType Directory -Force | Out-Null
-    }
-    $script:LogFileHandle = $true
-    Write-Log "Build log started: $LogPath" -Level 'INFO' -Color Green
-    Write-Log "Debug mode: ENABLED" -Level 'DEBUG' -Color Cyan
+# Validate directories
+if (!(Test-Path $DevDir)) {
+    Write-Step "Development directory not found: $DevDir" -Level 'ERROR'
+    exit 1
 }
 
-Write-Host ""
-Write-Host "M&A Discovery Suite - GUI v2 Enhanced Build Script" -ForegroundColor Green
-Write-Host "===================================================" -ForegroundColor Green
-Write-Host ""
+if (!(Test-Path $DeployDir)) {
+    Write-Step "Creating deployment directory: $DeployDir" -Level 'INFO'
+    New-Item -Path $DeployDir -ItemType Directory -Force | Out-Null
+}
 
-if ($DebugBuild) {
-    Write-Host "DEBUG MODE ENABLED" -ForegroundColor Yellow
-    Write-Host "  - Verbose logging: ON" -ForegroundColor Cyan
-    Write-Host "  - Log file: $LogPath" -ForegroundColor Cyan
-    Write-Host "  - DevTools auto-open: $OpenDevTools" -ForegroundColor Cyan
+# Step 1: Clean build artifacts
+if ($Clean) {
     Write-Host ""
-}
+    Write-Step "Cleaning build artifacts..." -Level 'INFO'
 
-# Get script directory and guiv2 directory
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$GuiV2Dir = Join-Path $ScriptDir "guiv2"
+    $artifactsToClean = @(
+        (Join-Path $DeployDir ".webpack"),
+        (Join-Path $DeployDir "out")
+    )
 
-Write-Log "Script directory: $ScriptDir" -Level 'DEBUG' -Color Gray
-Write-Log "GUI v2 directory: $GuiV2Dir" -Level 'DEBUG' -Color Gray
-
-if (!(Test-Path $GuiV2Dir)) {
-    Write-Log "guiv2 directory not found at: $GuiV2Dir" -Level 'ERROR' -Color Red
-    exit 1
-}
-
-Set-Location $GuiV2Dir
-
-# Check if Node.js is installed
-Write-Log "Checking for Node.js..." -Level 'INFO' -Color Yellow
-
-try {
-    $nodeVersion = & node --version 2>$null
-    if ($LASTEXITCODE -ne 0) {
-        throw "node command not found"
-    }
-
-    $majorVersion = [int]($nodeVersion.Substring(1).Split('.')[0])
-    if ($majorVersion -lt 16) {
-        throw "Requires Node.js 16 or later, found version $nodeVersion"
-    }
-
-    Write-Log "Found Node.js version: $nodeVersion" -Level 'OK' -Color Green
-}
-catch {
-    Write-Log "Node.js 16 or later is required but not found" -Level 'ERROR' -Color Red
-    Write-Log $_.Exception.Message -Level 'ERROR' -Color Red
-    exit 1
-}
-
-# Check npm
-try {
-    $ErrorActionPreference = 'Continue'
-    $npmVersion = & npm --version 2>&1
-    $ErrorActionPreference = 'Stop'
-    if ($LASTEXITCODE -eq 0) {
-        Write-Log "Found npm version: $npmVersion" -Level 'OK' -Color Green
-    } else {
-        Write-Log "npm check failed with exit code: $LASTEXITCODE" -Level 'WARNING' -Color Yellow
-    }
-}
-catch {
-    $ErrorActionPreference = 'Stop'
-    Write-Log "npm check failed: $($PSItem)" -Level 'WARNING' -Color Yellow
-}
-
-# Comprehensive prerequisite check and installation
-Write-Log "Performing comprehensive prerequisite checks..." -Level 'INFO' -Color Yellow
-
-# Check for required system tools
-$requiredTools = @(
-    @{ Name = "git"; Command = "git --version"; InstallCmd = "winget install --id Git.Git -e --source winget" },
-    @{ Name = "python"; Command = "python --version"; InstallCmd = "winget install --id Python.Python.3.11 -e --source winget" },
-    @{ Name = "7zip"; Command = "7z"; InstallCmd = "winget install --id 7zip.7zip -e --source winget" }
-)
-
-foreach ($tool in $requiredTools) {
-    try {
-        $ErrorActionPreference = 'Continue'
-        $result = Invoke-Expression $tool.Command 2>$null
-        $ErrorActionPreference = 'Stop'
-        if ($LASTEXITCODE -eq 0) {
-            Write-Log "Found $($tool.Name): OK" -Level 'OK' -Color Green
+    foreach ($artifact in $artifactsToClean) {
+        if (Test-Path $artifact) {
+            Remove-Item -Path $artifact -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Step "Removed: $(Split-Path -Leaf $artifact)" -Level 'SUCCESS'
         }
-    } catch {
-        Write-Log "Error checking $($tool.Name): $($_.Exception.Message)" -Level 'WARNING' -Color Yellow
     }
 }
 
-# Force clean install of all dependencies
-Write-Log "Ensuring all npm dependencies are properly installed..." -Level 'INFO' -Color Yellow
+# Step 2: Sync files from development to deployment
+if (!$SkipSync) {
+    Write-Host ""
+    Write-Step "Syncing files from development to deployment directory..." -Level 'INFO'
 
-if (Test-Path "node_modules") {
-    Write-Log "Removing existing node_modules for clean install..." -Level 'INFO' -Color Cyan
-    Remove-Item -Path "node_modules" -Recurse -Force -ErrorAction SilentlyContinue
-    if (Test-Path "package-lock.json") {
-        Remove-Item -Path "package-lock.json" -Force -ErrorAction SilentlyContinue
-    }
-}
+    $robocopyArgs = @(
+        "`"$DevDir`"",
+        "`"$DeployDir`"",
+        "/MIR",
+        "/XD", "node_modules", ".webpack", "out", ".git",
+        "/XF", "*.log", "*.md", "*.ps1", "*.sh", "*.patch",
+        "/NFL", "/NDL", "/NP", "/NJH", "/NJS"
+    )
 
-# Install dependencies with retry logic
-$maxRetries = 3
-$retryCount = 0
-$installSuccess = $false
-
-while (-not $installSuccess -and $retryCount -lt $maxRetries) {
-    $retryCount++
-    Write-Log "Installing npm dependencies (attempt $retryCount/$maxRetries)..." -Level 'INFO' -Color Yellow
+    $robocopyCmd = "robocopy $($robocopyArgs -join ' ')"
 
     try {
-        $ErrorActionPreference = 'Continue'
-        if ($DebugBuild) {
-            $npmOutput = Invoke-Expression "npm install --verbose 2>&1"
-            $npmOutput | ForEach-Object {
-                Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
-            }
+        # Robocopy exit codes 0-7 are success
+        $output = Invoke-Expression $robocopyCmd 2>&1
+        $exitCode = $LASTEXITCODE
+
+        if ($exitCode -le 7) {
+            Write-Step "Files synced successfully" -Level 'SUCCESS'
         } else {
-            $npmOutput = Invoke-Expression "npm install --prefer-offline --no-audit 2>&1"
-            $npmOutput | ForEach-Object {
-                Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
-            }
-        }
-
-        # Additional verification that dependencies installed correctly
-        if (!(Test-Path "node_modules")) {
-            Write-Log "node_modules directory not found after install attempt" -Level 'ERROR' -Color Red
-            throw "Dependencies installation failed - node_modules missing"
-        }
-
-        $packageCount = (Get-ChildItem -Path "node_modules" -Directory -ErrorAction SilentlyContinue | Measure-Object).Count
-        Write-Log "Found $packageCount packages in node_modules" -Level 'INFO' -Color Cyan
-        if ($packageCount -lt 100) {
-            Write-Log "Suspiciously low package count ($packageCount), dependencies may not have installed correctly" -Level 'WARNING' -Color Yellow
-        }
-        $ErrorActionPreference = 'Stop'
-
-        if ($LASTEXITCODE -eq 0) {
-            $installSuccess = $true
-            Write-Log "Dependencies installed successfully" -Level 'OK' -Color Green
-        } else {
-            Write-Log "npm install failed with exit code $LASTEXITCODE (attempt $retryCount)" -Level 'WARNING' -Color Yellow
-            if ($retryCount -lt $maxRetries) {
-                Write-Log "Retrying in 5 seconds..." -Level 'INFO' -Color Cyan
-                Start-Sleep -Seconds 5
-            }
-        }
-    } catch {
-        Write-Log "npm install error: $($_.Exception.Message) (attempt $retryCount)" -Level 'WARNING' -Color Yellow
-        if ($retryCount -lt $maxRetries) {
-            Start-Sleep -Seconds 5
-        }
-    }
-}
-
-if (-not $installSuccess) {
-    Write-Log "Failed to install dependencies after $maxRetries attempts" -Level 'ERROR' -Color Red
-    exit 1
-}
-
-# Verify critical dependencies
-$criticalDeps = @(
-    "electron",
-    "webpack",
-    "typescript",
-    "@electron-forge/cli"
-)
-
-Write-Log "Verifying critical dependencies..." -Level 'INFO' -Color Yellow
-foreach ($dep in $criticalDeps) {
-    try {
-        $depPath = Join-Path "node_modules" $dep
-        if (Test-Path $depPath) {
-            # Try to get version from package.json
-            $packageJsonPath = Join-Path $depPath "package.json"
-            if (Test-Path $packageJsonPath) {
-                $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
-                $version = $packageJson.version
-                Write-Log "Verified ${dep}: v${version}" -Level 'OK' -Color Green
-            } else {
-                Write-Log "Verified ${dep}: (installed)" -Level 'OK' -Color Green
-            }
-        } else {
-            Write-Log "Failed to verify ${dep} - not found in node_modules" -Level 'ERROR' -Color Red
+            Write-Step "Robocopy failed with exit code: $exitCode" -Level 'ERROR'
+            Write-Host $output
             exit 1
         }
     } catch {
-        Write-Log "Error verifying ${dep}: $($_.Exception.Message)" -Level 'ERROR' -Color Red
+        Write-Step "Sync failed: $($_.Exception.Message)" -Level 'ERROR'
         exit 1
     }
-}
-
-Write-Log "All prerequisites verified successfully" -Level 'OK' -Color Green
-
-# Check required files
-$RequiredFiles = @(
-    'package.json',
-    'forge.config.js',
-    'webpack.renderer.config.js',
-    'webpack.main.config.js',
-    'src/index.ts',
-    'src/renderer.tsx',
-    'src/preload.ts'
-)
-
-Write-Log "Checking required files..." -Level 'INFO' -Color Yellow
-foreach ($file in $RequiredFiles) {
-    if (!(Test-Path $file)) {
-        Write-Log "Required file not found: $file" -Level 'ERROR' -Color Red
-        exit 1
-    }
-    Write-Log "Found: $file" -Level 'DEBUG' -Color Gray
-}
-Write-Log "All required files present" -Level 'OK' -Color Green
-
-# Install dependencies
-Write-Log "Checking dependencies..." -Level 'INFO' -Color Yellow
-
-$needsInstall = $false
-if (!(Test-Path "node_modules")) {
-    Write-Log "node_modules not found - installing dependencies..." -Level 'INFO' -Color Cyan
-    $needsInstall = $true
-}
-
-if ($needsInstall) {
-    Write-Log "Installing npm dependencies..." -Level 'INFO' -Color Yellow
-
-    $npmCmd = if ($DebugBuild) { "npm ci --prefer-offline --no-audit --verbose" } else { "npm ci --prefer-offline --no-audit" }
-
-    Invoke-Expression "$npmCmd 2>&1" | ForEach-Object {
-        Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
-    }
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Log "npm ci failed, trying npm install..." -Level 'WARNING' -Color Yellow
-        $npmInstallCmd = if ($DebugBuild) { "npm install --prefer-offline --no-audit --verbose" } else { "npm install --prefer-offline --no-audit" }
-        Invoke-Expression "$npmInstallCmd 2>&1" | ForEach-Object {
-            Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
-        }
-        if ($LASTEXITCODE -ne 0) {
-            Write-Log "Failed to install dependencies" -Level 'ERROR' -Color Red
-            exit 1
-        }
-    }
-    Write-Log "Dependencies installed" -Level 'OK' -Color Green
 } else {
-    Write-Log "Dependencies up to date" -Level 'OK' -Color Green
+    Write-Host ""
+    Write-Step "Skipping file sync (using existing files in deployment directory)" -Level 'WARNING'
 }
 
-# TypeScript compilation check
-Write-Log "Checking TypeScript compilation..." -Level 'INFO' -Color Yellow
+# Step 3: Verify Node.js is available
+Write-Host ""
+Write-Step "Checking Node.js..." -Level 'INFO'
+
 try {
-    $ErrorActionPreference = 'Continue'
-    $tscCmd = "npm run tsc --if-present -- --noEmit 2>&1"
-    $tscOutput = Invoke-Expression $tscCmd
-    $ErrorActionPreference = 'Stop'
-    if ($DebugBuild) {
-        $tscOutput | ForEach-Object { Write-Log ($_.ToString()) -Level 'TSC' -Color Gray }
-    }
-
+    $nodeVersion = & node --version 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Log "TypeScript compilation has errors (non-blocking)" -Level 'WARNING' -Color Yellow
-    } else {
-        Write-Log "TypeScript compilation successful" -Level 'OK' -Color Green
+        throw "Node.js not found"
     }
-}
-catch {
-    $ErrorActionPreference = 'Stop'
-    Write-Log "TypeScript check failed: $($PSItem)" -Level 'WARNING' -Color Yellow
-}
-
-# Run tests
-if (-not $SkipTests) {
-    Write-Log "Running tests..." -Level 'INFO' -Color Yellow
-
-    $testCmd = if ($DebugBuild) { "npm run test" } else { "npm run test --silent" }
-
-    Invoke-Expression "$testCmd 2>&1" | ForEach-Object {
-        if ($DebugBuild) {
-            Write-Log ($_.ToString()) -Level 'TEST' -Color Gray
-        }
-    }
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Log "Some tests failed (non-blocking)" -Level 'WARNING' -Color Yellow
-    } else {
-        Write-Log "Tests passed" -Level 'OK' -Color Green
-    }
-} else {
-    Write-Log "Tests skipped per request" -Level 'INFO' -Color Cyan
-}
-
-# Set environment for build
-$env:NODE_ENV = if ($Configuration -eq 'Production') { 'production' } else { 'development' }
-if ($DebugBuild) {
-    $env:DEBUG = 'true'
-}
-if ($OpenDevTools) {
-    $env:OPEN_DEVTOOLS = 'true'
-}
-
-Write-Log "Building application (Configuration: $Configuration)..." -Level 'INFO' -Color Yellow
-Write-Log "NODE_ENV=$env:NODE_ENV" -Level 'DEBUG' -Color Gray
-Write-Log "DEBUG=$env:DEBUG" -Level 'DEBUG' -Color Gray
-Write-Log "OPEN_DEVTOOLS=$env:OPEN_DEVTOOLS" -Level 'DEBUG' -Color Gray
-
-# Clean previous build
-if (Test-Path ".webpack") {
-    Remove-Item -Path ".webpack" -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Log "Cleaned previous build" -Level 'DEBUG' -Color Gray
-}
-
-# Build the application
-$buildCommand = 'npx electron-forge make'
-Write-Log "Running: $buildCommand" -Level 'INFO' -Color Cyan
-
-$buildCmd = if ($DebugBuild) { "$buildCommand --verbose" } else { "$buildCommand" }
-
-Write-Log "Starting build process..." -Level 'INFO' -Color Cyan
-$ErrorActionPreference = 'Continue'
-Invoke-Expression "$buildCmd 2>&1" | ForEach-Object {
-    $line = $_.ToString()
-    if ($DebugBuild -or $line -notmatch "^npm (WARN|notice)") {
-        Write-Log $line -Level 'BUILD' -Color Gray
-    }
-}
-$ErrorActionPreference = 'Stop'
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Log "Build failed with exit code $LASTEXITCODE" -Level 'ERROR' -Color Red
+    Write-Step "Node.js version: $nodeVersion" -Level 'SUCCESS'
+} catch {
+    Write-Step "Node.js is required but not found in PATH" -Level 'ERROR'
     exit 1
 }
 
-Write-Log "Application built successfully" -Level 'OK' -Color Green
+# Step 4: Build webpack bundles
+Write-Host ""
+Write-Step "Building webpack bundles..." -Level 'INFO'
 
-# Create output directory
-Write-Log "Preparing deployment directory: $OutputPath" -Level 'INFO' -Color Yellow
+Set-Location $DeployDir
 
-# Stop any running instances
+$mode = if ($Configuration -eq 'production') { 'production' } else { 'development' }
+
+# Build main process
+Write-Host ""
+Write-Step "Building main process..." -Level 'INFO'
+$mainCmd = "npx webpack --config webpack.main.config.js --mode=$mode --output-path=.webpack/main"
 try {
-    $processes = Get-Process -Name "electron" -ErrorAction SilentlyContinue
-    if ($processes) {
-        Write-Log "Stopping $($processes.Count) running Electron instance(s)..." -Level 'INFO' -Color Yellow
-        $processes | Stop-Process -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 2
+    Invoke-Expression $mainCmd 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Main build failed with exit code: $LASTEXITCODE"
     }
+    Write-Step "Main process build complete" -Level 'SUCCESS'
 } catch {
-    Write-Log "Could not check for running processes: $($PSItem)" -Level 'WARNING' -Color Yellow
+    Write-Step "Main process build failed: $($_.Exception.Message)" -Level 'ERROR'
+    exit 1
 }
 
-if (!(Test-Path $OutputPath)) {
-    New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
-    Write-Log "Created output directory" -Level 'OK' -Color Green
-}
-
-# Copy built files
-Write-Log "Deploying application files..." -Level 'INFO' -Color Yellow
-
-# Webpack output
-$WebpackOutput = Join-Path $GuiV2Dir ".webpack"
-if (Test-Path $WebpackOutput) {
-    $WebpackDest = Join-Path $OutputPath ".webpack"
-    if (Test-Path $WebpackDest) {
-        Remove-Item -Path $WebpackDest -Recurse -Force -ErrorAction SilentlyContinue
-    }
-    Copy-Item -Path $WebpackOutput -Destination $WebpackDest -Recurse -Force
-    Write-Log "Webpack bundle copied" -Level 'OK' -Color Green
-}
-
-Copy-Item -Path "package.json" -Destination $OutputPath -Force
-Copy-Item -Path "package-lock.json" -Destination $OutputPath -Force -ErrorAction SilentlyContinue
-
-# Install production dependencies
-Write-Log "Installing production dependencies in output directory..." -Level 'INFO' -Color Cyan
-Push-Location $OutputPath
-Invoke-Expression "npm ci --production --prefer-offline --no-audit 2>&1" | ForEach-Object {
-    if ($DebugBuild) {
-        Write-Log ($_.ToString()) -Level 'NPM' -Color Gray
-    }
-}
-Pop-Location
-
-# Copy PowerShell modules
-$ModulesSourcePath = Join-Path $ScriptDir "Modules"
-$ModulesDestPath = Join-Path $OutputPath "Modules"
-
-if (Test-Path $ModulesSourcePath) {
-    if (Test-Path $ModulesDestPath) {
-        Remove-Item -Path $ModulesDestPath -Recurse -Force -ErrorAction SilentlyContinue
-    }
-    Copy-Item -Path $ModulesSourcePath -Destination $ModulesDestPath -Recurse -Force
-    $ModuleCount = (Get-ChildItem -Path $ModulesDestPath -Filter "*.psm1" -Recurse | Measure-Object).Count
-    Write-Log "Copied $ModuleCount PowerShell modules" -Level 'OK' -Color Green
-}
-
-# Copy Configuration, Tools, Scripts (same as original)
-# ... (rest of copy operations from original script)
-
-# Create enhanced launcher with debug console
-Write-Log "Creating launcher scripts..." -Level 'INFO' -Color Yellow
-
-# Debug launcher with console window
-$DebugLauncherPath = Join-Path $OutputPath "Launch-Debug.ps1"
-$DebugLauncherContent = @"
-#Requires -Version 5.1
-
-<#
-.SYNOPSIS
-    Launches M&A Discovery Suite v2 with debug console and verbose logging
-#>
-
-Set-StrictMode -Version 3.0
-
-# Create new PowerShell window for verbose output
-`$appDir = Split-Path -Parent `$MyInvocation.MyCommand.Path
-
+# Build renderer process
 Write-Host ""
-Write-Host "M&A Discovery Suite v2 - DEBUG MODE" -ForegroundColor Yellow
-Write-Host "====================================" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "Application Directory: `$appDir" -ForegroundColor Cyan
-Write-Host "Data Directory: `$(`$env:MANDA_DISCOVERY_PATH ?? 'C:\discoverydata')" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "Debug Features Enabled:" -ForegroundColor Green
-Write-Host "  - Verbose console logging" -ForegroundColor White
-Write-Host "  - Electron DevTools auto-open" -ForegroundColor White
-Write-Host "  - IPC message tracing" -ForegroundColor White
-Write-Host "  - PowerShell execution logs" -ForegroundColor White
-Write-Host ""
-Write-Host "Press Ctrl+C to stop the application" -ForegroundColor Yellow
-Write-Host ""
-
-# Set debug environment variables
-`$env:DEBUG = 'true'
-`$env:OPEN_DEVTOOLS = 'true'
-`$env:ELECTRON_ENABLE_LOGGING = '1'
-`$env:NODE_ENV = 'development'
-`$env:MANDA_DISCOVERY_PATH = if (`$env:MANDA_DISCOVERY_PATH) { `$env:MANDA_DISCOVERY_PATH } else { "C:\discoverydata" }
-
-# Change to app directory
-Set-Location `$appDir
-
-# Find electron executable
-`$electronPath = Join-Path `$appDir "node_modules\.bin\electron.cmd"
-if (-not (Test-Path `$electronPath)) {
-    `$electronPath = "electron"
-}
-
-# Start electron with the webpack output
-`$mainPath = Join-Path `$appDir ".webpack\main"
-Write-Host "Starting Electron from: `$mainPath" -ForegroundColor Cyan
-
+Write-Step "Building renderer process..." -Level 'INFO'
+$rendererCmd = "npx webpack --config webpack.renderer-standalone.config.js --mode=$mode"
 try {
-    & `$electronPath `$mainPath
+    Invoke-Expression $rendererCmd 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Renderer build failed with exit code: $LASTEXITCODE"
+    }
+    Write-Step "Renderer process build complete" -Level 'SUCCESS'
 } catch {
+    Write-Step "Renderer process build failed: $($_.Exception.Message)" -Level 'ERROR'
+    exit 1
+}
+
+# Build preload script
+Write-Host ""
+Write-Step "Building preload script..." -Level 'INFO'
+$preloadCmd = "npx webpack --config webpack.preload.config.js --mode=$mode"
+try {
+    Invoke-Expression $preloadCmd 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Preload build failed with exit code: $LASTEXITCODE"
+    }
+    Write-Step "Preload script build complete" -Level 'SUCCESS'
+} catch {
+    Write-Step "Preload script build failed: $($_.Exception.Message)" -Level 'ERROR'
+    exit 1
+}
+
+# Step 5: Verify build artifacts
+Write-Host ""
+Write-Step "Verifying build artifacts..." -Level 'INFO'
+
+$requiredArtifacts = @(
+    (Join-Path $DeployDir ".webpack\main\main.js"),
+    (Join-Path $DeployDir ".webpack\renderer\main_window\index.html"),
+    (Join-Path $DeployDir ".webpack\preload\index.js")
+)
+
+$allArtifactsPresent = $true
+foreach ($artifact in $requiredArtifacts) {
+    if (Test-Path $artifact) {
+        Write-Step "Found: $(Split-Path -Leaf (Split-Path -Parent $artifact))\$(Split-Path -Leaf $artifact)" -Level 'SUCCESS'
+    } else {
+        Write-Step "Missing: $artifact" -Level 'ERROR'
+        $allArtifactsPresent = $false
+    }
+}
+
+if (!$allArtifactsPresent) {
+    Write-Step "Build verification failed - some artifacts are missing" -Level 'ERROR'
+    exit 1
+}
+
+# Success summary
+Write-Host ""
+Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
+Write-Host " Build Completed Successfully!" -ForegroundColor Green
+Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
+Write-Host ""
+Write-Step "Application built in: $DeployDir" -Level 'SUCCESS'
+Write-Host ""
+Write-Host "To run the application:" -ForegroundColor Cyan
+Write-Host "  cd $DeployDir" -ForegroundColor White
+Write-Host "  npm start" -ForegroundColor White
+Write-Host ""
+
+# Step 6: Run if requested
+if ($Run) {
     Write-Host ""
-    Write-Host "Error launching application: `$(`$_.Exception.Message)" -ForegroundColor Red
-}
-
-# Keep console open if error occurs
-if (`$LASTEXITCODE -ne 0) {
+    Write-Step "Starting application..." -Level 'INFO'
     Write-Host ""
-    Write-Host "Application exited with error code: `$LASTEXITCODE" -ForegroundColor Red
-    Write-Host "Press any key to close..." -ForegroundColor Yellow
-    `$null = `$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+
+    try {
+        Set-Location $DeployDir
+        & npm start
+    } catch {
+        Write-Step "Failed to start application: $($_.Exception.Message)" -Level 'ERROR'
+        exit 1
+    }
 }
-"@
-
-Set-Content -Path $DebugLauncherPath -Value $DebugLauncherContent -Encoding UTF8
-Write-Log "Debug launcher created" -Level 'OK' -Color Green
-
-# Standard launcher (production mode)
-$ProdLauncherPath = Join-Path $OutputPath "Launch-MandADiscoverySuiteV2.ps1"
-$ProdLauncherContent = @"
-#Requires -Version 5.1
-Set-StrictMode -Version 3.0
-
-`$env:MANDA_DISCOVERY_PATH = if (`$env:MANDA_DISCOVERY_PATH) { `$env:MANDA_DISCOVERY_PATH } else { "C:\discoverydata" }
-`$env:NODE_ENV = "production"
-
-`$AppDir = Split-Path -Parent `$MyInvocation.MyCommand.Path
-Set-Location `$AppDir
-
-Write-Host "Starting M&A Discovery Suite v2..." -ForegroundColor Green
-
-# Find electron executable
-`$electronPath = Join-Path `$AppDir "node_modules\.bin\electron.cmd"
-if (-not (Test-Path `$electronPath)) {
-    `$electronPath = "electron"
-}
-
-# Start electron with the webpack output
-`$mainPath = Join-Path `$AppDir ".webpack\main"
-
-try {
-    & `$electronPath `$mainPath
-} catch {
-    Write-Host "Error launching application: `$(`$_.Exception.Message)" -ForegroundColor Red
-    Read-Host "Press Enter to exit"
-}
-"@
-
-Set-Content -Path $ProdLauncherPath -Value $ProdLauncherContent -Encoding UTF8
-Write-Log "Production launcher created" -Level 'OK' -Color Green
-
-Write-Host ""
-Write-Host "Build completed successfully!" -ForegroundColor Green
-Write-Host "=============================" -ForegroundColor Green
-Write-Host ""
-Write-Host "To run the application:" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "  PRODUCTION MODE:" -ForegroundColor Cyan
-Write-Host "    cd $OutputPath" -ForegroundColor White
-Write-Host "    .\Launch-MandADiscoverySuiteV2.ps1" -ForegroundColor White
-Write-Host ""
-Write-Host "  DEBUG MODE (with verbose console):" -ForegroundColor Cyan
-Write-Host "    cd $OutputPath" -ForegroundColor White
-Write-Host "    .\Launch-Debug.ps1" -ForegroundColor White
-Write-Host ""
-
-if ($DebugBuild) {
-    Write-Log "Build log saved to: $LogPath" -Level 'INFO' -Color Green
-}
-
-Write-Host "Build and Deployment Completed Successfully!" -ForegroundColor Green
-Write-Host "===========================================" -ForegroundColor Green
