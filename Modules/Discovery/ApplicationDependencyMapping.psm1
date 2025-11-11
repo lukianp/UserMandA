@@ -46,7 +46,14 @@ function Write-DependencyLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        Write-Host "[$timestamp] [$Level] [Dependency] $Message" -ForegroundColor $color
+        $logMessage = "[$timestamp] [$Level] [Dependency] $Message"
+        switch ($Level) {
+            'ERROR' { Write-Error "[ApplicationDependencyMapping] $logMessage" }
+            'WARN' { Write-Warning "[ApplicationDependencyMapping] $logMessage" }
+            'SUCCESS' { Write-Information "[ApplicationDependencyMapping] $logMessage" -InformationAction Continue }
+            'DEBUG' { Write-Verbose "[ApplicationDependencyMapping] $logMessage" -Verbose }
+            default { Write-Information "[ApplicationDependencyMapping] $logMessage" -InformationAction Continue }
+        }
     }
 }
 

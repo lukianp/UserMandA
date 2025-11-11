@@ -12,16 +12,15 @@ if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
             [hashtable]$Context = @{}
         )
         $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-        Write-Host "[$timestamp] [$Level] [$Component] $Message" -ForegroundColor $(
-            switch ($Level) {
-                'ERROR' { 'Red' }
-                'WARN' { 'Yellow' }
-                'SUCCESS' { 'Green' }
-                'HEADER' { 'Cyan' }
-                'DEBUG' { 'Gray' }
-                default { 'White' }
-            }
-        )
+        $logMessage = "[$timestamp] [$Level] [$Component] $Message"
+        switch ($Level) {
+            'ERROR' { Write-Error "[SQLServerDiscovery] $logMessage" }
+            'WARN' { Write-Warning "[SQLServerDiscovery] $logMessage" }
+            'SUCCESS' { Write-Information "[SQLServerDiscovery] $logMessage" -InformationAction Continue }
+            'HEADER' { Write-Verbose "[SQLServerDiscovery] $logMessage" -Verbose }
+            'DEBUG' { Write-Verbose "[SQLServerDiscovery] $logMessage" -Verbose }
+            default { Write-Information "[SQLServerDiscovery] $logMessage" -InformationAction Continue }
+        }
     }
 }
 

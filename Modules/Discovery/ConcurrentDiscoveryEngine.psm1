@@ -94,7 +94,7 @@ class ConcurrentDiscoveryEngine {
             $this.BatchSize = 200
         }
         
-        Write-Host "Configured for $($this.MaxConcurrentJobs) concurrent jobs, batch size $($this.BatchSize)" -ForegroundColor Green
+        Write-Information "[ConcurrentDiscoveryEngine] Configured for $($this.MaxConcurrentJobs) concurrent jobs, batch size $($this.BatchSize)" -InformationAction Continue
     }
     
     [void]QueueDiscoveryJob([string]$JobType, [hashtable]$JobParams) {
@@ -116,7 +116,7 @@ class ConcurrentDiscoveryEngine {
         $this.JobQueue.Enqueue($job)
         $this.TotalItemsQueued++
         
-        Write-Host "Queued $JobType job: $($job.Id)" -ForegroundColor Cyan
+        Write-Verbose "[ConcurrentDiscoveryEngine] Queued $JobType job: $($job.Id)" -Verbose
     }
     
     [hashtable]ProcessDiscoveryJobs() {
@@ -173,7 +173,7 @@ class ConcurrentDiscoveryEngine {
                 AsyncResult = $asyncResult
             }
             
-            Write-Host "Started job: $($Job.Id) ($($Job.Type))" -ForegroundColor Yellow
+            Write-Warning "[ConcurrentDiscoveryEngine] Started job: $($Job.Id) ($($Job.Type))"
             
         } catch {
             $Job.Status = 'Failed'
@@ -181,7 +181,7 @@ class ConcurrentDiscoveryEngine {
             $Job.CompletedAt = Get-Date
             $this.JobResults[$Job.Id] = $Job
             
-            Write-Host "Failed to start job: $($Job.Id) - $($_.Exception.Message)" -ForegroundColor Red
+            Write-Error "[ConcurrentDiscoveryEngine] Failed to start job: $($Job.Id) - $($_.Exception.Message)"
         }
     }
     
@@ -219,7 +219,7 @@ class ConcurrentDiscoveryEngine {
             
             $this.TotalItemsProcessed++
             
-            Write-Host "Completed job: $($job.Id) in $($job.Duration.TotalSeconds.ToString('F2'))s" -ForegroundColor Green
+            Write-Information "[ConcurrentDiscoveryEngine] Completed job: $($job.Id) in $($job.Duration.TotalSeconds.ToString('F2'))s" -InformationAction Continue
             
         } catch {
             $job.Status = 'Failed'
@@ -230,9 +230,9 @@ class ConcurrentDiscoveryEngine {
                 $job.RetryCount++
                 $job.Status = 'Retry'
                 $this.JobQueue.Enqueue($job)
-                Write-Host "Retrying job: $($job.Id) (attempt $($job.RetryCount))" -ForegroundColor Yellow
+                Write-Warning "[ConcurrentDiscoveryEngine] Retrying job: $($job.Id) (attempt $($job.RetryCount))"
             } else {
-                Write-Host "Job failed after $($job.MaxRetries) attempts: $($job.Id)" -ForegroundColor Red
+                Write-Error "[ConcurrentDiscoveryEngine] Job failed after $($job.MaxRetries) attempts: $($job.Id)"
             }
         } finally {
             # Clean up runspace
@@ -338,12 +338,12 @@ return @{ Status = "Unknown job type"; Data = $Data }
             RetryJobs = ($this.JobResults.Values | Where-Object { $_.Status -eq 'Retry' }).Count
         }
         
-        Write-Host "Discovery Engine Summary:" -ForegroundColor Cyan
-        Write-Host "  Total Jobs: $($summary.TotalJobsQueued)" -ForegroundColor White
-        Write-Host "  Completed: $($summary.CompletedJobs)" -ForegroundColor Green
-        Write-Host "  Failed: $($summary.FailedJobs)" -ForegroundColor Red
-        Write-Host "  Execution Time: $($summary.TotalExecutionTime.ToString('hh\:mm\:ss'))" -ForegroundColor White
-        Write-Host "  Average Job Time: $($summary.AverageJobTime.ToString('F2'))s" -ForegroundColor White
+        Write-Verbose "[ConcurrentDiscoveryEngine] Discovery Engine Summary:" -Verbose
+        Write-Information "[ConcurrentDiscoveryEngine]   Total Jobs: $($summary.TotalJobsQueued)" -InformationAction Continue
+        Write-Information "[ConcurrentDiscoveryEngine]   Completed: $($summary.CompletedJobs)" -InformationAction Continue
+        Write-Information "[ConcurrentDiscoveryEngine]   Failed: $($summary.FailedJobs)" -InformationAction Continue
+        Write-Information "[ConcurrentDiscoveryEngine]   Execution Time: $($summary.TotalExecutionTime.ToString('hh\:mm\:ss'))" -InformationAction Continue
+        Write-Information "[ConcurrentDiscoveryEngine]   Average Job Time: $($summary.AverageJobTime.ToString('F2'))s" -InformationAction Continue
         
         return $summary
     }
@@ -371,7 +371,7 @@ return @{ Status = "Unknown job type"; Data = $Data }
         )
         $this.RunspacePool.Open()
         
-        Write-Host "Runspace pool initialized with $($this.MaxConcurrentJobs) maximum runspaces" -ForegroundColor Green
+        Write-Information "[ConcurrentDiscoveryEngine] Runspace pool initialized with $($this.MaxConcurrentJobs) maximum runspaces" -InformationAction Continue
     }
     
     [void]QueueJobWithPriority([hashtable]$Job) {
@@ -416,16 +416,16 @@ return @{ Status = "Unknown job type"; Data = $Data }
         # Adaptive concurrency based on system load
         if ($usage.CPUUsage -gt 80 -and $this.MaxConcurrentJobs -gt 2) {
             $this.MaxConcurrentJobs--
-            Write-Host "High CPU usage detected, reducing concurrency to $($this.MaxConcurrentJobs)" -ForegroundColor Yellow
+            Write-Warning "[ConcurrentDiscoveryEngine] High CPU usage detected, reducing concurrency to $($this.MaxConcurrentJobs)"
         } elseif ($usage.CPUUsage -lt 50 -and $this.MaxConcurrentJobs -lt 12) {
             $this.MaxConcurrentJobs++
-            Write-Host "Low CPU usage detected, increasing concurrency to $($this.MaxConcurrentJobs)" -ForegroundColor Green
+            Write-Information "[ConcurrentDiscoveryEngine] Low CPU usage detected, increasing concurrency to $($this.MaxConcurrentJobs)" -InformationAction Continue
         }
         
         # Memory-based throttling
         if ($usage.MemoryUsageGB -lt 2) {
             $this.ThrottleDelayMs = 200
-            Write-Host "Low memory detected, increasing throttle delay" -ForegroundColor Yellow
+            Write-Warning "[ConcurrentDiscoveryEngine] Low memory detected, increasing throttle delay"
         } elseif ($usage.MemoryUsageGB -gt 8) {
             $this.ThrottleDelayMs = 25
         }
@@ -443,7 +443,7 @@ return @{ Status = "Unknown job type"; Data = $Data }
         }
         
         $this.ActiveJobs.Clear()
-        Write-Host "Discovery Engine stopped" -ForegroundColor Yellow
+        Write-Warning "[ConcurrentDiscoveryEngine] Discovery Engine stopped"
     }
 }
 
@@ -491,7 +491,7 @@ function Start-ConcurrentDiscovery {
         foreach ($taskName in $DiscoveryTasks.Keys) {
             $task = $DiscoveryTasks[$taskName]
             
-            Write-Host "Queueing discovery task: $taskName" -ForegroundColor Cyan
+            Write-Verbose "[ConcurrentDiscoveryEngine] Queueing discovery task: $taskName" -Verbose
             
             # Split large datasets into batches
             if ($task.Data -and $task.Data.Count -gt $engine.BatchSize) {
@@ -529,7 +529,7 @@ function Start-ConcurrentDiscovery {
         }
         
         # Process all queued jobs
-        Write-Host "Starting concurrent discovery processing..." -ForegroundColor Green
+        Write-Information "[ConcurrentDiscoveryEngine] Starting concurrent discovery processing..." -InformationAction Continue
         $results = $engine.ProcessDiscoveryJobs()
         
         return $results
@@ -583,11 +583,11 @@ function Invoke-ConcurrentDiscoveryEngine {
     )
 
     try {
-        Write-Host "Invoking Concurrent Discovery Engine..." -ForegroundColor Cyan
+        Write-Verbose "[ConcurrentDiscoveryEngine] Invoking Concurrent Discovery Engine..." -Verbose
 
         # If no DiscoveryTasks provided, create a default structure for compatibility
         if (-not $DiscoveryTasks -or $DiscoveryTasks.Count -eq 0) {
-            Write-Host "No DiscoveryTasks provided, using default concurrent discovery strategy" -ForegroundColor Yellow
+            Write-Warning "[ConcurrentDiscoveryEngine] No DiscoveryTasks provided, using default concurrent discovery strategy"
 
             # Create default discovery tasks for common concurrent workloads
             $DiscoveryTasks = @{
@@ -609,7 +609,7 @@ function Invoke-ConcurrentDiscoveryEngine {
         # Call the main discovery function
         $results = Start-ConcurrentDiscovery -Configuration $Configuration -Context $Context -SessionId $SessionId -DiscoveryTasks $DiscoveryTasks -MaxConcurrentJobs $MaxConcurrentJobs -BatchSize $BatchSize
 
-        Write-Host "Concurrent Discovery Engine completed successfully" -ForegroundColor Green
+        Write-Information "[ConcurrentDiscoveryEngine] Concurrent Discovery Engine completed successfully" -InformationAction Continue
         return $results
 
     } catch {

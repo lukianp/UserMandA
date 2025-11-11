@@ -47,7 +47,14 @@ function Write-BackupLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        Write-Host "[$timestamp] [$Level] [Backup] $Message" -ForegroundColor $color
+        $logMessage = "[$timestamp] [$Level] [Backup] $Message"
+        switch ($Level) {
+            'ERROR' { Write-Error "[BackupRecoveryDiscovery] $logMessage" }
+            'WARN' { Write-Warning "[BackupRecoveryDiscovery] $logMessage" }
+            'SUCCESS' { Write-Information "[BackupRecoveryDiscovery] $logMessage" -InformationAction Continue }
+            'DEBUG' { Write-Verbose "[BackupRecoveryDiscovery] $logMessage" -Verbose }
+            default { Write-Information "[BackupRecoveryDiscovery] $logMessage" -InformationAction Continue }
+        }
     }
 }
 

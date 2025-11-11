@@ -55,7 +55,14 @@ function Write-VirtualizationLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        Write-Host "[$timestamp] [$Level] [Virtualization] $Message" -ForegroundColor $color
+        $logMessage = "[$timestamp] [$Level] [Virtualization] $Message"
+        switch ($Level) {
+            'ERROR' { Write-Error "[VirtualizationDiscovery] $logMessage" }
+            'WARN' { Write-Warning "[VirtualizationDiscovery] $logMessage" }
+            'SUCCESS' { Write-Information "[VirtualizationDiscovery] $logMessage" -InformationAction Continue }
+            'DEBUG' { Write-Verbose "[VirtualizationDiscovery] $logMessage" -Verbose }
+            default { Write-Information "[VirtualizationDiscovery] $logMessage" -InformationAction Continue }
+        }
     }
 }
 function Test-IsAdministrator {

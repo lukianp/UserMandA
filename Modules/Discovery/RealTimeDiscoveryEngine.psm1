@@ -410,15 +410,14 @@ function Write-RealTimeLog {
         Write-MandALog -Message "[RealTime] $Message" -Level $Level -Component "RealTimeDiscoveryEngine" -Context $Context
     } else {
         $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-        Write-Host "[$timestamp] [$Level] [RealTime] $Message" -ForegroundColor $(
-            switch ($Level) {
-                'ERROR' { 'Red' }
-                'WARN' { 'Yellow' }
-                'SUCCESS' { 'Green' }
-                'DEBUG' { 'Gray' }
-                default { 'White' }
-            }
-        )
+        $logMessage = "[$timestamp] [$Level] [RealTime] $Message"
+        switch ($Level) {
+            'ERROR' { Write-Error "[RealTimeDiscoveryEngine] $logMessage" }
+            'WARN' { Write-Warning "[RealTimeDiscoveryEngine] $logMessage" }
+            'SUCCESS' { Write-Information "[RealTimeDiscoveryEngine] $logMessage" -InformationAction Continue }
+            'DEBUG' { Write-Verbose "[RealTimeDiscoveryEngine] $logMessage" -Verbose }
+            default { Write-Information "[RealTimeDiscoveryEngine] $logMessage" -InformationAction Continue }
+        }
     }
 }
 

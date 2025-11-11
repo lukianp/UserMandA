@@ -55,7 +55,14 @@ function Write-VirtualizationLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        Write-Host "[$timestamp] [$Level] [Virtualization] $Message" -ForegroundColor $color
+        $logMessage = "[$timestamp] [$Level] [Virtualization] $Message"
+        switch ($Level) {
+            'ERROR' { Write-Error "[Virtualization] $logMessage" }
+            'WARN' { Write-Warning "[Virtualization] $logMessage" }
+            'SUCCESS' { Write-Information "[Virtualization] $logMessage" -InformationAction Continue }
+            'DEBUG' { Write-Verbose "[Virtualization] $logMessage" -Verbose }
+            default { Write-Information "[Virtualization] $logMessage" -InformationAction Continue }
+        }
     }
 }
 

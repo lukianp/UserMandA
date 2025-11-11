@@ -45,7 +45,14 @@ function Write-DataClassificationLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        Write-Host "[$timestamp] [$Level] [DataClassification] $Message" -ForegroundColor $color
+        $logMessage = "[$timestamp] [$Level] [DataClassification] $Message"
+        switch ($Level) {
+            'ERROR' { Write-Error "[DataClassification] $logMessage" }
+            'WARN' { Write-Warning "[DataClassification] $logMessage" }
+            'SUCCESS' { Write-Information "[DataClassification] $logMessage" -InformationAction Continue }
+            'DEBUG' { Write-Verbose "[DataClassification] $logMessage" -Verbose }
+            default { Write-Information "[DataClassification] $logMessage" -InformationAction Continue }
+        }
     }
 }
 

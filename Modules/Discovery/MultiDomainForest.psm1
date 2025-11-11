@@ -47,7 +47,14 @@ function Write-MultiDomainLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        Write-Host "[$timestamp] [$Level] [MultiDomainForest] $Message" -ForegroundColor $color
+        $logMessage = "[$timestamp] [$Level] [MultiDomainForest] $Message"
+        switch ($Level) {
+            'ERROR' { Write-Error "[MultiDomainForest] $logMessage" }
+            'WARN' { Write-Warning "[MultiDomainForest] $logMessage" }
+            'SUCCESS' { Write-Information "[MultiDomainForest] $logMessage" -InformationAction Continue }
+            'DEBUG' { Write-Verbose "[MultiDomainForest] $logMessage" -Verbose }
+            default { Write-Information "[MultiDomainForest] $logMessage" -InformationAction Continue }
+        }
     }
 }
 

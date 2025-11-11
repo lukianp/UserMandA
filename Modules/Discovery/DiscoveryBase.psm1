@@ -160,15 +160,18 @@ function Write-ModuleLog {
     if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
         Write-MandALog -Message "[$ModuleName] $Message" -Level $Level -Component "$($ModuleName)Discovery" -Context $Context
     } else {
-        $color = switch ($Level) {
-            "ERROR" { "Red" }
-            "WARN" { "Yellow" }
-            "SUCCESS" { "Green" }
-            "DEBUG" { "Gray" }
-            "HEADER" { "Cyan" }
-            default { "White" }
+        # Use proper PowerShell streams for GUIV2 streaming support
+        $formattedMessage = "[$ModuleName] $Message"
+        switch ($Level) {
+            "ERROR" { Write-Error $formattedMessage }
+            "WARN" { Write-Warning $formattedMessage }
+            "DEBUG" { Write-Debug $formattedMessage }
+            "VERBOSE" { Write-Verbose $formattedMessage -Verbose }
+            default {
+                # Write to stderr with INFORMATION prefix for GUIV2 stream parsing
+                [Console]::Error.WriteLine("INFORMATION: $formattedMessage")
+            }
         }
-        Write-Host "[$ModuleName] $Message" -ForegroundColor $color
     }
 }
 

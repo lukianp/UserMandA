@@ -19,6 +19,7 @@ import { EventEmitter } from 'events';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
 
 import { ExecutionOptions, ExecutionResult, OutputData, ModuleInfo, ScriptTask } from '../../types/shared';
 import { CredentialService } from './credentialService';
@@ -368,15 +369,49 @@ class PowerShellExecutionService extends EventEmitter {
         // Use powershell.exe on Windows (fallback from pwsh if not installed)
         const powershellExecutable = process.platform === 'win32' ? 'powershell.exe' : 'pwsh';
 
-        const childProcess = spawn(powershellExecutable, pwshArgs, {
-          cwd: options.workingDirectory || this.config.scriptsBaseDir,
-          env: {
-            ...process.env,
-            ...options.environmentVariables,
-            // Enable all PowerShell streams
-            PSModulePath: process.env.PSModulePath || '',
-          },
-        });
+        let childProcess: ChildProcess;
+
+        // Launch in visible window if requested (Windows only)
+        if (options.showWindow && process.platform === 'win32') {
+          console.log(`[PowerShellService.executeScriptWithSession] Spawning VISIBLE PowerShell window for: ${resolvedPath}`);
+
+          // Use cmd.exe with 'start' to explicitly create a new console window
+          // This is the only reliable way to show a console from an Electron app
+          const cmdArgs = [
+            '/c',  // Run command and terminate
+            'start',  // Start a new window
+            '""',  // Empty title (required by start command)
+            powershellExecutable,
+            '-NoProfile',
+            '-ExecutionPolicy', 'Bypass',
+            '-NoExit',  // Keep window open after script completes
+            '-File',
+            `"${resolvedPath}"`,  // Quote the path
+            ...args.map(arg => `"${arg}"`)  // Quote all arguments
+          ];
+
+          childProcess = spawn('cmd.exe', cmdArgs, {
+            cwd: options.workingDirectory || this.config.scriptsBaseDir,
+            env: {
+              ...process.env,
+              ...options.environmentVariables,
+              PSModulePath: process.env.PSModulePath || '',
+            },
+            shell: true,  // Use shell to properly handle 'start' command
+            windowsHide: false,
+          });
+        } else {
+          // Normal hidden execution with output capture
+          childProcess = spawn(powershellExecutable, pwshArgs, {
+            cwd: options.workingDirectory || this.config.scriptsBaseDir,
+            env: {
+              ...process.env,
+              ...options.environmentVariables,
+              // Enable all PowerShell streams
+              PSModulePath: process.env.PSModulePath || '',
+            },
+          });
+        }
 
         // Track active execution
         this.activeExecutions.set(executionId, childProcess);
@@ -466,9 +501,59 @@ class PowerShellExecutionService extends EventEmitter {
           }
 
           try {
-            // Parse JSON output
-            const trimmedOutput = stdout.trim();
-            const data = trimmedOutput ? JSON.parse(trimmedOutput) : {};
+            // Extract JSON from between markers (ignoring stream output)
+            const jsonStartMarker = '<<<JSON_RESULT_START>>>';
+            const jsonEndMarker = '<<<JSON_RESULT_END>>>';
+
+            let jsonContent = stdout.trim();
+            const startIndex = stdout.indexOf(jsonStartMarker);
+            const endIndex = stdout.indexOf(jsonEndMarker);
+
+            if (startIndex !== -1 && endIndex !== -1) {
+              // Extract only the JSON between markers
+              jsonContent = stdout.substring(startIndex + jsonStartMarker.length, endIndex).trim();
+            }
+
+            // Debug logging for Azure discovery - write full output to file
+            const fs = require('fs');
+            const debugLogPath = 'C:\\discoverydata\\powershell_debug_output.txt';
+            try {
+              const debugContent = [
+                '========== POWERSHELL DEBUG OUTPUT ==========',
+                `Timestamp: ${new Date().toISOString()}`,
+                `stdout length: ${stdout.length}`,
+                `stderr length: ${stderr.length}`,
+                `jsonContent length: ${jsonContent.length}`,
+                '',
+                '========== FULL STDOUT ==========',
+                stdout,
+                '',
+                '========== STDERR ==========',
+                stderr,
+                '',
+                '========== EXTRACTED JSON CONTENT ==========',
+                jsonContent,
+                '',
+                '=========================================='
+              ].join('\n');
+              fs.writeFileSync(debugLogPath, debugContent, 'utf8');
+              console.log(`[PowerShellService] Full output written to: ${debugLogPath}`);
+            } catch (err) {
+              console.error('[PowerShellService] Failed to write debug log:', err);
+            }
+
+            console.log('[PowerShellService] ========== STDOUT DEBUG ==========');
+            console.log('[PowerShellService] stdout length:', stdout.length);
+            console.log('[PowerShellService] Last 2000 chars of stdout:\n', stdout.substring(Math.max(0, stdout.length - 2000)));
+            console.log('[PowerShellService] stderr length:', stderr.length);
+            if (stderr.length > 0) {
+              console.log('[PowerShellService] stderr:\n', stderr);
+            }
+            console.log('[PowerShellService] jsonContent length:', jsonContent.length);
+            console.log('[PowerShellService] jsonContent:', jsonContent);
+            console.log('[PowerShellService] ====================================');
+
+            const data = jsonContent ? JSON.parse(jsonContent) : {};
 
             const result: ExecutionResult = {
               success: true,
@@ -586,7 +671,7 @@ class PowerShellExecutionService extends EventEmitter {
           this.emit('stream:debug', data);
         }
       }
-      // Parse INFORMATION stream
+      // Parse INFORMATION stream (with explicit prefix)
       else if (line.startsWith('INFORMATION: ') || line.startsWith('INFO: ')) {
         const message = line.replace(/^(INFORMATION|INFO): /, '');
         information.push(message);
@@ -602,6 +687,17 @@ class PowerShellExecutionService extends EventEmitter {
           const data: OutputData = { executionId, data: line, type: 'error', timestamp: new Date() };
           this.emit('output', data);
           this.emit('stream:error', data);
+        }
+      }
+      // Treat all other non-empty lines as Information stream
+      // This handles Write-Information output that doesn't have explicit prefixes
+      else {
+        const message = line;
+        information.push(message);
+        if (streamOutput) {
+          const data: OutputData = { executionId, data: message, type: 'information', timestamp: new Date() };
+          this.emit('output', data);
+          this.emit('stream:information', data);
         }
       }
     }
@@ -823,17 +919,151 @@ class PowerShellExecutionService extends EventEmitter {
     options: ExecutionOptions = {}
   ): Promise<ExecutionResult> {
     try {
+      // Debug logging
+      console.log(`[PowerShellService.executeModule] showWindow: ${options.showWindow}, function: ${functionName}`);
+
       // Build PowerShell command to import module and call function
       const paramsJson = JSON.stringify(params);
-      const command = `
+
+      // PowerShell 5.1 compatible execution with clean output
+      const command = options.showWindow ? `
+        # Discovery Module Execution Window (PowerShell 5.1 compatible)
+        $Host.UI.RawUI.WindowTitle = "Discovery Module: ${functionName}"
+
+        Write-Host '========================================' -ForegroundColor Cyan
+        Write-Host 'Discovery Module - PowerShell Execution' -ForegroundColor Cyan
+        Write-Host '========================================' -ForegroundColor Cyan
+        Write-Host ''
+        Write-Host "Module: ${modulePath}" -ForegroundColor Yellow
+        Write-Host "Function: ${functionName}" -ForegroundColor Yellow
+        Write-Host ''
+        Write-Host '========================================' -ForegroundColor Cyan
+        Write-Host ''
+
+        # Enable ONLY Information stream for clean, summary-level output
+        $InformationPreference = 'Continue'
+        $VerbosePreference = 'SilentlyContinue'
+        $DebugPreference = 'SilentlyContinue'
+        $WarningPreference = 'Continue'
+
         Import-Module '${modulePath}' -Force -ErrorAction Stop
-        $params = '${paramsJson.replace(/'/g, "''")}' | ConvertFrom-Json -AsHashtable
+
+        # Convert JSON to hashtable recursively (PowerShell 5.1 compatible)
+        function ConvertTo-HashtableRecursive {
+            param([Parameter(ValueFromPipeline)] $InputObject)
+
+            if ($null -eq $InputObject) {
+                return $null
+            }
+
+            if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
+                $collection = @()
+                foreach ($item in $InputObject) {
+                    $collection += ConvertTo-HashtableRecursive $item
+                }
+                return $collection
+            }
+
+            if ($InputObject -is [PSCustomObject]) {
+                $hash = @{}
+                $InputObject.PSObject.Properties | ForEach-Object {
+                    $hash[$_.Name] = ConvertTo-HashtableRecursive $_.Value
+                }
+                return $hash
+            }
+
+            return $InputObject
+        }
+
+        $paramsObj = '${paramsJson.replace(/'/g, "''")}' | ConvertFrom-Json
+        $params = ConvertTo-HashtableRecursive $paramsObj
+
+        Write-Host 'Starting discovery execution...' -ForegroundColor Green
+        Write-Host ''
+
+        # Execute function - all Write-Information output will be visible
+        try {
+            $result = ${functionName} @params
+
+            Write-Host ''
+            Write-Host '========================================' -ForegroundColor Green
+            Write-Host 'Discovery Complete!' -ForegroundColor Green
+            Write-Host '========================================' -ForegroundColor Green
+
+            # Output minimal JSON for compatibility
+            Write-Output "<<<JSON_RESULT_START>>>"
+            if ($null -eq $result) {
+              @{Success=$true} | ConvertTo-Json -Compress
+            } else {
+              $result | ConvertTo-Json -Depth 10 -Compress
+            }
+            Write-Output "<<<JSON_RESULT_END>>>"
+
+            Write-Host ''
+            Write-Host 'Press any key to close this window...' -ForegroundColor Yellow
+            $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+        } catch {
+            Write-Host ''
+            Write-Host '========================================' -ForegroundColor Red
+            Write-Host 'Discovery Failed!' -ForegroundColor Red
+            Write-Host "Error: $_" -ForegroundColor Red
+            Write-Host '========================================' -ForegroundColor Red
+
+            Write-Host ''
+            Write-Host 'Press any key to close this window...' -ForegroundColor Yellow
+            $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+            throw
+        }
+      ` : `
+        # Hidden execution mode with clean summary output (PowerShell 5.1 compatible)
+        $InformationPreference = 'Continue'
+        $VerbosePreference = 'SilentlyContinue'
+        $DebugPreference = 'SilentlyContinue'
+        $WarningPreference = 'Continue'
+
+        Import-Module '${modulePath}' -Force -ErrorAction Stop
+
+        # Convert JSON to hashtable recursively (PowerShell 5.1 compatible)
+        function ConvertTo-HashtableRecursive {
+            param([Parameter(ValueFromPipeline)] $InputObject)
+
+            if ($null -eq $InputObject) {
+                return $null
+            }
+
+            if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
+                $collection = @()
+                foreach ($item in $InputObject) {
+                    $collection += ConvertTo-HashtableRecursive $item
+                }
+                return $collection
+            }
+
+            if ($InputObject -is [PSCustomObject]) {
+                $hash = @{}
+                $InputObject.PSObject.Properties | ForEach-Object {
+                    $hash[$_.Name] = ConvertTo-HashtableRecursive $_.Value
+                }
+                return $hash
+            }
+
+            return $InputObject
+        }
+
+        $paramsObj = '${paramsJson.replace(/'/g, "''")}' | ConvertFrom-Json
+        $params = ConvertTo-HashtableRecursive $paramsObj
+
+        # Execute function and capture result
         $result = ${functionName} @params
+
+        # Output JSON result marker and data
+        Write-Output "<<<JSON_RESULT_START>>>"
         if ($null -eq $result) {
           @{} | ConvertTo-Json -Compress
         } else {
           $result | ConvertTo-Json -Depth 10 -Compress
         }
+        Write-Output "<<<JSON_RESULT_END>>>"
       `;
 
       // Create temp script
@@ -887,22 +1117,66 @@ class PowerShellExecutionService extends EventEmitter {
         };
       }
 
+      // DEBUG: Log actual credentials loaded
+      console.log(`[PowerShellService] Credentials loaded:`, {
+        tenantId: credentials.tenantId || 'MISSING',
+        clientId: credentials.clientId || 'MISSING',
+        hasClientSecret: !!credentials.clientSecret,
+        connectionType: credentials.connectionType
+      });
+
+      // Validate required Azure credentials
+      const hasTenantId = !!(credentials.tenantId);
+      const hasClientId = !!(credentials.clientId || credentials.username);
+      const hasClientSecret = !!(credentials.clientSecret || credentials.password);
+
+      if (!hasTenantId || !hasClientId || !hasClientSecret) {
+        const missingFields = [];
+        if (!hasTenantId) missingFields.push('TenantId');
+        if (!hasClientId) missingFields.push('ClientId');
+        if (!hasClientSecret) missingFields.push('ClientSecret');
+
+        return {
+          success: false,
+          error: `Missing required Azure credentials: ${missingFields.join(', ')}. Please ensure your credentials include Tenant ID, Client ID, and Client Secret.`,
+          duration: 0,
+          warnings: [],
+        };
+      }
+
       // Prepare discovery parameters with credentials
+      // IMPORTANT: Additional params must be nested in AdditionalParams hashtable
       const discoveryParams = {
         CompanyName: companyName,
         TenantId: credentials.tenantId,
-        ClientId: credentials.clientId,
-        ClientSecret: credentials.clientSecret,
+        ClientId: credentials.clientId || credentials.username,
+        ClientSecret: credentials.clientSecret || credentials.password,
         OutputPath: `C:\\DiscoveryData\\${companyName}\\Raw`,
-        ...additionalParams,
+        AdditionalParams: additionalParams,  // Nested as hashtable
       };
 
       console.log(`[PowerShellService] Executing ${moduleName} discovery for ${companyName}`);
       console.log(`[PowerShellService] Output path: ${discoveryParams.OutputPath}`);
+      console.log(`[PowerShellService] AdditionalParams:`, JSON.stringify(additionalParams, null, 2));
 
       // Construct module path and function name
       const modulePath = path.join(this.config.scriptsBaseDir, 'Modules', 'Discovery', `${moduleName}Discovery.psm1`);
       const functionName = `Start-${moduleName}Discovery`;
+
+      // Pre-flight check: Validate module exists
+      try {
+        const fs = require('fs');
+        if (!fs.existsSync(modulePath)) {
+          return {
+            success: false,
+            error: `Discovery module not found: ${modulePath}`,
+            duration: 0,
+            warnings: [],
+          };
+        }
+      } catch (fsError) {
+        console.warn(`[PowerShellService] Could not verify module path: ${fsError}`);
+      }
 
       // Execute the discovery module
       const result = await this.executeModule(modulePath, functionName, discoveryParams, {

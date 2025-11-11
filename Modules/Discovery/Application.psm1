@@ -1212,7 +1212,7 @@ function Get-SoftwareLicenseInventory {
     
     foreach ($computerName in $ComputerNames) {
         try {
-            Write-Host "Scanning software on $computerName..." -ForegroundColor Cyan
+            Write-Verbose "[Application] Scanning software on $computerName..." -Verbose
             
             # Get installed software from registry (64-bit)
             $software64 = Get-InstalledSoftwareFromRegistry -ComputerName $computerName -RegistryPath "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
@@ -1577,7 +1577,7 @@ function Export-SoftwareLicenseReport {
             $optimizationReport | Export-Csv -Path $optimizationPath -NoTypeInformation -Encoding UTF8
         }
         
-        Write-Host "Software license reports exported to: $OutputPath" -ForegroundColor Green
+        Write-Information "[Application] Software license reports exported to: $OutputPath" -InformationAction Continue
         
     } catch {
         Write-Error "Failed to export software license report: $($_.Exception.Message)"

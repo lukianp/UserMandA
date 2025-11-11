@@ -11,7 +11,7 @@ import * as crypto from 'crypto';
 
 import { ipcMain, dialog, shell, BrowserWindow } from 'electron';
 
-import { ScriptExecutionParams, ModuleExecutionParams, ScriptTask } from '../types/shared';
+import { ScriptExecutionParams, ModuleExecutionParams, ScriptTask, ExecutionOptions } from '../types/shared';
 import type { UserDetailProjection } from '../renderer/types/models/userDetail';
 
 import { PowerShellExecutionService } from './services/powerShellService';
@@ -21,7 +21,7 @@ import { MockLogicEngineService } from './services/mockLogicEngineService';
 import { LogicEngineService } from './services/logicEngineService';
 import { ProjectService } from './services/projectService';
 import { DashboardService } from './services/dashboardService';
-import { ProfileService } from './services/ProfileService';
+import { ProfileService } from './services/profileService';
 
 
 // Service instances
@@ -634,7 +634,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       const { path: dirPath, options } = args;
       const sanitized = sanitizePath(dirPath);
       console.log(`IPC: fs:readdir - ${sanitized}`);
-      const result = await fs.readdir(sanitized, options);
+      const result = await fs.readdir(sanitized, options as any);
       return { success: true, data: result };
     } catch (error: unknown) {
       console.error(`fs:readdir error: ${error instanceof Error ? error.message : String(error)}`);
@@ -1003,7 +1003,6 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('profile:refresh', async () => {
     try {
-      const profileService = getProfileService();
       await profileService.refreshProfiles();
       const sourceProfiles = profileService.getSourceProfiles();
       console.log(`Refreshed profiles: ${sourceProfiles.length} source profiles found`);
@@ -1022,7 +1021,6 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('profile:getDataPath', async (_, profileId: string) => {
     try {
-      const profileService = getProfileService();
       const dataPath = profileService.getProfileDataPath(profileId);
       return { success: true, dataPath };
     } catch (error: unknown) {
@@ -2399,11 +2397,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       console.log(`[IPC:discovery:execute] Company: ${activeProfile.companyName}`);
       console.log(`[IPC:discovery:execute] Execution ID: ${execId}`);
       console.log(`[IPC:discovery:execute] Parameters:`, JSON.stringify(parameters, null, 2));
-      console.log(`[IPC:discovery:execute] Profile credentials loaded:`, {
-        tenantId: activeProfile.tenantId || 'N/A',
-        clientId: activeProfile.clientId || 'N/A',
-        hasClientSecret: !!(activeProfile.clientSecret || activeProfile.password),
-      });
+      // Note: Credentials are loaded from CredentialService, not from profile directly
 
       // Execute discovery module with credentials from profile
       const result = await psService.executeDiscoveryModule(
@@ -2414,6 +2408,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
           cancellationToken: execId,
           streamOutput: true,
           timeout: parameters.timeout || 300000,
+          showWindow: parameters.showWindow !== undefined ? parameters.showWindow : true,  // Default to showing PowerShell window
         }
       );
 

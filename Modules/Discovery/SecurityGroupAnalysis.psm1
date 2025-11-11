@@ -48,7 +48,14 @@ function Write-SecurityGroupLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        Write-Host "[$timestamp] [$Level] [SecurityGroup] $Message" -ForegroundColor $color
+        $logMessage = "[$timestamp] [$Level] [SecurityGroup] $Message"
+        switch ($Level) {
+            'ERROR' { Write-Error "[SecurityGroupAnalysis] $logMessage" }
+            'WARN' { Write-Warning "[SecurityGroupAnalysis] $logMessage" }
+            'SUCCESS' { Write-Information "[SecurityGroupAnalysis] $logMessage" -InformationAction Continue }
+            'DEBUG' { Write-Verbose "[SecurityGroupAnalysis] $logMessage" -Verbose }
+            default { Write-Information "[SecurityGroupAnalysis] $logMessage" -InformationAction Continue }
+        }
     }
 }
 

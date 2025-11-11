@@ -45,7 +45,14 @@ function Write-PhysicalServerLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        Write-Host "[$timestamp] [$Level] [PhysicalServer] $Message" -ForegroundColor $color
+        $logMessage = "[$timestamp] [$Level] [PhysicalServer] $Message"
+        switch ($Level) {
+            'ERROR' { Write-Error "[PhysicalServer] $logMessage" }
+            'WARN' { Write-Warning "[PhysicalServer] $logMessage" }
+            'SUCCESS' { Write-Information "[PhysicalServer] $logMessage" -InformationAction Continue }
+            'DEBUG' { Write-Verbose "[PhysicalServer] $logMessage" -Verbose }
+            default { Write-Information "[PhysicalServer] $logMessage" -InformationAction Continue }
+        }
     }
 }
 

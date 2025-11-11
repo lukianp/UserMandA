@@ -24,6 +24,7 @@ export interface AzureDiscoveryFormData {
   includeLicenses: boolean;
   maxResults: number;
   timeout: number; // seconds
+  showWindow: boolean; // Show PowerShell window during execution
 }
 
 export const useAzureDiscoveryLogic = () => {
@@ -40,6 +41,7 @@ export const useAzureDiscoveryLogic = () => {
     includeLicenses: true,
     maxResults: 50000,
     timeout: 1800, // 30 minutes (allows time for module installation on first run)
+    showWindow: true, // Show PowerShell window by default
   });
 
   // Execution state
@@ -82,6 +84,7 @@ export const useAzureDiscoveryLogic = () => {
       includeLicenses: true,
       maxResults: 50000,
       timeout: 600,
+      showWindow: true,
     });
     setError(null);
     setLogs([]);
@@ -149,6 +152,7 @@ export const useAzureDiscoveryLogic = () => {
         addResult(discoveryResult);
         addLog(`Discovery completed successfully! Found ${data?.result?.totalItems} items.`);
         setIsRunning(false);
+        setIsCancelling(false);
         setCurrentToken(null);
         setLocalProgress(null);
       }
@@ -159,6 +163,17 @@ export const useAzureDiscoveryLogic = () => {
         setError(data.error);
         addLog(`ERROR: ${data.error}`);
         setIsRunning(false);
+        setIsCancelling(false);
+        setCurrentToken(null);
+        setLocalProgress(null);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentToken) {
+        addLog('Discovery cancelled by user');
+        setIsRunning(false);
+        setIsCancelling(false);
         setCurrentToken(null);
         setLocalProgress(null);
       }
@@ -169,6 +184,7 @@ export const useAzureDiscoveryLogic = () => {
       if (unsubscribeOutput) unsubscribeOutput();
       if (unsubscribeComplete) unsubscribeComplete();
       if (unsubscribeError) unsubscribeError();
+      if (unsubscribeCancelled) unsubscribeCancelled();
     };
   }, [currentToken, setProgress, addResult, selectedSourceProfile, addLog]);
 
@@ -234,6 +250,8 @@ export const useAzureDiscoveryLogic = () => {
     console.log(`[AzureDiscoveryHook] Starting Azure discovery for company: ${selectedSourceProfile.companyName}`);
     addLog(`Starting Azure discovery for ${selectedSourceProfile.companyName}...`);
     addLog(`Tenant ID: ${selectedSourceProfile.tenantId || 'N/A'}`);
+    addLog(`Client ID: ${selectedSourceProfile.clientId || 'N/A'}`);
+    addLog(`Has credentials: ${selectedSourceProfile.clientId ? 'Yes' : 'No'}`);
 
     // Log selected services
     const services: string[] = [];
@@ -270,6 +288,7 @@ export const useAzureDiscoveryLogic = () => {
           IncludeLicenses: formData.includeLicenses,
           MaxResults: formData.maxResults,
           timeout: formData.timeout * 1000, // Convert to milliseconds
+          showWindow: formData.showWindow, // Pass showWindow parameter
         },
         executionId: token, // Pass the token so events are matched correctly
       });
@@ -298,10 +317,22 @@ export const useAzureDiscoveryLogic = () => {
     try {
       await window.electron.cancelDiscovery(currentToken);
       addLog('Discovery cancellation requested successfully');
+
+      // Set a timeout to reset state in case the cancelled event doesn't fire
+      setTimeout(() => {
+        setIsRunning(false);
+        setIsCancelling(false);
+        setCurrentToken(null);
+        setLocalProgress(null);
+        addLog('Discovery cancelled - reset to start state');
+      }, 2000);
     } catch (err) {
       addLog(`Error cancelling: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
+      // Reset state even on error
+      setIsRunning(false);
       setIsCancelling(false);
+      setCurrentToken(null);
+      setLocalProgress(null);
     }
   }, [currentToken, addLog]);
 

@@ -46,7 +46,14 @@ function Write-WebServerLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        Write-Host "[$timestamp] [$Level] [WebServer] $Message" -ForegroundColor $color
+        $logMessage = "[$timestamp] [$Level] [WebServer] $Message"
+        switch ($Level) {
+            'ERROR' { Write-Error "[WebServerConfigDiscovery] $logMessage" }
+            'WARN' { Write-Warning "[WebServerConfigDiscovery] $logMessage" }
+            'SUCCESS' { Write-Information "[WebServerConfigDiscovery] $logMessage" -InformationAction Continue }
+            'DEBUG' { Write-Verbose "[WebServerConfigDiscovery] $logMessage" -Verbose }
+            default { Write-Information "[WebServerConfigDiscovery] $logMessage" -InformationAction Continue }
+        }
     }
 }
 

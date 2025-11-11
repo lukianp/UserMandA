@@ -35,37 +35,27 @@ function Test-AzureModules {
     [CmdletBinding()]
     param()
 
-    # Modern approach: Use comprehensive Az module instead of individual modules
-    $requiredModules = @(
+    # Az module is optional - only needed for Azure resource discovery (VMs, subscriptions, databases)
+    # Basic Azure AD discovery (users, groups, licenses) works with just Microsoft.Graph
+    $optionalModules = @(
         'Az'
     )
 
     $missingModules = @()
-    foreach ($module in $requiredModules) {
+    foreach ($module in $optionalModules) {
         if (-not (Get-Module -ListAvailable -Name $module)) {
             $missingModules += $module
         }
     }
 
     if ($missingModules.Count -gt 0) {
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Missing required Azure module: $($missingModules -join ', ')" -Level "WARN"
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Installing Azure module. This includes all necessary Az sub-modules..." -Level "INFO"
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Optional Azure module not found: $($missingModules -join ', ')" -Level "WARN"
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure resource discovery (VMs, subscriptions, databases) will be skipped." -Level "WARN"
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "User/Group/License discovery will continue with Microsoft.Graph." -Level "INFO"
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "To enable full Azure resource discovery, install manually: Install-Module Az -Force -AllowClobber -Scope CurrentUser" -Level "INFO"
 
-        foreach ($module in $missingModules) {
-            try {
-                # Use the comprehensive Az module and specify minimum version for stability
-                if ($module -eq 'Az') {
-                    Install-Module -Name $module -MinimumVersion 10.0.0 -Force -AllowClobber -Scope CurrentUser -Repository PSGallery -ErrorAction Stop
-                } else {
-                    Install-Module -Name $module -Force -AllowClobber -Scope CurrentUser -Repository PSGallery -ErrorAction Stop
-                }
-
-                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Successfully installed Azure Az module" -Level "SUCCESS"
-            } catch {
-                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Failed to install module $module`: $($_.Exception.Message)" -Level "ERROR"
-                return $false
-            }
-        }
+        # Return false to indicate Az module is not available (but don't block execution)
+        return $false
     }
 
     return $true
@@ -81,77 +71,145 @@ function Connect-AzureWithMultipleStrategies {
         [object]$Result
     )
 
-    Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting Azure authentication with multiple strategies..." -Level "INFO"
+    Write-Information "[AzureDiscovery] Attempting Azure authentication with multiple strategies..." -InformationAction Continue
 
-    # Strategy 1: Service Principal with Client Secret
+    # Strategy 1: Service Principal with Client Secret (Highest Priority)
     if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
         try {
-            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting Service Principal authentication..." -Level "INFO"
+            Write-Information "[AzureDiscovery] Attempting Service Principal authentication..." -InformationAction Continue
+
+            # Check if Az module is available
+            if (-not (Get-Module -ListAvailable -Name 'Az.Accounts')) {
+                Write-Information "[AzureDiscovery] Az.Accounts module not found. Installing..." -InformationAction Continue
+                Install-Module -Name Az -Force -AllowClobber -Scope CurrentUser -Repository PSGallery -ErrorAction Stop
+            }
+
+            Import-Module Az.Accounts -Force -ErrorAction Stop
 
             $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
             $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
 
             $context = Connect-AzAccount -ServicePrincipal -Credential $credential -Tenant $Configuration.TenantId -WarningAction SilentlyContinue -ErrorAction Stop
 
-            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Service Principal authentication successful" -Level "SUCCESS"
-            return $context
+            Write-Information "[AzureDiscovery] Service Principal authentication successful" -InformationAction Continue
+            return @{Method="ServicePrincipal"; Context=$context}
 
         } catch {
-            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Service Principal authentication failed: $($_.Exception.Message)" -Level "WARN"
+            Write-Information "[AzureDiscovery] Service Principal authentication failed: $($_.Exception.Message)" -InformationAction Continue
             $Result.AddWarning("Service Principal authentication failed", @{Error=$_.Exception.Message})
         }
     }
 
-    # Strategy 2: Azure CLI Token
+    # Strategy 2: Azure CLI Token (PowerShell 5.1 compatible)
     try {
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting Azure CLI token authentication..." -Level "INFO"
+        Write-Information "[AzureDiscovery] Attempting Azure CLI token authentication..." -InformationAction Continue
 
-        # Check if Azure CLI is logged in
-        $cliAccount = az account show 2>$null | ConvertFrom-Json
-        if ($cliAccount) {
-            # Get CLI token and use it
-            $token = az account get-access-token --resource https://management.azure.com/ 2>$null | ConvertFrom-Json
-            if ($token) {
-                $accessToken = ConvertTo-SecureString $token.accessToken -AsPlainText -Force
-                $context = Connect-AzAccount -AccessToken $accessToken -AccountId $cliAccount.user.name -TenantId $cliAccount.tenantId -WarningAction SilentlyContinue -ErrorAction Stop
+        # Check if Azure CLI is available
+        $azCommand = Get-Command az -ErrorAction SilentlyContinue
+        if (-not $azCommand) {
+            Write-Information "[AzureDiscovery] Azure CLI not found, skipping CLI authentication" -InformationAction Continue
+        } else {
+            # Check if CLI is logged in (PowerShell 5.1 compatible)
+            $cliAccount = $null
+            try {
+                $cliAccountOutput = & az account show 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    $cliAccount = $cliAccountOutput | ConvertFrom-Json
+                }
+            } catch {
+                Write-Information "[AzureDiscovery] Azure CLI not logged in" -InformationAction Continue
+            }
 
-                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure CLI token authentication successful" -Level "SUCCESS"
-                return $context
+            if ($cliAccount) {
+                # Get CLI token (PowerShell 5.1 compatible)
+                $tokenOutput = & az account get-access-token --resource https://management.azure.com/ 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    $tokenData = $tokenOutput | ConvertFrom-Json
+                    if ($tokenData.accessToken) {
+                        # Use token with Az module
+                        if (Get-Module -ListAvailable -Name 'Az.Accounts') {
+                            Import-Module Az.Accounts -Force -ErrorAction Stop
+                            $accessToken = ConvertTo-SecureString $tokenData.accessToken -AsPlainText -Force
+                            $context = Connect-AzAccount -AccessToken $accessToken -AccountId $cliAccount.user.name -TenantId $cliAccount.tenantId -WarningAction SilentlyContinue -ErrorAction Stop
+
+                            Write-Information "[AzureDiscovery] Azure CLI token authentication successful" -InformationAction Continue
+                            return @{Method="AzureCLI"; Context=$context}
+                        }
+                    }
+                }
             }
         }
 
     } catch {
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure CLI token authentication failed: $($_.Exception.Message)" -Level "WARN"
+        Write-Information "[AzureDiscovery] Azure CLI token authentication failed: $($_.Exception.Message)" -InformationAction Continue
     }
 
-    # Strategy 3: Managed Identity (if running on Azure VM/Function/etc.)
+    # Strategy 3: Managed Identity (only if running in Azure environment)
     try {
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting Managed Identity authentication..." -Level "INFO"
+        Write-Information "[AzureDiscovery] Attempting Managed Identity authentication..." -InformationAction Continue
 
-        $context = Connect-AzAccount -Identity -WarningAction SilentlyContinue -ErrorAction Stop
-
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Managed Identity authentication successful" -Level "SUCCESS"
-        return $context
-
-    } catch {
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Managed Identity authentication failed: $($_.Exception.Message)" -Level "WARN"
-    }
-
-    # Strategy 4: Interactive Authentication (last resort)
-    try {
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting interactive authentication..." -Level "INFO"
-
-        if ($Configuration.TenantId) {
-            $context = Connect-AzAccount -Tenant $Configuration.TenantId -WarningAction SilentlyContinue -ErrorAction Stop
-        } else {
-            $context = Connect-AzAccount -WarningAction SilentlyContinue -ErrorAction Stop
+        # Check if we might be running in Azure (check environment variables)
+        $isAzureEnvironment = $false
+        $azureEnvVars = @('MSI_ENDPOINT', 'MSI_SECRET', 'IDENTITY_ENDPOINT', 'IDENTITY_HEADER')
+        foreach ($envVar in $azureEnvVars) {
+            try {
+                $envValue = [System.Environment]::GetEnvironmentVariable($envVar)
+                if ($envValue) {
+                    $isAzureEnvironment = $true
+                    break
+                }
+            } catch {
+                # Continue checking other variables
+            }
         }
 
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Interactive authentication successful" -Level "SUCCESS"
-        return $context
+        if ($isAzureEnvironment) {
+            if (Get-Module -ListAvailable -Name 'Az.Accounts') {
+                Import-Module Az.Accounts -Force -ErrorAction Stop
+                $context = Connect-AzAccount -Identity -WarningAction SilentlyContinue -ErrorAction Stop
+
+                Write-Information "[AzureDiscovery] Managed Identity authentication successful" -InformationAction Continue
+                return @{Method="ManagedIdentity"; Context=$context}
+            }
+        } else {
+            Write-Information "[AzureDiscovery] Not running in Azure environment, skipping Managed Identity authentication" -InformationAction Continue
+        }
 
     } catch {
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Interactive authentication failed: $($_.Exception.Message)" -Level "ERROR"
+        Write-Information "[AzureDiscovery] Managed Identity authentication failed: $($_.Exception.Message)" -InformationAction Continue
+    }
+
+    # Strategy 4: Interactive Authentication (last resort, only if no window)
+    try {
+        Write-Information "[AzureDiscovery] Attempting interactive authentication..." -InformationAction Continue
+
+        # Only try interactive if we're not in a headless environment
+        $isInteractive = $true
+        try {
+            $host.UI.RawUI.WindowSize.Width | Out-Null
+        } catch {
+            $isInteractive = $false
+        }
+
+        if ($isInteractive) {
+            if (Get-Module -ListAvailable -Name 'Az.Accounts') {
+                Import-Module Az.Accounts -Force -ErrorAction Stop
+
+                if ($Configuration.TenantId) {
+                    $context = Connect-AzAccount -Tenant $Configuration.TenantId -WarningAction SilentlyContinue -ErrorAction Stop
+                } else {
+                    $context = Connect-AzAccount -WarningAction SilentlyContinue -ErrorAction Stop
+                }
+
+                Write-Information "[AzureDiscovery] Interactive authentication successful" -InformationAction Continue
+                return @{Method="Interactive"; Context=$context}
+            }
+        } else {
+            Write-Information "[AzureDiscovery] Interactive authentication not available in headless environment" -InformationAction Continue
+        }
+
+    } catch {
+        Write-Information "[AzureDiscovery] Interactive authentication failed: $($_.Exception.Message)" -InformationAction Continue
         $Result.AddError("All authentication strategies failed", $_.Exception, @{Section="Authentication"})
     }
 
@@ -185,8 +243,20 @@ function Start-AzureDiscovery {
         [hashtable]$AdditionalParams = @{}
     )
 
-    Write-Host "[AzureDiscovery] Starting Azure discovery for $CompanyName..." -ForegroundColor Cyan
-    Write-Host "[AzureDiscovery] Tenant ID: $TenantId" -ForegroundColor Gray
+    Write-Information "[AzureDiscovery] Starting Azure discovery for $CompanyName..." -InformationAction Continue
+    Write-Information "[AzureDiscovery] Tenant ID: $TenantId" -InformationAction Continue
+    Write-Information "[AzureDiscovery] Client ID: $ClientId" -InformationAction Continue
+
+    # Pre-flight validation
+    if (-not $TenantId) {
+        throw "TenantId is required for Azure discovery"
+    }
+    if (-not $ClientId) {
+        throw "ClientId is required for Azure discovery"
+    }
+    if (-not $ClientSecret) {
+        throw "ClientSecret is required for Azure discovery"
+    }
 
     # Initialize result
     $result = [PSCustomObject]@{
@@ -213,9 +283,9 @@ function Start-AzureDiscovery {
         }
 
         # Test and install Microsoft.Graph module if needed
-        Write-Host "[AzureDiscovery] Checking for Microsoft.Graph module..." -ForegroundColor Yellow
+        Write-Information "[AzureDiscovery] Checking for Microsoft.Graph module..." -InformationAction Continue
         if (-not (Get-Module -ListAvailable -Name Microsoft.Graph.Authentication)) {
-            Write-Host "[AzureDiscovery] Installing Microsoft.Graph module..." -ForegroundColor Yellow
+            Write-Information "[AzureDiscovery] Installing Microsoft.Graph module..." -InformationAction Continue
             Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope CurrentUser -Repository PSGallery
         }
 
@@ -223,17 +293,17 @@ function Start-AzureDiscovery {
         Import-Module Microsoft.Graph.Authentication -Force
 
         # Connect to Microsoft Graph
-        Write-Host "[AzureDiscovery] Connecting to Microsoft Graph..." -ForegroundColor Yellow
+        Write-Information "[AzureDiscovery] Connecting to Microsoft Graph..." -InformationAction Continue
 
         if ($ClientId -and $ClientSecret -and $TenantId) {
             $secureSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
             $credential = New-Object System.Management.Automation.PSCredential($ClientId, $secureSecret)
             Connect-MgGraph -TenantId $TenantId -ClientSecretCredential $credential -NoWelcome
-            Write-Host "[AzureDiscovery] Connected to Microsoft Graph successfully" -ForegroundColor Green
+            Write-Information "[AzureDiscovery] Connected to Microsoft Graph successfully" -InformationAction Continue
         } else {
-            Write-Host "[AzureDiscovery] Using interactive authentication..." -ForegroundColor Yellow
+            Write-Information "[AzureDiscovery] Using interactive authentication..." -InformationAction Continue
             Connect-MgGraph -TenantId $TenantId -Scopes "User.Read.All","Group.Read.All","Directory.Read.All" -NoWelcome
-            Write-Host "[AzureDiscovery] Connected to Microsoft Graph successfully" -ForegroundColor Green
+            Write-Information "[AzureDiscovery] Connected to Microsoft Graph successfully" -InformationAction Continue
         }
 
         # Generate session ID for output files
@@ -268,7 +338,7 @@ function Start-AzureDiscovery {
         return $discoveryResult
 
     } catch {
-        Write-Host "[AzureDiscovery] ERROR: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Error "[AzureDiscovery] ERROR: $($_.Exception.Message)"
         $result.Errors += @{
             Message = $_.Exception.Message
             Exception = $_
@@ -309,9 +379,11 @@ function Invoke-AzureDiscovery {
         # Establish Azure connection using multiple authentication strategies
         $azureConnection = Connect-AzureWithMultipleStrategies -Configuration $Configuration -Result $Result
         if ($azureConnection) {
-            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure authentication successful" -Level "SUCCESS"
+            Write-Information "[AzureDiscovery] Azure authentication successful using $($azureConnection.Method)" -InformationAction Continue
+            $azureAuthMethod = $azureConnection.Method
         } else {
-            $Result.AddWarning("Could not establish Azure connection, will use Graph API where possible", @{Error="All authentication strategies failed"})
+            Write-Information "[AzureDiscovery] Could not establish Azure connection, will use Graph API where possible" -InformationAction Continue
+            $azureAuthMethod = "None"
         }
         
         #region Enhanced User Discovery - Foundation for Migration Planning
@@ -719,6 +791,7 @@ function Invoke-AzureDiscovery {
                     $owners = $ownersResponse.value
                     $ownerCount = $owners.Count
                 } catch {
+                    Write-Information "[AzureDiscovery] Failed to get group owners for $($group.displayName): $($_.Exception.Message)" -InformationAction Continue
                     $ownerCount = 0
                 }
 
@@ -1898,7 +1971,7 @@ function Invoke-AzureDiscovery {
 
     try {
         # Execute the discovery script directly (we're already authenticated by Start-AzureDiscovery)
-        Write-Host "[AzureDiscovery] Executing discovery logic..." -ForegroundColor Yellow
+        Write-Information "[AzureDiscovery] Executing discovery logic..." -InformationAction Continue
         $discoveredData = & $discoveryScript -Configuration $Configuration -Context $Context -SessionId $SessionId -Connections @{} -Result $Result
 
         # Store results
@@ -1909,7 +1982,7 @@ function Invoke-AzureDiscovery {
         $Result.Success = ($Result.Errors.Count -eq 0)
 
     } catch {
-        Write-Host "[AzureDiscovery] ERROR during discovery execution: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Error "[AzureDiscovery] ERROR during discovery execution: $($_.Exception.Message)"
         $Result.AddError("Discovery execution failed", $_.Exception, @{Phase = "Execution"})
     } finally {
         $Result.EndTime = Get-Date
