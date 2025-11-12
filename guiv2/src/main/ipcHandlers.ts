@@ -2300,7 +2300,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
       // Listen to all 6 PowerShell streams
       const onOutputStream = (data: any) => {
+        console.log(`[IPC Handler] 🎯 Received stream:output event:`, data.data?.substring(0, 100));
         if (mainWindow) {
+          console.log(`[IPC Handler] 📤 Forwarding to renderer as discovery:output (execId: ${execId})`);
           mainWindow.webContents.send('discovery:output', {
             executionId: execId,
             timestamp: new Date().toISOString(),
@@ -2308,11 +2310,15 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
             message: data.data,
             source: moduleName,
           });
+        } else {
+          console.log(`[IPC Handler] ⚠️ mainWindow is null, cannot forward output event`);
         }
       };
 
       const onErrorStream = (data: any) => {
+        console.log(`[IPC Handler] 🎯 Received stream:error event:`, data.data?.substring(0, 100));
         if (mainWindow) {
+          console.log(`[IPC Handler] 📤 Forwarding to renderer as discovery:output (error) (execId: ${execId})`);
           mainWindow.webContents.send('discovery:output', {
             executionId: execId,
             timestamp: new Date().toISOString(),
@@ -2320,11 +2326,15 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
             message: data.data,
             source: moduleName,
           });
+        } else {
+          console.log(`[IPC Handler] ⚠️ mainWindow is null, cannot forward error event`);
         }
       };
 
       const onWarningStream = (data: any) => {
+        console.log(`[IPC Handler] 🎯 Received stream:warning event:`, data.data?.substring(0, 100));
         if (mainWindow) {
+          console.log(`[IPC Handler] 📤 Forwarding to renderer as discovery:output (warning) (execId: ${execId})`);
           mainWindow.webContents.send('discovery:output', {
             executionId: execId,
             timestamp: new Date().toISOString(),
@@ -2332,11 +2342,15 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
             message: data.data,
             source: moduleName,
           });
+        } else {
+          console.log(`[IPC Handler] ⚠️ mainWindow is null, cannot forward warning event`);
         }
       };
 
       const onVerboseStream = (data: any) => {
+        console.log(`[IPC Handler] 🎯 Received stream:verbose event:`, data.data?.substring(0, 100));
         if (mainWindow) {
+          console.log(`[IPC Handler] 📤 Forwarding to renderer as discovery:output (verbose) (execId: ${execId})`);
           mainWindow.webContents.send('discovery:output', {
             executionId: execId,
             timestamp: new Date().toISOString(),
@@ -2344,11 +2358,15 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
             message: data.data,
             source: moduleName,
           });
+        } else {
+          console.log(`[IPC Handler] ⚠️ mainWindow is null, cannot forward verbose event`);
         }
       };
 
       const onDebugStream = (data: any) => {
+        console.log(`[IPC Handler] 🎯 Received stream:debug event:`, data.data?.substring(0, 100));
         if (mainWindow) {
+          console.log(`[IPC Handler] 📤 Forwarding to renderer as discovery:output (debug) (execId: ${execId})`);
           mainWindow.webContents.send('discovery:output', {
             executionId: execId,
             timestamp: new Date().toISOString(),
@@ -2356,11 +2374,15 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
             message: data.data,
             source: moduleName,
           });
+        } else {
+          console.log(`[IPC Handler] ⚠️ mainWindow is null, cannot forward debug event`);
         }
       };
 
       const onInformationStream = (data: any) => {
+        console.log(`[IPC Handler] 🎯 Received stream:information event:`, data.data?.substring(0, 100));
         if (mainWindow) {
+          console.log(`[IPC Handler] 📤 Forwarding to renderer as discovery:output (information) (execId: ${execId})`);
           mainWindow.webContents.send('discovery:output', {
             executionId: execId,
             timestamp: new Date().toISOString(),
@@ -2368,16 +2390,20 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
             message: data.data,
             source: moduleName,
           });
+        } else {
+          console.log(`[IPC Handler] ⚠️ mainWindow is null, cannot forward information event`);
         }
       };
 
       // Register listeners
+      console.log(`[IPC Handler] 🔌 Registering stream listeners for execId: ${execId}`);
       psService.on('stream:output', onOutputStream);
       psService.on('stream:error', onErrorStream);
       psService.on('stream:warning', onWarningStream);
       psService.on('stream:verbose', onVerboseStream);
       psService.on('stream:debug', onDebugStream);
       psService.on('stream:information', onInformationStream);
+      console.log(`[IPC Handler] ✅ All stream listeners registered for execId: ${execId}`);
 
       // Store cleanup functions
       outputListeners.push(() => psService.off('stream:output', onOutputStream));
@@ -2413,7 +2439,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       );
 
       // Cleanup listeners
+      console.log(`[IPC Handler] 🧹 Cleaning up stream listeners for execId: ${execId}`);
       outputListeners.forEach(cleanup => cleanup());
+      console.log(`[IPC Handler] ✅ All stream listeners cleaned up for execId: ${execId}`);
 
       console.log(`[IPC:discovery:execute] ✅ ${moduleName} completed successfully`);
       console.log(`[IPC:discovery:execute] Duration: ${Date.now() - execution.startTime}ms`);

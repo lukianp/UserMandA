@@ -22,7 +22,15 @@
       "Bash(taskkill:*)",
       "Bash(npx electron-forge:*)",
       "Bash(npx @electron-forge/cli start --help)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(Start-Sleep -Seconds 10)",
+      "Bash(npx @electron-forge/cli start)",
+      "Bash(Select-Object -First 10)",
+      "Bash(npm run build:renderer:*)",
+      "Bash(Select-Object -First 5)",
+      "Bash(npm run build:main:*)",
+      "Bash($null)",
+      "Bash(Start-Sleep -Seconds 2)"
     ],
     "deny": [],
     "ask": [],

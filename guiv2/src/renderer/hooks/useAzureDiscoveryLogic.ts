@@ -3,7 +3,7 @@
  * Handles Azure AD/Microsoft 365 discovery operations
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
@@ -25,7 +25,7 @@ export interface AzureDiscoveryFormData {
   includeLicenses: boolean;
   maxResults: number;
   timeout: number; // seconds
-  showWindow: boolean; // Show PowerShell window during execution
+  showWindow: boolean; // true = external DOS terminal, false = integrated GUI dialog (recommended)
 }
 
 export const useAzureDiscoveryLogic = () => {
@@ -42,13 +42,14 @@ export const useAzureDiscoveryLogic = () => {
     includeLicenses: true,
     maxResults: 50000,
     timeout: 1800, // 30 minutes (allows time for module installation on first run)
-    showWindow: false, // Don't show external PowerShell window - use integrated dialog instead
+    showWindow: false, // Use integrated PowerShell dialog (set to true for external terminal window)
   });
 
   // Execution state
   const [isRunning, setIsRunning] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [currentToken, setCurrentToken] = useState<string | null>(null);
+  const currentTokenRef = useRef<string | null>(null); // Ref to avoid closure issues in event handlers
   const [progress, setLocalProgress] = useState<DiscoveryProgress | null>(null);
   const [results, setResults] = useState<DiscoveryResult[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +87,7 @@ export const useAzureDiscoveryLogic = () => {
       includeLicenses: true,
       maxResults: 50000,
       timeout: 600,
-      showWindow: false, // Don't show external PowerShell window
+      showWindow: false, // Use integrated PowerShell dialog (set to true for external terminal window)
     });
     setError(null);
     setLogs([]);
@@ -128,10 +129,15 @@ export const useAzureDiscoveryLogic = () => {
     };
   }, [isRunning, currentToken, logs.length, addLog]);
 
-  // Discovery event handlers
+  // Discovery event handlers - set up ONCE on mount to avoid race conditions
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    console.log('[AzureDiscoveryHook] Setting up GLOBAL event listeners (mount)');
+
     const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
-      if (data.executionId === currentToken) {
+      console.log('[AzureDiscoveryHook] Progress event received:', data, 'currentTokenRef:', currentTokenRef.current);
+      // Check against the CURRENT token at the time of the event
+      if (data.executionId === currentTokenRef.current) {
         const progressData: DiscoveryProgress = {
           percentage: data.percentage,
           message: `${data.currentPhase} (${data.itemsProcessed || 0}/${data.totalItems || 0})`,
@@ -149,18 +155,24 @@ export const useAzureDiscoveryLogic = () => {
         setLocalProgress(progressData);
         setProgress(progressData);
         addLog(progressData.message, 'info');
+      } else {
+        console.log('[AzureDiscoveryHook] Progress event executionId mismatch:', data.executionId, 'vs', currentTokenRef.current);
       }
     });
 
     const unsubscribeOutput = window.electron.onDiscoveryOutput((data) => {
-      if (data.executionId === currentToken) {
+      console.log('[AzureDiscoveryHook] Output event received:', data, 'currentTokenRef:', currentTokenRef.current);
+      if (data.executionId === currentTokenRef.current) {
         const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
         addLog(data.message, logLevel);
+      } else {
+        console.log('[AzureDiscoveryHook] Output event executionId mismatch:', data.executionId, 'vs', currentTokenRef.current);
       }
     });
 
     const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
-      if (data.executionId === currentToken) {
+      console.log('[AzureDiscoveryHook] Complete event received:', data, 'currentTokenRef:', currentTokenRef.current);
+      if (data.executionId === currentTokenRef.current) {
         const discoveryResult: DiscoveryResult = {
           id: `azure-discovery-${Date.now()}`,
           name: 'Azure Discovery',
@@ -189,7 +201,8 @@ export const useAzureDiscoveryLogic = () => {
     });
 
     const unsubscribeError = window.electron.onDiscoveryError((data) => {
-      if (data.executionId === currentToken) {
+      console.log('[AzureDiscoveryHook] Error event received:', data, 'currentTokenRef:', currentTokenRef.current);
+      if (data.executionId === currentTokenRef.current) {
         setError(data.error);
         addLog(`${data.error}`, 'error');
         setIsRunning(false);
@@ -200,7 +213,8 @@ export const useAzureDiscoveryLogic = () => {
     });
 
     const unsubscribeCancelled = window.electron.onDiscoveryCancelled?.((data) => {
-      if (data.executionId === currentToken) {
+      console.log('[AzureDiscoveryHook] Cancelled event received:', data, 'currentTokenRef:', currentTokenRef.current);
+      if (data.executionId === currentTokenRef.current) {
         addLog('Discovery cancelled by user', 'warning');
         setIsRunning(false);
         setIsCancelling(false);
@@ -210,13 +224,14 @@ export const useAzureDiscoveryLogic = () => {
     });
 
     return () => {
+      console.log('[AzureDiscoveryHook] Cleaning up event listeners');
       if (unsubscribeProgress) unsubscribeProgress();
       if (unsubscribeOutput) unsubscribeOutput();
       if (unsubscribeComplete) unsubscribeComplete();
       if (unsubscribeError) unsubscribeError();
       if (unsubscribeCancelled) unsubscribeCancelled();
     };
-  }, [currentToken, setProgress, addResult, selectedSourceProfile, addLog]);
+  }, []); // Empty dependency array - set up once on mount to avoid race conditions
 
   // Test connection to Azure
   const testConnection = useCallback(async () => {
@@ -279,12 +294,17 @@ export const useAzureDiscoveryLogic = () => {
 
     const token = `azure-discovery-${Date.now()}`;
     setCurrentToken(token);
+    currentTokenRef.current = token; // Update ref immediately so event handlers have the latest value
 
     console.log(`[AzureDiscoveryHook] Starting Azure discovery for company: ${selectedSourceProfile.companyName}`);
+    console.log('[AzureDiscoveryHook] Full profile:', selectedSourceProfile);
+
     addLog(`Starting Azure discovery for ${selectedSourceProfile.companyName}...`, 'info');
-    addLog(`Tenant ID: ${selectedSourceProfile.tenantId || 'N/A'}`, 'info');
-    addLog(`Client ID: ${selectedSourceProfile.clientId || 'N/A'}`, 'info');
-    addLog(`Has credentials: ${selectedSourceProfile.clientId ? 'Yes' : 'No'}`, 'info');
+    const tenantId = selectedSourceProfile.tenantId || selectedSourceProfile.credentials?.azureTenantId || 'N/A';
+    const clientId = selectedSourceProfile.clientId || selectedSourceProfile.credentials?.azureClientId || 'N/A';
+    addLog(`Tenant ID: ${tenantId}`, 'info');
+    addLog(`Client ID: ${clientId}`, 'info');
+    addLog(`Profile has credentials: ${!!(selectedSourceProfile.credentials) ? 'Yes' : 'No'}`, 'info');
 
     // Log selected services
     const services: string[] = [];
@@ -308,7 +328,10 @@ export const useAzureDiscoveryLogic = () => {
     });
 
     try {
+      addLog('Connecting to Azure and initializing discovery...', 'info');
+
       // Use the correct discovery:execute handler that emits streaming events
+      console.log('[AzureDiscoveryHook] Calling executeDiscovery with token:', token);
       const result = await window.electron.executeDiscovery({
         moduleName: 'Azure',
         parameters: {
@@ -327,6 +350,7 @@ export const useAzureDiscoveryLogic = () => {
       });
 
       console.log('[AzureDiscoveryHook] Discovery execution completed:', result);
+      addLog('Discovery execution call completed', 'success');
 
       // Note: Completion will be handled by the discovery:complete event listener
       // Don't set isRunning to false here as the event listener will do it

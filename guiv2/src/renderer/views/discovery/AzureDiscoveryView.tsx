@@ -166,6 +166,22 @@ const AzureDiscoveryView: React.FC = () => {
                 </div>
 
                 {/* Advanced Settings */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Execution Options
+                  </label>
+                  <Checkbox
+                    label="Use External Terminal (Advanced)"
+                    checked={formData.showWindow}
+                    onChange={(checked) => updateFormField('showWindow', checked)}
+                    disabled={isRunning}
+                    data-cy="show-window-checkbox" data-testid="show-window-checkbox"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 ml-6">
+                    Unchecked (default): Modern integrated dialog with controls. Checked: External DOS terminal window.
+                  </p>
+                </div>
+
                 <Input
                   label="Max Results"
                   type="number"
@@ -338,14 +354,16 @@ const AzureDiscoveryView: React.FC = () => {
                     <div
                       key={index}
                       className={`mb-1 ${
-                        log.includes('ERROR')
+                        log.level === 'error'
                           ? 'text-red-400'
-                          : log.includes('successful') || log.includes('completed')
+                          : log.level === 'success'
                           ? 'text-green-400'
+                          : log.level === 'warning'
+                          ? 'text-yellow-400'
                           : 'text-gray-300'
                       }`}
                     >
-                      {log}
+                      <span className="text-gray-500">[{log.timestamp}]</span> {log.message}
                     </div>
                   ))
                 )}

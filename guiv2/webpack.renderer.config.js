@@ -1,5 +1,6 @@
 const path = require('path');
 const webpack = require('webpack');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const CspHtmlWebpackPlugin = require('csp-html-webpack-plugin');
@@ -27,6 +28,13 @@ const rendererConfig = {
   },
   plugins: [
     ...plugins,
+    // HTML plugin to inject bundles into index.html
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, 'src/index.html'),
+      filename: 'index.html',
+      inject: 'body',
+      scriptLoading: 'defer',
+    }),
     // Provide global polyfills for renderer process
     new webpack.ProvidePlugin({
       process: 'process/browser',

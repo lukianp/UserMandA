@@ -676,9 +676,12 @@ class PowerShellExecutionService extends EventEmitter {
         const message = line.replace(/^(INFORMATION|INFO): /, '');
         information.push(message);
         if (streamOutput) {
+          console.log(`[PowerShellService] 🔔 Emitting INFORMATION stream event: ${message.substring(0, 100)}...`);
           const data: OutputData = { executionId, data: message, type: 'information', timestamp: new Date() };
           this.emit('output', data);
           this.emit('stream:information', data);
+        } else {
+          console.log(`[PowerShellService] ⚠️ streamOutput is FALSE, not emitting: ${message.substring(0, 100)}...`);
         }
       }
       // Parse ERROR stream (non-terminating errors)
@@ -925,9 +928,9 @@ class PowerShellExecutionService extends EventEmitter {
       // Build PowerShell command to import module and call function
       const paramsJson = JSON.stringify(params);
 
-      // PowerShell 5.1 compatible execution with clean output
+      // If showWindow is enabled, create a user-friendly visible script
       const command = options.showWindow ? `
-        # Discovery Module Execution Window (PowerShell 5.1 compatible)
+        # Discovery Module Execution Window
         $Host.UI.RawUI.WindowTitle = "Discovery Module: ${functionName}"
 
         Write-Host '========================================' -ForegroundColor Cyan
@@ -941,14 +944,15 @@ class PowerShellExecutionService extends EventEmitter {
         Write-Host ''
 
         # Enable ONLY Information stream for clean, summary-level output
+        # Suppress verbose/debug to avoid HTTP request spam from Graph SDK
         $InformationPreference = 'Continue'
-        $VerbosePreference = 'SilentlyContinue'
-        $DebugPreference = 'SilentlyContinue'
-        $WarningPreference = 'Continue'
+        $VerbosePreference = 'SilentlyContinue'  # Suppress verbose HTTP logs
+        $DebugPreference = 'SilentlyContinue'    # Suppress debug HTTP logs
+        $WarningPreference = 'Continue'          # Keep warnings visible
 
         Import-Module '${modulePath}' -Force -ErrorAction Stop
 
-        # Convert JSON to hashtable recursively (PowerShell 5.1 compatible)
+        # Convert JSON to hashtable recursively
         function ConvertTo-HashtableRecursive {
             param([Parameter(ValueFromPipeline)] $InputObject)
 
@@ -981,7 +985,7 @@ class PowerShellExecutionService extends EventEmitter {
         Write-Host 'Starting discovery execution...' -ForegroundColor Green
         Write-Host ''
 
-        # Execute function - all Write-Information output will be visible
+        # Execute function - all Write-Information, Write-Verbose output will be visible
         try {
             $result = ${functionName} @params
 
@@ -1015,11 +1019,11 @@ class PowerShellExecutionService extends EventEmitter {
             throw
         }
       ` : `
-        # Hidden execution mode with clean summary output (PowerShell 5.1 compatible)
+        # Hidden execution mode with clean summary output
         $InformationPreference = 'Continue'
-        $VerbosePreference = 'SilentlyContinue'
-        $DebugPreference = 'SilentlyContinue'
-        $WarningPreference = 'Continue'
+        $VerbosePreference = 'SilentlyContinue'  # Suppress verbose HTTP logs
+        $DebugPreference = 'SilentlyContinue'    # Suppress debug HTTP logs
+        $WarningPreference = 'Continue'          # Keep warnings visible
 
         Import-Module '${modulePath}' -Force -ErrorAction Stop
 
@@ -1054,7 +1058,8 @@ class PowerShellExecutionService extends EventEmitter {
         $params = ConvertTo-HashtableRecursive $paramsObj
 
         # Execute function and capture result
-        $result = ${functionName} @params
+        # Note: All output streams (including Information) are already configured above
+        $result = & { ${functionName} @params }
 
         # Output JSON result marker and data
         Write-Output "<<<JSON_RESULT_START>>>"
@@ -1125,32 +1130,13 @@ class PowerShellExecutionService extends EventEmitter {
         connectionType: credentials.connectionType
       });
 
-      // Validate required Azure credentials
-      const hasTenantId = !!(credentials.tenantId);
-      const hasClientId = !!(credentials.clientId || credentials.username);
-      const hasClientSecret = !!(credentials.clientSecret || credentials.password);
-
-      if (!hasTenantId || !hasClientId || !hasClientSecret) {
-        const missingFields = [];
-        if (!hasTenantId) missingFields.push('TenantId');
-        if (!hasClientId) missingFields.push('ClientId');
-        if (!hasClientSecret) missingFields.push('ClientSecret');
-
-        return {
-          success: false,
-          error: `Missing required Azure credentials: ${missingFields.join(', ')}. Please ensure your credentials include Tenant ID, Client ID, and Client Secret.`,
-          duration: 0,
-          warnings: [],
-        };
-      }
-
       // Prepare discovery parameters with credentials
       // IMPORTANT: Additional params must be nested in AdditionalParams hashtable
       const discoveryParams = {
         CompanyName: companyName,
         TenantId: credentials.tenantId,
-        ClientId: credentials.clientId || credentials.username,
-        ClientSecret: credentials.clientSecret || credentials.password,
+        ClientId: credentials.clientId,
+        ClientSecret: credentials.clientSecret,
         OutputPath: `C:\\DiscoveryData\\${companyName}\\Raw`,
         AdditionalParams: additionalParams,  // Nested as hashtable
       };
@@ -1162,21 +1148,6 @@ class PowerShellExecutionService extends EventEmitter {
       // Construct module path and function name
       const modulePath = path.join(this.config.scriptsBaseDir, 'Modules', 'Discovery', `${moduleName}Discovery.psm1`);
       const functionName = `Start-${moduleName}Discovery`;
-
-      // Pre-flight check: Validate module exists
-      try {
-        const fs = require('fs');
-        if (!fs.existsSync(modulePath)) {
-          return {
-            success: false,
-            error: `Discovery module not found: ${modulePath}`,
-            duration: 0,
-            warnings: [],
-          };
-        }
-      } catch (fsError) {
-        console.warn(`[PowerShellService] Could not verify module path: ${fsError}`);
-      }
 
       // Execute the discovery module
       const result = await this.executeModule(modulePath, functionName, discoveryParams, {
