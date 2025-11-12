@@ -16,7 +16,13 @@
       "Bash(do if grep -q \"Write-Host\" \"$file\")",
       "Bash(then echo \"$file\")",
       "Bash(fi)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(npm run build:*)",
+      "Bash(test:*)",
+      "Bash(taskkill:*)",
+      "Bash(npx electron-forge:*)",
+      "Bash(npx @electron-forge/cli start --help)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": [],

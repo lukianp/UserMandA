@@ -11,6 +11,7 @@ import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import StatusIndicator from '../../components/atoms/StatusIndicator';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const AzureDiscoveryView: React.FC = () => {
   const {
@@ -31,6 +32,8 @@ const AzureDiscoveryView: React.FC = () => {
     exportResults,
     clearLogs,
     selectedProfile,
+    showExecutionDialog,
+    setShowExecutionDialog,
   } = useAzureDiscoveryLogic();
 
   return (
@@ -351,6 +354,25 @@ const AzureDiscoveryView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isRunning && setShowExecutionDialog(false)}
+        scriptName="Azure Discovery"
+        scriptDescription="Discovering users, groups, Teams, SharePoint, OneDrive, and Exchange Online"
+        logs={logs}
+        isRunning={isRunning}
+        isCancelling={isCancelling}
+        progress={progress ? {
+          percentage: progress.overallProgress,
+          message: progress.message
+        } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

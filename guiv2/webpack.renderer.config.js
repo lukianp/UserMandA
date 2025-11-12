@@ -15,7 +15,13 @@ const rendererRules = baseRules.filter(rule =>
 );
 
 const rendererConfig = {
+  entry: './src/renderer.tsx',
+  output: {
+    filename: '[name].[contenthash].js',
+    publicPath: './',
+  },
   mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+  target: 'electron-renderer',
   module: {
     rules: rendererRules,  // Use filtered rules without asset-relocator
   },
@@ -182,4 +188,8 @@ const rendererConfig = {
   },
 };
 
-module.exports = { rendererConfig };
+// Export config object for webpack-plugin (Electron Forge)
+module.exports.rendererConfig = rendererConfig;
+
+// Export config directly for standalone webpack builds
+module.exports = rendererConfig;
