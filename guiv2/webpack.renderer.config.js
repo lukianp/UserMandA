@@ -18,6 +18,7 @@ const rendererRules = baseRules.filter(rule =>
 const rendererConfig = {
   entry: './src/renderer.tsx',
   output: {
+    path: path.resolve(__dirname, '.webpack/renderer/main_window'),
     filename: '[name].[contenthash].js',
     publicPath: './',
   },

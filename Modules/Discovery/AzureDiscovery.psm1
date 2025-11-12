@@ -1981,6 +1981,39 @@ function Invoke-AzureDiscovery {
         } else { 0 }
         $Result.Success = ($Result.Errors.Count -eq 0)
 
+        # Export discovered data to CSV files
+        if ($discoveredData -and $discoveredData.Count -gt 0) {
+            Write-Information "[AzureDiscovery] Exporting discovered data to CSV files..." -InformationAction Continue
+
+            foreach ($group in $discoveredData) {
+                $dataType = if ($group.Name) { $group.Name } else { 'Data' }
+                $fileName = "AzureDiscovery_$dataType.csv"
+                $filePath = Join-Path $OutputPath $fileName
+
+                try {
+                    # Add session metadata to each record
+                    $group.Group | ForEach-Object {
+                        $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "AzureDiscovery" -Force
+                        $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
+                    }
+
+                    # Export to CSV
+                    $group.Group | Export-Csv -Path $filePath -NoTypeInformation -Force -Encoding UTF8
+
+                    Write-Information "[AzureDiscovery] Exported $($group.Count) $dataType records to $fileName" -InformationAction Continue
+                    Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Exported $($group.Count) $dataType records to $fileName" -Level "SUCCESS"
+                } catch {
+                    $errorMsg = "Failed to export $dataType to CSV: $($_.Exception.Message)"
+                    Write-Warning "[AzureDiscovery] $errorMsg"
+                    $Result.AddWarning($errorMsg, @{DataType = $dataType; FilePath = $filePath})
+                }
+            }
+
+            Write-Information "[AzureDiscovery] CSV export completed. Files saved to: $OutputPath" -InformationAction Continue
+        } else {
+            Write-Information "[AzureDiscovery] No data discovered to export" -InformationAction Continue
+        }
+
     } catch {
         Write-Error "[AzureDiscovery] ERROR during discovery execution: $($_.Exception.Message)"
         $Result.AddError("Discovery execution failed", $_.Exception, @{Phase = "Execution"})

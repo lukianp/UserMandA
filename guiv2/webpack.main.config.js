@@ -13,6 +13,8 @@ const mainConfig = {
   target: 'electron-main', // CRITICAL: Specify electron-main target
   // Put your normal webpack config below here
   output: {
+    path: require('path').resolve(__dirname, '.webpack/main'),
+    filename: 'main.js',
     publicPath: '', // Prevent automatic publicPath
   },
   module: {
@@ -64,7 +66,7 @@ const mainConfig = {
       new TerserPlugin({
         terserOptions: {
           compress: {
-            drop_console: process.env.NODE_ENV === 'production',
+            drop_console: false, // Temporarily disabled for debugging WindowManager
             drop_debugger: true,
           },
           mangle: true,
