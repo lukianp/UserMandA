@@ -30,7 +30,7 @@ export interface AzureDiscoveryFormData {
 
 export const useAzureDiscoveryLogic = () => {
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
-  const { addResult, setProgress } = useDiscoveryStore();
+  const { addResult, setProgress, getResultsByModuleName } = useDiscoveryStore();
   // Form state
   const [formData, setFormData] = useState<AzureDiscoveryFormData>({
     includeUsers: true,
@@ -98,6 +98,16 @@ export const useAzureDiscoveryLogic = () => {
     const timestamp = new Date().toLocaleTimeString();
     setLogs(prev => [...prev, { timestamp, message, level }]);
   }, []);
+
+  // Load previous discovery results from store on mount
+  useEffect(() => {
+    const previousResults = getResultsByModuleName('AzureDiscovery');
+    if (previousResults && previousResults.length > 0) {
+      console.log('[AzureDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
+      setResults(previousResults);
+      addLog(`Restored ${previousResults.length} previous discovery result(s)`, 'info');
+    }
+  }, [getResultsByModuleName, addLog]);
 
   // Safety mechanism: Reset state if discovery is running but hasn't received events for too long
   useEffect(() => {

@@ -3,7 +3,11 @@
  * Provides state management and business logic for application discovery operations
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useProfileStore } from '../store/useProfileStore';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import { getElectronAPI } from '../lib/electron-api-fallback';
+import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 
 /**
  * Log entry interface
@@ -52,6 +56,8 @@ export interface ApplicationDiscoveryHookResult {
   exportResults: () => Promise<void>;
   clearLogs: () => void;
   selectedProfile: Profile | null;
+  showExecutionDialog: boolean;
+  setShowExecutionDialog: (show: boolean) => void;
 
   // Additional properties expected by the view
   config: any;
@@ -75,6 +81,8 @@ export interface ApplicationDiscoveryHookResult {
  * Custom hook for application discovery logic
  */
 export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult => {
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult: addDiscoveryResult, getResultsByModuleName } = useDiscoveryStore();
   const [isRunning, setIsRunning] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [progress, setProgress] = useState<ProgressInfo | null>(null);
@@ -82,6 +90,9 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
+  const [currentToken, setCurrentToken] = useState<string | null>(null);
+  const currentTokenRef = useRef<string | null>(null);
 
   // Additional state for view compatibility
   const [config, setConfig] = useState<any>({
@@ -95,7 +106,7 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTab, setSelectedTab] = useState<string>('software');
   const [searchText, setSearchText] = useState<string>('');
-  const [errors, setErrors] = useState<string[] | null>(null);
+  const [errors, setErrors] = useState<string[]>([]);
 
   /**
    * Add a log entry
@@ -109,11 +120,93 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
     setLogs(prev => [...prev, entry]);
   }, []);
 
+  // Load previous discovery results from store on mount
+  useEffect(() => {
+    const previousResults = getResultsByModuleName('ApplicationDiscovery');
+    if (previousResults && previousResults.length > 0) {
+      console.log('[ApplicationDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
+      const latestResult = previousResults[previousResults.length - 1];
+      setResults(latestResult);
+      addLog('info', `Restored ${previousResults.length} previous discovery result(s)`);
+    }
+  }, [getResultsByModuleName, addLog]);
+
+  // Event listeners for PowerShell streaming
+  useEffect(() => {
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warn' : 'info';
+        addLog(logLevel, data.message);
+      }
+    });
+
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setIsRunning(false);
+        setIsCancelling(false);
+        setCurrentToken(null);
+
+        const result = {
+          id: `application-discovery-${Date.now()}`,
+          name: 'Application Discovery',
+          moduleName: 'ApplicationDiscovery',
+          displayName: 'Application Discovery',
+          itemCount: data?.result?.totalItems || data?.result?.RecordCount || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalItems || data?.result?.RecordCount || 0} applications`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setResults(result);
+        addDiscoveryResult(result);
+        addLog('info', `Discovery completed! Found ${result.itemCount} applications.`);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setIsRunning(false);
+        setError(data.error);
+        addLog('error', `Discovery failed: ${data.error}`);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setIsRunning(false);
+        setIsCancelling(false);
+        setCurrentToken(null);
+        addLog('warn', 'Discovery cancelled by user');
+      }
+    });
+
+    return () => {
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
+    };
+  }, [addLog, addDiscoveryResult]);
+
   /**
    * Start the application discovery process
    */
   const startDiscovery = useCallback(async () => {
     if (isRunning) return;
+
+    // Check if a profile is selected
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setError(errorMessage);
+      addLog('error', errorMessage);
+      return;
+    }
 
     setIsRunning(true);
     setIsCancelling(false);
@@ -121,72 +214,75 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
     setResults(null);
     setError(null);
     setLogs([]);
+    setShowExecutionDialog(true);
 
-    addLog('info', 'Starting application discovery...');
+    const token = `application-discovery-${Date.now()}`;
+    setCurrentToken(token);
+    currentTokenRef.current = token;
+
+    addLog('info', `Starting application discovery for ${selectedSourceProfile.companyName}...`);
 
     try {
-      // Simulate discovery process
-      setProgress({ current: 0, total: 100, percentage: 0, message: 'Initializing...' });
+      // Call PowerShell module with config parameters
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'Application',
+        parameters: {
+          IncludeSoftware: config.includeSoftware,
+          IncludeProcesses: config.includeProcesses,
+          IncludeServices: config.includeServices,
+          ScanRegistry: config.scanRegistry,
+          ScanFilesystem: config.scanFilesystem,
+          ScanPorts: config.scanPorts,
+          showWindow: false, // Don't show PowerShell console window
+        },
+        executionId: token,
+      });
 
-      // Mock progress updates
-      const progressSteps = [
-        { current: 20, message: 'Scanning registry for installed applications...' },
-        { current: 40, message: 'Checking Program Files directories...' },
-        { current: 60, message: 'Enumerating running processes...' },
-        { current: 80, message: 'Analyzing service dependencies...' },
-        { current: 100, message: 'Discovery completed' },
-      ];
+      console.log('[ApplicationDiscoveryHook] Discovery execution completed:', result);
+      addLog('info', 'Discovery execution call completed');
 
-      for (const step of progressSteps) {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        if (isCancelling) break;
-        setProgress({ ...step, total: 100, percentage: step.current });
-        addLog('info', step.message);
-      }
-
-      if (!isCancelling) {
-        // Mock results
-        const mockResults = {
-          applications: [
-            { name: 'Microsoft Office', version: '365', vendor: 'Microsoft', installDate: '2023-01-15' },
-            { name: 'Google Chrome', version: '120.0', vendor: 'Google', installDate: '2023-06-10' },
-            { name: 'Adobe Acrobat', version: '23.0', vendor: 'Adobe', installDate: '2023-03-20' },
-          ],
-          processes: [
-            { name: 'chrome.exe', pid: 1234, user: 'user1', cpuUsage: 5.2, memoryUsage: 150000000 },
-            { name: 'explorer.exe', pid: 5678, user: 'user1', cpuUsage: 2.1, memoryUsage: 80000000 },
-          ],
-          services: [
-            { name: 'wuauserv', displayName: 'Windows Update', status: 'Running', startType: 'Automatic' },
-            { name: 'Spooler', displayName: 'Print Spooler', status: 'Running', startType: 'Automatic' },
-          ],
-        };
-
-        setResults(mockResults);
-        addLog('info', `Discovery completed. Found ${mockResults.applications.length} applications, ${mockResults.processes.length} processes, ${mockResults.services.length} services.`);
-      } else {
-        addLog('warn', 'Discovery was cancelled by user.');
-      }
+      // Note: Completion will be handled by the discovery:complete event listener
     } catch (err: any) {
       const errorMessage = err.message || 'Unknown error occurred during discovery';
       setError(errorMessage);
       addLog('error', errorMessage);
-    } finally {
       setIsRunning(false);
-      setIsCancelling(false);
+      setCurrentToken(null);
       setProgress(null);
     }
-  }, [isRunning, isCancelling, addLog]);
+  }, [isRunning, config, selectedSourceProfile, addLog]);
 
   /**
    * Cancel the ongoing discovery process
    */
   const cancelDiscovery = useCallback(async () => {
-    if (!isRunning) return;
+    if (!isRunning || !currentToken) return;
 
     setIsCancelling(true);
-    addLog('info', 'Cancelling discovery...');
-  }, [isRunning, addLog]);
+    addLog('warn', 'Cancelling discovery...');
+
+    try {
+      await window.electron.cancelDiscovery(currentToken);
+      addLog('info', 'Discovery cancellation requested successfully');
+
+      // Set a timeout to reset state in case the cancelled event doesn't fire
+      setTimeout(() => {
+        setIsRunning(false);
+        setIsCancelling(false);
+        setCurrentToken(null);
+        setProgress(null);
+        addLog('warn', 'Discovery cancelled - reset to start state');
+      }, 2000);
+    } catch (err: any) {
+      const errorMessage = err.message || 'Error cancelling discovery';
+      addLog('error', errorMessage);
+      // Reset state even on error
+      setIsRunning(false);
+      setIsCancelling(false);
+      setCurrentToken(null);
+      setProgress(null);
+    }
+  }, [isRunning, currentToken, addLog]);
 
   /**
    * Export discovery results
@@ -268,6 +364,8 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
     exportResults,
     clearLogs,
     selectedProfile,
+    showExecutionDialog,
+    setShowExecutionDialog,
 
     // Additional properties
     config,
@@ -285,6 +383,6 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
     setSelectedTab,
     setSearchText,
     exportData,
-  
+
   };
 };

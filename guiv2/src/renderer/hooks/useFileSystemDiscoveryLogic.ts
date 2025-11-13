@@ -16,6 +16,7 @@ import {
   FileSystemProgress,
 } from '../types/models/filesystem';
 import type { ProgressData } from '../../shared/types';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 export interface UseFileSystemDiscoveryLogicReturn {
   // Discovery state
@@ -79,6 +80,7 @@ export interface UseFileSystemDiscoveryLogicReturn {
 }
 
 export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn => {
+  const { getResultsByModuleName } = useDiscoveryStore();
   const [result, setResult] = useState<FileSystemDiscoveryResult | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState<FileSystemProgress | null>(null);
@@ -104,6 +106,16 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
 
   const [searchText, setSearchText] = useState('');
   const [discoveryHistory, setDiscoveryHistory] = useState<FileSystemDiscoveryResult[]>([]);
+
+  // Load previous discovery results from store on mount
+  useEffect(() => {
+    const previousResults = getResultsByModuleName('FileSystemDiscovery');
+    if (previousResults && previousResults.length > 0) {
+      console.log('[FileSystemDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
+      const latestResult = previousResults[previousResults.length - 1];
+      setResult(latestResult as FileSystemDiscoveryResult);
+    }
+  }, [getResultsByModuleName]);
 
   const startDiscovery = useCallback(async () => {
     setIsRunning(true);

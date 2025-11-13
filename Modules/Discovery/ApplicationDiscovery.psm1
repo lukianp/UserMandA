@@ -1824,12 +1824,135 @@ function Invoke-ApplicationDiscovery {
     return $result
 }
 
+<#
+.SYNOPSIS
+    Entry point for Application Discovery called by the GUI/PowerShellService
+.DESCRIPTION
+    Standalone discovery function that connects using provided credentials and discovers applications
+#>
+function Start-ApplicationDiscovery {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [string]$CompanyName,
+
+        [Parameter(Mandatory=$false)]
+        [string]$TenantId,
+
+        [Parameter(Mandatory=$false)]
+        [string]$ClientId,
+
+        [Parameter(Mandatory=$false)]
+        [string]$ClientSecret,
+
+        [Parameter(Mandatory=$false)]
+        [string]$OutputPath,
+
+        [Parameter(Mandatory=$false)]
+        [hashtable]$AdditionalParams = @{}
+    )
+
+    Write-Information "[ApplicationDiscovery] Starting Application discovery for $CompanyName..." -InformationAction Continue
+    Write-Information "[ApplicationDiscovery] Tenant ID: $TenantId" -InformationAction Continue
+
+    # Pre-flight validation
+    if (-not $TenantId) {
+        throw "TenantId is required for Application discovery"
+    }
+    if (-not $ClientId) {
+        throw "ClientId is required for Application discovery"
+    }
+    if (-not $ClientSecret) {
+        throw "ClientSecret is required for Application discovery"
+    }
+
+    # Initialize result
+    $result = [PSCustomObject]@{
+        Success = $false
+        RecordCount = 0
+        Errors = @()
+        Warnings = @()
+        Metadata = @{}
+        Data = $null
+        TotalItems = 0
+        OutputPath = $OutputPath
+    }
+
+    try {
+        Write-Information "[ApplicationDiscovery] Connecting to Microsoft Graph..." -InformationAction Continue
+
+        # Connect to Microsoft Graph using client credentials
+        try {
+            $secureClientSecret = ConvertTo-SecureString -String $ClientSecret -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($ClientId, $secureClientSecret)
+
+            Connect-MgGraph -TenantId $TenantId -ClientSecretCredential $credential -NoWelcome -ErrorAction Stop
+            Write-Information "[ApplicationDiscovery] Connected to Microsoft Graph" -InformationAction Continue
+        } catch {
+            throw "Failed to connect to Microsoft Graph: $($_.Exception.Message)"
+        }
+
+        # Build configuration hashtable from AdditionalParams
+        $config = @{
+            IncludeIntuneApps = if ($AdditionalParams.ContainsKey('IncludeIntuneApps')) { $AdditionalParams.IncludeIntuneApps } else { $true }
+            IncludeDNSApps = if ($AdditionalParams.ContainsKey('IncludeDNSApps')) { $AdditionalParams.IncludeDNSApps } else { $false }
+            IncludeInternetApps = if ($AdditionalParams.ContainsKey('IncludeInternetApps')) { $AdditionalParams.IncludeInternetApps } else { $false }
+            IncludeLicenseInfo = if ($AdditionalParams.ContainsKey('IncludeLicenseInfo')) { $AdditionalParams.IncludeLicenseInfo } else { $true }
+            MaxResults = if ($AdditionalParams.ContainsKey('MaxResults')) { $AdditionalParams.MaxResults } else { 50000 }
+        }
+
+        # Build context
+        $context = @{
+            Paths = @{
+                RawDataOutput = $OutputPath
+            }
+            CompanyName = $CompanyName
+        }
+
+        # Generate session ID
+        $sessionId = [guid]::NewGuid().ToString()
+
+        Write-Information "[ApplicationDiscovery] Invoking discovery with session ID: $sessionId" -InformationAction Continue
+
+        # Call the main discovery function
+        $discoveryResult = Invoke-ApplicationDiscovery -Configuration $config -Context $context -SessionId $sessionId
+
+        if ($discoveryResult.Success) {
+            $result.Success = $true
+            $result.RecordCount = $discoveryResult.RecordCount
+            $result.TotalItems = $discoveryResult.RecordCount
+            $result.Data = $discoveryResult.Data
+            $result.Metadata = $discoveryResult.Metadata
+
+            Write-Information "[ApplicationDiscovery] Discovery completed successfully. Found $($result.RecordCount) applications." -InformationAction Continue
+        } else {
+            $result.Errors = $discoveryResult.Errors
+            $result.Warnings = $discoveryResult.Warnings
+            Write-Warning "[ApplicationDiscovery] Discovery completed with errors. Found $($discoveryResult.RecordCount) applications."
+        }
+
+    } catch {
+        $result.Success = $false
+        $result.Errors += $_.Exception.Message
+        Write-Error "[ApplicationDiscovery] Discovery failed: $($_.Exception.Message)"
+    } finally {
+        # Disconnect from Microsoft Graph
+        try {
+            Disconnect-MgGraph -ErrorAction SilentlyContinue
+        } catch {
+            Write-Warning "[ApplicationDiscovery] Failed to disconnect from Microsoft Graph: $($_.Exception.Message)"
+        }
+    }
+
+    return $result
+}
+
 #endregion
 
 # Export module functions
 Export-ModuleMember -Function @(
     'Get-IntuneApplications',
-    'Get-DNSApplications', 
+    'Get-DNSApplications',
     'Search-ApplicationDetails',
     'New-ApplicationCatalog',
     'Get-ApplicationMigrationPath',
@@ -1838,5 +1961,6 @@ Export-ModuleMember -Function @(
     'Test-ApplicationConnectivity',
     'Get-SoftwareLicenseInventory',
     'Export-SoftwareLicenseReport',
-    'Invoke-ApplicationDiscovery'
+    'Invoke-ApplicationDiscovery',
+    'Start-ApplicationDiscovery'
 )

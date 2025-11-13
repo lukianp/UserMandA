@@ -22,11 +22,13 @@ import {
 } from '../types/models/exchange';
 import type { ProgressData } from '../../shared/types';
 import { useProfileStore } from '../store/useProfileStore';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { getElectronAPI } from '../lib/electron-api-fallback';
 
 export function useExchangeDiscoveryLogic() {
   // Get selected company profile from store
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult: addDiscoveryResult, getResultsByModuleName } = useDiscoveryStore();
   // ============================================================================
   // State Management
   // ============================================================================
@@ -57,6 +59,16 @@ export function useExchangeDiscoveryLogic() {
     loadTemplates();
   }, []);
 
+  // Restore previous discovery results from store on mount
+  useEffect(() => {
+    const previousResults = getResultsByModuleName('ExchangeDiscovery');
+    if (previousResults && previousResults.length > 0) {
+      console.log('[ExchangeDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
+      const latestResult = previousResults[previousResults.length - 1];
+      setResult(latestResult.additionalData as ExchangeDiscoveryResult);
+    }
+  }, [getResultsByModuleName]);
+
   // Event handlers for discovery
   useEffect(() => {
     const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
@@ -67,9 +79,29 @@ export function useExchangeDiscoveryLogic() {
 
     const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
       if (data.executionId === 'exchange-discovery') {
-        setResult(data.result as ExchangeDiscoveryResult);
+        const exchangeResult = data.result as ExchangeDiscoveryResult;
+        setResult(exchangeResult);
         setIsDiscovering(false);
         setProgress(null);
+
+        // Store result in discovery store for persistence
+        const discoveryResult = {
+          id: `exchange-discovery-${Date.now()}`,
+          name: 'Exchange Discovery',
+          moduleName: 'ExchangeDiscovery',
+          displayName: 'Exchange Online Discovery',
+          itemCount: (exchangeResult?.mailboxes?.length || 0) + (exchangeResult?.distributionGroups?.length || 0),
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: '',
+          success: true,
+          summary: `Discovered ${exchangeResult?.mailboxes?.length || 0} mailboxes, ${exchangeResult?.distributionGroups?.length || 0} groups`,
+          errorMessage: '',
+          additionalData: exchangeResult,
+          createdAt: new Date().toISOString(),
+        };
+        addDiscoveryResult(discoveryResult);
       }
     });
 
@@ -86,7 +118,7 @@ export function useExchangeDiscoveryLogic() {
       if (unsubscribeComplete) unsubscribeComplete();
       if (unsubscribeError) unsubscribeError();
     };
-  }, []);
+  }, [addDiscoveryResult]);
 
   const loadTemplates = async () => {
     try {
@@ -135,11 +167,19 @@ export function useExchangeDiscoveryLogic() {
         'Exchange',
         selectedSourceProfile.companyName,
         {
-          IncludeMailboxes: config.includeMailboxes,
-          IncludeGroups: config.includeGroups,
-          IncludeTransportRules: config.includeTransportRules,
-          IncludeArchives: config.includeArchives,
-          IncludeInactiveMailboxes: config.includeInactiveMailboxes,
+          DiscoverMailboxes: config.discoverMailboxes,
+          DiscoverDistributionGroups: config.discoverDistributionGroups,
+          DiscoverTransportRules: config.discoverTransportRules,
+          DiscoverConnectors: config.discoverConnectors,
+          DiscoverPublicFolders: config.discoverPublicFolders,
+          IncludeArchiveData: config.includeArchiveData,
+          IncludeMailboxPermissions: config.includeMailboxPermissions,
+          IncludeMailboxStatistics: config.includeMailboxStatistics,
+          IncludeMobileDevices: config.includeMobileDevices,
+          IncludeGroupMembership: config.includeGroupMembership,
+          IncludeNestedGroups: config.includeNestedGroups,
+          showWindow: true, // Show PowerShell console window for monitoring
+          timeout: 300000,
         },
         {
           timeout: 300000,
