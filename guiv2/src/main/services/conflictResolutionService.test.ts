@@ -68,7 +68,7 @@ describe('ConflictResolutionService', () => {
     mockPowerShell.executeScript.mockResolvedValue({
       success: true,
       data: { conflicts: [] },
-      error: null,
+      error: undefined, duration: 0, warnings: [],
     });
 
     testDataDir = 'C:\\TestData\\Conflicts';
@@ -126,7 +126,7 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockResolvedValue({
         success: true,
         data: mockConflictData,
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       const events: any[] = [];
@@ -165,7 +165,7 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockResolvedValue({
         success: true,
         data: { conflicts: [] },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       const conflicts = await service.detectConflicts('wave-002', ['user1']);
@@ -207,7 +207,7 @@ describe('ConflictResolutionService', () => {
             },
           ],
         },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       const conflicts = await service.detectConflicts('wave-004', ['group1']);
@@ -238,7 +238,7 @@ describe('ConflictResolutionService', () => {
             },
           ],
         },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       const conflicts = await service.detectConflicts('wave-001', ['user1']);
@@ -249,7 +249,7 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockResolvedValue({
         success: true,
         data: { result: 'Source resource applied' },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       const events: any[] = [];
@@ -280,7 +280,7 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockResolvedValue({
         success: true,
         data: { result: 'Target resource preserved' },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       await service.resolveConflict(conflictId, 'target-wins', {}, 'admin');
@@ -296,7 +296,7 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockResolvedValue({
         success: true,
         data: { result: 'Resources merged successfully' },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       await service.resolveConflict(conflictId, 'merge', { mergeStrategy: 'smart' }, 'admin');
@@ -313,7 +313,7 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockResolvedValue({
         success: true,
         data: { result: 'Source renamed' },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       await service.resolveConflict(
@@ -336,7 +336,7 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockResolvedValue({
         success: true,
         data: { result: 'Target renamed' },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       await service.resolveConflict(conflictId, 'rename-target', { suffix: '_existing' }, 'admin');
@@ -384,7 +384,7 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockResolvedValue({
         success: true,
         data: { result: 'Success' },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       await service.resolveConflict(conflictId, 'source-wins');
@@ -440,7 +440,7 @@ describe('ConflictResolutionService', () => {
             },
           ],
         },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       const conflicts = await service.detectConflicts('wave-001', ['perm1']);
@@ -457,7 +457,7 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockResolvedValue({
         success: true,
         data: { result: 'Approved and resolved' },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       const events: any[] = [];
@@ -531,7 +531,7 @@ describe('ConflictResolutionService', () => {
             },
           ],
         },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       await service.detectConflicts('wave-001', ['user1', 'user2', 'group1']);
@@ -562,7 +562,7 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockResolvedValue({
         success: true,
         data: { result: 'Resolved' },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       const events: any[] = [];
@@ -657,7 +657,7 @@ describe('ConflictResolutionService', () => {
             },
           ],
         },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       await service.detectConflicts('wave-001', ['user1', 'user2']);
@@ -674,7 +674,7 @@ describe('ConflictResolutionService', () => {
             },
           ],
         },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       await service.detectConflicts('wave-002', ['group1']);
@@ -718,7 +718,7 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockResolvedValue({
         success: true,
         data: { result: 'Success' },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       const conflicts = service.getConflicts('wave-001');
@@ -742,7 +742,7 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockResolvedValue({
         success: true,
         data: { conflicts: [] },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       const conflicts = await service.detectConflicts('wave-empty', []);
@@ -760,7 +760,7 @@ describe('ConflictResolutionService', () => {
       mockPowerShell.executeScript.mockResolvedValue({
         success: true,
         data: { conflicts: largeConflictSet },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       const conflicts = await service.detectConflicts('wave-large', Array.from({ length: 100 }, (_, i) => `user${i}`));
@@ -782,7 +782,7 @@ describe('ConflictResolutionService', () => {
             },
           ],
         },
-        error: null,
+        error: undefined, duration: 0, warnings: [],
       });
 
       const conflicts = await service.detectConflicts('wave-001', ['user1']);

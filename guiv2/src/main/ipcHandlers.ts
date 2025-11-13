@@ -1784,6 +1784,31 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   });
 
   /**
+   * IPC Handler: logicEngine:forceReload
+   *
+   * Force reload all data from CSV files (bypasses cache)
+   */
+  ipcMain.handle('logicEngine:forceReload', async (_, profilePath?: string) => {
+    try {
+      console.log('[LogicEngine] Force reloading data from CSV files...');
+      const success = await logicEngineService.loadAllAsync(profilePath, true); // Pass true to force reload
+
+      if (success) {
+        console.log('[LogicEngine] Force reload completed successfully');
+        return { success: true };
+      } else {
+        return { success: false, error: 'Failed to reload data' };
+      }
+    } catch (error: unknown) {
+      console.error('logicEngine:forceReload error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
    * IPC Handler: logicEngine:getAllUsers
    *
    * Get all users from the Logic Engine

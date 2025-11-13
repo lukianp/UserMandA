@@ -100,7 +100,7 @@ describe('PowerShellExecutionService', () => {
 
       // Setup mock 'on' to capture and execute close handler
       let closeHandler: any;
-      (mockProcess.on as jest.Mock).mockImplementation((event, handler) => {
+      (mockProcess.on as jest.Mock).mockImplementation((event: string, handler: (...args: any[]) => void) => {
         if (event === 'close') {
           closeHandler = handler;
         }
@@ -143,7 +143,7 @@ describe('PowerShellExecutionService', () => {
 
       // Setup mock to never complete (simulates long-running)
       let closeHandler: any;
-      (mockProcess.on as jest.Mock).mockImplementation((event, handler) => {
+      (mockProcess.on as jest.Mock).mockImplementation((event: string, handler: (...args: any[]) => void) => {
         if (event === 'close') {
           closeHandler = handler;
           // Don't call handler immediately
@@ -217,7 +217,7 @@ describe('PowerShellExecutionService', () => {
 
       // Setup mock 'on' to capture and execute close handler
       let closeHandler: any;
-      (freshMockProcess.on as jest.Mock).mockImplementation((event, handler) => {
+      (freshMockProcess.on as jest.Mock).mockImplementation((event: string, handler: (...args: any[]) => void) => {
         if (event === 'close') {
           closeHandler = handler;
         }
@@ -267,7 +267,7 @@ describe('PowerShellExecutionService', () => {
       const mockResult = { success: true, data: {} };
 
       // Setup mock to complete quickly for both executions
-      (mockProcess.on as jest.Mock).mockImplementation((event, handler) => {
+      (mockProcess.on as jest.Mock).mockImplementation((event: string, handler: (...args: any[]) => void) => {
         if (event === 'close') {
           setTimeout(() => {
             mockProcess.stdout!.emit('data', JSON.stringify(mockResult));
@@ -480,7 +480,7 @@ describe('PowerShellExecutionService', () => {
 
       // Setup mock to handle multiple executions
       let executionCount = 0;
-      (mockProcess.on as jest.Mock).mockImplementation((event, handler) => {
+      (mockProcess.on as jest.Mock).mockImplementation((event: string, handler: (...args: any[]) => void) => {
         if (event === 'close') {
           setTimeout(() => {
             mockProcess.stdout!.emit('data', JSON.stringify(mockResult));
@@ -507,7 +507,7 @@ describe('PowerShellExecutionService', () => {
     it('should handle parallel execution with failures', async () => {
       // Simulate mixed results
       let callIndex = 0;
-      (mockProcess.on as jest.Mock).mockImplementation((event, handler) => {
+      (mockProcess.on as jest.Mock).mockImplementation((event: string, handler: (...args: any[]) => void) => {
         if (event === 'close') {
           setTimeout(() => {
             if (callIndex === 1) {
@@ -648,7 +648,7 @@ describe('PowerShellExecutionService', () => {
       let callCount = 0;
 
       // Setup mock to handle both successful and failing executions
-      (mockProcess.on as jest.Mock).mockImplementation((event, handler) => {
+      (mockProcess.on as jest.Mock).mockImplementation((event: string, handler: (...args: any[]) => void) => {
         if (event === 'close') {
           setTimeout(() => {
             callCount++;

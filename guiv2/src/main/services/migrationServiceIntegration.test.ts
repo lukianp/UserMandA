@@ -261,7 +261,7 @@ describe('Migration Services Integration', () => {
       const rollbackPoint = await rollbackService.createFullRollbackPoint(
         waveId,
         'Pre-migration state',
-        users
+        `Pre-migration state for users: ${users.join(', ')}`
       );
 
       const rollbackPoints = rollbackService.getRollbackPoints();
@@ -305,8 +305,8 @@ describe('Migration Services Integration', () => {
       // Create selective rollback point
       const rollbackPoint = await rollbackService.createSelectiveRollbackPoint(
         waveId,
-        'Partial rollback point',
-        ['user1@test.com', 'user2@test.com']
+        ['user1@test.com', 'user2@test.com'],
+        'Partial rollback point'
       );
 
       expect(rollbackPoint).toBeDefined();
@@ -378,7 +378,7 @@ describe('Migration Services Integration', () => {
       );
 
       expect(syncResult).toBeDefined();
-      expect(syncResult.status).toBe('completed');
+      expect(syncResult.changesApplied).toBeGreaterThan(0);
 
       // Verify sync history
       const history = deltaSyncService.getSyncHistory(waveId);
@@ -423,8 +423,8 @@ describe('Migration Services Integration', () => {
         'source-to-target'
       );
 
-      expect(result.status).toBe('completed');
-      expect(result.conflictsDetected).toBeGreaterThan(0);
+      expect(result.changesApplied).toBeGreaterThan(0);
+      expect(result.conflicts).toBeGreaterThan(0);
     }, 60000);
   });
 
@@ -437,12 +437,22 @@ describe('Migration Services Integration', () => {
       // Step 1: Configure coexistence
       const coexistenceConfig = await coexistenceService.configureCoexistence(
         'wave-cutover-test',
-        { type: 'exchange-onprem', connectionString: 'exchange.local' },
-        { type: 'microsoft365', connectionString: 'tenant.onmicrosoft.com' },
         {
-          freeBusySharing: true,
+          id: 'source-env',
+          name: 'On-Premises Exchange',
+          type: 'on-premises',
+          endpoints: { exchange: 'exchange.local' }
+        },
+        {
+          id: 'target-env',
+          name: 'Microsoft 365',
+          type: 'cloud',
+          endpoints: { exchange: 'tenant.onmicrosoft.com' }
+        },
+        {
+          freeBusy: true,
           mailRouting: true,
-          globalAddressList: true,
+          galSync: true,
           crossForestAuth: false,
           proxyAddresses: true,
         },
@@ -460,28 +470,25 @@ describe('Migration Services Integration', () => {
         waveId: 'wave-cutover-test',
         name: 'Production Cutover',
         scheduledStart: new Date(Date.now() + 1000),
-        targetEnvironment: { type: 'microsoft365', connectionString: 'tenant.onmicrosoft.com' },
         dnsRecords: [
-          { type: 'MX', name: '@', value: 'tenant-onmicrosoft-com.mail.protection.outlook.com', priority: 0, ttl: 3600 },
+          {
+            id: 'mx-record',
+            type: 'MX',
+            name: '@',
+            currentValue: '',
+            newValue: 'tenant-onmicrosoft-com.mail.protection.outlook.com',
+            ttl: 3600,
+            updated: false
+          },
         ],
-        notificationRules: {
-          notifyOnPhaseStart: true,
-          notifyOnPhaseComplete: true,
-          notifyOnError: true,
-          recipients: ['admin@test.com'],
-        },
-        rollbackPlan: {
-          enabled: true,
-          autoRollbackOnFailure: false,
-        },
+        notifications: [],
+        rollbackPlan: [],
         checklist: [
           { id: 'check-1', phase: 'pre-cutover', name: 'Verify coexistence', description: 'Check coexistence health', required: true, completed: true },
         ],
-        postCutoverActions: {
-          decommissionSource: false,
-          validateConfiguration: true,
-          runSmokeTests: true,
-        },
+        description: 'Production cutover plan',
+        scheduledEnd: new Date(Date.now() + 3600000),
+        metadata: {},
       });
 
       expect(cutoverPlan.status).toBe('planned');
@@ -533,7 +540,7 @@ describe('Migration Services Integration', () => {
       const rollbackPoint = await rollbackService.createFullRollbackPoint(
         wave.id,
         'E2E Pre-migration',
-        wave.users
+        `Pre-migration state for ${wave.users.length} users`
       );
 
       // 4. Execute migration

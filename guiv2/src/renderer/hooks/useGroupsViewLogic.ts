@@ -47,6 +47,15 @@ export const useGroupsViewLogic = () => {
     else if (typeStr.includes('mail')) groupType = GroupType.MailEnabled;
     else if (typeStr.includes('dynamic')) groupType = GroupType.Dynamic;
 
+    // Determine source from DiscoveryModule
+    let source: 'ActiveDirectory' | 'AzureAD' | 'Hybrid' = 'ActiveDirectory';
+    const discoveryModule = dto.DiscoveryModule || '';
+    if (discoveryModule.includes('Azure')) {
+      source = 'AzureAD';
+    } else if (discoveryModule.includes('ActiveDirectory') || discoveryModule.includes('AD')) {
+      source = 'ActiveDirectory';
+    }
+
     return {
       id: dto.Sid || dto.Name,
       objectId: dto.Sid || '',
@@ -61,7 +70,7 @@ export const useGroupsViewLogic = () => {
       owners: dto.ManagedBy ? [dto.ManagedBy] : [],
       createdDate: dto.DiscoveryTimestamp || new Date().toISOString(),
       lastModified: dto.DiscoveryTimestamp || new Date().toISOString(),
-      source: 'ActiveDirectory', // Default source
+      source,
       isSecurityEnabled: groupType === GroupType.Security,
       isMailEnabled: groupType === GroupType.MailEnabled,
       distinguishedName: dto.Dn,
@@ -73,14 +82,24 @@ export const useGroupsViewLogic = () => {
    * Load groups from Logic Engine (CSV data)
    * Replicates /gui/ GroupsViewModel.LoadAsync() pattern
    */
-  const loadGroups = async () => {
+  const loadGroups = async (forceReload: boolean = false) => {
     setIsLoading(true);
     setError(null);
     setWarnings([]);
     setLoadingMessage('Loading groups from Logic Engine...');
 
     try {
-      console.log('[GroupsView] Loading groups from LogicEngine...');
+      console.log(`[GroupsView] Loading groups from LogicEngine...${forceReload ? ' (force reload)' : ''}`);
+
+      // Force reload data from CSV if requested
+      if (forceReload) {
+        console.log('[GroupsView] Forcing LogicEngine data reload...');
+        const reloadResult = await window.electronAPI.invoke('logicEngine:forceReload');
+        if (!reloadResult.success) {
+          throw new Error(reloadResult.error || 'Failed to reload LogicEngine data');
+        }
+        console.log('[GroupsView] LogicEngine data reloaded successfully');
+      }
 
       // Get groups from Logic Engine
       const result = await window.electronAPI.invoke('logicEngine:getAllGroups');
@@ -139,33 +158,28 @@ export const useGroupsViewLogic = () => {
 
   /**
    * Delete selected groups
+   * Note: For CSV-based discovery data, this removes items from local state only.
+   * Data will reload from CSV files on next refresh.
    */
   const handleDelete = async () => {
     if (selectedGroups.length === 0) return;
 
-    if (!confirm(`Delete ${selectedGroups.length} group(s)? This action cannot be undone.`)) {
+    if (!confirm(`Remove ${selectedGroups.length} group(s) from the view?\n\nNote: This removes items from the current view only. Data will reload from CSV files on next refresh.`)) {
       return;
     }
 
     try {
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Management/GroupManagement.psm1',
-        functionName: 'Remove-Groups',
-        parameters: {
-          GroupIds: selectedGroups.map(g => g.id),
-        },
-      });
+      // Get IDs of groups to remove
+      const idsToRemove = new Set(selectedGroups.map(g => g.id));
 
-      if (result.success) {
-        alert('Groups deleted successfully!');
-        setSelectedGroups([]);
-        await loadGroups();
-      } else {
-        throw new Error(result.error || 'Failed to delete groups');
-      }
+      // Remove from local state
+      setGroups((prevGroups) => prevGroups.filter((g) => !idsToRemove.has(g.id)));
+      setSelectedGroups([]);
+
+      console.log(`[GroupsView] Removed ${selectedGroups.length} groups from view`);
     } catch (err: any) {
-      console.error('Delete failed:', err);
-      alert(`Delete failed: ${err.message}`);
+      console.error('[GroupsView] Delete failed:', err);
+      setError(`Failed to remove groups from view: ${err.message}`);
     }
   };
 
@@ -206,9 +220,11 @@ export const useGroupsViewLogic = () => {
 
   /**
    * Refresh groups list
+   * Forces reload of data from CSV files
    */
   const handleRefresh = () => {
-    loadGroups();
+    console.log('[GroupsView] Refresh button clicked, forcing data reload');
+    loadGroups(true); // Pass true to force reload
   };
 
   // Subscribe to selected source profile changes
