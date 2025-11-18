@@ -1,0 +1,18 @@
+--- a/src/renderer/components/organisms/VirtualizedDataGrid.test.tsx
++++ b/src/renderer/components/organisms/VirtualizedDataGrid.test.tsx
+@@ -66,6 +66,15 @@ jest.mock('../atoms/Spinner', () => ({
+   ),
+ }));
+ 
++// Mock Button component
++jest.mock('../atoms/Button', () => ({
++  Button: ({ children, onClick, icon, ...props }: any) => (
++    <button onClick={onClick} {...props}>
++      {icon}{children}
++    </button>
++  ),
++}));
++
+ describe('VirtualizedDataGrid', () => {
+   const mockData = [
+     { id: '1', name: 'Item 1', status: 'active', count: 10 },
