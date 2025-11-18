@@ -24,6 +24,7 @@ import type { ProgressData } from '../../shared/types';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { getElectronAPI } from '../lib/electron-api-fallback';
+import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 
 export function useExchangeDiscoveryLogic() {
   // Get selected company profile from store
@@ -38,6 +39,8 @@ export function useExchangeDiscoveryLogic() {
   const [progress, setProgress] = useState<ExchangeDiscoveryProgress | null>(null);
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [logs, setLogs] = useState<PowerShellLog[]>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
 
   // Templates
   const [templates, setTemplates] = useState<ExchangeDiscoveryTemplate[]>([]);
@@ -50,6 +53,16 @@ export function useExchangeDiscoveryLogic() {
 
   // UI state
   const [selectedTab, setSelectedTab] = useState<'overview' | 'mailboxes' | 'groups' | 'rules'>('overview');
+
+  // ============================================================================
+  // Utility Functions
+  // ============================================================================
+
+  // Utility function for adding logs
+  const addLog = useCallback((message: string, level: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+    const timestamp = new Date().toLocaleTimeString();
+    setLogs(prev => [...prev, { timestamp, message, level }]);
+  }, []);
 
   // ============================================================================
   // Data Fetching
@@ -69,20 +82,62 @@ export function useExchangeDiscoveryLogic() {
     }
   }, [getResultsByModuleName]);
 
-  // Event handlers for discovery
+  // Event handlers for discovery - similar to Azure discovery pattern
+  const [currentToken, setCurrentToken] = useState<string | null>(null);
+
   useEffect(() => {
     const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
-      if (data.executionId === 'exchange-discovery') {
+      console.log('[ExchangeDiscoveryHook] Progress event received:', data);
+      if (data.executionId && data.executionId.startsWith('exchange-discovery-')) {
         setProgress(data as unknown as ExchangeDiscoveryProgress);
+        addLog(data.message || `${data.currentPhase} (${data.itemsProcessed || 0}/${data.totalItems || 0})`, 'info');
+      }
+    });
+
+    const unsubscribeOutput = window.electron.onDiscoveryOutput?.((data) => {
+      console.log('[ExchangeDiscoveryHook] Output event received:', data);
+      if (data.executionId && data.executionId.startsWith('exchange-discovery-')) {
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
+        addLog(data.message, logLevel);
       }
     });
 
     const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
-      if (data.executionId === 'exchange-discovery') {
-        const exchangeResult = data.result as ExchangeDiscoveryResult;
+      console.log('[ExchangeDiscoveryHook] Complete event received:', data);
+      if (data.executionId && data.executionId.startsWith('exchange-discovery-')) {
+        // CORRECT: data.result is ExecutionResult with { success, data: PowerShellReturnValue, ... }
+        // PowerShellReturnValue is { Success, Data: { mailboxes, distributionGroups, ... }, RecordCount, Metadata, ... }
+        const executionResult = data.result as any;
+        const psReturnValue = executionResult.data; // Get the PowerShell return value
+
+        console.log('[ExchangeDiscoveryHook] PowerShell return value:', psReturnValue);
+
+        // Extract the structured data from the Data property of the PowerShell return value
+        const structuredData = psReturnValue?.Data || {}; // { mailboxes: [...], distributionGroups: [...], ... }
+
+        console.log('[ExchangeDiscoveryHook] Structured data keys:', Object.keys(structuredData));
+        console.log('[ExchangeDiscoveryHook] Mailboxes count:', structuredData.mailboxes?.length || 0);
+        console.log('[ExchangeDiscoveryHook] Groups count:', structuredData.distributionGroups?.length || 0);
+
+        // Build the ExchangeDiscoveryResult with the structured data at root level
+        const exchangeResult: ExchangeDiscoveryResult = {
+          ...structuredData,
+          id: `exchange-discovery-${Date.now()}`,
+          startTime: new Date(),
+          status: 'completed',
+          config: config,
+          statistics: psReturnValue?.Metadata || {},
+          errors: psReturnValue?.Errors || [],
+          warnings: psReturnValue?.Warnings || [],
+        } as ExchangeDiscoveryResult;
+
         setResult(exchangeResult);
         setIsDiscovering(false);
         setProgress(null);
+
+        const mailboxCount = exchangeResult?.mailboxes?.length || 0;
+        const groupCount = exchangeResult?.distributionGroups?.length || 0;
+        addLog(`Exchange discovery completed: ${mailboxCount} mailboxes, ${groupCount} groups`, 'success');
 
         // Store result in discovery store for persistence
         const discoveryResult = {
@@ -90,13 +145,13 @@ export function useExchangeDiscoveryLogic() {
           name: 'Exchange Discovery',
           moduleName: 'ExchangeDiscovery',
           displayName: 'Exchange Online Discovery',
-          itemCount: (exchangeResult?.mailboxes?.length || 0) + (exchangeResult?.distributionGroups?.length || 0),
+          itemCount: mailboxCount + groupCount,
           discoveryTime: new Date().toISOString(),
           duration: data.duration || 0,
           status: 'Completed',
           filePath: '',
           success: true,
-          summary: `Discovered ${exchangeResult?.mailboxes?.length || 0} mailboxes, ${exchangeResult?.distributionGroups?.length || 0} groups`,
+          summary: `Discovered ${mailboxCount} mailboxes, ${groupCount} groups`,
           errorMessage: '',
           additionalData: exchangeResult,
           createdAt: new Date().toISOString(),
@@ -106,8 +161,10 @@ export function useExchangeDiscoveryLogic() {
     });
 
     const unsubscribeError = window.electron.onDiscoveryError((data) => {
-      if (data.executionId === 'exchange-discovery') {
+      console.log('[ExchangeDiscoveryHook] Error event received:', data);
+      if (data.executionId && data.executionId.startsWith('exchange-discovery-')) {
         setError(data.error);
+        addLog(`Error: ${data.error}`, 'error');
         setIsDiscovering(false);
         setProgress(null);
       }
@@ -115,10 +172,11 @@ export function useExchangeDiscoveryLogic() {
 
     return () => {
       if (unsubscribeProgress) unsubscribeProgress();
+      if (unsubscribeOutput) unsubscribeOutput();
       if (unsubscribeComplete) unsubscribeComplete();
       if (unsubscribeError) unsubscribeError();
     };
-  }, [addDiscoveryResult]);
+  }, [addDiscoveryResult, addLog]);
 
   const loadTemplates = async () => {
     try {
@@ -140,7 +198,9 @@ export function useExchangeDiscoveryLogic() {
   const startDiscovery = useCallback(async () => {
     // Check if a profile is selected
     if (!selectedSourceProfile) {
-      setError('No company profile selected. Please select a profile first.');
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setError(errorMessage);
+      addLog(errorMessage, 'error');
       return;
     }
 
@@ -149,6 +209,12 @@ export function useExchangeDiscoveryLogic() {
 
     setIsDiscovering(true);
     setError(null);
+    setLogs([]);
+    setShowExecutionDialog(true);
+    addLog(`Starting Exchange discovery for ${selectedSourceProfile.companyName}...`, 'info');
+
+    const token = `exchange-discovery-${Date.now()}`;
+
     setProgress({
       phase: 'initializing',
       phaseLabel: 'Initializing Exchange discovery...',
@@ -160,13 +226,10 @@ export function useExchangeDiscoveryLogic() {
     });
 
     try {
-      const electronAPI = getElectronAPI();
-
-      // Execute discovery module with credentials from the profile
-      const result = await electronAPI.executeDiscoveryModule(
-        'Exchange',
-        selectedSourceProfile.companyName,
-        {
+      // Use the streaming discovery handler for real-time updates
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'Exchange',
+        parameters: {
           DiscoverMailboxes: config.discoverMailboxes,
           DiscoverDistributionGroups: config.discoverDistributionGroups,
           DiscoverTransportRules: config.discoverTransportRules,
@@ -178,29 +241,33 @@ export function useExchangeDiscoveryLogic() {
           IncludeMobileDevices: config.includeMobileDevices,
           IncludeGroupMembership: config.includeGroupMembership,
           IncludeNestedGroups: config.includeNestedGroups,
-          showWindow: true, // Show PowerShell console window for monitoring
+          showWindow: true, // Launch in PowerShell window like Azure and Application discovery
           timeout: 300000,
         },
-        {
-          timeout: 300000,
-        }
-      );
+        executionId: token,
+        profileName: selectedSourceProfile.companyName,
+      });
 
       if (result.success) {
         console.log(`[ExchangeDiscoveryHook] ✅ Exchange discovery completed successfully`);
+        addLog('Exchange discovery completed successfully', 'success');
       } else {
         console.error(`[ExchangeDiscoveryHook] ❌ Exchange discovery failed:`, result.error);
-        setError(result.error || 'Discovery failed');
+        const errorMsg = result.error || 'Discovery failed';
+        setError(errorMsg);
+        addLog(errorMsg, 'error');
         setIsDiscovering(false);
         setProgress(null);
       }
     } catch (err) {
       console.error(`[ExchangeDiscoveryHook] Error:`, err);
-      setError(err instanceof Error ? err.message : 'Discovery failed');
+      const errorMsg = err instanceof Error ? err.message : 'Discovery failed';
+      setError(errorMsg);
+      addLog(errorMsg, 'error');
       setIsDiscovering(false);
       setProgress(null);
     }
-  }, [config, selectedSourceProfile]);
+  }, [config, selectedSourceProfile, addLog]);
 
   const cancelDiscovery = useCallback(async () => {
     try {
@@ -595,6 +662,9 @@ export function useExchangeDiscoveryLogic() {
     progress,
     isDiscovering,
     error,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
 
     // Templates
     templates,
@@ -633,6 +703,6 @@ export function useExchangeDiscoveryLogic() {
 
     // Statistics (from result)
     statistics: result?.statistics,
-  
+
   };
 }

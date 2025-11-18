@@ -748,15 +748,312 @@ function Invoke-ExchangeDiscovery {
         
         return $allDiscoveredData
     }
-    
-    # Execute using base module
-    return Start-DiscoveryModule -ModuleName "Exchange" `
-        -Configuration $Configuration `
-        -Context $Context `
-        -SessionId $SessionId `
-        -RequiredServices @('Graph') `
-        -DiscoveryScript $discoveryScript
+
+    # Initialize result object
+    $result = [PSCustomObject]@{
+        Success = $false
+        ModuleName = "Exchange"
+        Data = $null
+        RecordCount = 0
+        Errors = @()
+        Warnings = @()
+        Metadata = @{}
+        StartTime = Get-Date
+        EndTime = $null
+        ExecutionId = [guid]::NewGuid().ToString()
+    }
+
+    # Add helper methods to result object
+    $result | Add-Member -MemberType ScriptMethod -Name "AddError" -Value {
+        param($Message, $Exception = $null, $Context = @{})
+        $errorObj = @{
+            Message = $Message
+            ExceptionType = if ($Exception) { $Exception.GetType().FullName } else { $null }
+            StackTrace = if ($Exception) { $Exception.StackTrace } else { $null }
+            Timestamp = Get-Date
+            Context = $Context
+            InnerException = if ($Exception -and $Exception.InnerException) { $Exception.InnerException.Message } else { $null }
+            Exception = $Exception
+        }
+        $this.Errors += $errorObj
+    }
+
+    $result | Add-Member -MemberType ScriptMethod -Name "AddWarning" -Value {
+        param($Message, $Context = @{})
+        $this.Warnings += @{
+            Message = $Message
+            Timestamp = Get-Date
+            Context = $Context
+        }
+    }
+
+    try {
+        # Execute discovery script directly (Graph is already connected by Start-)
+        Write-ModuleLog -ModuleName "Exchange" -Message "Starting Exchange discovery..." -Level "INFO"
+
+        # Note: Graph connection is already established by Start-ExchangeDiscovery
+        # We just need to execute the discovery logic directly
+        $discoveryData = & $discoveryScript -Configuration $Configuration -Context $Context -SessionId $SessionId -Connections @{Graph=$true} -Result $result
+
+        $result.Data = $discoveryData
+        $result.RecordCount = if ($discoveryData) { $discoveryData.Count } else { 0 }
+        $result.Success = $true
+
+        Write-ModuleLog -ModuleName "Exchange" -Message "Discovery completed successfully. Found $($result.RecordCount) records." -Level "SUCCESS"
+
+    } catch {
+        $result.Success = $false
+        $result.AddError("Discovery failed: $($_.Exception.Message)", $_.Exception, @{})
+        Write-ModuleLog -ModuleName "Exchange" -Message "Discovery failed: $($_.Exception.Message)" -Level "ERROR"
+    } finally {
+        $result.EndTime = Get-Date
+    }
+
+    return $result
+}
+
+function Start-ExchangeDiscovery {
+    <#
+    .SYNOPSIS
+        Entry point for Exchange Discovery called by the GUI/PowerShellService
+    .DESCRIPTION
+        Standalone discovery function that connects directly using provided credentials
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [string]$CompanyName,
+
+        [Parameter(Mandatory=$false)]
+        [string]$TenantId,
+
+        [Parameter(Mandatory=$false)]
+        [string]$ClientId,
+
+        [Parameter(Mandatory=$false)]
+        [string]$ClientSecret,
+
+        [Parameter(Mandatory=$false)]
+        [string]$OutputPath,
+
+        [Parameter(Mandatory=$false)]
+        [hashtable]$AdditionalParams = @{}
+    )
+
+    Write-Information "[ExchangeDiscovery] Starting Exchange discovery for $CompanyName..." -InformationAction Continue
+    Write-Information "[ExchangeDiscovery] Tenant ID: $TenantId" -InformationAction Continue
+    Write-Information "[ExchangeDiscovery] Client ID: $ClientId" -InformationAction Continue
+
+    # Pre-flight validation
+    if (-not $TenantId) {
+        throw "TenantId is required for Exchange discovery"
+    }
+    if (-not $ClientId) {
+        throw "ClientId is required for Exchange discovery"
+    }
+    if (-not $ClientSecret) {
+        throw "ClientSecret is required for Exchange discovery"
+    }
+
+    # Initialize result
+    $result = [PSCustomObject]@{
+        Success = $false
+        RecordCount = 0
+        Errors = @()
+        Warnings = @()
+        Metadata = @{}
+        Data = $null
+        TotalItems = 0
+        OutputPath = $OutputPath
+        StartTime = Get-Date
+        EndTime = $null
+        Duration = $null
+    }
+
+    try {
+        # Ensure output paths exist
+        if (-not (Test-Path $OutputPath)) {
+            New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
+        }
+
+        $logsPath = Join-Path (Split-Path $OutputPath -Parent) "Logs"
+        if (-not (Test-Path $logsPath)) {
+            New-Item -Path $logsPath -ItemType Directory -Force | Out-Null
+        }
+
+        # Test and install Microsoft.Graph module if needed
+        Write-Information "[ExchangeDiscovery] Checking for Microsoft.Graph module..." -InformationAction Continue
+        if (-not (Get-Module -ListAvailable -Name Microsoft.Graph.Authentication)) {
+            Write-Information "[ExchangeDiscovery] Installing Microsoft.Graph module..." -InformationAction Continue
+            Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope CurrentUser -Repository PSGallery
+        }
+
+        # Import Microsoft.Graph modules
+        Import-Module Microsoft.Graph.Authentication -Force
+
+        # Connect to Microsoft Graph
+        Write-Information "[ExchangeDiscovery] Connecting to Microsoft Graph..." -InformationAction Continue
+
+        if ($ClientId -and $ClientSecret -and $TenantId) {
+            $secureSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($ClientId, $secureSecret)
+            Connect-MgGraph -TenantId $TenantId -ClientSecretCredential $credential -NoWelcome
+            Write-Information "[ExchangeDiscovery] Connected to Microsoft Graph successfully" -InformationAction Continue
+        } else {
+            Write-Information "[ExchangeDiscovery] Using interactive authentication..." -InformationAction Continue
+            Connect-MgGraph -TenantId $TenantId -Scopes "User.Read.All","Group.Read.All","Directory.Read.All","Mail.Read" -NoWelcome
+            Write-Information "[ExchangeDiscovery] Connected to Microsoft Graph successfully" -InformationAction Continue
+        }
+
+        # Generate session ID for output files
+        $sessionId = [guid]::NewGuid().ToString()
+
+        # Build configuration for the discovery script
+        $config = @{
+            CompanyName = $CompanyName
+            TenantId = $TenantId
+            ClientId = $ClientId
+            ClientSecret = $ClientSecret
+        }
+
+        foreach ($key in $AdditionalParams.Keys) {
+            $config[$key] = $AdditionalParams[$key]
+        }
+
+        $context = @{
+            Paths = @{
+                RawDataOutput = $OutputPath
+                Logs = $logsPath
+            }
+            CompanyName = $CompanyName
+        }
+
+        # Call Invoke-ExchangeDiscovery with proper setup
+        $discoveryResult = Invoke-ExchangeDiscovery -Configuration $config -Context $context -SessionId $sessionId | Select-Object -Last 1
+
+        # Disconnect
+        Disconnect-MgGraph | Out-Null
+
+        # ✅ TRANSFORM DATA FOR FRONTEND
+        # The frontend TypeScript interface expects structured properties, not a flat array
+        if ($discoveryResult -and $discoveryResult.Success) {
+            Write-Information "[ExchangeDiscovery] Transforming data structure for frontend..." -InformationAction Continue
+
+            $allData = $discoveryResult.Data
+
+            # Group by _DataType and map to TypeScript property names
+            # Property names MUST match src/renderer/types/models/exchange.ts (ExchangeDiscoveryResult interface)
+            $structuredData = @{
+                mailboxes = @($allData | Where-Object {
+                    $_._DataType -eq 'Mailbox' -or $_._DataType -eq 'SharedMailbox'
+                })
+                distributionGroups = @($allData | Where-Object {
+                    $_._DataType -eq 'DistributionGroup'
+                })
+                transportRules = @($allData | Where-Object {
+                    $_._DataType -eq 'TransportRule'
+                })
+                connectors = @($allData | Where-Object {
+                    $_._DataType -eq 'Connector'
+                })
+                publicFolders = @($allData | Where-Object {
+                    $_._DataType -eq 'PublicFolder'
+                })
+                mailContacts = @($allData | Where-Object {
+                    $_._DataType -eq 'MailContact'
+                })
+            }
+
+            # Calculate statistics for frontend
+            $totalMailboxSize = ($structuredData.mailboxes | Where-Object { $_.TotalItemSize -ne $null } |
+                               Measure-Object -Property TotalItemSize -Sum).Sum
+            if (-not $totalMailboxSize) { $totalMailboxSize = 0 }
+
+            $avgMailboxSize = if ($structuredData.mailboxes.Count -gt 0) {
+                ($structuredData.mailboxes | Where-Object { $_.TotalItemSize -ne $null } |
+                 Measure-Object -Property TotalItemSize -Average).Average
+            } else { 0 }
+            if (-not $avgMailboxSize) { $avgMailboxSize = 0 }
+
+            $sharedMailboxCount = ($structuredData.mailboxes | Where-Object {
+                $_.RecipientTypeDetails -eq 'SharedMailbox'
+            }).Count
+
+            $securityGroupCount = ($structuredData.distributionGroups | Where-Object {
+                $_.GroupType -eq 'Security'
+            }).Count
+
+            $statistics = @{
+                totalMailboxes = $structuredData.mailboxes.Count
+                totalMailboxSize = $totalMailboxSize
+                averageMailboxSize = $avgMailboxSize
+                totalArchiveSize = 0
+                inactiveMailboxes = 0
+                sharedMailboxes = $sharedMailboxCount
+                roomMailboxes = 0
+                totalDistributionGroups = $structuredData.distributionGroups.Count
+                securityGroups = $securityGroupCount
+                totalTransportRules = $structuredData.transportRules.Count
+                enabledRules = 0
+                disabledRules = 0
+                totalConnectors = $structuredData.connectors.Count
+                sendConnectors = 0
+                receiveConnectors = 0
+                totalPublicFolders = $structuredData.publicFolders.Count
+                mailEnabledFolders = 0
+            }
+
+            # Build result matching TypeScript interface (ExchangeDiscoveryResult)
+            $result = [PSCustomObject]@{
+                id = [guid]::NewGuid().ToString()
+                startTime = $discoveryResult.StartTime
+                endTime = $discoveryResult.EndTime
+                status = 'completed'
+
+                # Structured data properties (MUST match TypeScript interface)
+                mailboxes = $structuredData.mailboxes
+                distributionGroups = $structuredData.distributionGroups
+                transportRules = $structuredData.transportRules
+                connectors = $structuredData.connectors
+                publicFolders = $structuredData.publicFolders
+
+                # Statistics
+                statistics = $statistics
+
+                # Errors/warnings
+                errors = if ($discoveryResult.Errors) { $discoveryResult.Errors } else { @() }
+                warnings = if ($discoveryResult.Warnings) { $discoveryResult.Warnings } else { @() }
+
+                # Legacy fields for backward compatibility
+                Success = $discoveryResult.Success
+                RecordCount = $discoveryResult.RecordCount
+                Data = $allData  # Keep flat array for backward compatibility
+            }
+
+            Write-Information "[ExchangeDiscovery] Data transformation complete:" -InformationAction Continue
+            Write-Information "[ExchangeDiscovery]   - Mailboxes: $($structuredData.mailboxes.Count)" -InformationAction Continue
+            Write-Information "[ExchangeDiscovery]   - Distribution Groups: $($structuredData.distributionGroups.Count)" -InformationAction Continue
+            Write-Information "[ExchangeDiscovery]   - Transport Rules: $($structuredData.transportRules.Count)" -InformationAction Continue
+            Write-Information "[ExchangeDiscovery]   - Total Storage: $totalMailboxSize bytes" -InformationAction Continue
+
+            return $result
+        }
+
+        # If discovery failed or no data, return original result
+        return $discoveryResult
+
+    } catch {
+        Write-Error "[ExchangeDiscovery] ERROR: $($_.Exception.Message)"
+        $result.Errors += @{
+            Message = $_.Exception.Message
+            Exception = $_
+        }
+        $result.EndTime = Get-Date
+        $duration = $result.EndTime - $result.StartTime
+        $result | Add-Member -MemberType NoteProperty -Name "Duration" -Value $duration -Force
+        return $result
+    }
 }
 
 # --- Module Export ---
-Export-ModuleMember -Function Invoke-ExchangeDiscovery
+Export-ModuleMember -Function Start-ExchangeDiscovery, Invoke-ExchangeDiscovery
