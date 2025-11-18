@@ -56,7 +56,7 @@ async function initializeServices(): Promise<void> {
     queueSize: 100,
     enableModuleCaching: true,
     defaultTimeout: 60000, // 1 minute
-    scriptsBaseDir: path.join(process.cwd(), '..'),
+    scriptsBaseDir: process.cwd(), // App runs from C:\enterprisediscovery
   });
   await psService.initialize();
 

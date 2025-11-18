@@ -3,8 +3,8 @@ export type JsType = "string" | "number" | "boolean";
 export interface ModuleSpec { script: string; argsSchema: Record<string, JsType>; timeoutSec?: number; }
 
 // Use dynamic path resolution instead of hardcoded path
-// Assumes modules directory is one level up from the project root
-const ROOT = path.resolve(process.cwd(), "..", "modules");
+// Modules directory is in the app's working directory (C:\enterprisediscovery\Modules)
+const ROOT = path.resolve(process.cwd(), "Modules");
 
 export const DiscoveryModules: Record<string, ModuleSpec> = {
   ActiveDirectory: { script: path.join(ROOT, "Discovery", "ActiveDirectoryDiscovery.psm1"), argsSchema: {"Message":"string","Level":"string","Component":"string","Context":"string"} },

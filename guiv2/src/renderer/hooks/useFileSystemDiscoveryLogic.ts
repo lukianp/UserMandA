@@ -17,6 +17,8 @@ import {
 } from '../types/models/filesystem';
 import type { ProgressData } from '../../shared/types';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import { useProfileStore } from '../store/useProfileStore';
+import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 
 export interface UseFileSystemDiscoveryLogicReturn {
   // Discovery state
@@ -25,6 +27,9 @@ export interface UseFileSystemDiscoveryLogicReturn {
   isRunning: boolean;
   progress: FileSystemProgress | null;
   error: string | null;
+  logs: PowerShellLog[];
+  showExecutionDialog: boolean;
+  setShowExecutionDialog: (show: boolean) => void;
 
   // Configuration
   config: FileSystemDiscoveryConfig;
@@ -80,11 +85,16 @@ export interface UseFileSystemDiscoveryLogicReturn {
 }
 
 export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn => {
-  const { getResultsByModuleName } = useDiscoveryStore();
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { getResultsByModuleName, addResult: addDiscoveryResult } = useDiscoveryStore();
+
   const [result, setResult] = useState<FileSystemDiscoveryResult | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState<FileSystemProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [logs, setLogs] = useState<PowerShellLog[]>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
+  const [currentToken, setCurrentToken] = useState<string | null>(null);
 
   const [config, setConfig] = useState<FileSystemDiscoveryConfig>(DEFAULT_FILESYSTEM_CONFIG);
   const [templates] = useState<FileSystemDiscoveryTemplate[]>([]);
@@ -117,9 +127,143 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     }
   }, [getResultsByModuleName]);
 
+  // Utility function to add logs
+  const addLog = useCallback((message: string, level: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+    const newLog: PowerShellLog = { timestamp: new Date(), message, level };
+    setLogs((prevLogs) => [...prevLogs, newLog]);
+  }, []);
+
+  // Event Handlers for Streaming Discovery
+  useEffect(() => {
+    const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
+      if (data.executionId && data.executionId.startsWith('filesystem-discovery-')) {
+        if (data.executionId === currentToken) {
+          console.log('[FileSystemDiscoveryHook] Progress event:', data);
+          addLog(`Progress: ${data.message}`, 'info');
+        }
+      }
+    });
+
+    const unsubscribeOutput = window.electron.onDiscoveryOutput((data) => {
+      if (data.executionId && data.executionId.startsWith('filesystem-discovery-')) {
+        if (data.executionId === currentToken) {
+          console.log('[FileSystemDiscoveryHook] Output:', data.output);
+          addLog(data.output, 'info');
+        }
+      }
+    });
+
+    const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
+      if (data.executionId && data.executionId.startsWith('filesystem-discovery-')) {
+        if (data.executionId === currentToken) {
+          console.log('[FileSystemDiscoveryHook] Discovery complete event received:', data);
+          addLog('File System discovery completed successfully', 'success');
+
+          // Extract PowerShell return value
+          const psReturnValue = data.result;
+          console.log('[FileSystemDiscoveryHook] PowerShell return value:', psReturnValue);
+          console.log('[FileSystemDiscoveryHook] PowerShell return value type:', typeof psReturnValue);
+          console.log('[FileSystemDiscoveryHook] PowerShell return value is array?', Array.isArray(psReturnValue));
+
+          // Handle data structure from PowerShell
+          let structuredData = psReturnValue?.Data || psReturnValue;
+          console.log('[FileSystemDiscoveryHook] Raw Data property:', structuredData);
+          console.log('[FileSystemDiscoveryHook] Data is array?', Array.isArray(structuredData));
+
+          // If data is a flat array with _DataType properties, group by type
+          if (Array.isArray(structuredData) && structuredData.length > 0 && structuredData[0]._DataType) {
+            console.log('[FileSystemDiscoveryHook] Data is flat array, grouping by _DataType...');
+            const grouped: any = {
+              shares: [],
+              permissions: [],
+              largeFiles: [],
+            };
+
+            structuredData.forEach((item: any) => {
+              if (item._DataType === 'Share') {
+                grouped.shares.push(item);
+              } else if (item._DataType === 'Permission') {
+                grouped.permissions.push(item);
+              } else if (item._DataType === 'LargeFile') {
+                grouped.largeFiles.push(item);
+              }
+            });
+
+            console.log('[FileSystemDiscoveryHook] Grouped data types:', Object.keys(grouped));
+            structuredData = grouped;
+          }
+
+          // Build final result
+          const fileSystemResult: FileSystemDiscoveryResult = {
+            id: psReturnValue?.id || data.executionId || `filesystem-discovery-${Date.now()}`,
+            startTime: psReturnValue?.startTime ? new Date(psReturnValue.startTime) : new Date(),
+            endTime: psReturnValue?.endTime ? new Date(psReturnValue.endTime) : new Date(),
+            duration: psReturnValue?.duration || 0,
+            status: 'completed',
+            config: config,
+            shares: structuredData?.shares || [],
+            permissions: structuredData?.permissions || [],
+            largeFiles: structuredData?.largeFiles || [],
+            statistics: psReturnValue?.statistics || {
+              totalShares: structuredData?.shares?.length || 0,
+              totalPermissions: structuredData?.permissions?.length || 0,
+              totalLargeFiles: structuredData?.largeFiles?.length || 0,
+              totalServers: 0,
+              totalSizeMB: 0,
+              averageFileSizeMB: 0,
+              largestFileMB: 0,
+            },
+            errors: psReturnValue?.errors || [],
+            warnings: psReturnValue?.warnings || [],
+          };
+
+          console.log('[FileSystemDiscoveryHook] Final fileSystemResult:', fileSystemResult);
+          console.log('[FileSystemDiscoveryHook] Final fileSystemResult.shares:', fileSystemResult.shares?.length || 0);
+          console.log('[FileSystemDiscoveryHook] Final fileSystemResult.permissions:', fileSystemResult.permissions?.length || 0);
+          console.log('[FileSystemDiscoveryHook] Final fileSystemResult.largeFiles:', fileSystemResult.largeFiles?.length || 0);
+
+          setResult(fileSystemResult);
+          setIsRunning(false);
+          setShowExecutionDialog(false);
+          setCurrentToken(null);
+
+          // Store result
+          addDiscoveryResult({
+            id: fileSystemResult.id,
+            moduleName: 'FileSystemDiscovery',
+            companyName: selectedSourceProfile?.companyName || 'Unknown',
+            result: fileSystemResult,
+            timestamp: new Date(),
+          });
+        }
+      }
+    });
+
+    const unsubscribeError = window.electron.onDiscoveryError((data) => {
+      if (data.executionId && data.executionId.startsWith('filesystem-discovery-')) {
+        if (data.executionId === currentToken) {
+          console.error('[FileSystemDiscoveryHook] Discovery error:', data.error);
+          addLog(`Error: ${data.error}`, 'error');
+          setError(data.error);
+          setIsRunning(false);
+          setShowExecutionDialog(false);
+          setCurrentToken(null);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribeProgress();
+      unsubscribeOutput();
+      unsubscribeComplete();
+      unsubscribeError();
+    };
+  }, [currentToken, config, selectedSourceProfile, addLog, addDiscoveryResult]);
+
   const startDiscovery = useCallback(async () => {
     setIsRunning(true);
     setError(null);
+    setLogs([]);
     setProgress({
       phase: 'initializing',
       serversCompleted: 0,
@@ -131,59 +275,49 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     });
 
     try {
-      const unsubscribe = window.electronAPI.onProgress((data: ProgressData) => {
-        // Convert ProgressData to FileSystemProgress
-        const progressData: FileSystemProgress = {
-          phase: 'discovering_shares',
-          serversCompleted: data.itemsProcessed || 0,
-          totalServers: data.totalItems || 0,
-          sharesCompleted: 0,
-          totalShares: 0,
-          percentComplete: data.percentage,
-          message: data.message || 'Processing...',
-        };
-        setProgress(progressData);
-      });
+      // Generate unique execution token
+      const token = `filesystem-discovery-${Date.now()}`;
+      setCurrentToken(token);
+      setShowExecutionDialog(true);
 
-      const discoveryResult = await window.electronAPI.executeModule({
+      addLog('Starting File System discovery...', 'info');
+      addLog(`Servers to scan: ${config.servers?.length || 0}`, 'info');
+      addLog(`Include hidden shares: ${config.includeHiddenShares}`, 'info');
+      addLog(`Scan permissions: ${config.scanPermissions}`, 'info');
+      addLog(`Scan large files: ${config.scanLargeFiles}`, 'info');
+
+      // Determine output path
+      const outputPath = selectedSourceProfile?.outputPath || 'C:\\discoverydata\\default\\Raw';
+
+      // Call streaming discovery API
+      await window.electron.executeDiscovery({
+        executionId: token,
         modulePath: 'Modules/Discovery/FileSystemDiscovery.psm1',
-        functionName: 'Invoke-FileSystemDiscovery',
+        functionName: 'Start-FileSystemDiscovery',
         parameters: {
-          Servers: config.servers,
-          IncludeHiddenShares: config.includeHiddenShares,
-          IncludeAdministrativeShares: config.includeAdministrativeShares,
-          ScanPermissions: config.scanPermissions,
-          ScanLargeFiles: config.scanLargeFiles,
-          LargeFileThresholdMB: config.largeFileThresholdMB,
-          AnalyzeStorage: config.analyzeStorage,
-          DetectSecurityRisks: config.detectSecurityRisks,
-          MaxDepth: config.maxDepth,
-          Timeout: config.timeout,
-          ParallelScans: config.parallelScans,
-          ExcludePaths: config.excludePaths,
+          CompanyName: selectedSourceProfile?.companyName || 'Unknown',
+          Servers: config.servers || [],
+          IncludeHiddenShares: config.includeHiddenShares || false,
+          IncludeAdministrativeShares: config.includeAdministrativeShares || false,
+          ScanPermissions: config.scanPermissions !== false,
+          ScanLargeFiles: config.scanLargeFiles !== false,
+          LargeFileThresholdMB: config.largeFileThresholdMB || 100,
+          OutputPath: outputPath,
         },
+        showWindow: false,
       });
 
-      unsubscribe();
-
-      if (discoveryResult.success) {
-        const typedResult = discoveryResult.data as FileSystemDiscoveryResult;
-        setResult(typedResult);
-        setShares(typedResult.shares);
-        setPermissions(typedResult.permissions);
-        setLargeFiles(typedResult.largeFiles);
-        setProgress(null);
-      } else {
-        throw new Error(discoveryResult.error || 'Discovery failed');
-      }
+      addLog('File System discovery started successfully', 'success');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
+      addLog(`Error starting discovery: ${errorMessage}`, 'error');
       setProgress(null);
-    } finally {
       setIsRunning(false);
+      setShowExecutionDialog(false);
+      setCurrentToken(null);
     }
-  }, [config]);
+  }, [config, selectedSourceProfile, addLog]);
 
   const cancelDiscovery = useCallback(async () => {
     if (!isRunning) return;
@@ -488,7 +622,9 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     discoveryHistory,
     loadHistory,
     loadHistoryItem,
-  
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
   };
 };
 

@@ -975,32 +975,90 @@ function Start-ExchangeDiscovery {
             } else { 0 }
             if (-not $avgMailboxSize) { $avgMailboxSize = 0 }
 
+            # Calculate detailed mailbox statistics
             $sharedMailboxCount = ($structuredData.mailboxes | Where-Object {
                 $_.RecipientTypeDetails -eq 'SharedMailbox'
             }).Count
 
-            $securityGroupCount = ($structuredData.distributionGroups | Where-Object {
-                $_.GroupType -eq 'Security'
+            $userMailboxCount = ($structuredData.mailboxes | Where-Object {
+                $_.RecipientTypeDetails -eq 'UserMailbox'
             }).Count
+
+            $resourceMailboxCount = ($structuredData.mailboxes | Where-Object {
+                $_.RecipientTypeDetails -match 'Room|Equipment'
+            }).Count
+
+            $largestMailboxSize = ($structuredData.mailboxes | Where-Object { $_.TotalItemSize -ne $null } |
+                Measure-Object -Property TotalItemSize -Maximum).Maximum
+            if (-not $largestMailboxSize) { $largestMailboxSize = 0 }
+
+            # Calculate distribution group statistics
+            $securityGroupCount = ($structuredData.distributionGroups | Where-Object {
+                $_.GroupType -eq 'Security' -or $_.GroupType -eq 'MailEnabledSecurity'
+            }).Count
+
+            $mailEnabledSecurityGroupCount = ($structuredData.distributionGroups | Where-Object {
+                $_.GroupType -eq 'MailEnabledSecurity'
+            }).Count
+
+            $dynamicGroupCount = ($structuredData.distributionGroups | Where-Object {
+                $_.IsDynamicGroup -eq $true
+            }).Count
+
+            $staticGroupCount = $structuredData.distributionGroups.Count - $dynamicGroupCount
+
+            $avgMembersPerGroup = if ($structuredData.distributionGroups.Count -gt 0) {
+                ($structuredData.distributionGroups | Where-Object { $_.MemberCount -ne $null } |
+                 Measure-Object -Property MemberCount -Average).Average
+            } else { 0 }
+            if (-not $avgMembersPerGroup) { $avgMembersPerGroup = 0 }
+
+            # Calculate transport rule statistics
+            $enabledTransportRuleCount = ($structuredData.transportRules | Where-Object {
+                $_.State -eq 'Enabled'
+            }).Count
+
+            $disabledTransportRuleCount = $structuredData.transportRules.Count - $enabledTransportRuleCount
 
             $statistics = @{
                 totalMailboxes = $structuredData.mailboxes.Count
+                userMailboxes = $userMailboxCount
+                sharedMailboxes = $sharedMailboxCount
+                resourceMailboxes = $resourceMailboxCount
                 totalMailboxSize = $totalMailboxSize
+                totalStorage = $totalMailboxSize  # Alias for compatibility
                 averageMailboxSize = $avgMailboxSize
+                largestMailboxSize = $largestMailboxSize
                 totalArchiveSize = 0
                 inactiveMailboxes = 0
-                sharedMailboxes = $sharedMailboxCount
                 roomMailboxes = 0
                 totalDistributionGroups = $structuredData.distributionGroups.Count
+                staticGroups = $staticGroupCount
+                dynamicGroups = $dynamicGroupCount
                 securityGroups = $securityGroupCount
+                mailEnabledSecurityGroups = $mailEnabledSecurityGroupCount
+                averageMembersPerGroup = $avgMembersPerGroup
                 totalTransportRules = $structuredData.transportRules.Count
-                enabledRules = 0
-                disabledRules = 0
+                enabledRules = $enabledTransportRuleCount
+                enabledTransportRules = $enabledTransportRuleCount  # Alias for compatibility
+                disabledRules = $disabledTransportRuleCount
+                disabledTransportRules = $disabledTransportRuleCount  # Alias for compatibility
                 totalConnectors = $structuredData.connectors.Count
                 sendConnectors = 0
                 receiveConnectors = 0
+                inboundConnectors = 0
+                outboundConnectors = 0
+                enabledConnectors = 0
                 totalPublicFolders = $structuredData.publicFolders.Count
                 mailEnabledFolders = 0
+            }
+
+            # Calculate duration in milliseconds
+            $duration = 0
+            if ($discoveryResult.StartTime -and $discoveryResult.EndTime) {
+                $startDateTime = [DateTime]$discoveryResult.StartTime
+                $endDateTime = [DateTime]$discoveryResult.EndTime
+                $duration = ($endDateTime - $startDateTime).TotalMilliseconds
             }
 
             # Build result matching TypeScript interface (ExchangeDiscoveryResult)
@@ -1008,6 +1066,7 @@ function Start-ExchangeDiscovery {
                 id = [guid]::NewGuid().ToString()
                 startTime = $discoveryResult.StartTime
                 endTime = $discoveryResult.EndTime
+                duration = $duration
                 status = 'completed'
 
                 # Structured data properties (MUST match TypeScript interface)

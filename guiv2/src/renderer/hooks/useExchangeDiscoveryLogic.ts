@@ -89,8 +89,8 @@ export function useExchangeDiscoveryLogic() {
     const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
       console.log('[ExchangeDiscoveryHook] Progress event received:', data);
       if (data.executionId && data.executionId.startsWith('exchange-discovery-')) {
-        setProgress(data as unknown as ExchangeDiscoveryProgress);
         addLog(data.message || `${data.currentPhase} (${data.itemsProcessed || 0}/${data.totalItems || 0})`, 'info');
+        setProgress(data as unknown as ExchangeDiscoveryProgress);
       }
     });
 
@@ -111,9 +111,36 @@ export function useExchangeDiscoveryLogic() {
         const psReturnValue = executionResult.data; // Get the PowerShell return value
 
         console.log('[ExchangeDiscoveryHook] PowerShell return value:', psReturnValue);
+        console.log('[ExchangeDiscoveryHook] PowerShell return value type:', typeof psReturnValue);
+        console.log('[ExchangeDiscoveryHook] PowerShell return value is array?', Array.isArray(psReturnValue));
 
         // Extract the structured data from the Data property of the PowerShell return value
-        const structuredData = psReturnValue?.Data || {}; // { mailboxes: [...], distributionGroups: [...], ... }
+        let structuredData = psReturnValue?.Data || {}; // { mailboxes: [...], distributionGroups: [...], ... }
+
+        console.log('[ExchangeDiscoveryHook] Raw Data property:', structuredData);
+        console.log('[ExchangeDiscoveryHook] Data is array?', Array.isArray(structuredData));
+
+        // If Data is an array (flat array with _DataType), group it by type
+        if (Array.isArray(structuredData)) {
+          console.log('[ExchangeDiscoveryHook] Data is flat array, grouping by _DataType...');
+          const grouped = structuredData.reduce((acc: any, item: any) => {
+            const type = item._DataType;
+            if (!acc[type]) acc[type] = [];
+            acc[type].push(item);
+            return acc;
+          }, {});
+
+          console.log('[ExchangeDiscoveryHook] Grouped data types:', Object.keys(grouped));
+
+          structuredData = {
+            mailboxes: [...(grouped.Mailbox || []), ...(grouped.SharedMailbox || [])],
+            distributionGroups: grouped.DistributionGroup || [],
+            transportRules: grouped.TransportRule || [],
+            connectors: grouped.Connector || [],
+            publicFolders: grouped.PublicFolder || [],
+            mailContacts: grouped.MailContact || [],
+          };
+        }
 
         console.log('[ExchangeDiscoveryHook] Structured data keys:', Object.keys(structuredData));
         console.log('[ExchangeDiscoveryHook] Mailboxes count:', structuredData.mailboxes?.length || 0);
@@ -122,14 +149,20 @@ export function useExchangeDiscoveryLogic() {
         // Build the ExchangeDiscoveryResult with the structured data at root level
         const exchangeResult: ExchangeDiscoveryResult = {
           ...structuredData,
-          id: `exchange-discovery-${Date.now()}`,
-          startTime: new Date(),
+          id: psReturnValue?.id || `exchange-discovery-${Date.now()}`,
+          startTime: psReturnValue?.startTime ? new Date(psReturnValue.startTime) : new Date(),
+          endTime: psReturnValue?.endTime ? new Date(psReturnValue.endTime) : undefined,
+          duration: psReturnValue?.duration || 0,
           status: 'completed',
           config: config,
-          statistics: psReturnValue?.Metadata || {},
+          statistics: psReturnValue?.statistics || {},
           errors: psReturnValue?.Errors || [],
           warnings: psReturnValue?.Warnings || [],
         } as ExchangeDiscoveryResult;
+
+        console.log('[ExchangeDiscoveryHook] Final exchangeResult:', exchangeResult);
+        console.log('[ExchangeDiscoveryHook] Final exchangeResult.mailboxes:', exchangeResult.mailboxes?.length || 0);
+        console.log('[ExchangeDiscoveryHook] Final exchangeResult.distributionGroups:', exchangeResult.distributionGroups?.length || 0);
 
         setResult(exchangeResult);
         setIsDiscovering(false);
@@ -241,7 +274,7 @@ export function useExchangeDiscoveryLogic() {
           IncludeMobileDevices: config.includeMobileDevices,
           IncludeGroupMembership: config.includeGroupMembership,
           IncludeNestedGroups: config.includeNestedGroups,
-          showWindow: true, // Launch in PowerShell window like Azure and Application discovery
+          showWindow: false, // Use integrated GUI dialog like Azure and Application discovery
           timeout: 300000,
         },
         executionId: token,
@@ -311,9 +344,27 @@ export function useExchangeDiscoveryLogic() {
   // ============================================================================
 
   const filteredMailboxes = useMemo(() => {
-    if (!result?.mailboxes) return [];
+    console.log('[DEBUG filteredMailboxes] ========== START ==========');
+    console.log('[DEBUG filteredMailboxes] result exists:', !!result);
+    console.log('[DEBUG filteredMailboxes] result?.mailboxes exists:', !!result?.mailboxes);
+    console.log('[DEBUG filteredMailboxes] result?.mailboxes type:', typeof result?.mailboxes);
+    console.log('[DEBUG filteredMailboxes] result?.mailboxes isArray:', Array.isArray(result?.mailboxes));
+    console.log('[DEBUG filteredMailboxes] result?.mailboxes length:', result?.mailboxes?.length);
+    console.log('[DEBUG filteredMailboxes] result?.mailboxes[0]:', result?.mailboxes?.[0]);
 
-    return result?.mailboxes?.filter((mailbox) => {
+    // More robust check
+    if (!result || !result.mailboxes || !Array.isArray(result.mailboxes) || result.mailboxes.length === 0) {
+      console.log('[DEBUG filteredMailboxes] No valid mailbox data, returning []');
+      console.log('[DEBUG filteredMailboxes] - result:', !!result);
+      console.log('[DEBUG filteredMailboxes] - result.mailboxes:', !!result?.mailboxes);
+      console.log('[DEBUG filteredMailboxes] - isArray:', Array.isArray(result?.mailboxes));
+      console.log('[DEBUG filteredMailboxes] - length:', result?.mailboxes?.length);
+      return [];
+    }
+
+    console.log('[DEBUG filteredMailboxes] Filtering', result.mailboxes.length, 'mailboxes');
+
+    const filtered = result.mailboxes.filter((mailbox) => {
       // Search text
       if (mailboxFilter.searchText) {
         const search = mailboxFilter.searchText.toLowerCase();
@@ -354,12 +405,20 @@ export function useExchangeDiscoveryLogic() {
 
       return true;
     });
-  }, [result?.mailboxes, mailboxFilter]);
+
+    console.log('[DEBUG filteredMailboxes] Filtered result length:', filtered.length);
+    console.log('[DEBUG filteredMailboxes] ========== END ==========');
+    return filtered;
+  }, [result, mailboxFilter]);
 
   const filteredGroups = useMemo(() => {
-    if (!result?.distributionGroups) return [];
+    console.log('[DEBUG filteredGroups] result?.distributionGroups length:', result?.distributionGroups?.length || 0);
 
-    return result?.distributionGroups?.filter((group) => {
+    if (!result || !result.distributionGroups || !Array.isArray(result.distributionGroups) || result.distributionGroups.length === 0) {
+      return [];
+    }
+
+    const filtered = result.distributionGroups.filter((group) => {
       if (groupFilter.searchText) {
         const search = groupFilter.searchText.toLowerCase();
         const matches =
@@ -391,12 +450,17 @@ export function useExchangeDiscoveryLogic() {
 
       return true;
     });
-  }, [result?.distributionGroups, groupFilter]);
+
+    console.log('[DEBUG filteredGroups] Filtered result length:', filtered.length);
+    return filtered;
+  }, [result, groupFilter]);
 
   const filteredRules = useMemo(() => {
-    if (!result?.transportRules) return [];
+    if (!result || !result.transportRules || !Array.isArray(result.transportRules) || result.transportRules.length === 0) {
+      return [];
+    }
 
-    return result?.transportRules?.filter((rule) => {
+    const filtered = result.transportRules.filter((rule) => {
       if (ruleFilter.searchText) {
         const search = ruleFilter.searchText.toLowerCase();
         const matches =
@@ -420,7 +484,9 @@ export function useExchangeDiscoveryLogic() {
 
       return true;
     });
-  }, [result?.transportRules, ruleFilter]);
+
+    return filtered;
+  }, [result, ruleFilter]);
 
   // ============================================================================
   // AG Grid Column Definitions
@@ -462,7 +528,11 @@ export function useExchangeDiscoveryLogic() {
         headerName: 'Size (MB)',
         sortable: true,
         filter: 'agNumberColumnFilter',
-        valueFormatter: (params) => (params.value / 1024 / 1024).toFixed(2),
+        valueFormatter: (params) => {
+          const value = params.value;
+          if (value === null || value === undefined || isNaN(value)) return 'N/A';
+          return (Number(value) / 1024 / 1024).toFixed(2);
+        },
         width: 120,
       },
       {
@@ -470,7 +540,11 @@ export function useExchangeDiscoveryLogic() {
         headerName: 'Item Count',
         sortable: true,
         filter: 'agNumberColumnFilter',
-        valueFormatter: (params) => params.value.toLocaleString(),
+        valueFormatter: (params) => {
+          const value = params.value;
+          if (value === null || value === undefined || isNaN(value)) return 'N/A';
+          return Number(value).toLocaleString();
+        },
         width: 120,
       },
       {

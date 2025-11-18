@@ -3,8 +3,10 @@ export type JsType = "string" | "number" | "boolean";
 export interface ModuleSpec { script: string; argsSchema: Record<string, JsType>; timeoutSec?: number; }
 
 // Use dynamic path resolution instead of hardcoded path
-// Assumes modules directory is one level up from the project root
-const ROOT = path.resolve(process.cwd(), "..", "modules");
+// Determine base directory: if running from guiv2, go up one level; otherwise use cwd
+const cwd = process.cwd();
+const baseDir = cwd.endsWith('guiv2') ? path.join(cwd, '..') : cwd;
+const ROOT = path.join(baseDir, "Modules"); // Capital M to match actual directory
 
 export const DiscoveryModules: Record<string, ModuleSpec> = {
   ActiveDirectory: { script: path.join(ROOT, "Discovery", "ActiveDirectoryDiscovery.psm1"), argsSchema: {"Message":"string","Level":"string","Component":"string","Context":"string"} },

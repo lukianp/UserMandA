@@ -29,6 +29,7 @@ import { SearchBar } from '../../components/molecules/SearchBar';
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';
 import { ProgressBar } from '../../components/molecules/ProgressBar';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 /**
  * Exchange Discovery View Component
@@ -41,6 +42,9 @@ const ExchangeDiscoveryView: React.FC = () => {
     isDiscovering,
     progress,
     error,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
     templates,
     selectedTemplate,
     loadTemplate,
@@ -270,19 +274,19 @@ const ExchangeDiscoveryView: React.FC = () => {
               <TabButton
                 active={selectedTab === 'mailboxes'}
                 onClick={() => setSelectedTab('mailboxes')}
-                label={`Mailboxes (${(result?.mailboxes?.length ?? 0)})`}
+                label={`Mailboxes (${mailboxes.length})`}
                 icon={<Inbox className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'groups'}
                 onClick={() => setSelectedTab('groups')}
-                label={`Groups (${(result?.distributionGroups?.length ?? 0)})`}
+                label={`Groups (${groups.length})`}
                 icon={<Users className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'rules'}
                 onClick={() => setSelectedTab('rules')}
-                label={`Transport Rules (${(result?.transportRules?.length ?? 0)})`}
+                label={`Transport Rules (${rules.length})`}
                 icon={<Shield className="w-4 h-4" />}
               />
             </div>
@@ -354,6 +358,25 @@ const ExchangeDiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="Exchange Discovery"
+        scriptDescription="Discovering Exchange mailboxes, groups, and transport rules"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={false}
+        progress={progress ? {
+          percentage: progress.percentComplete || 0,
+          message: progress.phaseLabel || 'Processing...'
+        } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={() => {}}
+        showStartButton={false}
+      />
     </div>
   );
 };

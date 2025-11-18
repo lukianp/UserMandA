@@ -106,12 +106,15 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
   const [discoveryHistory, setDiscoveryHistory] = useState<FileSystemDiscoveryResult[]>([]);
 
   const startDiscovery = useCallback(async () => {
+    console.log('[FileSystemDiscoveryHook] Starting file system discovery');
+    console.log('[FileSystemDiscoveryHook] Parameters:', config);
+
     setIsRunning(true);
     setError(null);
     setProgress({
       phase: 'initializing',
       serversCompleted: 0,
-      totalServers: config?.servers?.length,
+      totalServers: config?.servers?.length || 0,
       sharesCompleted: 0,
       totalShares: 0,
       percentComplete: 0,
@@ -119,23 +122,10 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     });
 
     try {
-      const unsubscribe = window.electronAPI.onProgress((data: ProgressData) => {
-        // Convert ProgressData to FileSystemProgress
-        const progressData: FileSystemProgress = {
-          phase: 'discovering_shares',
-          serversCompleted: data.itemsProcessed || 0,
-          totalServers: data.totalItems || 0,
-          sharesCompleted: 0,
-          totalShares: 0,
-          percentComplete: data.percentage,
-          message: data.message || 'Processing...',
-        };
-        setProgress(progressData);
-      });
-
-      const discoveryResult = await window.electronAPI.executeModule({
+      // Execute FileSystem discovery directly (not cloud-based, so no tenant credentials needed)
+      const result = await window.electronAPI.executeModule({
         modulePath: 'Modules/Discovery/FileSystemDiscovery.psm1',
-        functionName: 'Invoke-FileSystemDiscovery',
+        functionName: 'Start-FileSystemDiscovery',
         parameters: {
           Servers: config.servers,
           IncludeHiddenShares: config.includeHiddenShares,
@@ -148,24 +138,29 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
           MaxDepth: config.maxDepth,
           Timeout: config.timeout,
           ParallelScans: config.parallelScans,
-          ExcludePaths: config.excludePaths,
+          ExcludePaths: config.excludePaths || [],
+          OutputPath: 'C:\\DiscoveryData\\FileSystem\\Raw',
+        },
+        options: {
+          timeout: 300000, // 5 minutes
         },
       });
 
-      unsubscribe();
+      console.log('[FileSystemDiscoveryHook] Discovery result:', result);
 
-      if (discoveryResult.success) {
-        const typedResult = discoveryResult.data as FileSystemDiscoveryResult;
+      if (result.success) {
+        const typedResult = result.data as FileSystemDiscoveryResult;
         setResult(typedResult);
-        setShares(typedResult.shares);
-        setPermissions(typedResult.permissions);
-        setLargeFiles(typedResult.largeFiles);
+        setShares(typedResult.shares || []);
+        setPermissions(typedResult.permissions || []);
+        setLargeFiles(typedResult.largeFiles || []);
         setProgress(null);
       } else {
-        throw new Error(discoveryResult.error || 'Discovery failed');
+        throw new Error(result.error || 'Discovery failed');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('[FileSystemDiscoveryHook] Discovery failed:', errorMessage);
       setError(errorMessage);
       setProgress(null);
     } finally {
