@@ -3,8 +3,10 @@ export type JsType = "string" | "number" | "boolean";
 export interface ModuleSpec { script: string; argsSchema: Record<string, JsType>; timeoutSec?: number; }
 
 // Use dynamic path resolution instead of hardcoded path
-// Modules directory is in the app's working directory (C:\enterprisediscovery\Modules)
-const ROOT = path.resolve(process.cwd(), "Modules");
+// Determine base directory: if running from guiv2, go up one level; otherwise use cwd
+const cwd = process.cwd();
+const baseDir = cwd.endsWith('guiv2') ? path.join(cwd, '..') : cwd;
+const ROOT = path.join(baseDir, "Modules"); // Capital M to match actual directory
 
 export const DiscoveryModules: Record<string, ModuleSpec> = {
   ActiveDirectory: { script: path.join(ROOT, "Discovery", "ActiveDirectoryDiscovery.psm1"), argsSchema: {"Message":"string","Level":"string","Component":"string","Context":"string"} },
@@ -34,6 +36,7 @@ export const DiscoveryModules: Record<string, ModuleSpec> = {
   ExternalIdentityDiscovery: { script: path.join(ROOT, "Discovery", "ExternalIdentityDiscovery.psm1"), argsSchema: {"Message":"string","Level":"string","Component":"string","Context":"string"} },
   FileServer: { script: path.join(ROOT, "Discovery", "FileServer.psm1"), argsSchema: {"Message":"string","Level":"string","Component":"string","Context":"string"} },
   FileServerDiscovery: { script: path.join(ROOT, "Discovery", "FileServerDiscovery.psm1"), argsSchema: {"Message":"string","Level":"string","Component":"string","Context":"string"} },
+  FileSystem: { script: path.join(ROOT, "Discovery", "FileSystemDiscovery.psm1"), argsSchema: {} },
   GCP: { script: path.join(ROOT, "Discovery", "GCPDiscovery.psm1"), argsSchema: {"Message":"string","Level":"string","Component":"string","Context":"string"} },
   GPO: { script: path.join(ROOT, "Discovery", "GPODiscovery.psm1"), argsSchema: {"Message":"string","Level":"string","Component":"string","Context":"string"} },
   Graph: { script: path.join(ROOT, "Discovery", "GraphDiscovery.psm1"), argsSchema: {} },

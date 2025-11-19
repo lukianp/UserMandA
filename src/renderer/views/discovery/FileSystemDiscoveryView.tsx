@@ -6,6 +6,7 @@ import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataG
 import { Button } from '../../components/atoms/Button';
 import SearchBar from '../../components/molecules/SearchBar';
 import ProgressBar from '../../components/molecules/ProgressBar';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const FileSystemDiscoveryView: React.FC = () => {
   const [showConfigModal, setShowConfigModal] = React.useState(false);
@@ -16,6 +17,9 @@ const FileSystemDiscoveryView: React.FC = () => {
     isRunning,
     progress,
     error,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
     config,
     setConfig,
     startDiscovery,
@@ -564,6 +568,21 @@ const FileSystemDiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => setShowExecutionDialog(false)}
+        title="File System Discovery"
+        logs={logs}
+        isRunning={isRunning}
+        progress={progress ? {
+          phase: progress.phase || 'scanning',
+          percentComplete: progress.percentComplete || 0,
+          message: progress.message || '',
+        } : undefined}
+        data-cy="filesystem-execution-dialog"
+      />
     </div>
   );
 };

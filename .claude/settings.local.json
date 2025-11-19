@@ -57,7 +57,11 @@
       "Bash(xargs ls:*)",
       "Bash(cmd /c \"dir /s C:\\enterprisediscovery\\guiv2\\junk | findstr /C:\"\"File(s)\"\" /C:\"\"Dir(s)\"\"\")",
       "Bash(tasklist /FI 'IMAGENAME eq electron.exe' /FO TABLE 2)",
-      "Bash(cmd /c:*)"
+      "Bash(cmd /c:*)",
+      "Bash(npx webpack:*)",
+      "Bash(build-output.txt)",
+      "Bash(npx electron:*)",
+      "Bash(node node_modules/electron/cli.js:*)"
     ],
     "deny": [],
     "ask": [],
