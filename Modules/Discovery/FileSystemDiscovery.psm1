@@ -26,10 +26,10 @@ if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
         switch ($Level) {
             'ERROR' { Write-Error "[FileSystemDiscovery] $logMessage" }
             'WARN' { Write-Warning "[FileSystemDiscovery] $logMessage" }
-            'SUCCESS' { Write-Information "[FileSystemDiscovery] $logMessage" -InformationAction Continue }
+            'SUCCESS' { Write-Verbose "[FileSystemDiscovery] $logMessage" -InformationAction Continue }
             'HEADER' { Write-Verbose "[FileSystemDiscovery] $logMessage" -Verbose }
             'DEBUG' { Write-Verbose "[FileSystemDiscovery] $logMessage" -Verbose }
-            default { Write-Information "[FileSystemDiscovery] $logMessage" -InformationAction Continue }
+            default { Write-Verbose "[FileSystemDiscovery] $logMessage" -InformationAction Continue }
         }
     }
 }
@@ -66,8 +66,7 @@ function Invoke-FileSystemDiscovery {
         [string]$SessionId
     )
 
-    Write-Information "[FileSystemDiscovery] Starting comprehensive File System discovery..." -InformationAction Continue
-
+    Write-Verbose "[FileSystemDiscovery] Starting comprehensive File System discovery..."
     # Define discovery scriptblock
     $discoveryScript = {
         param($Configuration, $Context, $SessionId, $Connections, $Result)
@@ -75,8 +74,7 @@ function Invoke-FileSystemDiscovery {
         # Initialize data collection
         $allDiscoveredData = [System.Collections.ArrayList]::new()
 
-        Write-Information "[FileSystemDiscovery] === STARTING FILE SYSTEM DISCOVERY ===" -InformationAction Continue
-
+        Write-Verbose "[FileSystemDiscovery] === STARTING FILE SYSTEM DISCOVERY ==="
         # Extract configuration parameters
         $servers = $Configuration.Servers
         $includeHiddenShares = $Configuration.IncludeHiddenShares
@@ -86,24 +84,13 @@ function Invoke-FileSystemDiscovery {
         $largeFileThresholdMB = $Configuration.LargeFileThresholdMB -as [int]
         if (!$largeFileThresholdMB) { $largeFileThresholdMB = 100 }
 
-        Write-Information "[FileSystemDiscovery] Configuration received:" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery]   - Servers parameter: $($servers -join ', ')" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery]   - Servers count: $($servers.Count)" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery]   - Include Hidden Shares: $includeHiddenShares" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery]   - Include Admin Shares: $includeAdministrativeShares" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery]   - Scan Permissions: $scanPermissions" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery]   - Scan Large Files: $scanLargeFiles" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery]   - Large File Threshold: ${largeFileThresholdMB}MB" -InformationAction Continue
-
+        Write-Verbose "[FileSystemDiscovery] Configuration received:"        Write-Verbose "[FileSystemDiscovery]   - Servers parameter: $($servers -join ', ')"        Write-Verbose "[FileSystemDiscovery]   - Servers count: $($servers.Count)"        Write-Verbose "[FileSystemDiscovery]   - Include Hidden Shares: $includeHiddenShares"        Write-Verbose "[FileSystemDiscovery]   - Include Admin Shares: $includeAdministrativeShares"        Write-Verbose "[FileSystemDiscovery]   - Scan Permissions: $scanPermissions"        Write-Verbose "[FileSystemDiscovery]   - Scan Large Files: $scanLargeFiles"        Write-Verbose "[FileSystemDiscovery]   - Large File Threshold: ${largeFileThresholdMB}MB"
         # If no servers specified, use localhost as fallback
         if (!$servers -or $servers.Count -eq 0) {
-            Write-Information "[FileSystemDiscovery] No servers specified, using local computer as fallback..." -InformationAction Continue
-            $servers = @($env:COMPUTERNAME)
-            Write-Information "[FileSystemDiscovery] Will scan local computer: $($env:COMPUTERNAME)" -InformationAction Continue
-        }
+            Write-Verbose "[FileSystemDiscovery] No servers specified, using local computer as fallback..."            $servers = @($env:COMPUTERNAME)
+            Write-Verbose "[FileSystemDiscovery] Will scan local computer: $($env:COMPUTERNAME)"        }
 
-        Write-Information "[FileSystemDiscovery] Will process $($servers.Count) server(s): $($servers -join ', ')" -InformationAction Continue
-
+        Write-Verbose "[FileSystemDiscovery] Will process $($servers.Count) server(s): $($servers -join ', ')"
         # Discover file servers and add to data
         $fileServerCount = 0
         foreach ($server in $servers) {
@@ -146,34 +133,27 @@ function Invoke-FileSystemDiscovery {
 
         foreach ($server in $servers) {
             $serverName = if ($server -is [string]) { $server } else { $server.Name }
-            Write-Information "[FileSystemDiscovery] === PROCESSING SERVER: $serverName ===" -InformationAction Continue
-
+            Write-Verbose "[FileSystemDiscovery] === PROCESSING SERVER: $serverName ==="
             # Discover shares
             try {
                 # For local computer, use direct Get-SmbShare without CimSession
                 if ($serverName -eq $env:COMPUTERNAME -or $serverName -eq 'localhost' -or $serverName -eq '127.0.0.1') {
-                    Write-Information "[FileSystemDiscovery] Using local share enumeration for $serverName" -InformationAction Continue
-                    $shares = Get-SmbShare -ErrorAction Stop
+                    Write-Verbose "[FileSystemDiscovery] Using local share enumeration for $serverName"                    $shares = Get-SmbShare -ErrorAction Stop
                 } else {
-                    Write-Information "[FileSystemDiscovery] Using CimSession for remote server $serverName" -InformationAction Continue
-                    $shares = Get-SmbShare -CimSession $serverName -ErrorAction Stop
+                    Write-Verbose "[FileSystemDiscovery] Using CimSession for remote server $serverName"                    $shares = Get-SmbShare -CimSession $serverName -ErrorAction Stop
                 }
 
-                Write-Information "[FileSystemDiscovery] Found $($shares.Count) total shares on $serverName" -InformationAction Continue
-
+                Write-Verbose "[FileSystemDiscovery] Found $($shares.Count) total shares on $serverName"
                 foreach ($share in $shares) {
                     # Filter hidden/administrative shares if requested
                     if (!$includeHiddenShares -and $share.Name -match '\$$') {
-                        Write-Information "[FileSystemDiscovery] Skipping hidden share: $($share.Name)" -InformationAction Continue
-                        continue
+                        Write-Verbose "[FileSystemDiscovery] Skipping hidden share: $($share.Name)"                        continue
                     }
                     if (!$includeAdministrativeShares -and $share.Name -in @('ADMIN$', 'C$', 'D$', 'IPC$')) {
-                        Write-Information "[FileSystemDiscovery] Skipping administrative share: $($share.Name)" -InformationAction Continue
-                        continue
+                        Write-Verbose "[FileSystemDiscovery] Skipping administrative share: $($share.Name)"                        continue
                     }
 
-                    Write-Information "[FileSystemDiscovery] Processing share: $($share.Name) (Path: $($share.Path))" -InformationAction Continue
-
+                    Write-Verbose "[FileSystemDiscovery] Processing share: $($share.Name) (Path: $($share.Path))"
                     # Get share statistics
                     # For local computer, use the actual local path instead of UNC path for better reliability
                     $isLocalComputer = ($serverName -eq $env:COMPUTERNAME -or $serverName -eq 'localhost' -or $serverName -eq '127.0.0.1')
@@ -182,8 +162,7 @@ function Invoke-FileSystemDiscovery {
                     } else {
                         "\\$serverName\$($share.Name)"  # Use UNC path for remote shares
                     }
-                    Write-Information "[FileSystemDiscovery] Using path: $sharePath (isLocal: $isLocalComputer)" -InformationAction Continue
-
+                    Write-Verbose "[FileSystemDiscovery] Using path: $sharePath (isLocal: $isLocalComputer)"
                     $stats = Get-ShareStatistics -SharePath $sharePath
 
                     $shareObj = [PSCustomObject]@{
@@ -313,15 +292,7 @@ function Invoke-FileSystemDiscovery {
             }
         }
 
-        Write-Information "[FileSystemDiscovery] === DISCOVERY COMPLETE ===" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery] Summary:" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery]   - File Servers: $fileServerCount" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery]   - Shares: $shareCount" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery]   - Permissions: $permissionCount" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery]   - File Type Analysis: $fileAnalysisCount" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery]   - Large Files: $largeFileCount" -InformationAction Continue
-        Write-Information "[FileSystemDiscovery]   - Total Objects: $($allDiscoveredData.Count)" -InformationAction Continue
-
+        Write-Verbose "[FileSystemDiscovery] === DISCOVERY COMPLETE ==="        Write-Verbose "[FileSystemDiscovery] Summary:"        Write-Verbose "[FileSystemDiscovery]   - File Servers: $fileServerCount"        Write-Verbose "[FileSystemDiscovery]   - Shares: $shareCount"        Write-Verbose "[FileSystemDiscovery]   - Permissions: $permissionCount"        Write-Verbose "[FileSystemDiscovery]   - File Type Analysis: $fileAnalysisCount"        Write-Verbose "[FileSystemDiscovery]   - Large Files: $largeFileCount"        Write-Verbose "[FileSystemDiscovery]   - Total Objects: $($allDiscoveredData.Count)"
         # Export data grouped by type
         $dataGroups = $allDiscoveredData | Group-Object -Property _DataType
         foreach ($group in $dataGroups) {
@@ -393,18 +364,13 @@ function Start-FileSystemDiscovery {
         [string]$OutputPath
     )
 
-    Write-Information "[FileSystemDiscovery] Starting File System discovery for $CompanyName..." -InformationAction Continue
-    Write-Information "[FileSystemDiscovery] Servers parameter received: $($Servers -join ', ')" -InformationAction Continue
-    Write-Information "[FileSystemDiscovery] Servers count: $($Servers.Count)" -InformationAction Continue
-
+    Write-Verbose "[FileSystemDiscovery] Starting File System discovery for $CompanyName..."    Write-Verbose "[FileSystemDiscovery] Servers parameter received: $($Servers -join ', ')"    Write-Verbose "[FileSystemDiscovery] Servers count: $($Servers.Count)"
     # Ensure servers array is valid - use localhost as fallback
     if (-not $Servers -or $Servers.Count -eq 0) {
-        Write-Information "[FileSystemDiscovery] No servers specified, using local computer: $($env:COMPUTERNAME)" -InformationAction Continue
-        $Servers = @($env:COMPUTERNAME)
+        Write-Verbose "[FileSystemDiscovery] No servers specified, using local computer: $($env:COMPUTERNAME)"        $Servers = @($env:COMPUTERNAME)
     }
 
-    Write-Information "[FileSystemDiscovery] Final servers list: $($Servers -join ', ')" -InformationAction Continue
-
+    Write-Verbose "[FileSystemDiscovery] Final servers list: $($Servers -join ', ')"
     # Initialize result structure
     $result = [PSCustomObject]@{
         Success = $false
@@ -421,6 +387,12 @@ function Start-FileSystemDiscovery {
     }
 
     try {
+        # Validate OutputPath - use default if not provided
+        if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+            $OutputPath = "C:\DiscoveryData\FileSystem\Raw"
+            Write-Verbose "[FileSystemDiscovery] OutputPath not provided, using default: $OutputPath"
+        }
+
         # Ensure output paths exist
         if (-not (Test-Path $OutputPath)) {
             New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
@@ -517,8 +489,7 @@ function Start-FileSystemDiscovery {
 
                 $result.Metadata = $discoveryResult.Metadata
 
-                Write-Information "[FileSystemDiscovery] Discovery completed successfully. Found $($result.RecordCount) File System objects." -InformationAction Continue
-            } else {
+                Write-Verbose "[FileSystemDiscovery] Discovery completed successfully. Found $($result.RecordCount) File System objects."            } else {
                 $result.Success = $false
                 $result.Errors = $discoveryResult.Errors
                 $result.Warnings = $discoveryResult.Warnings
@@ -540,23 +511,20 @@ function Get-FileServersFromNetwork {
     [CmdletBinding()]
     param()
 
-    Write-Information "[FileSystemDiscovery] Starting network file server discovery..." -InformationAction Continue
-
+    Write-Verbose "[FileSystemDiscovery] Starting network file server discovery..."
     try {
         $servers = @()
 
         # Always include localhost for testing and reliability
         $localComputer = $env:COMPUTERNAME
-        Write-Information "[FileSystemDiscovery] Adding local computer: $localComputer" -InformationAction Continue
-
+        Write-Verbose "[FileSystemDiscovery] Adding local computer: $localComputer"
         # Get local shares count
         $localShareCount = 0
         try {
             $localShares = Get-SmbShare -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch '\$' }
             if ($localShares) {
                 $localShareCount = $localShares.Count
-                Write-Information "[FileSystemDiscovery] Local computer has $localShareCount non-administrative shares" -InformationAction Continue
-            }
+                Write-Verbose "[FileSystemDiscovery] Local computer has $localShareCount non-administrative shares"            }
         } catch {
             Write-Warning "[FileSystemDiscovery] Could not enumerate local shares: $($_.Exception.Message)"
         }
@@ -574,8 +542,7 @@ function Get-FileServersFromNetwork {
         # Method 1: Query Active Directory for file servers (optional, non-blocking)
         try {
             if (Get-Module -ListAvailable -Name ActiveDirectory) {
-                Write-Information "[FileSystemDiscovery] Querying Active Directory for file servers..." -InformationAction Continue
-                Import-Module ActiveDirectory -Force
+                Write-Verbose "[FileSystemDiscovery] Querying Active Directory for file servers..."                Import-Module ActiveDirectory -Force
                 $adServers = Get-ADComputer -Filter {OperatingSystem -like "*Server*"} -Properties OperatingSystem, IPv4Address, LastLogonDate
                 foreach ($server in $adServers) {
                     # Check if server has file shares (skip if not accessible)
@@ -600,8 +567,7 @@ function Get-FileServersFromNetwork {
                 }
             }
         } catch {
-            Write-Information "[FileSystemDiscovery] Active Directory module not available or accessible - using local computer only" -InformationAction Continue
-        }
+            Write-Verbose "[FileSystemDiscovery] Active Directory module not available or accessible - using local computer only"        }
 
         # Method 2: Network browsing for shares (optional, non-blocking)
         try {
@@ -630,11 +596,9 @@ function Get-FileServersFromNetwork {
                 }
             }
         } catch {
-            Write-Information "[FileSystemDiscovery] Network browsing not available - using local computer only" -InformationAction Continue
-        }
+            Write-Verbose "[FileSystemDiscovery] Network browsing not available - using local computer only"        }
 
-        Write-Information "[FileSystemDiscovery] Network discovery complete. Found $($servers.Count) server(s)." -InformationAction Continue
-        return $servers
+        Write-Verbose "[FileSystemDiscovery] Network discovery complete. Found $($servers.Count) server(s)."        return $servers
     } catch {
         Write-Warning "[FileSystemDiscovery] File server discovery failed: $($_.Exception.Message)"
         # Return localhost as fallback
@@ -655,11 +619,9 @@ function Get-ShareStatistics {
     param([string]$SharePath)
 
     try {
-        Write-Information "[FileSystemDiscovery] Getting statistics for: $SharePath" -InformationAction Continue
-
+        Write-Verbose "[FileSystemDiscovery] Getting statistics for: $SharePath"
         if (Test-Path $SharePath) {
-            Write-Information "[FileSystemDiscovery] Path exists, enumerating files (this may take a moment)..." -InformationAction Continue
-
+            Write-Verbose "[FileSystemDiscovery] Path exists, enumerating files (this may take a moment)..."
             # Use -Depth to limit recursion for faster results
             $items = Get-ChildItem $SharePath -Recurse -Force -ErrorAction SilentlyContinue -Depth 5
             $files = $items | Where-Object { -not $_.PSIsContainer }
@@ -670,8 +632,7 @@ function Get-ShareStatistics {
             $folderCount = ($folders | Measure-Object).Count
             $lastAccess = ($files | Sort-Object LastAccessTime -Descending | Select-Object -First 1).LastAccessTime
 
-            Write-Information "[FileSystemDiscovery] Found $fileCount files, $folderCount folders, $(if ($folderSize.Sum) { [math]::Round($folderSize.Sum / 1MB, 2) } else { 0 }) MB" -InformationAction Continue
-
+            Write-Verbose "[FileSystemDiscovery] Found $fileCount files, $folderCount folders, $(if ($folderSize.Sum) { [math]::Round($folderSize.Sum / 1MB, 2) } else { 0 }) MB"
             return [PSCustomObject]@{
                 SizeGB = if ($folderSize.Sum) { [math]::Round($folderSize.Sum / 1GB, 2) } else { 0 }
                 UsedSpaceGB = if ($folderSize.Sum) { [math]::Round($folderSize.Sum / 1GB, 2) } else { 0 }
