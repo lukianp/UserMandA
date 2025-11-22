@@ -61,7 +61,13 @@
       "Bash(npx webpack:*)",
       "Bash(build-output.txt)",
       "Bash(npx electron:*)",
-      "Bash(node node_modules/electron/cli.js:*)"
+      "Bash(node node_modules/electron/cli.js:*)",
+      "Bash(tasklist /FI 'IMAGENAME eq electron.exe' 2)",
+      "mcp__ide__getDiagnostics",
+      "Bash(tasklist /FI \"IMAGENAME eq electron.exe\" /FO TABLE)",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command \"Import-Module ''''C:\\enterprisediscovery\\Modules\\Discovery\\FileSystemDiscovery.psm1'''' -Force; Start-FileSystemDiscovery -CompanyName ''''test'''' -Servers @(''''localhost'''') -OutputPath ''''C:\\DiscoveryData\\test\\Raw'''' -Verbose\")",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command \"Get-SmbShare | Select-Object Name, Path, ShareType | Format-Table -AutoSize\")",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": [],

@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import {
@@ -17,6 +18,7 @@ import {
 import type { ProgressData } from '../../shared/types';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { useProfileStore } from '../store/useProfileStore';
+import { getElectronAPI } from '../lib/electron-api-fallback';
 import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 
 export interface UseFileSystemDiscoveryLogicReturn {
@@ -279,34 +281,106 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
       setCurrentToken(token);
       setShowExecutionDialog(true);
 
+      const companyName = selectedSourceProfile?.companyName || 'FileSystemDiscovery';
       addLog('Starting File System discovery...', 'info');
-      addLog(`Servers to scan: ${config.servers?.length || 0}`, 'info');
+      addLog(`Company: ${companyName}`, 'info');
+      addLog(`Servers to scan: ${config.servers?.length || 0} (localhost if none)`, 'info');
       addLog(`Include hidden shares: ${config.includeHiddenShares}`, 'info');
       addLog(`Scan permissions: ${config.scanPermissions}`, 'info');
       addLog(`Scan large files: ${config.scanLargeFiles}`, 'info');
 
-      // Determine output path
-      const outputPath = selectedSourceProfile?.outputPath || 'C:\\discoverydata\\default\\Raw';
+      // Get electron API (matches Azure pattern)
+      const electronAPI = getElectronAPI();
 
-      // Call streaming discovery API
-      await window.electron.executeDiscovery({
-        executionId: token,
-        modulePath: 'Modules/Discovery/FileSystemDiscovery.psm1',
-        functionName: 'Start-FileSystemDiscovery',
-        parameters: {
-          CompanyName: selectedSourceProfile?.companyName || 'Unknown',
-          Servers: config.servers || [],
+      // Execute FileSystem discovery using executeDiscoveryModule (matches Azure pattern)
+      // This correctly routes to powershell:executeDiscoveryModule IPC handler
+      // which loads credentials and constructs the proper module path
+      const result = await electronAPI.executeDiscoveryModule(
+        'FileSystem',
+        companyName,
+        {
+          Servers: config.servers && config.servers.length > 0 ? config.servers : null,
           IncludeHiddenShares: config.includeHiddenShares || false,
           IncludeAdministrativeShares: config.includeAdministrativeShares || false,
           ScanPermissions: config.scanPermissions !== false,
           ScanLargeFiles: config.scanLargeFiles !== false,
           LargeFileThresholdMB: config.largeFileThresholdMB || 100,
-          OutputPath: outputPath,
         },
-        showWindow: false,
-      });
+        {
+          timeout: 300000, // 5 minute timeout
+          showWindow: true, // Request visible PowerShell window
+        }
+      );
 
-      addLog('File System discovery started successfully', 'success');
+      console.log('[FileSystemDiscoveryHook] executeDiscoveryModule result:', result);
+
+      // Handle the result - the discovery module returns synchronously
+      if (result && result.success) {
+        addLog('File System discovery completed successfully', 'success');
+
+        // Process the result data
+        const psReturnValue = result.data || result;
+        let structuredData = psReturnValue?.Data || psReturnValue;
+
+        // If data is a flat array with _DataType properties, group by type
+        if (Array.isArray(structuredData) && structuredData.length > 0 && structuredData[0]?._DataType) {
+          const grouped: any = { shares: [], permissions: [], largeFiles: [] };
+          structuredData.forEach((item: any) => {
+            if (item._DataType === 'Share') grouped.shares.push(item);
+            else if (item._DataType === 'Permission') grouped.permissions.push(item);
+            else if (item._DataType === 'LargeFile') grouped.largeFiles.push(item);
+          });
+          structuredData = grouped;
+        }
+
+        // Build final result
+        const fileSystemResult: FileSystemDiscoveryResult = {
+          id: token,
+          startTime: psReturnValue?.startTime ? new Date(psReturnValue.startTime) : new Date(),
+          endTime: psReturnValue?.endTime ? new Date(psReturnValue.endTime) : new Date(),
+          duration: psReturnValue?.duration || 0,
+          status: 'completed',
+          config: config,
+          shares: structuredData?.shares || [],
+          permissions: structuredData?.permissions || [],
+          largeFiles: structuredData?.largeFiles || [],
+          statistics: psReturnValue?.statistics || {
+            totalShares: structuredData?.shares?.length || 0,
+            totalPermissions: structuredData?.permissions?.length || 0,
+            totalLargeFiles: structuredData?.largeFiles?.length || 0,
+            totalServers: config.servers?.length || 1,
+            totalSizeMB: 0,
+            averageFileSizeMB: 0,
+            largestFileMB: 0,
+          },
+          errors: psReturnValue?.errors || [],
+          warnings: psReturnValue?.warnings || [],
+        };
+
+        const totalItems = fileSystemResult.shares.length +
+                          fileSystemResult.permissions.length +
+                          fileSystemResult.largeFiles.length;
+        addLog(`Found ${fileSystemResult.shares.length} shares, ${fileSystemResult.permissions.length} permissions, ${fileSystemResult.largeFiles.length} large files`, 'success');
+
+        setResult(fileSystemResult);
+
+        // Store result in discovery store
+        addDiscoveryResult({
+          id: fileSystemResult.id,
+          moduleName: 'FileSystemDiscovery',
+          companyName: companyName,
+          result: fileSystemResult,
+          timestamp: new Date(),
+        });
+      } else {
+        const errorMsg = result?.error || 'Discovery failed with unknown error';
+        addLog(`Discovery failed: ${errorMsg}`, 'error');
+        setError(errorMsg);
+      }
+
+      setIsRunning(false);
+      setShowExecutionDialog(false);
+      setCurrentToken(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
@@ -316,28 +390,36 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
       setShowExecutionDialog(false);
       setCurrentToken(null);
     }
-  }, [config, selectedSourceProfile, addLog]);
+  }, [config, selectedSourceProfile, addLog, addDiscoveryResult]);
 
   const cancelDiscovery = useCallback(async () => {
-    if (!isRunning) return;
+    if (!isRunning || !currentToken) return;
 
     try {
-      await window.electronAPI.cancelExecution('filesystem-discovery');
+      addLog('Cancelling File System discovery...', 'warning');
+      await window.electron.cancelDiscovery(currentToken);
       setIsRunning(false);
       setProgress(null);
+      setShowExecutionDialog(false);
+      setCurrentToken(null);
+      addLog('File System discovery cancelled', 'warning');
     } catch (err) {
       console.error('Failed to cancel discovery:', err);
+      addLog(`Failed to cancel: ${err instanceof Error ? err.message : 'Unknown error'}`, 'error');
     }
-  }, [isRunning]);
+  }, [isRunning, currentToken, addLog]);
 
   const exportResults = useCallback(async (format: 'CSV' | 'JSON' | 'Excel') => {
     if (!result) return;
 
     try {
-      await window.electronAPI.executeModule({
-        modulePath: 'Modules/Export/FileSystemExport.psm1',
-        functionName: 'Export-FileSystemDiscovery',
-        parameters: {
+      const electronAPI = getElectronAPI();
+      const outputPath = selectedSourceProfile?.outputPath || 'C:\\discoverydata\\default\\Raw';
+
+      await electronAPI.executeDiscoveryModule(
+        'FileSystemExport',
+        selectedSourceProfile?.companyName || 'Unknown',
+        {
           Result: result,
           Format: format,
           IncludeShares: true,
@@ -345,12 +427,14 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
           IncludeLargeFiles: true,
           IncludeStatistics: true,
           IncludeSecurityRisks: true,
+          OutputPath: outputPath,
         },
-      });
+        { timeout: 60000 }
+      );
     } catch (err) {
       console.error('Export failed:', err);
     }
-  }, [result]);
+  }, [result, selectedSourceProfile]);
 
   const selectTemplate = useCallback((template: FileSystemDiscoveryTemplate) => {
     setSelectedTemplate(template);
@@ -359,39 +443,43 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
 
   const loadHistory = useCallback(async () => {
     try {
-      const historyResult = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/FileSystemDiscovery.psm1',
-        functionName: 'Get-FileSystemDiscoveryHistory',
-        parameters: {},
-      });
+      const electronAPI = getElectronAPI();
+      const historyResult = await electronAPI.executeDiscoveryModule(
+        'FileSystemHistory',
+        selectedSourceProfile?.companyName || 'Unknown',
+        {},
+        { timeout: 30000 }
+      );
 
-      if (historyResult.success) {
+      if (historyResult?.success && historyResult?.data?.history) {
         setDiscoveryHistory(historyResult.data.history);
       }
     } catch (err) {
       console.error('Failed to load history:', err);
     }
-  }, []);
+  }, [selectedSourceProfile]);
 
   const loadHistoryItem = useCallback(async (id: string) => {
     try {
-      const historyResult = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/FileSystemDiscovery.psm1',
-        functionName: 'Get-FileSystemDiscoveryResult',
-        parameters: { Id: id },
-      });
+      const electronAPI = getElectronAPI();
+      const historyResult = await electronAPI.executeDiscoveryModule(
+        'FileSystemHistoryItem',
+        selectedSourceProfile?.companyName || 'Unknown',
+        { Id: id },
+        { timeout: 30000 }
+      );
 
-      if (historyResult.success) {
+      if (historyResult?.success && historyResult?.data) {
         const typedResult = historyResult.data as FileSystemDiscoveryResult;
         setResult(typedResult);
-        setShares(typedResult.shares);
-        setPermissions(typedResult.permissions);
-        setLargeFiles(typedResult.largeFiles);
+        setShares(typedResult.shares || []);
+        setPermissions(typedResult.permissions || []);
+        setLargeFiles(typedResult.largeFiles || []);
       }
     } catch (err) {
       console.error('Failed to load history item:', err);
     }
-  }, []);
+  }, [selectedSourceProfile]);
 
   const filteredShares = useMemo(() => {
     let filtered = shares;

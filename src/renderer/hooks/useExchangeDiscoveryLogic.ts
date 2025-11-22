@@ -1,8 +1,3 @@
-/**
- * Exchange Discovery Logic Hook
- * Contains all business logic for Exchange discovery view
- */
-
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
@@ -22,11 +17,33 @@ import {
 } from '../types/models/exchange';
 import type { ProgressData } from '../../shared/types';
 import { useProfileStore } from '../store/useProfileStore';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { getElectronAPI } from '../lib/electron-api-fallback';
+import type { DiscoveryProgress, DiscoveryResult } from '../types/models/discovery';
+
+// Electron API global declarations
+declare global {
+  interface Window {
+    electron: {
+      executeDiscovery: (params: { moduleName: string; parameters: any; executionId: string }) => Promise<{ executionId: string }>;
+      onDiscoveryProgress: (callback: (data: any) => void) => () => void;
+      onDiscoveryComplete: (callback: (data: any) => void) => () => void;
+      onDiscoveryError: (callback: (data: any) => void) => () => void;
+      onDiscoveryOutput: (callback: (data: any) => void) => () => void;
+      onDiscoveryCancelled: (callback: (data: any) => void) => () => void;
+      cancelDiscovery: (executionId: string) => Promise<void>;
+    };
+    electronAPI: {
+      executeModule: (params: { modulePath: string; functionName: string; parameters: any }) => Promise<any>;
+    };
+  }
+}
 
 export function useExchangeDiscoveryLogic() {
   // Get selected company profile from store
-  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const selectedSourceProfile = useProfileStore((state: any) => state.selectedSourceProfile);
+  const { addResult, setProgress: setStoreProgress } = useDiscoveryStore();
+
   // ============================================================================
   // State Management
   // ============================================================================
@@ -36,6 +53,7 @@ export function useExchangeDiscoveryLogic() {
   const [progress, setProgress] = useState<ExchangeDiscoveryProgress | null>(null);
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentExecutionId, setCurrentExecutionId] = useState<string | null>(null);
 
   // Templates
   const [templates, setTemplates] = useState<ExchangeDiscoveryTemplate[]>([]);
@@ -59,34 +77,89 @@ export function useExchangeDiscoveryLogic() {
 
   // Event handlers for discovery
   useEffect(() => {
-    const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
-      if (data.executionId === 'exchange-discovery') {
-        setProgress(data as unknown as ExchangeDiscoveryProgress);
+    const unsubscribeProgress = window.electron.onDiscoveryProgress((data: any) => {
+      if (data.executionId === currentExecutionId) {
+        const progressData: DiscoveryProgress = {
+          percentage: data.percentage,
+          message: `${data.currentPhase} (${data.itemsProcessed || 0}/${data.totalItems || 0})`,
+          currentPhase: data.currentPhase,
+          itemsProcessed: data.itemsProcessed,
+          totalItems: data.totalItems,
+          moduleName: 'ExchangeDiscovery',
+          currentOperation: data.currentPhase || 'Processing',
+          overallProgress: data.percentage,
+          moduleProgress: data.percentage,
+          status: 'Running',
+          timestamp: new Date().toISOString(),
+        };
+
+        setProgress(progressData as unknown as ExchangeDiscoveryProgress);
+        setStoreProgress(progressData);
       }
     });
 
-    const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
-      if (data.executionId === 'exchange-discovery') {
+    const unsubscribeOutput = window.electron.onDiscoveryOutput((data: any) => {
+      if (data.executionId === currentExecutionId) {
+        if (data.level === 'error') {
+          console.error(`[ExchangeDiscovery] ERROR: ${data.message}`);
+        } else {
+          console.log(`[ExchangeDiscovery] ${data?.level?.toUpperCase()}: ${data.message}`);
+        }
+      }
+    });
+
+    const unsubscribeComplete = window.electron.onDiscoveryComplete((data: any) => {
+      if (data.executionId === currentExecutionId) {
+        const discoveryResult: DiscoveryResult = {
+          id: `exchange-discovery-${Date.now()}`,
+          name: 'Exchange Discovery',
+          moduleName: 'ExchangeDiscovery',
+          displayName: 'Exchange Online Discovery',
+          itemCount: data?.result?.totalItems || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalItems || 0} items from Exchange Online`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
         setResult(data.result as ExchangeDiscoveryResult);
+        addResult(discoveryResult);
         setIsDiscovering(false);
+        setCurrentExecutionId(null);
         setProgress(null);
       }
     });
 
-    const unsubscribeError = window.electron.onDiscoveryError((data) => {
-      if (data.executionId === 'exchange-discovery') {
+    const unsubscribeError = window.electron.onDiscoveryError((data: any) => {
+      if (data.executionId === currentExecutionId) {
         setError(data.error);
         setIsDiscovering(false);
+        setCurrentExecutionId(null);
+        setProgress(null);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron.onDiscoveryCancelled((data: any) => {
+      if (data.executionId === currentExecutionId) {
+        setIsDiscovering(false);
+        setCurrentExecutionId(null);
         setProgress(null);
       }
     });
 
     return () => {
       if (unsubscribeProgress) unsubscribeProgress();
+      if (unsubscribeOutput) unsubscribeOutput();
       if (unsubscribeComplete) unsubscribeComplete();
       if (unsubscribeError) unsubscribeError();
+      if (unsubscribeCancelled) unsubscribeCancelled();
     };
-  }, []);
+  }, [currentExecutionId, setStoreProgress, addResult]);
 
   const loadTemplates = async () => {
     try {
@@ -112,65 +185,50 @@ export function useExchangeDiscoveryLogic() {
       return;
     }
 
+    const executionId = `exchange-discovery-${Date.now()}`;
+    setCurrentExecutionId(executionId);
+
     console.log(`[ExchangeDiscoveryHook] Starting Exchange discovery for company: ${selectedSourceProfile.companyName}`);
+    console.log(`[ExchangeDiscoveryHook] Execution ID: ${executionId}`);
     console.log(`[ExchangeDiscoveryHook] Parameters:`, config);
 
     setIsDiscovering(true);
     setError(null);
-    setProgress({
-      phase: 'initializing',
-      phaseLabel: 'Initializing Exchange discovery...',
-      percentComplete: 0,
-      itemsProcessed: 0,
-      totalItems: 0,
-      errors: 0,
-      warnings: 0,
-    });
 
     try {
-      const electronAPI = getElectronAPI();
-
-      // Execute discovery module with credentials from the profile
-      const result = await electronAPI.executeDiscoveryModule(
-        'Exchange',
-        selectedSourceProfile.companyName,
-        {
+      // Start streaming discovery
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'Exchange',
+        parameters: {
           IncludeMailboxes: config.includeMailboxes,
           IncludeGroups: config.includeGroups,
           IncludeTransportRules: config.includeTransportRules,
-          IncludeArchives: config.includeArchives,
-          IncludeInactiveMailboxes: config.includeInactiveMailboxes,
+          IncludeArchives: config.includeArchiveData,
+          IncludeInactiveMailboxes: config.onlyInactiveMailboxes,
         },
-        {
-          timeout: 300000,
-        }
-      );
+        executionId
+      });
 
-      if (result.success) {
-        console.log(`[ExchangeDiscoveryHook] ✅ Exchange discovery completed successfully`);
-      } else {
-        console.error(`[ExchangeDiscoveryHook] ❌ Exchange discovery failed:`, result.error);
-        setError(result.error || 'Discovery failed');
-        setIsDiscovering(false);
-        setProgress(null);
-      }
-    } catch (err) {
-      console.error(`[ExchangeDiscoveryHook] Error:`, err);
-      setError(err instanceof Error ? err.message : 'Discovery failed');
+      // Store the execution ID from the response
+      setCurrentExecutionId(result.executionId);
+
+    } catch (err: any) {
+      console.error(`[ExchangeDiscoveryHook] Error starting discovery:`, err);
+      setError(err instanceof Error ? err.message : 'Failed to start discovery');
       setIsDiscovering(false);
-      setProgress(null);
+      setCurrentExecutionId(null);
     }
   }, [config, selectedSourceProfile]);
 
   const cancelDiscovery = useCallback(async () => {
+    if (!currentExecutionId) return;
+
     try {
-      await window.electron.cancelDiscovery('exchange-discovery');
-      setIsDiscovering(false);
-      setProgress(null);
+      await window.electron.cancelDiscovery(currentExecutionId);
     } catch (err) {
       console.error('Failed to cancel discovery:', err);
     }
-  }, []);
+  }, [currentExecutionId]);
 
   // ============================================================================
   // Template Management
@@ -319,206 +377,197 @@ export function useExchangeDiscoveryLogic() {
   // AG Grid Column Definitions
   // ============================================================================
 
-  const mailboxColumns = useMemo<ColDef<ExchangeMailbox>[]>(
-    () => [
-      {
-        field: 'displayName',
-        headerName: 'Display Name',
-        sortable: true,
-        filter: true,
-        pinned: 'left',
-        width: 200,
-      },
-      {
-        field: 'userPrincipalName',
-        headerName: 'UPN',
-        sortable: true,
-        filter: true,
-        width: 250,
-      },
-      {
-        field: 'primarySmtpAddress',
-        headerName: 'Email',
-        sortable: true,
-        filter: true,
-        width: 250,
-      },
-      {
-        field: 'mailboxType',
-        headerName: 'Type',
-        sortable: true,
-        filter: true,
-        width: 150,
-      },
-      {
-        field: 'totalItemSize',
-        headerName: 'Size (MB)',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        valueFormatter: (params) => (params.value / 1024 / 1024).toFixed(2),
-        width: 120,
-      },
-      {
-        field: 'itemCount',
-        headerName: 'Item Count',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        valueFormatter: (params) => params.value.toLocaleString(),
-        width: 120,
-      },
-      {
-        field: 'archiveEnabled',
-        headerName: 'Archive',
-        sortable: true,
-        filter: true,
-        valueFormatter: (params) => (params.value ? 'Yes' : 'No'),
-        width: 100,
-      },
-      {
-        field: 'litigationHoldEnabled',
-        headerName: 'Litigation Hold',
-        sortable: true,
-        filter: true,
-        valueFormatter: (params) => (params.value ? 'Yes' : 'No'),
-        width: 140,
-      },
-      {
-        field: 'isInactive',
-        headerName: 'Status',
-        sortable: true,
-        filter: true,
-        valueFormatter: (params) => (params.value ? 'Inactive' : 'Active'),
-        width: 100,
-      },
-      {
-        field: 'lastLogonTime',
-        headerName: 'Last Logon',
-        sortable: true,
-        filter: 'agDateColumnFilter',
-        valueFormatter: (params) =>
-          params.value ? new Date(params.value).toLocaleDateString() : 'Never',
-        width: 120,
-      },
-    ],
-    []
-  );
+  const mailboxColumns = useMemo<ColDef<ExchangeMailbox>[]>(() => [
+    {
+      field: 'displayName',
+      headerName: 'Display Name',
+      sortable: true,
+      filter: true,
+      pinned: 'left',
+      width: 200,
+    },
+    {
+      field: 'userPrincipalName',
+      headerName: 'UPN',
+      sortable: true,
+      filter: true,
+      width: 250,
+    },
+    {
+      field: 'primarySmtpAddress',
+      headerName: 'Email',
+      sortable: true,
+      filter: true,
+      width: 250,
+    },
+    {
+      field: 'mailboxType',
+      headerName: 'Type',
+      sortable: true,
+      filter: true,
+      width: 150,
+    },
+    {
+      field: 'totalItemSize',
+      headerName: 'Size (MB)',
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+      valueFormatter: (params: any) => (params.value / 1024 / 1024).toFixed(2),
+      width: 120,
+    },
+    {
+      field: 'itemCount',
+      headerName: 'Item Count',
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+      valueFormatter: (params: any) => params.value.toLocaleString(),
+      width: 120,
+    },
+    {
+      field: 'archiveEnabled',
+      headerName: 'Archive',
+      sortable: true,
+      filter: true,
+      valueFormatter: (params: any) => (params.value ? 'Yes' : 'No'),
+      width: 100,
+    },
+    {
+      field: 'litigationHoldEnabled',
+      headerName: 'Litigation Hold',
+      sortable: true,
+      filter: true,
+      valueFormatter: (params: any) => (params.value ? 'Yes' : 'No'),
+      width: 140,
+    },
+    {
+      field: 'isInactive',
+      headerName: 'Status',
+      sortable: true,
+      filter: true,
+      valueFormatter: (params: any) => (params.value ? 'Inactive' : 'Active'),
+      width: 100,
+    },
+    {
+      field: 'lastLogonTime',
+      headerName: 'Last Logon',
+      sortable: true,
+      filter: 'agDateColumnFilter',
+      valueFormatter: (params: any) =>
+        params.value ? new Date(params.value).toLocaleDateString() : 'Never',
+      width: 120,
+    },
+  ], []);
 
-  const groupColumns = useMemo<ColDef<ExchangeDistributionGroup>[]>(
-    () => [
-      {
-        field: 'displayName',
-        headerName: 'Display Name',
-        sortable: true,
-        filter: true,
-        pinned: 'left',
-        width: 200,
-      },
-      {
-        field: 'primarySmtpAddress',
-        headerName: 'Email',
-        sortable: true,
-        filter: true,
-        width: 250,
-      },
-      {
-        field: 'groupType',
-        headerName: 'Type',
-        sortable: true,
-        filter: true,
-        width: 120,
-      },
-      {
-        field: 'memberCount',
-        headerName: 'Members',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        width: 100,
-      },
-      {
-        field: 'moderationEnabled',
-        headerName: 'Moderation',
-        sortable: true,
-        filter: true,
-        valueFormatter: (params) => (params.value ? 'Yes' : 'No'),
-        width: 120,
-      },
-      {
-        field: 'hiddenFromAddressListsEnabled',
-        headerName: 'Hidden',
-        sortable: true,
-        filter: true,
-        valueFormatter: (params) => (params.value ? 'Yes' : 'No'),
-        width: 100,
-      },
-      {
-        field: 'whenCreated',
-        headerName: 'Created',
-        sortable: true,
-        filter: 'agDateColumnFilter',
-        valueFormatter: (params) => new Date(params.value).toLocaleDateString(),
-        width: 120,
-      },
-    ],
-    []
-  );
+  const groupColumns = useMemo<ColDef<ExchangeDistributionGroup>[]>(() => [
+    {
+      field: 'displayName',
+      headerName: 'Display Name',
+      sortable: true,
+      filter: true,
+      pinned: 'left',
+      width: 200,
+    },
+    {
+      field: 'primarySmtpAddress',
+      headerName: 'Email',
+      sortable: true,
+      filter: true,
+      width: 250,
+    },
+    {
+      field: 'groupType',
+      headerName: 'Type',
+      sortable: true,
+      filter: true,
+      width: 120,
+    },
+    {
+      field: 'memberCount',
+      headerName: 'Members',
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+      width: 100,
+    },
+    {
+      field: 'moderationEnabled',
+      headerName: 'Moderation',
+      sortable: true,
+      filter: true,
+      valueFormatter: (params: any) => (params.value ? 'Yes' : 'No'),
+      width: 120,
+    },
+    {
+      field: 'hiddenFromAddressListsEnabled',
+      headerName: 'Hidden',
+      sortable: true,
+      filter: true,
+      valueFormatter: (params: any) => (params.value ? 'Yes' : 'No'),
+      width: 100,
+    },
+    {
+      field: 'whenCreated',
+      headerName: 'Created',
+      sortable: true,
+      filter: 'agDateColumnFilter',
+      valueFormatter: (params: any) => new Date(params.value).toLocaleDateString(),
+      width: 120,
+    },
+  ], []);
 
-  const ruleColumns = useMemo<ColDef<ExchangeTransportRule>[]>(
-    () => [
-      {
-        field: 'name',
-        headerName: 'Rule Name',
-        sortable: true,
-        filter: true,
-        pinned: 'left',
-        width: 250,
-      },
-      {
-        field: 'description',
-        headerName: 'Description',
-        sortable: true,
-        filter: true,
-        width: 300,
-      },
-      {
-        field: 'priority',
-        headerName: 'Priority',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        width: 100,
-      },
-      {
-        field: 'state',
-        headerName: 'State',
-        sortable: true,
-        filter: true,
-        width: 100,
-      },
-      {
-        field: 'createdBy',
-        headerName: 'Created By',
-        sortable: true,
-        filter: true,
-        width: 150,
-      },
-      {
-        field: 'createdDate',
-        headerName: 'Created',
-        sortable: true,
-        filter: 'agDateColumnFilter',
-        valueFormatter: (params) => new Date(params.value).toLocaleDateString(),
-        width: 120,
-      },
-      {
-        field: 'modifiedDate',
-        headerName: 'Modified',
-        sortable: true,
-        filter: 'agDateColumnFilter',
-        valueFormatter: (params) => new Date(params.value).toLocaleDateString(),
-        width: 120,
-      },
-    ],
-    []
-  );
+  const ruleColumns = useMemo<ColDef<ExchangeTransportRule>[]>(() => [
+    {
+      field: 'name',
+      headerName: 'Rule Name',
+      sortable: true,
+      filter: true,
+      pinned: 'left',
+      width: 250,
+    },
+    {
+      field: 'description',
+      headerName: 'Description',
+      sortable: true,
+      filter: true,
+      width: 300,
+    },
+    {
+      field: 'priority',
+      headerName: 'Priority',
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+      width: 100,
+    },
+    {
+      field: 'state',
+      headerName: 'State',
+      sortable: true,
+      filter: true,
+      width: 100,
+    },
+    {
+      field: 'createdBy',
+      headerName: 'Created By',
+      sortable: true,
+      filter: true,
+      width: 150,
+    },
+    {
+      field: 'createdDate',
+      headerName: 'Created',
+      sortable: true,
+      filter: 'agDateColumnFilter',
+      valueFormatter: (params: any) => new Date(params.value).toLocaleDateString(),
+      width: 120,
+    },
+    {
+      field: 'modifiedDate',
+      headerName: 'Modified',
+      sortable: true,
+      filter: 'agDateColumnFilter',
+      valueFormatter: (params: any) => new Date(params.value).toLocaleDateString(),
+      width: 120,
+    },
+  ], []);
 
   // ============================================================================
   // Export Functionality
@@ -593,6 +642,6 @@ export function useExchangeDiscoveryLogic() {
 
     // Statistics (from result)
     statistics: result?.statistics,
-  
+
   };
 }

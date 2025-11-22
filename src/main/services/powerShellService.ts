@@ -376,6 +376,11 @@ class PowerShellExecutionService extends EventEmitter {
             // Enable all PowerShell streams
             PSModulePath: process.env.PSModulePath || '',
           },
+          // Show or hide the PowerShell window (Windows only)
+          // windowsHide: true (default) hides the window, false shows it
+          windowsHide: options.showWindow !== true,
+          // Detach when showing window so it can run independently
+          detached: options.showWindow === true,
         });
 
         // Track active execution

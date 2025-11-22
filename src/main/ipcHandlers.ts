@@ -2409,6 +2409,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
           cancellationToken: execId,
           streamOutput: true,
           timeout: parameters.timeout || 300000,
+          showWindow: parameters.showWindow === true,
         }
       );
 

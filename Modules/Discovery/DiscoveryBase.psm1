@@ -89,11 +89,17 @@ function Start-DiscoveryModule {
                 Connections = $connections
                 Result = $result
             }
-            
+
+            Write-ModuleLog -ModuleName $ModuleName -Message "Executing discovery scriptblock..." -Level "INFO"
             $discoveryData = & $DiscoveryScript @discoveryParams
             $result.Data = $discoveryData
+            Write-ModuleLog -ModuleName $ModuleName -Message "Discovery scriptblock completed, data count: $($discoveryData.Count)" -Level "INFO"
+
+            # Call Complete() to auto-calculate RecordCount from Data
+            $result.Complete()
+            Write-ModuleLog -ModuleName $ModuleName -Message "RecordCount set to: $($result.RecordCount)" -Level "INFO"
         }
-        
+
     } catch {
         $result.AddError("Critical error during $ModuleName discovery", $_.Exception, @{
             Phase = "Discovery"
