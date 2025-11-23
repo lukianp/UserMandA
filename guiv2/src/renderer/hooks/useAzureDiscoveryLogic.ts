@@ -3,7 +3,7 @@
  * Handles Azure AD/Microsoft 365 discovery operations
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
@@ -13,7 +13,6 @@ import {
   DiscoveryProgress,
 } from '../types/models/discovery';
 import type { ProgressData, OutputData } from '../../shared/types';
-import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 
 export interface AzureDiscoveryFormData {
   includeUsers: boolean;
@@ -25,12 +24,11 @@ export interface AzureDiscoveryFormData {
   includeLicenses: boolean;
   maxResults: number;
   timeout: number; // seconds
-  showWindow: boolean; // true = external DOS terminal, false = integrated GUI dialog (recommended)
 }
 
 export const useAzureDiscoveryLogic = () => {
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
-  const { addResult, setProgress, getResultsByModuleName } = useDiscoveryStore();
+  const { addResult, setProgress } = useDiscoveryStore();
   // Form state
   const [formData, setFormData] = useState<AzureDiscoveryFormData>({
     includeUsers: true,
@@ -41,21 +39,18 @@ export const useAzureDiscoveryLogic = () => {
     includeExchange: false,
     includeLicenses: true,
     maxResults: 50000,
-    timeout: 1800, // 30 minutes (allows time for module installation on first run)
-    showWindow: false, // Use integrated PowerShell dialog (set to true for external terminal window)
+    timeout: 600, // 10 minutes
   });
 
   // Execution state
   const [isRunning, setIsRunning] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [currentToken, setCurrentToken] = useState<string | null>(null);
-  const currentTokenRef = useRef<string | null>(null); // Ref to avoid closure issues in event handlers
   const [progress, setLocalProgress] = useState<DiscoveryProgress | null>(null);
   const [results, setResults] = useState<DiscoveryResult[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [logs, setLogs] = useState<PowerShellLog[]>([]);
+  const [logs, setLogs] = useState<string[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
-  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
 
   // Validation
   const isFormValid = useMemo(() => {
@@ -87,67 +82,20 @@ export const useAzureDiscoveryLogic = () => {
       includeLicenses: true,
       maxResults: 50000,
       timeout: 600,
-      showWindow: false, // Use integrated PowerShell dialog (set to true for external terminal window)
     });
     setError(null);
     setLogs([]);
   }, []);
 
   // Utility function for adding logs
-  const addLog = useCallback((message: string, level: 'info' | 'success' | 'warning' | 'error' = 'info') => {
-    const timestamp = new Date().toLocaleTimeString();
-    setLogs(prev => [...prev, { timestamp, message, level }]);
+  const addLog = useCallback((message: string) => {
+    setLogs(prev => [...prev, message]);
   }, []);
 
-  // Load previous discovery results from store on mount
+  // Discovery event handlers
   useEffect(() => {
-    const previousResults = getResultsByModuleName('AzureDiscovery');
-    if (previousResults && previousResults.length > 0) {
-      console.log('[AzureDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
-      setResults(previousResults);
-      addLog(`Restored ${previousResults.length} previous discovery result(s)`, 'info');
-    }
-  }, [getResultsByModuleName, addLog]);
-
-  // Safety mechanism: Reset state if discovery is running but hasn't received events for too long
-  useEffect(() => {
-    if (!isRunning || !currentToken) return;
-
-    let lastEventTime = Date.now();
-    const eventMonitor = setInterval(() => {
-      const timeSinceLastEvent = Date.now() - lastEventTime;
-      // If no events for 5 minutes and process is marked as running, assume it crashed
-      if (timeSinceLastEvent > 5 * 60 * 1000) {
-        addLog('No activity detected for 5 minutes. Resetting state...', 'warning');
-        setIsRunning(false);
-        setIsCancelling(false);
-        setCurrentToken(null);
-        setLocalProgress(null);
-      }
-    }, 30000); // Check every 30 seconds
-
-    // Update last event time whenever logs change
-    const updateEventTime = () => {
-      lastEventTime = Date.now();
-    };
-
-    // Monitor logs array changes as indicator of activity
-    updateEventTime();
-
-    return () => {
-      clearInterval(eventMonitor);
-    };
-  }, [isRunning, currentToken, logs.length, addLog]);
-
-  // Discovery event handlers - set up ONCE on mount to avoid race conditions
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    console.log('[AzureDiscoveryHook] Setting up GLOBAL event listeners (mount)');
-
     const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
-      console.log('[AzureDiscoveryHook] Progress event received:', data, 'currentTokenRef:', currentTokenRef.current);
-      // Check against the CURRENT token at the time of the event
-      if (data.executionId === currentTokenRef.current) {
+      if (data.executionId === currentToken) {
         const progressData: DiscoveryProgress = {
           percentage: data.percentage,
           message: `${data.currentPhase} (${data.itemsProcessed || 0}/${data.totalItems || 0})`,
@@ -164,25 +112,22 @@ export const useAzureDiscoveryLogic = () => {
 
         setLocalProgress(progressData);
         setProgress(progressData);
-        addLog(progressData.message, 'info');
-      } else {
-        console.log('[AzureDiscoveryHook] Progress event executionId mismatch:', data.executionId, 'vs', currentTokenRef.current);
+        addLog(`[${new Date().toLocaleTimeString()}] ${progressData.message}`);
       }
     });
 
     const unsubscribeOutput = window.electron.onDiscoveryOutput((data) => {
-      console.log('[AzureDiscoveryHook] Output event received:', data, 'currentTokenRef:', currentTokenRef.current);
-      if (data.executionId === currentTokenRef.current) {
-        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
-        addLog(data.message, logLevel);
-      } else {
-        console.log('[AzureDiscoveryHook] Output event executionId mismatch:', data.executionId, 'vs', currentTokenRef.current);
+      if (data.executionId === currentToken) {
+        if (data.level === 'error') {
+          addLog(`[ERROR] ${data.message}`);
+        } else {
+          addLog(`[${data?.level?.toUpperCase()}] ${data.message}`);
+        }
       }
     });
 
     const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
-      console.log('[AzureDiscoveryHook] Complete event received:', data, 'currentTokenRef:', currentTokenRef.current);
-      if (data.executionId === currentTokenRef.current) {
+      if (data.executionId === currentToken) {
         const discoveryResult: DiscoveryResult = {
           id: `azure-discovery-${Date.now()}`,
           name: 'Azure Discovery',
@@ -202,57 +147,41 @@ export const useAzureDiscoveryLogic = () => {
 
         setResults([discoveryResult]);
         addResult(discoveryResult);
-        addLog(`Discovery completed successfully! Found ${data?.result?.totalItems} items.`, 'success');
+        addLog(`Discovery completed successfully! Found ${data?.result?.totalItems} items.`);
         setIsRunning(false);
-        setIsCancelling(false);
         setCurrentToken(null);
         setLocalProgress(null);
       }
     });
 
     const unsubscribeError = window.electron.onDiscoveryError((data) => {
-      console.log('[AzureDiscoveryHook] Error event received:', data, 'currentTokenRef:', currentTokenRef.current);
-      if (data.executionId === currentTokenRef.current) {
+      if (data.executionId === currentToken) {
         setError(data.error);
-        addLog(`${data.error}`, 'error');
+        addLog(`ERROR: ${data.error}`);
         setIsRunning(false);
-        setIsCancelling(false);
-        setCurrentToken(null);
-        setLocalProgress(null);
-      }
-    });
-
-    const unsubscribeCancelled = window.electron.onDiscoveryCancelled?.((data) => {
-      console.log('[AzureDiscoveryHook] Cancelled event received:', data, 'currentTokenRef:', currentTokenRef.current);
-      if (data.executionId === currentTokenRef.current) {
-        addLog('Discovery cancelled by user', 'warning');
-        setIsRunning(false);
-        setIsCancelling(false);
         setCurrentToken(null);
         setLocalProgress(null);
       }
     });
 
     return () => {
-      console.log('[AzureDiscoveryHook] Cleaning up event listeners');
       if (unsubscribeProgress) unsubscribeProgress();
       if (unsubscribeOutput) unsubscribeOutput();
       if (unsubscribeComplete) unsubscribeComplete();
       if (unsubscribeError) unsubscribeError();
-      if (unsubscribeCancelled) unsubscribeCancelled();
     };
-  }, []); // Empty dependency array - set up once on mount to avoid race conditions
+  }, [currentToken, setProgress, addResult, selectedSourceProfile, addLog]);
 
   // Test connection to Azure
   const testConnection = useCallback(async () => {
     if (!selectedSourceProfile) {
       setConnectionStatus('error');
-      addLog('No company profile selected', 'error');
+      addLog('No company profile selected');
       return;
     }
 
     setConnectionStatus('connecting');
-    addLog('Testing connection to Azure AD...', 'info');
+    addLog('Testing connection to Azure AD...');
 
     try {
       const electronAPI = getElectronAPI();
@@ -269,12 +198,12 @@ export const useAzureDiscoveryLogic = () => {
       );
 
       setConnectionStatus('connected');
-      addLog(`Connection successful! Tenant: ${selectedSourceProfile.tenantId || selectedSourceProfile.companyName}`, 'success');
+      addLog(`Connection successful! Tenant: ${selectedSourceProfile.tenantId || selectedSourceProfile.companyName}`);
     } catch (err) {
       setConnectionStatus('error');
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
-      addLog(`Connection failed: ${errorMessage}`, 'error');
+      addLog(`Connection failed: ${errorMessage}`);
     }
   }, [selectedSourceProfile, addLog]);
 
@@ -284,14 +213,12 @@ export const useAzureDiscoveryLogic = () => {
     if (!selectedSourceProfile) {
       const errorMessage = 'No company profile selected. Please select a profile first.';
       setError(errorMessage);
-      addLog(errorMessage, 'error');
+      addLog(errorMessage);
       return;
     }
 
     if (!isFormValid) {
-      const errorMessage = 'Please select at least one service to discover';
-      setError(errorMessage);
-      addLog(errorMessage, 'error');
+      setError('Please select at least one service to discover');
       return;
     }
 
@@ -300,21 +227,13 @@ export const useAzureDiscoveryLogic = () => {
     setError(null);
     setResults([]);
     setLogs([]);
-    setShowExecutionDialog(true);
 
     const token = `azure-discovery-${Date.now()}`;
     setCurrentToken(token);
-    currentTokenRef.current = token; // Update ref immediately so event handlers have the latest value
 
     console.log(`[AzureDiscoveryHook] Starting Azure discovery for company: ${selectedSourceProfile.companyName}`);
-    console.log('[AzureDiscoveryHook] Full profile:', selectedSourceProfile);
-
-    addLog(`Starting Azure discovery for ${selectedSourceProfile.companyName}...`, 'info');
-    const tenantId = selectedSourceProfile.tenantId || selectedSourceProfile.credentials?.azureTenantId || 'N/A';
-    const clientId = selectedSourceProfile.clientId || selectedSourceProfile.credentials?.azureClientId || 'N/A';
-    addLog(`Tenant ID: ${tenantId}`, 'info');
-    addLog(`Client ID: ${clientId}`, 'info');
-    addLog(`Profile has credentials: ${!!(selectedSourceProfile.credentials) ? 'Yes' : 'No'}`, 'info');
+    addLog(`Starting Azure discovery for ${selectedSourceProfile.companyName}...`);
+    addLog(`Tenant ID: ${selectedSourceProfile.tenantId || 'N/A'}`);
 
     // Log selected services
     const services: string[] = [];
@@ -325,7 +244,7 @@ export const useAzureDiscoveryLogic = () => {
     if (formData.includeOneDrive) services.push('OneDrive');
     if (formData.includeExchange) services.push('Exchange');
     if (formData.includeLicenses) services.push('Licenses');
-    addLog(`Services: ${services.join(', ')}`, 'info');
+    addLog(`Services: ${services.join(', ')}`);
 
     console.log(`[AzureDiscoveryHook] Parameters:`, {
       includeUsers: formData.includeUsers,
@@ -338,13 +257,14 @@ export const useAzureDiscoveryLogic = () => {
     });
 
     try {
-      addLog('Connecting to Azure and initializing discovery...', 'info');
+      // Get electron API with fallback
+      const electronAPI = getElectronAPI();
 
-      // Use the correct discovery:execute handler that emits streaming events
-      console.log('[AzureDiscoveryHook] Calling executeDiscovery with token:', token);
-      const result = await window.electron.executeDiscovery({
-        moduleName: 'Azure',
-        parameters: {
+      // Execute discovery module with credentials from the profile
+      const result = await electronAPI.executeDiscoveryModule(
+        'Azure',
+        selectedSourceProfile.companyName,
+        {
           IncludeUsers: formData.includeUsers,
           IncludeGroups: formData.includeGroups,
           IncludeTeams: formData.includeTeams,
@@ -353,21 +273,28 @@ export const useAzureDiscoveryLogic = () => {
           IncludeExchange: formData.includeExchange,
           IncludeLicenses: formData.includeLicenses,
           MaxResults: formData.maxResults,
-          timeout: formData.timeout * 1000, // Convert to milliseconds
-          showWindow: formData.showWindow, // Pass showWindow parameter
         },
-        executionId: token, // Pass the token so events are matched correctly
-      });
+        {
+          timeout: formData.timeout * 1000, // Convert to milliseconds
+        }
+      );
 
-      console.log('[AzureDiscoveryHook] Discovery execution completed:', result);
-      addLog('Discovery execution call completed', 'success');
+      if (result.success) {
+        addLog('Azure discovery completed successfully');
+        addLog(`Results saved to C:\\DiscoveryData\\${selectedSourceProfile.companyName}\\Raw`);
+      } else {
+        const errorMessage = result.error || 'Discovery failed';
+        setError(errorMessage);
+        addLog(`ERROR: ${errorMessage}`);
+      }
 
-      // Note: Completion will be handled by the discovery:complete event listener
-      // Don't set isRunning to false here as the event listener will do it
+      setIsRunning(false);
+      setCurrentToken(null);
+      setLocalProgress(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
-      addLog(errorMessage, 'error');
+      addLog(`ERROR: ${errorMessage}`);
       setIsRunning(false);
       setCurrentToken(null);
       setLocalProgress(null);
@@ -379,27 +306,15 @@ export const useAzureDiscoveryLogic = () => {
     if (!currentToken) return;
 
     setIsCancelling(true);
-    addLog('Cancelling discovery...', 'warning');
+    addLog('Cancelling discovery...');
 
     try {
       await window.electron.cancelDiscovery(currentToken);
-      addLog('Discovery cancellation requested successfully', 'info');
-
-      // Set a timeout to reset state in case the cancelled event doesn't fire
-      setTimeout(() => {
-        setIsRunning(false);
-        setIsCancelling(false);
-        setCurrentToken(null);
-        setLocalProgress(null);
-        addLog('Discovery cancelled - reset to start state', 'warning');
-      }, 2000);
+      addLog('Discovery cancellation requested successfully');
     } catch (err) {
-      addLog(`Error cancelling: ${err instanceof Error ? err.message : 'Unknown error'}`, 'error');
-      // Reset state even on error
-      setIsRunning(false);
+      addLog(`Error cancelling: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
       setIsCancelling(false);
-      setCurrentToken(null);
-      setLocalProgress(null);
     }
   }, [currentToken, addLog]);
 
@@ -435,8 +350,6 @@ export const useAzureDiscoveryLogic = () => {
     error,
     logs,
     connectionStatus,
-    showExecutionDialog,
-    setShowExecutionDialog,
 
     // Actions
     testConnection,

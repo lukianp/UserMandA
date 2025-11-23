@@ -1130,16 +1130,55 @@ class PowerShellExecutionService extends EventEmitter {
         connectionType: credentials.connectionType
       });
 
-      // Prepare discovery parameters with credentials
-      // IMPORTANT: Additional params must be nested in AdditionalParams hashtable
-      const discoveryParams = {
-        CompanyName: companyName,
-        TenantId: credentials.tenantId,
-        ClientId: credentials.clientId,
-        ClientSecret: credentials.clientSecret,
-        OutputPath: `C:\\DiscoveryData\\${companyName}\\Raw`,
-        AdditionalParams: additionalParams,  // Nested as hashtable
-      };
+      // Modules that don't require Azure authentication
+      const localOnlyModules = ['FileSystem', 'Infrastructure', 'Network', 'Security'];
+      const requiresAzureAuth = !localOnlyModules.includes(moduleName);
+
+      // Prepare discovery parameters - only include Azure credentials for modules that need them
+      let discoveryParams: Record<string, any>;
+
+      if (requiresAzureAuth) {
+        // Azure-based discovery modules (Azure, Exchange, Application, etc.)
+        discoveryParams = {
+          CompanyName: companyName,
+          TenantId: credentials.tenantId,
+          ClientId: credentials.clientId,
+          ClientSecret: credentials.clientSecret,
+          OutputPath: `C:\\DiscoveryData\\${companyName}\\Raw`,
+          AdditionalParams: additionalParams,  // Nested as hashtable
+        };
+        console.log(`[PowerShellService] ${moduleName} discovery requires Azure auth - including credentials`);
+      } else {
+        // Local discovery modules (FileSystem, Infrastructure, etc.) - no Azure credentials
+        // Filter parameters to only include what each module accepts
+        let filteredParams: Record<string, any> = {};
+
+        if (moduleName === 'FileSystem') {
+          // FileSystemDiscovery.psm1 Start-FileSystemDiscovery accepts:
+          // CompanyName, Servers, IncludeHiddenShares, IncludeAdministrativeShares,
+          // ScanPermissions, ScanLargeFiles, LargeFileThresholdMB, OutputPath
+          const allowedFileSystemParams = [
+            'Servers', 'IncludeHiddenShares', 'IncludeAdministrativeShares',
+            'ScanPermissions', 'ScanLargeFiles', 'LargeFileThresholdMB'
+          ];
+          for (const key of allowedFileSystemParams) {
+            if (additionalParams[key] !== undefined) {
+              filteredParams[key] = additionalParams[key];
+            }
+          }
+          console.log(`[PowerShellService] FileSystem - filtered params:`, filteredParams);
+        } else {
+          // Other local modules - pass all params
+          filteredParams = additionalParams;
+        }
+
+        discoveryParams = {
+          CompanyName: companyName,
+          OutputPath: `C:\\DiscoveryData\\${companyName}\\Raw`,
+          ...filteredParams,
+        };
+        console.log(`[PowerShellService] ${moduleName} discovery is local-only - no Azure credentials needed`);
+      }
 
       console.log(`[PowerShellService] Executing ${moduleName} discovery for ${companyName}`);
       console.log(`[PowerShellService] Output path: ${discoveryParams.OutputPath}`);

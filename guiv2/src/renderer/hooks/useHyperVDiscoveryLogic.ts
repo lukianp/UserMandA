@@ -6,7 +6,6 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { ColDef } from 'ag-grid-community';
-import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 import {
   HyperVDiscoveryConfig,
@@ -40,8 +39,6 @@ interface HyperVDiscoveryState {
 }
 
 export const useHyperVDiscoveryLogic = () => {
-  const { getResultsByModuleName } = useDiscoveryStore();
-
   const [state, setState] = useState<HyperVDiscoveryState>({
     config: {
       includeVMs: true,
@@ -62,16 +59,6 @@ export const useHyperVDiscoveryLogic = () => {
     cancellationToken: null,
     error: null
   });
-
-  // Load previous discovery results from store on mount
-  useEffect(() => {
-    const previousResults = getResultsByModuleName('HyperVDiscovery');
-    if (previousResults && previousResults.length > 0) {
-      console.log('[HyperVDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
-      const latestResult = previousResults[previousResults.length - 1];
-      setState(prev => ({ ...prev, result: latestResult }));
-    }
-  }, [getResultsByModuleName]);
 
   // Real-time progress tracking via IPC
   useEffect(() => {

@@ -51,15 +51,6 @@ export const useUsersViewLogic = () => {
    * Map UserDto from Logic Engine to UserData for the view
    */
   const mapUserDtoToUserData = (dto: any): UserData => {
-    // Determine source from DiscoveryModule
-    let userSource: 'AzureAD' | 'ActiveDirectory' | 'Hybrid' = 'ActiveDirectory';
-    const discoveryModule = dto.DiscoveryModule || '';
-    if (discoveryModule.includes('Azure')) {
-      userSource = 'AzureAD';
-    } else if (discoveryModule.includes('ActiveDirectory') || discoveryModule.includes('AD')) {
-      userSource = 'ActiveDirectory';
-    }
-
     return {
       // Core UserData properties
       id: dto.UPN || dto.Sid,
@@ -76,7 +67,7 @@ export const useUsersViewLogic = () => {
       companyName: null,
       managerDisplayName: null,
       createdDateTime: dto.DiscoveryTimestamp || null,
-      userSource,
+      userSource: dto.AzureObjectId ? 'AzureAD' : 'ActiveDirectory',
 
       // Additional properties
       firstName: null,
@@ -94,22 +85,12 @@ export const useUsersViewLogic = () => {
    * Load users from Logic Engine (CSV data)
    * Replicates /gui/ UsersViewModel.LoadAsync() pattern
    */
-  const loadUsers = async (forceReload: boolean = false) => {
+  const loadUsers = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      console.log(`[UsersView] Loading users from LogicEngine...${forceReload ? ' (force reload)' : ''}`);
-
-      // Force reload data from CSV if requested
-      if (forceReload) {
-        console.log('[UsersView] Forcing LogicEngine data reload...');
-        const reloadResult = await window.electronAPI.invoke('logicEngine:forceReload');
-        if (!reloadResult.success) {
-          throw new Error(reloadResult.error || 'Failed to reload LogicEngine data');
-        }
-        console.log('[UsersView] LogicEngine data reloaded successfully');
-      }
+      console.log('[UsersView] Loading users from LogicEngine...');
 
       // Get users from Logic Engine
       const result = await window.electronAPI.invoke('logicEngine:getAllUsers');
@@ -270,30 +251,40 @@ export const useUsersViewLogic = () => {
 
   /**
    * Handle delete selected users
-   * Note: For CSV-based discovery data, this removes items from local state only.
-   * Data will reload from CSV files on next refresh.
    */
   const handleDelete = async () => {
     if (!selectedUsers.length) return;
 
     const confirmed = window.confirm(
-      `Are you sure you want to remove ${selectedUsers.length} user(s) from the view?\n\nNote: This removes items from the current view only. Data will reload from CSV files on next refresh.`
+      `Are you sure you want to delete ${selectedUsers.length} user(s)?\n\nThis action cannot be undone.`
     );
 
     if (!confirmed) return;
 
+    setIsLoading(true);
     try {
-      // Get IDs of users to remove
-      const idsToRemove = new Set(selectedUsers.map((u) => u.id));
+      // Execute PowerShell module to delete users
+      const result = await window.electronAPI.executeModule({
+        modulePath: 'Modules/Management/Remove-Users.psm1',
+        functionName: 'Remove-Users',
+        parameters: {
+          UserIds: selectedUsers.map((u) => u.id),
+        },
+      });
 
-      // Remove from local state
-      setUsers((prevUsers) => prevUsers.filter((u) => !idsToRemove.has(u.id)));
-      setSelectedUsers([]);
-
-      console.log(`[UsersView] Removed ${selectedUsers.length} users from view`);
+      if (result.success) {
+        // Reload users after deletion
+        await loadUsers();
+        setSelectedUsers([]);
+        console.log(`Deleted ${selectedUsers.length} users successfully`);
+      } else {
+        throw new Error(result.error || 'Failed to delete users');
+      }
     } catch (err) {
-      console.error('[UsersView] Delete failed:', err);
-      setError('Failed to remove users from view. Please try again.');
+      console.error('Delete failed:', err);
+      setError('Failed to delete users. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -336,15 +327,6 @@ export const useUsersViewLogic = () => {
     });
   };
 
-  /**
-   * Handle refresh button click
-   * Forces reload of data from CSV files
-   */
-  const handleRefresh = () => {
-    console.log('[UsersView] Refresh button clicked, forcing data reload');
-    loadUsers(true); // Pass true to force reload
-  };
-
   return {
     // State
     users: filteredUsers,
@@ -358,7 +340,6 @@ export const useUsersViewLogic = () => {
     setSearchText,
     setSelectedUsers,
     loadUsers,
-    handleRefresh,
     handleExport,
     handleDelete,
     handleAddUser,

@@ -47,10 +47,10 @@
   /* Modern Card Component */
   .modern-card {
     @apply bg-gradient-to-br from-[#1C2433] to-[#2D3748]
-           border border-white/30 rounded-card p-5 m-2
+           border border-[rgba(255,255,255,0.3)] rounded-card p-5 m-2
            shadow-card
            transition-all duration-300 ease-in-out
-           hover:shadow-card-hover hover:border-cyan-400/50;
+           hover:shadow-card-hover hover:border-[rgba(34,211,238,0.5)];
   }
 
   .modern-card-hoverable {

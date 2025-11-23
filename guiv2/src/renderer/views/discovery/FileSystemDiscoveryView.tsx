@@ -1,18 +1,25 @@
 import * as React from 'react';
-import { FolderOpen, Play, XCircle, Download, Clock, HardDrive, Shield, AlertTriangle } from 'lucide-react';
+import { FolderOpen, Play, XCircle, Download, Clock, HardDrive, Shield, AlertTriangle, Settings, Plus, Trash2 } from 'lucide-react';
 
 import { useFileSystemDiscoveryLogic } from '../../hooks/useFileSystemDiscoveryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import SearchBar from '../../components/molecules/SearchBar';
 import ProgressBar from '../../components/molecules/ProgressBar';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const FileSystemDiscoveryView: React.FC = () => {
+  const [showConfigModal, setShowConfigModal] = React.useState(false);
+  const [serverInput, setServerInput] = React.useState('');
+
   const {
     result,
     isRunning,
     progress,
     error,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
     config,
     setConfig,
     startDiscovery,
@@ -52,6 +59,14 @@ const FileSystemDiscoveryView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              icon={<Settings className="w-4 h-4" />}
+              onClick={() => setShowConfigModal(true)}
+              data-cy="config-btn" data-testid="config-btn"
+            >
+              Configure
+            </Button>
             {result && (
               <>
                 <Button
@@ -344,6 +359,230 @@ const FileSystemDiscoveryView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Configuration Modal */}
+      {showConfigModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={() => setShowConfigModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">File System Discovery Configuration</h2>
+              <button
+                onClick={() => setShowConfigModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              {/* Servers */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  File Servers to Scan
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={serverInput}
+                    onChange={(e) => setServerInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && serverInput.trim()) {
+                        setConfig({
+                          ...config,
+                          servers: [...config.servers, serverInput.trim()]
+                        });
+                        setServerInput('');
+                      }
+                    }}
+                    placeholder="Enter server name or IP (press Enter to add)"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                  <Button
+                    variant="primary"
+                    icon={<Plus className="w-4 h-4" />}
+                    onClick={() => {
+                      if (serverInput.trim()) {
+                        setConfig({
+                          ...config,
+                          servers: [...config.servers, serverInput.trim()]
+                        });
+                        setServerInput('');
+                      }
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {config.servers.map((server, index) => (
+                    <div key={index} className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-md">
+                      <span className="text-gray-900 dark:text-white">{server}</span>
+                      <button
+                        onClick={() => {
+                          setConfig({
+                            ...config,
+                            servers: config.servers.filter((_, i) => i !== index)
+                          });
+                        }}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {config.servers.length === 0 && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">No servers configured. Add at least one server to start discovery.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Options */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={config.includeHiddenShares}
+                    onChange={(e) => setConfig({ ...config, includeHiddenShares: e.target.checked })}
+                    className="rounded border-gray-300 dark:border-gray-600"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Include Hidden Shares</span>
+                </label>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={config.includeAdministrativeShares}
+                    onChange={(e) => setConfig({ ...config, includeAdministrativeShares: e.target.checked })}
+                    className="rounded border-gray-300 dark:border-gray-600"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Include Administrative Shares</span>
+                </label>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={config.scanPermissions}
+                    onChange={(e) => setConfig({ ...config, scanPermissions: e.target.checked })}
+                    className="rounded border-gray-300 dark:border-gray-600"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Scan Permissions</span>
+                </label>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={config.scanLargeFiles}
+                    onChange={(e) => setConfig({ ...config, scanLargeFiles: e.target.checked })}
+                    className="rounded border-gray-300 dark:border-gray-600"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Scan Large Files</span>
+                </label>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={config.analyzeStorage}
+                    onChange={(e) => setConfig({ ...config, analyzeStorage: e.target.checked })}
+                    className="rounded border-gray-300 dark:border-gray-600"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Analyze Storage</span>
+                </label>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={config.detectSecurityRisks}
+                    onChange={(e) => setConfig({ ...config, detectSecurityRisks: e.target.checked })}
+                    className="rounded border-gray-300 dark:border-gray-600"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Detect Security Risks</span>
+                </label>
+              </div>
+
+              {/* Advanced Settings */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Large File Threshold (MB)
+                  </label>
+                  <input
+                    type="number"
+                    value={config.largeFileThresholdMB}
+                    onChange={(e) => setConfig({ ...config, largeFileThresholdMB: parseInt(e.target.value) || 1024 })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Max Depth
+                  </label>
+                  <input
+                    type="number"
+                    value={config.maxDepth}
+                    onChange={(e) => setConfig({ ...config, maxDepth: parseInt(e.target.value) || 10 })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Timeout (seconds)
+                  </label>
+                  <input
+                    type="number"
+                    value={config.timeout}
+                    onChange={(e) => setConfig({ ...config, timeout: parseInt(e.target.value) || 300 })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Parallel Scans
+                  </label>
+                  <input
+                    type="number"
+                    value={config.parallelScans}
+                    onChange={(e) => setConfig({ ...config, parallelScans: parseInt(e.target.value) || 5 })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 p-6 border-t border-gray-200 dark:border-gray-700">
+              <Button
+                variant="secondary"
+                onClick={() => setShowConfigModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => setShowConfigModal(false)}
+              >
+                Save Configuration
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => setShowExecutionDialog(false)}
+        title="File System Discovery"
+        logs={logs}
+        isRunning={isRunning}
+        progress={progress ? {
+          phase: progress.phase || 'scanning',
+          percentComplete: progress.percentComplete || 0,
+          message: progress.message || '',
+        } : undefined}
+        data-cy="filesystem-execution-dialog"
+      />
     </div>
   );
 };

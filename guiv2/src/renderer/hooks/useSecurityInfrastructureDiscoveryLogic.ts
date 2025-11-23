@@ -21,7 +21,6 @@ import {
 } from '../types/models/securityInfrastructure';
 
 import { useDebounce } from './useDebounce';
-import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 /**
  * Security Discovery View State
@@ -53,8 +52,6 @@ interface SecurityDiscoveryState {
  * Security Infrastructure Discovery Logic Hook
  */
 export const useSecurityInfrastructureDiscoveryLogic = () => {
-  const { getResultsByModuleName } = useDiscoveryStore();
-
   // State
   const [state, setState] = useState<SecurityDiscoveryState>({
     config: createDefaultSecurityConfig(),
@@ -71,16 +68,6 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
   });
 
   const debouncedSearch = useDebounce(state.searchText, 300);
-
-  // Load previous discovery results from store on mount
-  useEffect(() => {
-    const previousResults = getResultsByModuleName('SecurityInfrastructureDiscovery');
-    if (previousResults && previousResults.length > 0) {
-      console.log('[SecurityInfrastructureDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
-      const latestResult = previousResults[previousResults.length - 1];
-      setState(prev => ({ ...prev, currentResult: latestResult }));
-    }
-  }, [getResultsByModuleName]);
 
   // Load templates and historical results on mount
   useEffect(() => {

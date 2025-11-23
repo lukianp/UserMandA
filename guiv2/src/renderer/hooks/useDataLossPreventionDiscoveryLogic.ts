@@ -16,8 +16,6 @@ import {
   DLPStats,
   DLPMode
 } from '../types/models/dlp';
-import { useProfileStore } from '../store/useProfileStore';
-import { getElectronAPI } from '../lib/electron-api-fallback';
 
 type TabType = 'overview' | 'policies' | 'rules' | 'incidents' | 'sensitive-types';
 
@@ -40,9 +38,6 @@ interface DLPDiscoveryState {
 }
 
 export const useDataLossPreventionDiscoveryLogic = () => {
-  // Get selected profile from store
-  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
-
   // Combined state
   const [state, setState] = useState<DLPDiscoveryState>({
     config: {
@@ -83,13 +78,6 @@ export const useDataLossPreventionDiscoveryLogic = () => {
 
   // Start discovery
   const startDiscovery = useCallback(async () => {
-    if (!selectedSourceProfile) {
-      const errorMessage = 'No company profile selected. Please select a profile first.';
-      setState(prev => ({ ...prev, error: errorMessage }));
-      console.error('[DLPDiscovery]', errorMessage);
-      return;
-    }
-
     const token = `dlp-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setState(prev => ({
       ...prev,
@@ -99,37 +87,25 @@ export const useDataLossPreventionDiscoveryLogic = () => {
       progress: { current: 0, total: 100, message: 'Initializing DLP discovery...', percentage: 0 }
     }));
 
-    console.log(`[DLPDiscovery] Starting discovery for company: ${selectedSourceProfile.companyName}`);
-    console.log(`[DLPDiscovery] Parameters:`, {
-      includePolicies: state.config.includePolicies,
-      includeRules: state.config.includeRules,
-      includeIncidents: state.config.includeIncidents
-    });
-
     try {
-      const electronAPI = getElectronAPI();
-      const discoveryResult = await electronAPI.executeDiscoveryModule(
-        'DLP',
-        selectedSourceProfile.companyName,
-        {
-          IncludePolicies: state.config.includePolicies,
-          IncludeRules: state.config.includeRules,
-          IncludeIncidents: state.config.includeIncidents
+      const discoveryResult = await window.electronAPI.executeModule({
+        modulePath: 'Modules/Discovery/DLPDiscovery.psm1',
+        functionName: 'Invoke-DLPDiscovery',
+        parameters: {
+          ...state.config,
+          cancellationToken: token
         },
-        { timeout: state.config.timeout || 300000 }
-      );
+      });
 
       setState(prev => ({
         ...prev,
-        result: discoveryResult.data || discoveryResult,
+        result: discoveryResult.data,
         isDiscovering: false,
         cancellationToken: null,
         progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
       }));
-
-      console.log(`[DLPDiscovery] Discovery completed successfully`);
     } catch (error: any) {
-      console.error('[DLPDiscovery] Discovery failed:', error);
+      console.error('DLP Discovery failed:', error);
       setState(prev => ({
         ...prev,
         isDiscovering: false,
@@ -137,7 +113,7 @@ export const useDataLossPreventionDiscoveryLogic = () => {
         error: error.message || 'Discovery failed'
       }));
     }
-  }, [selectedSourceProfile, state.config]);
+  }, [state.config]);
 
   // Cancel discovery
   const cancelDiscovery = useCallback(async () => {

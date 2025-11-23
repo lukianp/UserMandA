@@ -19,7 +19,6 @@ import {
 } from '../types/models/office365';
 
 import { useDebounce } from './useDebounce';
-import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 /**
  * Office 365 Discovery View State
@@ -51,8 +50,6 @@ interface Office365DiscoveryState {
  * Office 365 Discovery Logic Hook
  */
 export const useOffice365DiscoveryLogic = () => {
-  const { getResultsByModuleName } = useDiscoveryStore();
-
   // State
   const [state, setState] = useState<Office365DiscoveryState>({
     config: createDefaultConfig(),
@@ -69,16 +66,6 @@ export const useOffice365DiscoveryLogic = () => {
   });
 
   const debouncedSearch = useDebounce(state.searchText, 300);
-
-  // Load previous discovery results from store on mount
-  useEffect(() => {
-    const previousResults = getResultsByModuleName('Office365Discovery');
-    if (previousResults && previousResults.length > 0) {
-      console.log('[Office365DiscoveryHook] Restoring', previousResults.length, 'previous results from store');
-      const latestResult = previousResults[previousResults.length - 1];
-      setState(prev => ({ ...prev, currentResult: latestResult }));
-    }
-  }, [getResultsByModuleName]);
 
   // Load templates and historical results on mount
   useEffect(() => {

@@ -13,7 +13,7 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
-const createWindow = async (): Promise<BrowserWindow> => {
+const createWindow = (): void => {
   // Debug: Log webpack entry points
   console.log('[MAIN] ========================================');
   console.log('[MAIN] Webpack Entry Points:');
@@ -91,19 +91,15 @@ const createWindow = async (): Promise<BrowserWindow> => {
     console.log('[MAIN] Opening DevTools (debug mode enabled)');
     mainWindow.webContents.openDevTools();
   }
-
-  return mainWindow;
 };
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', async () => {
-  // Create window first
-  const mainWindow = await createWindow();
-
-  // Register IPC handlers with window reference for stream events
-  await registerIpcHandlers(mainWindow);
+  // Register IPC handlers before creating window
+  await registerIpcHandlers();
+  createWindow();
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common

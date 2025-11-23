@@ -15,8 +15,7 @@ import {
   UserDto, GroupDto, DeviceDto, AppDto, GpoDto, AclEntry,
   MappedDriveDto, MailboxDto, AzureRoleAssignment, SqlDbDto,
   FileShareDto, ThreatDetectionDTO, DataGovernanceDTO, DataLineageDTO,
-  ExternalIdentityDTO, ServicePrincipalDto, DirectoryRoleDto, SharePointSiteDto,
-  MicrosoftTeamDto, TenantDto, ApplicationSecretDto, GraphNode, GraphEdge, NodeType, EdgeType,
+  ExternalIdentityDTO, GraphNode, GraphEdge, NodeType, EdgeType,
   LogicEngineRisk, MigrationHint, UserDetailProjection, AssetDetailProjection,
   FuzzyMatchingConfig, DataLoadStatistics, DataLoadedEventArgs,
   DataLoadErrorEventArgs, RiskDashboardProjection, ThreatAnalysisProjection
@@ -95,14 +94,6 @@ export class LogicEngineService extends EventEmitter {
   private externalIdentitiesByProvider: Map<string, ExternalIdentityDTO[]> = new Map();
   private externalIdentitiesByMappingStatus: Map<string, ExternalIdentityDTO[]> = new Map();
 
-  // Azure-specific data stores
-  private servicePrincipalsById: Map<string, ServicePrincipalDto> = new Map();
-  private directoryRolesById: Map<string, DirectoryRoleDto> = new Map();
-  private sharePointSitesById: Map<string, SharePointSiteDto> = new Map();
-  private teamsById: Map<string, MicrosoftTeamDto> = new Map();
-  private tenantsById: Map<string, TenantDto> = new Map();
-  private applicationSecretsById: Map<string, ApplicationSecretDto> = new Map();
-
   // Enhanced graph structures
   private nodes: Map<string, GraphNode> = new Map();
   private edges: GraphEdge[] = [];
@@ -143,10 +134,8 @@ export class LogicEngineService extends EventEmitter {
 
   /**
    * Main entry point - loads all discovery data from CSV files
-   * @param profilePath Optional path to profile data directory
-   * @param forceReload If true, bypasses cache and reloads all data
    */
-  public async loadAllAsync(profilePath?: string, forceReload: boolean = false): Promise<boolean> {
+  public async loadAllAsync(profilePath?: string): Promise<boolean> {
     if (this.isLoading) {
       console.warn('Load already in progress, skipping duplicate request');
       return false;
@@ -158,7 +147,7 @@ export class LogicEngineService extends EventEmitter {
       this.appliedInferenceRules = [];
 
       const dataPath = profilePath || this.dataRoot;
-      console.log(`Starting LogicEngine data load from ${dataPath}${forceReload ? ' (force reload)' : ''}`);
+      console.log(`Starting LogicEngine data load from ${dataPath}`);
       this.emit('progress', { stage: 'init', message: 'Initializing data load', percentage: 0 });
 
       // Check if directory exists
@@ -179,16 +168,12 @@ export class LogicEngineService extends EventEmitter {
       const csvFiles = files.filter(f => f.toLowerCase().endsWith('.csv'))
         .map(f => path.join(dataPath, f));
 
-      // Check if any files have changed (skip if force reload)
-      if (!forceReload) {
-        const hasChanges = await this.checkForFileChanges(csvFiles);
-        if (!hasChanges && this.lastLoadTime) {
-          console.log('No CSV changes detected. Using cached data');
-          this.emit('progress', { stage: 'cached', message: 'Using cached data', percentage: 100 });
-          return true;
-        }
-      } else {
-        console.log('[LogicEngine] Force reload requested, bypassing cache');
+      // Check if any files have changed
+      const hasChanges = await this.checkForFileChanges(csvFiles);
+      if (!hasChanges && this.lastLoadTime) {
+        console.log('No CSV changes detected. Using cached data');
+        this.emit('progress', { stage: 'cached', message: 'Using cached data', percentage: 100 });
+        return true;
       }
 
       // Clear existing data stores
@@ -212,15 +197,7 @@ export class LogicEngineService extends EventEmitter {
         this.loadThreatDetectionStreamingAsync(dataPath),
         this.loadDataGovernanceStreamingAsync(dataPath),
         this.loadDataLineageStreamingAsync(dataPath),
-        this.loadExternalIdentitiesStreamingAsync(dataPath),
-        // Azure-specific loading tasks - TEMPORARILY DISABLED until methods are implemented
-        // TODO: Implement these methods after Azure discovery creates CSV files
-        // this.loadServicePrincipalsStreamingAsync(dataPath),
-        // this.loadDirectoryRolesStreamingAsync(dataPath),
-        // this.loadSharePointSitesStreamingAsync(dataPath),
-        // this.loadTeamsStreamingAsync(dataPath),
-        // this.loadTenantsStreamingAsync(dataPath),
-        // this.loadApplicationSecretsStreamingAsync(dataPath)
+        this.loadExternalIdentitiesStreamingAsync(dataPath)
       ];
 
       await Promise.all(loadTasks);
@@ -397,14 +374,6 @@ export class LogicEngineService extends EventEmitter {
     this.externalIdentitiesByProvider.clear();
     this.externalIdentitiesByMappingStatus.clear();
 
-    // Azure-specific data stores
-    this.servicePrincipalsById.clear();
-    this.directoryRolesById.clear();
-    this.sharePointSitesById.clear();
-    this.teamsById.clear();
-    this.tenantsById.clear();
-    this.applicationSecretsById.clear();
-
     // Clear graph structures
     this.nodes.clear();
     this.edges = [];
@@ -473,19 +442,17 @@ export class LogicEngineService extends EventEmitter {
     try {
       // Required fields
       const upn = row.UPN || row.UserPrincipalName || row.Mail || '';
-      const sam = row.Sam || row.SamAccountName || row.SAMAccountName || row.OnPremisesSamAccountName || '';
-      // Use Id for Azure users, Sid for AD users, UserPrincipalName as fallback
-      const sid = row.Sid || row.SID || row.ObjectSid || row.Id || upn || sam;
+      const sam = row.Sam || row.SamAccountName || row.SAMAccountName || '';
+      // Use UserPrincipalName as fallback SID if SID not provided (for test/synthetic data)
+      const sid = row.Sid || row.SID || row.ObjectSid || upn || sam;
 
       if (!sid) {
         return null; // Skip incomplete records
       }
 
-      // Parse groups array - Azure uses GroupMemberships, AD uses Groups
+      // Parse groups array
       const groups = row.Groups ?
-        row.Groups.split(';').filter((g: string) => g) :
-        row.GroupMemberships ?
-          row.GroupMemberships.split(';').filter((g: string) => g) : [];
+        row.Groups.split(';').filter((g: string) => g) : [];
 
       return {
         UPN: upn,
@@ -493,15 +460,15 @@ export class LogicEngineService extends EventEmitter {
         Sid: sid,
         Mail: row.Mail || row.EmailAddress,
         DisplayName: row.DisplayName || row.Name || sam,
-        Enabled: row.Enabled === 'true' || row.Enabled === 'True' || row.Enabled === '1' || row.AccountEnabled === 'True' || row.AccountEnabled === 'true',
+        Enabled: row.Enabled === 'true' || row.Enabled === 'True' || row.Enabled === '1',
         OU: row.OU || row.OrganizationalUnit,
-        ManagerSid: row.ManagerSid || row.ManagerId || row.Manager,
+        ManagerSid: row.ManagerSid || row.Manager,
         Dept: row.Department || row.Dept,
-        AzureObjectId: row.AzureObjectId || row.ObjectId || row.Id,
+        AzureObjectId: row.AzureObjectId || row.ObjectId,
         Groups: groups,
         DiscoveryTimestamp: new Date(row.DiscoveryTimestamp || Date.now()),
-        DiscoveryModule: row._DiscoveryModule || row.DiscoveryModule || 'UserDiscovery',
-        SessionId: row._SessionId || row.SessionId || this.generateSessionId(),
+        DiscoveryModule: row.DiscoveryModule || 'UserDiscovery',
+        SessionId: row.SessionId || this.generateSessionId(),
         Manager: row.Manager,
         Dn: row.DN || row.DistinguishedName || sid
       };
@@ -572,11 +539,9 @@ export class LogicEngineService extends EventEmitter {
         return null;
       }
 
-      // Parse members array - Azure uses SampleMembers, AD uses Members
+      // Parse members array
       const members = row.Members ?
-        row.Members.split(';').filter((m: string) => m) :
-        row.SampleMembers ?
-          row.SampleMembers.split(';').filter((m: string) => m) : [];
+        row.Members.split(';').filter((m: string) => m) : [];
 
       // Parse nested groups
       const nestedGroups = row.NestedGroups ?
@@ -588,8 +553,8 @@ export class LogicEngineService extends EventEmitter {
         Type: row.Type || row.GroupType || 'Security',
         Members: members,
         DiscoveryTimestamp: new Date(row.DiscoveryTimestamp || Date.now()),
-        DiscoveryModule: row._DiscoveryModule || row.DiscoveryModule || 'GroupDiscovery',
-        SessionId: row._SessionId || row.SessionId || this.generateSessionId(),
+        DiscoveryModule: row.DiscoveryModule || 'GroupDiscovery',
+        SessionId: row.SessionId || this.generateSessionId(),
         NestedGroups: nestedGroups,
         Dn: row.DN || row.DistinguishedName || sid,
         ManagedBy: row.ManagedBy || row.Manager

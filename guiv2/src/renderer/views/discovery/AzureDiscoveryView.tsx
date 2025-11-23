@@ -11,7 +11,6 @@ import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import StatusIndicator from '../../components/atoms/StatusIndicator';
-import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const AzureDiscoveryView: React.FC = () => {
   const {
@@ -32,8 +31,6 @@ const AzureDiscoveryView: React.FC = () => {
     exportResults,
     clearLogs,
     selectedProfile,
-    showExecutionDialog,
-    setShowExecutionDialog,
   } = useAzureDiscoveryLogic();
 
   return (
@@ -98,24 +95,73 @@ const AzureDiscoveryView: React.FC = () => {
               )}
 
               <div className="space-y-4">
-
-                {/* Advanced Settings */}
+                {/* Services to Discover */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Execution Options
+                    Services to Discover
                   </label>
-                  <Checkbox
-                    label="Use External Terminal (Advanced)"
-                    checked={formData.showWindow}
-                    onChange={(checked) => updateFormField('showWindow', checked)}
-                    disabled={isRunning}
-                    data-cy="show-window-checkbox" data-testid="show-window-checkbox"
-                  />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 ml-6">
-                    Unchecked (default): Modern integrated dialog with controls. Checked: External DOS terminal window.
-                  </p>
+
+                  {/* Core Services */}
+                  <div className="border-b border-gray-200 dark:border-gray-700 pb-2 mb-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Core Directory</p>
+                    <Checkbox
+                      label="Users"
+                      checked={formData.includeUsers}
+                      onChange={(checked) => updateFormField('includeUsers', checked)}
+                      disabled={isRunning}
+                      data-cy="include-users-checkbox" data-testid="include-users-checkbox"
+                    />
+                    <Checkbox
+                      label="Groups"
+                      checked={formData.includeGroups}
+                      onChange={(checked) => updateFormField('includeGroups', checked)}
+                      disabled={isRunning}
+                      data-cy="include-groups-checkbox" data-testid="include-groups-checkbox"
+                    />
+                    <Checkbox
+                      label="Licenses"
+                      checked={formData.includeLicenses}
+                      onChange={(checked) => updateFormField('includeLicenses', checked)}
+                      disabled={isRunning}
+                      data-cy="include-licenses-checkbox" data-testid="include-licenses-checkbox"
+                    />
+                  </div>
+
+                  {/* Microsoft 365 Services */}
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Microsoft 365 Workloads</p>
+                    <Checkbox
+                      label="Microsoft Teams"
+                      checked={formData.includeTeams}
+                      onChange={(checked) => updateFormField('includeTeams', checked)}
+                      disabled={isRunning}
+                      data-cy="include-teams-checkbox" data-testid="include-teams-checkbox"
+                    />
+                    <Checkbox
+                      label="SharePoint Online"
+                      checked={formData.includeSharePoint}
+                      onChange={(checked) => updateFormField('includeSharePoint', checked)}
+                      disabled={isRunning}
+                      data-cy="include-sharepoint-checkbox" data-testid="include-sharepoint-checkbox"
+                    />
+                    <Checkbox
+                      label="OneDrive for Business"
+                      checked={formData.includeOneDrive}
+                      onChange={(checked) => updateFormField('includeOneDrive', checked)}
+                      disabled={isRunning}
+                      data-cy="include-onedrive-checkbox" data-testid="include-onedrive-checkbox"
+                    />
+                    <Checkbox
+                      label="Exchange Online"
+                      checked={formData.includeExchange}
+                      onChange={(checked) => updateFormField('includeExchange', checked)}
+                      disabled={isRunning}
+                      data-cy="include-exchange-checkbox" data-testid="include-exchange-checkbox"
+                    />
+                  </div>
                 </div>
 
+                {/* Advanced Settings */}
                 <Input
                   label="Max Results"
                   type="number"
@@ -288,16 +334,14 @@ const AzureDiscoveryView: React.FC = () => {
                     <div
                       key={index}
                       className={`mb-1 ${
-                        log.level === 'error'
+                        log.includes('ERROR')
                           ? 'text-red-400'
-                          : log.level === 'success'
+                          : log.includes('successful') || log.includes('completed')
                           ? 'text-green-400'
-                          : log.level === 'warning'
-                          ? 'text-yellow-400'
                           : 'text-gray-300'
                       }`}
                     >
-                      <span className="text-gray-500">[{log.timestamp}]</span> {log.message}
+                      {log}
                     </div>
                   ))
                 )}
@@ -306,25 +350,6 @@ const AzureDiscoveryView: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* PowerShell Execution Dialog */}
-      <PowerShellExecutionDialog
-        isOpen={showExecutionDialog}
-        onClose={() => !isRunning && setShowExecutionDialog(false)}
-        scriptName="Azure Discovery"
-        scriptDescription="Discovering users, groups, Teams, SharePoint, OneDrive, and Exchange Online"
-        logs={logs}
-        isRunning={isRunning}
-        isCancelling={isCancelling}
-        progress={progress ? {
-          percentage: progress.overallProgress,
-          message: progress.message
-        } : undefined}
-        onStart={startDiscovery}
-        onStop={cancelDiscovery}
-        onClear={clearLogs}
-        showStartButton={false}
-      />
     </div>
   );
 };

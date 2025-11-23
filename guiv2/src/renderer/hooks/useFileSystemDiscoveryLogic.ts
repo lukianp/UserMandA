@@ -148,8 +148,12 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     const unsubscribeOutput = window.electron.onDiscoveryOutput((data) => {
       if (data.executionId && data.executionId.startsWith('filesystem-discovery-')) {
         if (data.executionId === currentToken) {
-          console.log('[FileSystemDiscoveryHook] Output:', data.output);
-          addLog(data.output, 'info');
+          // Handle both data.output and data.message formats
+          const message = data.output || data.message || '';
+          console.log('[FileSystemDiscoveryHook] Output:', message);
+          if (message && !message.includes('<<<JSON_RESULT')) {
+            addLog(message.replace(/\r?\n/g, '').trim(), 'info');
+          }
         }
       }
     });
@@ -313,13 +317,18 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
       );
 
       console.log('[FileSystemDiscoveryHook] executeDiscoveryModule result:', result);
+      console.log('[FileSystemDiscoveryHook] result.result:', result?.result);
 
       // Handle the result - the discovery module returns synchronously
       if (result && result.success) {
         addLog('File System discovery completed successfully', 'success');
 
-        // Process the result data
-        const psReturnValue = result.data || result;
+        // Process the result data - PowerShell returns { success, executionId, result: { Success, RecordCount, Data, ... } }
+        const psReturnValue = result.result || result.data || result;
+        console.log('[FileSystemDiscoveryHook] psReturnValue:', psReturnValue);
+        console.log('[FileSystemDiscoveryHook] psReturnValue.Data:', psReturnValue?.Data);
+        console.log('[FileSystemDiscoveryHook] psReturnValue.RecordCount:', psReturnValue?.RecordCount);
+
         let structuredData = psReturnValue?.Data || psReturnValue;
 
         // If data is a flat array with _DataType properties, group by type

@@ -29,7 +29,6 @@ import { Button } from '../../components/atoms/Button';
 import Badge from '../../components/atoms/Badge';
 import ProgressBar from '../../components/molecules/ProgressBar';
 import Checkbox from '../../components/atoms/Checkbox';
-import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 /**
  * Application Discovery View Component
@@ -40,25 +39,20 @@ const ApplicationDiscoveryView: React.FC = () => {
     templates,
     currentResult,
     isDiscovering,
-    isCancelling,
     progress,
     selectedTab,
     searchText,
     filteredData,
     columnDefs,
     errors,
-    logs,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
     loadTemplate,
     saveAsTemplate,
     exportResults,
-    clearLogs,
     setSelectedTab,
     setSearchText,
-    showExecutionDialog,
-    setShowExecutionDialog,
   } = useApplicationDiscoveryLogic();
 
   return (
@@ -269,25 +263,25 @@ const ApplicationDiscoveryView: React.FC = () => {
               <TabButton
                 active={selectedTab === 'applications'}
                 onClick={() => setSelectedTab('applications')}
-                label={`Applications (${currentResult?.applications?.length || 0})`}
+                label={`Applications (${currentResult.applications.length})`}
                 icon={<Package className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'processes'}
                 onClick={() => setSelectedTab('processes')}
-                label={`Processes (${currentResult?.processes?.length || 0})`}
+                label={`Processes (${currentResult.processes.length})`}
                 icon={<Activity className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'services'}
                 onClick={() => setSelectedTab('services')}
-                label={`Services (${currentResult?.services?.length || 0})`}
+                label={`Services (${currentResult.services.length})`}
                 icon={<Server className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'ports'}
                 onClick={() => setSelectedTab('ports')}
-                label={`Ports (${currentResult?.ports?.length || 0})`}
+                label={`Ports (${currentResult.ports.length})`}
                 icon={<Network className="w-4 h-4" />}
               />
             </div>
@@ -378,25 +372,6 @@ const ApplicationDiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* PowerShell Execution Dialog */}
-      <PowerShellExecutionDialog
-        isOpen={showExecutionDialog}
-        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
-        scriptName="Application Discovery"
-        scriptDescription="Discovering installed applications, services, and processes"
-        logs={logs}
-        isRunning={isDiscovering}
-        isCancelling={isCancelling}
-        progress={progress ? {
-          percentage: progress.percentage || progress.progress || 0,
-          message: progress.message || progress.currentOperation || ''
-        } : undefined}
-        onStart={startDiscovery}
-        onStop={cancelDiscovery}
-        onClear={clearLogs}
-        showStartButton={false}
-      />
     </div>
   );
 };

@@ -56,12 +56,6 @@ const DomainDiscoveryView = lazy(() => import('./views/discovery/DomainDiscovery
 const NetworkDiscoveryView = lazy(() => import('./views/discovery/NetworkDiscoveryView'));
 const ApplicationDiscoveryView = lazy(() => import('./views/discovery/ApplicationDiscoveryView'));
 const EnvironmentDetectionView = lazy(() => import('./views/discovery/EnvironmentDetectionView'));
-const GoogleWorkspaceDiscoveryView = lazy(() => import('./views/discovery/GoogleWorkspaceDiscoveryView'));
-const HyperVDiscoveryView = lazy(() => import('./views/discovery/HyperVDiscoveryView'));
-const Office365DiscoveryView = lazy(() => import('./views/discovery/Office365DiscoveryView'));
-const SecurityInfrastructureDiscoveryView = lazy(() => import('./views/discovery/SecurityInfrastructureDiscoveryView'));
-const SQLServerDiscoveryView = lazy(() => import('./views/discovery/SQLServerDiscoveryView'));
-const VMwareDiscoveryView = lazy(() => import('./views/discovery/VMwareDiscoveryView'));
 
 // Migration views
 const MigrationPlanningView = lazy(() => import('./views/migration/MigrationPlanningView'));
@@ -153,7 +147,7 @@ export const routes: RouteObject[] = [
     element: lazyLoad(() => import('./views/discovery/OneDriveDiscoveryView')),
   },
   {
-    path: '/discovery/file-system',
+    path: '/discovery/filesystem',
     element: lazyLoad(() => import('./views/discovery/FileSystemDiscoveryView')),
   },
   {
@@ -165,36 +159,12 @@ export const routes: RouteObject[] = [
     element: lazyLoad(() => import('./views/discovery/NetworkDiscoveryView')),
   },
   {
-    path: '/discovery/applications',
+    path: '/discovery/application',
     element: lazyLoad(() => import('./views/discovery/ApplicationDiscoveryView')),
   },
   {
     path: '/discovery/environment',
     element: lazyLoad(() => import('./views/discovery/EnvironmentDetectionView')),
-  },
-  {
-    path: '/discovery/google-workspace',
-    element: lazyLoad(() => import('./views/discovery/GoogleWorkspaceDiscoveryView')),
-  },
-  {
-    path: '/discovery/hyper-v',
-    element: lazyLoad(() => import('./views/discovery/HyperVDiscoveryView')),
-  },
-  {
-    path: '/discovery/office365',
-    element: lazyLoad(() => import('./views/discovery/Office365DiscoveryView')),
-  },
-  {
-    path: '/discovery/security',
-    element: lazyLoad(() => import('./views/discovery/SecurityInfrastructureDiscoveryView')),
-  },
-  {
-    path: '/discovery/sql-server',
-    element: lazyLoad(() => import('./views/discovery/SQLServerDiscoveryView')),
-  },
-  {
-    path: '/discovery/vmware',
-    element: lazyLoad(() => import('./views/discovery/VMwareDiscoveryView')),
   },
 
   // Migration routes

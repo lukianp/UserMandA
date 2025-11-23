@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import type {
@@ -10,7 +10,6 @@ import type {
   VMwareDiscoveryTemplate,
 } from '../types/models/vmware';
 import { VMWARE_TEMPLATES } from '../types/models/vmware';
-import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 export interface VMwareDiscoveryLogicState {
   config: VMwareDiscoveryConfig;
@@ -32,8 +31,6 @@ const formatBytes = (bytes: number): string => {
 };
 
 export const useVMwareDiscoveryLogic = () => {
-  const { getResultsByModuleName } = useDiscoveryStore();
-
   const [config, setConfig] = useState<VMwareDiscoveryConfig>({
     vCenters: [],
     includeHosts: true,
@@ -64,16 +61,6 @@ export const useVMwareDiscoveryLogic = () => {
     modifiedDate: new Date().toISOString(),
     createdBy: 'system',
   }));
-
-  // Load previous discovery results from store on mount
-  useEffect(() => {
-    const previousResults = getResultsByModuleName('VMwareDiscovery');
-    if (previousResults && previousResults.length > 0) {
-      console.log('[VMwareDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
-      const latestResult = previousResults[previousResults.length - 1];
-      setResult(latestResult);
-    }
-  }, [getResultsByModuleName]);
 
   const handleStartDiscovery = async () => {
     setIsLoading(true);

@@ -56,6 +56,7 @@ export const Sidebar: React.FC = () => {
       label: 'Discovery',
       icon: <Search size={20} />,
       children: [
+        { path: '/discovery/dashboard', label: 'Dashboard', icon: <ChevronRight size={16} /> },
         { path: '/discovery/domain', label: 'Domain', icon: <ChevronRight size={16} /> },
         { path: '/discovery/azure', label: 'Azure AD', icon: <ChevronRight size={16} /> },
       ],

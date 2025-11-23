@@ -1,6 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import type { ColDef } from 'ag-grid-community';
-import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 import type {
   SQLDiscoveryConfig,
@@ -31,8 +30,6 @@ const formatBytes = (bytes: number): string => {
 };
 
 export const useSQLServerDiscoveryLogic = () => {
-  const { getResultsByModuleName } = useDiscoveryStore();
-
   const [config, setConfig] = useState<SQLDiscoveryConfig>({
     servers: [],
     includeSystemDatabases: true,
@@ -52,16 +49,6 @@ export const useSQLServerDiscoveryLogic = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'instances' | 'databases'>('overview');
-
-  // Load previous discovery results from store on mount
-  useEffect(() => {
-    const previousResults = getResultsByModuleName('SQLServerDiscovery');
-    if (previousResults && previousResults.length > 0) {
-      console.log('[SQLServerDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
-      const latestResult = previousResults[previousResults.length - 1];
-      setResult(latestResult);
-    }
-  }, [getResultsByModuleName]);
 
   const templates = [
     {

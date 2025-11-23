@@ -11,7 +11,7 @@ import * as crypto from 'crypto';
 
 import { ipcMain, dialog, shell, BrowserWindow } from 'electron';
 
-import { ScriptExecutionParams, ModuleExecutionParams, ScriptTask, ExecutionOptions } from '../types/shared';
+import { ScriptExecutionParams, ModuleExecutionParams, ScriptTask } from '../types/shared';
 import type { UserDetailProjection } from '../renderer/types/models/userDetail';
 
 import { PowerShellExecutionService } from './services/powerShellService';
@@ -21,7 +21,7 @@ import { MockLogicEngineService } from './services/mockLogicEngineService';
 import { LogicEngineService } from './services/logicEngineService';
 import { ProjectService } from './services/projectService';
 import { DashboardService } from './services/dashboardService';
-import { ProfileService } from './services/profileService';
+import { ProfileService } from './services/ProfileService';
 
 
 // Service instances
@@ -33,23 +33,7 @@ let logicEngineService: LogicEngineService;
 let projectService: ProjectService;
 let dashboardService: DashboardService;
 let profileService: ProfileService;
-
-// Window storage - simple pattern that webpack can't optimize away
-let _storedWindow: BrowserWindow | null = null;
-
-function setMainWindow(window: BrowserWindow | null): void {
-  console.error('[WINDOW_MANAGER] 🔧 Setting window:', !!window);
-  _storedWindow = window;
-  console.error('[WINDOW_MANAGER] ✅ Window stored, valid:', !!_storedWindow);
-}
-
-function getMainWindow(): BrowserWindow | null {
-  return _storedWindow;
-}
-
-function hasMainWindow(): boolean {
-  return _storedWindow !== null && !_storedWindow.isDestroyed();
-}
+let mainWindow: BrowserWindow | null = null;
 
 // Configuration storage
 const configPath = path.join(process.cwd(), 'config', 'app-config.json');
@@ -65,11 +49,6 @@ async function initializeServices(): Promise<void> {
   console.log('Initializing IPC services...');
 
   // Initialize PowerShell Execution Service
-  // Determine base directory: if running from guiv2, go up one level; otherwise use cwd
-  const cwd = process.cwd();
-  const baseDir = cwd.endsWith('guiv2') ? path.join(cwd, '..') : cwd;
-  console.log(`[IPC] PowerShell scripts base directory: ${baseDir}`);
-
   psService = new PowerShellExecutionService({
     maxPoolSize: 10,
     minPoolSize: 2,
@@ -77,7 +56,7 @@ async function initializeServices(): Promise<void> {
     queueSize: 100,
     enableModuleCaching: true,
     defaultTimeout: 60000, // 1 minute
-    scriptsBaseDir: baseDir,
+    scriptsBaseDir: process.cwd(), // App runs from C:\enterprisediscovery
   });
   await psService.initialize();
 
@@ -198,96 +177,75 @@ function sanitizePath(filePath: string): string {
  * @param window The main browser window for sending events to renderer
  */
 export async function registerIpcHandlers(window?: BrowserWindow): Promise<void> {
-  console.error('[IPC] ================================================');
-  console.error('[IPC] registerIpcHandlers called with window:', !!window);
-  console.error('[IPC] ================================================');
-
   // Store window reference for stream events
   if (window) {
-    setMainWindow(window);
-    console.error('[IPC] ✅ Window stored, verified:', hasMainWindow());
-  } else {
-    console.error('[IPC] ⚠️ CRITICAL WARNING: No window provided to registerIpcHandlers!');
+    mainWindow = window;
   }
 
   // Initialize services first
   await initializeServices();
-  console.error('[IPC] After initializeServices, window still exists:', hasMainWindow());
 
   // ========================================
   // PowerShell Stream Event Forwarding
   // ========================================
 
   // Forward all 6 PowerShell streams to renderer process
-  if (hasMainWindow()) {
+  if (mainWindow) {
     psService.on('stream:output', (data) => {
-      const win = getMainWindow();
-      win?.webContents.send('powershell:stream:output', data);
+      mainWindow?.webContents.send('powershell:stream:output', data);
     });
 
     psService.on('stream:error', (data) => {
-      const win = getMainWindow();
-      win?.webContents.send('powershell:stream:error', data);
+      mainWindow?.webContents.send('powershell:stream:error', data);
     });
 
     psService.on('stream:warning', (data) => {
-      const win = getMainWindow();
-      win?.webContents.send('powershell:stream:warning', data);
+      mainWindow?.webContents.send('powershell:stream:warning', data);
     });
 
     psService.on('stream:verbose', (data) => {
-      const win = getMainWindow();
-      win?.webContents.send('powershell:stream:verbose', data);
+      mainWindow?.webContents.send('powershell:stream:verbose', data);
     });
 
     psService.on('stream:debug', (data) => {
-      const win = getMainWindow();
-      win?.webContents.send('powershell:stream:debug', data);
+      mainWindow?.webContents.send('powershell:stream:debug', data);
     });
 
     psService.on('stream:information', (data) => {
-      const win = getMainWindow();
-      win?.webContents.send('powershell:stream:information', data);
+      mainWindow?.webContents.send('powershell:stream:information', data);
     });
 
     // Forward legacy output event (backward compatibility)
     psService.on('output', (data) => {
-      const win = getMainWindow();
-      win?.webContents.send('powershell:output', data);
+      mainWindow?.webContents.send('powershell:output', data);
     });
 
     // Forward cancellation events
     psService.on('execution:cancelled', (data) => {
-      const win = getMainWindow();
-      win?.webContents.send('powershell:execution:cancelled', data);
+      mainWindow?.webContents.send('powershell:execution:cancelled', data);
     });
 
     console.log('PowerShell stream event forwarding configured');
 
     // Forward Environment Detection events
     environmentDetectionService.on('detection:started', (data) => {
-      const win = getMainWindow();
-      win?.webContents.send('environment:detection:started', data);
+      mainWindow?.webContents.send('environment:detection:started', data);
     });
 
     environmentDetectionService.on('detection:progress', (data) => {
-      const win = getMainWindow();
-      win?.webContents.send('environment:detection:progress', data);
+      mainWindow?.webContents.send('environment:detection:progress', data);
     });
 
     environmentDetectionService.on('detection:completed', (data) => {
-      const win = getMainWindow();
-      win?.webContents.send('environment:detection:completed', data);
+      mainWindow?.webContents.send('environment:detection:completed', data);
     });
 
     environmentDetectionService.on('detection:failed', (data) => {
-      const win = getMainWindow();
-      win?.webContents.send('environment:detection:failed', data);
+      mainWindow?.webContents.send('environment:detection:failed', data);
     });
 
     environmentDetectionService.on('detection:cancelled', (data) => {
-      const win = getMainWindow();
-      win?.webContents.send('environment:detection:cancelled', data);
+      mainWindow?.webContents.send('environment:detection:cancelled', data);
     });
 
     console.log('Environment Detection event forwarding configured');
@@ -671,7 +629,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       const { path: dirPath, options } = args;
       const sanitized = sanitizePath(dirPath);
       console.log(`IPC: fs:readdir - ${sanitized}`);
-      const result = await fs.readdir(sanitized, options as any);
+      const result = await fs.readdir(sanitized, options);
       return { success: true, data: result };
     } catch (error: unknown) {
       console.error(`fs:readdir error: ${error instanceof Error ? error.message : String(error)}`);
@@ -1040,6 +998,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('profile:refresh', async () => {
     try {
+      const profileService = getProfileService();
       await profileService.refreshProfiles();
       const sourceProfiles = profileService.getSourceProfiles();
       console.log(`Refreshed profiles: ${sourceProfiles.length} source profiles found`);
@@ -1058,6 +1017,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('profile:getDataPath', async (_, profileId: string) => {
     try {
+      const profileService = getProfileService();
       const dataPath = profileService.getProfileDataPath(profileId);
       return { success: true, dataPath };
     } catch (error: unknown) {
@@ -1232,9 +1192,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
   ipcMain.handle('window:minimize', async () => {
     try {
-      const win = getMainWindow();
-      if (win) {
-        win.minimize();
+      if (mainWindow) {
+        mainWindow.minimize();
         return { success: true };
       }
       return { success: false, error: 'Main window not available' };
@@ -1246,12 +1205,11 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
   ipcMain.handle('window:maximize', async () => {
     try {
-      const win = getMainWindow();
-      if (win) {
-        if (win.isMaximized()) {
-          win.unmaximize();
+      if (mainWindow) {
+        if (mainWindow.isMaximized()) {
+          mainWindow.unmaximize();
         } else {
-          win.maximize();
+          mainWindow.maximize();
         }
         return { success: true };
       }
@@ -1264,9 +1222,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
   ipcMain.handle('window:close', async () => {
     try {
-      const win = getMainWindow();
-      if (win) {
-        win.close();
+      if (mainWindow) {
+        mainWindow.close();
         return { success: true };
       }
       return { success: false, error: 'Main window not available' };
@@ -1278,9 +1235,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
   ipcMain.handle('window:restore', async () => {
     try {
-      const win = getMainWindow();
-      if (win) {
-        win.restore();
+      if (mainWindow) {
+        mainWindow.restore();
         return { success: true };
       }
       return { success: false, error: 'Main window not available' };
@@ -1292,9 +1248,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
   ipcMain.handle('window:isMaximized', async () => {
     try {
-      const win = getMainWindow();
-      if (win) {
-        return { success: true, isMaximized: win.isMaximized() };
+      if (mainWindow) {
+        return { success: true, isMaximized: mainWindow.isMaximized() };
       }
       return { success: false, error: 'Main window not available' };
     } catch (error: unknown) {
@@ -1368,9 +1323,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       const { getFileWatcherService } = await import('./services/fileWatcherService');
       const fileWatcher = getFileWatcherService();
 
-      const win = getMainWindow();
-      if (win) {
-        fileWatcher.setMainWindow(win);
+      if (mainWindow) {
+        fileWatcher.setMainWindow(mainWindow);
       }
 
       await fileWatcher.watchProfile(profileId);
@@ -1459,23 +1413,20 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
       // Set up progress event listener
       const progressHandler = (progress: any) => {
-        const win = getMainWindow();
-        if (win) {
-          win.webContents.send('logic-engine:progress', progress);
+        if (mainWindow) {
+          mainWindow.webContents.send('logic-engine:progress', progress);
         }
       };
 
       const loadedHandler = (data: any) => {
-        const win = getMainWindow();
-        if (win) {
-          win.webContents.send('logic-engine:loaded', data);
+        if (mainWindow) {
+          mainWindow.webContents.send('logic-engine:loaded', data);
         }
       };
 
       const errorHandler = (error: any) => {
-        const win = getMainWindow();
-        if (win) {
-          win.webContents.send('logic-engine:error', error);
+        if (mainWindow) {
+          mainWindow.webContents.send('logic-engine:error', error);
         }
       };
 
@@ -1776,31 +1727,6 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       };
     } catch (error: unknown) {
       console.error('logicEngine:getComplexityStatistics error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
-
-  /**
-   * IPC Handler: logicEngine:forceReload
-   *
-   * Force reload all data from CSV files (bypasses cache)
-   */
-  ipcMain.handle('logicEngine:forceReload', async (_, profilePath?: string) => {
-    try {
-      console.log('[LogicEngine] Force reloading data from CSV files...');
-      const success = await logicEngineService.loadAllAsync(profilePath, true); // Pass true to force reload
-
-      if (success) {
-        console.log('[LogicEngine] Force reload completed successfully');
-        return { success: true };
-      } else {
-        return { success: false, error: 'Failed to reload data' };
-      }
-    } catch (error: unknown) {
-      console.error('logicEngine:forceReload error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error)
@@ -2345,19 +2271,12 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    * Execute discovery module with real-time streaming
    * Emits events: discovery:output, discovery:progress, discovery:complete, discovery:error
    */
-  console.log('[IPC] Registering discovery:execute handler...');
   ipcMain.handle('discovery:execute', async (event, args: {
     moduleName: string;
     parameters: Record<string, any>;
     executionId?: string;
   }) => {
     const { moduleName, parameters, executionId } = args;
-    console.log(`[IPC] ===============================================`);
-    console.log(`[IPC] discovery:execute HANDLER CALLED!`);
-    console.log(`[IPC] Module: ${moduleName}`);
-    console.log(`[IPC] ExecutionId: ${executionId || 'auto-generating...'}`);
-    console.log(`[IPC] mainWindow exists: ${hasMainWindow()}`);
-    console.log(`[IPC] ===============================================`);
 
     try {
       // Generate execution ID if not provided
@@ -2378,117 +2297,84 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
 
       // Listen to all 6 PowerShell streams
       const onOutputStream = (data: any) => {
-        console.error(`[IPC Handler] 🎯 Received stream:output event:`, data.data?.substring(0, 100));
-        const win = getMainWindow();
-        console.error(`[IPC Handler] 🔍 Window exists: ${!!win}, hasWindow: ${hasMainWindow()}`);
-        if (win && !win.isDestroyed()) {
-          console.error(`[IPC Handler] 📤 Forwarding output to renderer (execId: ${execId})`);
-          win.webContents.send('discovery:output', {
+        if (mainWindow) {
+          mainWindow.webContents.send('discovery:output', {
             executionId: execId,
             timestamp: new Date().toISOString(),
             level: 'output',
             message: data.data,
             source: moduleName,
           });
-        } else {
-          console.error(`[IPC Handler] ⚠️ Window not available, cannot forward output event`);
         }
       };
 
       const onErrorStream = (data: any) => {
-        console.error(`[IPC Handler] 🎯 Received stream:error event:`, data.data?.substring(0, 100));
-        const win = getMainWindow();
-        if (win && !win.isDestroyed()) {
-          console.error(`[IPC Handler] 📤 Forwarding error to renderer (execId: ${execId})`);
-          win.webContents.send('discovery:output', {
+        if (mainWindow) {
+          mainWindow.webContents.send('discovery:output', {
             executionId: execId,
             timestamp: new Date().toISOString(),
             level: 'error',
             message: data.data,
             source: moduleName,
           });
-        } else {
-          console.error(`[IPC Handler] ⚠️ Window not available, cannot forward error event`);
         }
       };
 
       const onWarningStream = (data: any) => {
-        console.error(`[IPC Handler] 🎯 Received stream:warning event:`, data.data?.substring(0, 100));
-        const win = getMainWindow();
-        if (win && !win.isDestroyed()) {
-          console.error(`[IPC Handler] 📤 Forwarding warning to renderer (execId: ${execId})`);
-          win.webContents.send('discovery:output', {
+        if (mainWindow) {
+          mainWindow.webContents.send('discovery:output', {
             executionId: execId,
             timestamp: new Date().toISOString(),
             level: 'warning',
             message: data.data,
             source: moduleName,
           });
-        } else {
-          console.error(`[IPC Handler] ⚠️ Window not available, cannot forward warning event`);
         }
       };
 
       const onVerboseStream = (data: any) => {
-        console.error(`[IPC Handler] 🎯 Received stream:verbose event:`, data.data?.substring(0, 100));
-        const win = getMainWindow();
-        if (win && !win.isDestroyed()) {
-          console.error(`[IPC Handler] 📤 Forwarding verbose to renderer (execId: ${execId})`);
-          win.webContents.send('discovery:output', {
+        if (mainWindow) {
+          mainWindow.webContents.send('discovery:output', {
             executionId: execId,
             timestamp: new Date().toISOString(),
             level: 'verbose',
             message: data.data,
             source: moduleName,
           });
-        } else {
-          console.error(`[IPC Handler] ⚠️ Window not available, cannot forward verbose event`);
         }
       };
 
       const onDebugStream = (data: any) => {
-        console.error(`[IPC Handler] 🎯 Received stream:debug event:`, data.data?.substring(0, 100));
-        const win = getMainWindow();
-        if (win && !win.isDestroyed()) {
-          console.error(`[IPC Handler] 📤 Forwarding debug to renderer (execId: ${execId})`);
-          win.webContents.send('discovery:output', {
+        if (mainWindow) {
+          mainWindow.webContents.send('discovery:output', {
             executionId: execId,
             timestamp: new Date().toISOString(),
             level: 'debug',
             message: data.data,
             source: moduleName,
           });
-        } else {
-          console.error(`[IPC Handler] ⚠️ Window not available, cannot forward debug event`);
         }
       };
 
       const onInformationStream = (data: any) => {
-        console.error(`[IPC Handler] 🎯 Received stream:information event:`, data.data?.substring(0, 100));
-        const win = getMainWindow();
-        if (win && !win.isDestroyed()) {
-          console.error(`[IPC Handler] 📤 Forwarding information to renderer (execId: ${execId})`);
-          win.webContents.send('discovery:output', {
+        if (mainWindow) {
+          mainWindow.webContents.send('discovery:output', {
             executionId: execId,
             timestamp: new Date().toISOString(),
             level: 'information',
             message: data.data,
             source: moduleName,
           });
-        } else {
-          console.error(`[IPC Handler] ⚠️ Window not available, cannot forward information event`);
         }
       };
 
       // Register listeners
-      console.log(`[IPC Handler] 🔌 Registering stream listeners for execId: ${execId}`);
       psService.on('stream:output', onOutputStream);
       psService.on('stream:error', onErrorStream);
       psService.on('stream:warning', onWarningStream);
       psService.on('stream:verbose', onVerboseStream);
       psService.on('stream:debug', onDebugStream);
       psService.on('stream:information', onInformationStream);
-      console.log(`[IPC Handler] ✅ All stream listeners registered for execId: ${execId}`);
 
       // Store cleanup functions
       outputListeners.push(() => psService.off('stream:output', onOutputStream));
@@ -2508,7 +2394,11 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       console.log(`[IPC:discovery:execute] Company: ${activeProfile.companyName}`);
       console.log(`[IPC:discovery:execute] Execution ID: ${execId}`);
       console.log(`[IPC:discovery:execute] Parameters:`, JSON.stringify(parameters, null, 2));
-      // Note: Credentials are loaded from CredentialService, not from profile directly
+      console.log(`[IPC:discovery:execute] Profile credentials loaded:`, {
+        tenantId: activeProfile.tenantId || 'N/A',
+        clientId: activeProfile.clientId || 'N/A',
+        hasClientSecret: !!(activeProfile.clientSecret || activeProfile.password),
+      });
 
       // Execute discovery module with credentials from profile
       const result = await psService.executeDiscoveryModule(
@@ -2519,40 +2409,24 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
           cancellationToken: execId,
           streamOutput: true,
           timeout: parameters.timeout || 300000,
-          showWindow: parameters.showWindow !== undefined ? parameters.showWindow : true,  // Default to showing PowerShell window
+          showWindow: parameters.showWindow === true,
         }
       );
 
       // Cleanup listeners
-      console.log(`[IPC Handler] 🧹 Cleaning up stream listeners for execId: ${execId}`);
       outputListeners.forEach(cleanup => cleanup());
-      console.log(`[IPC Handler] ✅ All stream listeners cleaned up for execId: ${execId}`);
 
       console.log(`[IPC:discovery:execute] ✅ ${moduleName} completed successfully`);
       console.log(`[IPC:discovery:execute] Duration: ${Date.now() - execution.startTime}ms`);
       console.log(`[IPC:discovery:execute] Result:`, result.success ? 'SUCCESS' : 'FAILED');
 
-      // Send completion event with normalized result structure
-      const completionWin = getMainWindow();
-      if (completionWin && !completionWin.isDestroyed()) {
-        console.error('[IPC Handler] 📤 Sending discovery:complete event');
-
-        // Normalize result: Add totalItems from PowerShell RecordCount
-        const normalizedResult = {
-          ...result,
-          totalItems: result.data?.RecordCount || 0,  // Map PowerShell RecordCount to totalItems
-          recordCount: result.data?.RecordCount || 0, // Keep RecordCount for backward compatibility
-        };
-
-        console.error(`[IPC Handler] 📊 Discovery results: RecordCount=${result.data?.RecordCount}, Success=${result.data?.Success}`);
-
-        completionWin.webContents.send('discovery:complete', {
+      // Send completion event
+      if (mainWindow) {
+        mainWindow.webContents.send('discovery:complete', {
           executionId: execId,
-          result: normalizedResult,
+          result,
           duration: Date.now() - execution.startTime,
         });
-      } else {
-        console.error('[IPC Handler] ⚠️ Window not available for completion event');
       }
 
       return {
@@ -2565,15 +2439,11 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       console.error('[IPC:discovery:execute] ❌ Error:', error);
 
       // Send error event
-      const errorWin = getMainWindow();
-      if (errorWin && !errorWin.isDestroyed() && executionId) {
-        console.error('[IPC Handler] 📤 Sending discovery:error event');
-        errorWin.webContents.send('discovery:error', {
+      if (mainWindow && executionId) {
+        mainWindow.webContents.send('discovery:error', {
           executionId: executionId || 'unknown',
           error: error instanceof Error ? error.message : String(error),
         });
-      } else {
-        console.error('[IPC Handler] ⚠️ Window not available for error event');
       }
 
       return {
@@ -2593,9 +2463,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       console.log(`IPC: discovery:cancel - ${executionId}`);
       const success = await psService.cancelExecution(executionId);
 
-      const win = getMainWindow();
-      if (success && win) {
-        win.webContents.send('discovery:cancelled', { executionId });
+      if (success && mainWindow) {
+        mainWindow.webContents.send('discovery:cancelled', { executionId });
       }
 
       return { success };
@@ -2640,9 +2509,8 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       console.log(`IPC: discovery:clear-logs - ${executionId}`);
 
       // Send event to renderer to clear logs
-      const win = getMainWindow();
-      if (win) {
-        win.webContents.send('discovery:logs-cleared', { executionId });
+      if (mainWindow) {
+        mainWindow.webContents.send('discovery:logs-cleared', { executionId });
       }
 
       return { success: true };
@@ -2987,7 +2855,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   // Connection Testing (Task 5)
   // ========================================
   const { registerConnectionTestHandlers } = await import('./ipc/connectionTestHandlers');
-  registerConnectionTestHandlers(getMainWindow() || undefined);
+  registerConnectionTestHandlers(mainWindow || undefined);
 
   // ========================================
   // Migration Planning (Task 7)
@@ -3011,7 +2879,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   // Error Monitoring (Task 9)
   // ========================================
   const { registerErrorMonitoringHandlers } = await import('./ipc/errorMonitoringHandlers');
-  registerErrorMonitoringHandlers(getMainWindow() || undefined);
+  registerErrorMonitoringHandlers(mainWindow || undefined);
 
   // ========================================
   // Centralized Logging (Task 10)

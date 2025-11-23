@@ -21,7 +21,6 @@ import type {
   ProgressData,
   OutputData
 } from './shared/types';
-import type { ExecutionOptions } from './types/shared';
 
 /**
 // ========================================
@@ -551,16 +550,9 @@ const electronAPI: ElectronAPI = {
     message: string;
     source: string;
   }) => void) => {
-    const subscription = (_: any, data: any) => {
-      console.log('[PRELOAD] 📩 Received discovery:output event from main process:', data);
-      callback(data);
-    };
+    const subscription = (_: any, data: any) => callback(data);
     ipcRenderer.on('discovery:output', subscription);
-    console.log('[PRELOAD] ✅ Registered listener for discovery:output events');
-    return () => {
-      console.log('[PRELOAD] 🧹 Removing listener for discovery:output');
-      ipcRenderer.removeListener('discovery:output', subscription);
-    };
+    return () => ipcRenderer.removeListener('discovery:output', subscription);
   },
 
   /**
@@ -575,16 +567,9 @@ const electronAPI: ElectronAPI = {
     itemsProcessed?: number;
     totalItems?: number;
   }) => void) => {
-    const subscription = (_: any, data: any) => {
-      console.log('[PRELOAD] 📊 Received discovery:progress event from main process:', data);
-      callback(data);
-    };
+    const subscription = (_: any, data: any) => callback(data);
     ipcRenderer.on('discovery:progress', subscription);
-    console.log('[PRELOAD] ✅ Registered listener for discovery:progress events');
-    return () => {
-      console.log('[PRELOAD] 🧹 Removing listener for discovery:progress');
-      ipcRenderer.removeListener('discovery:progress', subscription);
-    };
+    return () => ipcRenderer.removeListener('discovery:progress', subscription);
   },
 
   /**
@@ -597,16 +582,9 @@ const electronAPI: ElectronAPI = {
     result: any;
     duration: number;
   }) => void) => {
-    const subscription = (_: any, data: any) => {
-      console.log('[PRELOAD] ✅ Received discovery:complete event from main process:', data);
-      callback(data);
-    };
+    const subscription = (_: any, data: any) => callback(data);
     ipcRenderer.on('discovery:complete', subscription);
-    console.log('[PRELOAD] ✅ Registered listener for discovery:complete events');
-    return () => {
-      console.log('[PRELOAD] 🧹 Removing listener for discovery:complete');
-      ipcRenderer.removeListener('discovery:complete', subscription);
-    };
+    return () => ipcRenderer.removeListener('discovery:complete', subscription);
   },
 
   /**
@@ -618,16 +596,9 @@ const electronAPI: ElectronAPI = {
     executionId: string;
     error: string;
   }) => void) => {
-    const subscription = (_: any, data: any) => {
-      console.log('[PRELOAD] ❌ Received discovery:error event from main process:', data);
-      callback(data);
-    };
+    const subscription = (_: any, data: any) => callback(data);
     ipcRenderer.on('discovery:error', subscription);
-    console.log('[PRELOAD] ✅ Registered listener for discovery:error events');
-    return () => {
-      console.log('[PRELOAD] 🧹 Removing listener for discovery:error');
-      ipcRenderer.removeListener('discovery:error', subscription);
-    };
+    return () => ipcRenderer.removeListener('discovery:error', subscription);
   },
 
   /**
