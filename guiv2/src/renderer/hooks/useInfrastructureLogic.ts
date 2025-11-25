@@ -3,10 +3,9 @@
  * Handles network infrastructure and server discovery
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
-import { useProfileStore } from '../store/useProfileStore';
 import { DiscoveryResult } from '../types/models/discovery';
 import { getElectronAPI } from '../lib/electron-api-fallback';
 
@@ -30,51 +29,43 @@ export const useInfrastructureLogic = () => {
   const [selectedItems, setSelectedItems] = useState<InfrastructureData[]>([]);
   const [filterType, setFilterType] = useState<string>('all');
 
-  // Subscribe to selected source profile changes
-  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
-
-  // Load infrastructure on mount and when profile changes
-  useEffect(() => {
-    loadInfrastructure();
-  }, [selectedSourceProfile]);
-
   const loadInfrastructure = useCallback(async () => {
     setIsLoading(true);
     try {
-      console.log('[InfrastructureView] Loading devices from LogicEngine...');
+      const electronAPI = getElectronAPI();
+      const result = await electronAPI.executeModule({
+        modulePath: 'Modules/Discovery/InfrastructureDiscovery.psm1',
+        functionName: 'Get-InfrastructureInventory',
+        parameters: {},
+      });
 
-      // Get devices from Logic Engine
-      const result = await window.electronAPI.invoke('logicEngine:getAllDevices');
+      if (result.success) {
+        setInfrastructure(result.data.infrastructure || []);
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to load devices from LogicEngine');
+        const discoveryResult: DiscoveryResult = {
+          id: `infra-${Date.now()}`,
+          name: 'Infrastructure Discovery',
+          moduleName: 'InfrastructureDiscovery',
+          displayName: 'Network Infrastructure Discovery',
+          itemCount: result.data.infrastructure?.length || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: result.duration || 0,
+          status: 'Completed',
+          filePath: result.data.outputPath || '',
+          success: true,
+          summary: `Discovered ${result.data.infrastructure?.length || 0} infrastructure items`,
+          errorMessage: '',
+          additionalData: result.data,
+          createdAt: new Date().toISOString(),
+        };
+        addResult(discoveryResult);
       }
-
-      if (!Array.isArray(result.data)) {
-        throw new Error('Invalid response format from LogicEngine');
-      }
-
-      // Map device DTOs to InfrastructureData
-      const mappedDevices: InfrastructureData[] = result.data.map((device: any) => ({
-        id: device.Id || device.Name || `device-${Date.now()}`,
-        name: device.Name || 'Unknown Device',
-        type: device.Type || 'server',
-        ipAddress: device.IpAddress || 'Unknown',
-        status: 'online' as const,
-        os: device.Os || device.OperatingSystem || 'Unknown',
-        lastSeen: device.DiscoveryTimestamp || new Date().toISOString(),
-        details: device,
-      }));
-
-      setInfrastructure(mappedDevices);
-      console.log(`[InfrastructureView] Loaded ${mappedDevices.length} devices from LogicEngine`);
-    } catch (error: any) {
-      console.error('[InfrastructureView] Failed to load devices:', error);
-      setInfrastructure([]);
+    } catch (error) {
+      console.error('Failed to load infrastructure:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedSourceProfile]);
+  }, [addResult]);
 
   const filteredInfrastructure = infrastructure.filter(item => {
     const matchesSearch = !searchText ||

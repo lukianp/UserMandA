@@ -16,6 +16,8 @@ import {
   PIMRole,
   IGStats
 } from '../types/models/identityGovernance';
+import { useProfileStore } from '../store/useProfileStore';
+import { getElectronAPI } from '../lib/electron-api-fallback';
 
 type TabType = 'overview' | 'access-reviews' | 'entitlements' | 'pim-roles';
 
@@ -38,6 +40,9 @@ interface IGDiscoveryState {
 }
 
 export const useIdentityGovernanceDiscoveryLogic = () => {
+  // Get selected profile from store
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+
   // Combined state for optimal performance
   const [state, setState] = useState<IGDiscoveryState>({
     config: {
@@ -78,6 +83,13 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
 
   // Start discovery - FULLY FUNCTIONAL with error handling
   const startDiscovery = useCallback(async () => {
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setState(prev => ({ ...prev, error: errorMessage }));
+      console.error('[IdentityGovernanceDiscovery]', errorMessage);
+      return;
+    }
+
     const token = `ig-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setState(prev => ({
       ...prev,
@@ -87,25 +99,37 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
       progress: { current: 0, total: 100, message: 'Initializing Identity Governance discovery...', percentage: 0 }
     }));
 
+    console.log(`[IdentityGovernanceDiscovery] Starting discovery for company: ${selectedSourceProfile.companyName}`);
+    console.log(`[IdentityGovernanceDiscovery] Parameters:`, {
+      includeAccessReviews: state.config.includeAccessReviews,
+      includeEntitlements: state.config.includeEntitlements,
+      includePIM: state.config.includePIM
+    });
+
     try {
-      const discoveryResult = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/IdentityGovernanceDiscovery.psm1',
-        functionName: 'Invoke-IGDiscovery',
-        parameters: {
-          ...state.config,
-          cancellationToken: token
+      const electronAPI = getElectronAPI();
+      const discoveryResult = await electronAPI.executeDiscoveryModule(
+        'IdentityGovernance',
+        selectedSourceProfile.companyName,
+        {
+          IncludeAccessReviews: state.config.includeAccessReviews,
+          IncludeEntitlements: state.config.includeEntitlements,
+          IncludePIM: state.config.includePIM
         },
-      });
+        { timeout: state.config.timeout || 300000 }
+      );
 
       setState(prev => ({
         ...prev,
-        result: discoveryResult.data,
+        result: discoveryResult.data || discoveryResult,
         isDiscovering: false,
         cancellationToken: null,
         progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
       }));
+
+      console.log(`[IdentityGovernanceDiscovery] Discovery completed successfully`);
     } catch (error: any) {
-      console.error('Identity Governance Discovery failed:', error);
+      console.error('[IdentityGovernanceDiscovery] Discovery failed:', error);
       setState(prev => ({
         ...prev,
         isDiscovering: false,
@@ -113,7 +137,7 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
         error: error.message || 'Discovery failed. Please check your credentials and permissions.'
       }));
     }
-  }, [state.config]);
+  }, [selectedSourceProfile, state.config]);
 
   // Cancel discovery - FULLY FUNCTIONAL with cleanup
   const cancelDiscovery = useCallback(async () => {

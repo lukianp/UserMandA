@@ -51,6 +51,7 @@ interface DiscoveryState {
   clearAllOperations: () => void;
   getOperation: (operationId: string) => DiscoveryOperation | undefined;
   getResults: (operationId: string) => DiscoveryResult[] | undefined;
+  getResultsByModuleName: (moduleName: string) => DiscoveryResult[] | undefined;
 
   // Compatibility methods for discovery hooks
   addResult: (result: DiscoveryResult) => void;
@@ -283,6 +284,13 @@ export const useDiscoveryStore = create<DiscoveryState>()(
        */
       getResults: (operationId) => {
         return get().results.get(operationId);
+      },
+
+      /**
+       * Get results by module name (for persistent retrieval across component remounts)
+       */
+      getResultsByModuleName: (moduleName) => {
+        return get().results.get(moduleName);
       },
 
       /**

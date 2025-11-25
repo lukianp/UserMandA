@@ -19,6 +19,7 @@ import {
   CalendarUserInfo
 } from '../types/models/googleworkspace';
 import { useProfileStore } from '../store/useProfileStore';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { getElectronAPI } from '../lib/electron-api-fallback';
 
 type TabType = 'overview' | 'users' | 'groups' | 'gmail' | 'drive' | 'calendar' | 'licenses';
@@ -44,6 +45,7 @@ interface GoogleWorkspaceDiscoveryState {
 export const useGoogleWorkspaceDiscoveryLogic = () => {
   // Get selected company profile from store
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { getResultsByModuleName } = useDiscoveryStore();
 
   const [state, setState] = useState<GoogleWorkspaceDiscoveryState>({
     config: {
@@ -69,6 +71,16 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
     cancellationToken: null,
     error: null
   });
+
+  // Load previous discovery results from store on mount
+  useEffect(() => {
+    const previousResults = getResultsByModuleName('GoogleWorkspaceDiscovery');
+    if (previousResults && previousResults.length > 0) {
+      console.log('[GoogleWorkspaceDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
+      const latestResult = previousResults[previousResults.length - 1];
+      setState(prev => ({ ...prev, result: latestResult }));
+    }
+  }, [getResultsByModuleName]);
 
   // Real-time progress tracking via IPC
   useEffect(() => {

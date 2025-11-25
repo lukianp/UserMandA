@@ -78,30 +78,6 @@ export class DashboardService {
   async getProjectTimeline(profileName: string): Promise<ProjectTimeline> {
     const projectConfig = await this.projectService.loadProjectConfig(profileName);
 
-    // Return default timeline if no project config
-    if (!projectConfig) {
-      const now = new Date();
-      return {
-        projectId: 'default',
-        projectName: 'New Project',
-        projectDescription: '',
-        projectStartDate: now.toISOString(),
-        targetCutover: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-        nextWave: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        daysToCutover: 90,
-        daysToNextWave: 7,
-        daysElapsed: 0,
-        currentPhase: 'Discovery',
-        phaseProgress: 0,
-        totalWaves: 0,
-        completedWaves: 0,
-        activeWave: undefined,
-        waveProgress: 0,
-        overallProgress: 0,
-        estimatedCompletionDate: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
-      };
-    }
-
     const now = new Date();
     const cutoverDate = new Date(projectConfig.targetCutover);
     const startDate = new Date(projectConfig.startDate);
@@ -259,75 +235,40 @@ export class DashboardService {
 
   private async getMigratedUserCount(profileName: string): Promise<number> {
     // Would check migration status from project waves
-    try {
-      const projectConfig = await this.projectService.loadProjectConfig(profileName);
-      if (!projectConfig) return 0;
-      const waves = Array.isArray(projectConfig.waves) ? projectConfig.waves : [];
-      return waves
-        .filter(w => w.status === 'Complete')
-        .reduce((sum, wave) => sum + (wave.userCount || 0), 0);
-    } catch (error) {
-      console.warn('getMigratedUserCount error:', error);
-      return 0;
-    }
+    const projectConfig = await this.projectService.loadProjectConfig(profileName);
+    return projectConfig.waves
+      .filter(w => w.status === 'Complete')
+      .reduce((sum, wave) => sum + wave.userCount, 0);
   }
 
   private async getMigratedGroupCount(profileName: string): Promise<number> {
-    try {
-      const projectConfig = await this.projectService.loadProjectConfig(profileName);
-      if (!projectConfig) return 0;
-      const waves = Array.isArray(projectConfig.waves) ? projectConfig.waves : [];
-      return waves
-        .filter(w => w.status === 'Complete')
-        .reduce((sum, wave) => sum + (wave.groupCount || 0), 0);
-    } catch (error) {
-      console.warn('getMigratedGroupCount error:', error);
-      return 0;
-    }
+    const projectConfig = await this.projectService.loadProjectConfig(profileName);
+    return projectConfig.waves
+      .filter(w => w.status === 'Complete')
+      .reduce((sum, wave) => sum + wave.groupCount, 0);
   }
 
   private async getPendingMigrationUserCount(profileName: string): Promise<number> {
-    try {
-      const projectConfig = await this.projectService.loadProjectConfig(profileName);
-      if (!projectConfig) return 0;
-      const waves = Array.isArray(projectConfig.waves) ? projectConfig.waves : [];
-      return waves
-        .filter(w => w.status === 'Scheduled' || w.status === 'InProgress')
-        .reduce((sum, wave) => sum + (wave.userCount || 0), 0);
-    } catch (error) {
-      console.warn('getPendingMigrationUserCount error:', error);
-      return 0;
-    }
+    const projectConfig = await this.projectService.loadProjectConfig(profileName);
+    return projectConfig.waves
+      .filter(w => w.status === 'Scheduled' || w.status === 'InProgress')
+      .reduce((sum, wave) => sum + wave.userCount, 0);
   }
 
   private async getPendingMigrationGroupCount(profileName: string): Promise<number> {
-    try {
-      const projectConfig = await this.projectService.loadProjectConfig(profileName);
-      if (!projectConfig) return 0;
-      const waves = Array.isArray(projectConfig.waves) ? projectConfig.waves : [];
-      return waves
-        .filter(w => w.status === 'Scheduled' || w.status === 'InProgress')
-        .reduce((sum, wave) => sum + (wave.groupCount || 0), 0);
-    } catch (error) {
-      console.warn('getPendingMigrationGroupCount error:', error);
-      return 0;
-    }
+    const projectConfig = await this.projectService.loadProjectConfig(profileName);
+    return projectConfig.waves
+      .filter(w => w.status === 'Scheduled' || w.status === 'InProgress')
+      .reduce((sum, wave) => sum + wave.groupCount, 0);
   }
 
   private async getLastMigrationRun(profileName: string): Promise<string | undefined> {
-    try {
-      const projectConfig = await this.projectService.loadProjectConfig(profileName);
-      if (!projectConfig) return undefined;
-      const waves = Array.isArray(projectConfig.waves) ? projectConfig.waves : [];
-      const completedWaves = waves
-        .filter(w => w.status === 'Complete' && w.completedAt)
-        .sort((a, b) => new Date(b.completedAt as string).getTime() - new Date(a.completedAt as string).getTime());
+    const projectConfig = await this.projectService.loadProjectConfig(profileName);
+    const completedWaves = projectConfig.waves
+      .filter(w => w.status === 'Complete' && w.completedAt)
+      .sort((a, b) => new Date(b.completedAt as string).getTime() - new Date(a.completedAt as string).getTime());
 
-      return completedWaves.length > 0 ? completedWaves[0].completedAt : undefined;
-    } catch (error) {
-      console.warn('getLastMigrationRun error:', error);
-      return undefined;
-    }
+    return completedWaves.length > 0 ? completedWaves[0].completedAt : undefined;
   }
 
   private async checkLogicEngineStatus(): Promise<ServiceStatus> {
@@ -387,10 +328,6 @@ export class DashboardService {
   }
 
   private calculateDaysDifference(from: Date, to: Date): number {
-    // Validate dates - return 0 if either date is invalid
-    if (!from || !to || isNaN(from.getTime()) || isNaN(to.getTime())) {
-      return 0;
-    }
     const diffTime = to.getTime() - from.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
@@ -417,7 +354,7 @@ export class DashboardService {
 
   private calculateEstimatedCompletion(config: ProjectConfig, _daysElapsed: number): string {
     const avgWaveDuration = 7; // days
-    const remainingWaves = (config.waves ?? []).filter(w => w.status !== 'Complete').length;
+    const remainingWaves = config.waves.filter(w => w.status !== 'Complete').length;
     const estimatedDays = remainingWaves * avgWaveDuration;
     const completionDate = new Date(Date.now() + estimatedDays * 24 * 60 * 60 * 1000);
     return completionDate.toISOString();

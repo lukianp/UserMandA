@@ -10,6 +10,9 @@ import type {
   LicenseStatus
 } from '../types/models/licensing';
 
+import { useProfileStore } from '../store/useProfileStore';
+import { getElectronAPI } from '../lib/electron-api-fallback';
+
 type TabType = 'overview' | 'licenses' | 'assignments' | 'subscriptions' | 'compliance';
 
 interface LicensingDiscoveryState {
@@ -54,6 +57,9 @@ interface LicenseStats {
 }
 
 export const useLicensingDiscoveryLogic = () => {
+  // Get selected profile from store
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+
   const [state, setState] = useState<LicensingDiscoveryState>({
     config: {
       includeMicrosoft365: true,
@@ -105,6 +111,13 @@ export const useLicensingDiscoveryLogic = () => {
   }, [state.cancellationToken]);
 
   const startDiscovery = useCallback(async () => {
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setState(prev => ({ ...prev, error: errorMessage }));
+      console.error('[LicensingDiscovery]', errorMessage);
+      return;
+    }
+
     const token = `licensing-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     setState(prev => ({
@@ -115,41 +128,49 @@ export const useLicensingDiscoveryLogic = () => {
       progress: { current: 0, total: 100, message: 'Starting license discovery...', percentage: 0 }
     }));
 
+    console.log(`[LicensingDiscovery] Starting discovery for company: ${selectedSourceProfile.companyName}`);
+    console.log(`[LicensingDiscovery] Parameters:`, {
+      IncludeMicrosoft365: state.config.includeMicrosoft365,
+      IncludeAzure: state.config.includeAzure,
+      IncludeOffice: state.config.includeOffice,
+      IncludeWindows: state.config.includeWindows,
+      IncludeThirdParty: state.config.includeThirdParty
+    });
+
     try {
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/LicensingDiscovery.psm1',
-        functionName: 'Invoke-LicenseDiscovery',
-        parameters: {
+      const electronAPI = getElectronAPI();
+      const discoveryResult = await electronAPI.executeDiscoveryModule(
+        'Licensing',
+        selectedSourceProfile.companyName,
+        {
           IncludeMicrosoft365: state.config.includeMicrosoft365,
           IncludeAzure: state.config.includeAzure,
           IncludeOffice: state.config.includeOffice,
           IncludeWindows: state.config.includeWindows,
-          IncludeThirdParty: state.config.includeThirdParty,
-          TenantId: state.config.tenantId,
-          Timeout: state.config.timeout,
-          CancellationToken: token
+          IncludeThirdParty: state.config.includeThirdParty
         },
-        options: {
-          timeout: state.config.timeout,
-          streamOutput: true
-        }
-      });
+        { timeout: state.config.timeout || 600000 }
+      );
 
       setState(prev => ({
         ...prev,
-        result: result.data,
+        result: discoveryResult.data || discoveryResult,
         isDiscovering: false,
-        progress: { current: 100, total: 100, message: 'Discovery completed', percentage: 100 }
+        cancellationToken: null,
+        progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
       }));
+
+      console.log(`[LicensingDiscovery] Discovery completed successfully`);
     } catch (error: any) {
+      console.error('[LicensingDiscovery] Discovery failed:', error);
       setState(prev => ({
         ...prev,
         isDiscovering: false,
-        error: error.message || 'Discovery failed',
-        progress: { current: 0, total: 100, message: 'Discovery failed', percentage: 0 }
+        cancellationToken: null,
+        error: error.message || 'Discovery failed'
       }));
     }
-  }, [state.config]);
+  }, [selectedSourceProfile, state.config]);
 
   const cancelDiscovery = useCallback(async () => {
     if (state.cancellationToken) {

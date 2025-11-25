@@ -15,6 +15,8 @@ import {
   CAStats,
   PolicyState
 } from '../types/models/conditionalaccess';
+import { useProfileStore } from '../store/useProfileStore';
+import { getElectronAPI } from '../lib/electron-api-fallback';
 
 type TabType = 'overview' | 'policies' | 'locations' | 'assignments';
 
@@ -37,6 +39,9 @@ interface CADiscoveryState {
 }
 
 export const useConditionalAccessDiscoveryLogic = () => {
+  // Get selected profile from store
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+
   // Combined state for better performance
   const [state, setState] = useState<CADiscoveryState>({
     config: {
@@ -77,6 +82,13 @@ export const useConditionalAccessDiscoveryLogic = () => {
 
   // Start discovery
   const startDiscovery = useCallback(async () => {
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setState(prev => ({ ...prev, error: errorMessage }));
+      console.error('[ConditionalAccessDiscovery]', errorMessage);
+      return;
+    }
+
     const token = `ca-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setState(prev => ({
       ...prev,
@@ -86,25 +98,37 @@ export const useConditionalAccessDiscoveryLogic = () => {
       progress: { current: 0, total: 100, message: 'Initializing...', percentage: 0 }
     }));
 
+    console.log(`[ConditionalAccessDiscovery] Starting discovery for company: ${selectedSourceProfile.companyName}`);
+    console.log(`[ConditionalAccessDiscovery] Parameters:`, {
+      includeAssignments: state.config.includeAssignments,
+      includeConditions: state.config.includeConditions,
+      includeControls: state.config.includeControls
+    });
+
     try {
-      const discoveryResult = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/ConditionalAccessDiscovery.psm1',
-        functionName: 'Invoke-CADiscovery',
-        parameters: {
-          ...state.config,
-          cancellationToken: token
+      const electronAPI = getElectronAPI();
+      const discoveryResult = await electronAPI.executeDiscoveryModule(
+        'ConditionalAccess',
+        selectedSourceProfile.companyName,
+        {
+          IncludeAssignments: state.config.includeAssignments,
+          IncludeConditions: state.config.includeConditions,
+          IncludeControls: state.config.includeControls
         },
-      });
+        { timeout: state.config.timeout || 300000 }
+      );
 
       setState(prev => ({
         ...prev,
-        result: discoveryResult.data,
+        result: discoveryResult.data || discoveryResult,
         isDiscovering: false,
         cancellationToken: null,
         progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
       }));
+
+      console.log(`[ConditionalAccessDiscovery] Discovery completed successfully`);
     } catch (error: any) {
-      console.error('CA Discovery failed:', error);
+      console.error('[ConditionalAccessDiscovery] Discovery failed:', error);
       setState(prev => ({
         ...prev,
         isDiscovering: false,
@@ -112,7 +136,7 @@ export const useConditionalAccessDiscoveryLogic = () => {
         error: error.message || 'Discovery failed'
       }));
     }
-  }, [state.config]);
+  }, [selectedSourceProfile, state.config]);
 
   // Cancel discovery
   const cancelDiscovery = useCallback(async () => {

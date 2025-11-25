@@ -26,7 +26,7 @@ export interface ExecutionOptions {
   workingDirectory?: string;
   /** Environment variables to pass to PowerShell */
   environmentVariables?: Dictionary<string>;
-  /** Show PowerShell window during execution (default: false/hidden) */
+  /** Show PowerShell window (Windows only) - launches in separate visible console */
   showWindow?: boolean;
 }
 

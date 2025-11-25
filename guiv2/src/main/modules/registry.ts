@@ -36,7 +36,6 @@ export const DiscoveryModules: Record<string, ModuleSpec> = {
   ExternalIdentityDiscovery: { script: path.join(ROOT, "Discovery", "ExternalIdentityDiscovery.psm1"), argsSchema: {"Message":"string","Level":"string","Component":"string","Context":"string"} },
   FileServer: { script: path.join(ROOT, "Discovery", "FileServer.psm1"), argsSchema: {"Message":"string","Level":"string","Component":"string","Context":"string"} },
   FileServerDiscovery: { script: path.join(ROOT, "Discovery", "FileServerDiscovery.psm1"), argsSchema: {"Message":"string","Level":"string","Component":"string","Context":"string"} },
-  FileSystem: { script: path.join(ROOT, "Discovery", "FileSystemDiscovery.psm1"), argsSchema: {} },
   GCP: { script: path.join(ROOT, "Discovery", "GCPDiscovery.psm1"), argsSchema: {"Message":"string","Level":"string","Component":"string","Context":"string"} },
   GPO: { script: path.join(ROOT, "Discovery", "GPODiscovery.psm1"), argsSchema: {"Message":"string","Level":"string","Component":"string","Context":"string"} },
   Graph: { script: path.join(ROOT, "Discovery", "GraphDiscovery.psm1"), argsSchema: {} },
