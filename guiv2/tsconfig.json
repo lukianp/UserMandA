@@ -20,7 +20,13 @@
       "@/*": ["src/*"],
       "@main/*": ["src/main/*"],
       "@renderer/*": ["src/renderer/*"],
-      "@shared/*": ["src/shared/*"]
+      "@shared/*": ["src/shared/*"],
+      "@components/*": ["src/renderer/components/*"],
+      "@hooks/*": ["src/renderer/hooks/*"],
+      "@store/*": ["src/renderer/store/*"],
+      "@views/*": ["src/renderer/views/*"],
+      "@types/*": ["src/renderer/types/*"],
+      "@lib/*": ["src/renderer/lib/*"]
     },
     "typeRoots": ["src/renderer/types", "node_modules/@types"],
     "types": []

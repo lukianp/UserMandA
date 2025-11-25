@@ -67,7 +67,10 @@
       "Bash(tasklist /FI \"IMAGENAME eq electron.exe\" /FO TABLE)",
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command \"Import-Module ''''C:\\enterprisediscovery\\Modules\\Discovery\\FileSystemDiscovery.psm1'''' -Force; Start-FileSystemDiscovery -CompanyName ''''test'''' -Servers @(''''localhost'''') -OutputPath ''''C:\\DiscoveryData\\test\\Raw'''' -Verbose\")",
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command \"Get-SmbShare | Select-Object Name, Path, ShareType | Format-Table -AutoSize\")",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(xcopy:*)",
+      "Bash(cat:*)",
+      "Bash(cmp:*)"
     ],
     "deny": [],
     "ask": [],
