@@ -308,7 +308,7 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
         },
         {
           timeout: 300000, // 5 minute timeout
-          showWindow: true, // Request visible PowerShell window
+          showWindow: false, // Use integrated execution dialog
         }
       );
 

@@ -1,11 +1,12 @@
 import * as React from 'react';
-import { FolderOpen, Play, XCircle, Download, Clock, HardDrive, Shield, AlertTriangle } from 'lucide-react';
+import { FolderOpen, Play, XCircle, Download, Clock, HardDrive, Shield, AlertTriangle, Settings } from 'lucide-react';
 
 import { useFileSystemDiscoveryLogic } from '../../hooks/useFileSystemDiscoveryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import SearchBar from '../../components/molecules/SearchBar';
 import ProgressBar from '../../components/molecules/ProgressBar';
+import FileSystemConfigDialog from '../../components/molecules/FileSystemConfigDialog';
 
 const FileSystemDiscoveryView: React.FC = () => {
   const {
@@ -36,6 +37,13 @@ const FileSystemDiscoveryView: React.FC = () => {
     setSearchText,
   } = useFileSystemDiscoveryLogic();
 
+  const [showConfigDialog, setShowConfigDialog] = React.useState(false);
+
+  const handleSaveConfig = (newConfig: typeof config) => {
+    setConfig(newConfig);
+    setShowConfigDialog(false);
+  };
+
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="filesystem-discovery-view" data-testid="filesystem-discovery-view">
       {/* Header */}
@@ -52,6 +60,15 @@ const FileSystemDiscoveryView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              icon={<Settings className="w-4 h-4" />}
+              onClick={() => setShowConfigDialog(true)}
+              disabled={isRunning}
+              data-cy="config-btn" data-testid="config-btn"
+            >
+              Configure
+            </Button>
             {result && (
               <>
                 <Button
@@ -344,6 +361,14 @@ const FileSystemDiscoveryView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Configuration Dialog */}
+      <FileSystemConfigDialog
+        isOpen={showConfigDialog}
+        onClose={() => setShowConfigDialog(false)}
+        config={config}
+        onSave={handleSaveConfig}
+      />
     </div>
   );
 };
