@@ -166,9 +166,13 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
           console.log('[FileSystemDiscoveryHook] PowerShell return value type:', typeof psReturnValue);
           console.log('[FileSystemDiscoveryHook] PowerShell return value is array?', Array.isArray(psReturnValue));
 
-          // Handle data structure from PowerShell
-          let structuredData = psReturnValue?.Data || psReturnValue;
-          console.log('[FileSystemDiscoveryHook] Raw Data property:', structuredData);
+          // Handle nested data structure from PowerShell
+          // PowerShell returns: { data: { Data: { shares: [...], permissions: [...] } } }
+          const psWrapper = psReturnValue?.data || psReturnValue;
+          let structuredData = psWrapper?.Data || psWrapper;
+          console.log('[FileSystemDiscoveryHook] psWrapper:', psWrapper);
+          console.log('[FileSystemDiscoveryHook] structuredData (after unwrapping):', structuredData);
+          console.log('[FileSystemDiscoveryHook] structuredData keys:', Object.keys(structuredData || {}));
           console.log('[FileSystemDiscoveryHook] Data is array?', Array.isArray(structuredData));
 
           // If data is a flat array with _DataType properties, group by type
@@ -195,27 +199,30 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
           }
 
           // Build final result
+          // Extract metadata from the Data level
+          const metadata = psWrapper?.Data || structuredData;
+
           const fileSystemResult: FileSystemDiscoveryResult = {
-            id: psReturnValue?.id || data.executionId || `filesystem-discovery-${Date.now()}`,
-            startTime: psReturnValue?.startTime ? new Date(psReturnValue.startTime) : new Date(),
-            endTime: psReturnValue?.endTime ? new Date(psReturnValue.endTime) : new Date(),
-            duration: psReturnValue?.duration || 0,
+            id: metadata?.id || data.executionId || `filesystem-discovery-${Date.now()}`,
+            startTime: metadata?.startTime?.DateTime || metadata?.startTime || new Date().toISOString(),
+            endTime: metadata?.endTime?.DateTime || metadata?.endTime || new Date().toISOString(),
+            duration: metadata?.duration || 0,
             status: 'completed',
             config: config,
             shares: structuredData?.shares || [],
             permissions: structuredData?.permissions || [],
             largeFiles: structuredData?.largeFiles || [],
-            statistics: psReturnValue?.statistics || {
+            statistics: metadata?.statistics || {
               totalShares: structuredData?.shares?.length || 0,
               totalPermissions: structuredData?.permissions?.length || 0,
               totalLargeFiles: structuredData?.largeFiles?.length || 0,
-              totalServers: 0,
+              totalServers: structuredData?.fileServers?.length || 0,
               totalSizeMB: 0,
               averageFileSizeMB: 0,
               largestFileMB: 0,
             },
-            errors: psReturnValue?.errors || [],
-            warnings: psReturnValue?.warnings || [],
+            errors: psWrapper?.Errors || [],
+            warnings: psWrapper?.Warnings || [],
           };
 
           console.log('[FileSystemDiscoveryHook] Final fileSystemResult:', fileSystemResult);
@@ -308,7 +315,7 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
         },
         {
           timeout: 300000, // 5 minute timeout
-          showWindow: false, // Use integrated execution dialog
+          showWindow: true, // Show PowerShell window for debugging
         }
       );
 
@@ -318,9 +325,13 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
       if (result && result.success) {
         addLog('File System discovery completed successfully', 'success');
 
-        // Process the result data
-        const psReturnValue = result.data || result;
-        let structuredData = psReturnValue?.Data || psReturnValue;
+        // Process the result data - nested structure unwrapping
+        // result = { success: true, data: { Success: true, Data: {...} } }
+        const psWrapper = result.data || result;
+        console.log('[FileSystemDiscoveryHook] psWrapper:', psWrapper);
+        let structuredData = psWrapper?.Data || psWrapper;
+        console.log('[FileSystemDiscoveryHook] structuredData:', structuredData);
+        console.log('[FileSystemDiscoveryHook] structuredData keys:', Object.keys(structuredData || {}));
 
         // If data is a flat array with _DataType properties, group by type
         if (Array.isArray(structuredData) && structuredData.length > 0 && structuredData[0]?._DataType) {

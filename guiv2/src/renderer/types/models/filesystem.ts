@@ -291,7 +291,7 @@ export interface FileSystemSchedule {
 }
 
 export const DEFAULT_FILESYSTEM_CONFIG: FileSystemDiscoveryConfig = {
-  servers: [],
+  servers: ['localhost'],
   includeHiddenShares: false,
   includeAdministrativeShares: false,
   scanPermissions: true,

@@ -1130,16 +1130,34 @@ class PowerShellExecutionService extends EventEmitter {
         connectionType: credentials.connectionType
       });
 
-      // Prepare discovery parameters with credentials
-      // IMPORTANT: Additional params must be nested in AdditionalParams hashtable
-      const discoveryParams = {
-        CompanyName: companyName,
-        TenantId: credentials.tenantId,
-        ClientId: credentials.clientId,
-        ClientSecret: credentials.clientSecret,
-        OutputPath: `C:\\DiscoveryData\\${companyName}\\Raw`,
-        AdditionalParams: additionalParams,  // Nested as hashtable
-      };
+      // Determine if this module needs Azure credentials
+      // Local discovery modules (FileSystem, Application) don't need cloud credentials
+      const azureModules = ['Azure', 'Exchange', 'SharePoint', 'OneDrive', 'Teams'];
+      const needsAzureCredentials = azureModules.includes(moduleName);
+
+      // Prepare discovery parameters
+      let discoveryParams: Record<string, any>;
+
+      if (needsAzureCredentials) {
+        // Azure modules use AdditionalParams hashtable pattern
+        discoveryParams = {
+          CompanyName: companyName,
+          TenantId: credentials.tenantId,
+          ClientId: credentials.clientId,
+          ClientSecret: credentials.clientSecret,
+          OutputPath: `C:\\DiscoveryData\\${companyName}\\Raw`,
+          AdditionalParams: additionalParams,  // Nested as hashtable
+        };
+        console.log(`[PowerShellService] Azure credentials added for ${moduleName} module`);
+      } else {
+        // Local modules accept parameters directly (flattened)
+        discoveryParams = {
+          CompanyName: companyName,
+          OutputPath: `C:\\DiscoveryData\\${companyName}\\Raw`,
+          ...additionalParams,  // Flatten additional params to top level
+        };
+        console.log(`[PowerShellService] Skipping Azure credentials for local ${moduleName} module`);
+      }
 
       console.log(`[PowerShellService] Executing ${moduleName} discovery for ${companyName}`);
       console.log(`[PowerShellService] Output path: ${discoveryParams.OutputPath}`);
