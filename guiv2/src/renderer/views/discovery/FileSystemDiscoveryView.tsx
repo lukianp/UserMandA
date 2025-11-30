@@ -191,7 +191,7 @@ const FileSystemDiscoveryView: React.FC = () => {
               </div>
               <div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {(result?.statistics?.usedStorage as any)?.formatted ?? '0'}
+                  {result?.statistics?.totalSizeMB ? `${(result.statistics.totalSizeMB / 1024).toFixed(1)} GB` : '0'}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">Storage Used</div>
               </div>
@@ -203,7 +203,7 @@ const FileSystemDiscoveryView: React.FC = () => {
               </div>
               <div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {(result?.metadata?.totalPermissionsAnalyzed ?? 0).toLocaleString()}
+                  {(result?.statistics?.totalPermissions ?? 0).toLocaleString()}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">Unique Permissions</div>
               </div>
@@ -264,23 +264,29 @@ const FileSystemDiscoveryView: React.FC = () => {
                 <dl className="space-y-3">
                   <div className="flex justify-between">
                     <dt className="text-gray-600 dark:text-gray-400">Total Storage:</dt>
-                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.totalStorage as any)?.formatted ?? '0'}</dd>
+                    <dd className="font-medium text-gray-900 dark:text-white">
+                      {result?.statistics?.totalSizeMB ? `${(result.statistics.totalSizeMB / 1024).toFixed(1)} GB` : 'N/A'}
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-600 dark:text-gray-400">Used Storage:</dt>
-                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.usedStorage as any)?.formatted ?? '0'}</dd>
+                    <dd className="font-medium text-gray-900 dark:text-white">
+                      {result?.statistics?.totalSizeMB ? `${(result.statistics.totalSizeMB / 1024).toFixed(1)} GB` : 'N/A'}
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-600 dark:text-gray-400">Free Storage:</dt>
-                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.freeStorage as any)?.formatted ?? '0'}</dd>
+                    <dd className="font-medium text-gray-900 dark:text-white">N/A</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-gray-600 dark:text-gray-400">Total Files:</dt>
-                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.totalFiles ?? 0).toLocaleString()}</dd>
+                    <dt className="text-gray-600 dark:text-gray-400">Total Large Files:</dt>
+                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.totalLargeFiles ?? 0).toLocaleString()}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-gray-600 dark:text-gray-400">Total Folders:</dt>
-                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.totalFolders ?? 0).toLocaleString()}</dd>
+                    <dt className="text-gray-600 dark:text-gray-400">Average File Size:</dt>
+                    <dd className="font-medium text-gray-900 dark:text-white">
+                      {result?.statistics?.averageFileSizeMB ? `${result.statistics.averageFileSizeMB.toFixed(1)} MB` : 'N/A'}
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -323,6 +329,7 @@ const FileSystemDiscoveryView: React.FC = () => {
 
         {activeTab === 'shares' && (
           <div className="h-full p-6">
+            {console.log('[FileSystemDiscoveryView] Rendering shares tab with data:', filteredShares?.length || 0, 'shares')}
             <VirtualizedDataGrid
               data={filteredShares}
               columns={shareColumnDefs}
@@ -330,33 +337,38 @@ const FileSystemDiscoveryView: React.FC = () => {
               onSelectionChange={setSelectedShares}
               enableExport
               enableGrouping
-              data-cy="shares-grid" data-testid="shares-grid"
+              height="calc(100vh - 400px)"
+              data-cy="shares-grid"
             />
           </div>
         )}
 
         {activeTab === 'permissions' && (
           <div className="h-full p-6">
+            {console.log('[FileSystemDiscoveryView] Rendering permissions tab with data:', filteredPermissions?.length || 0, 'permissions')}
             <VirtualizedDataGrid
               data={filteredPermissions}
               columns={permissionColumnDefs}
               loading={isRunning}
               onSelectionChange={setSelectedPermissions}
               enableExport
-              data-cy="permissions-grid" data-testid="permissions-grid"
+              height="calc(100vh - 400px)"
+              data-cy="permissions-grid"
             />
           </div>
         )}
 
         {activeTab === 'large-files' && (
           <div className="h-full p-6">
+            {console.log('[FileSystemDiscoveryView] Rendering large-files tab with data:', filteredLargeFiles?.length || 0, 'files')}
             <VirtualizedDataGrid
               data={filteredLargeFiles}
               columns={largeFileColumnDefs}
               loading={isRunning}
               onSelectionChange={setSelectedLargeFiles}
               enableExport
-              data-cy="large-files-grid" data-testid="large-files-grid"
+              height="calc(100vh - 400px)"
+              data-cy="large-files-grid"
             />
           </div>
         )}

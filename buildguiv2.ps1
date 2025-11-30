@@ -46,7 +46,17 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateSet('production', 'development')]
-    [string]$Configuration = 'production'
+    [string]$Configuration = 'production',
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('quiet', 'normal', 'verbose')]
+    [string]$Verbosity = 'normal',
+
+    [Parameter(Mandatory = $false)]
+    [switch]$Deploy = $false,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$Optimize = $false
 )
 
 $ErrorActionPreference = 'Stop'
@@ -55,30 +65,142 @@ $ErrorActionPreference = 'Stop'
 $DevDir = Join-Path $PSScriptRoot "guiv2"
 $DeployDir = "C:\enterprisediscovery"
 
-# Helper function for logging
+# Global tracking variables
+$script:BuildStats = @{
+    StartTime = $null
+    StepTimes = @{}
+    TotalFilesSynced = 0
+    CurrentStep = 0
+    TotalSteps = 8
+}
+
+# Enhanced progress bar function
+function Write-ProgressBar {
+    param(
+        [int]$Current,
+        [int]$Total,
+        [string]$Activity = "Building",
+        [string]$Status = "",
+        [switch]$Completed
+    )
+
+    $percentage = if ($Total -gt 0) { [math]::Min(100, [math]::Round(($Current / $Total) * 100)) } else { 0 }
+    $progressBarWidth = 40
+    $filledBars = [math]::Round(($percentage / 100) * $progressBarWidth)
+    $emptyBars = $progressBarWidth - $filledBars
+
+    $progressBar = "[" + ("█" * $filledBars) + ("░" * $emptyBars) + "]"
+
+    if ($Completed) {
+        Write-Host "✅ $Activity Complete! ($percentage%)" -ForegroundColor Green
+    } else {
+        Write-Host "🔄 $Activity $progressBar $percentage% - $Status" -ForegroundColor Cyan -NoNewline
+        Write-Host ""  # New line
+    }
+}
+
+# Enhanced logging with emojis and timing
 function Write-Step {
     param(
         [string]$Message,
-        [string]$Level = 'INFO'
+        [string]$Level = 'INFO',
+        [switch]$StartTimer,
+        [switch]$StopTimer,
+        [string]$TimerName = ""
     )
+
+    $emoji = switch ($Level) {
+        'SUCCESS' { '✅' }
+        'WARNING' { '⚠️' }
+        'ERROR'   { '❌' }
+        'INFO'    { 'ℹ️' }
+        'BUILD'   { '🔨' }
+        'SYNC'    { '🔄' }
+        'CLEAN'   { '🧹' }
+        'DEPLOY'  { '🚀' }
+        default   { '📝' }
+    }
 
     $color = switch ($Level) {
         'SUCCESS' { 'Green' }
         'WARNING' { 'Yellow' }
-        'ERROR' { 'Red' }
-        'INFO' { 'Cyan' }
-        default { 'White' }
+        'ERROR'   { 'Red' }
+        'INFO'    { 'Cyan' }
+        'BUILD'   { 'Magenta' }
+        'SYNC'    { 'Blue' }
+        'CLEAN'   { 'Gray' }
+        'DEPLOY'  { 'Green' }
+        default   { 'White' }
     }
 
-    $prefix = switch ($Level) {
-        'SUCCESS' { '[✓]' }
-        'WARNING' { '[!]' }
-        'ERROR' { '[✗]' }
-        'INFO' { '[→]' }
-        default { '[·]' }
+    $timestamp = Get-Date -Format "HH:mm:ss"
+
+    if ($StartTimer -and $TimerName) {
+        $script:BuildStats.StepTimes[$TimerName] = @{ Start = Get-Date; End = $null; Duration = $null }
+        Write-Verbose "⏱️  Started timing: $TimerName"
     }
 
-    Write-Host "$prefix $Message" -ForegroundColor $color
+    if ($StopTimer -and $TimerName -and $script:BuildStats.StepTimes.ContainsKey($TimerName)) {
+        $script:BuildStats.StepTimes[$TimerName].End = Get-Date
+        $duration = $script:BuildStats.StepTimes[$TimerName].End - $script:BuildStats.StepTimes[$TimerName].Start
+        $script:BuildStats.StepTimes[$TimerName].Duration = $duration
+        $durationStr = "{0:mm\:ss\.fff}" -f $duration
+        $Message += " (${durationStr})"
+        Write-Verbose "⏱️  Completed timing: $TimerName - $durationStr"
+    }
+
+    Write-Host "$emoji [$timestamp] $Message" -ForegroundColor $color
+}
+
+# ASCII Art Header
+function Show-BuildHeader {
+    $art = @"
+
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║                🚀 M&A DISCOVERY SUITE V2                     ║
+║                                                              ║
+║                Ultimate Build System v2.0                    ║
+║                                                              ║
+║  ┌────────────────────────────────────────────────────────┐  ║
+║  │  ✨ Sync • 🔨 Build • 🚀 Deploy • 📊 Analyze           │  ║
+║  └────────────────────────────────────────────────────────┘  ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+"@
+
+    Write-Host $art -ForegroundColor Cyan
+}
+
+# Build summary function
+function Show-BuildSummary {
+    Write-Host ""
+    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Yellow
+    Write-Host " 📊 BUILD SUMMARY REPORT" -ForegroundColor Yellow
+    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Yellow
+    Write-Host ""
+
+    $totalDuration = (Get-Date) - $script:BuildStats.StartTime
+    $totalDurationStr = "{0:mm\:ss\.fff}" -f $totalDuration
+
+    Write-Host "⏱️  Total Build Time: $totalDurationStr" -ForegroundColor White
+    Write-Host "📁 Files Synced: $($script:BuildStats.TotalFilesSynced)" -ForegroundColor White
+    Write-Host "🔧 Configuration: $Configuration" -ForegroundColor White
+    Write-Host "📍 Deployment: $DeployDir" -ForegroundColor White
+
+    Write-Host ""
+    Write-Host "📈 Step Timings:" -ForegroundColor Cyan
+    foreach ($step in $script:BuildStats.StepTimes.GetEnumerator() | Sort-Object { $_.Value.Start }) {
+        if ($step.Value.Duration) {
+            $durationStr = "{0:mm\:ss\.fff}" -f $step.Value.Duration
+            Write-Host "  • $($step.Key): $durationStr" -ForegroundColor Gray
+        }
+    }
+
+    Write-Host ""
+    Write-Host "🎯 Build Status: SUCCESS ✅" -ForegroundColor Green
+    Write-Host ""
 }
 
 # Header
@@ -106,19 +228,33 @@ if (!(Test-Path $DeployDir)) {
 # Step 1: Clean build artifacts
 if ($Clean) {
     Write-Host ""
-    Write-Step "Cleaning build artifacts..." -Level 'INFO'
+    Write-Step "🧹 Cleaning build artifacts..." -Level 'CLEAN' -StartTimer -TimerName "Clean"
+    Write-ProgressBar -Current 0 -Total 1 -Activity "🧹 Cleaning" -Status "Removing old artifacts"
 
     $artifactsToClean = @(
         (Join-Path $DeployDir ".webpack"),
-        (Join-Path $DeployDir "out")
+        (Join-Path $DeployDir "out"),
+        (Join-Path $DeployDir "dist"),
+        (Join-Path $DeployDir "*.log")
     )
 
+    $cleanedCount = 0
     foreach ($artifact in $artifactsToClean) {
         if (Test-Path $artifact) {
-            Remove-Item -Path $artifact -Recurse -Force -ErrorAction SilentlyContinue
-            Write-Step "Removed: $(Split-Path -Leaf $artifact)" -Level 'SUCCESS'
+            try {
+                Remove-Item -Path $artifact -Recurse -Force -ErrorAction Stop
+                Write-Step "Removed: $(Split-Path -Leaf $artifact)" -Level 'CLEAN'
+                $cleanedCount++
+            } catch {
+                Write-Step "Failed to remove: $(Split-Path -Leaf $artifact) - $($_.Exception.Message)" -Level 'WARNING'
+            }
         }
+        Write-ProgressBar -Current $cleanedCount -Total $artifactsToClean.Count -Activity "🧹 Cleaning" -Status "$cleanedCount/$(artifactsToClean.Count) artifacts"
     }
+
+    Write-ProgressBar -Current $artifactsToClean.Count -Total $artifactsToClean.Count -Activity "🧹 Cleaning" -Completed
+    Write-Step "Cleaned $cleanedCount artifact(s)" -Level 'CLEAN' -StopTimer -TimerName "Clean"
+    $script:BuildStats.CurrentStep++
 }
 
 # Step 2: Sync files from development to deployment
@@ -175,56 +311,84 @@ try {
 
 # Step 4: Build webpack bundles
 Write-Host ""
-Write-Step "Building webpack bundles..." -Level 'INFO'
+Write-Step "🔨 Building webpack bundles..." -Level 'BUILD' -StartTimer -TimerName "Build"
+$script:BuildStats.CurrentStep++
 
 Set-Location $DeployDir
 
 $mode = if ($Configuration -eq 'production') { 'production' } else { 'development' }
+$buildSteps = @("Main Process", "Renderer Process", "Preload Script")
+$currentBuildStep = 0
 
 # Build main process
 Write-Host ""
-Write-Step "Building main process..." -Level 'INFO'
+Write-Step "🔨 Building main process..." -Level 'BUILD' -StartTimer -TimerName "MainBuild"
+Write-ProgressBar -Current $currentBuildStep -Total $buildSteps.Count -Activity "🔨 Building" -Status $buildSteps[$currentBuildStep]
+
 $mainCmd = "npx webpack --config webpack.main.config.js --mode=$mode --output-path=.webpack/main"
 try {
-    Invoke-Expression $mainCmd 2>&1 | Out-Null
+    if ($Verbosity -eq 'verbose') {
+        Invoke-Expression $mainCmd 2>&1
+    } else {
+        Invoke-Expression $mainCmd 2>&1 | Out-Null
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "Main build failed with exit code: $LASTEXITCODE"
     }
-    Write-Step "Main process build complete" -Level 'SUCCESS'
+    Write-Step "✅ Main process build complete" -Level 'BUILD' -StopTimer -TimerName "MainBuild"
+    $currentBuildStep++
+    Write-ProgressBar -Current $currentBuildStep -Total $buildSteps.Count -Activity "🔨 Building" -Status $buildSteps[$currentBuildStep]
 } catch {
-    Write-Step "Main process build failed: $($_.Exception.Message)" -Level 'ERROR'
+    Write-Step "❌ Main process build failed: $($_.Exception.Message)" -Level 'ERROR'
+    Write-Step "💡 Suggestion: Check webpack.main.config.js and ensure all dependencies are installed (npm install)" -Level 'INFO'
     exit 1
 }
 
 # Build renderer process
 Write-Host ""
-Write-Step "Building renderer process..." -Level 'INFO'
+Write-Step "🎨 Building renderer process..." -Level 'BUILD' -StartTimer -TimerName "RendererBuild"
 $rendererCmd = "npx webpack --config webpack.renderer-standalone.config.js --mode=$mode"
 try {
-    Invoke-Expression $rendererCmd 2>&1 | Out-Null
+    if ($Verbosity -eq 'verbose') {
+        Invoke-Expression $rendererCmd 2>&1
+    } else {
+        Invoke-Expression $rendererCmd 2>&1 | Out-Null
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "Renderer build failed with exit code: $LASTEXITCODE"
     }
-    Write-Step "Renderer process build complete" -Level 'SUCCESS'
+    Write-Step "✅ Renderer process build complete" -Level 'BUILD' -StopTimer -TimerName "RendererBuild"
+    $currentBuildStep++
+    Write-ProgressBar -Current $currentBuildStep -Total $buildSteps.Count -Activity "🔨 Building" -Status $buildSteps[$currentBuildStep]
 } catch {
-    Write-Step "Renderer process build failed: $($_.Exception.Message)" -Level 'ERROR'
+    Write-Step "❌ Renderer process build failed: $($_.Exception.Message)" -Level 'ERROR'
+    Write-Step "💡 Suggestion: Check webpack.renderer-standalone.config.js and ensure React dependencies are available" -Level 'INFO'
     exit 1
 }
 
 # Build preload script
 Write-Host ""
-Write-Step "Building preload script..." -Level 'INFO'
+Write-Step "⚡ Building preload script..." -Level 'BUILD' -StartTimer -TimerName "PreloadBuild"
 $preloadCmd = "npx webpack --config webpack.preload.config.js --mode=$mode"
 try {
-    Invoke-Expression $preloadCmd 2>&1 | Out-Null
+    if ($Verbosity -eq 'verbose') {
+        Invoke-Expression $preloadCmd 2>&1
+    } else {
+        Invoke-Expression $preloadCmd 2>&1 | Out-Null
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "Preload build failed with exit code: $LASTEXITCODE"
     }
-    Write-Step "Preload script build complete" -Level 'SUCCESS'
+    Write-Step "✅ Preload script build complete" -Level 'BUILD' -StopTimer -TimerName "PreloadBuild"
+    $currentBuildStep++
+    Write-ProgressBar -Current $buildSteps.Count -Total $buildSteps.Count -Activity "🔨 Building" -Completed
 } catch {
-    Write-Step "Preload script build failed: $($_.Exception.Message)" -Level 'ERROR'
+    Write-Step "❌ Preload script build failed: $($_.Exception.Message)" -Level 'ERROR'
+    Write-Step "💡 Suggestion: Check webpack.preload.config.js and ensure preload.ts exists" -Level 'INFO'
     exit 1
 }
+
+Write-Step "🎉 All webpack bundles built successfully" -Level 'BUILD' -StopTimer -TimerName "Build"
 
 # Step 5: Verify build artifacts
 Write-Host ""

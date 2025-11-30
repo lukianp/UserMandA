@@ -101,7 +101,11 @@ function VirtualizedDataGridInner<T = any>(
   const gridRef = useRef<AgGridReact>(null);
   const [gridApi, setGridApi] = React.useState<GridApi | null>(null);
   const [showColumnPanel, setShowColumnPanel] = React.useState(false);
-  const rowData = useMemo(() => data ?? [], [data]);
+  const rowData = useMemo(() => {
+    const result = data ?? [];
+    console.log('[VirtualizedDataGrid] rowData computed:', result.length, 'rows');
+    return result;
+  }, [data]);
 
   // Load AG Grid styles on component mount
   useEffect(() => {
@@ -129,8 +133,10 @@ function VirtualizedDataGridInner<T = any>(
       suppressRowClickSelection: !enableSelection,
       rowSelection: enableSelection ? selectionMode : undefined,
       animateRows: true,
-      enableRangeSelection: true,
-      enableCharts: true,
+      // FIX: Disable charts to avoid error #200 (requires IntegratedChartsModule)
+      enableCharts: false,
+      // FIX: Use cellSelection instead of deprecated enableRangeSelection
+      cellSelection: true,
       statusBar: {
         statusPanels: [
           { statusPanel: 'agTotalAndFilteredRowCountComponent', align: 'left' },

@@ -162,75 +162,91 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
 
           // Extract PowerShell return value
           const psReturnValue = data.result;
-          console.log('[FileSystemDiscoveryHook] PowerShell return value:', psReturnValue);
-          console.log('[FileSystemDiscoveryHook] PowerShell return value type:', typeof psReturnValue);
-          console.log('[FileSystemDiscoveryHook] PowerShell return value is array?', Array.isArray(psReturnValue));
+          console.log('[FileSystemDiscoveryHook] Event: PowerShell return value:', JSON.stringify(psReturnValue).slice(0, 500));
 
           // Handle nested data structure from PowerShell
-          // PowerShell returns: { data: { Data: { shares: [...], permissions: [...] } } }
+          // PowerShell returns: { data: { Success: true, Data: { shares: [], statistics: {} } } }
           const psWrapper = psReturnValue?.data || psReturnValue;
-          let structuredData = psWrapper?.Data || psWrapper;
-          console.log('[FileSystemDiscoveryHook] psWrapper:', psWrapper);
-          console.log('[FileSystemDiscoveryHook] structuredData (after unwrapping):', structuredData);
-          console.log('[FileSystemDiscoveryHook] structuredData keys:', Object.keys(structuredData || {}));
-          console.log('[FileSystemDiscoveryHook] Data is array?', Array.isArray(structuredData));
+          console.log('[FileSystemDiscoveryHook] Event: psWrapper keys:', Object.keys(psWrapper || {}));
 
-          // If data is a flat array with _DataType properties, group by type
-          if (Array.isArray(structuredData) && structuredData.length > 0 && structuredData[0]._DataType) {
-            console.log('[FileSystemDiscoveryHook] Data is flat array, grouping by _DataType...');
-            const grouped: any = {
-              shares: [],
-              permissions: [],
-              largeFiles: [],
-            };
+          // CRITICAL: Extract the Data object (capital D) which contains the structured data
+          const psData = psWrapper?.Data || psWrapper?.data || psWrapper;
+          console.log('[FileSystemDiscoveryHook] Event: psData keys:', Object.keys(psData || {}));
+          console.log('[FileSystemDiscoveryHook] Event: psData.shares length:', psData?.shares?.length);
+          console.log('[FileSystemDiscoveryHook] Event: psData.permissions length:', psData?.permissions?.length);
+          console.log('[FileSystemDiscoveryHook] Event: psData.largeFiles length:', psData?.largeFiles?.length);
+          console.log('[FileSystemDiscoveryHook] Event: psData.statistics:', JSON.stringify(psData?.statistics));
 
-            structuredData.forEach((item: any) => {
-              if (item._DataType === 'Share') {
-                grouped.shares.push(item);
-              } else if (item._DataType === 'Permission') {
-                grouped.permissions.push(item);
-              } else if (item._DataType === 'LargeFile') {
-                grouped.largeFiles.push(item);
-              }
-            });
+          // Extract structured data directly from psData (PowerShell already grouped it)
+          const grouped = {
+            shares: Array.isArray(psData?.shares) ? psData.shares : [],
+            permissions: Array.isArray(psData?.permissions) ? psData.permissions : [],
+            largeFiles: Array.isArray(psData?.largeFiles) ? psData.largeFiles : [],
+          };
 
-            console.log('[FileSystemDiscoveryHook] Grouped data types:', Object.keys(grouped));
-            structuredData = grouped;
-          }
+          console.log('[FileSystemDiscoveryHook] Event: Grouped data:', {
+            shares: grouped.shares.length,
+            permissions: grouped.permissions.length,
+            largeFiles: grouped.largeFiles.length,
+          });
+
+          // Extract statistics from psData (not psWrapper!)
+          const psStats = psData?.statistics || {};
+          console.log('[FileSystemDiscoveryHook] Event: Extracted statistics:', JSON.stringify(psStats));
 
           // Build final result
-          // Extract metadata from the Data level
-          const metadata = psWrapper?.Data || structuredData;
-
           const fileSystemResult: FileSystemDiscoveryResult = {
-            id: metadata?.id || data.executionId || `filesystem-discovery-${Date.now()}`,
-            startTime: metadata?.startTime?.DateTime || metadata?.startTime || new Date().toISOString(),
-            endTime: metadata?.endTime?.DateTime || metadata?.endTime || new Date().toISOString(),
-            duration: metadata?.duration || 0,
+            id: psData?.id || data.executionId || `filesystem-discovery-${Date.now()}`,
+            configId: config?.servers?.join('-') || 'default',
+            startTime: psData?.startTime?.DateTime || psData?.startTime || psWrapper?.StartTime?.DateTime || new Date().toISOString(),
+            endTime: psData?.endTime?.DateTime || psData?.endTime || psWrapper?.EndTime?.DateTime || new Date().toISOString(),
+            duration: psData?.duration || psWrapper?.Duration || 0,
             status: 'completed',
-            config: config,
-            shares: structuredData?.shares || [],
-            permissions: structuredData?.permissions || [],
-            largeFiles: structuredData?.largeFiles || [],
-            statistics: metadata?.statistics || {
-              totalShares: structuredData?.shares?.length || 0,
-              totalPermissions: structuredData?.permissions?.length || 0,
-              totalLargeFiles: structuredData?.largeFiles?.length || 0,
-              totalServers: structuredData?.fileServers?.length || 0,
+            servers: config.servers || ['localhost'],
+            shares: grouped.shares,
+            permissions: grouped.permissions,
+            largeFiles: grouped.largeFiles,
+            statistics: psStats && Object.keys(psStats).length > 0 ? psStats : {
+              totalShares: grouped.shares.length,
+              totalPermissions: grouped.permissions.length,
+              totalLargeFiles: grouped.largeFiles.length,
+              totalServers: config.servers?.length || 1,
               totalSizeMB: 0,
               averageFileSizeMB: 0,
               largestFileMB: 0,
+            } as any,
+            securityRisks: psData?.securityRisks || [],
+            errors: psData?.errors || psWrapper?.Errors || [],
+            warnings: psData?.warnings || psWrapper?.Warnings || [],
+            metadata: {
+              totalServersScanned: config.servers?.length || 1,
+              totalSharesDiscovered: grouped.shares.length,
+              totalPermissionsAnalyzed: grouped.permissions.length,
+              totalFilesScanned: 0,
+              totalFoldersScanned: 0,
+              totalStorageAnalyzed: 0,
             },
-            errors: psWrapper?.Errors || [],
-            warnings: psWrapper?.Warnings || [],
           };
 
-          console.log('[FileSystemDiscoveryHook] Final fileSystemResult:', fileSystemResult);
-          console.log('[FileSystemDiscoveryHook] Final fileSystemResult.shares:', fileSystemResult.shares?.length || 0);
-          console.log('[FileSystemDiscoveryHook] Final fileSystemResult.permissions:', fileSystemResult.permissions?.length || 0);
-          console.log('[FileSystemDiscoveryHook] Final fileSystemResult.largeFiles:', fileSystemResult.largeFiles?.length || 0);
+          console.log('[FileSystemDiscoveryHook] Event: Final fileSystemResult:', {
+            shares: fileSystemResult.shares.length,
+            permissions: fileSystemResult.permissions.length,
+            largeFiles: fileSystemResult.largeFiles.length,
+            statistics: fileSystemResult.statistics,
+          });
 
           setResult(fileSystemResult);
+
+          // CRITICAL: Update state arrays so tabs can display data
+          console.log('[FileSystemDiscoveryHook] Event: Setting state arrays:', {
+            shares: fileSystemResult.shares?.length || 0,
+            permissions: fileSystemResult.permissions?.length || 0,
+            largeFiles: fileSystemResult.largeFiles?.length || 0,
+          });
+          setShares(fileSystemResult.shares || []);
+          setPermissions(fileSystemResult.permissions || []);
+          setLargeFiles(fileSystemResult.largeFiles || []);
+
           setIsRunning(false);
           setShowExecutionDialog(false);
           setCurrentToken(null);
@@ -321,51 +337,82 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
 
       console.log('[FileSystemDiscoveryHook] executeDiscoveryModule result:', result);
 
+      // Write debug output to temp file for troubleshooting
+      const debugPath = `C:\\temp\\filesystem-result-${Date.now()}.json`;
+      try {
+        await window.electronAPI.writeFile(debugPath, JSON.stringify(result, null, 2));
+        console.log(`[FileSystemDiscoveryHook] Debug file written to: ${debugPath}`);
+      } catch (e) {
+        console.warn('[FileSystemDiscoveryHook] Could not write debug file:', e);
+      }
+
       // Handle the result - the discovery module returns synchronously
       if (result && result.success) {
         addLog('File System discovery completed successfully', 'success');
 
         // Process the result data - nested structure unwrapping
-        // result = { success: true, data: { Success: true, Data: {...} } }
+        // PowerShell returns: { success: true, data: { Success: true, Data: { shares: [], statistics: {} } } }
         const psWrapper = result.data || result;
-        console.log('[FileSystemDiscoveryHook] psWrapper:', psWrapper);
-        let structuredData = psWrapper?.Data || psWrapper;
-        console.log('[FileSystemDiscoveryHook] structuredData:', structuredData);
-        console.log('[FileSystemDiscoveryHook] structuredData keys:', Object.keys(structuredData || {}));
+        console.log('[FileSystemDiscoveryHook] psWrapper:', JSON.stringify(psWrapper).slice(0, 500));
+        console.log('[FileSystemDiscoveryHook] psWrapper keys:', Object.keys(psWrapper || {}));
 
-        // If data is a flat array with _DataType properties, group by type
-        if (Array.isArray(structuredData) && structuredData.length > 0 && structuredData[0]?._DataType) {
-          const grouped: any = { shares: [], permissions: [], largeFiles: [] };
-          structuredData.forEach((item: any) => {
-            if (item._DataType === 'Share') grouped.shares.push(item);
-            else if (item._DataType === 'Permission') grouped.permissions.push(item);
-            else if (item._DataType === 'LargeFile') grouped.largeFiles.push(item);
-          });
-          structuredData = grouped;
-        }
+        // CRITICAL: Extract the Data object (capital D) which contains the structured data
+        const psData = psWrapper?.Data || psWrapper?.data || psWrapper;
+        console.log('[FileSystemDiscoveryHook] psData keys:', Object.keys(psData || {}));
+        console.log('[FileSystemDiscoveryHook] psData.shares length:', psData?.shares?.length);
+        console.log('[FileSystemDiscoveryHook] psData.permissions length:', psData?.permissions?.length);
+        console.log('[FileSystemDiscoveryHook] psData.largeFiles length:', psData?.largeFiles?.length);
+        console.log('[FileSystemDiscoveryHook] psData.statistics:', JSON.stringify(psData?.statistics));
+
+        // Extract structured data directly from psData (PowerShell already grouped it)
+        const grouped = {
+          shares: Array.isArray(psData?.shares) ? psData.shares : [],
+          permissions: Array.isArray(psData?.permissions) ? psData.permissions : [],
+          largeFiles: Array.isArray(psData?.largeFiles) ? psData.largeFiles : [],
+        };
+
+        console.log('[FileSystemDiscoveryHook] Grouped data:', {
+          shares: grouped.shares.length,
+          permissions: grouped.permissions.length,
+          largeFiles: grouped.largeFiles.length,
+        });
+
+        // Extract statistics from psData (not psWrapper!)
+        const psStats = psData?.statistics || {};
+        console.log('[FileSystemDiscoveryHook] Extracted statistics:', JSON.stringify(psStats));
 
         // Build final result
         const fileSystemResult: FileSystemDiscoveryResult = {
-          id: token,
-          startTime: psReturnValue?.startTime ? new Date(psReturnValue.startTime) : new Date(),
-          endTime: psReturnValue?.endTime ? new Date(psReturnValue.endTime) : new Date(),
-          duration: psReturnValue?.duration || 0,
+          id: psData?.id || token,
+          configId: config?.servers?.join('-') || 'default',
+          startTime: psData?.startTime?.DateTime || psData?.startTime || psWrapper?.StartTime?.DateTime || new Date().toISOString(),
+          endTime: psData?.endTime?.DateTime || psData?.endTime || psWrapper?.EndTime?.DateTime || new Date().toISOString(),
+          duration: psData?.duration || psWrapper?.Duration || result?.duration || 0,
           status: 'completed',
-          config: config,
-          shares: structuredData?.shares || [],
-          permissions: structuredData?.permissions || [],
-          largeFiles: structuredData?.largeFiles || [],
-          statistics: psReturnValue?.statistics || {
-            totalShares: structuredData?.shares?.length || 0,
-            totalPermissions: structuredData?.permissions?.length || 0,
-            totalLargeFiles: structuredData?.largeFiles?.length || 0,
+          servers: config.servers || ['localhost'],
+          shares: grouped.shares,
+          permissions: grouped.permissions,
+          largeFiles: grouped.largeFiles,
+          statistics: psStats && Object.keys(psStats).length > 0 ? psStats : {
+            totalShares: grouped.shares.length,
+            totalPermissions: grouped.permissions.length,
+            totalLargeFiles: grouped.largeFiles.length,
             totalServers: config.servers?.length || 1,
             totalSizeMB: 0,
             averageFileSizeMB: 0,
             largestFileMB: 0,
+          } as any,
+          securityRisks: psData?.securityRisks || [],
+          errors: psData?.errors || psWrapper?.Errors || [],
+          warnings: psData?.warnings || psWrapper?.Warnings || [],
+          metadata: {
+            totalServersScanned: config.servers?.length || 1,
+            totalSharesDiscovered: grouped.shares.length,
+            totalPermissionsAnalyzed: grouped.permissions.length,
+            totalFilesScanned: 0,
+            totalFoldersScanned: 0,
+            totalStorageAnalyzed: 0,
           },
-          errors: psReturnValue?.errors || [],
-          warnings: psReturnValue?.warnings || [],
         };
 
         const totalItems = fileSystemResult.shares.length +
@@ -374,6 +421,11 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
         addLog(`Found ${fileSystemResult.shares.length} shares, ${fileSystemResult.permissions.length} permissions, ${fileSystemResult.largeFiles.length} large files`, 'success');
 
         setResult(fileSystemResult);
+
+        // CRITICAL: Update state arrays so tabs can display data
+        setShares(fileSystemResult.shares || []);
+        setPermissions(fileSystemResult.permissions || []);
+        setLargeFiles(fileSystemResult.largeFiles || []);
 
         // Store result in discovery store
         addDiscoveryResult({
@@ -493,6 +545,7 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
   }, [selectedSourceProfile]);
 
   const filteredShares = useMemo(() => {
+    console.log('[FileSystemDiscoveryHook] Computing filteredShares from shares:', shares?.length || 0);
     let filtered = shares;
 
     if (shareFilter.type?.length) {
@@ -536,6 +589,7 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
       );
     }
 
+    console.log('[FileSystemDiscoveryHook] filteredShares result:', filtered?.length || 0);
     return filtered;
   }, [shares, shareFilter, searchText]);
 
@@ -612,66 +666,55 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
   }, [largeFiles, largeFileFilter, searchText]);
 
   const shareColumnDefs = useMemo<ColDef[]>(() => [
-    { field: 'name', headerName: 'Share Name', sortable: true, filter: true, pinned: 'left', width: 200 },
-    { field: 'path', headerName: 'Path', sortable: true, filter: true, width: 300 },
-    { field: 'type', headerName: 'Type', sortable: true, filter: true, width: 120 },
-    { field: 'server', headerName: 'Server', sortable: true, filter: true, width: 150 },
+    { field: 'Name', headerName: 'Share Name', sortable: true, filter: true, pinned: 'left', width: 200 },
+    { field: 'Path', headerName: 'Path', sortable: true, filter: true, width: 300 },
     {
-      field: 'size.totalBytes',
+      field: 'ShareType',
+      headerName: 'Type',
+      sortable: true,
+      filter: true,
+      width: 120,
+      valueFormatter: (params) => params.value !== undefined ? `Type ${params.value}` : 'SMB'
+    },
+    { field: 'Server', headerName: 'Server', sortable: true, filter: true, width: 150 },
+    {
+      field: 'SizeGB',
       headerName: 'Total Size',
       sortable: true,
       filter: 'agNumberColumnFilter',
       width: 130,
-      valueFormatter: (params) => formatBytes(params.value),
+      valueFormatter: (params) => params.value !== undefined ? `${params.value.toFixed(2)} GB` : 'N/A',
     },
-    {
-      field: 'size.percentUsed',
-      headerName: 'Used %',
-      sortable: true,
-      filter: 'agNumberColumnFilter',
-      width: 100,
-      valueFormatter: (params) => `${params.value?.toFixed(1)}%`,
-    },
-    { field: 'statistics.totalFiles', headerName: 'Files', sortable: true, filter: 'agNumberColumnFilter', width: 100 },
-    { field: 'statistics.totalFolders', headerName: 'Folders', sortable: true, filter: 'agNumberColumnFilter', width: 100 },
-    { field: 'encryptionEnabled', headerName: 'Encrypted', sortable: true, filter: true, width: 110, valueFormatter: (params) => params.value ? 'Yes' : 'No' },
-    { field: 'deduplicationEnabled', headerName: 'Dedupe', sortable: true, filter: true, width: 100, valueFormatter: (params) => params.value ? 'Yes' : 'No' },
+    { field: 'FileCount', headerName: 'Files', sortable: true, filter: 'agNumberColumnFilter', width: 100 },
+    { field: 'FolderCount', headerName: 'Folders', sortable: true, filter: 'agNumberColumnFilter', width: 100 },
+    { field: 'EncryptData', headerName: 'Encrypted', sortable: true, filter: true, width: 110, valueFormatter: (params) => params.value ? 'Yes' : 'No' },
   ], []);
 
   const permissionColumnDefs = useMemo<ColDef[]>(() => [
-    { field: 'shareName', headerName: 'Share', sortable: true, filter: true, pinned: 'left', width: 200 },
-    { field: 'principal.name', headerName: 'Principal', sortable: true, filter: true, width: 250 },
-    { field: 'principal.type', headerName: 'Type', sortable: true, filter: true, width: 120 },
-    { field: 'accessType', headerName: 'Access', sortable: true, filter: true, width: 100 },
-    {
-      field: 'rights',
-      headerName: 'Rights',
-      sortable: false,
-      filter: false,
-      width: 250,
-      valueFormatter: (params) => params.value?.join(', ') || '',
-    },
-    { field: 'inheritance', headerName: 'Inheritance', sortable: true, filter: true, width: 150 },
-    { field: 'isInherited', headerName: 'Inherited', sortable: true, filter: true, width: 110, valueFormatter: (params) => params.value ? 'Yes' : 'No' },
+    { field: 'ShareName', headerName: 'Share', sortable: true, filter: true, pinned: 'left', width: 200 },
+    { field: 'IdentityReference', headerName: 'Principal', sortable: true, filter: true, width: 250 },
+    { field: 'AccessControlType', headerName: 'Access', sortable: true, filter: true, width: 100 },
+    { field: 'FileSystemRights', headerName: 'Rights', sortable: true, filter: true, width: 250 },
+    { field: 'InheritanceFlags', headerName: 'Inheritance', sortable: true, filter: true, width: 180 },
+    { field: 'IsInherited', headerName: 'Inherited', sortable: true, filter: true, width: 110, valueFormatter: (params) => params.value ? 'Yes' : 'No' },
   ], []);
 
   const largeFileColumnDefs = useMemo<ColDef[]>(() => [
-    { field: 'name', headerName: 'File Name', sortable: true, filter: true, pinned: 'left', width: 250 },
-    { field: 'path', headerName: 'Path', sortable: true, filter: true, width: 350 },
-    { field: 'extension', headerName: 'Type', sortable: true, filter: true, width: 100 },
+    { field: 'Name', headerName: 'File Name', sortable: true, filter: true, pinned: 'left', width: 250 },
+    { field: 'Path', headerName: 'Path', sortable: true, filter: true, width: 350 },
+    { field: 'Extension', headerName: 'Type', sortable: true, filter: true, width: 100 },
     {
-      field: 'sizeBytes',
+      field: 'SizeMB',
       headerName: 'Size',
       sortable: true,
       filter: 'agNumberColumnFilter',
       width: 130,
-      valueFormatter: (params) => formatBytes(params.value),
+      valueFormatter: (params) => params.value !== undefined ? `${params.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MB` : 'N/A',
     },
-    { field: 'owner', headerName: 'Owner', sortable: true, filter: true, width: 200 },
-    { field: 'share', headerName: 'Share', sortable: true, filter: true, width: 200 },
-    { field: 'modifiedDate', headerName: 'Modified', sortable: true, filter: 'agDateColumnFilter', width: 180 },
-    { field: 'isEncrypted', headerName: 'Encrypted', sortable: true, filter: true, width: 110, valueFormatter: (params) => params.value ? 'Yes' : 'No' },
-    { field: 'isCompressed', headerName: 'Compressed', sortable: true, filter: true, width: 120, valueFormatter: (params) => params.value ? 'Yes' : 'No' },
+    { field: 'ShareName', headerName: 'Share', sortable: true, filter: true, width: 200 },
+    { field: 'Server', headerName: 'Server', sortable: true, filter: true, width: 150 },
+    { field: 'IsReadOnly', headerName: 'ReadOnly', sortable: true, filter: true, width: 110, valueFormatter: (params) => params.value ? 'Yes' : 'No' },
+    { field: 'IsHidden', headerName: 'Hidden', sortable: true, filter: true, width: 100, valueFormatter: (params) => params.value ? 'Yes' : 'No' },
   ], []);
 
   useEffect(() => {
