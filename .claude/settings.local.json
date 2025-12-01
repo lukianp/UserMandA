@@ -74,7 +74,9 @@
       "Bash(Sort-Object LastWriteTime -Descending)",
       "Bash(Select-Object -First 1)",
       "Bash(Select-Object FullName)",
-      "Bash(Copy-Item -Path \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\views\\discovery\\FileSystemDiscoveryView.tsx\" -Destination \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\discovery\\FileSystemDiscoveryView.tsx\" -Force)"
+      "Bash(Copy-Item -Path \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\views\\discovery\\FileSystemDiscoveryView.tsx\" -Destination \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\discovery\\FileSystemDiscoveryView.tsx\" -Force)",
+      "Bash(Copy-Item -Path \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\components\\organisms\\VirtualizedDataGrid.tsx\" -Destination \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\components\\organisms\\VirtualizedDataGrid.tsx\" -Force)",
+      "Bash(Copy-Item -Path \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useApplicationDiscoveryLogic.ts\" -Destination \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useApplicationDiscoveryLogic.ts\" -Force)"
     ],
     "deny": [],
     "ask": [],

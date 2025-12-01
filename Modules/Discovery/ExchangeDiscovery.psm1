@@ -2,9 +2,15 @@
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
-# Version: 1.0.0
+# Version: 1.1.0
 # Created: 2025-01-18
-# Last Modified: 2025-01-18
+# Last Modified: 2025-12-01
+# ENHANCEMENTS (v1.1.0):
+#   - Smart retry logic: Skips 404/403/400 errors to avoid wasting time on non-existent endpoints
+#   - Multi-authentication fallback: Graph API > Azure AD > Exchange Online PowerShell
+#   - Endpoint validation: Test-GraphEndpoint function validates before expensive retries
+#   - Enhanced error messages: Clear guidance for improving authentication
+#   - Configuration support: UseAzureAD, UseExchangeOnline, PreferredAuthMethod options
 
 <#
 .SYNOPSIS
@@ -47,16 +53,58 @@ function Invoke-ExchangeDiscovery {
         $batchSize = 100
         $maxRetries = 3
         
-        # Helper function for Graph API calls with retry and exponential backoff
+        # ENHANCED: Smart endpoint validation to avoid wasting retries on non-existent endpoints
+        function Test-GraphEndpoint {
+            param(
+                [string]$Uri,
+                [string]$Method = "GET",
+                [hashtable]$Headers = @{ 'ConsistencyLevel' = 'eventual' },
+                [int]$MaxRetries = 1,  # Only try once for endpoint validation
+                [string]$Body = $null
+            )
+
+            try {
+                if ($Body) {
+                    $response = Invoke-MgGraphRequest -Uri $Uri -Method $Method -Headers $Headers -Body $Body -ContentType "application/json" -ErrorAction Stop
+                } else {
+                    $response = Invoke-MgGraphRequest -Uri $Uri -Method $Method -Headers $Headers -ErrorAction Stop
+                }
+                return @{ Success = $true; Data = $response; StatusCode = 200 }
+            } catch {
+                $statusCode = 0
+                $errorMessage = $_.Exception.Message
+
+                # Extract status code from error
+                if ($_.Exception.Response) {
+                    $statusCode = [int]$_.Exception.Response.StatusCode
+                } elseif ($errorMessage -match "(\d{3})") {
+                    $statusCode = [int]$matches[1]
+                }
+
+                # Categorize errors
+                if ($statusCode -eq 404 -or $errorMessage -match "404" -or $errorMessage -match "Not Found") {
+                    return @{ Success = $false; Error = 'EndpointNotFound'; StatusCode = 404; Message = $errorMessage }
+                } elseif ($statusCode -eq 403 -or $errorMessage -match "403" -or $errorMessage -match "Forbidden") {
+                    return @{ Success = $false; Error = 'InsufficientPermissions'; StatusCode = 403; Message = $errorMessage }
+                } elseif ($statusCode -eq 400 -or $errorMessage -match "400" -or $errorMessage -match "Bad Request") {
+                    return @{ Success = $false; Error = 'BadRequest'; StatusCode = 400; Message = $errorMessage }
+                } else {
+                    return @{ Success = $false; Error = 'Unknown'; StatusCode = $statusCode; Message = $errorMessage }
+                }
+            }
+        }
+
+        # Helper function for Graph API calls with SMART retry and exponential backoff
         function Invoke-GraphWithRetry {
             param(
                 [string]$Uri,
                 [string]$Method = "GET",
                 [hashtable]$Headers = @{ 'ConsistencyLevel' = 'eventual' },
                 [int]$MaxRetries = 3,
-                [string]$Body = $null
+                [string]$Body = $null,
+                [switch]$SkipNotFound = $false  # NEW: Skip retries for 404s
             )
-            
+
             for ($i = 1; $i -le $MaxRetries; $i++) {
                 try {
                     if ($Body) {
@@ -66,12 +114,38 @@ function Invoke-ExchangeDiscovery {
                     }
                     return $response
                 } catch {
-                    if ($i -eq $MaxRetries) { throw }
-                    
-                    $delay = [Math]::Pow(2, $i) # Exponential backoff
                     $errorMessage = $_.Exception.Message
-                    
-                    # Handle specific throttling scenarios
+                    $statusCode = 0
+
+                    # Extract status code
+                    if ($_.Exception.Response) {
+                        $statusCode = [int]$_.Exception.Response.StatusCode
+                    } elseif ($errorMessage -match "(\d{3})") {
+                        $statusCode = [int]$matches[1]
+                    }
+
+                    # SMART RETRY: Don't retry 404s or 403s - they won't succeed
+                    if ($statusCode -eq 404 -or $errorMessage -match "404" -or $errorMessage -match "Not Found") {
+                        Write-ModuleLog -ModuleName "Exchange" -Message "Endpoint not found (404): $Uri - Skipping retries" -Level "DEBUG"
+                        throw  # Don't retry
+                    }
+
+                    if ($statusCode -eq 403 -or $errorMessage -match "403" -or $errorMessage -match "Forbidden") {
+                        Write-ModuleLog -ModuleName "Exchange" -Message "Insufficient permissions (403): $Uri - Skipping retries" -Level "DEBUG"
+                        throw  # Don't retry
+                    }
+
+                    if ($statusCode -eq 400 -or $errorMessage -match "400" -or $errorMessage -match "Bad Request") {
+                        Write-ModuleLog -ModuleName "Exchange" -Message "Bad request (400): $Uri - Skipping retries" -Level "DEBUG"
+                        throw  # Don't retry
+                    }
+
+                    # If final retry, throw
+                    if ($i -eq $MaxRetries) { throw }
+
+                    $delay = [Math]::Pow(2, $i) # Exponential backoff
+
+                    # Handle specific throttling scenarios with LONGER delays
                     if ($errorMessage -match "Too Many Requests" -or $errorMessage -match "TooManyRequests" -or $errorMessage -match "429") {
                         $delay = $delay * 2  # Extra delay for throttling
                         Write-ModuleLog -ModuleName "Exchange" -Message "Rate limited (429). Retry $i/$MaxRetries after $delay seconds..." -Level "WARN"
@@ -80,14 +154,105 @@ function Invoke-ExchangeDiscovery {
                     } elseif ($errorMessage -match "Timeout" -or $errorMessage -match "408") {
                         Write-ModuleLog -ModuleName "Exchange" -Message "Request timeout (408). Retry $i/$MaxRetries after $delay seconds..." -Level "WARN"
                     } else {
-                        Write-ModuleLog -ModuleName "Exchange" -Message "Retry $i/$MaxRetries after error: $errorMessage. Waiting $delay seconds..." -Level "WARN"
+                        Write-ModuleLog -ModuleName "Exchange" -Message "Retry $i/$MaxRetries after error: $errorMessage. Waiting $delay seconds..." -Level "DEBUG"
                     }
-                    
+
                     Start-Sleep -Seconds $delay
                 }
             }
         }
         
+        # ENHANCED: Multi-authentication strategy for comprehensive Exchange data
+        function Initialize-ExchangeAuthentication {
+            param([hashtable]$Configuration)
+
+            $authResult = @{
+                GraphAuthenticated = $false
+                AzureADAuthenticated = $false
+                ExchangeOnlineAuthenticated = $false
+                AvailableScopes = @()
+                PreferredMethod = 'None'
+                Capabilities = @()
+            }
+
+            # Test Microsoft Graph (current method)
+            try {
+                $graphContext = Get-MgContext
+                if ($graphContext -and $graphContext.Scopes) {
+                    $authResult.GraphAuthenticated = $true
+                    $authResult.AvailableScopes += 'Graph'
+                    $authResult.Capabilities += 'BasicUserData'
+                    $authResult.Capabilities += 'GroupData'
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Microsoft Graph authenticated with scopes: $($graphContext.Scopes -join ', ')" -Level "INFO"
+                }
+            } catch {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Microsoft Graph not authenticated: $($_.Exception.Message)" -Level "WARN"
+            }
+
+            # Test Azure AD PowerShell (enhanced capabilities)
+            if ($Configuration.UseAzureAD) {
+                try {
+                    if (Get-Module -Name AzureAD -ListAvailable) {
+                        $azureContext = Get-AzureADCurrentSessionInfo -ErrorAction SilentlyContinue
+                        if ($azureContext) {
+                            $authResult.AzureADAuthenticated = $true
+                            $authResult.AvailableScopes += 'AzureAD'
+                            $authResult.Capabilities += 'EnhancedUserData'
+                            Write-ModuleLog -ModuleName "Exchange" -Message "Azure AD authenticated for tenant: $($azureContext.TenantId)" -Level "INFO"
+                        }
+                    } else {
+                        Write-ModuleLog -ModuleName "Exchange" -Message "Azure AD module not installed - enhanced user data unavailable" -Level "DEBUG"
+                    }
+                } catch {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Azure AD not authenticated: $($_.Exception.Message)" -Level "DEBUG"
+                }
+            }
+
+            # Test Exchange Online PowerShell (most comprehensive)
+            if ($Configuration.UseExchangeOnline) {
+                try {
+                    if (Get-Module -Name ExchangeOnlineManagement -ListAvailable) {
+                        $exoSession = Get-ConnectionInformation -ErrorAction SilentlyContinue | Where-Object { $_.TokenStatus -eq 'Active' } | Select-Object -First 1
+                        if ($exoSession) {
+                            $authResult.ExchangeOnlineAuthenticated = $true
+                            $authResult.AvailableScopes += 'ExchangeOnline'
+                            $authResult.Capabilities += 'DetailedMailboxInfo'
+                            $authResult.Capabilities += 'MailFlowRules'
+                            $authResult.Capabilities += 'RetentionPolicies'
+                            Write-ModuleLog -ModuleName "Exchange" -Message "Exchange Online authenticated: $($exoSession.Name)" -Level "INFO"
+                        }
+                    } else {
+                        Write-ModuleLog -ModuleName "Exchange" -Message "Exchange Online module not installed - detailed mailbox data unavailable" -Level "DEBUG"
+                    }
+                } catch {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Exchange Online not authenticated: $($_.Exception.Message)" -Level "DEBUG"
+                }
+            }
+
+            # Determine preferred method (hierarchy: ExchangeOnline > AzureAD > Graph)
+            if ($authResult.ExchangeOnlineAuthenticated) {
+                $authResult.PreferredMethod = 'ExchangeOnline'
+            } elseif ($authResult.AzureADAuthenticated) {
+                $authResult.PreferredMethod = 'AzureAD'
+            } elseif ($authResult.GraphAuthenticated) {
+                $authResult.PreferredMethod = 'Graph'
+            }
+
+            # Log recommendations if not using most comprehensive method
+            if (-not $authResult.ExchangeOnlineAuthenticated -and -not $authResult.AzureADAuthenticated) {
+                Write-ModuleLog -ModuleName "Exchange" -Message "TIP: For comprehensive Exchange data, consider:" -Level "INFO"
+                Write-ModuleLog -ModuleName "Exchange" -Message "  1. Install-Module ExchangeOnlineManagement (most comprehensive)" -Level "INFO"
+                Write-ModuleLog -ModuleName "Exchange" -Message "  2. Install-Module AzureAD (enhanced user data)" -Level "INFO"
+                Write-ModuleLog -ModuleName "Exchange" -Message "  3. Current discovery limited to basic user/group data via Graph API" -Level "INFO"
+            }
+
+            return $authResult
+        }
+
+        # Initialize authentication
+        $authResult = Initialize-ExchangeAuthentication -Configuration $Configuration
+        Write-ModuleLog -ModuleName "Exchange" -Message "Authentication method: $($authResult.PreferredMethod) | Capabilities: $($authResult.Capabilities -join ', ')" -Level "INFO"
+
         # Enhanced user selection for comprehensive mailbox discovery
         $userSelectFields = @(
             'id', 'userPrincipalName', 'displayName', 'mail', 'mailNickname',
@@ -908,16 +1073,31 @@ function Start-ExchangeDiscovery {
         # Generate session ID for output files
         $sessionId = [guid]::NewGuid().ToString()
 
-        # Build configuration for the discovery script
+        # Build configuration for the discovery script with ENHANCED auth options
         $config = @{
             CompanyName = $CompanyName
             TenantId = $TenantId
             ClientId = $ClientId
             ClientSecret = $ClientSecret
+
+            # ENHANCED: Multi-authentication support (PowerShell 5.1 compatible syntax)
+            UseAzureAD = if ($AdditionalParams.UseAzureAD -ne $null) { $AdditionalParams.UseAzureAD } else { $false }
+            UseExchangeOnline = if ($AdditionalParams.UseExchangeOnline -ne $null) { $AdditionalParams.UseExchangeOnline } else { $false }
+            PreferredAuthMethod = if ($AdditionalParams.PreferredAuthMethod -ne $null) { $AdditionalParams.PreferredAuthMethod } else { 'Auto' }
+
+            # Discovery options (PowerShell 5.1 compatible syntax)
+            discovery = @{
+                excludeDisabledUsers = if ($AdditionalParams.ExcludeDisabledUsers -ne $null) { $AdditionalParams.ExcludeDisabledUsers } else { $true }
+                includeSharedMailboxes = if ($AdditionalParams.IncludeSharedMailboxes -ne $null) { $AdditionalParams.IncludeSharedMailboxes } else { $true }
+                includeResourceMailboxes = if ($AdditionalParams.IncludeResourceMailboxes -ne $null) { $AdditionalParams.IncludeResourceMailboxes } else { $false }
+            }
         }
 
+        # Merge additional parameters
         foreach ($key in $AdditionalParams.Keys) {
-            $config[$key] = $AdditionalParams[$key]
+            if ($key -notin @('UseAzureAD', 'UseExchangeOnline', 'PreferredAuthMethod', 'ExcludeDisabledUsers', 'IncludeSharedMailboxes', 'IncludeResourceMailboxes')) {
+                $config[$key] = $AdditionalParams[$key]
+            }
         }
 
         $context = @{

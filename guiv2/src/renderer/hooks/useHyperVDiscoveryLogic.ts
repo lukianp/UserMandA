@@ -4,9 +4,11 @@
  * NO PLACEHOLDERS - Complete implementation with Hosts, VMs, Switches, VHDs
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import { useProfileStore } from '../store/useProfileStore';
+import { getElectronAPI } from '../lib/electron-api-fallback';
 
 import {
   HyperVDiscoveryConfig,
@@ -40,14 +42,20 @@ interface HyperVDiscoveryState {
 }
 
 export const useHyperVDiscoveryLogic = () => {
-  const { getResultsByModuleName } = useDiscoveryStore();
+  const { getResultsByModuleName, addResult: addDiscoveryResult } = useDiscoveryStore();
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const currentTokenRef = useRef<string | null>(null);
 
   const [state, setState] = useState<HyperVDiscoveryState>({
     config: {
       includeVMs: true,
       includeVirtualSwitches: true,
       includeVHDs: true,
-      timeout: 300000
+      includeVirtualNetworks: true,
+      includeStorage: true,
+      hostAddresses: [],
+      timeout: 300000,
+      companyName: ''
     },
     result: null,
     isDiscovering: false,
@@ -75,8 +83,8 @@ export const useHyperVDiscoveryLogic = () => {
 
   // Real-time progress tracking via IPC
   useEffect(() => {
-    const unsubscribe = window.electronAPI?.onProgress?.((data: any) => {
-      if (data.type === 'hyperv-discovery' && data.token === state.cancellationToken) {
+    const unsubscribeProgress = window.electronAPI?.onDiscoveryProgress?.((data: any) => {
+      if (data.executionId === currentTokenRef.current) {
         setState(prev => ({
           ...prev,
           progress: {
@@ -88,12 +96,66 @@ export const useHyperVDiscoveryLogic = () => {
         }));
       }
     });
-    return () => { if (unsubscribe) unsubscribe(); };
-  }, [state.cancellationToken]);
+
+    const unsubscribeComplete = window.electronAPI?.onDiscoveryComplete?.((data: any) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[HyperVDiscoveryHook] Discovery completed, raw data:', JSON.stringify(data).slice(0, 500));
+
+        const result = data.result || data.data;
+
+        setState(prev => ({
+          ...prev,
+          result: result,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: {
+            current: 100,
+            total: 100,
+            message: 'Discovery completed',
+            percentage: 100
+          }
+        }));
+
+        // Store result in discovery store
+        const discoveryResult = {
+          id: `hyperv-discovery-${Date.now()}`,
+          moduleName: 'VirtualizationDiscovery',
+          displayName: 'Hyper-V Discovery',
+          itemCount: result?.RecordCount || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          additionalData: result
+        };
+
+        addDiscoveryResult(discoveryResult);
+      }
+    });
+
+    const unsubscribeError = window.electronAPI?.onDiscoveryError?.((data: any) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.error('[HyperVDiscoveryHook] Discovery error:', data);
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          error: data.error || 'Discovery failed',
+          cancellationToken: null
+        }));
+      }
+    });
+
+    return () => {
+      if (unsubscribeProgress) unsubscribeProgress();
+      if (unsubscribeComplete) unsubscribeComplete();
+      if (unsubscribeError) unsubscribeError();
+    };
+  }, [addDiscoveryResult]);
 
   // Start discovery
   const startDiscovery = useCallback(async () => {
     const token = `hyperv-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    currentTokenRef.current = token;
+
     setState(prev => ({
       ...prev,
       isDiscovering: true,
@@ -103,46 +165,62 @@ export const useHyperVDiscoveryLogic = () => {
     }));
 
     try {
-      const discoveryResult = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/HyperVDiscovery.psm1',
-        functionName: 'Invoke-HyperVDiscovery',
+      const companyName = state.config.companyName || selectedSourceProfile?.companyName || 'default';
+
+      const discoveryResult = await window.electronAPI.executeDiscovery({
+        moduleName: 'Virtualization',
         parameters: {
-          HostAddresses: state.config.hostAddresses,
-          IncludeVMs: state.config.includeVMs,
-          IncludeVirtualSwitches: state.config.includeVirtualSwitches,
-          IncludeVHDs: state.config.includeVHDs,
-          Timeout: state.config.timeout,
-          cancellationToken: token
+          Configuration: {
+            includeVMs: state.config.includeVMs ?? true,
+            includeVirtualSwitches: state.config.includeVirtualSwitches ?? true,
+            includeVHDs: state.config.includeVHDs ?? true,
+            includeVirtualNetworks: state.config.includeVirtualNetworks ?? true,
+            includeStorage: state.config.includeStorage ?? true,
+            hostAddresses: state.config.hostAddresses || [],
+            timeout: state.config.timeout ?? 300000
+          },
+          Context: {
+            Paths: {
+              RawDataOutput: `C:\\DiscoveryData\\${companyName}\\Raw`,
+              Logs: `C:\\DiscoveryData\\${companyName}\\Logs`
+            },
+            SessionInfo: {
+              StartTime: new Date().toISOString(),
+              Operator: 'System'
+            },
+            CompanyName: companyName
+          },
+          SessionId: token
         },
+        executionId: token,
+        showWindow: false
       });
 
-      setState(prev => ({
-        ...prev,
-        result: discoveryResult.data,
-        isDiscovering: false,
-        cancellationToken: null,
-        progress: { current: 100, total: 100, message: 'Discovery completed', percentage: 100 }
-      }));
+      // Note: Actual completion will be handled by onDiscoveryComplete event
+      console.log('[HyperVDiscoveryHook] Discovery started successfully:', discoveryResult);
+
     } catch (error: any) {
-      console.error('Hyper-V discovery failed:', error);
+      console.error('[HyperVDiscoveryHook] Discovery failed to start:', error);
       setState(prev => ({
         ...prev,
         isDiscovering: false,
         cancellationToken: null,
-        error: error.message || 'Discovery failed'
+        error: error.message || 'Discovery failed to start'
       }));
     }
-  }, [state.config]);
+  }, [state.config, selectedSourceProfile]);
 
   // Cancel discovery
   const cancelDiscovery = useCallback(async () => {
     if (state.cancellationToken) {
       try {
-        await window.electronAPI.cancelExecution(state.cancellationToken);
+        await window.electronAPI.cancelDiscovery(state.cancellationToken);
+        console.log('[HyperVDiscoveryHook] Discovery cancelled:', state.cancellationToken);
       } catch (error) {
-        console.error('Failed to cancel discovery:', error);
+        console.error('[HyperVDiscoveryHook] Failed to cancel discovery:', error);
       }
     }
+    currentTokenRef.current = null;
     setState(prev => ({
       ...prev,
       isDiscovering: false,

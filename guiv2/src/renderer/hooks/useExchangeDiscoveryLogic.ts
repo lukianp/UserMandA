@@ -89,7 +89,11 @@ export function useExchangeDiscoveryLogic() {
     const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
       console.log('[ExchangeDiscoveryHook] Progress event received:', data);
       if (data.executionId && data.executionId.startsWith('exchange-discovery-')) {
-        addLog(data.message || `${data.currentPhase} (${data.itemsProcessed || 0}/${data.totalItems || 0})`, 'info');
+        // Construct progress message from available properties (no 'message' property on progress events)
+        const progressMessage = data.currentPhase
+          ? `${data.currentPhase}${data.itemsProcessed !== undefined && data.totalItems !== undefined ? ` (${data.itemsProcessed}/${data.totalItems})` : ''}`
+          : 'Processing...';
+        addLog(progressMessage, 'info');
         setProgress(data as unknown as ExchangeDiscoveryProgress);
       }
     });
@@ -105,60 +109,100 @@ export function useExchangeDiscoveryLogic() {
     const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
       console.log('[ExchangeDiscoveryHook] Complete event received:', data);
       if (data.executionId && data.executionId.startsWith('exchange-discovery-')) {
-        // CORRECT: data.result is ExecutionResult with { success, data: PowerShellReturnValue, ... }
-        // PowerShellReturnValue is { Success, Data: { mailboxes, distributionGroups, ... }, RecordCount, Metadata, ... }
+        // ENHANCED: Robust data extraction handling multiple PowerShell output formats
+        // PowerShellReturnValue can be: { Success, Data: {...}, RecordCount, ... } OR { success, data: {...} } OR direct data
         const executionResult = data.result as any;
-        const psReturnValue = executionResult.data; // Get the PowerShell return value
+        const psReturnValue = executionResult?.data || executionResult; // Handle both formats
 
-        console.log('[ExchangeDiscoveryHook] PowerShell return value:', psReturnValue);
-        console.log('[ExchangeDiscoveryHook] PowerShell return value type:', typeof psReturnValue);
-        console.log('[ExchangeDiscoveryHook] PowerShell return value is array?', Array.isArray(psReturnValue));
+        console.log('[ExchangeDiscoveryHook] PowerShell return value:', JSON.stringify(psReturnValue).slice(0, 500));
+        console.log('[ExchangeDiscoveryHook] PowerShell return value keys:', Object.keys(psReturnValue || {}));
 
-        // Extract the structured data from the Data property of the PowerShell return value
-        let structuredData = psReturnValue?.Data || {}; // { mailboxes: [...], distributionGroups: [...], ... }
+        // Extract the structured data - handle nested Data property or direct structure
+        const structuredData = psReturnValue?.Data || psReturnValue?.data || psReturnValue || {};
 
-        console.log('[ExchangeDiscoveryHook] Raw Data property:', structuredData);
-        console.log('[ExchangeDiscoveryHook] Data is array?', Array.isArray(structuredData));
+        console.log('[ExchangeDiscoveryHook] Structured data type:', Array.isArray(structuredData) ? 'Array' : typeof structuredData);
+        console.log('[ExchangeDiscoveryHook] Structured data keys:', Array.isArray(structuredData) ? `Array[${structuredData.length}]` : Object.keys(structuredData));
 
-        // If Data is an array (flat array with _DataType), group it by type
+        // Initialize result containers
+        let mailboxes: any[] = [];
+        let distributionGroups: any[] = [];
+        let transportRules: any[] = [];
+        let connectors: any[] = [];
+        let publicFolders: any[] = [];
+        let mailContacts: any[] = [];
+
+        // Handle both flat array (with _DataType) and structured object formats
         if (Array.isArray(structuredData)) {
-          console.log('[ExchangeDiscoveryHook] Data is flat array, grouping by _DataType...');
-          const grouped = structuredData.reduce((acc: any, item: any) => {
-            const type = item._DataType;
-            if (!acc[type]) acc[type] = [];
-            acc[type].push(item);
-            return acc;
-          }, {});
-
-          console.log('[ExchangeDiscoveryHook] Grouped data types:', Object.keys(grouped));
-
-          structuredData = {
-            mailboxes: [...(grouped.Mailbox || []), ...(grouped.SharedMailbox || [])],
-            distributionGroups: grouped.DistributionGroup || [],
-            transportRules: grouped.TransportRule || [],
-            connectors: grouped.Connector || [],
-            publicFolders: grouped.PublicFolder || [],
-            mailContacts: grouped.MailContact || [],
-          };
+          console.log('[ExchangeDiscoveryHook] Processing flat array with _DataType grouping...');
+          // Flat array with _DataType property - group by type
+          mailboxes = structuredData.filter((item: any) => item._DataType === 'Mailbox' || item._DataType === 'SharedMailbox');
+          distributionGroups = structuredData.filter((item: any) => item._DataType === 'DistributionGroup');
+          transportRules = structuredData.filter((item: any) => item._DataType === 'TransportRule');
+          connectors = structuredData.filter((item: any) => item._DataType === 'Connector');
+          publicFolders = structuredData.filter((item: any) => item._DataType === 'PublicFolder');
+          mailContacts = structuredData.filter((item: any) => item._DataType === 'MailContact');
+        } else {
+          console.log('[ExchangeDiscoveryHook] Processing structured object format...');
+          // Structured object format - extract arrays (handle both camelCase and PascalCase)
+          mailboxes = structuredData.mailboxes || structuredData.Mailboxes || [];
+          distributionGroups = structuredData.distributionGroups || structuredData.DistributionGroups || [];
+          transportRules = structuredData.transportRules || structuredData.TransportRules || [];
+          connectors = structuredData.connectors || structuredData.Connectors || [];
+          publicFolders = structuredData.publicFolders || structuredData.PublicFolders || [];
+          mailContacts = structuredData.mailContacts || structuredData.MailContacts || [];
         }
 
-        console.log('[ExchangeDiscoveryHook] Structured data keys:', Object.keys(structuredData));
-        console.log('[ExchangeDiscoveryHook] Mailboxes count:', structuredData.mailboxes?.length || 0);
-        console.log('[ExchangeDiscoveryHook] Groups count:', structuredData.distributionGroups?.length || 0);
+        console.log('[ExchangeDiscoveryHook] Extracted counts:', {
+          mailboxes: mailboxes.length,
+          distributionGroups: distributionGroups.length,
+          transportRules: transportRules.length,
+          connectors: connectors.length,
+          publicFolders: publicFolders.length,
+          mailContacts: mailContacts.length
+        });
 
-        // Build the ExchangeDiscoveryResult with the structured data at root level
+        // Build the ExchangeDiscoveryResult with all required properties
         const exchangeResult: ExchangeDiscoveryResult = {
-          ...structuredData,
+          // Required metadata properties
           id: psReturnValue?.id || `exchange-discovery-${Date.now()}`,
+          discoveredBy: 'ExchangeDiscovery',
+          environment: 'Online',
+
+          // Timing properties
           startTime: psReturnValue?.startTime ? new Date(psReturnValue.startTime) : new Date(),
           endTime: psReturnValue?.endTime ? new Date(psReturnValue.endTime) : undefined,
           duration: psReturnValue?.duration || 0,
           status: 'completed',
+
+          // Configuration
           config: config,
-          statistics: psReturnValue?.statistics || {},
-          errors: psReturnValue?.Errors || [],
-          warnings: psReturnValue?.Warnings || [],
-        } as ExchangeDiscoveryResult;
+
+          // Data arrays (using extracted data)
+          mailboxes: mailboxes,
+          distributionGroups: distributionGroups,
+          transportRules: transportRules,
+          connectors: connectors,
+          publicFolders: publicFolders,
+
+          // Statistics and errors
+          statistics: psReturnValue?.statistics || {
+            totalMailboxes: mailboxes.length,
+            totalDistributionGroups: distributionGroups.length,
+            totalTransportRules: transportRules.length,
+            totalConnectors: connectors.length,
+            totalPublicFolders: publicFolders.length
+          },
+          errors: (psReturnValue?.Errors || []).map((err: any) => ({
+            message: typeof err === 'string' ? err : err.message || 'Unknown error',
+            timestamp: new Date(),
+            severity: 'error' as const
+          })),
+          warnings: (psReturnValue?.Warnings || []).map((warn: any) => ({
+            message: typeof warn === 'string' ? warn : warn.message || 'Unknown warning',
+            timestamp: new Date(),
+            severity: 'warning' as const
+          })),
+        };
 
         console.log('[ExchangeDiscoveryHook] Final exchangeResult:', exchangeResult);
         console.log('[ExchangeDiscoveryHook] Final exchangeResult.mailboxes:', exchangeResult.mailboxes?.length || 0);
@@ -263,6 +307,11 @@ export function useExchangeDiscoveryLogic() {
       const result = await window.electron.executeDiscovery({
         moduleName: 'Exchange',
         parameters: {
+          // Profile information (passed as parameters, not as top-level property)
+          ProfileName: selectedSourceProfile?.companyName || 'Default',
+          TenantId: selectedSourceProfile?.tenantId || '',
+
+          // Discovery options
           DiscoverMailboxes: config.discoverMailboxes,
           DiscoverDistributionGroups: config.discoverDistributionGroups,
           DiscoverTransportRules: config.discoverTransportRules,
@@ -274,11 +323,10 @@ export function useExchangeDiscoveryLogic() {
           IncludeMobileDevices: config.includeMobileDevices,
           IncludeGroupMembership: config.includeGroupMembership,
           IncludeNestedGroups: config.includeNestedGroups,
-          showWindow: false, // Use integrated GUI dialog like Azure and Application discovery
+          showWindow: false,
           timeout: 300000,
         },
         executionId: token,
-        profileName: selectedSourceProfile.companyName,
       });
 
       if (result.success) {

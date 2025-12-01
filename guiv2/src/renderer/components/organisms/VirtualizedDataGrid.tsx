@@ -137,6 +137,8 @@ function VirtualizedDataGridInner<T = any>(
       enableCharts: false,
       // FIX: Use cellSelection instead of deprecated enableRangeSelection
       cellSelection: true,
+      // FIX: Suppress new Theming API to use legacy CSS (prevents error #239)
+      theme: undefined,
       statusBar: {
         statusPanels: [
           { statusPanel: 'agTotalAndFilteredRowCountComponent', align: 'left' },

@@ -6,15 +6,18 @@ export type HyperVDiscoveryStatus = 'idle' | 'discovering' | 'completed' | 'fail
 export type VMState = 'running' | 'off' | 'paused' | 'saved' | 'starting' | 'stopping' | 'saving' | 'pausing' | 'resuming';
 
 export interface HyperVDiscoveryConfig {
-  id: string;
-  name: string;
+  id?: string;
+  name?: string;
   hostAddresses: string[];
   includeVMs: boolean;
   includeVirtualSwitches: boolean;
   includeVHDs: boolean;
+  includeVirtualNetworks: boolean;
+  includeStorage: boolean;
   timeout: number;
-  createdAt: Date;
-  updatedAt: Date;
+  companyName?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface HyperVDiscoveryResult {

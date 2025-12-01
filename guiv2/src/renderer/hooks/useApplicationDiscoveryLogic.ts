@@ -223,16 +223,13 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
     addLog('info', `Starting application discovery for ${selectedSourceProfile.companyName}...`);
 
     try {
-      // Call PowerShell module with config parameters
+      // Call PowerShell module - Application Discovery uses Microsoft Graph for cloud applications
+      // It doesn't accept ScanRegistry, ScanFilesystem, or ScanPorts parameters
       const result = await window.electron.executeDiscovery({
         moduleName: 'Application',
         parameters: {
-          IncludeSoftware: config.includeSoftware,
-          IncludeProcesses: config.includeProcesses,
-          IncludeServices: config.includeServices,
-          ScanRegistry: config.scanRegistry,
-          ScanFilesystem: config.scanFilesystem,
-          ScanPorts: config.scanPorts,
+          // Application discovery parameters are handled via AdditionalParams in the PowerShell module
+          // The module automatically discovers enterprise applications from Microsoft Graph
           showWindow: false, // Don't show PowerShell console window
         },
         executionId: token,
