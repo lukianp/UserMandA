@@ -137,8 +137,9 @@ function VirtualizedDataGridInner<T = any>(
       enableCharts: false,
       // FIX: Use cellSelection instead of deprecated enableRangeSelection
       cellSelection: true,
-      // FIX: Suppress new Theming API to use legacy CSS (prevents error #239)
-      theme: undefined,
+      // FIX: Use legacy theme to prevent theming API conflict (error #239)
+      // Must be set to 'legacy' to use v32 style themes with CSS files
+      theme: 'legacy' as any,
       statusBar: {
         statusPanels: [
           { statusPanel: 'agTotalAndFilteredRowCountComponent', align: 'left' },
@@ -408,4 +409,5 @@ function VirtualizedDataGridInner<T = any>(
 
 export const VirtualizedDataGrid = React.forwardRef(VirtualizedDataGridInner) as VirtualizedDataGridComponent;
 
-VirtualizedDataGrid.displayName = 'VirtualizedDataGrid';
+// Set displayName for React DevTools
+(VirtualizedDataGrid as any).displayName = 'VirtualizedDataGrid';

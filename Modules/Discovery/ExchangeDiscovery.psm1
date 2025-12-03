@@ -1081,15 +1081,16 @@ function Start-ExchangeDiscovery {
             ClientSecret = $ClientSecret
 
             # ENHANCED: Multi-authentication support (PowerShell 5.1 compatible syntax)
-            UseAzureAD = if ($AdditionalParams.UseAzureAD -ne $null) { $AdditionalParams.UseAzureAD } else { $false }
-            UseExchangeOnline = if ($AdditionalParams.UseExchangeOnline -ne $null) { $AdditionalParams.UseExchangeOnline } else { $false }
-            PreferredAuthMethod = if ($AdditionalParams.PreferredAuthMethod -ne $null) { $AdditionalParams.PreferredAuthMethod } else { 'Auto' }
+            # FIX: Use $null on left side of comparison (PSScriptAnalyzer best practice)
+            UseAzureAD = if ($null -ne $AdditionalParams.UseAzureAD) { $AdditionalParams.UseAzureAD } else { $false }
+            UseExchangeOnline = if ($null -ne $AdditionalParams.UseExchangeOnline) { $AdditionalParams.UseExchangeOnline } else { $false }
+            PreferredAuthMethod = if ($null -ne $AdditionalParams.PreferredAuthMethod) { $AdditionalParams.PreferredAuthMethod } else { 'Auto' }
 
             # Discovery options (PowerShell 5.1 compatible syntax)
             discovery = @{
-                excludeDisabledUsers = if ($AdditionalParams.ExcludeDisabledUsers -ne $null) { $AdditionalParams.ExcludeDisabledUsers } else { $true }
-                includeSharedMailboxes = if ($AdditionalParams.IncludeSharedMailboxes -ne $null) { $AdditionalParams.IncludeSharedMailboxes } else { $true }
-                includeResourceMailboxes = if ($AdditionalParams.IncludeResourceMailboxes -ne $null) { $AdditionalParams.IncludeResourceMailboxes } else { $false }
+                excludeDisabledUsers = if ($null -ne $AdditionalParams.ExcludeDisabledUsers) { $AdditionalParams.ExcludeDisabledUsers } else { $true }
+                includeSharedMailboxes = if ($null -ne $AdditionalParams.IncludeSharedMailboxes) { $AdditionalParams.IncludeSharedMailboxes } else { $true }
+                includeResourceMailboxes = if ($null -ne $AdditionalParams.IncludeResourceMailboxes) { $AdditionalParams.IncludeResourceMailboxes } else { $false }
             }
         }
 
@@ -1145,12 +1146,13 @@ function Start-ExchangeDiscovery {
             }
 
             # Calculate statistics for frontend
-            $totalMailboxSize = ($structuredData.mailboxes | Where-Object { $_.TotalItemSize -ne $null } |
+            # FIX: Use $null on left side of comparison (PSScriptAnalyzer best practice)
+            $totalMailboxSize = ($structuredData.mailboxes | Where-Object { $null -ne $_.TotalItemSize } |
                                Measure-Object -Property TotalItemSize -Sum).Sum
             if (-not $totalMailboxSize) { $totalMailboxSize = 0 }
 
             $avgMailboxSize = if ($structuredData.mailboxes.Count -gt 0) {
-                ($structuredData.mailboxes | Where-Object { $_.TotalItemSize -ne $null } |
+                ($structuredData.mailboxes | Where-Object { $null -ne $_.TotalItemSize } |
                  Measure-Object -Property TotalItemSize -Average).Average
             } else { 0 }
             if (-not $avgMailboxSize) { $avgMailboxSize = 0 }
@@ -1168,7 +1170,7 @@ function Start-ExchangeDiscovery {
                 $_.RecipientTypeDetails -match 'Room|Equipment'
             }).Count
 
-            $largestMailboxSize = ($structuredData.mailboxes | Where-Object { $_.TotalItemSize -ne $null } |
+            $largestMailboxSize = ($structuredData.mailboxes | Where-Object { $null -ne $_.TotalItemSize } |
                 Measure-Object -Property TotalItemSize -Maximum).Maximum
             if (-not $largestMailboxSize) { $largestMailboxSize = 0 }
 
@@ -1188,7 +1190,7 @@ function Start-ExchangeDiscovery {
             $staticGroupCount = $structuredData.distributionGroups.Count - $dynamicGroupCount
 
             $avgMembersPerGroup = if ($structuredData.distributionGroups.Count -gt 0) {
-                ($structuredData.distributionGroups | Where-Object { $_.MemberCount -ne $null } |
+                ($structuredData.distributionGroups | Where-Object { $null -ne $_.MemberCount } |
                  Measure-Object -Property MemberCount -Average).Average
             } else { 0 }
             if (-not $avgMembersPerGroup) { $avgMembersPerGroup = 0 }

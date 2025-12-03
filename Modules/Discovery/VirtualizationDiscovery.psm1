@@ -57,32 +57,16 @@ function Write-VirtualizationLog {
         }
         $logMessage = "[$timestamp] [$Level] [Virtualization] $Message"
         switch ($Level) {
-            'ERROR' { Write-Error "[VirtualizationDiscovery] $logMessage" }
-            'WARN' { Write-Warning "[VirtualizationDiscovery] $logMessage" }
-            'SUCCESS' { Write-Information "[VirtualizationDiscovery] $logMessage" -InformationAction Continue }
-            'DEBUG' { Write-Verbose "[VirtualizationDiscovery] $logMessage" -Verbose }
-            default { Write-Information "[VirtualizationDiscovery] $logMessage" -InformationAction Continue }
+            'ERROR' { Write-Error "[Virtualization] $logMessage" }
+            'WARN' { Write-Warning "[Virtualization] $logMessage" }
+            'SUCCESS' { Write-Information "[Virtualization] $logMessage" -InformationAction Continue }
+            'DEBUG' { Write-Verbose "[Virtualization] $logMessage" -Verbose }
+            default { Write-Information "[Virtualization] $logMessage" -InformationAction Continue }
         }
     }
 }
-function Test-IsAdministrator {
-    <#
-    .SYNOPSIS
-        Tests if the current user has administrator privileges.
-    #>
-    [CmdletBinding()]
-    param()
 
-    try {
-        $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
-        $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
-        return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-    } catch {
-        return $false
-    }
-}
-
-function Invoke-VirtualizationDiscovery {
+function Invoke-Virtualization {
     <#
     .SYNOPSIS
         Main virtualization discovery function that coordinates Hyper-V and VMware discovery.
@@ -117,11 +101,6 @@ function Invoke-VirtualizationDiscovery {
 
     Write-VirtualizationLog -Level "HEADER" -Message "Starting Virtualization Discovery (v1.0)" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-
-    # Check for administrator privileges and warn if not elevated
-    if (-not (Test-IsAdministrator)) {
-        Write-VirtualizationLog -Level "WARN" -Message "Script is not running as administrator. Some virtualization data discovery may require elevated privileges." -Context $Context
-    }
 
     # Initialize result object
     $result = @{
@@ -303,11 +282,7 @@ function Get-HyperVInfrastructure {
                 SessionId = $SessionId
             }
         } catch {
-            if ($_.Exception.Message -match "(?i)(access|permission|privilege|denied|elevation|administrator)") {
-                Write-VirtualizationLog -Level "WARN" -Message "Insufficient permissions to access Hyper-V host information. Host data will be skipped due to lack of administrator privileges."
-            } else {
-                Write-VirtualizationLog -Level "WARN" -Message "Failed to get Hyper-V host information: $($_.Exception.Message)"
-            }
+            Write-VirtualizationLog -Level "WARN" -Message "Failed to get Hyper-V host information: $($_.Exception.Message)"
         }
         
         # Get Virtual Machines
@@ -343,11 +318,7 @@ function Get-HyperVInfrastructure {
                 }
             }
         } catch {
-            if ($_.Exception.Message -match "(?i)(access|permission|privilege|denied|elevation|administrator)") {
-                Write-VirtualizationLog -Level "WARN" -Message "Insufficient permissions to access virtual machines. VM data will be skipped due to lack of administrator privileges."
-            } else {
-                Write-VirtualizationLog -Level "WARN" -Message "Failed to get virtual machines: $($_.Exception.Message)"
-            }
+            Write-VirtualizationLog -Level "WARN" -Message "Failed to get virtual machines: $($_.Exception.Message)"
         }
         
         # Get Virtual Switches
@@ -369,11 +340,7 @@ function Get-HyperVInfrastructure {
                 }
             }
         } catch {
-            if ($_.Exception.Message -match "(?i)(access|permission|privilege|denied|elevation|administrator)") {
-                Write-VirtualizationLog -Level "WARN" -Message "Insufficient permissions to access virtual switches. Switch data will be skipped due to lack of administrator privileges."
-            } else {
-                Write-VirtualizationLog -Level "WARN" -Message "Failed to get virtual switches: $($_.Exception.Message)"
-            }
+            Write-VirtualizationLog -Level "WARN" -Message "Failed to get virtual switches: $($_.Exception.Message)"
         }
         
         # Get VM Network Adapters
@@ -396,11 +363,7 @@ function Get-HyperVInfrastructure {
                 }
             }
         } catch {
-            if ($_.Exception.Message -match "(?i)(access|permission|privilege|denied|elevation|administrator)") {
-                Write-VirtualizationLog -Level "WARN" -Message "Insufficient permissions to access VM network adapters. Network adapter data will be skipped due to lack of administrator privileges."
-            } else {
-                Write-VirtualizationLog -Level "WARN" -Message "Failed to get VM network adapters: $($_.Exception.Message)"
-            }
+            Write-VirtualizationLog -Level "WARN" -Message "Failed to get VM network adapters: $($_.Exception.Message)"
         }
         
     } catch {
@@ -609,4 +572,4 @@ function Get-VirtualStorage {
 }
 
 # Export functions
-Export-ModuleMember -Function Invoke-VirtualizationDiscovery
+Export-ModuleMember -Function Invoke-Virtualization

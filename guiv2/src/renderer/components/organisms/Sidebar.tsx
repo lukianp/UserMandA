@@ -7,7 +7,7 @@
  * Epic 0: UI/UX Enhancement - Navigation & UX (TASK 6)
  */
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
 import {
@@ -20,6 +20,30 @@ import {
   Settings,
   Search,
   ChevronRight,
+  ChevronDown,
+  Cloud,
+  Mail,
+  HardDrive,
+  Database,
+  Folder,
+  MessageSquare,
+  Shield,
+  Folders,
+  Package,
+  Lock,
+  Key,
+  Network,
+  Globe,
+  Cpu,
+  Binary,
+  FileCode,
+  Layers,
+  Workflow,
+  BarChart3,
+  Printer,
+  Calendar,
+  FileSearch,
+  Box,
 } from 'lucide-react';
 
 import { useProfileStore } from '../../store/useProfileStore';
@@ -44,6 +68,26 @@ export const Sidebar: React.FC = () => {
   const { selectedSourceProfile, selectedTargetProfile } = useProfileStore();
   const { systemStatus } = useSystemHealthLogic();
 
+  // Discovered Data - Shows results from discovery operations
+  // These are DATA DISPLAY views, not discovery execution interfaces
+  const discoveredItems: NavItem[] = useMemo(() => [
+    { path: '/discovered/users', label: 'Users', icon: <Users size={16} /> },
+    { path: '/discovered/groups', label: 'Groups', icon: <UserCheck size={16} /> },
+    { path: '/discovered/infrastructure', label: 'Infrastructure', icon: <Server size={16} /> },
+    { path: '/discovered/azure', label: 'Azure Resources', icon: <Cloud size={16} /> },
+    { path: '/discovered/aws', label: 'AWS Resources', icon: <Cloud size={16} /> },
+    { path: '/discovered/gcp', label: 'GCP Resources', icon: <Cloud size={16} /> },
+    { path: '/discovered/vmware', label: 'VMware VMs', icon: <Cpu size={16} /> },
+    { path: '/discovered/hyperv', label: 'Hyper-V VMs', icon: <Cpu size={16} /> },
+    { path: '/discovered/exchange', label: 'Exchange Mailboxes', icon: <Mail size={16} /> },
+    { path: '/discovered/sharepoint', label: 'SharePoint Sites', icon: <Folder size={16} /> },
+    { path: '/discovered/teams', label: 'Teams Channels', icon: <MessageSquare size={16} /> },
+    { path: '/discovered/onedrive', label: 'OneDrive Storage', icon: <Folders size={16} /> },
+    { path: '/discovered/applications', label: 'Applications', icon: <Package size={16} /> },
+    { path: '/discovered/filesystems', label: 'File Systems', icon: <HardDrive size={16} /> },
+    { path: '/discovered/activedirectory', label: 'AD Objects', icon: <Database size={16} /> },
+  ], []);
+
   // Navigation items
   const navItems: NavItem[] = [
     {
@@ -56,8 +100,12 @@ export const Sidebar: React.FC = () => {
       label: 'Discovery',
       icon: <Search size={20} />,
       children: [
-        { path: '/discovery/domain', label: 'Domain', icon: <ChevronRight size={16} /> },
-        { path: '/discovery/azure', label: 'Azure AD', icon: <ChevronRight size={16} /> },
+        {
+          path: '/discovered',
+          label: 'Discovered',
+          icon: <FileSearch size={18} />,
+          children: discoveredItems,
+        },
       ],
     },
     {
@@ -147,22 +195,47 @@ export const Sidebar: React.FC = () => {
             {item.children && (
               <div className="ml-4">
                 {item.children.map((child) => (
-                  <NavLink
-                    key={child.path}
-                    to={child.path}
-                    className={({ isActive }) =>
-                      clsx(
-                        'flex items-center gap-2 px-4 py-1.5 text-sm transition-colors',
-                        'hover:bg-gray-800 hover:text-white',
-                        isActive
-                          ? 'bg-gray-800 text-white'
-                          : 'text-gray-400'
-                      )
-                    }
-                  >
-                    {child.icon}
-                    <span>{child.label}</span>
-                  </NavLink>
+                  <div key={child.path}>
+                    <NavLink
+                      to={child.path}
+                      className={({ isActive }) =>
+                        clsx(
+                          'flex items-center gap-2 px-4 py-1.5 text-sm transition-colors',
+                          'hover:bg-gray-800 hover:text-white',
+                          isActive
+                            ? 'bg-gray-800 text-white'
+                            : 'text-gray-400'
+                        )
+                      }
+                    >
+                      {child.icon}
+                      <span>{child.label}</span>
+                    </NavLink>
+
+                    {/* Grandchild items (nested children) */}
+                    {child.children && (
+                      <div className="ml-4">
+                        {child.children.map((grandchild) => (
+                          <NavLink
+                            key={grandchild.path}
+                            to={grandchild.path}
+                            className={({ isActive }) =>
+                              clsx(
+                                'flex items-center gap-2 px-4 py-1.5 text-xs transition-colors',
+                                'hover:bg-gray-800 hover:text-white',
+                                isActive
+                                  ? 'bg-gray-800 text-white'
+                                  : 'text-gray-500'
+                              )
+                            }
+                          >
+                            {grandchild.icon}
+                            <span>{grandchild.label}</span>
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             )}

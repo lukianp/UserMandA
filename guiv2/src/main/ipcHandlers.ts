@@ -2348,10 +2348,27 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   console.log('[IPC] Registering discovery:execute handler...');
   ipcMain.handle('discovery:execute', async (event, args: {
     moduleName: string;
-    parameters: Record<string, any>;
+    companyName?: string;
+    configuration?: Record<string, any>;
+    executionOptions?: {
+      timeout?: number;
+      showWindow?: boolean;
+    };
+    parameters?: Record<string, any>;
     executionId?: string;
   }) => {
-    const { moduleName, parameters, executionId } = args;
+    console.log('[IPC] ========== discovery:execute RECEIVED PARAMS ==========');
+    console.log('[IPC] args:', JSON.stringify(args, null, 2));
+
+    // Support both new structure (configuration/executionOptions) and old structure (parameters)
+    const moduleName = args.moduleName;
+    const parameters = args.configuration || args.parameters || {};
+    const executionId = args.executionId;
+    const executionOptions = args.executionOptions || {};
+    const providedCompanyName = args.companyName;
+
+    console.log('[IPC] Extracted parameters:', JSON.stringify(parameters, null, 2));
+    console.log('[IPC] Extracted executionOptions:', JSON.stringify(executionOptions, null, 2));
     console.log(`[IPC] ===============================================`);
     console.log(`[IPC] discovery:execute HANDLER CALLED!`);
     console.log(`[IPC] Module: ${moduleName}`);
@@ -2510,16 +2527,20 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       console.log(`[IPC:discovery:execute] Parameters:`, JSON.stringify(parameters, null, 2));
       // Note: Credentials are loaded from CredentialService, not from profile directly
 
+      // Use provided company name if available, otherwise use active profile
+      const companyName = providedCompanyName || activeProfile.companyName;
+      console.log(`[IPC:discovery:execute] Using company name: ${companyName}`);
+
       // Execute discovery module with credentials from profile
       const result = await psService.executeDiscoveryModule(
         moduleName,
-        activeProfile.companyName,
+        companyName,
         parameters,
         {
           cancellationToken: execId,
           streamOutput: true,
-          timeout: parameters.timeout || 300000,
-          showWindow: parameters.showWindow !== undefined ? parameters.showWindow : true,  // Default to showing PowerShell window
+          timeout: executionOptions.timeout || 300000,
+          showWindow: executionOptions.showWindow !== undefined ? executionOptions.showWindow : false,  // Default to NOT showing PowerShell window
         }
       );
 
@@ -2538,13 +2559,14 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         console.error('[IPC Handler] 📤 Sending discovery:complete event');
 
         // Normalize result: Add totalItems from PowerShell RecordCount
+        const psData = result.data as any;
         const normalizedResult = {
           ...result,
-          totalItems: result.data?.RecordCount || 0,  // Map PowerShell RecordCount to totalItems
-          recordCount: result.data?.RecordCount || 0, // Keep RecordCount for backward compatibility
+          totalItems: psData?.RecordCount || 0,  // Map PowerShell RecordCount to totalItems
+          recordCount: psData?.RecordCount || 0, // Keep RecordCount for backward compatibility
         };
 
-        console.error(`[IPC Handler] 📊 Discovery results: RecordCount=${result.data?.RecordCount}, Success=${result.data?.Success}`);
+        console.error(`[IPC Handler] 📊 Discovery results: RecordCount=${psData?.RecordCount}, Success=${psData?.Success}`);
 
         completionWin.webContents.send('discovery:complete', {
           executionId: execId,
@@ -3366,6 +3388,83 @@ function convertGroupDetailToCSV(groupDetail: any): string {
 
   return rows.join('\n');
 }
+
+// ===================================================================
+// ORGANISATION MAP HANDLERS
+// ===================================================================
+
+/**
+ * Get all discovery CSV files
+ */
+ipcMain.handle('get-discovery-files', async () => {
+  try {
+    console.log('[IPC] get-discovery-files: Scanning for CSV files...');
+
+    const discoveryPaths = [
+      path.join(process.cwd(), 'DiscoveryData'),
+      path.join('C:', 'DiscoveryData'),
+      path.join(process.cwd(), 'Modules', 'Discovery')
+    ];
+
+    const csvFiles: Array<{path: string, type: string}> = [];
+
+    const scanDirectory = async (dir: string) => {
+      try {
+        if (!(await fs.stat(dir).catch(() => null))) return;
+
+        const files = await fs.readdir(dir);
+
+        for (const file of files) {
+          const fullPath = path.join(dir, file);
+          const stat = await fs.stat(fullPath).catch(() => null);
+
+          if (!stat) continue;
+
+          if (stat.isDirectory()) {
+            await scanDirectory(fullPath);
+          } else if (file.endsWith('.csv')) {
+            // Determine file type based on filename patterns
+            let type = 'generic';
+            if (file.includes('Users')) type = 'users';
+            else if (file.includes('Groups')) type = 'groups';
+            else if (file.includes('Applications')) type = 'applications';
+            else if (file.includes('Infrastructure')) type = 'infrastructure';
+            else if (file.includes('Exchange')) type = 'exchange';
+            else if (file.includes('FileSystem')) type = 'filesystem';
+
+            csvFiles.push({ path: fullPath, type });
+          }
+        }
+      } catch (err) {
+        console.warn('[IPC] get-discovery-files: Error scanning directory:', dir, err);
+      }
+    };
+
+    for (const discoveryPath of discoveryPaths) {
+      await scanDirectory(discoveryPath);
+    }
+
+    console.log('[IPC] get-discovery-files: Found', csvFiles.length, 'CSV files');
+    return csvFiles;
+  } catch (error) {
+    console.error('[IPC] get-discovery-files: Error:', error);
+    return [];
+  }
+});
+
+/**
+ * Read discovery CSV file
+ */
+ipcMain.handle('read-discovery-file', async (_, filePath: string) => {
+  try {
+    console.log('[IPC] read-discovery-file:', filePath);
+    const content = await fs.readFile(filePath, 'utf8');
+    return content;
+  } catch (error) {
+    console.error('[IPC] read-discovery-file: Error reading file:', filePath, error);
+    throw error;
+  }
+});
 
 /**
  * Cleanup function to shutdown services

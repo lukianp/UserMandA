@@ -76,7 +76,12 @@
       "Bash(Select-Object FullName)",
       "Bash(Copy-Item -Path \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\views\\discovery\\FileSystemDiscoveryView.tsx\" -Destination \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\discovery\\FileSystemDiscoveryView.tsx\" -Force)",
       "Bash(Copy-Item -Path \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\components\\organisms\\VirtualizedDataGrid.tsx\" -Destination \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\components\\organisms\\VirtualizedDataGrid.tsx\" -Force)",
-      "Bash(Copy-Item -Path \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useApplicationDiscoveryLogic.ts\" -Destination \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useApplicationDiscoveryLogic.ts\" -Force)"
+      "Bash(Copy-Item -Path \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useApplicationDiscoveryLogic.ts\" -Destination \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useApplicationDiscoveryLogic.ts\" -Force)",
+      "Bash(Copy-Item -Path 'C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useExchangeDiscoveryLogic.ts' -Destination 'D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useExchangeDiscoveryLogic.ts' -Force)",
+      "Bash(Copy-Item -Path \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useFileSystemDiscoveryLogic.ts\" -Destination \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useFileSystemDiscoveryLogic.ts\" -Force)",
+      "Bash(Select-Object -Last 15)",
+      "Bash(npx tsc:*)",
+      "Bash(Copy-Item -Path \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\components\\organisms\\Sidebar.tsx\" -Destination \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\components\\organisms\\Sidebar.tsx\" -Force)"
     ],
     "deny": [],
     "ask": [],

@@ -26,6 +26,48 @@ import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { getElectronAPI } from '../lib/electron-api-fallback';
 import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 
+/**
+ * Parse PowerShell date objects into JavaScript Date objects
+ * PowerShell serializes dates as complex objects with DateTime property
+ */
+const parsePowerShellDate = (dateObj: any): Date | undefined => {
+  if (!dateObj) {
+    console.log('[parsePowerShellDate] Received null/undefined');
+    return undefined;
+  }
+
+  // Handle PowerShell serialized date objects with DateTime property
+  if (dateObj.DateTime) {
+    console.log('[parsePowerShellDate] Using DateTime property:', dateObj.DateTime);
+    return new Date(dateObj.DateTime);
+  }
+
+  // Handle Microsoft JSON date format /Date(timestamp)/
+  if (dateObj.value && typeof dateObj.value === 'string' && dateObj.value.startsWith('/Date(')) {
+    const timestamp = dateObj.value.match(/\/Date\((\d+)\)\//)?.[1];
+    console.log('[parsePowerShellDate] Using /Date() timestamp:', timestamp);
+    return timestamp ? new Date(parseInt(timestamp)) : undefined;
+  }
+
+  // Handle ISO date strings directly
+  if (typeof dateObj === 'string') {
+    console.log('[parsePowerShellDate] Using ISO string:', dateObj);
+    try {
+      return new Date(dateObj);
+    } catch {
+      return undefined;
+    }
+  }
+
+  // Fallback for direct date objects
+  console.log('[parsePowerShellDate] Using direct date object conversion');
+  try {
+    return new Date(dateObj);
+  } catch {
+    return undefined;
+  }
+};
+
 export function useExchangeDiscoveryLogic() {
   // Get selected company profile from store
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
@@ -161,6 +203,21 @@ export function useExchangeDiscoveryLogic() {
           mailContacts: mailContacts.length
         });
 
+        // DEBUG: Log data samples and column field verification
+        console.log('[ExchangeDiscoveryHook] ========== DEBUG DATA VERIFICATION ==========');
+        console.log('[ExchangeDiscoveryHook] PowerShell return keys:', Object.keys(psReturnValue || {}));
+        if (mailboxes.length > 0) {
+          console.log('[ExchangeDiscoveryHook] First mailbox sample:', mailboxes[0]);
+          console.log('[ExchangeDiscoveryHook] First mailbox keys:', Object.keys(mailboxes[0]));
+        }
+        if (distributionGroups.length > 0) {
+          console.log('[ExchangeDiscoveryHook] First group sample:', distributionGroups[0]);
+          console.log('[ExchangeDiscoveryHook] First group keys:', Object.keys(distributionGroups[0]));
+        }
+        console.log('[ExchangeDiscoveryHook] Mailbox column fields:', mailboxColumns.map(c => c.field));
+        console.log('[ExchangeDiscoveryHook] Group column fields:', groupColumns.map(c => c.field));
+        console.log('[ExchangeDiscoveryHook] ========================================');
+
         // Build the ExchangeDiscoveryResult with all required properties
         const exchangeResult: ExchangeDiscoveryResult = {
           // Required metadata properties
@@ -168,9 +225,9 @@ export function useExchangeDiscoveryLogic() {
           discoveredBy: 'ExchangeDiscovery',
           environment: 'Online',
 
-          // Timing properties
-          startTime: psReturnValue?.startTime ? new Date(psReturnValue.startTime) : new Date(),
-          endTime: psReturnValue?.endTime ? new Date(psReturnValue.endTime) : undefined,
+          // Timing properties - use parsePowerShellDate to handle complex date objects
+          startTime: parsePowerShellDate(psReturnValue?.startTime) || new Date(),
+          endTime: parsePowerShellDate(psReturnValue?.endTime),
           duration: psReturnValue?.duration || 0,
           status: 'completed',
 
@@ -543,7 +600,7 @@ export function useExchangeDiscoveryLogic() {
   const mailboxColumns = useMemo<ColDef<ExchangeMailbox>[]>(
     () => [
       {
-        field: 'displayName',
+        field: 'DisplayName', // ✅ PascalCase to match PowerShell output
         headerName: 'Display Name',
         sortable: true,
         filter: true,
@@ -551,28 +608,28 @@ export function useExchangeDiscoveryLogic() {
         width: 200,
       },
       {
-        field: 'userPrincipalName',
+        field: 'UserPrincipalName', // ✅ PascalCase
         headerName: 'UPN',
         sortable: true,
         filter: true,
         width: 250,
       },
       {
-        field: 'primarySmtpAddress',
+        field: 'PrimarySmtpAddress', // ✅ PascalCase
         headerName: 'Email',
         sortable: true,
         filter: true,
         width: 250,
       },
       {
-        field: 'mailboxType',
+        field: 'MailboxType', // ✅ PascalCase
         headerName: 'Type',
         sortable: true,
         filter: true,
         width: 150,
       },
       {
-        field: 'totalItemSize',
+        field: 'TotalItemSize', // ✅ PascalCase
         headerName: 'Size (MB)',
         sortable: true,
         filter: 'agNumberColumnFilter',
@@ -584,7 +641,7 @@ export function useExchangeDiscoveryLogic() {
         width: 120,
       },
       {
-        field: 'itemCount',
+        field: 'ItemCount', // ✅ PascalCase
         headerName: 'Item Count',
         sortable: true,
         filter: 'agNumberColumnFilter',
@@ -596,7 +653,7 @@ export function useExchangeDiscoveryLogic() {
         width: 120,
       },
       {
-        field: 'archiveEnabled',
+        field: 'ArchiveEnabled', // ✅ PascalCase
         headerName: 'Archive',
         sortable: true,
         filter: true,
@@ -604,7 +661,7 @@ export function useExchangeDiscoveryLogic() {
         width: 100,
       },
       {
-        field: 'litigationHoldEnabled',
+        field: 'LitigationHoldEnabled', // ✅ PascalCase
         headerName: 'Litigation Hold',
         sortable: true,
         filter: true,
@@ -612,7 +669,7 @@ export function useExchangeDiscoveryLogic() {
         width: 140,
       },
       {
-        field: 'isInactive',
+        field: 'IsInactive', // ✅ PascalCase
         headerName: 'Status',
         sortable: true,
         filter: true,
@@ -620,12 +677,22 @@ export function useExchangeDiscoveryLogic() {
         width: 100,
       },
       {
-        field: 'lastLogonTime',
+        field: 'LastLogonTime', // ✅ PascalCase
         headerName: 'Last Logon',
         sortable: true,
         filter: 'agDateColumnFilter',
-        valueFormatter: (params) =>
-          params.value ? new Date(params.value).toLocaleDateString() : 'Never',
+        valueFormatter: (params) => {
+          if (!params.value) return 'Never';
+          // Handle PowerShell date format
+          if (params.value.value && params.value.value.startsWith('/Date(')) {
+            const ts = params.value.value.match(/\/Date\((\d+)\)\//)?.[1];
+            return ts ? new Date(parseInt(ts)).toLocaleDateString() : 'Invalid';
+          }
+          if (params.value.DateTime) {
+            return new Date(params.value.DateTime).toLocaleDateString();
+          }
+          return new Date(params.value).toLocaleDateString();
+        },
         width: 120,
       },
     ],
@@ -635,7 +702,7 @@ export function useExchangeDiscoveryLogic() {
   const groupColumns = useMemo<ColDef<ExchangeDistributionGroup>[]>(
     () => [
       {
-        field: 'displayName',
+        field: 'DisplayName', // ✅ PascalCase to match PowerShell output
         headerName: 'Display Name',
         sortable: true,
         filter: true,
@@ -643,28 +710,28 @@ export function useExchangeDiscoveryLogic() {
         width: 200,
       },
       {
-        field: 'primarySmtpAddress',
+        field: 'PrimarySmtpAddress', // ✅ PascalCase
         headerName: 'Email',
         sortable: true,
         filter: true,
         width: 250,
       },
       {
-        field: 'groupType',
+        field: 'GroupType', // ✅ PascalCase
         headerName: 'Type',
         sortable: true,
         filter: true,
         width: 120,
       },
       {
-        field: 'memberCount',
+        field: 'MemberCount', // ✅ PascalCase
         headerName: 'Members',
         sortable: true,
         filter: 'agNumberColumnFilter',
         width: 100,
       },
       {
-        field: 'moderationEnabled',
+        field: 'ModerationEnabled', // ✅ PascalCase
         headerName: 'Moderation',
         sortable: true,
         filter: true,
@@ -672,7 +739,7 @@ export function useExchangeDiscoveryLogic() {
         width: 120,
       },
       {
-        field: 'hiddenFromAddressListsEnabled',
+        field: 'HiddenFromAddressListsEnabled', // ✅ PascalCase
         headerName: 'Hidden',
         sortable: true,
         filter: true,
@@ -680,11 +747,22 @@ export function useExchangeDiscoveryLogic() {
         width: 100,
       },
       {
-        field: 'whenCreated',
+        field: 'WhenCreated', // ✅ PascalCase
         headerName: 'Created',
         sortable: true,
         filter: 'agDateColumnFilter',
-        valueFormatter: (params) => new Date(params.value).toLocaleDateString(),
+        valueFormatter: (params) => {
+          if (!params.value) return 'N/A';
+          // Handle PowerShell date format
+          if (params.value.value && params.value.value.startsWith('/Date(')) {
+            const ts = params.value.value.match(/\/Date\((\d+)\)\//)?.[1];
+            return ts ? new Date(parseInt(ts)).toLocaleDateString() : 'Invalid';
+          }
+          if (params.value.DateTime) {
+            return new Date(params.value.DateTime).toLocaleDateString();
+          }
+          return new Date(params.value).toLocaleDateString();
+        },
         width: 120,
       },
     ],
@@ -694,7 +772,7 @@ export function useExchangeDiscoveryLogic() {
   const ruleColumns = useMemo<ColDef<ExchangeTransportRule>[]>(
     () => [
       {
-        field: 'name',
+        field: 'Name', // ✅ PascalCase to match PowerShell output
         headerName: 'Rule Name',
         sortable: true,
         filter: true,
@@ -702,47 +780,69 @@ export function useExchangeDiscoveryLogic() {
         width: 250,
       },
       {
-        field: 'description',
+        field: 'Description', // ✅ PascalCase
         headerName: 'Description',
         sortable: true,
         filter: true,
         width: 300,
       },
       {
-        field: 'priority',
+        field: 'Priority', // ✅ PascalCase
         headerName: 'Priority',
         sortable: true,
         filter: 'agNumberColumnFilter',
         width: 100,
       },
       {
-        field: 'state',
+        field: 'State', // ✅ PascalCase
         headerName: 'State',
         sortable: true,
         filter: true,
         width: 100,
       },
       {
-        field: 'createdBy',
+        field: 'CreatedBy', // ✅ PascalCase
         headerName: 'Created By',
         sortable: true,
         filter: true,
         width: 150,
       },
       {
-        field: 'createdDate',
+        field: 'CreatedDate', // ✅ PascalCase
         headerName: 'Created',
         sortable: true,
         filter: 'agDateColumnFilter',
-        valueFormatter: (params) => new Date(params.value).toLocaleDateString(),
+        valueFormatter: (params) => {
+          if (!params.value) return 'N/A';
+          // Handle PowerShell date format
+          if (params.value.value && params.value.value.startsWith('/Date(')) {
+            const ts = params.value.value.match(/\/Date\((\d+)\)\//)?.[1];
+            return ts ? new Date(parseInt(ts)).toLocaleDateString() : 'Invalid';
+          }
+          if (params.value.DateTime) {
+            return new Date(params.value.DateTime).toLocaleDateString();
+          }
+          return new Date(params.value).toLocaleDateString();
+        },
         width: 120,
       },
       {
-        field: 'modifiedDate',
+        field: 'ModifiedDate', // ✅ PascalCase
         headerName: 'Modified',
         sortable: true,
         filter: 'agDateColumnFilter',
-        valueFormatter: (params) => new Date(params.value).toLocaleDateString(),
+        valueFormatter: (params) => {
+          if (!params.value) return 'N/A';
+          // Handle PowerShell date format
+          if (params.value.value && params.value.value.startsWith('/Date(')) {
+            const ts = params.value.value.match(/\/Date\((\d+)\)\//)?.[1];
+            return ts ? new Date(parseInt(ts)).toLocaleDateString() : 'Invalid';
+          }
+          if (params.value.DateTime) {
+            return new Date(params.value.DateTime).toLocaleDateString();
+          }
+          return new Date(params.value).toLocaleDateString();
+        },
         width: 120,
       },
     ],

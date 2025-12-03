@@ -94,6 +94,12 @@ export interface LargeFile {
 }
 
 export interface StorageStatistics {
+  // Raw PowerShell values (for View compatibility)
+  totalSizeMB?: number;
+  totalPermissions?: number;
+  highRiskPermissions?: number;
+  averageFileSizeMB?: number;
+  // Converted values
   totalShares: number;
   totalStorage: {
     bytes: number;

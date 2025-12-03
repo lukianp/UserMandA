@@ -24,7 +24,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Full width button */
   fullWidth?: boolean;
   /** Children content */
-  children: React.ReactNode;
+  children?: React.ReactNode;
   /** Data attribute for Cypress testing */
   'data-cy'?: string;
 }

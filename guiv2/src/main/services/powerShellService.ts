@@ -928,6 +928,9 @@ class PowerShellExecutionService extends EventEmitter {
       // Build PowerShell command to import module and call function
       const paramsJson = JSON.stringify(params);
 
+      // Create a temp file for result output (used when showWindow is enabled)
+      const resultFile = path.join(process.env.TEMP || '/tmp', `ps_result_${crypto.randomUUID()}.json`);
+
       // If showWindow is enabled, create a user-friendly visible script
       const command = options.showWindow ? `
         # Discovery Module Execution Window
@@ -994,12 +997,24 @@ class PowerShellExecutionService extends EventEmitter {
             Write-Host 'Discovery Complete!' -ForegroundColor Green
             Write-Host '========================================' -ForegroundColor Green
 
-            # Output minimal JSON for compatibility
+            # Write result to temp file for Node.js to read
+            $resultFile = '${resultFile.replace(/\\/g, '\\\\')}'
+            Write-Host "Writing result to: $resultFile" -ForegroundColor Cyan
+
+            if ($null -eq $result) {
+              @{Success=$true} | ConvertTo-Json -Depth 20 | Out-File -FilePath $resultFile -Encoding UTF8
+            } else {
+              $result | ConvertTo-Json -Depth 20 | Out-File -FilePath $resultFile -Encoding UTF8
+            }
+
+            Write-Host 'Result written successfully!' -ForegroundColor Green
+
+            # Also output to stdout for compatibility (though it won't be captured)
             Write-Output "<<<JSON_RESULT_START>>>"
             if ($null -eq $result) {
               @{Success=$true} | ConvertTo-Json -Compress
             } else {
-              $result | ConvertTo-Json -Depth 10 -Compress
+              $result | ConvertTo-Json -Depth 20 -Compress
             }
             Write-Output "<<<JSON_RESULT_END>>>"
 
@@ -1012,6 +1027,14 @@ class PowerShellExecutionService extends EventEmitter {
             Write-Host 'Discovery Failed!' -ForegroundColor Red
             Write-Host "Error: $_" -ForegroundColor Red
             Write-Host '========================================' -ForegroundColor Red
+
+            # Write error to result file
+            $resultFile = '${resultFile.replace(/\\/g, '\\\\')}'
+            @{
+              Success = $false
+              Error = $_.Exception.Message
+              StackTrace = $_.ScriptStackTrace
+            } | ConvertTo-Json -Depth 5 | Out-File -FilePath $resultFile -Encoding UTF8
 
             Write-Host ''
             Write-Host 'Press any key to close this window...' -ForegroundColor Yellow
@@ -1066,7 +1089,7 @@ class PowerShellExecutionService extends EventEmitter {
         if ($null -eq $result) {
           @{} | ConvertTo-Json -Compress
         } else {
-          $result | ConvertTo-Json -Depth 10 -Compress
+          $result | ConvertTo-Json -Depth 20 -Compress
         }
         Write-Output "<<<JSON_RESULT_END>>>"
       `;
@@ -1080,10 +1103,61 @@ class PowerShellExecutionService extends EventEmitter {
       // Execute the script
       const result = await this.executeScript(tempScript, [], options);
 
-      // Clean up temp file
-      await fs.unlink(tempScript).catch(() => {});
+      // If showWindow is enabled, read result from temp file instead of relying on stdout
+      if (options.showWindow) {
+        console.log(`[PowerShellService.executeModule] Reading result from file: ${resultFile}`);
+        try {
+          // Wait a moment for the file to be written
+          await new Promise(resolve => setTimeout(resolve, 500));
 
-      return result;
+          // Check if file exists
+          const fileExists = await fs.access(resultFile).then(() => true).catch(() => false);
+
+          if (fileExists) {
+            let fileContent = await fs.readFile(resultFile, 'utf-8');
+            console.log(`[PowerShellService.executeModule] Read ${fileContent.length} bytes from result file`);
+
+            // Strip BOM if present (PowerShell Out-File -Encoding UTF8 adds BOM)
+            if (fileContent.charCodeAt(0) === 0xFEFF) {
+              fileContent = fileContent.substring(1);
+              console.log(`[PowerShellService.executeModule] Stripped BOM from file content`);
+            }
+
+            const fileData = JSON.parse(fileContent);
+
+            // Clean up temp files
+            await fs.unlink(tempScript).catch(() => {});
+            await fs.unlink(resultFile).catch(() => {});
+
+            // Return the result from file
+            return {
+              success: fileData.Success !== false,
+              data: fileData,
+              duration: result.duration,
+              warnings: result.warnings || [],
+              stdout: result.stdout,
+              stderr: result.stderr,
+              exitCode: result.exitCode,
+            };
+          } else {
+            console.warn(`[PowerShellService.executeModule] Result file not found: ${resultFile}`);
+            // Fall back to stdout result
+            await fs.unlink(tempScript).catch(() => {});
+            return result;
+          }
+        } catch (error: any) {
+          console.error(`[PowerShellService.executeModule] Error reading result file: ${error.message}`);
+          // Clean up temp files
+          await fs.unlink(tempScript).catch(() => {});
+          await fs.unlink(resultFile).catch(() => {});
+          // Fall back to stdout result
+          return result;
+        }
+      } else {
+        // Clean up temp script only (no result file in hidden mode)
+        await fs.unlink(tempScript).catch(() => {});
+        return result;
+      }
     } catch (error: any) {
       return {
         success: false,

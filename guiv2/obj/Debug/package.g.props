@@ -1,0 +1,146 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <PackageJsonName Condition="$(PackageJsonName) == ''">guiv2</PackageJsonName>
+    <PackageJsonProductname Condition="$(PackageJsonProductname) == ''">guiv2</PackageJsonProductname>
+    <PackageJsonVersion Condition="$(PackageJsonVersion) == ''">1.0.0</PackageJsonVersion>
+    <PackageJsonDescription Condition="$(PackageJsonDescription) == ''">My Electron application description</PackageJsonDescription>
+    <PackageJsonMain Condition="$(PackageJsonMain) == ''">.webpack/main</PackageJsonMain>
+    <PackageJsonSideeffects Condition="$(PackageJsonSideeffects) == ''">[
+  "*.css",
+  "*.scss",
+  "./src/index.css",
+  "./src/renderer/index.css"
+]</PackageJsonSideeffects>
+    <PackageJsonScriptsBuild Condition="$(PackageJsonScriptsBuild) == ''">webpack --config webpack.main.config.js --mode=production --output-path=.webpack/main</PackageJsonScriptsBuild>
+    <PackageJsonScriptsStart Condition="$(PackageJsonScriptsStart) == ''">electron .webpack/main/main.js</PackageJsonScriptsStart>
+    <PackageJsonScriptsDev Condition="$(PackageJsonScriptsDev) == ''">npm run build &amp;&amp; npm run start</PackageJsonScriptsDev>
+    <PackageJsonScriptsTestUnit Condition="$(PackageJsonScriptsTestUnit) == ''">jest --testPathPatterns="src.*\.(test|spec)\.(ts|tsx)$"</PackageJsonScriptsTestUnit>
+    <PackageJsonScriptsTestUnitWatch Condition="$(PackageJsonScriptsTestUnitWatch) == ''">jest --watch --testPathPatterns="src.*\.(test|spec)\.(ts|tsx)$"</PackageJsonScriptsTestUnitWatch>
+    <PackageJsonScriptsTestUnitCoverage Condition="$(PackageJsonScriptsTestUnitCoverage) == ''">jest --coverage --testPathPatterns="src.*\.(test|spec)\.(ts|tsx)$"</PackageJsonScriptsTestUnitCoverage>
+    <PackageJsonScriptsTestE2e Condition="$(PackageJsonScriptsTestE2e) == ''">playwright test</PackageJsonScriptsTestE2e>
+    <PackageJsonScriptsTestE2eHeaded Condition="$(PackageJsonScriptsTestE2eHeaded) == ''">playwright test --headed</PackageJsonScriptsTestE2eHeaded>
+    <PackageJsonScriptsTestUnitDebug Condition="$(PackageJsonScriptsTestUnitDebug) == ''">node --inspect-brk node_modules/.bin/jest --runInBand --testPathPattern='src.*\.(test|spec)\.(ts|tsx)$'</PackageJsonScriptsTestUnitDebug>
+    <PackageJsonKeywords Condition="$(PackageJsonKeywords) == ''">[]</PackageJsonKeywords>
+    <PackageJsonAuthorName Condition="$(PackageJsonAuthorName) == ''">Lukian Poleschtschuk</PackageJsonAuthorName>
+    <PackageJsonAuthorEmail Condition="$(PackageJsonAuthorEmail) == ''">lukianp@hotmail.com</PackageJsonAuthorEmail>
+    <PackageJsonLicense Condition="$(PackageJsonLicense) == ''">MIT</PackageJsonLicense>
+    <PackageJsonEnginesNode Condition="$(PackageJsonEnginesNode) == ''">&gt;=20.17.0</PackageJsonEnginesNode>
+    <PackageJsonPackagemanager Condition="$(PackageJsonPackagemanager) == ''">npm@10.8.2</PackageJsonPackagemanager>
+    <PackageJsonDevdependenciesBabelCore Condition="$(PackageJsonDevdependenciesBabelCore) == ''">^7.28.5</PackageJsonDevdependenciesBabelCore>
+    <PackageJsonDevdependenciesBabelPluginProposalClassProperties Condition="$(PackageJsonDevdependenciesBabelPluginProposalClassProperties) == ''">^7.18.6</PackageJsonDevdependenciesBabelPluginProposalClassProperties>
+    <PackageJsonDevdependenciesBabelPluginTransformRuntime Condition="$(PackageJsonDevdependenciesBabelPluginTransformRuntime) == ''">^7.28.3</PackageJsonDevdependenciesBabelPluginTransformRuntime>
+    <PackageJsonDevdependenciesBabelPresetEnv Condition="$(PackageJsonDevdependenciesBabelPresetEnv) == ''">^7.28.3</PackageJsonDevdependenciesBabelPresetEnv>
+    <PackageJsonDevdependenciesBabelPresetReact Condition="$(PackageJsonDevdependenciesBabelPresetReact) == ''">^7.27.1</PackageJsonDevdependenciesBabelPresetReact>
+    <PackageJsonDevdependenciesBabelPresetTypescript Condition="$(PackageJsonDevdependenciesBabelPresetTypescript) == ''">^7.27.1</PackageJsonDevdependenciesBabelPresetTypescript>
+    <PackageJsonDevdependenciesElectronForgeCli Condition="$(PackageJsonDevdependenciesElectronForgeCli) == ''">^7.8.3</PackageJsonDevdependenciesElectronForgeCli>
+    <PackageJsonDevdependenciesElectronForgeMakerDeb Condition="$(PackageJsonDevdependenciesElectronForgeMakerDeb) == ''">^7.9.0</PackageJsonDevdependenciesElectronForgeMakerDeb>
+    <PackageJsonDevdependenciesElectronForgeMakerRpm Condition="$(PackageJsonDevdependenciesElectronForgeMakerRpm) == ''">^7.9.0</PackageJsonDevdependenciesElectronForgeMakerRpm>
+    <PackageJsonDevdependenciesElectronForgeMakerSquirrel Condition="$(PackageJsonDevdependenciesElectronForgeMakerSquirrel) == ''">^7.9.0</PackageJsonDevdependenciesElectronForgeMakerSquirrel>
+    <PackageJsonDevdependenciesElectronForgeMakerZip Condition="$(PackageJsonDevdependenciesElectronForgeMakerZip) == ''">^7.9.0</PackageJsonDevdependenciesElectronForgeMakerZip>
+    <PackageJsonDevdependenciesElectronForgePluginAutoUnpackNatives Condition="$(PackageJsonDevdependenciesElectronForgePluginAutoUnpackNatives) == ''">^7.9.0</PackageJsonDevdependenciesElectronForgePluginAutoUnpackNatives>
+    <PackageJsonDevdependenciesElectronForgePluginFuses Condition="$(PackageJsonDevdependenciesElectronForgePluginFuses) == ''">^7.9.0</PackageJsonDevdependenciesElectronForgePluginFuses>
+    <PackageJsonDevdependenciesElectronForgePluginWebpack Condition="$(PackageJsonDevdependenciesElectronForgePluginWebpack) == ''">^7.10.2</PackageJsonDevdependenciesElectronForgePluginWebpack>
+    <PackageJsonDevdependenciesElectronFuses Condition="$(PackageJsonDevdependenciesElectronFuses) == ''">^1.8.0</PackageJsonDevdependenciesElectronFuses>
+    <PackageJsonDevdependenciesFakerJsFaker Condition="$(PackageJsonDevdependenciesFakerJsFaker) == ''">^10.1.0</PackageJsonDevdependenciesFakerJsFaker>
+    <PackageJsonDevdependenciesPlaywrightTest Condition="$(PackageJsonDevdependenciesPlaywrightTest) == ''">^1.55.1</PackageJsonDevdependenciesPlaywrightTest>
+    <PackageJsonDevdependenciesTailwindcssForms Condition="$(PackageJsonDevdependenciesTailwindcssForms) == ''">^0.5.10</PackageJsonDevdependenciesTailwindcssForms>
+    <PackageJsonDevdependenciesTailwindcssTypography Condition="$(PackageJsonDevdependenciesTailwindcssTypography) == ''">^0.5.19</PackageJsonDevdependenciesTailwindcssTypography>
+    <PackageJsonDevdependenciesTestingLibraryJestDom Condition="$(PackageJsonDevdependenciesTestingLibraryJestDom) == ''">^6.9.1</PackageJsonDevdependenciesTestingLibraryJestDom>
+    <PackageJsonDevdependenciesTestingLibraryReact Condition="$(PackageJsonDevdependenciesTestingLibraryReact) == ''">^16.3.0</PackageJsonDevdependenciesTestingLibraryReact>
+    <PackageJsonDevdependenciesTestingLibraryUserEvent Condition="$(PackageJsonDevdependenciesTestingLibraryUserEvent) == ''">^14.6.1</PackageJsonDevdependenciesTestingLibraryUserEvent>
+    <PackageJsonDevdependenciesTypesJest Condition="$(PackageJsonDevdependenciesTypesJest) == ''">^30.0.0</PackageJsonDevdependenciesTypesJest>
+    <PackageJsonDevdependenciesTypesNode Condition="$(PackageJsonDevdependenciesTypesNode) == ''">^22.18.10</PackageJsonDevdependenciesTypesNode>
+    <PackageJsonDevdependenciesTypesPapaparse Condition="$(PackageJsonDevdependenciesTypesPapaparse) == ''">^5.3.16</PackageJsonDevdependenciesTypesPapaparse>
+    <PackageJsonDevdependenciesTypesReact Condition="$(PackageJsonDevdependenciesTypesReact) == ''">^18.3.26</PackageJsonDevdependenciesTypesReact>
+    <PackageJsonDevdependenciesTypesReactDnd Condition="$(PackageJsonDevdependenciesTypesReactDnd) == ''">^3.0.2</PackageJsonDevdependenciesTypesReactDnd>
+    <PackageJsonDevdependenciesTypesReactRouterDom Condition="$(PackageJsonDevdependenciesTypesReactRouterDom) == ''">^5.3.3</PackageJsonDevdependenciesTypesReactRouterDom>
+    <PackageJsonDevdependenciesTypescriptEslintEslintPlugin Condition="$(PackageJsonDevdependenciesTypescriptEslintEslintPlugin) == ''">^5.62.0</PackageJsonDevdependenciesTypescriptEslintEslintPlugin>
+    <PackageJsonDevdependenciesTypescriptEslintParser Condition="$(PackageJsonDevdependenciesTypescriptEslintParser) == ''">^5.62.0</PackageJsonDevdependenciesTypescriptEslintParser>
+    <PackageJsonDevdependenciesVercelWebpackAssetRelocatorLoader Condition="$(PackageJsonDevdependenciesVercelWebpackAssetRelocatorLoader) == ''">^1.7.3</PackageJsonDevdependenciesVercelWebpackAssetRelocatorLoader>
+    <PackageJsonDevdependenciesAssert Condition="$(PackageJsonDevdependenciesAssert) == ''">^2.1.0</PackageJsonDevdependenciesAssert>
+    <PackageJsonDevdependenciesAutoprefixer Condition="$(PackageJsonDevdependenciesAutoprefixer) == ''">^10.4.20</PackageJsonDevdependenciesAutoprefixer>
+    <PackageJsonDevdependenciesAxeCore Condition="$(PackageJsonDevdependenciesAxeCore) == ''">^4.11.0</PackageJsonDevdependenciesAxeCore>
+    <PackageJsonDevdependenciesBabelJest Condition="$(PackageJsonDevdependenciesBabelJest) == ''">^30.2.0</PackageJsonDevdependenciesBabelJest>
+    <PackageJsonDevdependenciesBuffer Condition="$(PackageJsonDevdependenciesBuffer) == ''">^6.0.3</PackageJsonDevdependenciesBuffer>
+    <PackageJsonDevdependenciesBundlewatch Condition="$(PackageJsonDevdependenciesBundlewatch) == ''">^0.4.1</PackageJsonDevdependenciesBundlewatch>
+    <PackageJsonDevdependenciesCompressionWebpackPlugin Condition="$(PackageJsonDevdependenciesCompressionWebpackPlugin) == ''">^11.1.0</PackageJsonDevdependenciesCompressionWebpackPlugin>
+    <PackageJsonDevdependenciesConstantsBrowserify Condition="$(PackageJsonDevdependenciesConstantsBrowserify) == ''">^1.0.0</PackageJsonDevdependenciesConstantsBrowserify>
+    <PackageJsonDevdependenciesCrossEnv Condition="$(PackageJsonDevdependenciesCrossEnv) == ''">^10.1.0</PackageJsonDevdependenciesCrossEnv>
+    <PackageJsonDevdependenciesCryptoBrowserify Condition="$(PackageJsonDevdependenciesCryptoBrowserify) == ''">^3.12.1</PackageJsonDevdependenciesCryptoBrowserify>
+    <PackageJsonDevdependenciesCspHtmlWebpackPlugin Condition="$(PackageJsonDevdependenciesCspHtmlWebpackPlugin) == ''">^5.1.0</PackageJsonDevdependenciesCspHtmlWebpackPlugin>
+    <PackageJsonDevdependenciesCssLoader Condition="$(PackageJsonDevdependenciesCssLoader) == ''">^6.11.0</PackageJsonDevdependenciesCssLoader>
+    <PackageJsonDevdependenciesCssMinimizerWebpackPlugin Condition="$(PackageJsonDevdependenciesCssMinimizerWebpackPlugin) == ''">^7.0.2</PackageJsonDevdependenciesCssMinimizerWebpackPlugin>
+    <PackageJsonDevdependenciesElectron Condition="$(PackageJsonDevdependenciesElectron) == ''">^38.3.0</PackageJsonDevdependenciesElectron>
+    <PackageJsonDevdependenciesElectronPrebuiltCompile Condition="$(PackageJsonDevdependenciesElectronPrebuiltCompile) == ''">^1.3.2</PackageJsonDevdependenciesElectronPrebuiltCompile>
+    <PackageJsonDevdependenciesEslint Condition="$(PackageJsonDevdependenciesEslint) == ''">^8.57.1</PackageJsonDevdependenciesEslint>
+    <PackageJsonDevdependenciesEslintImportResolverTypescript Condition="$(PackageJsonDevdependenciesEslintImportResolverTypescript) == ''">^3.6.1</PackageJsonDevdependenciesEslintImportResolverTypescript>
+    <PackageJsonDevdependenciesEslintPluginImport Condition="$(PackageJsonDevdependenciesEslintPluginImport) == ''">^2.32.0</PackageJsonDevdependenciesEslintPluginImport>
+    <PackageJsonDevdependenciesEslintPluginJsxA11y Condition="$(PackageJsonDevdependenciesEslintPluginJsxA11y) == ''">^6.10.2</PackageJsonDevdependenciesEslintPluginJsxA11y>
+    <PackageJsonDevdependenciesEslintPluginReact Condition="$(PackageJsonDevdependenciesEslintPluginReact) == ''">^7.37.5</PackageJsonDevdependenciesEslintPluginReact>
+    <PackageJsonDevdependenciesEslintPluginReactHooks Condition="$(PackageJsonDevdependenciesEslintPluginReactHooks) == ''">^7.0.0</PackageJsonDevdependenciesEslintPluginReactHooks>
+    <PackageJsonDevdependenciesForkTsCheckerWebpackPlugin Condition="$(PackageJsonDevdependenciesForkTsCheckerWebpackPlugin) == ''">^7.3.0</PackageJsonDevdependenciesForkTsCheckerWebpackPlugin>
+    <PackageJsonDevdependenciesHttpServer Condition="$(PackageJsonDevdependenciesHttpServer) == ''">^14.1.1</PackageJsonDevdependenciesHttpServer>
+    <PackageJsonDevdependenciesIdentityObjProxy Condition="$(PackageJsonDevdependenciesIdentityObjProxy) == ''">^3.0.0</PackageJsonDevdependenciesIdentityObjProxy>
+    <PackageJsonDevdependenciesJest Condition="$(PackageJsonDevdependenciesJest) == ''">^30.2.0</PackageJsonDevdependenciesJest>
+    <PackageJsonDevdependenciesJestAxe Condition="$(PackageJsonDevdependenciesJestAxe) == ''">^10.0.0</PackageJsonDevdependenciesJestAxe>
+    <PackageJsonDevdependenciesJestEnvironmentJsdom Condition="$(PackageJsonDevdependenciesJestEnvironmentJsdom) == ''">^30.2.0</PackageJsonDevdependenciesJestEnvironmentJsdom>
+    <PackageJsonDevdependenciesNodeLoader Condition="$(PackageJsonDevdependenciesNodeLoader) == ''">^2.1.0</PackageJsonDevdependenciesNodeLoader>
+    <PackageJsonDevdependenciesOsBrowserify Condition="$(PackageJsonDevdependenciesOsBrowserify) == ''">^0.3.0</PackageJsonDevdependenciesOsBrowserify>
+    <PackageJsonDevdependenciesPathBrowserify Condition="$(PackageJsonDevdependenciesPathBrowserify) == ''">^1.0.1</PackageJsonDevdependenciesPathBrowserify>
+    <PackageJsonDevdependenciesPostcss Condition="$(PackageJsonDevdependenciesPostcss) == ''">^8.4.47</PackageJsonDevdependenciesPostcss>
+    <PackageJsonDevdependenciesPostcssLoader Condition="$(PackageJsonDevdependenciesPostcssLoader) == ''">^8.2.0</PackageJsonDevdependenciesPostcssLoader>
+    <PackageJsonDevdependenciesQuerystringEs3 Condition="$(PackageJsonDevdependenciesQuerystringEs3) == ''">^0.2.1</PackageJsonDevdependenciesQuerystringEs3>
+    <PackageJsonDevdependenciesRimraf Condition="$(PackageJsonDevdependenciesRimraf) == ''">^6.0.1</PackageJsonDevdependenciesRimraf>
+    <PackageJsonDevdependenciesSourceMapExplorer Condition="$(PackageJsonDevdependenciesSourceMapExplorer) == ''">^2.5.3</PackageJsonDevdependenciesSourceMapExplorer>
+    <PackageJsonDevdependenciesStreamBrowserify Condition="$(PackageJsonDevdependenciesStreamBrowserify) == ''">^3.0.0</PackageJsonDevdependenciesStreamBrowserify>
+    <PackageJsonDevdependenciesStyleLoader Condition="$(PackageJsonDevdependenciesStyleLoader) == ''">^3.3.4</PackageJsonDevdependenciesStyleLoader>
+    <PackageJsonDevdependenciesTailwindcss Condition="$(PackageJsonDevdependenciesTailwindcss) == ''">^3.4.14</PackageJsonDevdependenciesTailwindcss>
+    <PackageJsonDevdependenciesTerserWebpackPlugin Condition="$(PackageJsonDevdependenciesTerserWebpackPlugin) == ''">^5.3.14</PackageJsonDevdependenciesTerserWebpackPlugin>
+    <PackageJsonDevdependenciesTsJest Condition="$(PackageJsonDevdependenciesTsJest) == ''">^29.4.4</PackageJsonDevdependenciesTsJest>
+    <PackageJsonDevdependenciesTsLoader Condition="$(PackageJsonDevdependenciesTsLoader) == ''">^9.5.4</PackageJsonDevdependenciesTsLoader>
+    <PackageJsonDevdependenciesTypedoc Condition="$(PackageJsonDevdependenciesTypedoc) == ''">^0.28.13</PackageJsonDevdependenciesTypedoc>
+    <PackageJsonDevdependenciesTypescript Condition="$(PackageJsonDevdependenciesTypescript) == ''">~5.6.0</PackageJsonDevdependenciesTypescript>
+    <PackageJsonDevdependenciesUrl Condition="$(PackageJsonDevdependenciesUrl) == ''">^0.11.4</PackageJsonDevdependenciesUrl>
+    <PackageJsonDevdependenciesUtil Condition="$(PackageJsonDevdependenciesUtil) == ''">^0.12.5</PackageJsonDevdependenciesUtil>
+    <PackageJsonDevdependenciesVmBrowserify Condition="$(PackageJsonDevdependenciesVmBrowserify) == ''">^1.1.2</PackageJsonDevdependenciesVmBrowserify>
+    <PackageJsonDevdependenciesWebpackBundleAnalyzer Condition="$(PackageJsonDevdependenciesWebpackBundleAnalyzer) == ''">^4.10.2</PackageJsonDevdependenciesWebpackBundleAnalyzer>
+    <PackageJsonDevdependenciesWebpackCli Condition="$(PackageJsonDevdependenciesWebpackCli) == ''">^6.0.1</PackageJsonDevdependenciesWebpackCli>
+    <PackageJsonDevdependenciesWhatwgFetch Condition="$(PackageJsonDevdependenciesWhatwgFetch) == ''">^3.6.20</PackageJsonDevdependenciesWhatwgFetch>
+    <PackageJsonDependenciesHeadlessuiReact Condition="$(PackageJsonDependenciesHeadlessuiReact) == ''">^2.2.9</PackageJsonDependenciesHeadlessuiReact>
+    <PackageJsonDependenciesTestingLibraryDom Condition="$(PackageJsonDependenciesTestingLibraryDom) == ''">^10.4.1</PackageJsonDependenciesTestingLibraryDom>
+    <PackageJsonDependenciesTypesGlob Condition="$(PackageJsonDependenciesTypesGlob) == ''">^8.1.0</PackageJsonDependenciesTypesGlob>
+    <PackageJsonDependenciesTypesNodeCron Condition="$(PackageJsonDependenciesTypesNodeCron) == ''">^3.0.11</PackageJsonDependenciesTypesNodeCron>
+    <PackageJsonDependenciesTypesReactWindow Condition="$(PackageJsonDependenciesTypesReactWindow) == ''">^1.8.8</PackageJsonDependenciesTypesReactWindow>
+    <PackageJsonDependenciesAgGridCommunity Condition="$(PackageJsonDependenciesAgGridCommunity) == ''">^34.2.0</PackageJsonDependenciesAgGridCommunity>
+    <PackageJsonDependenciesAgGridEnterprise Condition="$(PackageJsonDependenciesAgGridEnterprise) == ''">^34.2.0</PackageJsonDependenciesAgGridEnterprise>
+    <PackageJsonDependenciesAgGridReact Condition="$(PackageJsonDependenciesAgGridReact) == ''">^34.2.0</PackageJsonDependenciesAgGridReact>
+    <PackageJsonDependenciesChokidar Condition="$(PackageJsonDependenciesChokidar) == ''">^4.0.3</PackageJsonDependenciesChokidar>
+    <PackageJsonDependenciesClsx Condition="$(PackageJsonDependenciesClsx) == ''">^2.1.1</PackageJsonDependenciesClsx>
+    <PackageJsonDependenciesDateFns Condition="$(PackageJsonDependenciesDateFns) == ''">^4.1.0</PackageJsonDependenciesDateFns>
+    <PackageJsonDependenciesElectronSquirrelStartup Condition="$(PackageJsonDependenciesElectronSquirrelStartup) == ''">^1.0.1</PackageJsonDependenciesElectronSquirrelStartup>
+    <PackageJsonDependenciesGlob Condition="$(PackageJsonDependenciesGlob) == ''">^11.0.3</PackageJsonDependenciesGlob>
+    <PackageJsonDependenciesImmer Condition="$(PackageJsonDependenciesImmer) == ''">^10.1.3</PackageJsonDependenciesImmer>
+    <PackageJsonDependenciesJspdf Condition="$(PackageJsonDependenciesJspdf) == ''">^3.0.3</PackageJsonDependenciesJspdf>
+    <PackageJsonDependenciesJspdfAutotable Condition="$(PackageJsonDependenciesJspdfAutotable) == ''">^5.0.2</PackageJsonDependenciesJspdfAutotable>
+    <PackageJsonDependenciesLowdb Condition="$(PackageJsonDependenciesLowdb) == ''">^7.0.1</PackageJsonDependenciesLowdb>
+    <PackageJsonDependenciesLucideReact Condition="$(PackageJsonDependenciesLucideReact) == ''">^0.544.0</PackageJsonDependenciesLucideReact>
+    <PackageJsonDependenciesNodeCron Condition="$(PackageJsonDependenciesNodeCron) == ''">^4.2.1</PackageJsonDependenciesNodeCron>
+    <PackageJsonDependenciesPapaparse Condition="$(PackageJsonDependenciesPapaparse) == ''">^5.5.3</PackageJsonDependenciesPapaparse>
+    <PackageJsonDependenciesReact Condition="$(PackageJsonDependenciesReact) == ''">^18.3.1</PackageJsonDependenciesReact>
+    <PackageJsonDependenciesReactContexify Condition="$(PackageJsonDependenciesReactContexify) == ''">^6.0.0</PackageJsonDependenciesReactContexify>
+    <PackageJsonDependenciesReactDnd Condition="$(PackageJsonDependenciesReactDnd) == ''">^16.0.1</PackageJsonDependenciesReactDnd>
+    <PackageJsonDependenciesReactDndHtml5Backend Condition="$(PackageJsonDependenciesReactDndHtml5Backend) == ''">^16.0.1</PackageJsonDependenciesReactDndHtml5Backend>
+    <PackageJsonDependenciesReactDom Condition="$(PackageJsonDependenciesReactDom) == ''">^18.3.1</PackageJsonDependenciesReactDom>
+    <PackageJsonDependenciesReactRouterDom Condition="$(PackageJsonDependenciesReactRouterDom) == ''">^7.9.3</PackageJsonDependenciesReactRouterDom>
+    <PackageJsonDependenciesReactVirtualizedAutoSizer Condition="$(PackageJsonDependenciesReactVirtualizedAutoSizer) == ''">^1.0.26</PackageJsonDependenciesReactVirtualizedAutoSizer>
+    <PackageJsonDependenciesReactWindow Condition="$(PackageJsonDependenciesReactWindow) == ''">^2.2.0</PackageJsonDependenciesReactWindow>
+    <PackageJsonDependenciesRecharts Condition="$(PackageJsonDependenciesRecharts) == ''">^3.2.1</PackageJsonDependenciesRecharts>
+    <PackageJsonDependenciesTailwindMerge Condition="$(PackageJsonDependenciesTailwindMerge) == ''">^3.3.1</PackageJsonDependenciesTailwindMerge>
+    <PackageJsonDependenciesWebVitals Condition="$(PackageJsonDependenciesWebVitals) == ''">^5.1.0</PackageJsonDependenciesWebVitals>
+    <PackageJsonDependenciesXlsx Condition="$(PackageJsonDependenciesXlsx) == ''">^0.18.5</PackageJsonDependenciesXlsx>
+    <PackageJsonDependenciesZustand Condition="$(PackageJsonDependenciesZustand) == ''">^5.0.8</PackageJsonDependenciesZustand>
+    <PackageJsonOverridesColorette Condition="$(PackageJsonOverridesColorette) == ''">2.0.19</PackageJsonOverridesColorette>
+    <PackageJsonOverridesListr2 Condition="$(PackageJsonOverridesListr2) == ''">6.6.1</PackageJsonOverridesListr2>
+  </PropertyGroup>
+</Project>

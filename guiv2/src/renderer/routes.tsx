@@ -45,12 +45,16 @@ const SettingsView = lazy(() => import('./views/settings/SettingsView'));
 // Discovery views
 const InfrastructureDiscoveryHubView = lazy(() => import('./views/discovery/InfrastructureDiscoveryHubView'));
 const ActiveDirectoryDiscoveryView = lazy(() => import('./views/discovery/ActiveDirectoryDiscoveryView'));
+
+// Organisation Map
+const OrganisationMapView = lazy(() => import('./views/organisation/OrganisationMapView'));
 const AzureDiscoveryView = lazy(() => import('./views/discovery/AzureDiscoveryView'));
 const AWSCloudInfrastructureDiscoveryView = lazy(() => import('./views/discovery/AWSCloudInfrastructureDiscoveryView'));
 const ExchangeDiscoveryView = lazy(() => import('./views/discovery/ExchangeDiscoveryView'));
 const SharePointDiscoveryView = lazy(() => import('./views/discovery/SharePointDiscoveryView'));
 const TeamsDiscoveryView = lazy(() => import('./views/discovery/TeamsDiscoveryView'));
 const OneDriveDiscoveryView = lazy(() => import('./views/discovery/OneDriveDiscoveryView'));
+const IntuneDiscoveryView = lazy(() => import('./views/discovery/IntuneDiscoveryView'));
 const FileSystemDiscoveryView = lazy(() => import('./views/discovery/FileSystemDiscoveryView'));
 const DomainDiscoveryView = lazy(() => import('./views/discovery/DomainDiscoveryView'));
 const NetworkDiscoveryView = lazy(() => import('./views/discovery/NetworkDiscoveryView'));
@@ -120,6 +124,83 @@ export const routes: RouteObject[] = [
     path: '/discovery',
     element: lazyLoad(() => import('./views/discovery/InfrastructureDiscoveryHubView')),
   },
+
+  // Organisation Map
+  {
+    path: '/organisation-map',
+    element: lazyLoad(() => import('./views/organisation/OrganisationMapView')),
+  },
+
+  // ========================================================================
+  // QUANTUM "DISCOVERED" ROUTES - Fractal Navigation Endpoints
+  // ========================================================================
+  {
+    path: '/discovered/azure',
+    element: lazyLoad(() => import('./views/discovery/AzureDiscoveryView')),
+  },
+  {
+    path: '/discovered/applications',
+    element: lazyLoad(() => import('./views/discovery/ApplicationDiscoveryView')),
+  },
+  {
+    path: '/discovered/exchange',
+    element: lazyLoad(() => import('./views/discovery/ExchangeDiscoveryView')),
+  },
+  {
+    path: '/discovered/filesystem',
+    element: lazyLoad(() => import('./views/discovery/FileSystemDiscoveryView')),
+  },
+  {
+    path: '/discovered/users',
+    element: lazyLoad(() => import('./views/users/UsersView')),
+  },
+  {
+    path: '/discovered/groups',
+    element: lazyLoad(() => import('./views/groups/GroupsView')),
+  },
+  {
+    path: '/discovered/infrastructure',
+    element: lazyLoad(() => import('./views/infrastructure/InfrastructureView')),
+  },
+  {
+    path: '/discovered/activedirectory',
+    element: lazyLoad(() => import('./views/discovery/ActiveDirectoryDiscoveryView')),
+  },
+  {
+    path: '/discovered/sharepoint',
+    element: lazyLoad(() => import('./views/discovery/SharePointDiscoveryView')),
+  },
+  {
+    path: '/discovered/teams',
+    element: lazyLoad(() => import('./views/discovery/TeamsDiscoveryView')),
+  },
+  {
+    path: '/discovered/intune',
+    element: lazyLoad(() => import('./views/discovery/IntuneDiscoveryView')),
+  },
+  {
+    path: '/discovered/onedrive',
+    element: lazyLoad(() => import('./views/discovery/OneDriveDiscoveryView')),
+  },
+  // CSV DATA DISPLAY VIEWS - New discovered data views for CSV results
+  {
+    path: '/discovered/aws',
+    element: lazyLoad(() => import('./views/discovered/AWSDiscoveredView')),
+  },
+  {
+    path: '/discovered/gcp',
+    element: lazyLoad(() => import('./views/discovered/GCPDiscoveredView')),
+  },
+  {
+    path: '/discovered/vmware',
+    element: lazyLoad(() => import('./views/discovered/VMwareDiscoveredView')),
+  },
+  {
+    path: '/discovered/hyperv',
+    element: lazyLoad(() => import('./views/discovered/HyperVDiscoveredView')),
+  },
+  // ========================================================================
+
   {
     path: '/discovery/dashboard',
     element: lazyLoad(() => import('./views/discovery/InfrastructureDiscoveryHubView')),
@@ -195,6 +276,114 @@ export const routes: RouteObject[] = [
   {
     path: '/discovery/vmware',
     element: lazyLoad(() => import('./views/discovery/VMwareDiscoveryView')),
+  },
+  {
+    path: '/discovery/intune',
+    element: lazyLoad(() => import('./views/discovery/IntuneDiscoveryView')),
+  },
+  {
+    path: '/discovery/conditional-access',
+    element: lazyLoad(() => import('./views/discovery/ConditionalAccessDiscoveryView')),
+  },
+  {
+    path: '/discovery/dlp',
+    element: lazyLoad(() => import('./views/discovery/DLPDiscoveryView')),
+  },
+  {
+    path: '/discovery/certificate',
+    element: lazyLoad(() => import('./views/discovery/CertificateDiscoveryView')),
+  },
+  {
+    path: '/discovery/certificate-authority',
+    element: lazyLoad(() => import('./views/discovery/CertificateAuthorityDiscoveryView')),
+  },
+  {
+    path: '/discovery/dns-dhcp',
+    element: lazyLoad(() => import('./views/discovery/DNSDHCPDiscoveryView')),
+  },
+  {
+    path: '/discovery/printer',
+    element: lazyLoad(() => import('./views/discovery/PrinterDiscoveryView')),
+  },
+  {
+    path: '/discovery/virtualization',
+    element: lazyLoad(() => import('./views/discovery/VirtualizationDiscoveryView')),
+  },
+  {
+    path: '/discovery/physical-server',
+    element: lazyLoad(() => import('./views/discovery/PhysicalServerDiscoveryView')),
+  },
+  {
+    path: '/discovery/storage-array',
+    element: lazyLoad(() => import('./views/discovery/StorageArrayDiscoveryView')),
+  },
+  {
+    path: '/discovery/database-schema',
+    element: lazyLoad(() => import('./views/discovery/DatabaseSchemaDiscoveryView')),
+  },
+  {
+    path: '/discovery/web-server',
+    element: lazyLoad(() => import('./views/discovery/WebServerConfigDiscoveryView')),
+  },
+  {
+    path: '/discovery/power-platform',
+    element: lazyLoad(() => import('./views/discovery/PowerPlatformDiscoveryView')),
+  },
+  {
+    path: '/discovery/powerbi',
+    element: lazyLoad(() => import('./views/discovery/PowerBIDiscoveryView')),
+  },
+  {
+    path: '/discovery/entra-id-app',
+    element: lazyLoad(() => import('./views/discovery/EntraIDAppDiscoveryView')),
+  },
+  {
+    path: '/discovery/external-identity',
+    element: lazyLoad(() => import('./views/discovery/ExternalIdentityDiscoveryView')),
+  },
+  {
+    path: '/discovery/gpo',
+    element: lazyLoad(() => import('./views/discovery/GPODiscoveryView')),
+  },
+  {
+    path: '/discovery/multi-domain-forest',
+    element: lazyLoad(() => import('./views/discovery/MultiDomainForestDiscoveryView')),
+  },
+  {
+    path: '/discovery/data-classification',
+    element: lazyLoad(() => import('./views/discovery/DataClassificationDiscoveryView')),
+  },
+  {
+    path: '/discovery/licensing',
+    element: lazyLoad(() => import('./views/discovery/LicensingDiscoveryView')),
+  },
+  {
+    path: '/discovery/scheduled-task',
+    element: lazyLoad(() => import('./views/discovery/ScheduledTaskDiscoveryView')),
+  },
+  {
+    path: '/discovery/backup-recovery',
+    element: lazyLoad(() => import('./views/discovery/BackupRecoveryDiscoveryView')),
+  },
+  {
+    path: '/discovery/palo-alto',
+    element: lazyLoad(() => import('./views/discovery/PaloAltoDiscoveryView')),
+  },
+  {
+    path: '/discovery/gcp',
+    element: lazyLoad(() => import('./views/discovery/GCPDiscoveryView')),
+  },
+  {
+    path: '/discovery/graph',
+    element: lazyLoad(() => import('./views/discovery/GraphDiscoveryView')),
+  },
+  {
+    path: '/discovery/file-server',
+    element: lazyLoad(() => import('./views/discovery/FileServerDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-resource',
+    element: lazyLoad(() => import('./views/discovery/AzureResourceDiscoveryView')),
   },
 
   // Migration routes
