@@ -50,6 +50,7 @@ import { useProfileStore } from '../../store/useProfileStore';
 import { SystemStatus } from '../molecules/SystemStatus';
 import { ProfileSelector } from '../molecules/ProfileSelector';
 import { useSystemHealthLogic } from '../../hooks/useSystemHealthLogic';
+import { discoveredNavItems } from '../../views/discovered/_sidebar.generated';
 
 /**
  * Navigation item interface
@@ -70,23 +71,8 @@ export const Sidebar: React.FC = () => {
 
   // Discovered Data - Shows results from discovery operations
   // These are DATA DISPLAY views, not discovery execution interfaces
-  const discoveredItems: NavItem[] = useMemo(() => [
-    { path: '/discovered/users', label: 'Users', icon: <Users size={16} /> },
-    { path: '/discovered/groups', label: 'Groups', icon: <UserCheck size={16} /> },
-    { path: '/discovered/infrastructure', label: 'Infrastructure', icon: <Server size={16} /> },
-    { path: '/discovered/azure', label: 'Azure Resources', icon: <Cloud size={16} /> },
-    { path: '/discovered/aws', label: 'AWS Resources', icon: <Cloud size={16} /> },
-    { path: '/discovered/gcp', label: 'GCP Resources', icon: <Cloud size={16} /> },
-    { path: '/discovered/vmware', label: 'VMware VMs', icon: <Cpu size={16} /> },
-    { path: '/discovered/hyperv', label: 'Hyper-V VMs', icon: <Cpu size={16} /> },
-    { path: '/discovered/exchange', label: 'Exchange Mailboxes', icon: <Mail size={16} /> },
-    { path: '/discovered/sharepoint', label: 'SharePoint Sites', icon: <Folder size={16} /> },
-    { path: '/discovered/teams', label: 'Teams Channels', icon: <MessageSquare size={16} /> },
-    { path: '/discovered/onedrive', label: 'OneDrive Storage', icon: <Folders size={16} /> },
-    { path: '/discovered/applications', label: 'Applications', icon: <Package size={16} /> },
-    { path: '/discovered/filesystems', label: 'File Systems', icon: <HardDrive size={16} /> },
-    { path: '/discovered/activedirectory', label: 'AD Objects', icon: <Database size={16} /> },
-  ], []);
+  // Now using auto-generated navigation items from _sidebar.generated.ts
+  const discoveredItems: NavItem[] = useMemo(() => discoveredNavItems, []);
 
   // Navigation items
   const navItems: NavItem[] = [
@@ -122,6 +108,11 @@ export const Sidebar: React.FC = () => {
       path: '/infrastructure',
       label: 'Infrastructure',
       icon: <Server size={20} />,
+    },
+    {
+      path: '/organisation-map',
+      label: 'Organisation Map',
+      icon: <Workflow size={20} />,
     },
     {
       path: '/migration',

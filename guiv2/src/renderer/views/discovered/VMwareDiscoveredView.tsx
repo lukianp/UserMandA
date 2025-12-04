@@ -1,38 +1,75 @@
 /**
- * VMware Discovered View
+ * V Mware Discovered View
  *
- * Displays VMware discovery results from CSV export
+ * Displays CSV data from vmware/results.csv
+ * Calls useCsvDataLoader hook directly and passes data to DiscoveredViewTemplate
+ *
+ * @module vmware
  */
 
-import React from 'react';
-import { ColDef } from 'ag-grid-community';
-
+import React, { useState, useRef, useEffect } from 'react';
+import { useCsvDataLoader } from '../../hooks/useCsvDataLoader';
 import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
-import { VmwareDiscoveryData } from '../../types/discoveryData';
 
-const VMWARE_COLUMNS: ColDef<VmwareDiscoveryData>[] = [
-  { field: 'VmName', headerName: 'VM Name', sortable: true, filter: true, pinned: 'left', width: 200 },
-  { field: 'PowerState', headerName: 'Power State', sortable: true, filter: true, width: 120 },
-  { field: 'VCenterServer', headerName: 'vCenter', sortable: true, filter: true, width: 150 },
-  { field: 'Datacenter', headerName: 'Datacenter', sortable: true, filter: true, width: 130 },
-  { field: 'Cluster', headerName: 'Cluster', sortable: true, filter: true, width: 130 },
-  { field: 'Host', headerName: 'Host', sortable: true, filter: true, width: 150 },
-  { field: 'NumCpu', headerName: 'CPUs', sortable: true, filter: 'agNumberColumnFilter', width: 80 },
-  { field: 'MemoryMB', headerName: 'Memory (MB)', sortable: true, filter: 'agNumberColumnFilter', width: 120 },
-  { field: 'GuestOS', headerName: 'Guest OS', sortable: true, filter: true, width: 150 },
-  { field: 'IpAddress', headerName: 'IP Address', sortable: true, filter: true, width: 130 },
-];
-
+/**
+ * V Mware discovered data view component
+ */
 export const VMwareDiscoveredView: React.FC = () => {
+  const componentKeyRef = useRef(`vmware-${Date.now()}`);
+  const mountCountRef = useRef(0);
+  const [searchText, setSearchText] = useState('');
+
+  useEffect(() => {
+    mountCountRef.current += 1;
+    console.log(`[V Mware] Component mounted (mount #${mountCountRef.current}, key: ${componentKeyRef.current})`);
+
+    return () => {
+      console.log(`[V Mware] Component unmounted (mount #${mountCountRef.current})`);
+    };
+  }, []);
+
+  // VIEW calls hook directly - template receives data as props
+  const { data, columns, loading, error, lastRefresh, reload } = useCsvDataLoader(
+    'vmware/results.csv',
+    {
+      enableAutoRefresh: true,
+      refreshInterval: 30000,
+      onError: (err) => {
+        console.error('[V Mware] CSV load error:', err);
+      },
+      onSuccess: (loadedData, loadedColumns) => {
+        console.log(`[V Mware] Data loaded successfully: ${loadedData.length} rows, ${loadedColumns.length} columns`);
+      },
+    }
+  );
+
+  const handleSearchChange = (value: string) => {
+    setSearchText(value);
+  };
+
+  const handleRefresh = () => {
+    console.log('[V Mware] User triggered refresh');
+    reload();
+  };
+
   return (
-    <DiscoveredViewTemplate<VmwareDiscoveryData>
-      moduleName="VMware"
-      csvPath="vmware/results.csv"
-      columns={VMWARE_COLUMNS}
-      title="VMware Virtual Machines"
-      description="Discovered data of VMware vSphere virtual machines"
-      data-cy="vmware-discovered-view"
-    />
+    <div key={componentKeyRef.current}>
+      <DiscoveredViewTemplate
+        title="V Mware"
+        description="V Mware discovered data from automated scanning"
+        data={data}
+        columns={columns}
+        loading={loading}
+        error={error}
+        searchText={searchText}
+        onSearchChange={handleSearchChange}
+        onRefresh={handleRefresh}
+        lastRefresh={lastRefresh}
+        enableSearch={true}
+        enableExport={true}
+        data-cy="vmware-discovered-view"
+      />
+    </div>
   );
 };
 

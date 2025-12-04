@@ -1,10 +1,11 @@
 /**
- * G C P Discovered View
+ * Active Directory Discovered View
  *
- * Displays CSV data from gcp/results.csv
+ * Displays CSV data from AzureDiscovery_Users.csv
  * Calls useCsvDataLoader hook directly and passes data to DiscoveredViewTemplate
  *
- * @module gcp
+ * @module activedirectory
+ * @category identity
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -12,51 +13,52 @@ import { useCsvDataLoader } from '../../hooks/useCsvDataLoader';
 import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
 
 /**
- * G C P discovered data view component
+ * Active Directory discovered data view component
  */
-export const GCPDiscoveredView: React.FC = () => {
-  const componentKeyRef = useRef(`gcp-${Date.now()}`);
+export const ActivedirectoryDiscoveredView: React.FC = () => {
+  const componentKeyRef = useRef(`activedirectory-${Date.now()}`);
   const mountCountRef = useRef(0);
   const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
     mountCountRef.current += 1;
-    console.log(`[G C P] Component mounted (mount #${mountCountRef.current}, key: ${componentKeyRef.current})`);
+    console.log(`[Active Directory] Component mounted (mount #${mountCountRef.current}, key: ${componentKeyRef.current})`);
 
     return () => {
-      console.log(`[G C P] Component unmounted (mount #${mountCountRef.current})`);
+      console.log(`[Active Directory] Component unmounted (mount #${mountCountRef.current})`);
     };
   }, []);
 
   // VIEW calls hook directly - template receives data as props
   const { data, columns, loading, error, lastRefresh, reload } = useCsvDataLoader(
-    'gcp/results.csv',
+    'AzureDiscovery_Users.csv',
     {
       enableAutoRefresh: true,
       refreshInterval: 30000,
       onError: (err) => {
-        console.error('[G C P] CSV load error:', err);
+        console.error('[Active Directory] CSV load error:', err);
       },
       onSuccess: (loadedData, loadedColumns) => {
-        console.log(`[G C P] Data loaded successfully: ${loadedData.length} rows, ${loadedColumns.length} columns`);
+        console.log(`[Active Directory] Data loaded successfully: ${loadedData.length} rows, ${loadedColumns.length} columns`);
       },
     }
   );
 
   const handleSearchChange = (value: string) => {
     setSearchText(value);
+    console.log(`[Active Directory] Search changed: "${value}"`);
   };
 
   const handleRefresh = () => {
-    console.log('[G C P] User triggered refresh');
+    console.log('[Active Directory] User triggered refresh');
     reload();
   };
 
   return (
     <div key={componentKeyRef.current}>
       <DiscoveredViewTemplate
-        title="G C P"
-        description="G C P discovered data from automated scanning"
+        title="Active Directory"
+        description="Active Directory users, groups, and objects from discovery"
         data={data}
         columns={columns}
         loading={loading}
@@ -67,10 +69,10 @@ export const GCPDiscoveredView: React.FC = () => {
         lastRefresh={lastRefresh}
         enableSearch={true}
         enableExport={true}
-        data-cy="gcp-discovered-view"
+        data-cy="activedirectory-discovered-view"
       />
     </div>
   );
 };
 
-export default GCPDiscoveredView;
+export default ActivedirectoryDiscoveredView;

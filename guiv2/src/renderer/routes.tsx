@@ -9,6 +9,7 @@ import React, { Suspense, lazy } from 'react';
 import { RouteObject } from 'react-router-dom';
 
 import { Spinner } from './components/atoms/Spinner';
+import { discoveredRoutes } from './views/discovered/_routes.generated';
 
 /**
  * Loading fallback component
@@ -385,6 +386,9 @@ export const routes: RouteObject[] = [
     path: '/discovery/azure-resource',
     element: lazyLoad(() => import('./views/discovery/AzureResourceDiscoveryView')),
   },
+
+  // Auto-generated discovered data routes (CSV display views)
+  ...discoveredRoutes,
 
   // Migration routes
   {

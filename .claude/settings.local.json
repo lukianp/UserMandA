@@ -81,7 +81,11 @@
       "Bash(Copy-Item -Path \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useFileSystemDiscoveryLogic.ts\" -Destination \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useFileSystemDiscoveryLogic.ts\" -Force)",
       "Bash(Select-Object -Last 15)",
       "Bash(npx tsc:*)",
-      "Bash(Copy-Item -Path \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\components\\organisms\\Sidebar.tsx\" -Destination \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\components\\organisms\\Sidebar.tsx\" -Force)"
+      "Bash(Copy-Item -Path \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\components\\organisms\\Sidebar.tsx\" -Destination \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\components\\organisms\\Sidebar.tsx\" -Force)",
+      "Bash(node scripts/generate-discovery-views.js:*)",
+      "Bash(Test-Path \"D:\\Scripts\\UserMandA\\guiv2\\src\\test-utils\")",
+      "Bash(ls:*)",
+      "Bash(node scripts/update-discovered-views.js:*)"
     ],
     "deny": [],
     "ask": [],

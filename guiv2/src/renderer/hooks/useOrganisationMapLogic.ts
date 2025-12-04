@@ -120,66 +120,62 @@ function parseCSVToNodes(csvContent: string, fileType: string): SankeyNode[] {
 /**
  * Create SankeyNode from CSV record
  * CRITICAL: Use PascalCase property names to match PowerShell output
+ * Works with actual discovery data (Users, Groups, Devices, Mailboxes, etc.)
  */
 function createNodeFromRecord(record: any, fileType: string, index: number): SankeyNode | null {
-  // Extract company from CompanyName field
-  if (record.CompanyName && !record.company_processed) {
-    return {
-      id: `company-${record.CompanyName}`,
-      name: record.CompanyName,
-      type: 'company',
-      factSheet: createFactSheet(record, 'company'),
-      metadata: { source: fileType, record }
-    };
+  // Map file types to entity types and extract relevant fields
+  const typeMapping: Record<string, { type: EntityType, getName: (r: any) => string | null }> = {
+    'user': {
+      type: 'application' as EntityType, // Users as applications for visualization
+      getName: (r) => r.DisplayName || r.UserPrincipalName || r.SamAccountName || r.Name
+    },
+    'group': {
+      type: 'platform' as EntityType, // Groups as platforms
+      getName: (r) => r.DisplayName || r.Name || r.GroupName
+    },
+    'mailbox': {
+      type: 'application' as EntityType,
+      getName: (r) => r.DisplayName || r.PrimarySmtpAddress || r.Name
+    },
+    'device': {
+      type: 'it-component' as EntityType,
+      getName: (r) => r.Name || r.ComputerName || r.DeviceName || r.DisplayName
+    },
+    'server': {
+      type: 'it-component' as EntityType,
+      getName: (r) => r.Name || r.ServerName || r.ComputerName
+    },
+    'application': {
+      type: 'application' as EntityType,
+      getName: (r) => r.Name || r.DisplayName || r.ApplicationName
+    },
+    'infrastructure': {
+      type: 'datacenter' as EntityType,
+      getName: (r) => r.Name || r.DisplayName
+    }
+  };
+
+  const mapping = typeMapping[fileType.toLowerCase()];
+  if (!mapping) {
+    // Unknown type, skip
+    return null;
   }
 
-  // Extract platforms from application data (L3 platforms)
-  if (record.Platform && !record.platform_processed) {
-    return {
-      id: `platform-${record.Platform}`,
-      name: record.Platform,
-      type: 'platform',
-      factSheet: createFactSheet(record, 'platform'),
-      metadata: { source: fileType, record }
-    };
+  const name = mapping.getName(record);
+  if (!name || name.trim() === '') {
+    return null;
   }
 
-  // Extract applications
-  if (record.ApplicationName || record.Name) {
-    const appName = record.ApplicationName || record.Name;
-    return {
-      id: `application-${appName}`,
-      name: appName,
-      type: 'application',
-      factSheet: createFactSheet(record, 'application'),
-      metadata: { source: fileType, record }
-    };
-  }
+  const nodeType = mapping.type;
+  const uniqueId = `${nodeType}-${name}-${index}`;
 
-  // Extract data centers
-  if (record.DataCenter || record.LocationType === 'datacenter') {
-    return {
-      id: `datacenter-${record.DataCenter || record.Name}`,
-      name: record.DataCenter || record.Name,
-      type: 'datacenter',
-      factSheet: createFactSheet(record, 'datacenter'),
-      metadata: { source: fileType, record }
-    };
-  }
-
-  // Extract interfaces from Exchange/SharePoint data
-  if (record.InterfaceType || record.ConnectionType) {
-    const interfaceType = record.InterfaceType === 'provider' ? 'provider-interface' : 'consumer-interface';
-    return {
-      id: `interface-${record.Name || index}`,
-      name: record.Name || `Interface ${index}`,
-      type: interfaceType as EntityType,
-      factSheet: createFactSheet(record, interfaceType as EntityType),
-      metadata: { source: fileType, record }
-    };
-  }
-
-  return null;
+  return {
+    id: uniqueId,
+    name: name,
+    type: nodeType,
+    factSheet: createFactSheet(record, nodeType),
+    metadata: { source: fileType, record }
+  };
 }
 
 /**
@@ -212,45 +208,64 @@ function createFactSheet(record: any, type: EntityType): FactSheetData {
 
 /**
  * Generate links between nodes based on hierarchical relationships
+ * Works with actual discovery data relationships (users→groups, devices→servers, etc.)
  */
 function generateLinksForFile(nodes: SankeyNode[], fileType: string): SankeyLink[] {
   const links: SankeyLink[] = [];
 
-  // Create hierarchical links based on LeanIX structure
+  // Create relationships based on discovered data
   nodes.forEach(node => {
-    switch (node.type) {
-      case 'application':
-        // Link applications to their platforms
-        if (node.metadata.record.Platform) {
-          links.push({
-            source: `platform-${node.metadata.record.Platform}`,
-            target: node.id,
-            value: 1,
-            type: 'ownership'
-          });
-        }
-        // Link applications to data centers
-        if (node.metadata.record.DataCenter) {
-          links.push({
-            source: node.id,
-            target: `datacenter-${node.metadata.record.DataCenter}`,
-            value: 1,
-            type: 'deployment'
-          });
-        }
-        break;
+    const record = node.metadata.record;
 
-      case 'platform':
-        // Link platforms to companies
-        if (node.metadata.record.CompanyName) {
-          links.push({
-            source: `company-${node.metadata.record.CompanyName}`,
-            target: node.id,
-            value: 1,
-            type: 'ownership'
-          });
+    // Link users to groups they belong to
+    if (fileType.toLowerCase() === 'user' && record.Groups) {
+      const groups = Array.isArray(record.Groups) ? record.Groups : [record.Groups];
+      groups.forEach((groupName: string) => {
+        if (groupName && groupName.trim()) {
+          // Find matching group node
+          const groupNode = nodes.find(n => n.type === 'platform' && n.name === groupName);
+          if (groupNode) {
+            links.push({
+              source: groupNode.id,
+              target: node.id,
+              value: 1,
+              type: 'membership'
+            });
+          }
         }
-        break;
+      });
+    }
+
+    // Link mailboxes to users (by matching names/UPNs)
+    if (fileType.toLowerCase() === 'mailbox' && record.UserPrincipalName) {
+      const userNode = nodes.find(n =>
+        n.type === 'application' &&
+        (n.metadata.record.UserPrincipalName === record.UserPrincipalName ||
+         n.metadata.record.DisplayName === record.DisplayName)
+      );
+      if (userNode) {
+        links.push({
+          source: userNode.id,
+          target: node.id,
+          value: 1,
+          type: 'ownership'
+        });
+      }
+    }
+
+    // Link devices to servers or infrastructure
+    if (fileType.toLowerCase() === 'device' && record.ServerName) {
+      const serverNode = nodes.find(n =>
+        n.type === 'it-component' && n.name === record.ServerName
+      );
+      if (serverNode) {
+        links.push({
+          source: serverNode.id,
+          target: node.id,
+          value: 1,
+          type: 'deployment'
+        });
+      }
     }
   });
 

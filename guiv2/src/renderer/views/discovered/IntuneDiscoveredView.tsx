@@ -1,59 +1,75 @@
 /**
  * Intune Discovered View
  *
- * Displays Intune discovery results from CSV export
+ * Displays CSV data from intune/results.csv
+ * Calls useCsvDataLoader hook directly and passes data to DiscoveredViewTemplate
+ *
+ * @module intune
  */
 
-import React from 'react';
-import { ColDef } from 'ag-grid-community';
-
+import React, { useState, useRef, useEffect } from 'react';
+import { useCsvDataLoader } from '../../hooks/useCsvDataLoader';
 import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
-import { IntuneDiscoveryData, parsePowerShellDate } from '../../types/discoveryData';
 
-const INTUNE_COLUMNS: ColDef<IntuneDiscoveryData>[] = [
-  { field: 'DeviceName', headerName: 'Device Name', sortable: true, filter: true, pinned: 'left', width: 200 },
-  { field: 'UserPrincipalName', headerName: 'User', sortable: true, filter: true, width: 200 },
-  { field: 'OperatingSystem', headerName: 'OS', sortable: true, filter: true, width: 100 },
-  { field: 'OsVersion', headerName: 'OS Version', sortable: true, filter: true, width: 120 },
-  { field: 'ComplianceState', headerName: 'Compliance', sortable: true, filter: true, width: 120 },
-  { field: 'ManagedDeviceOwnerType', headerName: 'Owner Type', sortable: true, filter: true, width: 120 },
-  {
-    field: 'EnrollmentDate',
-    headerName: 'Enrolled',
-    sortable: true,
-    filter: 'agDateColumnFilter',
-    width: 120,
-    valueFormatter: (params) => {
-      if (!params.value) return 'N/A';
-      const date = parsePowerShellDate(params.value);
-      return date ? date.toLocaleDateString() : 'Invalid';
-    },
-  },
-  {
-    field: 'LastSyncDateTime',
-    headerName: 'Last Sync',
-    sortable: true,
-    filter: 'agDateColumnFilter',
-    width: 120,
-    valueFormatter: (params) => {
-      if (!params.value) return 'Never';
-      const date = parsePowerShellDate(params.value);
-      return date ? date.toLocaleDateString() : 'Invalid';
-    },
-  },
-  { field: 'DeviceId', headerName: 'Device ID', sortable: true, filter: true, width: 250 },
-];
-
+/**
+ * Intune discovered data view component
+ */
 export const IntuneDiscoveredView: React.FC = () => {
+  const componentKeyRef = useRef(`intune-${Date.now()}`);
+  const mountCountRef = useRef(0);
+  const [searchText, setSearchText] = useState('');
+
+  useEffect(() => {
+    mountCountRef.current += 1;
+    console.log(`[Intune] Component mounted (mount #${mountCountRef.current}, key: ${componentKeyRef.current})`);
+
+    return () => {
+      console.log(`[Intune] Component unmounted (mount #${mountCountRef.current})`);
+    };
+  }, []);
+
+  // VIEW calls hook directly - template receives data as props
+  const { data, columns, loading, error, lastRefresh, reload } = useCsvDataLoader(
+    'intune/results.csv',
+    {
+      enableAutoRefresh: true,
+      refreshInterval: 30000,
+      onError: (err) => {
+        console.error('[Intune] CSV load error:', err);
+      },
+      onSuccess: (loadedData, loadedColumns) => {
+        console.log(`[Intune] Data loaded successfully: ${loadedData.length} rows, ${loadedColumns.length} columns`);
+      },
+    }
+  );
+
+  const handleSearchChange = (value: string) => {
+    setSearchText(value);
+  };
+
+  const handleRefresh = () => {
+    console.log('[Intune] User triggered refresh');
+    reload();
+  };
+
   return (
-    <DiscoveredViewTemplate<IntuneDiscoveryData>
-      moduleName="Intune"
-      csvPath="intune/results.csv"
-      columns={INTUNE_COLUMNS}
-      title="Intune Managed Devices"
-      description="Discovered data of Microsoft Intune managed devices"
-      data-cy="intune-discovered-view"
-    />
+    <div key={componentKeyRef.current}>
+      <DiscoveredViewTemplate
+        title="Intune"
+        description="Intune discovered data from automated scanning"
+        data={data}
+        columns={columns}
+        loading={loading}
+        error={error}
+        searchText={searchText}
+        onSearchChange={handleSearchChange}
+        onRefresh={handleRefresh}
+        lastRefresh={lastRefresh}
+        enableSearch={true}
+        enableExport={true}
+        data-cy="intune-discovered-view"
+      />
+    </div>
   );
 };
 

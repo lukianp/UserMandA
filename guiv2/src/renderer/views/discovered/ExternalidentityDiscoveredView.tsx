@@ -1,10 +1,10 @@
 /**
- * G C P Discovered View
+ * Externalidentity Discovered View
  *
- * Displays CSV data from gcp/results.csv
+ * Displays CSV data from externalidentity/results.csv
  * Calls useCsvDataLoader hook directly and passes data to DiscoveredViewTemplate
  *
- * @module gcp
+ * @module externalidentity
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -12,33 +12,33 @@ import { useCsvDataLoader } from '../../hooks/useCsvDataLoader';
 import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
 
 /**
- * G C P discovered data view component
+ * Externalidentity discovered data view component
  */
-export const GCPDiscoveredView: React.FC = () => {
-  const componentKeyRef = useRef(`gcp-${Date.now()}`);
+export const ExternalidentityDiscoveredView: React.FC = () => {
+  const componentKeyRef = useRef(`externalidentity-${Date.now()}`);
   const mountCountRef = useRef(0);
   const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
     mountCountRef.current += 1;
-    console.log(`[G C P] Component mounted (mount #${mountCountRef.current}, key: ${componentKeyRef.current})`);
+    console.log(`[Externalidentity] Component mounted (mount #${mountCountRef.current}, key: ${componentKeyRef.current})`);
 
     return () => {
-      console.log(`[G C P] Component unmounted (mount #${mountCountRef.current})`);
+      console.log(`[Externalidentity] Component unmounted (mount #${mountCountRef.current})`);
     };
   }, []);
 
   // VIEW calls hook directly - template receives data as props
   const { data, columns, loading, error, lastRefresh, reload } = useCsvDataLoader(
-    'gcp/results.csv',
+    'externalidentity/results.csv',
     {
       enableAutoRefresh: true,
       refreshInterval: 30000,
       onError: (err) => {
-        console.error('[G C P] CSV load error:', err);
+        console.error('[Externalidentity] CSV load error:', err);
       },
       onSuccess: (loadedData, loadedColumns) => {
-        console.log(`[G C P] Data loaded successfully: ${loadedData.length} rows, ${loadedColumns.length} columns`);
+        console.log(`[Externalidentity] Data loaded successfully: ${loadedData.length} rows, ${loadedColumns.length} columns`);
       },
     }
   );
@@ -48,15 +48,15 @@ export const GCPDiscoveredView: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    console.log('[G C P] User triggered refresh');
+    console.log('[Externalidentity] User triggered refresh');
     reload();
   };
 
   return (
     <div key={componentKeyRef.current}>
       <DiscoveredViewTemplate
-        title="G C P"
-        description="G C P discovered data from automated scanning"
+        title="Externalidentity"
+        description="Externalidentity discovered data from automated scanning"
         data={data}
         columns={columns}
         loading={loading}
@@ -67,10 +67,10 @@ export const GCPDiscoveredView: React.FC = () => {
         lastRefresh={lastRefresh}
         enableSearch={true}
         enableExport={true}
-        data-cy="gcp-discovered-view"
+        data-cy="externalidentity-discovered-view"
       />
     </div>
   );
 };
 
-export default GCPDiscoveredView;
+export default ExternalidentityDiscoveredView;

@@ -1,32 +1,46 @@
 /**
  * Discovered View Template Component
  *
- * Standardized template for displaying CSV data from discovery modules
+ * Pure presentation component for displaying CSV data from discovery modules
  * Provides consistent UI/UX across all discovered data views with dark theme support
+ *
+ * ARCHITECTURE: This component receives data as props - it does NOT call useCsvDataLoader.
+ * Individual views are responsible for calling useCsvDataLoader and passing data to this template.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { ColDef } from 'ag-grid-community';
 import { Download, RefreshCw, Search, AlertCircle } from 'lucide-react';
 import { clsx } from 'clsx';
 
 import { VirtualizedDataGrid } from './VirtualizedDataGrid';
-import { useCsvDataLoader } from '../../hooks/useCsvDataLoader';
-import { BaseDiscoveryData, generateColumnDefs, parsePowerShellDate } from '../../types/discoveryData';
+import { BaseDiscoveryData } from '../../types/discoveryData';
 import { Button } from '../atoms/Button';
 import { Spinner } from '../atoms/Spinner';
 
 export interface DiscoveredViewTemplateProps<T extends BaseDiscoveryData = BaseDiscoveryData> {
-  /** Module name (e.g., 'AWS', 'GCP', 'VMware') */
-  moduleName: string;
-  /** Relative CSV path from /public/discovery/ (e.g., 'aws/results.csv') */
-  csvPath: string;
-  /** Custom column definitions */
-  columns?: ColDef<T>[];
   /** Page title */
-  title?: string;
+  title: string;
   /** Page description */
-  description?: string;
+  description: string;
+  /** Data array to display */
+  data: T[];
+  /** AG Grid column definitions */
+  columns: ColDef<T>[];
+  /** Loading state */
+  loading: boolean;
+  /** Error state */
+  error: Error | null;
+  /** Search text value */
+  searchText: string;
+  /** Search change handler */
+  onSearchChange: (value: string) => void;
+  /** Refresh button handler */
+  onRefresh: () => void;
+  /** Optional export handler */
+  onExport?: () => void;
+  /** Last refresh timestamp */
+  lastRefresh?: Date | null;
   /** Enable search filter */
   enableSearch?: boolean;
   /** Enable export */
@@ -36,202 +50,219 @@ export interface DiscoveredViewTemplateProps<T extends BaseDiscoveryData = BaseD
 }
 
 /**
- * Standardized discovered data view component
+ * Pure presentation component for discovered data views
+ * Receives data as props and renders UI - does NOT handle data loading
  */
-export function DiscoveredViewTemplate<T extends BaseDiscoveryData = BaseDiscoveryData>({
-  moduleName,
-  csvPath,
-  columns: customColumns,
-  title,
-  description,
-  enableSearch = true,
-  enableExport = true,
-  'data-cy': dataCy,
-}: DiscoveredViewTemplateProps<T>): JSX.Element {
-  const [searchText, setSearchText] = useState('');
-  const [selectedRows, setSelectedRows] = useState<T[]>([]);
+export const DiscoveredViewTemplate = React.memo<DiscoveredViewTemplateProps>(
+  function DiscoveredViewTemplate({
+    title,
+    description,
+    data = [],  // CRITICAL: Default to empty array to prevent undefined errors
+    columns = [],  // CRITICAL: Default to empty array
+    loading,
+    error,
+    searchText,
+    onSearchChange,
+    onRefresh,
+    onExport,
+    lastRefresh,
+    enableSearch = true,
+    enableExport = true,
+    'data-cy': dataCy,
+  }) {
+    console.log(`[DiscoveredViewTemplate] Rendering "${title}" with ${data?.length || 0} rows, loading: ${loading}`);
 
-  // Load CSV data
-  const { data, loading, error, reload } = useCsvDataLoader<T>(csvPath, {
-    maxRows: 100000,
-    maxFileSize: 50 * 1024 * 1024,
-    onError: (err) => {
-      console.error(`[${moduleName}DiscoveredView] CSV load error:`, err);
-    },
-  });
+    // Filter data based on search text
+    const filteredData = useMemo(() => {
+      if (!searchText.trim()) {
+        return data;
+      }
 
-  // Auto-generate or use custom column definitions
-  const columnDefs = useMemo<ColDef<T>[]>(() => {
-    if (customColumns && customColumns.length > 0) {
-      return customColumns;
-    }
-
-    // Auto-generate from first data row
-    if (data.length > 0) {
-      return generateColumnDefs<T>(data[0]);
-    }
-
-    return [];
-  }, [data, customColumns]);
-
-  // Filter data based on search text
-  const filteredData = useMemo(() => {
-    if (!searchText.trim()) {
-      return data;
-    }
-
-    const searchLower = searchText.toLowerCase();
-    return data.filter((row) => {
-      return Object.values(row).some((value) => {
-        if (value === null || value === undefined) return false;
-        return String(value).toLowerCase().includes(searchLower);
+      const searchLower = searchText.toLowerCase();
+      return data.filter((row) => {
+        return Object.values(row).some((value) => {
+          if (value === null || value === undefined) return false;
+          return String(value).toLowerCase().includes(searchLower);
+        });
       });
-    });
-  }, [data, searchText]);
+    }, [data, searchText]);
 
-  // Calculate statistics
-  const stats = useMemo(() => {
-    return {
-      total: data.length,
-      filtered: filteredData.length,
-      selected: selectedRows.length,
-    };
-  }, [data.length, filteredData.length, selectedRows.length]);
+    // Calculate statistics
+    const stats = useMemo(() => {
+      return {
+        total: data.length,
+        filtered: filteredData.length,
+      };
+    }, [data.length, filteredData.length]);
 
-  const displayTitle = title || `${moduleName} Discovered Data`;
-  const displayDescription = description || `Discovered data of ${moduleName} from CSV export`;
+    // Stable selection handler
+    const handleSelectionChange = useCallback(() => {
+      // Placeholder for future selection handling
+    }, []);
 
-  return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy={dataCy}>
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {displayTitle}
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {displayDescription}
-            </p>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={reload}
-              disabled={loading}
-              aria-label="Reload data"
-            >
-              <RefreshCw size={16} className={clsx(loading && 'animate-spin')} />
-              <span className="ml-2">Reload</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Statistics bar */}
-        <div className="mt-4 flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-          <span>
-            Total: <strong className="text-gray-900 dark:text-white">{stats.total.toLocaleString()}</strong>
-          </span>
-          {stats.filtered !== stats.total && (
-            <span>
-              Filtered: <strong className="text-gray-900 dark:text-white">{stats.filtered.toLocaleString()}</strong>
-            </span>
-          )}
-          {stats.selected > 0 && (
-            <span>
-              Selected: <strong className="text-gray-900 dark:text-white">{stats.selected.toLocaleString()}</strong>
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Search bar */}
-      {enableSearch && (
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
-          <div className="relative max-w-md">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className={clsx(
-                'w-full pl-10 pr-4 py-2 rounded-lg',
-                'bg-gray-50 dark:bg-gray-700',
-                'border border-gray-300 dark:border-gray-600',
-                'text-gray-900 dark:text-white',
-                'placeholder-gray-500 dark:placeholder-gray-400',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400',
-                'transition-colors'
+    return (
+      <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy={dataCy}>
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {title}
+              </h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {description}
+              </p>
+              {lastRefresh && (
+                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  Last updated: {lastRefresh.toLocaleTimeString()} (auto-refresh: 30s)
+                </p>
               )}
-              aria-label="Search discovered data"
-            />
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRefresh}
+                disabled={loading}
+                aria-label="Reload data"
+              >
+                <RefreshCw size={16} className={clsx(loading && 'animate-spin')} />
+                <span className="ml-2">Reload</span>
+              </Button>
+              {enableExport && onExport && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onExport}
+                  disabled={loading}
+                  aria-label="Export data"
+                >
+                  <Download size={16} />
+                  <span className="ml-2">Export</span>
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Statistics bar */}
+          <div className="mt-4 flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+            <span>
+              Total: <strong className="text-gray-900 dark:text-white">{stats.total.toLocaleString()}</strong>
+            </span>
+            {stats.filtered !== stats.total && (
+              <span>
+                Filtered: <strong className="text-gray-900 dark:text-white">{stats.filtered.toLocaleString()}</strong>
+              </span>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Data grid or error/loading states */}
-      <div className="flex-1 p-6 overflow-hidden">
-        {loading && (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <Spinner size="lg" />
-              <p className="mt-4 text-gray-600 dark:text-gray-400">
-                Loading {moduleName} data...
-              </p>
+        {/* Search bar */}
+        {enableSearch && (
+          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
+            <div className="relative max-w-md">
+              <Search
+                size={18}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchText}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className={clsx(
+                  'w-full pl-10 pr-4 py-2 rounded-lg',
+                  'bg-gray-50 dark:bg-gray-700',
+                  'border border-gray-300 dark:border-gray-600',
+                  'text-gray-900 dark:text-white',
+                  'placeholder-gray-500 dark:placeholder-gray-400',
+                  'focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400',
+                  'transition-colors'
+                )}
+                aria-label="Search discovered data"
+              />
             </div>
           </div>
         )}
 
-        {error && !loading && (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center max-w-md">
-              <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Error Loading Data
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                {error.message}
-              </p>
-              <Button onClick={reload} variant="primary">
-                <RefreshCw size={16} />
-                <span className="ml-2">Try Again</span>
-              </Button>
+        {/* Data grid or error/loading states */}
+        <div className="flex-1 p-6 overflow-hidden">
+          {loading && data.length === 0 && (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <Spinner size="lg" />
+                <p className="mt-4 text-gray-600 dark:text-gray-400">
+                  Loading data...
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {!loading && !error && filteredData.length === 0 && (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-gray-600 dark:text-gray-400">
-                {searchText.trim()
-                  ? 'No results match your search'
-                  : 'No data available'}
-              </p>
+          {error && !loading && (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center max-w-md">
+                <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Error Loading Data
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  {error.message}
+                </p>
+                <Button onClick={onRefresh} variant="primary">
+                  <RefreshCw size={16} />
+                  <span className="ml-2">Try Again</span>
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {!loading && !error && filteredData.length > 0 && (
-          <VirtualizedDataGrid<T>
-            data={filteredData}
-            columns={columnDefs}
-            loading={loading}
-            onSelectionChange={setSelectedRows}
-            enableExport={enableExport}
-            enableGrouping={true}
-            height="calc(100vh - 280px)"
-            data-cy={`${dataCy}-grid`}
-          />
-        )}
+          {!loading && !error && filteredData.length === 0 && data.length === 0 && (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-gray-600 dark:text-gray-400">
+                  No data available
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && filteredData.length === 0 && data.length > 0 && (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-gray-600 dark:text-gray-400">
+                  No results match your search
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!error && (filteredData.length > 0 || loading) && (
+            <VirtualizedDataGrid
+              data={filteredData}
+              columns={columns}
+              loading={loading}
+              onSelectionChange={handleSelectionChange}
+              enableExport={enableExport}
+              enableGrouping={true}
+              height="calc(100vh - 280px)"
+              data-cy={`${dataCy}-grid`}
+            />
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison to prevent unnecessary re-renders
+    return (
+      prevProps.data === nextProps.data &&
+      prevProps.columns === nextProps.columns &&
+      prevProps.loading === nextProps.loading &&
+      prevProps.error === nextProps.error &&
+      prevProps.searchText === nextProps.searchText &&
+      prevProps.lastRefresh === nextProps.lastRefresh
+    );
+  }
+);

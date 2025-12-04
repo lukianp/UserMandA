@@ -1,38 +1,75 @@
 /**
- * AWS Discovered View
+ * A W S Discovered View
  *
- * Displays AWS discovery results from CSV export
+ * Displays CSV data from aws/results.csv
+ * Calls useCsvDataLoader hook directly and passes data to DiscoveredViewTemplate
+ *
+ * @module aws
  */
 
-import React from 'react';
-import { ColDef } from 'ag-grid-community';
-
+import React, { useState, useRef, useEffect } from 'react';
+import { useCsvDataLoader } from '../../hooks/useCsvDataLoader';
 import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
-import { AwsDiscoveryData } from '../../types/discoveryData';
 
-const AWS_COLUMNS: ColDef<AwsDiscoveryData>[] = [
-  { field: 'Name', headerName: 'Resource Name', sortable: true, filter: true, pinned: 'left', width: 200 },
-  { field: 'ResourceType', headerName: 'Type', sortable: true, filter: true, width: 120 },
-  { field: 'AccountId', headerName: 'Account ID', sortable: true, filter: true, width: 150 },
-  { field: 'Region', headerName: 'Region', sortable: true, filter: true, width: 120 },
-  { field: 'Arn', headerName: 'ARN', sortable: true, filter: true, width: 300 },
-  { field: 'State', headerName: 'State', sortable: true, filter: true, width: 100 },
-  { field: 'InstanceType', headerName: 'Instance Type', sortable: true, filter: true, width: 130 },
-  { field: 'VpcId', headerName: 'VPC ID', sortable: true, filter: true, width: 150 },
-  { field: 'SubnetId', headerName: 'Subnet ID', sortable: true, filter: true, width: 150 },
-  { field: 'Tags', headerName: 'Tags', sortable: true, filter: true, width: 200 },
-];
-
+/**
+ * A W S discovered data view component
+ */
 export const AWSDiscoveredView: React.FC = () => {
+  const componentKeyRef = useRef(`aws-${Date.now()}`);
+  const mountCountRef = useRef(0);
+  const [searchText, setSearchText] = useState('');
+
+  useEffect(() => {
+    mountCountRef.current += 1;
+    console.log(`[A W S] Component mounted (mount #${mountCountRef.current}, key: ${componentKeyRef.current})`);
+
+    return () => {
+      console.log(`[A W S] Component unmounted (mount #${mountCountRef.current})`);
+    };
+  }, []);
+
+  // VIEW calls hook directly - template receives data as props
+  const { data, columns, loading, error, lastRefresh, reload } = useCsvDataLoader(
+    'aws/results.csv',
+    {
+      enableAutoRefresh: true,
+      refreshInterval: 30000,
+      onError: (err) => {
+        console.error('[A W S] CSV load error:', err);
+      },
+      onSuccess: (loadedData, loadedColumns) => {
+        console.log(`[A W S] Data loaded successfully: ${loadedData.length} rows, ${loadedColumns.length} columns`);
+      },
+    }
+  );
+
+  const handleSearchChange = (value: string) => {
+    setSearchText(value);
+  };
+
+  const handleRefresh = () => {
+    console.log('[A W S] User triggered refresh');
+    reload();
+  };
+
   return (
-    <DiscoveredViewTemplate<AwsDiscoveryData>
-      moduleName="AWS"
-      csvPath="aws/results.csv"
-      columns={AWS_COLUMNS}
-      title="AWS Resources"
-      description="Discovered data of AWS resources including EC2, S3, RDS, and other services"
-      data-cy="aws-discovered-view"
-    />
+    <div key={componentKeyRef.current}>
+      <DiscoveredViewTemplate
+        title="A W S"
+        description="A W S discovered data from automated scanning"
+        data={data}
+        columns={columns}
+        loading={loading}
+        error={error}
+        searchText={searchText}
+        onSearchChange={handleSearchChange}
+        onRefresh={handleRefresh}
+        lastRefresh={lastRefresh}
+        enableSearch={true}
+        enableExport={true}
+        data-cy="aws-discovered-view"
+      />
+    </div>
   );
 };
 

@@ -1,10 +1,10 @@
 /**
- * G C P Discovered View
+ * Azure Discovered View
  *
- * Displays CSV data from gcp/results.csv
+ * Displays CSV data from AzureDiscovery_Tenant.csv
  * Calls useCsvDataLoader hook directly and passes data to DiscoveredViewTemplate
  *
- * @module gcp
+ * @module azure
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -12,33 +12,33 @@ import { useCsvDataLoader } from '../../hooks/useCsvDataLoader';
 import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
 
 /**
- * G C P discovered data view component
+ * Azure discovered data view component
  */
-export const GCPDiscoveredView: React.FC = () => {
-  const componentKeyRef = useRef(`gcp-${Date.now()}`);
+export const AzureDiscoveredView: React.FC = () => {
+  const componentKeyRef = useRef(`azure-${Date.now()}`);
   const mountCountRef = useRef(0);
   const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
     mountCountRef.current += 1;
-    console.log(`[G C P] Component mounted (mount #${mountCountRef.current}, key: ${componentKeyRef.current})`);
+    console.log(`[Azure] Component mounted (mount #${mountCountRef.current}, key: ${componentKeyRef.current})`);
 
     return () => {
-      console.log(`[G C P] Component unmounted (mount #${mountCountRef.current})`);
+      console.log(`[Azure] Component unmounted (mount #${mountCountRef.current})`);
     };
   }, []);
 
   // VIEW calls hook directly - template receives data as props
   const { data, columns, loading, error, lastRefresh, reload } = useCsvDataLoader(
-    'gcp/results.csv',
+    'AzureDiscovery_Tenant.csv',
     {
       enableAutoRefresh: true,
       refreshInterval: 30000,
       onError: (err) => {
-        console.error('[G C P] CSV load error:', err);
+        console.error('[Azure] CSV load error:', err);
       },
       onSuccess: (loadedData, loadedColumns) => {
-        console.log(`[G C P] Data loaded successfully: ${loadedData.length} rows, ${loadedColumns.length} columns`);
+        console.log(`[Azure] Data loaded successfully: ${loadedData.length} rows, ${loadedColumns.length} columns`);
       },
     }
   );
@@ -48,15 +48,15 @@ export const GCPDiscoveredView: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    console.log('[G C P] User triggered refresh');
+    console.log('[Azure] User triggered refresh');
     reload();
   };
 
   return (
     <div key={componentKeyRef.current}>
       <DiscoveredViewTemplate
-        title="G C P"
-        description="G C P discovered data from automated scanning"
+        title="Azure"
+        description="Azure discovered data from automated scanning"
         data={data}
         columns={columns}
         loading={loading}
@@ -67,10 +67,10 @@ export const GCPDiscoveredView: React.FC = () => {
         lastRefresh={lastRefresh}
         enableSearch={true}
         enableExport={true}
-        data-cy="gcp-discovered-view"
+        data-cy="azure-discovered-view"
       />
     </div>
   );
 };
 
-export default GCPDiscoveredView;
+export default AzureDiscoveredView;

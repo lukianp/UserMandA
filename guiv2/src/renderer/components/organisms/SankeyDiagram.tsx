@@ -83,11 +83,158 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
       links: links.map(l => ({ ...l }))
     };
 
-    // Generate sankey layout
+    // Validate data before generating layout
+    if (graphData.nodes.length === 0) {
+      console.warn('[SankeyDiagram] No nodes to render');
+      g.append('text')
+        .attr('x', width / 2)
+        .attr('y', height / 2)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#9ca3af')
+        .attr('font-size', '16px')
+        .text('No entities to display');
+      return;
+    }
+
+    // Filter out links that reference non-existent nodes
+    const nodeIds = new Set(graphData.nodes.map(n => n.id));
+    const validLinks = graphData.links.filter(l => {
+      const sourceId = typeof l.source === 'string' ? l.source : (l.source as any).id;
+      const targetId = typeof l.target === 'string' ? l.target : (l.target as any).id;
+      const valid = nodeIds.has(sourceId) && nodeIds.has(targetId);
+      if (!valid) {
+        console.warn('[SankeyDiagram] Skipping invalid link:', sourceId, '->', targetId);
+      }
+      return valid;
+    });
+
+    graphData.links = validLinks;
+    console.log('[SankeyDiagram] Validated data:', {
+      nodes: graphData.nodes.length,
+      validLinks: validLinks.length,
+      invalidLinks: links.length - validLinks.length
+    });
+
+    // If no links, use grid layout instead of Sankey
+    if (validLinks.length === 0) {
+      console.warn('[SankeyDiagram] No links found, using grid layout');
+
+      // Calculate grid dimensions
+      const nodeCount = graphData.nodes.length;
+      const cols = Math.ceil(Math.sqrt(nodeCount));
+      const rows = Math.ceil(nodeCount / cols);
+      const cellWidth = (width - 40) / cols;
+      const cellHeight = (height - 40) / rows;
+      const nodeWidth = 15;
+      const nodeHeight = 30;
+
+      // Position nodes in a grid
+      graphData.nodes.forEach((node: any, i: number) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        node.x0 = 20 + col * cellWidth;
+        node.y0 = 20 + row * cellHeight;
+        node.x1 = node.x0 + nodeWidth;
+        node.y1 = node.y0 + nodeHeight;
+        node.value = 1;
+        node.sourceLinks = [];
+        node.targetLinks = [];
+      });
+
+      // Use the gridded data as sankeyData
+      const sankeyData = { nodes: graphData.nodes, links: [] };
+
+      // Draw nodes only (no links to draw)
+      const node = g.append('g')
+        .attr('class', 'nodes')
+        .selectAll('g')
+        .data(sankeyData.nodes)
+        .join('g')
+        .attr('class', 'node');
+
+      // Add node rectangles
+      node.append('rect')
+        .attr('x', (d: any) => d.x0)
+        .attr('y', (d: any) => d.y0)
+        .attr('height', (d: any) => d.y1 - d.y0)
+        .attr('width', (d: any) => d.x1 - d.x0)
+        .attr('fill', (d: any) => TYPE_COLORS[d.type as EntityType] || '#6b7280')
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 2)
+        .style('cursor', 'pointer')
+        .on('mouseenter', function(this: SVGRectElement, event: any, d: any) {
+          setHoveredNode(d.id);
+          if (onNodeHover) onNodeHover(d);
+          d3.select(this).attr('stroke', '#fbbf24').attr('stroke-width', 3);
+        })
+        .on('mouseleave', function(this: SVGRectElement, event: any, d: any) {
+          setHoveredNode(null);
+          if (onNodeHover) onNodeHover(null);
+          d3.select(this).attr('stroke', '#fff').attr('stroke-width', 2);
+        })
+        .on('click', function(this: SVGRectElement, event: any, d: any) {
+          if (onNodeClick) onNodeClick(d);
+        });
+
+      // Add node labels
+      node.append('text')
+        .attr('x', (d: any) => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+        .attr('y', (d: any) => (d.y1 + d.y0) / 2)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', (d: any) => d.x0 < width / 2 ? 'start' : 'end')
+        .attr('font-size', '10px')
+        .attr('fill', '#374151')
+        .style('pointer-events', 'none')
+        .text((d: any) => {
+          const maxLength = 20;
+          return d.name.length > maxLength ? d.name.substring(0, maxLength) + '...' : d.name;
+        });
+
+      // Add tooltips for grid layout
+      const tooltip = d3.select('body')
+        .append('div')
+        .attr('class', 'sankey-tooltip-grid')
+        .style('position', 'absolute')
+        .style('background', 'rgba(0, 0, 0, 0.8)')
+        .style('color', '#fff')
+        .style('padding', '8px 12px')
+        .style('border-radius', '4px')
+        .style('font-size', '12px')
+        .style('pointer-events', 'none')
+        .style('opacity', 0)
+        .style('z-index', 10000);
+
+      node
+        .on('mousemove', function(this: SVGGElement, event: any, d: any) {
+          tooltip
+            .style('opacity', 1)
+            .html(`<strong>${d.name}</strong><br/>Type: ${d.type}`)
+            .style('left', (event.pageX + 10) + 'px')
+            .style('top', (event.pageY - 28) + 'px');
+        })
+        .on('mouseout', function() {
+          tooltip.style('opacity', 0);
+        });
+
+      return () => {
+        tooltip.remove();
+      };
+    }
+
+    // Generate sankey layout (when we have links)
     let sankeyData;
     try {
       sankeyData = sankeyGenerator(graphData as any);
       console.log('[SankeyDiagram] Layout computed successfully');
+
+      // Validate layout output
+      const hasInvalidPositions = sankeyData.nodes.some((n: any) =>
+        isNaN(n.x0) || isNaN(n.y0) || isNaN(n.x1) || isNaN(n.y1)
+      );
+
+      if (hasInvalidPositions) {
+        throw new Error('Layout produced NaN coordinates');
+      }
     } catch (error) {
       console.error('[SankeyDiagram] Layout computation failed:', error);
 

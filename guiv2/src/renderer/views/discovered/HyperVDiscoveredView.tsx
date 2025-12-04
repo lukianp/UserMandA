@@ -1,36 +1,75 @@
 /**
- * Hyper-V Discovered View
+ * Hyper V Discovered View
  *
- * Displays Hyper-V discovery results from CSV export
+ * Displays CSV data from hyperv/results.csv
+ * Calls useCsvDataLoader hook directly and passes data to DiscoveredViewTemplate
+ *
+ * @module hyperv
  */
 
-import React from 'react';
-import { ColDef } from 'ag-grid-community';
-
+import React, { useState, useRef, useEffect } from 'react';
+import { useCsvDataLoader } from '../../hooks/useCsvDataLoader';
 import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
-import { HyperVDiscoveryData } from '../../types/discoveryData';
 
-const HYPERV_COLUMNS: ColDef<HyperVDiscoveryData>[] = [
-  { field: 'VmName', headerName: 'VM Name', sortable: true, filter: true, pinned: 'left', width: 200 },
-  { field: 'State', headerName: 'State', sortable: true, filter: true, width: 100 },
-  { field: 'HostName', headerName: 'Host', sortable: true, filter: true, width: 150 },
-  { field: 'ProcessorCount', headerName: 'CPUs', sortable: true, filter: 'agNumberColumnFilter', width: 80 },
-  { field: 'MemoryMB', headerName: 'Memory (MB)', sortable: true, filter: 'agNumberColumnFilter', width: 120 },
-  { field: 'Generation', headerName: 'Generation', sortable: true, filter: 'agNumberColumnFilter', width: 100 },
-  { field: 'Version', headerName: 'Version', sortable: true, filter: true, width: 120 },
-  { field: 'NetworkAdapters', headerName: 'Network Adapters', sortable: true, filter: true, width: 150 },
-];
-
+/**
+ * Hyper V discovered data view component
+ */
 export const HyperVDiscoveredView: React.FC = () => {
+  const componentKeyRef = useRef(`hyperv-${Date.now()}`);
+  const mountCountRef = useRef(0);
+  const [searchText, setSearchText] = useState('');
+
+  useEffect(() => {
+    mountCountRef.current += 1;
+    console.log(`[Hyper V] Component mounted (mount #${mountCountRef.current}, key: ${componentKeyRef.current})`);
+
+    return () => {
+      console.log(`[Hyper V] Component unmounted (mount #${mountCountRef.current})`);
+    };
+  }, []);
+
+  // VIEW calls hook directly - template receives data as props
+  const { data, columns, loading, error, lastRefresh, reload } = useCsvDataLoader(
+    'hyperv/results.csv',
+    {
+      enableAutoRefresh: true,
+      refreshInterval: 30000,
+      onError: (err) => {
+        console.error('[Hyper V] CSV load error:', err);
+      },
+      onSuccess: (loadedData, loadedColumns) => {
+        console.log(`[Hyper V] Data loaded successfully: ${loadedData.length} rows, ${loadedColumns.length} columns`);
+      },
+    }
+  );
+
+  const handleSearchChange = (value: string) => {
+    setSearchText(value);
+  };
+
+  const handleRefresh = () => {
+    console.log('[Hyper V] User triggered refresh');
+    reload();
+  };
+
   return (
-    <DiscoveredViewTemplate<HyperVDiscoveryData>
-      moduleName="Hyper-V"
-      csvPath="hyperv/results.csv"
-      columns={HYPERV_COLUMNS}
-      title="Hyper-V Virtual Machines"
-      description="Discovered data of Hyper-V virtual machines"
-      data-cy="hyperv-discovered-view"
-    />
+    <div key={componentKeyRef.current}>
+      <DiscoveredViewTemplate
+        title="Hyper V"
+        description="Hyper V discovered data from automated scanning"
+        data={data}
+        columns={columns}
+        loading={loading}
+        error={error}
+        searchText={searchText}
+        onSearchChange={handleSearchChange}
+        onRefresh={handleRefresh}
+        lastRefresh={lastRefresh}
+        enableSearch={true}
+        enableExport={true}
+        data-cy="hyperv-discovered-view"
+      />
+    </div>
   );
 };
 

@@ -15,12 +15,14 @@
     <PackageJsonScriptsBuild Condition="$(PackageJsonScriptsBuild) == ''">webpack --config webpack.main.config.js --mode=production --output-path=.webpack/main</PackageJsonScriptsBuild>
     <PackageJsonScriptsStart Condition="$(PackageJsonScriptsStart) == ''">electron .webpack/main/main.js</PackageJsonScriptsStart>
     <PackageJsonScriptsDev Condition="$(PackageJsonScriptsDev) == ''">npm run build &amp;&amp; npm run start</PackageJsonScriptsDev>
+    <PackageJsonScriptsGenerateViews Condition="$(PackageJsonScriptsGenerateViews) == ''">node scripts/generate-discovery-views.js</PackageJsonScriptsGenerateViews>
+    <PackageJsonScriptsGenerateViewsDryRun Condition="$(PackageJsonScriptsGenerateViewsDryRun) == ''">node scripts/generate-discovery-views.js --dry-run</PackageJsonScriptsGenerateViewsDryRun>
     <PackageJsonScriptsTestUnit Condition="$(PackageJsonScriptsTestUnit) == ''">jest --testPathPatterns="src.*\.(test|spec)\.(ts|tsx)$"</PackageJsonScriptsTestUnit>
     <PackageJsonScriptsTestUnitWatch Condition="$(PackageJsonScriptsTestUnitWatch) == ''">jest --watch --testPathPatterns="src.*\.(test|spec)\.(ts|tsx)$"</PackageJsonScriptsTestUnitWatch>
     <PackageJsonScriptsTestUnitCoverage Condition="$(PackageJsonScriptsTestUnitCoverage) == ''">jest --coverage --testPathPatterns="src.*\.(test|spec)\.(ts|tsx)$"</PackageJsonScriptsTestUnitCoverage>
     <PackageJsonScriptsTestE2e Condition="$(PackageJsonScriptsTestE2e) == ''">playwright test</PackageJsonScriptsTestE2e>
     <PackageJsonScriptsTestE2eHeaded Condition="$(PackageJsonScriptsTestE2eHeaded) == ''">playwright test --headed</PackageJsonScriptsTestE2eHeaded>
-    <PackageJsonScriptsTestUnitDebug Condition="$(PackageJsonScriptsTestUnitDebug) == ''">node --inspect-brk node_modules/.bin/jest --runInBand --testPathPattern='src.*\.(test|spec)\.(ts|tsx)$'</PackageJsonScriptsTestUnitDebug>
+    <PackageJsonScriptsTestUnitDebug Condition="$(PackageJsonScriptsTestUnitDebug) == ''">node --inspect-brk node_modules/.bin/jest --runInBand --testPathPatterns='src.*\.(test|spec)\.(ts|tsx)$'</PackageJsonScriptsTestUnitDebug>
     <PackageJsonKeywords Condition="$(PackageJsonKeywords) == ''">[]</PackageJsonKeywords>
     <PackageJsonAuthorName Condition="$(PackageJsonAuthorName) == ''">Lukian Poleschtschuk</PackageJsonAuthorName>
     <PackageJsonAuthorEmail Condition="$(PackageJsonAuthorEmail) == ''">lukianp@hotmail.com</PackageJsonAuthorEmail>
@@ -109,6 +111,7 @@
     <PackageJsonDevdependenciesWhatwgFetch Condition="$(PackageJsonDevdependenciesWhatwgFetch) == ''">^3.6.20</PackageJsonDevdependenciesWhatwgFetch>
     <PackageJsonDependenciesHeadlessuiReact Condition="$(PackageJsonDependenciesHeadlessuiReact) == ''">^2.2.9</PackageJsonDependenciesHeadlessuiReact>
     <PackageJsonDependenciesTestingLibraryDom Condition="$(PackageJsonDependenciesTestingLibraryDom) == ''">^10.4.1</PackageJsonDependenciesTestingLibraryDom>
+    <PackageJsonDependenciesTypesD3 Condition="$(PackageJsonDependenciesTypesD3) == ''">^7.4.3</PackageJsonDependenciesTypesD3>
     <PackageJsonDependenciesTypesGlob Condition="$(PackageJsonDependenciesTypesGlob) == ''">^8.1.0</PackageJsonDependenciesTypesGlob>
     <PackageJsonDependenciesTypesNodeCron Condition="$(PackageJsonDependenciesTypesNodeCron) == ''">^3.0.11</PackageJsonDependenciesTypesNodeCron>
     <PackageJsonDependenciesTypesReactWindow Condition="$(PackageJsonDependenciesTypesReactWindow) == ''">^1.8.8</PackageJsonDependenciesTypesReactWindow>
@@ -117,11 +120,14 @@
     <PackageJsonDependenciesAgGridReact Condition="$(PackageJsonDependenciesAgGridReact) == ''">^34.2.0</PackageJsonDependenciesAgGridReact>
     <PackageJsonDependenciesChokidar Condition="$(PackageJsonDependenciesChokidar) == ''">^4.0.3</PackageJsonDependenciesChokidar>
     <PackageJsonDependenciesClsx Condition="$(PackageJsonDependenciesClsx) == ''">^2.1.1</PackageJsonDependenciesClsx>
+    <PackageJsonDependenciesD3 Condition="$(PackageJsonDependenciesD3) == ''">^7.9.0</PackageJsonDependenciesD3>
+    <PackageJsonDependenciesD3Sankey Condition="$(PackageJsonDependenciesD3Sankey) == ''">^0.12.3</PackageJsonDependenciesD3Sankey>
     <PackageJsonDependenciesDateFns Condition="$(PackageJsonDependenciesDateFns) == ''">^4.1.0</PackageJsonDependenciesDateFns>
     <PackageJsonDependenciesElectronSquirrelStartup Condition="$(PackageJsonDependenciesElectronSquirrelStartup) == ''">^1.0.1</PackageJsonDependenciesElectronSquirrelStartup>
     <PackageJsonDependenciesGlob Condition="$(PackageJsonDependenciesGlob) == ''">^11.0.3</PackageJsonDependenciesGlob>
+    <PackageJsonDependenciesHtml2canvas Condition="$(PackageJsonDependenciesHtml2canvas) == ''">^1.4.1</PackageJsonDependenciesHtml2canvas>
     <PackageJsonDependenciesImmer Condition="$(PackageJsonDependenciesImmer) == ''">^10.1.3</PackageJsonDependenciesImmer>
-    <PackageJsonDependenciesJspdf Condition="$(PackageJsonDependenciesJspdf) == ''">^3.0.3</PackageJsonDependenciesJspdf>
+    <PackageJsonDependenciesJspdf Condition="$(PackageJsonDependenciesJspdf) == ''">^2.5.2</PackageJsonDependenciesJspdf>
     <PackageJsonDependenciesJspdfAutotable Condition="$(PackageJsonDependenciesJspdfAutotable) == ''">^5.0.2</PackageJsonDependenciesJspdfAutotable>
     <PackageJsonDependenciesLowdb Condition="$(PackageJsonDependenciesLowdb) == ''">^7.0.1</PackageJsonDependenciesLowdb>
     <PackageJsonDependenciesLucideReact Condition="$(PackageJsonDependenciesLucideReact) == ''">^0.544.0</PackageJsonDependenciesLucideReact>
