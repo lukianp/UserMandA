@@ -1238,8 +1238,9 @@ class PowerShellExecutionService extends EventEmitter {
       console.log(`[PowerShellService] AdditionalParams:`, JSON.stringify(additionalParams, null, 2));
 
       // Construct module path and function name
+      // Note: All discovery modules use the Invoke-* naming convention, not Start-*
       const modulePath = path.join(this.config.scriptsBaseDir, 'Modules', 'Discovery', `${moduleName}Discovery.psm1`);
-      const functionName = `Start-${moduleName}Discovery`;
+      const functionName = `Invoke-${moduleName}Discovery`;
 
       // Execute the discovery module
       const result = await this.executeModule(modulePath, functionName, discoveryParams, {

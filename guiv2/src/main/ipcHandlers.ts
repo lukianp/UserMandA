@@ -65,9 +65,11 @@ async function initializeServices(): Promise<void> {
   console.log('Initializing IPC services...');
 
   // Initialize PowerShell Execution Service
-  // Determine base directory: if running from guiv2, go up one level; otherwise use cwd
+  // Always use the fixed deployment directory for PowerShell modules
+  // This ensures modules are found regardless of where Electron is launched from
+  const deploymentDir = 'C:\\enterprisediscovery';
   const cwd = process.cwd();
-  const baseDir = cwd.endsWith('guiv2') ? path.join(cwd, '..') : cwd;
+  const baseDir = cwd.endsWith('guiv2') ? path.join(cwd, '..') : deploymentDir;
   console.log(`[IPC] PowerShell scripts base directory: ${baseDir}`);
 
   psService = new PowerShellExecutionService({

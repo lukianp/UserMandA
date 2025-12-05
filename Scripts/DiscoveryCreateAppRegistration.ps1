@@ -207,10 +207,13 @@ $ProgressPreference = "Continue"
 # Script metadata and validation
 $script:ScriptInfo = @{
     Name = "Enhanced M`&A Discovery Suite - App Registration"
-    Version = "4.0.0"
+    Version = "4.0.1"
     Author = "M`&A Discovery Team"
     RequiredPSVersion = "5.1"
-    Dependencies = @("Az.Accounts", "Az.Resources", "Microsoft.Graph.Applications", "Microsoft.Graph.Authentication", "Microsoft.Graph.Identity.DirectoryManagement", "Microsoft.Graph.Groups", "Microsoft.Graph.DirectoryObjects")
+    # Core dependencies - always required for Graph API access
+    Dependencies = @("Microsoft.Graph.Applications", "Microsoft.Graph.Authentication", "Microsoft.Graph.Identity.DirectoryManagement", "Microsoft.Graph.Groups", "Microsoft.Graph.DirectoryObjects")
+    # Optional dependencies - only needed if NOT using -SkipAzureRoles
+    OptionalAzDependencies = @("Az.Accounts", "Az.Resources")
 }
 
 # Enhanced application configuration
@@ -581,7 +584,17 @@ function Test-Prerequisites {
         # Enhanced module availability check with automatic installation
         Write-EnhancedLog "Checking and installing PowerShell modules..." -Level PROGRESS
         $moduleInstallationFailed = $false
-        foreach ($module in $script:ScriptInfo.Dependencies) {
+
+        # Determine which modules to check - add Az modules only if NOT skipping Azure roles
+        $modulesToCheck = $script:ScriptInfo.Dependencies.Clone()
+        if (-not $SkipAzureRoles) {
+            Write-EnhancedLog "Azure role assignment enabled - including Az modules" -Level INFO
+            $modulesToCheck += $script:ScriptInfo.OptionalAzDependencies
+        } else {
+            Write-EnhancedLog "Azure role assignment skipped (-SkipAzureRoles) - Az modules not required" -Level INFO
+        }
+
+        foreach ($module in $modulesToCheck) {
             $installedModule = Get-Module -ListAvailable -Name $module -ErrorAction SilentlyContinue |
                 Sort-Object Version -Descending | Select-Object -First 1
 
@@ -705,10 +718,15 @@ function Ensure-RequiredModules {
         }
         
         # Process each required module with enhanced progress tracking
-        $totalModules = $script:ScriptInfo.Dependencies.Count
+        # Determine which modules to process - add Az modules only if NOT skipping Azure roles
+        $modulesToProcess = @($script:ScriptInfo.Dependencies)
+        if (-not $SkipAzureRoles -and $script:ScriptInfo.OptionalAzDependencies) {
+            $modulesToProcess += $script:ScriptInfo.OptionalAzDependencies
+        }
+        $totalModules = $modulesToProcess.Count
         $processedModules = 0
-        
-        foreach ($moduleName in $script:ScriptInfo.Dependencies) {
+
+        foreach ($moduleName in $modulesToProcess) {
             $processedModules++
             Write-Progress -Activity "Processing Modules" -Status "Processing $moduleName - $processedModules of $totalModules" -PercentComplete (($processedModules / $totalModules) * 100)
             

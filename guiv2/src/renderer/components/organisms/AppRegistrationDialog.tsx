@@ -38,7 +38,7 @@ export const AppRegistrationDialog: React.FC<AppRegistrationDialogProps> = ({
   const [showWindow, setShowWindow] = useState(true);
   const [autoInstallModules, setAutoInstallModules] = useState(true);
   const [secretValidityYears, setSecretValidityYears] = useState(2);
-  const [skipAzureRoles, setSkipAzureRoles] = useState(false);
+  const [skipAzureRoles, setSkipAzureRoles] = useState(true);  // Default to skip - Az modules are large and often not needed for basic discovery
 
   // Existing credentials state
   const [hasExistingCredentials, setHasExistingCredentials] = useState(false);
