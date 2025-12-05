@@ -93,10 +93,11 @@ export function useAppRegistration() {
 
     monitorIntervalRef.current = setInterval(async () => {
       try {
-        // First, check the status file for progress updates
-        console.log('[useAppRegistration] Polling status for:', companyName);
-        const status = await window.electronAPI.appRegistration.readStatus(companyName);
-        console.log('[useAppRegistration] Status result:', status);
+        // Check status file and credentials in parallel for faster updates
+        const [status, hasCredentials] = await Promise.all([
+          window.electronAPI.appRegistration.readStatus(companyName),
+          window.electronAPI.appRegistration.hasCredentials(companyName)
+        ]);
 
         if (status) {
           // Update state with current step and status
@@ -137,9 +138,7 @@ export function useAppRegistration() {
           }
         }
 
-        // Check if credentials exist
-        const hasCredentials = await window.electronAPI.appRegistration.hasCredentials(companyName);
-
+        // Check if credentials exist (already fetched in parallel above)
         if (hasCredentials) {
           // Stop monitoring
           if (monitorIntervalRef.current) {
