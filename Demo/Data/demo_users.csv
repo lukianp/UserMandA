@@ -1,6 +1,0 @@
-﻿Id,Name,Department,Email,SourceDomain,TargetDomain
-USER0001,Alex Chen,Engineering,alex.chen@techcorp.com,contoso.local,techcorp.com
-USER0002,Maria Gonzalez,Product,maria.gonzalez@techcorp.com,contoso.local,techcorp.com
-USER0003,James Kim,DevOps,james.kim@techcorp.com,contoso.local,techcorp.com
-USER0004,Rebecca Zhang,Data Science,rebecca.zhang@techcorp.com,contoso.local,techcorp.com
-USER0005,Thomas Anderson,Security,thomas.anderson@techcorp.com,contoso.local,techcorp.com
