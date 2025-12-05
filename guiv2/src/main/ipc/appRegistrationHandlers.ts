@@ -48,6 +48,26 @@ export function registerAppRegistrationHandlers(): void {
     }
   );
 
+  // Read registration status (for progress tracking)
+  ipcMain.handle(
+    'app-registration:read-status',
+    async (event: IpcMainInvokeEvent, companyName: string) => {
+      const status = await appRegistrationService.readRegistrationStatus(companyName);
+      if (status) {
+        console.log('[IPC] app-registration:read-status', companyName, '=> status:', status.status, 'step:', status.step, 'message:', status.message);
+      }
+      return status;
+    }
+  );
+
+  // Clear registration status (before starting new registration)
+  ipcMain.handle(
+    'app-registration:clear-status',
+    async (event: IpcMainInvokeEvent, companyName: string) => {
+      return await appRegistrationService.clearRegistrationStatus(companyName);
+    }
+  );
+
   console.log('[IPC] App registration handlers registered');
 }
 

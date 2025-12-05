@@ -156,17 +156,15 @@ function Write-Step {
 function Show-BuildHeader {
     $art = @"
 
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║                🚀 M&A DISCOVERY SUITE V2                     ║
-║                                                              ║
-║                Ultimate Build System v2.0                    ║
-║                                                              ║
-║  ┌────────────────────────────────────────────────────────┐  ║
-║  │  ✨ Sync • 🔨 Build • 🚀 Deploy • 📊 Analyze           │  ║
-║  └────────────────────────────────────────────────────────┘  ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
+======================================================================
+
+                 M and A DISCOVERY SUITE V2
+
+                 Ultimate Build System v2.0
+
+     Sync - Build - Deploy - Analyze
+
+======================================================================
 
 "@
 
@@ -176,38 +174,38 @@ function Show-BuildHeader {
 # Build summary function
 function Show-BuildSummary {
     Write-Host ""
-    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Yellow
-    Write-Host " 📊 BUILD SUMMARY REPORT" -ForegroundColor Yellow
-    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Yellow
+    Write-Host "=======================================================" -ForegroundColor Yellow
+    Write-Host " BUILD SUMMARY REPORT" -ForegroundColor Yellow
+    Write-Host "=======================================================" -ForegroundColor Yellow
     Write-Host ""
 
     $totalDuration = (Get-Date) - $script:BuildStats.StartTime
     $totalDurationStr = "{0:mm\:ss\.fff}" -f $totalDuration
 
-    Write-Host "⏱️  Total Build Time: $totalDurationStr" -ForegroundColor White
-    Write-Host "📁 Files Synced: $($script:BuildStats.TotalFilesSynced)" -ForegroundColor White
-    Write-Host "🔧 Configuration: $Configuration" -ForegroundColor White
-    Write-Host "📍 Deployment: $DeployDir" -ForegroundColor White
+    Write-Host "Total Build Time: $totalDurationStr" -ForegroundColor White
+    Write-Host "Files Synced: $($script:BuildStats.TotalFilesSynced)" -ForegroundColor White
+    Write-Host "Configuration: $Configuration" -ForegroundColor White
+    Write-Host "Deployment: $DeployDir" -ForegroundColor White
 
     Write-Host ""
-    Write-Host "📈 Step Timings:" -ForegroundColor Cyan
+    Write-Host "Step Timings:" -ForegroundColor Cyan
     foreach ($step in $script:BuildStats.StepTimes.GetEnumerator() | Sort-Object { $_.Value.Start }) {
         if ($step.Value.Duration) {
             $durationStr = "{0:mm\:ss\.fff}" -f $step.Value.Duration
-            Write-Host "  • $($step.Key): $durationStr" -ForegroundColor Gray
+            Write-Host "  - $($step.Key): $durationStr" -ForegroundColor Gray
         }
     }
 
     Write-Host ""
-    Write-Host "🎯 Build Status: SUCCESS ✅" -ForegroundColor Green
+    Write-Host "Build Status: SUCCESS" -ForegroundColor Green
     Write-Host ""
 }
 
 # Header
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host " M&A Discovery Suite - GUI v2 Build Script" -ForegroundColor Green
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "=======================================================" -ForegroundColor Cyan
+Write-Host " M and A Discovery Suite - GUI v2 Build Script" -ForegroundColor Green
+Write-Host "=======================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Step "Development Directory: $DevDir" -Level 'INFO'
 Write-Step "Deployment Directory: $DeployDir" -Level 'INFO'
@@ -347,7 +345,8 @@ try {
 # Build renderer process
 Write-Host ""
 Write-Step "🎨 Building renderer process..." -Level 'BUILD' -StartTimer -TimerName "RendererBuild"
-$rendererCmd = "npx webpack --config webpack.renderer-standalone.config.js --mode=$mode"
+# Use webpack.renderer.config.js directly - includes all plugins, optimizations, and bundle analysis
+$rendererCmd = "npx webpack --config webpack.renderer.config.js --mode=$mode"
 try {
     if ($Verbosity -eq 'verbose') {
         Invoke-Expression $rendererCmd 2>&1
@@ -362,7 +361,7 @@ try {
     Write-ProgressBar -Current $currentBuildStep -Total $buildSteps.Count -Activity "🔨 Building" -Status $buildSteps[$currentBuildStep]
 } catch {
     Write-Step "❌ Renderer process build failed: $($_.Exception.Message)" -Level 'ERROR'
-    Write-Step "💡 Suggestion: Check webpack.renderer-standalone.config.js and ensure React dependencies are available" -Level 'INFO'
+    Write-Step "💡 Suggestion: Check webpack.renderer.config.js and ensure React dependencies are available" -Level 'INFO'
     exit 1
 }
 
@@ -417,9 +416,9 @@ if (!$allArtifactsPresent) {
 
 # Success summary
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
+Write-Host "=======================================================" -ForegroundColor Green
 Write-Host " Build Completed Successfully!" -ForegroundColor Green
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
+Write-Host "=======================================================" -ForegroundColor Green
 Write-Host ""
 Write-Step "Application built in: $DeployDir" -Level 'SUCCESS'
 Write-Host ""

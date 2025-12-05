@@ -870,6 +870,21 @@ const electronAPI: ElectronAPI = {
      */
     decryptCredential: (credentialFilePath: string) =>
       ipcRenderer.invoke('app-registration:decrypt-credential', credentialFilePath),
+
+    /**
+     * Read registration status from status file (for progress tracking)
+     * @param companyName - Company name
+     * @returns Promise with status object or null
+     */
+    readStatus: (companyName: string) =>
+      ipcRenderer.invoke('app-registration:read-status', companyName),
+
+    /**
+     * Clear registration status file before starting new registration
+     * @param companyName - Company name
+     */
+    clearStatus: (companyName: string) =>
+      ipcRenderer.invoke('app-registration:clear-status', companyName),
   },
 
   // ========================================

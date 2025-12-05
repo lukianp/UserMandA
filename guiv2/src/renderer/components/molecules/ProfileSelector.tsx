@@ -252,7 +252,7 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
         })}
         placeholder={profiles.length > 0 ? "Select a profile..." : "No profiles found - click Refresh"}
         disabled={isLoading}
-        error={error || undefined}
+        error={type === 'source' && error ? error : undefined}
         data-cy={`profile-select-${type}`}
       />
 

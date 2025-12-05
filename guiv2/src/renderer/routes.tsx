@@ -9,7 +9,7 @@ import React, { Suspense, lazy } from 'react';
 import { RouteObject } from 'react-router-dom';
 
 import { Spinner } from './components/atoms/Spinner';
-import { discoveredRoutes } from './views/discovered/_routes.generated';
+import { discoveredRoutes } from './views/discovered/_routes.generated.tsx';
 
 /**
  * Loading fallback component
@@ -42,6 +42,11 @@ const UsersView = lazy(() => import('./views/users/UsersView'));
 const GroupsView = lazy(() => import('./views/groups/GroupsView'));
 const ReportsView = lazy(() => import('./views/reports/ReportsView'));
 const SettingsView = lazy(() => import('./views/settings/SettingsView'));
+
+// Setup views
+const SetupCompanyView = lazy(() => import('./views/setup/SetupCompanyView'));
+const SetupAzurePrerequisitesView = lazy(() => import('./views/setup/SetupAzurePrerequisitesView'));
+const SetupInstallersView = lazy(() => import('./views/setup/SetupInstallersView'));
 
 // Discovery views
 const InfrastructureDiscoveryHubView = lazy(() => import('./views/discovery/InfrastructureDiscoveryHubView'));
@@ -120,6 +125,24 @@ export const routes: RouteObject[] = [
     element: lazyLoad(() => import('./views/overview/OverviewView')),
   },
 
+  // Setup routes
+  {
+    path: '/setup',
+    element: lazyLoad(() => import('./views/setup/SetupCompanyView')),
+  },
+  {
+    path: '/setup/company',
+    element: lazyLoad(() => import('./views/setup/SetupCompanyView')),
+  },
+  {
+    path: '/setup/azure-prerequisites',
+    element: lazyLoad(() => import('./views/setup/SetupAzurePrerequisitesView')),
+  },
+  {
+    path: '/setup/installers',
+    element: lazyLoad(() => import('./views/setup/SetupInstallersView')),
+  },
+
   // Discovery routes
   {
     path: '/discovery',
@@ -133,73 +156,9 @@ export const routes: RouteObject[] = [
   },
 
   // ========================================================================
-  // QUANTUM "DISCOVERED" ROUTES - Fractal Navigation Endpoints
-  // ========================================================================
-  {
-    path: '/discovered/azure',
-    element: lazyLoad(() => import('./views/discovery/AzureDiscoveryView')),
-  },
-  {
-    path: '/discovered/applications',
-    element: lazyLoad(() => import('./views/discovery/ApplicationDiscoveryView')),
-  },
-  {
-    path: '/discovered/exchange',
-    element: lazyLoad(() => import('./views/discovery/ExchangeDiscoveryView')),
-  },
-  {
-    path: '/discovered/filesystem',
-    element: lazyLoad(() => import('./views/discovery/FileSystemDiscoveryView')),
-  },
-  {
-    path: '/discovered/users',
-    element: lazyLoad(() => import('./views/users/UsersView')),
-  },
-  {
-    path: '/discovered/groups',
-    element: lazyLoad(() => import('./views/groups/GroupsView')),
-  },
-  {
-    path: '/discovered/infrastructure',
-    element: lazyLoad(() => import('./views/infrastructure/InfrastructureView')),
-  },
-  {
-    path: '/discovered/activedirectory',
-    element: lazyLoad(() => import('./views/discovery/ActiveDirectoryDiscoveryView')),
-  },
-  {
-    path: '/discovered/sharepoint',
-    element: lazyLoad(() => import('./views/discovery/SharePointDiscoveryView')),
-  },
-  {
-    path: '/discovered/teams',
-    element: lazyLoad(() => import('./views/discovery/TeamsDiscoveryView')),
-  },
-  {
-    path: '/discovered/intune',
-    element: lazyLoad(() => import('./views/discovery/IntuneDiscoveryView')),
-  },
-  {
-    path: '/discovered/onedrive',
-    element: lazyLoad(() => import('./views/discovery/OneDriveDiscoveryView')),
-  },
-  // CSV DATA DISPLAY VIEWS - New discovered data views for CSV results
-  {
-    path: '/discovered/aws',
-    element: lazyLoad(() => import('./views/discovered/AWSDiscoveredView')),
-  },
-  {
-    path: '/discovered/gcp',
-    element: lazyLoad(() => import('./views/discovered/GCPDiscoveredView')),
-  },
-  {
-    path: '/discovered/vmware',
-    element: lazyLoad(() => import('./views/discovered/VMwareDiscoveredView')),
-  },
-  {
-    path: '/discovered/hyperv',
-    element: lazyLoad(() => import('./views/discovered/HyperVDiscoveredView')),
-  },
+  // DISCOVERED ROUTES - Auto-generated CSV data display views
+  // These routes are handled by ...discoveredRoutes below (from _routes.generated.tsx)
+  // DO NOT add manual /discovered/* routes here - they will override the generated ones
   // ========================================================================
 
   {
@@ -369,6 +328,10 @@ export const routes: RouteObject[] = [
   {
     path: '/discovery/palo-alto',
     element: lazyLoad(() => import('./views/discovery/PaloAltoDiscoveryView')),
+  },
+  {
+    path: '/discovery/panorama-interrogation',
+    element: lazyLoad(() => import('./views/discovery/PanoramaInterrogationDiscoveryView')),
   },
   {
     path: '/discovery/gcp',

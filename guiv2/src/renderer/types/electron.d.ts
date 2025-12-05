@@ -1306,6 +1306,26 @@ export interface ElectronAPI {
      * @returns Promise with decrypted client secret or null
      */
     decryptCredential: (credentialFilePath: string) => Promise<string | null>;
+
+    /**
+     * Read registration status from status file (for progress tracking)
+     * @param companyName Company name
+     * @returns Promise with status object or null
+     */
+    readStatus: (companyName: string) => Promise<{
+      status: 'running' | 'success' | 'failed';
+      message: string;
+      error: string;
+      step: string;
+      timestamp: string;
+      logFile: string;
+    } | null>;
+
+    /**
+     * Clear registration status file before starting new registration
+     * @param companyName Company name
+     */
+    clearStatus: (companyName: string) => Promise<void>;
   };
 
   // ========================================

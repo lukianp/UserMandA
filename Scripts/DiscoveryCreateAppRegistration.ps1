@@ -210,7 +210,7 @@ $script:ScriptInfo = @{
     Version = "4.0.0"
     Author = "M`&A Discovery Team"
     RequiredPSVersion = "5.1"
-    Dependencies = @("Az", "Microsoft.Graph.Applications", "Microsoft.Graph.Authentication", "Microsoft.Graph.Identity.DirectoryManagement", "Microsoft.Graph.Groups", "Microsoft.Graph.DirectoryObjects")
+    Dependencies = @("Az.Accounts", "Az.Resources", "Microsoft.Graph.Applications", "Microsoft.Graph.Authentication", "Microsoft.Graph.Identity.DirectoryManagement", "Microsoft.Graph.Groups", "Microsoft.Graph.DirectoryObjects")
 }
 
 # Enhanced application configuration
@@ -1094,24 +1094,68 @@ function Connect-EnhancedAzure {
 function New-EnhancedAppRegistration {
     Start-OperationTimer "AppRegistration"
     Write-ProgressHeader "APPLICATION REGISTRATION" "Creating M`&A Discovery service principal with comprehensive permissions"
-    
+
     $appName = $script:AppConfig.DisplayName
-    
+    $originalAppName = $appName
+
     try {
-        # Check for existing app
+        # Check for existing app and service principal
         Write-EnhancedLog "Checking for existing application '$appName'..." -Level PROGRESS
         $existingApp = Get-MgApplication -Filter "displayName eq '$appName'" -ErrorAction SilentlyContinue
+
         if ($existingApp -and -not $Force) {
-            Write-EnhancedLog "Application '$appName' already exists. Use -Force to recreate." -Level WARN
-            Write-EnhancedLog "  Application ID: $($existingApp.AppId)" -Level INFO
-            Write-EnhancedLog "  Object ID: $($existingApp.Id)" -Level INFO
-            Stop-OperationTimer "AppRegistration" $true
-            return $existingApp
+            # Check if service principal also exists
+            $existingSp = Get-MgServicePrincipal -Filter "AppId eq '$($existingApp.AppId)'" -ErrorAction SilentlyContinue
+
+            if ($existingSp) {
+                # Both app and SP exist - try v2 name instead
+                $appNameV2 = "${originalAppName}_v2"
+                Write-EnhancedLog "Application '$appName' and its service principal already exist." -Level WARN
+                Write-EnhancedLog "Checking for alternate name '$appNameV2'..." -Level PROGRESS
+
+                $existingAppV2 = Get-MgApplication -Filter "displayName eq '$appNameV2'" -ErrorAction SilentlyContinue
+
+                if ($existingAppV2) {
+                    $existingSpV2 = Get-MgServicePrincipal -Filter "AppId eq '$($existingAppV2.AppId)'" -ErrorAction SilentlyContinue
+                    if ($existingSpV2) {
+                        Write-EnhancedLog "Both '$appName' and '$appNameV2' already exist with service principals." -Level WARN
+                        Write-EnhancedLog "Use -Force to recreate the primary app, or manually delete one from Azure portal." -Level WARN
+                        Write-EnhancedLog "  Primary App ID: $($existingApp.AppId)" -Level INFO
+                        Write-EnhancedLog "  V2 App ID: $($existingAppV2.AppId)" -Level INFO
+                        Stop-OperationTimer "AppRegistration" $true
+                        return $existingApp
+                    } else {
+                        # V2 app exists but no SP - we can use it
+                        Write-EnhancedLog "Using existing v2 application (no service principal yet)" -Level INFO
+                        $appName = $appNameV2
+                        $script:AppConfig.DisplayName = $appNameV2
+                        Stop-OperationTimer "AppRegistration" $true
+                        return $existingAppV2
+                    }
+                } else {
+                    # V2 doesn't exist - create it
+                    Write-EnhancedLog "Will create new application with name '$appNameV2'" -Level INFO
+                    $appName = $appNameV2
+                    $script:AppConfig.DisplayName = $appNameV2
+                }
+            } else {
+                # App exists but no SP - we can use this app and just create the SP
+                Write-EnhancedLog "Application '$appName' exists but service principal not found. Will create SP." -Level INFO
+                Stop-OperationTimer "AppRegistration" $true
+                return $existingApp
+            }
         } elseif ($existingApp -and $Force) {
             Write-EnhancedLog "Force mode: Removing existing application..." -Level PROGRESS
+            # Also remove the service principal if it exists
+            $existingSp = Get-MgServicePrincipal -Filter "AppId eq '$($existingApp.AppId)'" -ErrorAction SilentlyContinue
+            if ($existingSp) {
+                Write-EnhancedLog "Removing existing service principal..." -Level PROGRESS
+                Remove-MgServicePrincipal -ServicePrincipalId $existingSp.Id -ErrorAction SilentlyContinue
+                Write-EnhancedLog "Existing service principal removed" -Level SUCCESS
+            }
             Remove-MgApplication -ApplicationId $existingApp.Id -ErrorAction Stop
             Write-EnhancedLog "Existing application removed" -Level SUCCESS
-            Start-Sleep -Seconds 3  # Allow for propagation
+            Start-Sleep -Seconds 5  # Allow for propagation
         }
         
         # Get Microsoft Graph service principal with enhanced verification
@@ -1940,16 +1984,47 @@ function Save-EnhancedCredentials {
 }
 #endregion
 
+#region Status File Helper
+function Write-RegistrationStatus {
+    param(
+        [ValidateSet('running', 'success', 'failed')]
+        [string]$Status,
+        [string]$Message = '',
+        [string]$Error = '',
+        [string]$Step = ''
+    )
+
+    $statusPath = $LogPath -replace '\.txt$', '_status.json'
+    $statusObj = @{
+        status = $Status
+        message = $Message
+        error = $Error
+        step = $Step
+        timestamp = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+        logFile = $LogPath
+    }
+
+    try {
+        $statusObj | ConvertTo-Json | Set-Content -Path $statusPath -Encoding UTF8 -Force
+    } catch {
+        # Silently ignore status file write errors
+    }
+}
+#endregion
+
 #region Main Execution
 try {
     # Initialize script
     $script:Metrics.StartTime = Get-Date
-    
+
     # Initialize logging
     $logDir = Split-Path $LogPath -Parent
     if ($logDir -and -not (Test-Path $logDir -PathType Container)) {
         New-Item -Path $logDir -ItemType Directory -Force | Out-Null
     }
+
+    # Write initial status for GUI to detect
+    Write-RegistrationStatus -Status 'running' -Message 'Initializing app registration...' -Step 'Initialization'
     
     # Enhanced header with script information
     $headerContent = @"
@@ -1980,19 +2055,23 @@ PowerShell: $($PSVersionTable.PSVersion)
     Write-EnhancedLog "  Secret Validity: $SecretValidityYears years" -Level INFO
     
     # Prerequisites validation
+    Write-RegistrationStatus -Status 'running' -Message 'Validating prerequisites...' -Step 'Prerequisites'
     if (-not (Test-Prerequisites)) {
         throw "Prerequisites validation failed. Please resolve issues and retry."
     }
-    
+
     if ($ValidateOnly) {
         Write-EnhancedLog "Validation-only mode completed successfully" -Level SUCCESS
+        Write-RegistrationStatus -Status 'success' -Message 'Validation completed successfully'
         exit 0
     }
-    
+
     # Module management
+    Write-RegistrationStatus -Status 'running' -Message 'Loading PowerShell modules...' -Step 'ModuleManagement'
     Ensure-RequiredModules
-    
+
     # Establish connections
+    Write-RegistrationStatus -Status 'running' -Message 'Connecting to Microsoft Graph...' -Step 'GraphConnection'
     if (-not (Connect-EnhancedGraph)) {
         throw "Failed to establish Microsoft Graph connection"
     }
@@ -2016,21 +2095,27 @@ PowerShell: $($PSVersionTable.PSVersion)
     }
     
     # Create app registration
+    Write-RegistrationStatus -Status 'running' -Message 'Creating Azure AD application...' -Step 'AppRegistration'
     $appRegistration = New-EnhancedAppRegistration
-    
+
     # Grant admin consent and create service principal
+    Write-RegistrationStatus -Status 'running' -Message 'Granting admin consent and creating service principal...' -Step 'PermissionGrant'
     $servicePrincipal = Grant-EnhancedAdminConsent -AppRegistration $appRegistration
-    
+
     # Assign roles
+    Write-RegistrationStatus -Status 'running' -Message 'Assigning directory roles...' -Step 'RoleAssignment'
     Set-EnhancedRoleAssignments -ServicePrincipal $servicePrincipal
-    
+
     # Add service principal ObjectId to all subscriptions
+    Write-RegistrationStatus -Status 'running' -Message 'Configuring subscription access...' -Step 'SubscriptionAccess'
     Add-ServicePrincipalToAllSubscriptions -ServicePrincipal $servicePrincipal
-    
+
     # Create client secret
+    Write-RegistrationStatus -Status 'running' -Message 'Creating client secret...' -Step 'SecretCreation'
     $clientSecret = New-EnhancedClientSecret -AppRegistration $appRegistration
-    
+
     # Save encrypted credentials
+    Write-RegistrationStatus -Status 'running' -Message 'Saving encrypted credentials...' -Step 'CredentialStorage'
     Save-EnhancedCredentials -AppRegistration $appRegistration -ClientSecret $clientSecret -TenantId $tenantId
     
     # Calculate final metrics
@@ -2083,8 +2168,14 @@ PowerShell: $($PSVersionTable.PSVersion)
     
     Write-EnhancedLog "Azure AD App Registration completed successfully!" -Level SUCCESS
     Write-EnhancedLog "Ready to proceed with environment discovery using script 2" -Level SUCCESS
-    
+
+    # Signal success to GUI
+    Write-RegistrationStatus -Status 'success' -Message 'App registration completed successfully!' -Step 'Complete'
+
 } catch {
+    # Signal failure to GUI
+    Write-RegistrationStatus -Status 'failed' -Message 'App registration failed' -Error $_.Exception.Message -Step 'Error'
+
     Write-EnhancedLog "CRITICAL ERROR: $($_.Exception.Message)" -Level CRITICAL
     if ($_.Exception.InnerException) {
         Write-EnhancedLog "Inner Exception: $($_.Exception.InnerException.Message)" -Level ERROR
@@ -2134,5 +2225,14 @@ PowerShell: $($PSVersionTable.PSVersion)
     
     
     Write-EnhancedLog "Cleanup completed. Full log: $LogPath" -Level SUCCESS
+
+    # Pause to allow user to review output before window closes
+    Write-Host ""
+    Write-Host "===============================================================================" -ForegroundColor Cyan
+    Write-Host "  Script execution complete. Press any key to close this window..." -ForegroundColor Yellow
+    Write-Host "  Log file: $LogPath" -ForegroundColor Gray
+    Write-Host "===============================================================================" -ForegroundColor Cyan
+    Write-Host ""
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 #endregion

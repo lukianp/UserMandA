@@ -22,12 +22,41 @@ export interface AppRegistrationOptions {
   skipAzureRoles?: boolean;
 }
 
+// Registration steps in order
+export const REGISTRATION_STEPS = [
+  { id: 'Initialization', label: 'Initializing', description: 'Setting up script environment' },
+  { id: 'Prerequisites', label: 'Prerequisites', description: 'Validating system requirements' },
+  { id: 'ModuleManagement', label: 'Modules', description: 'Loading PowerShell modules' },
+  { id: 'GraphConnection', label: 'Graph Connection', description: 'Connecting to Microsoft Graph' },
+  { id: 'AzureConnection', label: 'Azure Connection', description: 'Connecting to Azure' },
+  { id: 'AppRegistration', label: 'App Registration', description: 'Creating Azure AD application' },
+  { id: 'PermissionGrant', label: 'Permissions', description: 'Granting admin consent' },
+  { id: 'RoleAssignment', label: 'Role Assignment', description: 'Assigning directory roles' },
+  { id: 'SubscriptionAccess', label: 'Subscriptions', description: 'Configuring subscription access' },
+  { id: 'SecretCreation', label: 'Secret', description: 'Creating client secret' },
+  { id: 'CredentialStorage', label: 'Storage', description: 'Saving encrypted credentials' },
+  { id: 'Complete', label: 'Complete', description: 'Registration complete' },
+] as const;
+
+export type RegistrationStepId = typeof REGISTRATION_STEPS[number]['id'];
+
+export interface RegistrationStatus {
+  status: 'running' | 'success' | 'failed';
+  message: string;
+  error: string;
+  step: string;
+  timestamp: string;
+  logFile: string;
+}
+
 export interface AppRegistrationState {
   isRunning: boolean;
   isMonitoring: boolean;
   progress: string;
   error: string | null;
   success: boolean;
+  currentStep: RegistrationStepId | null;
+  registrationStatus: RegistrationStatus | null;
 }
 
 /**
@@ -39,28 +68,75 @@ export function useAppRegistration() {
     isMonitoring: false,
     progress: '',
     error: null,
-    success: false
+    success: false,
+    currentStep: null,
+    registrationStatus: null,
   });
 
   const monitorIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { addTargetProfile, updateTargetProfile } = useProfileStore();
 
   /**
-   * Starts monitoring for credential files
+   * Starts monitoring for credential files and status updates
    */
   const startMonitoring = useCallback(async (companyName: string) => {
     setState(prev => ({
       ...prev,
       isMonitoring: true,
-      progress: 'Waiting for app registration to complete...'
+      progress: 'Waiting for app registration to complete...',
+      currentStep: 'Initialization',
     }));
 
     const startTime = Date.now();
-    const maxDuration = 5 * 60 * 1000; // 5 minutes
-    const pollInterval = 5000; // 5 seconds
+    const maxDuration = 10 * 60 * 1000; // 10 minutes (increased for module loading)
+    const pollInterval = 2000; // 2 seconds (faster polling for better UX)
 
     monitorIntervalRef.current = setInterval(async () => {
       try {
+        // First, check the status file for progress updates
+        console.log('[useAppRegistration] Polling status for:', companyName);
+        const status = await window.electronAPI.appRegistration.readStatus(companyName);
+        console.log('[useAppRegistration] Status result:', status);
+
+        if (status) {
+          // Update state with current step and status
+          setState(prev => ({
+            ...prev,
+            currentStep: status.step as RegistrationStepId,
+            registrationStatus: status,
+            progress: status.message,
+          }));
+
+          // Check if script failed
+          if (status.status === 'failed') {
+            if (monitorIntervalRef.current) {
+              clearInterval(monitorIntervalRef.current);
+              monitorIntervalRef.current = null;
+            }
+
+            setState({
+              isRunning: false,
+              isMonitoring: false,
+              progress: '',
+              error: status.error || 'App registration failed',
+              success: false,
+              currentStep: 'Error' as RegistrationStepId,
+              registrationStatus: status,
+            });
+            return;
+          }
+
+          // Check if script succeeded - also check credentials
+          if (status.status === 'success') {
+            // Script finished successfully, now import credentials
+            setState(prev => ({
+              ...prev,
+              progress: 'Loading credentials...',
+              currentStep: 'Complete',
+            }));
+          }
+        }
+
         // Check if credentials exist
         const hasCredentials = await window.electronAPI.appRegistration.hasCredentials(companyName);
 
@@ -111,7 +187,9 @@ export function useAppRegistration() {
                   isMonitoring: false,
                   progress: '',
                   error: null,
-                  success: true
+                  success: true,
+                  currentStep: 'Complete',
+                  registrationStatus: null,
                 });
               } else {
                 // Create new profile with required fields - cast to TargetProfile to avoid type mismatch
@@ -150,7 +228,9 @@ export function useAppRegistration() {
                   isMonitoring: false,
                   progress: '',
                   error: null,
-                  success: true
+                  success: true,
+                  currentStep: 'Complete',
+                  registrationStatus: null,
                 });
               }
             } else {
@@ -172,17 +252,13 @@ export function useAppRegistration() {
               isRunning: false,
               isMonitoring: false,
               progress: '',
-              error: 'Timeout: App registration did not complete within 5 minutes',
-              success: false
+              error: 'Timeout: App registration did not complete within 10 minutes',
+              success: false,
+              currentStep: null,
+              registrationStatus: null,
             });
-          } else {
-            // Update progress
-            const remainingSeconds = Math.floor((maxDuration - elapsed) / 1000);
-            setState(prev => ({
-              ...prev,
-              progress: `Waiting for app registration... (${remainingSeconds}s remaining)`
-            }));
           }
+          // Progress is now updated from status file, no need for countdown here
         }
       } catch (error: any) {
         // Stop monitoring on error
@@ -196,7 +272,9 @@ export function useAppRegistration() {
           isMonitoring: false,
           progress: '',
           error: error.message || 'Failed to import credentials',
-          success: false
+          success: false,
+          currentStep: null,
+          registrationStatus: null,
         });
       }
     }, pollInterval);
@@ -224,19 +302,24 @@ export function useAppRegistration() {
    */
   const launchAppRegistration = useCallback(async (options: AppRegistrationOptions) => {
     try {
+      // Clear any previous status file
+      await window.electronAPI.appRegistration.clearStatus(options.companyName);
+
       setState({
         isRunning: true,
         isMonitoring: false,
         progress: 'Launching app registration script...',
         error: null,
-        success: false
+        success: false,
+        currentStep: null,
+        registrationStatus: null,
       });
 
       // Launch the PowerShell script
       const result = await window.electronAPI.appRegistration.launch(options);
 
       if (result.success) {
-        // Start monitoring for credential files
+        // Start monitoring for credential files and status updates
         await startMonitoring(options.companyName);
       } else {
         setState({
@@ -244,7 +327,9 @@ export function useAppRegistration() {
           isMonitoring: false,
           progress: '',
           error: result.error || 'Failed to launch app registration script',
-          success: false
+          success: false,
+          currentStep: null,
+          registrationStatus: null,
         });
       }
     } catch (error: any) {
@@ -253,7 +338,9 @@ export function useAppRegistration() {
         isMonitoring: false,
         progress: '',
         error: error.message || 'An unexpected error occurred',
-        success: false
+        success: false,
+        currentStep: null,
+        registrationStatus: null,
       });
     }
   }, [startMonitoring]);
@@ -280,7 +367,9 @@ export function useAppRegistration() {
         isMonitoring: false,
         progress: 'Importing credentials...',
         error: null,
-        success: false
+        success: false,
+        currentStep: null,
+        registrationStatus: null,
       });
 
       // Read credential summary
@@ -339,7 +428,9 @@ export function useAppRegistration() {
         isMonitoring: false,
         progress: '',
         error: null,
-        success: true
+        success: true,
+        currentStep: 'Complete',
+        registrationStatus: null,
       });
     } catch (error: any) {
       setState({
@@ -347,7 +438,9 @@ export function useAppRegistration() {
         isMonitoring: false,
         progress: '',
         error: error.message || 'Failed to import credentials',
-        success: false
+        success: false,
+        currentStep: null,
+        registrationStatus: null,
       });
     }
   }, [addTargetProfile, updateTargetProfile]);
@@ -362,7 +455,9 @@ export function useAppRegistration() {
       isMonitoring: false,
       progress: '',
       error: null,
-      success: false
+      success: false,
+      currentStep: null,
+      registrationStatus: null,
     });
   }, [stopMonitoring]);
 
@@ -372,6 +467,7 @@ export function useAppRegistration() {
     checkExistingCredentials,
     importExistingCredentials,
     stopMonitoring,
-    reset
+    reset,
+    REGISTRATION_STEPS, // Export for UI consumption
   };
 }

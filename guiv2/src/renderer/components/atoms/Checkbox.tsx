@@ -68,29 +68,30 @@ export const Checkbox: React.FC<CheckboxProps> = ({
     'h-5 w-5 rounded border-2',
     'transition-all duration-200',
     'focus:outline-none focus:ring-2 focus:ring-offset-2',
+    'dark:ring-offset-gray-900',
 
     // State-based styles
     {
-      // Normal state
-      'border-gray-300 bg-white text-blue-600': !hasError && !disabled,
+      // Normal state (unchecked)
+      'border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700': !hasError && !disabled && !checked,
       'focus:ring-blue-500': !hasError && !disabled,
 
       // Checked state
-      'bg-blue-600 border-blue-600': checked && !disabled && !hasError,
+      'bg-blue-600 border-blue-600 dark:bg-blue-500 dark:border-blue-500': checked && !disabled && !hasError,
 
       // Error state
-      'border-red-500 text-red-600': hasError && !disabled,
+      'border-red-500 text-red-600 dark:border-red-400': hasError && !disabled,
       'focus:ring-red-500': hasError && !disabled,
 
       // Disabled state
-      'border-gray-200 bg-gray-100 cursor-not-allowed': disabled,
+      'border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 cursor-not-allowed': disabled,
     }
   );
 
   const labelClasses = clsx('text-sm font-medium', {
-    'text-gray-700': !hasError && !disabled,
-    'text-red-700': hasError && !disabled,
-    'text-gray-500': disabled,
+    'text-gray-700 dark:text-gray-200': !hasError && !disabled,
+    'text-red-700 dark:text-red-400': hasError && !disabled,
+    'text-gray-500 dark:text-gray-500': disabled,
   });
 
   return (
@@ -145,7 +146,7 @@ export const Checkbox: React.FC<CheckboxProps> = ({
               </label>
             )}
             {description && (
-              <p id={descriptionId} className="text-sm text-gray-500 mt-0.5">
+              <p id={descriptionId} className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                 {description}
               </p>
             )}

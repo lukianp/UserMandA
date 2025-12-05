@@ -107,10 +107,10 @@ export const AppRegistrationDialog: React.FC<AppRegistrationDialogProps> = ({
       <div className="space-y-6">
         {/* Success Message */}
         {state.success && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
             <div className="flex items-start">
               <svg
-                className="w-5 h-5 text-green-600 mt-0.5"
+                className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -121,10 +121,10 @@ export const AppRegistrationDialog: React.FC<AppRegistrationDialogProps> = ({
                 />
               </svg>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-green-800">
+                <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
                   App Registration Complete
                 </h3>
-                <p className="mt-1 text-sm text-green-700">
+                <p className="mt-1 text-sm text-green-700 dark:text-green-300">
                   Azure credentials have been imported successfully and are ready to use.
                 </p>
               </div>
@@ -134,10 +134,10 @@ export const AppRegistrationDialog: React.FC<AppRegistrationDialogProps> = ({
 
         {/* Error Message */}
         {state.error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
             <div className="flex items-start">
               <svg
-                className="w-5 h-5 text-red-600 mt-0.5"
+                className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -148,8 +148,8 @@ export const AppRegistrationDialog: React.FC<AppRegistrationDialogProps> = ({
                 />
               </svg>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <p className="mt-1 text-sm text-red-700">{state.error}</p>
+                <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error</h3>
+                <p className="mt-1 text-sm text-red-700 dark:text-red-300">{state.error}</p>
               </div>
             </div>
           </div>
@@ -157,11 +157,11 @@ export const AppRegistrationDialog: React.FC<AppRegistrationDialogProps> = ({
 
         {/* Progress Indicator */}
         {(state.isRunning || state.isMonitoring) && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <div className="flex items-center">
               <LoadingSpinner size="sm" />
               <div className="ml-3">
-                <p className="text-sm text-blue-800">{state.progress}</p>
+                <p className="text-sm text-blue-800 dark:text-blue-200">{state.progress}</p>
               </div>
             </div>
           </div>
@@ -169,7 +169,7 @@ export const AppRegistrationDialog: React.FC<AppRegistrationDialogProps> = ({
 
         {/* Company Name */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Company Name <span className="text-red-500">*</span>
           </label>
           <input
@@ -178,19 +178,19 @@ export const AppRegistrationDialog: React.FC<AppRegistrationDialogProps> = ({
             onChange={(e) => setCompanyName(e.target.value)}
             disabled={isFormDisabled}
             placeholder="Enter company name"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
           />
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             This name will be used to organize credentials in C:\DiscoveryData\[CompanyName]
           </p>
         </div>
 
         {/* Existing Credentials Warning */}
         {hasExistingCredentials && !state.success && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
             <div className="flex items-start">
               <svg
-                className="w-5 h-5 text-yellow-600 mt-0.5"
+                className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -201,10 +201,10 @@ export const AppRegistrationDialog: React.FC<AppRegistrationDialogProps> = ({
                 />
               </svg>
               <div className="ml-3 flex-1">
-                <h3 className="text-sm font-medium text-yellow-800">
+                <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
                   Existing Credentials Found
                 </h3>
-                <p className="mt-1 text-sm text-yellow-700">
+                <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
                   App registration credentials already exist for this company. You can import
                   them or create new ones.
                 </p>
@@ -222,53 +222,92 @@ export const AppRegistrationDialog: React.FC<AppRegistrationDialogProps> = ({
 
         {/* Options */}
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-gray-700">Options</h3>
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Options</h3>
 
           {/* Show Window */}
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={showWindow}
-              onChange={(e) => setShowWindow(e.target.checked)}
-              disabled={isFormDisabled}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
-            />
-            <span className="ml-2 text-sm text-gray-700">
+          <label className="flex items-center cursor-pointer group">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={showWindow}
+                onChange={(e) => setShowWindow(e.target.checked)}
+                disabled={isFormDisabled}
+                className="sr-only peer"
+              />
+              <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-all ${
+                showWindow
+                  ? 'bg-blue-600 border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+                  : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-500 group-hover:border-blue-400'
+              } ${isFormDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                {showWindow && (
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+            </div>
+            <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
               Show PowerShell window (recommended for first-time setup)
             </span>
           </label>
 
           {/* Auto Install Modules */}
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={autoInstallModules}
-              onChange={(e) => setAutoInstallModules(e.target.checked)}
-              disabled={isFormDisabled}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
-            />
-            <span className="ml-2 text-sm text-gray-700">
+          <label className="flex items-center cursor-pointer group">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={autoInstallModules}
+                onChange={(e) => setAutoInstallModules(e.target.checked)}
+                disabled={isFormDisabled}
+                className="sr-only peer"
+              />
+              <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-all ${
+                autoInstallModules
+                  ? 'bg-blue-600 border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+                  : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-500 group-hover:border-blue-400'
+              } ${isFormDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                {autoInstallModules && (
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+            </div>
+            <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
               Automatically install required PowerShell modules
             </span>
           </label>
 
           {/* Skip Azure Roles */}
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={skipAzureRoles}
-              onChange={(e) => setSkipAzureRoles(e.target.checked)}
-              disabled={isFormDisabled}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
-            />
-            <span className="ml-2 text-sm text-gray-700">
+          <label className="flex items-center cursor-pointer group">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={skipAzureRoles}
+                onChange={(e) => setSkipAzureRoles(e.target.checked)}
+                disabled={isFormDisabled}
+                className="sr-only peer"
+              />
+              <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-all ${
+                skipAzureRoles
+                  ? 'bg-blue-600 border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+                  : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-500 group-hover:border-blue-400'
+              } ${isFormDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                {skipAzureRoles && (
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+            </div>
+            <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
               Skip Azure role assignments (for limited admin access)
             </span>
           </label>
 
           {/* Secret Validity */}
           <div>
-            <label className="block text-sm text-gray-700 mb-1">
+            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
               Client Secret Validity (years)
             </label>
             <input
@@ -278,37 +317,37 @@ export const AppRegistrationDialog: React.FC<AppRegistrationDialogProps> = ({
               value={secretValidityYears}
               onChange={(e) => setSecretValidityYears(parseInt(e.target.value) || 2)}
               disabled={isFormDisabled}
-              className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Azure recommends 2 years maximum
             </p>
           </div>
         </div>
 
         {/* Information */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-gray-900 mb-2">
+        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
             What this script does:
           </h4>
-          <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+          <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
             <li>Creates an Azure AD app registration</li>
             <li>Configures Microsoft Graph API permissions</li>
             <li>Generates a client secret</li>
             <li>Saves encrypted credentials to C:\DiscoveryData\[CompanyName]\Credentials</li>
             <li>Automatically imports credentials into your profile</li>
           </ul>
-          <p className="mt-2 text-xs text-gray-500">
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
             You will need Global Administrator rights in Azure AD to complete this setup.
           </p>
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={handleClose}
             disabled={state.isRunning || state.isMonitoring}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {state.success ? 'Close' : 'Cancel'}
           </button>

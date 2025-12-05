@@ -52,7 +52,9 @@ export const discoveredNavItems = [
   { path: '/discovery/discovered/certificateauthority', label: 'Certificate Authority', icon: <Shield size={16} /> },
   { path: '/discovery/discovered/certificates', label: 'Certificates', icon: <Key size={16} /> },
   { path: '/discovery/discovered/conditionalaccess', label: 'Conditional Access', icon: <Lock size={16} /> },
+  { path: '/discovery/discovered/dlp', label: 'Data Loss Prevention', icon: <Shield size={16} /> },
   { path: '/discovery/discovered/paloalto', label: 'Palo Alto Networks', icon: <Shield size={16} /> },
+  { path: '/discovery/discovered/panoramainterrogation', label: 'Panorama Interrogation', icon: <Shield size={16} /> },
   { path: '/discovery/discovered/securityinfrastructure', label: 'Security Infrastructure', icon: <Shield size={16} /> },
 
   // Network

@@ -36,6 +36,15 @@ export interface CredentialSummary {
   Domain?: string;
 }
 
+export interface RegistrationStatus {
+  status: 'running' | 'success' | 'failed';
+  message: string;
+  error: string;
+  step: string;
+  timestamp: string;
+  logFile: string;
+}
+
 /**
  * Launches the Azure App Registration PowerShell script
  *
@@ -232,11 +241,28 @@ export async function readCredentialSummary(
     }
 
     const content = await fs.promises.readFile(summaryPath, 'utf8');
-    const summary = JSON.parse(content) as CredentialSummary;
+    const rawSummary = JSON.parse(content);
+
+    // Map field names - handle both CreatedDate and Created
+    const summary: CredentialSummary = {
+      TenantId: rawSummary.TenantId,
+      ClientId: rawSummary.ClientId,
+      CredentialFile: rawSummary.CredentialFile,
+      Created: rawSummary.Created || rawSummary.CreatedDate || new Date().toISOString(),
+      Domain: rawSummary.Domain || ''
+    };
 
     // Ensure credential file path is absolute
     if (summary.CredentialFile && !path.isAbsolute(summary.CredentialFile)) {
       summary.CredentialFile = path.join(credentialsDir, summary.CredentialFile);
+    }
+
+    // If no CredentialFile specified, try the default location
+    if (!summary.CredentialFile) {
+      const defaultCredPath = path.join(credentialsDir, 'discoverycredentials.config');
+      if (fs.existsSync(defaultCredPath)) {
+        summary.CredentialFile = defaultCredPath;
+      }
     }
 
     return summary;
@@ -247,7 +273,7 @@ export async function readCredentialSummary(
 }
 
 /**
- * Decrypts credential file using PowerShell DPAPI
+ * Reads credential file - handles both plain JSON and DPAPI encrypted formats
  *
  * Pattern from GUI/Models/TargetProfile.cs:226-251
  */
@@ -260,6 +286,22 @@ export async function decryptCredentialFile(
       return null;
     }
 
+    // First try to read as plain JSON
+    const content = await fs.promises.readFile(credentialFilePath, 'utf8');
+
+    try {
+      // Try parsing as plain JSON first
+      const credData = JSON.parse(content);
+      if (credData.ClientSecret) {
+        console.log(`[AppRegistrationService] Read client secret from plain JSON credential file`);
+        return credData.ClientSecret;
+      }
+    } catch {
+      // Not valid JSON, try DPAPI decryption
+      console.log(`[AppRegistrationService] Credential file is not plain JSON, trying DPAPI decryption`);
+    }
+
+    // Fall back to DPAPI decryption for encrypted files
     // Escape single quotes in file path
     const escapedPath = credentialFilePath.replace(/'/g, "''");
 
@@ -311,7 +353,7 @@ export async function decryptCredentialFile(
       });
     });
   } catch (error: any) {
-    console.error(`[AppRegistrationService] Decryption error:`, error);
+    console.error(`[AppRegistrationService] Credential read error:`, error);
     return null;
   }
 }
@@ -377,10 +419,66 @@ export function watchForCredentials(
   return cleanup;
 }
 
+/**
+ * Reads the registration status file written by the PowerShell script
+ *
+ * The script writes status updates to: {LogPath}_status.json
+ * This allows the GUI to track progress in real-time
+ */
+export async function readRegistrationStatus(
+  companyName: string
+): Promise<RegistrationStatus | null> {
+  try {
+    const statusPath = path.join(
+      'C:',
+      'DiscoveryData',
+      companyName,
+      'Logs',
+      'MandADiscovery_Registration_Log_status.json'
+    );
+
+    if (!fs.existsSync(statusPath)) {
+      return null;
+    }
+
+    const content = await fs.promises.readFile(statusPath, 'utf8');
+    const status = JSON.parse(content) as RegistrationStatus;
+
+    return status;
+  } catch (error: any) {
+    console.error(`[AppRegistrationService] Failed to read status file:`, error);
+    return null;
+  }
+}
+
+/**
+ * Clears the registration status file to prepare for a new run
+ */
+export async function clearRegistrationStatus(companyName: string): Promise<void> {
+  try {
+    const statusPath = path.join(
+      'C:',
+      'DiscoveryData',
+      companyName,
+      'Logs',
+      'MandADiscovery_Registration_Log_status.json'
+    );
+
+    if (fs.existsSync(statusPath)) {
+      await fs.promises.unlink(statusPath);
+      console.log(`[AppRegistrationService] Cleared status file for ${companyName}`);
+    }
+  } catch (error: any) {
+    console.error(`[AppRegistrationService] Failed to clear status file:`, error);
+  }
+}
+
 export default {
   launchAppRegistration,
   hasAppRegistrationCredentials,
   readCredentialSummary,
   decryptCredentialFile,
-  watchForCredentials
+  watchForCredentials,
+  readRegistrationStatus,
+  clearRegistrationStatus
 };

@@ -7,8 +7,8 @@
  * Epic 0: UI/UX Enhancement - Navigation & UX (TASK 6)
  */
 
-import React, { useState, useMemo } from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useMemo, useCallback } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 import {
   LayoutDashboard,
@@ -44,6 +44,9 @@ import {
   Calendar,
   FileSearch,
   Box,
+  Wrench,
+  Building2,
+  Download,
 } from 'lucide-react';
 
 import { useProfileStore } from '../../store/useProfileStore';
@@ -68,11 +71,51 @@ interface NavItem {
 export const Sidebar: React.FC = () => {
   const { selectedSourceProfile, selectedTargetProfile } = useProfileStore();
   const { systemStatus } = useSystemHealthLogic();
+  const location = useLocation();
+
+  // State for collapsible sections
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    setup: false,
+    discovery: false,
+    migration: false,
+  });
+
+  // Toggle section expansion
+  const toggleSection = useCallback((section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  }, []);
+
+  // Check if a section should be expanded based on current path
+  const isSectionActive = useCallback((paths: string[]) => {
+    return paths.some(path => location.pathname.startsWith(path));
+  }, [location.pathname]);
 
   // Discovered Data - Shows results from discovery operations
   // These are DATA DISPLAY views, not discovery execution interfaces
   // Now using auto-generated navigation items from _sidebar.generated.ts
   const discoveredItems: NavItem[] = useMemo(() => discoveredNavItems, []);
+
+  // Setup menu items (admin-only)
+  const setupItems: NavItem[] = [
+    {
+      path: '/setup/company',
+      label: 'Company',
+      icon: <Building2 size={16} />,
+    },
+    {
+      path: '/setup/azure-prerequisites',
+      label: 'Azure Prerequisites',
+      icon: <Cloud size={16} />,
+    },
+    {
+      path: '/setup/installers',
+      label: 'Installers',
+      icon: <Download size={16} />,
+    },
+  ];
 
   // Navigation items
   const navItems: NavItem[] = [
@@ -80,6 +123,12 @@ export const Sidebar: React.FC = () => {
       path: '/',
       label: 'Overview',
       icon: <LayoutDashboard size={20} />,
+    },
+    {
+      path: '/setup',
+      label: 'Setup',
+      icon: <Wrench size={20} />,
+      children: setupItems,
     },
     {
       path: '/discovery',
