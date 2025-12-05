@@ -85,7 +85,8 @@
       "Bash(node scripts/generate-discovery-views.js:*)",
       "Bash(Test-Path \"D:\\Scripts\\UserMandA\\guiv2\\src\\test-utils\")",
       "Bash(ls:*)",
-      "Bash(node scripts/update-discovered-views.js:*)"
+      "Bash(node scripts/update-discovered-views.js:*)",
+      "Bash(node update-discovered-views.js:*)"
     ],
     "deny": [],
     "ask": [],

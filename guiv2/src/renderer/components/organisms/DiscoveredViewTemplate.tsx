@@ -10,7 +10,7 @@
 
 import React, { useMemo, useCallback } from 'react';
 import { ColDef } from 'ag-grid-community';
-import { Download, RefreshCw, Search, AlertCircle } from 'lucide-react';
+import { Download, RefreshCw, Search, AlertCircle, Info } from 'lucide-react';
 import { clsx } from 'clsx';
 
 import { VirtualizedDataGrid } from './VirtualizedDataGrid';
@@ -70,7 +70,15 @@ export const DiscoveredViewTemplate = React.memo<DiscoveredViewTemplateProps>(
     enableExport = true,
     'data-cy': dataCy,
   }) {
-    console.log(`[DiscoveredViewTemplate] Rendering "${title}" with ${data?.length || 0} rows, loading: ${loading}`);
+    console.log(`[DiscoveredViewTemplate] ========== RENDER START ==========`);
+    console.log(`[DiscoveredViewTemplate] Title: "${title}"`);
+    console.log(`[DiscoveredViewTemplate] Data: ${data?.length || 0} rows`);
+    console.log(`[DiscoveredViewTemplate] Columns: ${columns?.length || 0}`);
+    console.log(`[DiscoveredViewTemplate] Loading: ${loading}`);
+    console.log(`[DiscoveredViewTemplate] Error: ${error?.message || 'none'}`);
+    console.log(`[DiscoveredViewTemplate] SearchText: "${searchText}"`);
+    console.log(`[DiscoveredViewTemplate] LastRefresh: ${lastRefresh?.toISOString() || 'null'}`);
+    console.log(`[DiscoveredViewTemplate] ========== RENDER END ==========`);
 
     // Filter data based on search text
     const filteredData = useMemo(() => {
@@ -99,6 +107,16 @@ export const DiscoveredViewTemplate = React.memo<DiscoveredViewTemplateProps>(
     const handleSelectionChange = useCallback(() => {
       // Placeholder for future selection handling
     }, []);
+
+    // Detect if error is a "discovery not run" scenario (file not found)
+    const isDiscoveryNotRun = useMemo(() => {
+      if (!error) return false;
+      const errorMsg = error.message.toLowerCase();
+      return errorMsg.includes('enoent') ||
+             errorMsg.includes('no such file') ||
+             errorMsg.includes('cannot find') ||
+             errorMsg.includes('does not exist');
+    }, [error]);
 
     return (
       <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy={dataCy}>
@@ -203,17 +221,39 @@ export const DiscoveredViewTemplate = React.memo<DiscoveredViewTemplateProps>(
           {error && !loading && (
             <div className="h-full flex items-center justify-center">
               <div className="text-center max-w-md">
-                <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Error Loading Data
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  {error.message}
-                </p>
-                <Button onClick={onRefresh} variant="primary">
-                  <RefreshCw size={16} />
-                  <span className="ml-2">Try Again</span>
-                </Button>
+                {isDiscoveryNotRun ? (
+                  <>
+                    <Info size={48} className="text-blue-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      Discovery Not Run
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      The <strong>{title}</strong> discovery module has not been executed yet.
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Run the discovery module from the Discovery tab to populate this view with data.
+                    </p>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+                      <p className="text-xs text-blue-700 dark:text-blue-300 text-left">
+                        <strong>Tip:</strong> Navigate to the Discovery tab, select {title}, configure the target environment, and click "Start Discovery" to collect data.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      Error Loading Data
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      {error.message}
+                    </p>
+                    <Button onClick={onRefresh} variant="primary">
+                      <RefreshCw size={16} />
+                      <span className="ml-2">Try Again</span>
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           )}

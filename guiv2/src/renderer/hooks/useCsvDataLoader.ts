@@ -106,19 +106,31 @@ export function useCsvDataLoader<T = any>(
     setReloadCounter((c) => c + 1);
   }, []);
 
+  // CRITICAL DEBUG: Track loading state changes
+  useEffect(() => {
+    console.log(`[useCsvDataLoader] 🔄 Loading state changed to: ${loading}`);
+  }, [loading]);
+
+  // CRITICAL DEBUG: Track data state changes
+  useEffect(() => {
+    console.log(`[useCsvDataLoader] 📊 Data state changed to: ${data.length} rows`);
+  }, [data]);
+
   useEffect(() => {
     mountCountRef.current += 1;
     const now = Date.now();
     const timeSinceLastMount = now - lastMountTimeRef.current;
 
-    // CRITICAL: Prevent rapid re-mounting (< 1 second apart)
-    if (timeSinceLastMount < 1000 && mountCountRef.current > 1) {
-      console.warn(`[useCsvDataLoader] Rapid re-mount detected (${timeSinceLastMount}ms after mount #${mountCountRef.current}), skipping load`);
-      return;
-    }
+    console.log(`[useCsvDataLoader] ⚙️  Effect triggered - Mount #${mountCountRef.current}, timeSince: ${timeSinceLastMount}ms, csvPath: ${csvPath}`);
 
     lastMountTimeRef.current = now;
     isUnmountedRef.current = false;
+
+    // CRITICAL: Reset loadInProgressRef on each mount to prevent stale state from React Strict Mode double-mount
+    if (mountCountRef.current > 1 && loadInProgressRef.current) {
+      console.log(`[useCsvDataLoader] ⚠️  Resetting stale loadInProgressRef from previous mount`);
+      loadInProgressRef.current = false;
+    }
 
     if (!csvPath) {
       setData([]);
@@ -143,7 +155,17 @@ export function useCsvDataLoader<T = any>(
       }
 
       loadInProgressRef.current = true;
+
+      // CRITICAL: Check if unmounted BEFORE setting loading to true
+      if (isUnmountedRef.current) {
+        console.warn('[useCsvDataLoader] ⚠️  Component unmounted before setLoading, aborting');
+        loadInProgressRef.current = false;
+        return;
+      }
+
       setLoading(true);
+      console.log(`[useCsvDataLoader] 🔄 setLoading(true) called`);
+
       if (!isRetry) {
         setError(null);
       }
@@ -161,6 +183,13 @@ export function useCsvDataLoader<T = any>(
 
         // Read CSV file using Electron API
         const csvText = await window.electronAPI.fs.readFile(fullPath, 'utf8');
+
+        // CRITICAL: Check again after async operation
+        if (isUnmountedRef.current) {
+          console.warn('[useCsvDataLoader] ⚠️  Component unmounted after readFile, aborting');
+          loadInProgressRef.current = false;
+          return;
+        }
 
         if (!csvText || csvText.length === 0) {
           throw new Error(`CSV file is empty: ${fullPath}`);
@@ -233,15 +262,25 @@ export function useCsvDataLoader<T = any>(
               console.warn('[useCsvDataLoader] Parse warnings:', results.errors);
             }
 
-            setData(finalData);
-            setColumns(generatedColumns);
-            setLastRefresh(new Date());
-            setError(null);
-            retryCountRef.current = 0;
-            setLoading(false);
-            loadInProgressRef.current = false;
+            // CRITICAL: Update state in correct order to prevent race conditions
+            if (!isUnmountedRef.current) {
+              setData(finalData);
+              setColumns(generatedColumns);
+              setLastRefresh(new Date());
+              setError(null);
+              retryCountRef.current = 0;
 
-            onSuccess?.(finalData, generatedColumns);
+              // CRITICAL: Set loading to false LAST and log it
+              setLoading(false);
+              loadInProgressRef.current = false;
+
+              console.log(`[useCsvDataLoader] ✅ SUCCESS: Data loaded, loading set to FALSE`);
+              console.log(`[useCsvDataLoader] ✅ Data: ${finalData.length} rows, Columns: ${generatedColumns.length}`);
+
+              onSuccess?.(finalData, generatedColumns);
+            } else {
+              console.warn('[useCsvDataLoader] ⚠️  Component unmounted during parse, skipping state update');
+            }
           },
           error: (parseError) => {
             const err = new Error(`CSV parse error: ${parseError.message}`);
@@ -290,6 +329,9 @@ export function useCsvDataLoader<T = any>(
       loadCsvData();
     } else {
       console.log(`[useCsvDataLoader] Skipping load - no path change (mount: ${mountCountRef.current})`);
+      // CRITICAL: Ensure loading stays false when we skip the load
+      setLoading(false);
+      console.log(`[useCsvDataLoader] ✅ Ensured loading=false since skipping load`);
     }
 
     // Setup auto-refresh ONLY on first mount
