@@ -1,0 +1,199 @@
+<UserControl x:Class="MandADiscoverySuite.Views.ComputersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:converters="clr-namespace:MandADiscoverySuite.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Background="#0F1419">
+    
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <!-- Count to Visibility Converter -->
+        <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+        <!-- Null to Visibility Converter -->
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+    </UserControl.Resources>
+    
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Computer Inventory" 
+                       FontSize="28" 
+                       FontWeight="SemiBold"
+                       Foreground="#E2E8F0"/>
+            <TextBlock Text="Infrastructure assets including computers, servers, and devices" 
+                       FontSize="14" 
+                       Foreground="{StaticResource SecondaryTextBrush}" 
+                       Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <!-- Header Warnings Banner -->
+        <ItemsControl Grid.Row="1" ItemsSource="{Binding HeaderWarnings}" 
+                      Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibilityConverter}}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Background="#55FF0000" Padding="10" Margin="0,0,0,5" CornerRadius="4">
+                        <TextBlock Text="{Binding}" Foreground="White" FontWeight="Medium"/>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Error Banner -->
+        <Border Grid.Row="2" Background="#55FF6B6B" Padding="10" Margin="0,0,0,15" CornerRadius="4"
+                Visibility="{Binding LastError, Converter={StaticResource NullToVisibilityConverter}}">
+            <TextBlock Text="{Binding LastError}" Foreground="White" FontWeight="Medium"/>
+        </Border>
+        
+        <!-- Content -->
+        <Border Grid.Row="3" 
+                Background="#1A202C" 
+                BorderBrush="#2D3748" 
+                BorderThickness="1" 
+                CornerRadius="8"
+                Padding="24">
+            <Grid>
+                <!-- Loading Indicator -->
+                <StackPanel HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock Text="⏳" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                    <TextBlock Text="{Binding LoadingMessage}" 
+                               FontSize="16" 
+                               Foreground="{StaticResource SecondaryTextBrush}" 
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+                
+                <!-- Data Grid -->
+                <DataGrid ItemsSource="{Binding Infrastructure}"
+                          AutoGenerateColumns="False"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          GridLinesVisibility="None"
+                          HeadersVisibility="Column"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          IsReadOnly="True"
+                          SelectionMode="Single">
+                    <DataGrid.Style>
+                        <Style TargetType="DataGrid">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding HasData}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.Style>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="200" />
+                        <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150" />
+                        <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="250" />
+                        <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="150" />
+                        <DataGridTextColumn Header="OS" Binding="{Binding OperatingSystem}" Width="150" />
+                        <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="100" />
+                        <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="150" />
+                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" />
+                        <DataGridTextColumn Header="Manufacturer" Binding="{Binding Manufacturer}" Width="150" />
+                        <DataGridTextColumn Header="Model" Binding="{Binding Model}" Width="150" />
+                        <DataGridTextColumn Header="Last Seen" Binding="{Binding LastSeen}" Width="150" />
+                        <!-- View Details Button -->
+                        <DataGridTemplateColumn Header="Actions" Width="100">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="View Details" 
+                                            FontSize="11" 
+                                            Padding="8,4"
+                                            Background="#10B981" 
+                                            Foreground="White" 
+                                            BorderThickness="0"
+                                            Command="{Binding DataContext.ShowAssetDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="{TemplateBinding Background}"
+                                                                    CornerRadius="4"
+                                                                    BorderThickness="0">
+                                                                <ContentPresenter HorizontalAlignment="Center" 
+                                                                                  VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="#059669"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#2D3748"/>
+                            <Setter Property="Foreground" Value="#E2E8F0"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Padding" Value="12,8"/>
+                        </Style>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="#E2E8F0"/>
+                        </Style>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Padding" Value="12,8"/>
+                        </Style>
+                    </DataGrid.Resources>
+                </DataGrid>
+                
+                <!-- Empty State -->
+                <StackPanel HorizontalAlignment="Center" 
+                           VerticalAlignment="Center">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsLoading}" Value="False"/>
+                                        <Condition Binding="{Binding HasData}" Value="False"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="💻" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16" Foreground="#6B7280"/>
+                    <TextBlock Text="No computers found" 
+                               FontSize="18" 
+                               Foreground="#6B7280" 
+                               HorizontalAlignment="Center" 
+                               Margin="0,0,0,8"/>
+                    <TextBlock Text="Computers will appear here once discovery is run" 
+                               FontSize="14" 
+                               Foreground="#4B5563" 
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

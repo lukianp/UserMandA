@@ -87,7 +87,7 @@ function Invoke-SafeModuleExecution {
         if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
             Write-MandALog -Message "[$ModuleName] Error: $($_.Exception.Message)" -Level "ERROR" -Component $ModuleName -Context $Context
         } else {
-            Write-Error "[DiscoveryModuleBase] [$ModuleName] Error: $($_.Exception.Message)"
+            Write-Host "[$ModuleName] Error: $($_.Exception.Message)" -ForegroundColor Red
         }
         # Don't rethrow - let caller handle based on result
     } finally {

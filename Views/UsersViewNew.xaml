@@ -1,0 +1,301 @@
+<UserControl x:Class="MandADiscoverySuite.Views.UsersViewNew"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Background="{DynamicResource SurfaceBrush}">
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Converters.xaml"/>
+                <ResourceDictionary Source="../Resources/DataGridTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Header -->
+            <RowDefinition Height="Auto"/>  <!-- Warning Banners -->
+            <RowDefinition Height="Auto"/>  <!-- Error Banner -->
+            <RowDefinition Height="Auto"/>  <!-- Filters Panel -->
+            <RowDefinition Height="Auto"/>  <!-- Loading -->
+            <RowDefinition Height="*"/>     <!-- Data Grid -->
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="24" Margin="20,20,20,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="👥 User Management" FontSize="24" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ForegroundBrush}"/>
+                    <TextBlock Text="Active Directory users and identity information for migration planning"
+                               FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBox x:Name="SearchBox" Width="200" Height="32" Margin="0,0,8,0"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalContentAlignment="Center"
+                             Background="{DynamicResource BackgroundBrush}"
+                             Foreground="{DynamicResource ForegroundBrush}"
+                             BorderBrush="{DynamicResource BorderBrush}"
+                             ToolTip="Search users by name, email, or department">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="TextBox">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="1" CornerRadius="4">
+                                                <Grid>
+                                                    <TextBlock Text="🔍 Search users..."
+                                                               Foreground="{DynamicResource MutedForegroundBrush}"
+                                                               VerticalAlignment="Center" Margin="8,0,0,0"
+                                                               IsHitTestVisible="False">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource TemplatedParent}}" Value="">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <ScrollViewer x:Name="PART_ContentHost" Margin="8,0,0,0"/>
+                                                </Grid>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+
+                    <Button Content="📊 Export"
+                            Command="{Binding ExportUsersCommand}"
+                            Background="{DynamicResource AccentBrush}"
+                            Foreground="{DynamicResource WhiteBrush}"
+                            BorderThickness="0" Padding="12,6" Margin="0,0,8,0"
+                            Style="{DynamicResource ModernButtonStyle}"
+                            ToolTip="Export user list to CSV"/>
+
+                    <Button Content="🔄 Refresh"
+                            Command="{Binding RefreshUsersCommand}"
+                            Background="{DynamicResource SecondaryBrush}"
+                            Foreground="{DynamicResource ForegroundBrush}"
+                            BorderThickness="0" Padding="12,6"
+                            Style="{DynamicResource ModernButtonStyle}"
+                            ToolTip="Refresh user data from directory"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Header Warnings Banner -->
+        <ItemsControl Grid.Row="1" ItemsSource="{Binding HeaderWarnings}"
+                      Visibility="{Binding HeaderWarnings.Count, Converter={StaticResource CountToVisibility}}"
+                      Margin="20,0,20,10">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
+                            CornerRadius="4" Margin="0,0,0,8" Padding="8">
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}" />
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        
+        <!-- Error Banner -->
+        <Border Grid.Row="2" Background="{DynamicResource ErrorBrush}" Opacity="0.33" BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1"
+                CornerRadius="4" Margin="20,0,20,10" Padding="8"
+                Visibility="{Binding LastError, Converter={StaticResource NullToVisibility}}">
+            <TextBlock Text="{Binding LastError}" TextWrapping="Wrap" Foreground="{DynamicResource WhiteBrush}" />
+        </Border>
+        
+        <!-- Loading Spinner -->
+        <Border Grid.Row="4" Background="{DynamicResource SurfaceBrush}"
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
+                <TextBlock Text="Loading users..." Margin="0,10,0,0" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Filters Panel -->
+        <Border Grid.Row="3" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,1,0,1" Padding="20,12" Margin="20,0,20,0"
+                Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Filters:" VerticalAlignment="Center" Margin="0,0,12,0"
+                           FontWeight="Medium" Foreground="{DynamicResource ForegroundBrush}"/>
+
+                <ComboBox Width="120" Height="28" Margin="0,0,12,0"
+                          ItemsSource="{Binding DepartmentFilters}"
+                          SelectedItem="{Binding SelectedDepartmentFilter}"
+                          ToolTip="Filter by department">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" FontSize="12"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <ComboBox Width="100" Height="28" Margin="0,0,12,0"
+                          ItemsSource="{Binding StatusFilters}"
+                          SelectedItem="{Binding SelectedStatusFilter}"
+                          ToolTip="Filter by account status">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" FontSize="12"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <Button Content="❌ Clear Filters"
+                        Command="{Binding ClearFiltersCommand}"
+                        Background="Transparent"
+                        Foreground="{DynamicResource AccentBrush}"
+                        BorderBrush="{DynamicResource AccentBrush}"
+                        BorderThickness="1" Padding="8,4"
+                        Style="{DynamicResource ModernButtonStyle}"
+                        ToolTip="Clear all active filters"/>
+
+                <TextBlock Text="{Binding FilteredUsersCount, StringFormat='Showing {0} users'}"
+                           VerticalAlignment="Center" Margin="16,0,0,0"
+                           Foreground="{DynamicResource MutedForegroundBrush}" FontSize="12"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Data Grid -->
+        <DataGrid Grid.Row="5"
+                  ItemsSource="{Binding FilteredUsers}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  GridLinesVisibility="Horizontal"
+                  HeadersVisibility="Column"
+                  Margin="20,0,20,20"
+                  Visibility="{Binding HasData, Converter={StaticResource BoolToVisibility}}">
+            
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Display Name" 
+                                    Binding="{Binding DisplayName}" 
+                                    Width="200"/>
+                
+                <DataGridTextColumn Header="User Principal Name" 
+                                    Binding="{Binding UserPrincipalName}" 
+                                    Width="250"/>
+                
+                <DataGridTextColumn Header="Email" 
+                                    Binding="{Binding Mail}" 
+                                    Width="200"/>
+                
+                <DataGridTextColumn Header="Department" 
+                                    Binding="{Binding Department}" 
+                                    Width="150"/>
+                
+                <DataGridTextColumn Header="Job Title" 
+                                    Binding="{Binding JobTitle}" 
+                                    Width="150"/>
+                
+                <DataGridCheckBoxColumn Header="Enabled" 
+                                        Binding="{Binding AccountEnabled}" 
+                                        Width="70"/>
+                
+                <DataGridTextColumn Header="SAM Account" 
+                                    Binding="{Binding SamAccountName}" 
+                                    Width="150"/>
+                
+                <DataGridTextColumn Header="Company" 
+                                    Binding="{Binding CompanyName}" 
+                                    Width="150"/>
+                
+                <DataGridTextColumn Header="Manager" 
+                                    Binding="{Binding ManagerDisplayName}" 
+                                    Width="150"/>
+                
+                <DataGridTextColumn Header="Created" 
+                                    Binding="{Binding CreatedDateTime, Converter={StaticResource DateFormat}}" 
+                                    Width="100"/>
+                
+                <!-- Detailed View Button -->
+                <DataGridTemplateColumn Header="Actions" Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="📋 Details" 
+                                    Padding="8,4"
+                                    Margin="4"
+                                    FontSize="11"
+                                    Command="{Binding DataContext.ShowUserDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                    CommandParameter="{Binding}"
+                                    ToolTip="Show detailed user information">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource WhiteBrush}"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            CornerRadius="4"
+                                                            BorderThickness="0">
+                                                        <ContentPresenter HorizontalAlignment="Center" 
+                                                                          VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsPressed" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+            
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
+        </DataGrid>
+        
+        <!-- No Data Message -->
+        <Border Grid.Row="5" HorizontalAlignment="Center" VerticalAlignment="Center"
+                Visibility="{Binding HasData, Converter={StaticResource InverseBoolToVisibility}}">
+            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                <TextBlock Text="👥" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
+                <TextBlock Text="No user data available" FontSize="16" HorizontalAlignment="Center"
+                           Margin="0,10,0,0" Opacity="0.7" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                <TextBlock Text="Run discovery modules or check CSV files in data directory" FontSize="12" HorizontalAlignment="Center"
+                           Margin="0,5,0,0" Opacity="0.5" Foreground="{DynamicResource MutedForegroundBrush}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

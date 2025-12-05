@@ -54,6 +54,7 @@ import { SystemStatus } from '../molecules/SystemStatus';
 import { ProfileSelector } from '../molecules/ProfileSelector';
 import { useSystemHealthLogic } from '../../hooks/useSystemHealthLogic';
 import { discoveredNavItems } from '../../views/discovered/_sidebar.generated';
+import { discoveryNavItems } from '../../views/discovery/_sidebar.generated';
 
 /**
  * Navigation item interface

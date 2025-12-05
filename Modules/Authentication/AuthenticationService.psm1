@@ -608,4 +608,4 @@ Export-ModuleMember -Function @(
     'Get-CurrentAuthenticationSession'
 )
 
-Write-Verbose "[AuthenticationService.psm1] Unified authentication service loaded"
+Write-Host "[AuthenticationService.psm1] Unified authentication service loaded" -ForegroundColor Green

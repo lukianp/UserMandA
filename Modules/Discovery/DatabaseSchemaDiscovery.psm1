@@ -46,14 +46,7 @@ function Write-DatabaseLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        $logMessage = "[$timestamp] [$Level] [Database] $Message"
-        switch ($Level) {
-            'ERROR' { Write-Error "[DatabaseSchemaDiscovery] $logMessage" }
-            'WARN' { Write-Warning "[DatabaseSchemaDiscovery] $logMessage" }
-            'SUCCESS' { Write-Information "[DatabaseSchemaDiscovery] $logMessage" -InformationAction Continue }
-            'DEBUG' { Write-Verbose "[DatabaseSchemaDiscovery] $logMessage" -Verbose }
-            default { Write-Information "[DatabaseSchemaDiscovery] $logMessage" -InformationAction Continue }
-        }
+        Write-Host "[$timestamp] [$Level] [Database] $Message" -ForegroundColor $color
     }
 }
 

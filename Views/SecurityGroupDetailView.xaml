@@ -1,0 +1,426 @@
+<UserControl x:Class="MandADiscoverySuite.Views.SecurityGroupDetailView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="900" d:DesignWidth="1400"
+             Background="#0F1419">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        
+        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#2D3748"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        
+        <Style x:Key="LabelStyle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#4A5568"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        
+        <Style x:Key="ValueStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#2D3748"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        
+        <Style x:Key="SectionBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header with Back Button -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <Button Grid.Column="0" Content="← Back" Command="{Binding CloseDetailCommand}" 
+                    Padding="12,6" Margin="0,0,16,0"
+                    Background="#3182CE" Foreground="White" BorderThickness="0"/>
+            
+            <TextBlock Grid.Column="1" Text="{Binding Group.DisplayName, StringFormat='Security Group: {0}'}" 
+                      FontSize="24" FontWeight="Bold" VerticalAlignment="Center"/>
+            
+            <TextBlock Grid.Column="2" Text="{Binding RelationshipsSummary}" 
+                      VerticalAlignment="Center" Foreground="#718096" FontSize="12"/>
+        </Grid>
+
+        <!-- Group Summary Information -->
+        <Border Grid.Row="1" Style="{StaticResource SectionBorderStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Column 1 -->
+                <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Group Type:" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="{Binding Group.Type}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="0" Grid.Row="1" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Mail Enabled:" Style="{StaticResource LabelStyle}"/>
+                    <CheckBox IsChecked="{Binding Group.MailEnabled, Mode=OneWay}" IsEnabled="False"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="0" Grid.Row="2" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Security Enabled:" Style="{StaticResource LabelStyle}"/>
+                    <CheckBox IsChecked="{Binding Group.SecurityEnabled, Mode=OneWay}" IsEnabled="False"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="0" Grid.Row="3" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Visibility:" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="{Binding Group.Visibility}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+                
+                <!-- Column 2 -->
+                <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Mail Address:" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="{Binding Group.Mail}" Style="{StaticResource ValueStyle}" FontFamily="Consolas"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Member Count:" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="{Binding Group.MemberCount}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Grid.Row="2" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Owner Count:" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="{Binding Group.OwnerCount}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Grid.Row="3" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Created:" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="{Binding Group.CreatedDateTime}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+                
+                <!-- Column 3 -->
+                <StackPanel Grid.Column="2" Grid.Row="0" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Domain:" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="{Binding Group.Domain}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="2" Grid.Row="1" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Object Type:" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="{Binding Group.ObjectType}" Style="{StaticResource ValueStyle}"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="2" Grid.Row="2" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Group ID:" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="{Binding Group.Id}" Style="{StaticResource ValueStyle}" FontFamily="Consolas"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="2" Grid.Row="3" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Description:" Style="{StaticResource LabelStyle}"/>
+                    <TextBlock Text="{Binding Group.Description}" Style="{StaticResource ValueStyle}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Tabbed Sections for Relationships -->
+        <TabControl Grid.Row="2" Margin="0,0,0,16">
+            <!-- Members Tab -->
+            <TabItem Header="Members">
+                <Grid>
+                    <DataGrid ItemsSource="{Binding Members}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              GridLinesVisibility="Horizontal"
+                              AlternatingRowBackground="#F8FAFC">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="*"/>
+                            <DataGridTextColumn Header="UPN" Binding="{Binding UserPrincipalName}" Width="200"/>
+                            <DataGridTextColumn Header="Department" Binding="{Binding Department}" Width="150"/>
+                            <DataGridTextColumn Header="Job Title" Binding="{Binding JobTitle}" Width="150"/>
+                            <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="200"/>
+                            <DataGridTemplateColumn Header="Actions" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="View Details" 
+                                                Command="{Binding DataContext.OpenUserDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                                CommandParameter="{Binding}"
+                                                Padding="6,2" FontSize="10"
+                                                Background="#3182CE" Foreground="White" BorderThickness="0"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- Owners Tab -->
+            <TabItem Header="Owners">
+                <Grid>
+                    <DataGrid ItemsSource="{Binding Owners}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              GridLinesVisibility="Horizontal"
+                              AlternatingRowBackground="#F8FAFC">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="*"/>
+                            <DataGridTextColumn Header="UPN" Binding="{Binding UserPrincipalName}" Width="200"/>
+                            <DataGridTextColumn Header="Department" Binding="{Binding Department}" Width="150"/>
+                            <DataGridTextColumn Header="Job Title" Binding="{Binding JobTitle}" Width="150"/>
+                            <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="200"/>
+                            <DataGridTemplateColumn Header="Actions" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="View Details" 
+                                                Command="{Binding DataContext.OpenUserDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                                CommandParameter="{Binding}"
+                                                Padding="6,2" FontSize="10"
+                                                Background="#3182CE" Foreground="White" BorderThickness="0"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- Linked Applications Tab -->
+            <TabItem Header="Linked Applications">
+                <Grid>
+                    <DataGrid ItemsSource="{Binding LinkedApplications}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              GridLinesVisibility="Horizontal"
+                              AlternatingRowBackground="#F8FAFC">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Application Name" Binding="{Binding Name}" Width="*"/>
+                            <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="100"/>
+                            <DataGridTextColumn Header="Publisher" Binding="{Binding Publisher}" Width="150"/>
+                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="120"/>
+                            <DataGridTextColumn Header="Install Date" Binding="{Binding InstallDate, StringFormat='{}{0:yyyy-MM-dd}'}" Width="100"/>
+                            <DataGridTemplateColumn Header="Actions" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="View Details" 
+                                                Command="{Binding DataContext.OpenApplicationDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                                CommandParameter="{Binding}"
+                                                Padding="6,2" FontSize="10"
+                                                Background="#3182CE" Foreground="White" BorderThickness="0"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- Linked Assets Tab -->
+            <TabItem Header="Linked Assets">
+                <Grid>
+                    <DataGrid ItemsSource="{Binding LinkedAssets}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              GridLinesVisibility="Horizontal"
+                              AlternatingRowBackground="#F8FAFC">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Asset Name" Binding="{Binding Name}" Width="*"/>
+                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150"/>
+                            <DataGridTextColumn Header="IP Address" Binding="{Binding IPAddress}" Width="120"/>
+                            <DataGridTextColumn Header="Operating System" Binding="{Binding OperatingSystem}" Width="150"/>
+                            <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="120"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80"/>
+                            <DataGridTemplateColumn Header="Actions" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="View Details" 
+                                                Command="{Binding DataContext.OpenAssetDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                                CommandParameter="{Binding}"
+                                                Padding="6,2" FontSize="10"
+                                                Background="#3182CE" Foreground="White" BorderThickness="0"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- Nested Groups Tab -->
+            <TabItem Header="Nested Groups">
+                <Grid>
+                    <DataGrid ItemsSource="{Binding NestedGroups}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              GridLinesVisibility="Horizontal"
+                              AlternatingRowBackground="#F8FAFC">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Group Name" Binding="{Binding DisplayName}" Width="*"/>
+                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150"/>
+                            <DataGridTextColumn Header="Member Count" Binding="{Binding MemberCount}" Width="100"/>
+                            <DataGridTextColumn Header="Mail Enabled" Binding="{Binding MailEnabled}" Width="100"/>
+                            <DataGridTextColumn Header="Security Enabled" Binding="{Binding SecurityEnabled}" Width="120"/>
+                            <DataGridTemplateColumn Header="Actions" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="View Details" 
+                                                Command="{Binding DataContext.OpenNestedGroupDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                                CommandParameter="{Binding}"
+                                                Padding="6,2" FontSize="10"
+                                                Background="#3182CE" Foreground="White" BorderThickness="0"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- Access Controls Tab -->
+            <TabItem Header="Access Controls">
+                <Grid>
+                    <DataGrid ItemsSource="{Binding AccessControls}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              GridLinesVisibility="Horizontal"
+                              AlternatingRowBackground="#F8FAFC">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Policy Name" Binding="{Binding Name}" Width="*"/>
+                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150"/>
+                            <DataGridTextColumn Header="Permission Level" Binding="{Binding PermissionLevel}" Width="150"/>
+                            <DataGridTextColumn Header="Scope" Binding="{Binding Scope}" Width="200"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- Migration Notes Tab -->
+            <TabItem Header="Migration Notes">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Add Note Section -->
+                    <Border Grid.Row="0" Background="#F8FAFC" Padding="16" Margin="0,0,0,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBox Grid.Column="0" Text="{Binding NewMigrationNote, UpdateSourceTrigger=PropertyChanged}"
+                                     TextWrapping="Wrap" AcceptsReturn="True" MinHeight="60"
+                                     Padding="8" BorderThickness="1" BorderBrush="#E2E8F0"/>
+                            
+                            <Button Grid.Column="1" Content="Add Note" Command="{Binding AddMigrationNoteCommand}"
+                                    Padding="12,6" Margin="8,0,0,0" VerticalAlignment="Bottom"
+                                    Background="#10B981" Foreground="White" BorderThickness="0"/>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Notes List -->
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding MigrationNotes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#1E1E1E" BorderBrush="#E2E8F0" BorderThickness="1" 
+                                        Padding="12" Margin="0,0,0,8" CornerRadius="4">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                            <TextBlock Text="{Binding CreatedDate, StringFormat='Added: {0:yyyy-MM-dd HH:mm}'}" 
+                                                      FontSize="10" Foreground="#718096"/>
+                                            <TextBlock Text="{Binding CreatedBy, StringFormat='By: {0}'}" 
+                                                      FontSize="10" Foreground="#718096" Margin="0,2,0,0"/>
+                                            <TextBlock Text="{Binding Tags, StringFormat='Tags: {0}'}" 
+                                                      FontSize="10" Foreground="#718096" Margin="0,2,0,0"
+                                                      Visibility="{Binding Tags, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        </StackPanel>
+                                        
+                                        <Button Grid.Column="1" Content="Remove" 
+                                                Command="{Binding DataContext.RemoveMigrationNoteCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}"
+                                                Padding="8,4" FontSize="10"
+                                                Background="#EF4444" Foreground="White" BorderThickness="0"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    
+                    <!-- Save Notes Button -->
+                    <Button Grid.Row="2" Content="Save All Notes" Command="{Binding SaveNotesCommand}"
+                            HorizontalAlignment="Right" Padding="16,8" Margin="0,16,0,0"
+                            Background="#3182CE" Foreground="White" BorderThickness="0"/>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- Loading Overlay -->
+        <Border Grid.Row="0" Grid.RowSpan="4" Background="#1E1E1E" Opacity="0.9"
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,0,0,16"/>
+                <TextBlock Text="{Binding LoadingMessage}" HorizontalAlignment="Center" 
+                           Foreground="#4A5568" FontSize="14"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Error Message -->
+        <Border Grid.Row="0" Grid.RowSpan="4" Background="#FEF2F2" BorderBrush="#ED8077" 
+                BorderThickness="1" Padding="16" Margin="16"
+                Visibility="{Binding HasErrors, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel>
+                <TextBlock Text="Error" FontWeight="Bold" Foreground="#E53E3E" Margin="0,0,0,8"/>
+                <TextBlock Text="{Binding ErrorMessage}" Foreground="#E53E3E" TextWrapping="Wrap"/>
+                <Button Content="Close" Command="{Binding CloseDetailCommand}" 
+                        HorizontalAlignment="Right" Padding="12,6" Margin="0,16,0,0"
+                        Background="#EF4444" Foreground="White" BorderThickness="0"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

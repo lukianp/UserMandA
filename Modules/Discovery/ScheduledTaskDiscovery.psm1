@@ -46,14 +46,7 @@ function Write-ScheduledTaskLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        $logMessage = "[$timestamp] [$Level] [ScheduledTask] $Message"
-        switch ($Level) {
-            'ERROR' { Write-Error "[ScheduledTaskDiscovery] $logMessage" }
-            'WARN' { Write-Warning "[ScheduledTaskDiscovery] $logMessage" }
-            'SUCCESS' { Write-Information "[ScheduledTaskDiscovery] $logMessage" -InformationAction Continue }
-            'DEBUG' { Write-Verbose "[ScheduledTaskDiscovery] $logMessage" -Verbose }
-            default { Write-Information "[ScheduledTaskDiscovery] $logMessage" -InformationAction Continue }
-        }
+        Write-Host "[$timestamp] [$Level] [ScheduledTask] $Message" -ForegroundColor $color
     }
 }
 

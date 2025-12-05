@@ -47,14 +47,16 @@ const rendererConfig = {
       '__dirname': JSON.stringify(''),
       'module': JSON.stringify({}),  // Polyfill for asset-relocator-loader
     }),
-    new CspHtmlWebpackPlugin({
-      'default-src': ["'self'"],
-      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      'style-src': ["'self'", "'unsafe-inline'"],
-      'img-src': ["'self'", 'data:', 'blob:'],
-      'connect-src': ["'self'", 'ws:', 'wss:'],
-      'font-src': ["'self'", 'data:', 'blob:'],
-    }),
+    // CSP plugin disabled - causing issues with inline polyfill script
+    // The meta CSP in index.html provides sufficient security
+    // new CspHtmlWebpackPlugin({
+    //   'default-src': ["'self'"],
+    //   'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+    //   'style-src': ["'self'", "'unsafe-inline'"],
+    //   'img-src': ["'self'", 'data:', 'blob:'],
+    //   'connect-src': ["'self'", 'ws:', 'wss:'],
+    //   'font-src': ["'self'", 'data:', 'blob:'],
+    // }),
     new BundleAnalyzerPlugin({
       analyzerMode: 'static',
       openAnalyzer: false,

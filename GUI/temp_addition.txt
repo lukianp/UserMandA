@@ -1,1 +1,0 @@
-<ItemGroup><ApplicationDefinition Remove="App.xaml" /><Page Include="App.xaml"><SubType>Designer</SubType><Generator>MSBuild:Compile</Generator></Page></ItemGroup>

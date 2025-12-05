@@ -1,0 +1,504 @@
+<UserControl x:Class="MandADiscoverySuite.Views.GroupsPolicyMigrationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:MandADiscoverySuite.ViewModels"
+             mc:Ignorable="d" d:DesignHeight="800" d:DesignWidth="1200">
+
+    <UserControl.Resources>
+        <!-- Converters -->
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+        
+        <!-- Styles -->
+        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#2D3748"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+
+        <Style x:Key="SummaryCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="Black" Direction="315" ShadowDepth="2" Opacity="0.1" BlurRadius="4"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ProgressBarStyle" TargetType="ProgressBar">
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Background" Value="#E2E8F0"/>
+            <Setter Property="Foreground" Value="#4299E1"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="10">
+                            <Grid>
+                                <Border Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="10"/>
+                                <Border Name="PART_Indicator" Background="{TemplateBinding Foreground}" 
+                                       HorizontalAlignment="Left" CornerRadius="10"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#4299E1"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#3182CE"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#2C5282"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="{StaticResource SecondaryTextBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="#E2E8F0"/>
+            <Setter Property="Foreground" Value="#2D3748"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#D1D5DB"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="#F7FAFC">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Title and Description -->
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Groups, GPOs &amp; ACLs Migration" FontSize="24" FontWeight="Bold" Foreground="#1A202C" Margin="0,0,0,8"/>
+                    <TextBlock Text="Replicate security groups, Group Policy Objects, and Access Control Lists to Azure AD and cloud services" 
+                               FontSize="14" Foreground="#718096" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <!-- Profile Selection -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                    <ComboBox x:Name="SourceProfileCombo" MinWidth="180" Height="32" Margin="0,0,10,0"
+                              ItemsSource="{Binding CompanyProfiles}" 
+                              SelectedItem="{Binding SelectedSourceProfile}"
+                              DisplayMemberPath="CompanyName">
+                        <ComboBox.Style>
+                            <Style TargetType="ComboBox">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ComboBox">
+                                            <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="4">
+                                                <Grid>
+                                                    <ToggleButton Grid.Column="2" Focusable="false" IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" >
+                                                        <ToggleButton.Template>
+                                                            <ControlTemplate>
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="5" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                        <ColumnDefinition Width="20" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <Border Grid.ColumnSpan="3" Background="Transparent"/>
+                                                                    <ContentPresenter Grid.Column="1" HorizontalAlignment="Left" Margin="3,3,23,3" VerticalAlignment="Center" Content="{Binding Path=SelectionBoxItem, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}"/>
+                                                                    <Path Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#4A5568"/>
+                                                                </Grid>
+                                                            </ControlTemplate>
+                                                        </ToggleButton.Template>
+                                                    </ToggleButton>
+                                                    <ContentPresenter Name="ContentSite" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" Margin="3,3,23,3" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                                    <TextBox x:Name="PART_EditableTextBox" Visibility="Hidden" Template="{DynamicResource ComboBoxTextBox}" HorizontalAlignment="Left" VerticalAlignment="Center" Focusable="True" Background="Transparent" IsReadOnly="{TemplateBinding IsReadOnly}"/>
+                                                    <Popup Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                                        <Grid Name="DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                                            <Border x:Name="DropDownBorder" Background="White" BorderThickness="1" BorderBrush="#E2E8F0"/>
+                                                            <ScrollViewer Margin="4,6,4,6" SnapsToDevicePixels="True">
+                                                                <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                                            </ScrollViewer>
+                                                        </Grid>
+                                                    </Popup>
+                                                </Grid>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ComboBox.Style>
+                    </ComboBox>
+
+                    <TextBlock Text="→" FontSize="16" Margin="5,8" Foreground="#718096"/>
+
+                    <ComboBox x:Name="TargetProfileCombo" MinWidth="180" Height="32"
+                              ItemsSource="{Binding TargetProfiles}" 
+                              SelectedItem="{Binding SelectedTargetProfile}"
+                              DisplayMemberPath="CompanyName"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Summary Cards -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="20,20,20,0">
+            <!-- Groups Summary -->
+            <Border Style="{StaticResource SummaryCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Security Groups" FontSize="14" Foreground="#718096" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding TotalGroups}" FontSize="24" FontWeight="Bold" Foreground="#1A202C"/>
+                    <TextBlock Text="{Binding MigratedGroups, StringFormat='{}({0} migrated)'}" FontSize="12" Foreground="#38A169"/>
+                </StackPanel>
+            </Border>
+
+            <!-- GPOs Summary -->
+            <Border Style="{StaticResource SummaryCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Group Policies" FontSize="14" Foreground="#718096" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding TotalGpos}" FontSize="24" FontWeight="Bold" Foreground="#1A202C"/>
+                    <TextBlock Text="{Binding MigratedGpos, StringFormat='{}({0} migrated)'}" FontSize="12" Foreground="#38A169"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ACLs Summary -->
+            <Border Style="{StaticResource SummaryCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Access Control Lists" FontSize="14" Foreground="#718096" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding TotalAcls}" FontSize="24" FontWeight="Bold" Foreground="#1A202C"/>
+                    <TextBlock Text="{Binding MigratedAcls, StringFormat='{}({0} migrated)'}" FontSize="12" Foreground="#38A169"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Last Migration -->
+            <Border Style="{StaticResource SummaryCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Last Migration" FontSize="14" Foreground="#718096" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding LastMigrationDate, StringFormat='{}{0:MMM dd, yyyy}'}" FontSize="16" FontWeight="Bold" Foreground="#1A202C"/>
+                    <TextBlock Text="{Binding LastMigrationDate, StringFormat='{}{0:HH:mm}'}" FontSize="12" Foreground="#718096"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Main Content -->
+        <TabControl Grid.Row="2" Margin="20" Background="Transparent" BorderThickness="0">
+            <TabControl.Style>
+                <Style TargetType="TabControl">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="TabControl">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TabPanel Grid.Row="0" Panel.ZIndex="1" IsItemsHost="True" Background="Transparent"/>
+                                    <Border Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="0,8,8,8">
+                                        <ContentPresenter ContentSource="SelectedContent" Margin="20"/>
+                                    </Border>
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </TabControl.Style>
+
+            <!-- Migration Planning Tab -->
+            <TabItem Header="Migration Planning" Background="White">
+                <TabItem.Style>
+                    <Style TargetType="TabItem">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="TabItem">
+                                    <Border Name="Border" Background="White" BorderBrush="#E2E8F0" BorderThickness="1,1,1,0" 
+                                            CornerRadius="8,8,0,0" Padding="16,8" Margin="0,0,4,0">
+                                        <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="False">
+                                            <Setter TargetName="Border" Property="Background" Value="#F7FAFC"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </TabItem.Style>
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Migration Type Selection -->
+                    <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                        <TextBlock Text="Migration Type" Style="{StaticResource SectionHeaderStyle}"/>
+                        <ComboBox ItemsSource="{Binding MigrationTypes}" SelectedItem="{Binding SelectedMigrationType}"
+                                  Width="200" HorizontalAlignment="Left" Height="32"/>
+                    </StackPanel>
+
+                    <!-- Settings Panels -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <!-- Groups Settings -->
+                            <Expander Header="Group Migration Settings" IsExpanded="True" Margin="0,0,0,20"
+                                      Visibility="{Binding IsGroupsSelected, Converter={StaticResource BoolToVisConverter}}">
+                                <Grid Margin="20,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                        <CheckBox Content="Preserve group membership" IsChecked="{Binding GroupSettings.PreserveMembership}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Migrate nested groups" IsChecked="{Binding GroupSettings.MigrateNestedGroups}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Convert to cloud groups" IsChecked="{Binding GroupSettings.ConvertToCloudGroups}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Validate after migration" IsChecked="{Binding GroupSettings.ValidateAfterMigration}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Create backup" IsChecked="{Binding GroupSettings.CreateBackup}" Margin="0,0,0,8"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Column="1">
+                                        <Label Content="Max concurrent operations:"/>
+                                        <TextBox Text="{Binding GroupSettings.MaxConcurrentOperations}" Width="100" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                                        <Label Content="Operation timeout (minutes):"/>
+                                        <TextBox Text="{Binding GroupSettings.OperationTimeout.TotalMinutes}" Width="100" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                                        <Label Content="Conflict resolution:"/>
+                                        <ComboBox SelectedItem="{Binding GroupSettings.ConflictResolution}" Width="150" HorizontalAlignment="Left">
+                                            <ComboBox.Items>
+                                                <ComboBoxItem Content="Prompt"/>
+                                                <ComboBoxItem Content="AutoResolve"/>
+                                                <ComboBoxItem Content="Skip"/>
+                                            </ComboBox.Items>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+                            </Expander>
+
+                            <!-- GPO Settings -->
+                            <Expander Header="Group Policy Migration Settings" IsExpanded="True" Margin="0,0,0,20"
+                                      Visibility="{Binding IsGposSelected, Converter={StaticResource BoolToVisConverter}}">
+                                <Grid Margin="20,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                        <CheckBox Content="Convert to Intune profiles" IsChecked="{Binding GpoSettings.ConvertToIntuneProfiles}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Convert to compliance policies" IsChecked="{Binding GpoSettings.ConvertToCompliancePolicies}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Generate report for unsupported" IsChecked="{Binding GpoSettings.GenerateReportForUnsupported}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Validate cloud capabilities" IsChecked="{Binding GpoSettings.ValidateCloudCapabilities}" Margin="0,0,0,8"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Column="1">
+                                        <Label Content="Migration mode:"/>
+                                        <ComboBox SelectedItem="{Binding GpoSettings.Mode}" Width="150" HorizontalAlignment="Left" Margin="0,0,0,8">
+                                            <ComboBox.Items>
+                                                <ComboBoxItem Content="Automatic"/>
+                                                <ComboBoxItem Content="SemiAutomatic"/>
+                                                <ComboBoxItem Content="Manual"/>
+                                                <ComboBoxItem Content="ReportOnly"/>
+                                            </ComboBox.Items>
+                                        </ComboBox>
+                                        <Label Content="Max complexity level:"/>
+                                        <TextBox Text="{Binding GpoSettings.MaxComplexityLevel}" Width="100" HorizontalAlignment="Left"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Expander>
+
+                            <!-- ACL Settings -->
+                            <Expander Header="Access Control List Settings" IsExpanded="True" Margin="0,0,0,20"
+                                      Visibility="{Binding IsAclsSelected, Converter={StaticResource BoolToVisConverter}}">
+                                <Grid Margin="20,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                                        <CheckBox Content="Preserve ownership" IsChecked="{Binding AclSettings.PreserveOwnership}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Map to SharePoint permissions" IsChecked="{Binding AclSettings.MapToSharePointPermissions}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Create permission groups" IsChecked="{Binding AclSettings.CreatePermissionGroups}" Margin="0,0,0,8"/>
+                                        <CheckBox Content="Validate permissions" IsChecked="{Binding AclSettings.ValidatePermissions}" Margin="0,0,0,8"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Column="1">
+                                        <Label Content="Mapping strategy:"/>
+                                        <ComboBox SelectedItem="{Binding AclSettings.MappingStrategy}" Width="150" HorizontalAlignment="Left" Margin="0,0,0,8">
+                                            <ComboBox.Items>
+                                                <ComboBoxItem Content="DirectMapping"/>
+                                                <ComboBoxItem Content="BestMatch"/>
+                                                <ComboBoxItem Content="Simplified"/>
+                                                <ComboBoxItem Content="GroupBased"/>
+                                            </ComboBox.Items>
+                                        </ComboBox>
+                                        <Label Content="Max permission entries:"/>
+                                        <TextBox Text="{Binding AclSettings.MaxPermissionEntries}" Width="100" HorizontalAlignment="Left"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Expander>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Action Buttons -->
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                        <Button Content="Load Data" Command="{Binding LoadGroupsCommand}" Style="{StaticResource SecondaryButtonStyle}"/>
+                        <Button Content="Validate Settings" Command="{Binding ValidateSettingsCommand}" Style="{StaticResource SecondaryButtonStyle}"/>
+                        <Button Content="Analyze Dependencies" Command="{Binding AnalyzeDependenciesCommand}" Style="{StaticResource SecondaryButtonStyle}"/>
+                        <Button Content="Create Backup" Command="{Binding CreateBackupCommand}" Style="{StaticResource SecondaryButtonStyle}"/>
+                        <Button Content="Start Migration" Command="{Binding StartMigrationCommand}" Style="{StaticResource ActionButtonStyle}"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- Migration Results Tab -->
+            <TabItem Header="Migration Results" Background="White">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Results Header -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+                        <TextBlock Text="Migration Results" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,20,0"/>
+                        <Button Content="Export Results" Command="{Binding ExportResultsCommand}" Style="{StaticResource SecondaryButtonStyle}"/>
+                    </StackPanel>
+
+                    <!-- Results TabControl -->
+                    <TabControl Grid.Row="1" Background="Transparent">
+                        <!-- Groups Results -->
+                        <TabItem Header="Groups" Visibility="{Binding IsGroupsSelected, Converter={StaticResource BoolToVisConverter}}">
+                            <DataGrid ItemsSource="{Binding GroupMigrationResults}" AutoGenerateColumns="False" IsReadOnly="True"
+                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#F7FAFC">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Group Name" Binding="{Binding GroupName}" Width="200"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
+                                    <DataGridTextColumn Header="Members" Binding="{Binding MigratedMembers}" Width="80"/>
+                                    <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" Width="100"/>
+                                    <DataGridTemplateColumn Header="Actions" Width="120">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="Details" Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.ViewDetailsCommand}" 
+                                                        CommandParameter="{Binding}" Style="{StaticResource SecondaryButtonStyle}" Height="24" Margin="2"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+
+                        <!-- GPO Results -->
+                        <TabItem Header="Group Policies" Visibility="{Binding IsGposSelected, Converter={StaticResource BoolToVisConverter}}">
+                            <DataGrid ItemsSource="{Binding GpoMigrationResults}" AutoGenerateColumns="False" IsReadOnly="True"
+                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#F7FAFC">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="GPO Name" Binding="{Binding GpoName}" Width="200"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
+                                    <DataGridTextColumn Header="Settings" Binding="{Binding MigratedSettings}" Width="80"/>
+                                    <DataGridTextColumn Header="Policies Created" Binding="{Binding CreatedPolicyIds.Count}" Width="120"/>
+                                    <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" Width="100"/>
+                                    <DataGridTemplateColumn Header="Actions" Width="120">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="Details" Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.ViewDetailsCommand}" 
+                                                        CommandParameter="{Binding}" Style="{StaticResource SecondaryButtonStyle}" Height="24" Margin="2"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+
+                        <!-- ACL Results -->
+                        <TabItem Header="Access Control Lists" Visibility="{Binding IsAclsSelected, Converter={StaticResource BoolToVisConverter}}">
+                            <DataGrid ItemsSource="{Binding AclMigrationResults}" AutoGenerateColumns="False" IsReadOnly="True"
+                                      GridLinesVisibility="None" HeadersVisibility="Column" AlternatingRowBackground="#F7FAFC">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Source Path" Binding="{Binding SourcePath}" Width="300"/>
+                                    <DataGridTextColumn Header="Target Path" Binding="{Binding TargetPath}" Width="300"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
+                                    <DataGridTextColumn Header="Entries" Binding="{Binding MigratedEntries}" Width="80"/>
+                                    <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" Width="100"/>
+                                    <DataGridTemplateColumn Header="Actions" Width="120">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="Details" Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.ViewDetailsCommand}" 
+                                                        CommandParameter="{Binding}" Style="{StaticResource SecondaryButtonStyle}" Height="24" Margin="2"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                    </TabControl>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="3" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="20,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Status Message -->
+                <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" VerticalAlignment="Center" 
+                           Foreground="#4A5568" FontSize="14"/>
+
+                <!-- Progress Bar -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" 
+                            Visibility="{Binding IsMigrationRunning, Converter={StaticResource BoolToVisConverter}}">
+                    <ProgressBar Value="{Binding ProgressPercentage}" Maximum="100" Width="150" 
+                                 Style="{StaticResource ProgressBarStyle}" Margin="0,0,10,0"/>
+                    <TextBlock Text="{Binding ProgressPercentage, StringFormat='{}{0}%'}" VerticalAlignment="Center" 
+                               FontSize="12" Foreground="#718096"/>
+                </StackPanel>
+
+                <!-- Cancel Button -->
+                <Button Grid.Column="2" Content="Cancel" Command="{Binding CancelMigrationCommand}" 
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Visibility="{Binding IsMigrationRunning, Converter={StaticResource BoolToVisConverter}}"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

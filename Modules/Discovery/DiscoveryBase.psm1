@@ -89,17 +89,11 @@ function Start-DiscoveryModule {
                 Connections = $connections
                 Result = $result
             }
-
-            Write-ModuleLog -ModuleName $ModuleName -Message "Executing discovery scriptblock..." -Level "INFO"
+            
             $discoveryData = & $DiscoveryScript @discoveryParams
             $result.Data = $discoveryData
-            Write-ModuleLog -ModuleName $ModuleName -Message "Discovery scriptblock completed, data count: $($discoveryData.Count)" -Level "INFO"
-
-            # Call Complete() to auto-calculate RecordCount from Data
-            $result.Complete()
-            Write-ModuleLog -ModuleName $ModuleName -Message "RecordCount set to: $($result.RecordCount)" -Level "INFO"
         }
-
+        
     } catch {
         $result.AddError("Critical error during $ModuleName discovery", $_.Exception, @{
             Phase = "Discovery"
@@ -166,18 +160,15 @@ function Write-ModuleLog {
     if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
         Write-MandALog -Message "[$ModuleName] $Message" -Level $Level -Component "$($ModuleName)Discovery" -Context $Context
     } else {
-        # Use proper PowerShell streams for GUIV2 streaming support
-        $formattedMessage = "[$ModuleName] $Message"
-        switch ($Level) {
-            "ERROR" { Write-Error $formattedMessage }
-            "WARN" { Write-Warning $formattedMessage }
-            "DEBUG" { Write-Debug $formattedMessage }
-            "VERBOSE" { Write-Verbose $formattedMessage -Verbose }
-            default {
-                # Write to stderr with INFORMATION prefix for GUIV2 stream parsing
-                [Console]::Error.WriteLine("INFORMATION: $formattedMessage")
-            }
+        $color = switch ($Level) {
+            "ERROR" { "Red" }
+            "WARN" { "Yellow" }
+            "SUCCESS" { "Green" }
+            "DEBUG" { "Gray" }
+            "HEADER" { "Cyan" }
+            default { "White" }
         }
+        Write-Host "[$ModuleName] $Message" -ForegroundColor $color
     }
 }
 

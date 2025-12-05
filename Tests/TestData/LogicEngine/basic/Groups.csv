@@ -1,2 +1,0 @@
-Sid,Name,Type,Members,DiscoveryTimestamp,DiscoveryModule,SessionId,NestedGroups
-S-1-5-21-1-1-1-2001,GroupA,Security,S-1-5-21-1-1-1-1001,2024-01-01T00:00:00Z,ActiveDirectoryDiscovery,session-001,

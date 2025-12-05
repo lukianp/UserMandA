@@ -49,15 +49,16 @@ if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
             [hashtable]$Context = @{}
         )
         $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-        $logMessage = "[$timestamp] [$Level] [$Component] $Message"
-        switch ($Level) {
-            'ERROR' { Write-Error "[ConditionalAccessDiscovery] $logMessage" }
-            'WARN' { Write-Warning "[ConditionalAccessDiscovery] $logMessage" }
-            'SUCCESS' { Write-Information "[ConditionalAccessDiscovery] $logMessage" -InformationAction Continue }
-            'HEADER' { Write-Verbose "[ConditionalAccessDiscovery] $logMessage" -Verbose }
-            'DEBUG' { Write-Verbose "[ConditionalAccessDiscovery] $logMessage" -Verbose }
-            default { Write-Information "[ConditionalAccessDiscovery] $logMessage" -InformationAction Continue }
-        }
+        Write-Host "[$timestamp] [$Level] [$Component] $Message" -ForegroundColor $(
+            switch ($Level) {
+                'ERROR' { 'Red' }
+                'WARN' { 'Yellow' }
+                'SUCCESS' { 'Green' }
+                'HEADER' { 'Cyan' }
+                'DEBUG' { 'Gray' }
+                default { 'White' }
+            }
+        )
     }
 }
 

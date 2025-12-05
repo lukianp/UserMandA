@@ -2,15 +2,9 @@
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
-# Version: 1.1.0
+# Version: 1.0.0
 # Created: 2025-01-18
-# Last Modified: 2025-12-01
-# ENHANCEMENTS (v1.1.0):
-#   - Smart retry logic: Skips 404/403/400 errors to avoid wasting time on non-existent endpoints
-#   - Multi-authentication fallback: Graph API > Azure AD > Exchange Online PowerShell
-#   - Endpoint validation: Test-GraphEndpoint function validates before expensive retries
-#   - Enhanced error messages: Clear guidance for improving authentication
-#   - Configuration support: UseAzureAD, UseExchangeOnline, PreferredAuthMethod options
+# Last Modified: 2025-01-18
 
 <#
 .SYNOPSIS
@@ -53,58 +47,16 @@ function Invoke-ExchangeDiscovery {
         $batchSize = 100
         $maxRetries = 3
         
-        # ENHANCED: Smart endpoint validation to avoid wasting retries on non-existent endpoints
-        function Test-GraphEndpoint {
-            param(
-                [string]$Uri,
-                [string]$Method = "GET",
-                [hashtable]$Headers = @{ 'ConsistencyLevel' = 'eventual' },
-                [int]$MaxRetries = 1,  # Only try once for endpoint validation
-                [string]$Body = $null
-            )
-
-            try {
-                if ($Body) {
-                    $response = Invoke-MgGraphRequest -Uri $Uri -Method $Method -Headers $Headers -Body $Body -ContentType "application/json" -ErrorAction Stop
-                } else {
-                    $response = Invoke-MgGraphRequest -Uri $Uri -Method $Method -Headers $Headers -ErrorAction Stop
-                }
-                return @{ Success = $true; Data = $response; StatusCode = 200 }
-            } catch {
-                $statusCode = 0
-                $errorMessage = $_.Exception.Message
-
-                # Extract status code from error
-                if ($_.Exception.Response) {
-                    $statusCode = [int]$_.Exception.Response.StatusCode
-                } elseif ($errorMessage -match "(\d{3})") {
-                    $statusCode = [int]$matches[1]
-                }
-
-                # Categorize errors
-                if ($statusCode -eq 404 -or $errorMessage -match "404" -or $errorMessage -match "Not Found") {
-                    return @{ Success = $false; Error = 'EndpointNotFound'; StatusCode = 404; Message = $errorMessage }
-                } elseif ($statusCode -eq 403 -or $errorMessage -match "403" -or $errorMessage -match "Forbidden") {
-                    return @{ Success = $false; Error = 'InsufficientPermissions'; StatusCode = 403; Message = $errorMessage }
-                } elseif ($statusCode -eq 400 -or $errorMessage -match "400" -or $errorMessage -match "Bad Request") {
-                    return @{ Success = $false; Error = 'BadRequest'; StatusCode = 400; Message = $errorMessage }
-                } else {
-                    return @{ Success = $false; Error = 'Unknown'; StatusCode = $statusCode; Message = $errorMessage }
-                }
-            }
-        }
-
-        # Helper function for Graph API calls with SMART retry and exponential backoff
+        # Helper function for Graph API calls with retry and exponential backoff
         function Invoke-GraphWithRetry {
             param(
                 [string]$Uri,
                 [string]$Method = "GET",
                 [hashtable]$Headers = @{ 'ConsistencyLevel' = 'eventual' },
                 [int]$MaxRetries = 3,
-                [string]$Body = $null,
-                [switch]$SkipNotFound = $false  # NEW: Skip retries for 404s
+                [string]$Body = $null
             )
-
+            
             for ($i = 1; $i -le $MaxRetries; $i++) {
                 try {
                     if ($Body) {
@@ -114,38 +66,12 @@ function Invoke-ExchangeDiscovery {
                     }
                     return $response
                 } catch {
-                    $errorMessage = $_.Exception.Message
-                    $statusCode = 0
-
-                    # Extract status code
-                    if ($_.Exception.Response) {
-                        $statusCode = [int]$_.Exception.Response.StatusCode
-                    } elseif ($errorMessage -match "(\d{3})") {
-                        $statusCode = [int]$matches[1]
-                    }
-
-                    # SMART RETRY: Don't retry 404s or 403s - they won't succeed
-                    if ($statusCode -eq 404 -or $errorMessage -match "404" -or $errorMessage -match "Not Found") {
-                        Write-ModuleLog -ModuleName "Exchange" -Message "Endpoint not found (404): $Uri - Skipping retries" -Level "DEBUG"
-                        throw  # Don't retry
-                    }
-
-                    if ($statusCode -eq 403 -or $errorMessage -match "403" -or $errorMessage -match "Forbidden") {
-                        Write-ModuleLog -ModuleName "Exchange" -Message "Insufficient permissions (403): $Uri - Skipping retries" -Level "DEBUG"
-                        throw  # Don't retry
-                    }
-
-                    if ($statusCode -eq 400 -or $errorMessage -match "400" -or $errorMessage -match "Bad Request") {
-                        Write-ModuleLog -ModuleName "Exchange" -Message "Bad request (400): $Uri - Skipping retries" -Level "DEBUG"
-                        throw  # Don't retry
-                    }
-
-                    # If final retry, throw
                     if ($i -eq $MaxRetries) { throw }
-
+                    
                     $delay = [Math]::Pow(2, $i) # Exponential backoff
-
-                    # Handle specific throttling scenarios with LONGER delays
+                    $errorMessage = $_.Exception.Message
+                    
+                    # Handle specific throttling scenarios
                     if ($errorMessage -match "Too Many Requests" -or $errorMessage -match "TooManyRequests" -or $errorMessage -match "429") {
                         $delay = $delay * 2  # Extra delay for throttling
                         Write-ModuleLog -ModuleName "Exchange" -Message "Rate limited (429). Retry $i/$MaxRetries after $delay seconds..." -Level "WARN"
@@ -154,105 +80,14 @@ function Invoke-ExchangeDiscovery {
                     } elseif ($errorMessage -match "Timeout" -or $errorMessage -match "408") {
                         Write-ModuleLog -ModuleName "Exchange" -Message "Request timeout (408). Retry $i/$MaxRetries after $delay seconds..." -Level "WARN"
                     } else {
-                        Write-ModuleLog -ModuleName "Exchange" -Message "Retry $i/$MaxRetries after error: $errorMessage. Waiting $delay seconds..." -Level "DEBUG"
+                        Write-ModuleLog -ModuleName "Exchange" -Message "Retry $i/$MaxRetries after error: $errorMessage. Waiting $delay seconds..." -Level "WARN"
                     }
-
+                    
                     Start-Sleep -Seconds $delay
                 }
             }
         }
         
-        # ENHANCED: Multi-authentication strategy for comprehensive Exchange data
-        function Initialize-ExchangeAuthentication {
-            param([hashtable]$Configuration)
-
-            $authResult = @{
-                GraphAuthenticated = $false
-                AzureADAuthenticated = $false
-                ExchangeOnlineAuthenticated = $false
-                AvailableScopes = @()
-                PreferredMethod = 'None'
-                Capabilities = @()
-            }
-
-            # Test Microsoft Graph (current method)
-            try {
-                $graphContext = Get-MgContext
-                if ($graphContext -and $graphContext.Scopes) {
-                    $authResult.GraphAuthenticated = $true
-                    $authResult.AvailableScopes += 'Graph'
-                    $authResult.Capabilities += 'BasicUserData'
-                    $authResult.Capabilities += 'GroupData'
-                    Write-ModuleLog -ModuleName "Exchange" -Message "Microsoft Graph authenticated with scopes: $($graphContext.Scopes -join ', ')" -Level "INFO"
-                }
-            } catch {
-                Write-ModuleLog -ModuleName "Exchange" -Message "Microsoft Graph not authenticated: $($_.Exception.Message)" -Level "WARN"
-            }
-
-            # Test Azure AD PowerShell (enhanced capabilities)
-            if ($Configuration.UseAzureAD) {
-                try {
-                    if (Get-Module -Name AzureAD -ListAvailable) {
-                        $azureContext = Get-AzureADCurrentSessionInfo -ErrorAction SilentlyContinue
-                        if ($azureContext) {
-                            $authResult.AzureADAuthenticated = $true
-                            $authResult.AvailableScopes += 'AzureAD'
-                            $authResult.Capabilities += 'EnhancedUserData'
-                            Write-ModuleLog -ModuleName "Exchange" -Message "Azure AD authenticated for tenant: $($azureContext.TenantId)" -Level "INFO"
-                        }
-                    } else {
-                        Write-ModuleLog -ModuleName "Exchange" -Message "Azure AD module not installed - enhanced user data unavailable" -Level "DEBUG"
-                    }
-                } catch {
-                    Write-ModuleLog -ModuleName "Exchange" -Message "Azure AD not authenticated: $($_.Exception.Message)" -Level "DEBUG"
-                }
-            }
-
-            # Test Exchange Online PowerShell (most comprehensive)
-            if ($Configuration.UseExchangeOnline) {
-                try {
-                    if (Get-Module -Name ExchangeOnlineManagement -ListAvailable) {
-                        $exoSession = Get-ConnectionInformation -ErrorAction SilentlyContinue | Where-Object { $_.TokenStatus -eq 'Active' } | Select-Object -First 1
-                        if ($exoSession) {
-                            $authResult.ExchangeOnlineAuthenticated = $true
-                            $authResult.AvailableScopes += 'ExchangeOnline'
-                            $authResult.Capabilities += 'DetailedMailboxInfo'
-                            $authResult.Capabilities += 'MailFlowRules'
-                            $authResult.Capabilities += 'RetentionPolicies'
-                            Write-ModuleLog -ModuleName "Exchange" -Message "Exchange Online authenticated: $($exoSession.Name)" -Level "INFO"
-                        }
-                    } else {
-                        Write-ModuleLog -ModuleName "Exchange" -Message "Exchange Online module not installed - detailed mailbox data unavailable" -Level "DEBUG"
-                    }
-                } catch {
-                    Write-ModuleLog -ModuleName "Exchange" -Message "Exchange Online not authenticated: $($_.Exception.Message)" -Level "DEBUG"
-                }
-            }
-
-            # Determine preferred method (hierarchy: ExchangeOnline > AzureAD > Graph)
-            if ($authResult.ExchangeOnlineAuthenticated) {
-                $authResult.PreferredMethod = 'ExchangeOnline'
-            } elseif ($authResult.AzureADAuthenticated) {
-                $authResult.PreferredMethod = 'AzureAD'
-            } elseif ($authResult.GraphAuthenticated) {
-                $authResult.PreferredMethod = 'Graph'
-            }
-
-            # Log recommendations if not using most comprehensive method
-            if (-not $authResult.ExchangeOnlineAuthenticated -and -not $authResult.AzureADAuthenticated) {
-                Write-ModuleLog -ModuleName "Exchange" -Message "TIP: For comprehensive Exchange data, consider:" -Level "INFO"
-                Write-ModuleLog -ModuleName "Exchange" -Message "  1. Install-Module ExchangeOnlineManagement (most comprehensive)" -Level "INFO"
-                Write-ModuleLog -ModuleName "Exchange" -Message "  2. Install-Module AzureAD (enhanced user data)" -Level "INFO"
-                Write-ModuleLog -ModuleName "Exchange" -Message "  3. Current discovery limited to basic user/group data via Graph API" -Level "INFO"
-            }
-
-            return $authResult
-        }
-
-        # Initialize authentication
-        $authResult = Initialize-ExchangeAuthentication -Configuration $Configuration
-        Write-ModuleLog -ModuleName "Exchange" -Message "Authentication method: $($authResult.PreferredMethod) | Capabilities: $($authResult.Capabilities -join ', ')" -Level "INFO"
-
         # Enhanced user selection for comprehensive mailbox discovery
         $userSelectFields = @(
             'id', 'userPrincipalName', 'displayName', 'mail', 'mailNickname',
@@ -913,388 +748,15 @@ function Invoke-ExchangeDiscovery {
         
         return $allDiscoveredData
     }
-
-    # Initialize result object
-    $result = [PSCustomObject]@{
-        Success = $false
-        ModuleName = "Exchange"
-        Data = $null
-        RecordCount = 0
-        Errors = @()
-        Warnings = @()
-        Metadata = @{}
-        StartTime = Get-Date
-        EndTime = $null
-        ExecutionId = [guid]::NewGuid().ToString()
-    }
-
-    # Add helper methods to result object
-    $result | Add-Member -MemberType ScriptMethod -Name "AddError" -Value {
-        param($Message, $Exception = $null, $Context = @{})
-        $errorObj = @{
-            Message = $Message
-            ExceptionType = if ($Exception) { $Exception.GetType().FullName } else { $null }
-            StackTrace = if ($Exception) { $Exception.StackTrace } else { $null }
-            Timestamp = Get-Date
-            Context = $Context
-            InnerException = if ($Exception -and $Exception.InnerException) { $Exception.InnerException.Message } else { $null }
-            Exception = $Exception
-        }
-        $this.Errors += $errorObj
-    }
-
-    $result | Add-Member -MemberType ScriptMethod -Name "AddWarning" -Value {
-        param($Message, $Context = @{})
-        $this.Warnings += @{
-            Message = $Message
-            Timestamp = Get-Date
-            Context = $Context
-        }
-    }
-
-    try {
-        # Execute discovery script directly (Graph is already connected by Start-)
-        Write-ModuleLog -ModuleName "Exchange" -Message "Starting Exchange discovery..." -Level "INFO"
-
-        # Note: Graph connection is already established by Start-ExchangeDiscovery
-        # We just need to execute the discovery logic directly
-        $discoveryData = & $discoveryScript -Configuration $Configuration -Context $Context -SessionId $SessionId -Connections @{Graph=$true} -Result $result
-
-        $result.Data = $discoveryData
-        $result.RecordCount = if ($discoveryData) { $discoveryData.Count } else { 0 }
-        $result.Success = $true
-
-        Write-ModuleLog -ModuleName "Exchange" -Message "Discovery completed successfully. Found $($result.RecordCount) records." -Level "SUCCESS"
-
-    } catch {
-        $result.Success = $false
-        $result.AddError("Discovery failed: $($_.Exception.Message)", $_.Exception, @{})
-        Write-ModuleLog -ModuleName "Exchange" -Message "Discovery failed: $($_.Exception.Message)" -Level "ERROR"
-    } finally {
-        $result.EndTime = Get-Date
-    }
-
-    return $result
-}
-
-function Start-ExchangeDiscovery {
-    <#
-    .SYNOPSIS
-        Entry point for Exchange Discovery called by the GUI/PowerShellService
-    .DESCRIPTION
-        Standalone discovery function that connects directly using provided credentials
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$false)]
-        [string]$CompanyName,
-
-        [Parameter(Mandatory=$false)]
-        [string]$TenantId,
-
-        [Parameter(Mandatory=$false)]
-        [string]$ClientId,
-
-        [Parameter(Mandatory=$false)]
-        [string]$ClientSecret,
-
-        [Parameter(Mandatory=$false)]
-        [string]$OutputPath,
-
-        [Parameter(Mandatory=$false)]
-        [hashtable]$AdditionalParams = @{}
-    )
-
-    Write-Information "[ExchangeDiscovery] Starting Exchange discovery for $CompanyName..." -InformationAction Continue
-    Write-Information "[ExchangeDiscovery] Tenant ID: $TenantId" -InformationAction Continue
-    Write-Information "[ExchangeDiscovery] Client ID: $ClientId" -InformationAction Continue
-
-    # Pre-flight validation
-    if (-not $TenantId) {
-        throw "TenantId is required for Exchange discovery"
-    }
-    if (-not $ClientId) {
-        throw "ClientId is required for Exchange discovery"
-    }
-    if (-not $ClientSecret) {
-        throw "ClientSecret is required for Exchange discovery"
-    }
-
-    # Initialize result
-    $result = [PSCustomObject]@{
-        Success = $false
-        RecordCount = 0
-        Errors = @()
-        Warnings = @()
-        Metadata = @{}
-        Data = $null
-        TotalItems = 0
-        OutputPath = $OutputPath
-        StartTime = Get-Date
-        EndTime = $null
-        Duration = $null
-    }
-
-    try {
-        # Ensure output paths exist
-        if (-not (Test-Path $OutputPath)) {
-            New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
-        }
-
-        $logsPath = Join-Path (Split-Path $OutputPath -Parent) "Logs"
-        if (-not (Test-Path $logsPath)) {
-            New-Item -Path $logsPath -ItemType Directory -Force | Out-Null
-        }
-
-        # Test and install Microsoft.Graph module if needed
-        Write-Information "[ExchangeDiscovery] Checking for Microsoft.Graph module..." -InformationAction Continue
-        if (-not (Get-Module -ListAvailable -Name Microsoft.Graph.Authentication)) {
-            Write-Information "[ExchangeDiscovery] Installing Microsoft.Graph module..." -InformationAction Continue
-            Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope CurrentUser -Repository PSGallery
-        }
-
-        # Import Microsoft.Graph modules
-        Import-Module Microsoft.Graph.Authentication -Force
-
-        # Connect to Microsoft Graph
-        Write-Information "[ExchangeDiscovery] Connecting to Microsoft Graph..." -InformationAction Continue
-
-        if ($ClientId -and $ClientSecret -and $TenantId) {
-            $secureSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
-            $credential = New-Object System.Management.Automation.PSCredential($ClientId, $secureSecret)
-            Connect-MgGraph -TenantId $TenantId -ClientSecretCredential $credential -NoWelcome
-            Write-Information "[ExchangeDiscovery] Connected to Microsoft Graph successfully" -InformationAction Continue
-        } else {
-            Write-Information "[ExchangeDiscovery] Using interactive authentication..." -InformationAction Continue
-            Connect-MgGraph -TenantId $TenantId -Scopes "User.Read.All","Group.Read.All","Directory.Read.All","Mail.Read" -NoWelcome
-            Write-Information "[ExchangeDiscovery] Connected to Microsoft Graph successfully" -InformationAction Continue
-        }
-
-        # Generate session ID for output files
-        $sessionId = [guid]::NewGuid().ToString()
-
-        # Build configuration for the discovery script with ENHANCED auth options
-        $config = @{
-            CompanyName = $CompanyName
-            TenantId = $TenantId
-            ClientId = $ClientId
-            ClientSecret = $ClientSecret
-
-            # ENHANCED: Multi-authentication support (PowerShell 5.1 compatible syntax)
-            # FIX: Use $null on left side of comparison (PSScriptAnalyzer best practice)
-            UseAzureAD = if ($null -ne $AdditionalParams.UseAzureAD) { $AdditionalParams.UseAzureAD } else { $false }
-            UseExchangeOnline = if ($null -ne $AdditionalParams.UseExchangeOnline) { $AdditionalParams.UseExchangeOnline } else { $false }
-            PreferredAuthMethod = if ($null -ne $AdditionalParams.PreferredAuthMethod) { $AdditionalParams.PreferredAuthMethod } else { 'Auto' }
-
-            # Discovery options (PowerShell 5.1 compatible syntax)
-            discovery = @{
-                excludeDisabledUsers = if ($null -ne $AdditionalParams.ExcludeDisabledUsers) { $AdditionalParams.ExcludeDisabledUsers } else { $true }
-                includeSharedMailboxes = if ($null -ne $AdditionalParams.IncludeSharedMailboxes) { $AdditionalParams.IncludeSharedMailboxes } else { $true }
-                includeResourceMailboxes = if ($null -ne $AdditionalParams.IncludeResourceMailboxes) { $AdditionalParams.IncludeResourceMailboxes } else { $false }
-            }
-        }
-
-        # Merge additional parameters
-        foreach ($key in $AdditionalParams.Keys) {
-            if ($key -notin @('UseAzureAD', 'UseExchangeOnline', 'PreferredAuthMethod', 'ExcludeDisabledUsers', 'IncludeSharedMailboxes', 'IncludeResourceMailboxes')) {
-                $config[$key] = $AdditionalParams[$key]
-            }
-        }
-
-        $context = @{
-            Paths = @{
-                RawDataOutput = $OutputPath
-                Logs = $logsPath
-            }
-            CompanyName = $CompanyName
-        }
-
-        # Call Invoke-ExchangeDiscovery with proper setup
-        $discoveryResult = Invoke-ExchangeDiscovery -Configuration $config -Context $context -SessionId $sessionId | Select-Object -Last 1
-
-        # Disconnect
-        Disconnect-MgGraph | Out-Null
-
-        # ✅ TRANSFORM DATA FOR FRONTEND
-        # The frontend TypeScript interface expects structured properties, not a flat array
-        if ($discoveryResult -and $discoveryResult.Success) {
-            Write-Information "[ExchangeDiscovery] Transforming data structure for frontend..." -InformationAction Continue
-
-            $allData = $discoveryResult.Data
-
-            # Group by _DataType and map to TypeScript property names
-            # Property names MUST match src/renderer/types/models/exchange.ts (ExchangeDiscoveryResult interface)
-            $structuredData = @{
-                mailboxes = @($allData | Where-Object {
-                    $_._DataType -eq 'Mailbox' -or $_._DataType -eq 'SharedMailbox'
-                })
-                distributionGroups = @($allData | Where-Object {
-                    $_._DataType -eq 'DistributionGroup'
-                })
-                transportRules = @($allData | Where-Object {
-                    $_._DataType -eq 'TransportRule'
-                })
-                connectors = @($allData | Where-Object {
-                    $_._DataType -eq 'Connector'
-                })
-                publicFolders = @($allData | Where-Object {
-                    $_._DataType -eq 'PublicFolder'
-                })
-                mailContacts = @($allData | Where-Object {
-                    $_._DataType -eq 'MailContact'
-                })
-            }
-
-            # Calculate statistics for frontend
-            # FIX: Use $null on left side of comparison (PSScriptAnalyzer best practice)
-            $totalMailboxSize = ($structuredData.mailboxes | Where-Object { $null -ne $_.TotalItemSize } |
-                               Measure-Object -Property TotalItemSize -Sum).Sum
-            if (-not $totalMailboxSize) { $totalMailboxSize = 0 }
-
-            $avgMailboxSize = if ($structuredData.mailboxes.Count -gt 0) {
-                ($structuredData.mailboxes | Where-Object { $null -ne $_.TotalItemSize } |
-                 Measure-Object -Property TotalItemSize -Average).Average
-            } else { 0 }
-            if (-not $avgMailboxSize) { $avgMailboxSize = 0 }
-
-            # Calculate detailed mailbox statistics
-            $sharedMailboxCount = ($structuredData.mailboxes | Where-Object {
-                $_.RecipientTypeDetails -eq 'SharedMailbox'
-            }).Count
-
-            $userMailboxCount = ($structuredData.mailboxes | Where-Object {
-                $_.RecipientTypeDetails -eq 'UserMailbox'
-            }).Count
-
-            $resourceMailboxCount = ($structuredData.mailboxes | Where-Object {
-                $_.RecipientTypeDetails -match 'Room|Equipment'
-            }).Count
-
-            $largestMailboxSize = ($structuredData.mailboxes | Where-Object { $null -ne $_.TotalItemSize } |
-                Measure-Object -Property TotalItemSize -Maximum).Maximum
-            if (-not $largestMailboxSize) { $largestMailboxSize = 0 }
-
-            # Calculate distribution group statistics
-            $securityGroupCount = ($structuredData.distributionGroups | Where-Object {
-                $_.GroupType -eq 'Security' -or $_.GroupType -eq 'MailEnabledSecurity'
-            }).Count
-
-            $mailEnabledSecurityGroupCount = ($structuredData.distributionGroups | Where-Object {
-                $_.GroupType -eq 'MailEnabledSecurity'
-            }).Count
-
-            $dynamicGroupCount = ($structuredData.distributionGroups | Where-Object {
-                $_.IsDynamicGroup -eq $true
-            }).Count
-
-            $staticGroupCount = $structuredData.distributionGroups.Count - $dynamicGroupCount
-
-            $avgMembersPerGroup = if ($structuredData.distributionGroups.Count -gt 0) {
-                ($structuredData.distributionGroups | Where-Object { $null -ne $_.MemberCount } |
-                 Measure-Object -Property MemberCount -Average).Average
-            } else { 0 }
-            if (-not $avgMembersPerGroup) { $avgMembersPerGroup = 0 }
-
-            # Calculate transport rule statistics
-            $enabledTransportRuleCount = ($structuredData.transportRules | Where-Object {
-                $_.State -eq 'Enabled'
-            }).Count
-
-            $disabledTransportRuleCount = $structuredData.transportRules.Count - $enabledTransportRuleCount
-
-            $statistics = @{
-                totalMailboxes = $structuredData.mailboxes.Count
-                userMailboxes = $userMailboxCount
-                sharedMailboxes = $sharedMailboxCount
-                resourceMailboxes = $resourceMailboxCount
-                totalMailboxSize = $totalMailboxSize
-                totalStorage = $totalMailboxSize  # Alias for compatibility
-                averageMailboxSize = $avgMailboxSize
-                largestMailboxSize = $largestMailboxSize
-                totalArchiveSize = 0
-                inactiveMailboxes = 0
-                roomMailboxes = 0
-                totalDistributionGroups = $structuredData.distributionGroups.Count
-                staticGroups = $staticGroupCount
-                dynamicGroups = $dynamicGroupCount
-                securityGroups = $securityGroupCount
-                mailEnabledSecurityGroups = $mailEnabledSecurityGroupCount
-                averageMembersPerGroup = $avgMembersPerGroup
-                totalTransportRules = $structuredData.transportRules.Count
-                enabledRules = $enabledTransportRuleCount
-                enabledTransportRules = $enabledTransportRuleCount  # Alias for compatibility
-                disabledRules = $disabledTransportRuleCount
-                disabledTransportRules = $disabledTransportRuleCount  # Alias for compatibility
-                totalConnectors = $structuredData.connectors.Count
-                sendConnectors = 0
-                receiveConnectors = 0
-                inboundConnectors = 0
-                outboundConnectors = 0
-                enabledConnectors = 0
-                totalPublicFolders = $structuredData.publicFolders.Count
-                mailEnabledFolders = 0
-            }
-
-            # Calculate duration in milliseconds
-            $duration = 0
-            if ($discoveryResult.StartTime -and $discoveryResult.EndTime) {
-                $startDateTime = [DateTime]$discoveryResult.StartTime
-                $endDateTime = [DateTime]$discoveryResult.EndTime
-                $duration = ($endDateTime - $startDateTime).TotalMilliseconds
-            }
-
-            # Build result matching TypeScript interface (ExchangeDiscoveryResult)
-            $result = [PSCustomObject]@{
-                id = [guid]::NewGuid().ToString()
-                startTime = $discoveryResult.StartTime
-                endTime = $discoveryResult.EndTime
-                duration = $duration
-                status = 'completed'
-
-                # Structured data properties (MUST match TypeScript interface)
-                mailboxes = $structuredData.mailboxes
-                distributionGroups = $structuredData.distributionGroups
-                transportRules = $structuredData.transportRules
-                connectors = $structuredData.connectors
-                publicFolders = $structuredData.publicFolders
-
-                # Statistics
-                statistics = $statistics
-
-                # Errors/warnings
-                errors = if ($discoveryResult.Errors) { $discoveryResult.Errors } else { @() }
-                warnings = if ($discoveryResult.Warnings) { $discoveryResult.Warnings } else { @() }
-
-                # Legacy fields for backward compatibility
-                Success = $discoveryResult.Success
-                RecordCount = $discoveryResult.RecordCount
-                Data = $allData  # Keep flat array for backward compatibility
-            }
-
-            Write-Information "[ExchangeDiscovery] Data transformation complete:" -InformationAction Continue
-            Write-Information "[ExchangeDiscovery]   - Mailboxes: $($structuredData.mailboxes.Count)" -InformationAction Continue
-            Write-Information "[ExchangeDiscovery]   - Distribution Groups: $($structuredData.distributionGroups.Count)" -InformationAction Continue
-            Write-Information "[ExchangeDiscovery]   - Transport Rules: $($structuredData.transportRules.Count)" -InformationAction Continue
-            Write-Information "[ExchangeDiscovery]   - Total Storage: $totalMailboxSize bytes" -InformationAction Continue
-
-            return $result
-        }
-
-        # If discovery failed or no data, return original result
-        return $discoveryResult
-
-    } catch {
-        Write-Error "[ExchangeDiscovery] ERROR: $($_.Exception.Message)"
-        $result.Errors += @{
-            Message = $_.Exception.Message
-            Exception = $_
-        }
-        $result.EndTime = Get-Date
-        $duration = $result.EndTime - $result.StartTime
-        $result | Add-Member -MemberType NoteProperty -Name "Duration" -Value $duration -Force
-        return $result
-    }
+    
+    # Execute using base module
+    return Start-DiscoveryModule -ModuleName "Exchange" `
+        -Configuration $Configuration `
+        -Context $Context `
+        -SessionId $SessionId `
+        -RequiredServices @('Graph') `
+        -DiscoveryScript $discoveryScript
 }
 
 # --- Module Export ---
-Export-ModuleMember -Function Start-ExchangeDiscovery, Invoke-ExchangeDiscovery
+Export-ModuleMember -Function Invoke-ExchangeDiscovery

@@ -46,14 +46,7 @@ function Write-PrinterLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        $logMessage = "[$timestamp] [$Level] [Printer] $Message"
-        switch ($Level) {
-            'ERROR' { Write-Error "[PrinterDiscovery] $logMessage" }
-            'WARN' { Write-Warning "[PrinterDiscovery] $logMessage" }
-            'SUCCESS' { Write-Information "[PrinterDiscovery] $logMessage" -InformationAction Continue }
-            'DEBUG' { Write-Verbose "[PrinterDiscovery] $logMessage" -Verbose }
-            default { Write-Information "[PrinterDiscovery] $logMessage" -InformationAction Continue }
-        }
+        Write-Host "[$timestamp] [$Level] [Printer] $Message" -ForegroundColor $color
     }
 }
 

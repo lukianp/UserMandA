@@ -46,14 +46,7 @@ function Write-CertificateLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        $logMessage = "[$timestamp] [$Level] [Certificate] $Message"
-        switch ($Level) {
-            'ERROR' { Write-Error "[CertificateDiscovery] $logMessage" }
-            'WARN' { Write-Warning "[CertificateDiscovery] $logMessage" }
-            'SUCCESS' { Write-Information "[CertificateDiscovery] $logMessage" -InformationAction Continue }
-            'DEBUG' { Write-Verbose "[CertificateDiscovery] $logMessage" -Verbose }
-            default { Write-Information "[CertificateDiscovery] $logMessage" -InformationAction Continue }
-        }
+        Write-Host "[$timestamp] [$Level] [Certificate] $Message" -ForegroundColor $color
     }
 }
 

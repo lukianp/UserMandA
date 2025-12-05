@@ -20,6 +20,7 @@
 #>
 
 Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\ComprehensiveErrorHandling.psm1") -Force -ErrorAction SilentlyContinue
+Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Core\ClassDefinitions.psm1") -Force
 
 function Write-PhysicalServerLog {
     <#
@@ -45,18 +46,11 @@ function Write-PhysicalServerLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        $logMessage = "[$timestamp] [$Level] [PhysicalServer] $Message"
-        switch ($Level) {
-            'ERROR' { Write-Error "[PhysicalServer] $logMessage" }
-            'WARN' { Write-Warning "[PhysicalServer] $logMessage" }
-            'SUCCESS' { Write-Information "[PhysicalServer] $logMessage" -InformationAction Continue }
-            'DEBUG' { Write-Verbose "[PhysicalServer] $logMessage" -Verbose }
-            default { Write-Information "[PhysicalServer] $logMessage" -InformationAction Continue }
-        }
+        Write-Host "[$timestamp] [$Level] [PhysicalServer] $Message" -ForegroundColor $color
     }
 }
 
-function Invoke-PhysicalServer {
+function Invoke-PhysicalServerDiscovery {
     <#
     .SYNOPSIS
         Main physical server discovery function.
@@ -90,19 +84,7 @@ function Invoke-PhysicalServer {
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # Initialize result object
-    $result = @{
-        Success = $true
-        ModuleName = 'PhysicalServerDiscovery'
-        RecordCount = 0
-        Errors = [System.Collections.ArrayList]::new()
-        Warnings = [System.Collections.ArrayList]::new()
-        Metadata = @{}
-        StartTime = Get-Date
-        EndTime = $null
-        ExecutionId = [guid]::NewGuid().ToString()
-        AddError = { param($m, $e, $c) $this.Errors.Add(@{Message=$m; Exception=$e; Context=$c}); $this.Success = $false }.GetNewClosure()
-        AddWarning = { param($m, $c) $this.Warnings.Add(@{Message=$m; Context=$c}) }.GetNewClosure()
-    }
+    $result = [DiscoveryResult]::new('PhysicalServerDiscovery')
 
     try {
         # Validate context
@@ -215,8 +197,8 @@ function Invoke-PhysicalServer {
             Write-PhysicalServerLog -Level "WARN" -Message "No physical server data discovered to export" -Context $Context
         }
 
-        $result.RecordCount = $allDiscoveredData.Count
-        $result.Metadata["TotalRecords"] = $result.RecordCount
+        # Set the discovered data so Complete() can automatically calculate metadata
+        $result.Data = $allDiscoveredData
         $result.Metadata["SessionId"] = $SessionId
 
     } catch {
@@ -563,4 +545,4 @@ function Get-BIOSInformation {
 }
 
 # Export functions
-Export-ModuleMember -Function Invoke-PhysicalServer
+Export-ModuleMember -Function Invoke-PhysicalServerDiscovery

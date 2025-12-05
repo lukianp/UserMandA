@@ -2,9 +2,10 @@
  * IPC Handlers for Azure App Registration
  *
  * Provides renderer process access to app registration functionality
+ * with real-time status updates via IPC streaming.
  */
 
-import { ipcMain, IpcMainInvokeEvent } from 'electron';
+import { ipcMain, IpcMainInvokeEvent, BrowserWindow } from 'electron';
 
 import * as appRegistrationService from '../services/appRegistrationService';
 
@@ -35,7 +36,13 @@ export function registerAppRegistrationHandlers(): void {
     'app-registration:read-summary',
     async (event: IpcMainInvokeEvent, companyName: string) => {
       console.log('[IPC] app-registration:read-summary', companyName);
-      return await appRegistrationService.readCredentialSummary(companyName);
+      try {
+        return await appRegistrationService.readCredentialSummary(companyName);
+      } catch (error: any) {
+        console.error('[IPC] app-registration:read-summary error:', error.message);
+        // Return null instead of throwing to let the renderer handle it gracefully
+        return null;
+      }
     }
   );
 
@@ -54,7 +61,7 @@ export function registerAppRegistrationHandlers(): void {
     async (event: IpcMainInvokeEvent, companyName: string) => {
       const status = await appRegistrationService.readRegistrationStatus(companyName);
       if (status) {
-        console.log('[IPC] app-registration:read-status', companyName, '=> status:', status.status, 'step:', status.step, 'message:', status.message);
+        console.log('[IPC] app-registration:read-status', companyName, '=> status:', status.status, 'step:', status.step, 'progress:', status.progress, '%');
       }
       return status;
     }
@@ -64,11 +71,24 @@ export function registerAppRegistrationHandlers(): void {
   ipcMain.handle(
     'app-registration:clear-status',
     async (event: IpcMainInvokeEvent, companyName: string) => {
+      console.log('[IPC] app-registration:clear-status', companyName);
       return await appRegistrationService.clearRegistrationStatus(companyName);
     }
   );
 
-  console.log('[IPC] App registration handlers registered');
+  // Manual status broadcast (can be called from main process)
+  ipcMain.on('app-registration:broadcast-status', (event, status: appRegistrationService.ParsedPowerShellOutput) => {
+    console.log('[IPC] app-registration:broadcast-status', status.step, status.message);
+    // Broadcast to all renderer windows
+    const windows = BrowserWindow.getAllWindows();
+    for (const window of windows) {
+      if (!window.isDestroyed()) {
+        window.webContents.send('app-registration:status-update', status);
+      }
+    }
+  });
+
+  console.log('[IPC] App registration handlers registered with streaming support');
 }
 
 export default registerAppRegistrationHandlers;

@@ -31,15 +31,16 @@ if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
             [hashtable]$Context = @{}
         )
         $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-        $logMessage = "[$timestamp] [$Level] [$Component] $Message"
-        switch ($Level) {
-            'ERROR' { Write-Error "[SharePointDiscovery] $logMessage" }
-            'WARN' { Write-Warning "[SharePointDiscovery] $logMessage" }
-            'SUCCESS' { Write-Information "[SharePointDiscovery] $logMessage" -InformationAction Continue }
-            'HEADER' { Write-Verbose "[SharePointDiscovery] $logMessage" -Verbose }
-            'DEBUG' { Write-Verbose "[SharePointDiscovery] $logMessage" -Verbose }
-            default { Write-Information "[SharePointDiscovery] $logMessage" -InformationAction Continue }
-        }
+        Write-Host "[$timestamp] [$Level] [$Component] $Message" -ForegroundColor $(
+            switch ($Level) {
+                'ERROR' { 'Red' }
+                'WARN' { 'Yellow' }
+                'SUCCESS' { 'Green' }
+                'HEADER' { 'Cyan' }
+                'DEBUG' { 'Gray' }
+                default { 'White' }
+            }
+        )
     }
 }
 

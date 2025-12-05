@@ -46,14 +46,7 @@ function Write-StorageLog {
             'DEBUG' { 'Gray' }
             default { 'White' }
         }
-        $logMessage = "[$timestamp] [$Level] [Storage] $Message"
-        switch ($Level) {
-            'ERROR' { Write-Error "[StorageArrayDiscovery] $logMessage" }
-            'WARN' { Write-Warning "[StorageArrayDiscovery] $logMessage" }
-            'SUCCESS' { Write-Information "[StorageArrayDiscovery] $logMessage" -InformationAction Continue }
-            'DEBUG' { Write-Verbose "[StorageArrayDiscovery] $logMessage" -Verbose }
-            default { Write-Information "[StorageArrayDiscovery] $logMessage" -InformationAction Continue }
-        }
+        Write-Host "[$timestamp] [$Level] [Storage] $Message" -ForegroundColor $color
     }
 }
 

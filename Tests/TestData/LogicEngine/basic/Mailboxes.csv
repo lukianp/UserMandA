@@ -1,2 +1,0 @@
-UPN,DisplayName,PrimarySmtpAddress,TotalSize,ProhibitSendQuota,MailboxType,DiscoveryTimestamp,DiscoveryModule,SessionId
-user1@contoso.com,User One,user1@contoso.com,1024,10240,Regular,2024-01-01T04:00:00Z,ExchangeDiscovery,session-001
