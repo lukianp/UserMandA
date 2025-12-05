@@ -89,7 +89,7 @@ export function useAppRegistration() {
 
     const startTime = Date.now();
     const maxDuration = 10 * 60 * 1000; // 10 minutes (increased for module loading)
-    const pollInterval = 2000; // 2 seconds (faster polling for better UX)
+    const pollInterval = 500; // 500ms for snappy UI updates through each step
 
     monitorIntervalRef.current = setInterval(async () => {
       try {
