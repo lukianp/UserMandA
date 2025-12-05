@@ -10,14 +10,14 @@
  */
 
 import React from 'react';
-import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
+import { DiscoveredViewWrapper } from '../../components/organisms/DiscoveredViewWrapper';
 
 /**
  * DNS & DHCP discovered data view component
  */
 export const DnsdhcpDiscoveredView: React.FC = () => {
   return (
-    <DiscoveredViewTemplate
+    <DiscoveredViewWrapper
       moduleName="DNS & DHCP"
       csvPath="DNSDHCPDiscovery.csv"
       title="DNS & DHCP"

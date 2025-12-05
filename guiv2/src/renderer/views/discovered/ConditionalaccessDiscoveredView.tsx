@@ -10,14 +10,14 @@
  */
 
 import React from 'react';
-import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
+import { DiscoveredViewWrapper } from '../../components/organisms/DiscoveredViewWrapper';
 
 /**
  * Conditional Access discovered data view component
  */
 export const ConditionalaccessDiscoveredView: React.FC = () => {
   return (
-    <DiscoveredViewTemplate
+    <DiscoveredViewWrapper
       moduleName="Conditional Access"
       csvPath="ConditionalAccessDiscovery.csv"
       title="Conditional Access"

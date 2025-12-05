@@ -10,14 +10,14 @@
  */
 
 import React from 'react';
-import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
+import { DiscoveredViewWrapper } from '../../components/organisms/DiscoveredViewWrapper';
 
 /**
  * File Systems discovered data view component
  */
 export const FilesystemDiscoveredView: React.FC = () => {
   return (
-    <DiscoveredViewTemplate
+    <DiscoveredViewWrapper
       moduleName="File Systems"
       csvPath="FileSystemDiscovery.csv"
       title="File Systems"

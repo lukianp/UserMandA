@@ -10,14 +10,14 @@
  */
 
 import React from 'react';
-import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
+import { DiscoveredViewWrapper } from '../../components/organisms/DiscoveredViewWrapper';
 
 /**
  * Intune discovered data view component
  */
 export const IntuneDiscoveredView: React.FC = () => {
   return (
-    <DiscoveredViewTemplate
+    <DiscoveredViewWrapper
       moduleName="Intune"
       csvPath="IntuneDiscovery.csv"
       title="Intune"

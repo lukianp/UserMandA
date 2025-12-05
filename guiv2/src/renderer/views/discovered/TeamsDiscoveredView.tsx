@@ -10,14 +10,14 @@
  */
 
 import React from 'react';
-import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
+import { DiscoveredViewWrapper } from '../../components/organisms/DiscoveredViewWrapper';
 
 /**
  * Microsoft Teams discovered data view component
  */
 export const TeamsDiscoveredView: React.FC = () => {
   return (
-    <DiscoveredViewTemplate
+    <DiscoveredViewWrapper
       moduleName="Microsoft Teams"
       csvPath="TeamsDiscovery.csv"
       title="Microsoft Teams"

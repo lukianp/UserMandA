@@ -10,14 +10,14 @@
  */
 
 import React from 'react';
-import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
+import { DiscoveredViewWrapper } from '../../components/organisms/DiscoveredViewWrapper';
 
 /**
  * Network Infrastructure discovered data view component
  */
 export const NetworkinfrastructureDiscoveredView: React.FC = () => {
   return (
-    <DiscoveredViewTemplate
+    <DiscoveredViewWrapper
       moduleName="Network Infrastructure"
       csvPath="NetworkInfrastructure_ARPEntry.csv"
       title="Network Infrastructure"

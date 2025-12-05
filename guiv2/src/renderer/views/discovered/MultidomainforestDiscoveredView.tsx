@@ -10,14 +10,14 @@
  */
 
 import React from 'react';
-import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
+import { DiscoveredViewWrapper } from '../../components/organisms/DiscoveredViewWrapper';
 
 /**
  * Multi-Domain Forest discovered data view component
  */
 export const MultidomainforestDiscoveredView: React.FC = () => {
   return (
-    <DiscoveredViewTemplate
+    <DiscoveredViewWrapper
       moduleName="Multi-Domain Forest"
       csvPath="MultiDomainForestDiscovery.csv"
       title="Multi-Domain Forest"

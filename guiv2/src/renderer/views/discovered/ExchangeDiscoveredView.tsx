@@ -10,16 +10,16 @@
  */
 
 import React from 'react';
-import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
+import { DiscoveredViewWrapper } from '../../components/organisms/DiscoveredViewWrapper';
 
 /**
  * Exchange discovered data view component
  */
 export const ExchangeDiscoveredView: React.FC = () => {
   return (
-    <DiscoveredViewTemplate
+    <DiscoveredViewWrapper
       moduleName="Exchange"
-      csvPath="ExchangeDiscovery.csv"
+      csvPath="ExchangeMailboxes.csv"
       title="Exchange"
       description="Exchange mailboxes, distribution groups, and transport rules"
       enableSearch={true}
