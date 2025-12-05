@@ -1,8 +1,0 @@
-[2025-08-23 09:55:43] [INFO] UserMigration module initialized
-[2025-08-23 09:55:43] [INFO] Source Domain: test.local
-[2025-08-23 09:55:43] [INFO] Target Domain: new.com
-[2025-08-23 09:55:43] [INFO] Initializing advanced group mapping capabilities
-[2025-08-23 09:55:43] [INFO] Group naming convention set: DomainReplacement = True
-[2025-08-23 09:55:43] [INFO] Group naming convention set: ConflictStrategy = Append
-[2025-08-23 09:55:43] [INFO] Added group transformation rule: RemoveSourceDomain
-[2025-08-23 09:55:43] [INFO] Advanced group mapping initialized
