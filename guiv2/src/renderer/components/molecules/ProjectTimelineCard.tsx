@@ -53,6 +53,12 @@ export const ProjectTimelineCard: React.FC<ProjectTimelineCardProps> = ({ projec
     ? Math.round((project.completedWaves / project.totalWaves) * 100)
     : 0;
 
+  // Safely display numeric values, defaulting to '--' for NaN/undefined
+  const displayDays = (value: number | undefined): string => {
+    if (value === undefined || value === null || isNaN(value)) return '--';
+    return String(value);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -86,7 +92,7 @@ export const ProjectTimelineCard: React.FC<ProjectTimelineCardProps> = ({ projec
         {/* Days to Cutover */}
         <div className="text-center p-4 rounded-lg bg-[var(--card-bg-secondary)]">
           <div className="text-4xl font-bold text-[var(--accent-primary)] mb-1">
-            {project.daysToCutover}
+            {displayDays(project.daysToCutover)}
           </div>
           <div className="text-sm text-[var(--text-secondary)] flex items-center justify-center gap-1">
             <Calendar className="w-4 h-4" />
@@ -97,7 +103,7 @@ export const ProjectTimelineCard: React.FC<ProjectTimelineCardProps> = ({ projec
         {/* Days to Next Wave */}
         <div className="text-center p-4 rounded-lg bg-[var(--card-bg-secondary)]">
           <div className="text-4xl font-bold text-[var(--warning)] mb-1">
-            {project.daysToNextWave}
+            {displayDays(project.daysToNextWave)}
           </div>
           <div className="text-sm text-[var(--text-secondary)] flex items-center justify-center gap-1">
             <Clock className="w-4 h-4" />

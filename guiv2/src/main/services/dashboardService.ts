@@ -236,35 +236,40 @@ export class DashboardService {
   private async getMigratedUserCount(profileName: string): Promise<number> {
     // Would check migration status from project waves
     const projectConfig = await this.projectService.loadProjectConfig(profileName);
-    return projectConfig.waves
+    const waves = projectConfig.waves ?? [];
+    return waves
       .filter(w => w.status === 'Complete')
       .reduce((sum, wave) => sum + wave.userCount, 0);
   }
 
   private async getMigratedGroupCount(profileName: string): Promise<number> {
     const projectConfig = await this.projectService.loadProjectConfig(profileName);
-    return projectConfig.waves
+    const waves = projectConfig.waves ?? [];
+    return waves
       .filter(w => w.status === 'Complete')
       .reduce((sum, wave) => sum + wave.groupCount, 0);
   }
 
   private async getPendingMigrationUserCount(profileName: string): Promise<number> {
     const projectConfig = await this.projectService.loadProjectConfig(profileName);
-    return projectConfig.waves
+    const waves = projectConfig.waves ?? [];
+    return waves
       .filter(w => w.status === 'Scheduled' || w.status === 'InProgress')
       .reduce((sum, wave) => sum + wave.userCount, 0);
   }
 
   private async getPendingMigrationGroupCount(profileName: string): Promise<number> {
     const projectConfig = await this.projectService.loadProjectConfig(profileName);
-    return projectConfig.waves
+    const waves = projectConfig.waves ?? [];
+    return waves
       .filter(w => w.status === 'Scheduled' || w.status === 'InProgress')
       .reduce((sum, wave) => sum + wave.groupCount, 0);
   }
 
   private async getLastMigrationRun(profileName: string): Promise<string | undefined> {
     const projectConfig = await this.projectService.loadProjectConfig(profileName);
-    const completedWaves = projectConfig.waves
+    const waves = projectConfig.waves ?? [];
+    const completedWaves = waves
       .filter(w => w.status === 'Complete' && w.completedAt)
       .sort((a, b) => new Date(b.completedAt as string).getTime() - new Date(a.completedAt as string).getTime());
 
@@ -354,7 +359,8 @@ export class DashboardService {
 
   private calculateEstimatedCompletion(config: ProjectConfig, _daysElapsed: number): string {
     const avgWaveDuration = 7; // days
-    const remainingWaves = config.waves.filter(w => w.status !== 'Complete').length;
+    const waves = config.waves ?? [];
+    const remainingWaves = waves.filter(w => w.status !== 'Complete').length;
     const estimatedDays = remainingWaves * avgWaveDuration;
     const completionDate = new Date(Date.now() + estimatedDays * 24 * 60 * 60 * 1000);
     return completionDate.toISOString();
