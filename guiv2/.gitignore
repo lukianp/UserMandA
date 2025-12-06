@@ -83,7 +83,7 @@ typings/
 .dynamodb/
 
 # Webpack
-.webpack/
+# .webpack/  # REMOVED - we want built app to sync
 
 # Vite
 .vite/
@@ -93,7 +93,7 @@ out/
 
 # Build artifacts
 dist/
-.webpack/
+# .webpack/  # REMOVED - we want built app to sync
 
 # Test coverage
 coverage/
