@@ -594,6 +594,11 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         modified: stats.mtime,
       };
     } catch (error: unknown) {
+      // Don't log ENOENT errors - these are expected when checking if optional files exist
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        return null;  // File doesn't exist - return null instead of throwing
+      }
+      // Log other errors (permissions, etc.)
       console.error(`statFile error: ${error instanceof Error ? error.message : String(error)}`);
       throw new Error(`Failed to stat file: ${error instanceof Error ? error.message : String(error)}`);
     }

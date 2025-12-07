@@ -230,6 +230,8 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
         parameters: {
           // Application discovery parameters are handled via AdditionalParams in the PowerShell module
           // The module automatically discovers enterprise applications from Microsoft Graph
+        },
+        executionOptions: {
           showWindow: false, // Don't show PowerShell console window
         },
         executionId: token,

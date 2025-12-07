@@ -205,14 +205,36 @@ class PowerShellExecutionService extends EventEmitter {
     const sessionId = crypto.randomUUID();
     const runspaceId = `runspace_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+    // Spawn a persistent PowerShell process for this session
+    const powershellExecutable = process.platform === 'win32' ? 'powershell.exe' : 'pwsh';
+    const childProcess = spawn(powershellExecutable, ['-NoExit', '-Command', '-'], {
+      cwd: this.config.scriptsBaseDir,
+      env: {
+        ...process.env,
+        PSModulePath: process.env.PSModulePath || '',
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
     const session: PowerShellSession = {
       id: sessionId,
-      process: null,
+      process: childProcess,
       status: 'idle',
       lastUsed: Date.now(),
       runspaceId,
       executionCount: 0,
     };
+
+    // Handle process termination
+    childProcess.on('exit', (code) => {
+      console.log(`PowerShell session ${sessionId} exited with code ${code}`);
+      this.sessionPool.delete(sessionId);
+    });
+
+    childProcess.on('error', (error) => {
+      console.error(`PowerShell session ${sessionId} error:`, error);
+      this.sessionPool.delete(sessionId);
+    });
 
     this.sessionPool.set(sessionId, session);
     console.log(`Created PowerShell session: ${sessionId}`);
@@ -1279,37 +1301,55 @@ class PowerShellExecutionService extends EventEmitter {
       });
 
       // Determine if this module needs Azure credentials
-      // Local discovery modules (FileSystem, Application) don't need cloud credentials
-      const azureModules = ['Azure', 'Exchange', 'SharePoint', 'OneDrive', 'Teams'];
+      // Local discovery modules (FileSystem, PhysicalServer) don't need cloud credentials
+      // Application uses Microsoft Graph/Intune, so it needs Azure credentials
+      const azureModules = ['Azure', 'Exchange', 'SharePoint', 'OneDrive', 'Teams', 'Application'];
       const needsAzureCredentials = azureModules.includes(moduleName);
 
-      // Prepare discovery parameters
-      let discoveryParams: Record<string, any>;
+      // ALL Invoke-*Discovery functions use the same structure:
+      // - Configuration: hashtable with credentials and module-specific params
+      // - Context: hashtable with paths and company info
+      // - SessionId: GUID for tracking
 
+      // Build Configuration hashtable
+      const configuration: Record<string, any> = {
+        CompanyName: companyName,
+        ...additionalParams,  // Module-specific parameters
+      };
+
+      // Add Azure credentials if needed
       if (needsAzureCredentials) {
-        // Azure modules use AdditionalParams hashtable pattern
-        discoveryParams = {
-          CompanyName: companyName,
-          TenantId: credentials.tenantId,
-          ClientId: credentials.clientId,
-          ClientSecret: credentials.clientSecret,
-          OutputPath: `C:\\DiscoveryData\\${companyName}\\Raw`,
-          AdditionalParams: additionalParams,  // Nested as hashtable
-        };
-        console.log(`[PowerShellService] Azure credentials added for ${moduleName} module`);
+        configuration.TenantId = credentials.tenantId;
+        configuration.ClientId = credentials.clientId;
+        configuration.ClientSecret = credentials.clientSecret;
+        console.log(`[PowerShellService] Azure credentials added to Configuration for ${moduleName} module`);
       } else {
-        // Local modules accept parameters directly (flattened)
-        discoveryParams = {
-          CompanyName: companyName,
-          OutputPath: `C:\\DiscoveryData\\${companyName}\\Raw`,
-          ...additionalParams,  // Flatten additional params to top level
-        };
-        console.log(`[PowerShellService] Skipping Azure credentials for local ${moduleName} module`);
+        console.log(`[PowerShellService] Local module ${moduleName} - skipping Azure credentials`);
       }
 
+      // Build Context hashtable
+      const context = {
+        Paths: {
+          RawDataOutput: `C:\\DiscoveryData\\${companyName}\\Raw`,
+          Logs: `C:\\DiscoveryData\\${companyName}\\Logs`,
+        },
+        CompanyName: companyName,
+      };
+
+      // Generate SessionId
+      const sessionId = crypto.randomUUID();
+
+      // Build the structured parameters for Invoke-*Discovery
+      const discoveryParams = {
+        Configuration: configuration,
+        Context: context,
+        SessionId: sessionId,
+      };
+
       console.log(`[PowerShellService] Executing ${moduleName} discovery for ${companyName}`);
-      console.log(`[PowerShellService] Output path: ${discoveryParams.OutputPath}`);
-      console.log(`[PowerShellService] AdditionalParams:`, JSON.stringify(additionalParams, null, 2));
+      console.log(`[PowerShellService] SessionId: ${sessionId}`);
+      console.log(`[PowerShellService] Output path: ${context.Paths.RawDataOutput}`);
+      console.log(`[PowerShellService] Configuration keys:`, Object.keys(configuration));
 
       // Construct module path and function name
       // Note: All discovery modules use the Invoke-* naming convention, not Start-*

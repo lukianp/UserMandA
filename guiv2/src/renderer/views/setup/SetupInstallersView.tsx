@@ -523,7 +523,13 @@ const InstallerCard: React.FC<{
           <div className="flex-1 min-w-0 cursor-pointer" onClick={onExpand}>
             <div className="flex items-center gap-2 flex-wrap">
               <h4 className="font-semibold text-gray-900 dark:text-white">{installer.displayName}</h4>
-              <span className="text-xs text-gray-500 dark:text-gray-400">v{installer.version}</span>
+              {installer.installedVersion ? (
+                <span className="text-xs font-semibold text-green-600 dark:text-green-400">
+                  Installed: v{installer.installedVersion}
+                </span>
+              ) : (
+                <span className="text-xs text-gray-500 dark:text-gray-400">Required: v{installer.version}</span>
+              )}
               {installer.official && (
                 <span className="px-1.5 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded flex items-center gap-0.5">
                   <Lock className="w-2.5 h-2.5" />

@@ -448,7 +448,13 @@ const ModuleCard: React.FC<{
             <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1">
                 <Package className="w-3 h-3" />
-                {module.installedVersion ? `v${module.installedVersion}` : module.version}
+                {module.installedVersion ? (
+                  <span className="font-semibold text-green-600 dark:text-green-400">
+                    Installed: v{module.installedVersion}
+                  </span>
+                ) : (
+                  <span>Required: {module.version}</span>
+                )}
               </span>
               {module.size && (
                 <span className="flex items-center gap-1">
@@ -783,6 +789,12 @@ const SetupAzurePrerequisitesView: React.FC = () => {
             } else {
               addLog(module.name, 'Verify', 'info', 'Not installed');
             }
+          } else {
+            // Handle failed PowerShell check (no sessions available, etc.)
+            console.warn(`[SetupAzurePrerequisitesView] Module ${module.name} check failed:`, result.error);
+            module.status = 'error';
+            module.errorMessage = result.error || 'Check failed - unable to verify module';
+            addLog(module.name, 'Verify', 'error', result.error || 'Check failed');
           }
         } else {
           console.warn(`[SetupAzurePrerequisitesView] electronAPI.executeScript not available for module: ${module.name}`);
