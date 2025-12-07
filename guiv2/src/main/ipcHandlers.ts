@@ -299,10 +299,38 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   // PowerShell Execution Handlers
   // ========================================
 
-  ipcMain.handle('powershell:executeScript', async (_, params: ScriptExecutionParams) => {
+  ipcMain.handle('powershell:executeScript', async (_, params: ScriptExecutionParams | { script: string; timeout?: number }) => {
     try {
-      console.log(`IPC: executeScript - ${params.scriptPath}`);
-      return await psService.executeScript(params.scriptPath, params.args || [], params.options);
+      // Check if this is an inline script or a script file
+      if ('script' in params) {
+        // Inline script execution
+        console.log(`IPC: executeInlineScript - ${params.script.substring(0, 50)}...`);
+        const startTime = Date.now();
+
+        try {
+          const result = await psService.executeRawCommand(params.script, params.timeout || 30000);
+          const duration = Date.now() - startTime;
+
+          return {
+            success: true,
+            data: result,
+            duration,
+            warnings: [],
+          };
+        } catch (error: unknown) {
+          const duration = Date.now() - startTime;
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+            duration,
+            warnings: [],
+          };
+        }
+      } else {
+        // Script file execution
+        console.log(`IPC: executeScript - ${params.scriptPath}`);
+        return await psService.executeScript(params.scriptPath, params.args || [], params.options);
+      }
     } catch (error: unknown) {
       console.error(`executeScript error: ${error instanceof Error ? error.message : String(error)}`);
       return {

@@ -712,14 +712,17 @@ const LogViewer: React.FC<{
 // ============================================================================
 
 const SetupInstallersView: React.FC = () => {
+  console.log('[SetupInstallersView] Component rendering');
+
   // Tab state
   const [activeTab, setActiveTab] = useState<InstallerCategory>('networking');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Installers state
-  const [installers, setInstallers] = useState<Installer[]>(() =>
-    INSTALLERS.map((i) => ({ ...i, status: 'pending' as const, progress: 0, installed: null, installedVersion: undefined, errorMessage: undefined }))
-  );
+  const [installers, setInstallers] = useState<Installer[]>(() => {
+    console.log('[SetupInstallersView] Initializing installers state');
+    return INSTALLERS.map((i) => ({ ...i, status: 'pending' as const, progress: 0, installed: null, installedVersion: undefined, errorMessage: undefined }));
+  });
   const [selectedInstallers, setSelectedInstallers] = useState<Set<string>>(new Set());
   const [expandedInstaller, setExpandedInstaller] = useState<string | null>(null);
 
@@ -784,6 +787,7 @@ const SetupInstallersView: React.FC = () => {
 
   // Verify all installers
   const verifyInstallers = useCallback(async () => {
+    console.log('[SetupInstallersView] verifyInstallers called, installer count:', installers.length);
     setIsChecking(true);
     addLog('System', 'Verify', 'info', 'Checking installed software...');
 
@@ -791,6 +795,7 @@ const SetupInstallersView: React.FC = () => {
 
     for (let i = 0; i < updatedInstallers.length; i++) {
       const installer = updatedInstallers[i];
+      console.log(`[SetupInstallersView] Checking installer ${i + 1}/${updatedInstallers.length}: ${installer.name}`);
       installer.status = 'checking';
       setInstallers([...updatedInstallers]);
 

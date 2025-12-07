@@ -11,7 +11,9 @@
     "./src/renderer/index.css"
   ],
   "scripts": {
-    "build": "webpack --config webpack.main.config.js --mode=production --output-path=.webpack/main",
+    "build:main": "webpack --config webpack.main.config.js --mode=production --output-path=.webpack/main",
+    "build:renderer": "webpack --config webpack.renderer.config.js --mode=production",
+    "build": "npm run build:main && npm run build:renderer",
     "start": "electron .webpack/main/main.js",
     "dev": "npm run build && npm run start",
     "generate:views": "node scripts/generate-discovery-views.js",

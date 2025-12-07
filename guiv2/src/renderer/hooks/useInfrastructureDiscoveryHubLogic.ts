@@ -11,6 +11,7 @@ import {
   DiscoveryResult,
   DiscoveryModuleStatus
 } from '../types/models/discovery';
+import { getModuleCsvFiles } from '../constants/discoveryModuleMapping';
 
 /**
  * Recent discovery activity entry
@@ -474,6 +475,84 @@ export const useInfrastructureDiscoveryHubLogic = () => {
   });
 
   /**
+   * Get the last run date for a discovery module by checking CSV file dates
+   *
+   * @param moduleId - The discovery module ID
+   * @param companyName - The company name for the data path
+   * @returns The most recent file modification date, or null if no files found
+   */
+  const getModuleLastRunDate = useCallback(async (moduleId: string, companyName: string): Promise<Date | null> => {
+    try {
+      const csvFiles = getModuleCsvFiles(moduleId);
+
+      if (csvFiles.length === 0) {
+        return null;
+      }
+
+      // Get the base data path for the company
+      const basePath = `C:\\DiscoveryData\\${companyName}\\Raw`;
+
+      // Check each CSV file and get the most recent modification date
+      let latestDate: Date | null = null;
+
+      for (const csvFile of csvFiles) {
+        const fullPath = `${basePath}\\${csvFile}`;
+
+        try {
+          // Check if file exists and get its stats
+          const stats = await window.electronAPI.fs.stat(fullPath);
+
+          if (stats && stats.modified) {
+            const modifiedDate = new Date(stats.modified);
+
+            if (!latestDate || modifiedDate > latestDate) {
+              latestDate = modifiedDate;
+            }
+          }
+        } catch (fileError) {
+          // File doesn't exist or can't be accessed - skip it
+          continue;
+        }
+      }
+
+      return latestDate;
+    } catch (error) {
+      console.error(`Failed to get last run date for module ${moduleId}:`, error);
+      return null;
+    }
+  }, []);
+
+  /**
+   * Get company name from localStorage or default locations
+   */
+  const getCompanyName = useCallback((): string => {
+    try {
+      // Try to get from localStorage first
+      const savedProfile = localStorage.getItem('selectedSourceProfile');
+      if (savedProfile) {
+        const profile = JSON.parse(savedProfile);
+        if (profile?.companyName) {
+          return profile.companyName;
+        }
+      }
+
+      // Try to get from profile store state (if available)
+      const profileState = localStorage.getItem('profile-store');
+      if (profileState) {
+        const state = JSON.parse(profileState);
+        if (state?.state?.selectedSourceProfile?.companyName) {
+          return state.state.selectedSourceProfile.companyName;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to get company name from storage:', error);
+    }
+
+    // Default to 'ljpops'
+    return 'ljpops';
+  }, []);
+
+  /**
    * Load discovery modules and their status
    */
   const loadDiscoveryModules = useCallback(async () => {
@@ -485,13 +564,26 @@ export const useInfrastructureDiscoveryHubLogic = () => {
       const statusMap: Record<string, { lastRun?: string; resultCount?: number; status: DiscoveryTile['status'] }> =
         savedStatus ? JSON.parse(savedStatus) : {};
 
-      // Merge with defaults
-      const modules = defaultDiscoveryModules.map(module => ({
-        ...module,
-        lastRun: statusMap[module.id]?.lastRun,
-        resultCount: statusMap[module.id]?.resultCount,
-        status: statusMap[module.id]?.status || 'idle',
-      }));
+      // Get the company name from localStorage
+      const companyName = getCompanyName();
+
+      // Load modules and check for CSV file dates
+      const modulesPromises = defaultDiscoveryModules.map(async (module) => {
+        // First try to get the last run date from CSV files
+        const csvLastRun = await getModuleLastRunDate(module.id, companyName);
+
+        // Use CSV date if available, otherwise fall back to localStorage
+        const lastRun = csvLastRun?.toISOString() || statusMap[module.id]?.lastRun;
+
+        return {
+          ...module,
+          lastRun,
+          resultCount: statusMap[module.id]?.resultCount,
+          status: statusMap[module.id]?.status || 'idle',
+        };
+      });
+
+      const modules = await Promise.all(modulesPromises);
 
       setState(prev => ({ ...prev, discoveryModules: modules, isLoading: false }));
     } catch (error) {
@@ -502,7 +594,7 @@ export const useInfrastructureDiscoveryHubLogic = () => {
         isLoading: false
       }));
     }
-  }, []);
+  }, [getModuleLastRunDate, getCompanyName]);
 
   /**
    * Load recent discovery activity

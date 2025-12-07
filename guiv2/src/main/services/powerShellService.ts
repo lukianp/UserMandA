@@ -909,6 +909,80 @@ class PowerShellExecutionService extends EventEmitter {
   }
 
   /**
+   * Execute raw PowerShell command (inline script)
+   * @param command PowerShell command to execute
+   * @param timeout Execution timeout in milliseconds
+   */
+  async executeRawCommand(command: string, timeout: number = 30000): Promise<string> {
+    if (!this.initialized) {
+      throw new Error('PowerShellExecutionService not initialized. Call initialize() first.');
+    }
+
+    const session = await this.getAvailableSession();
+    if (!session) {
+      throw new Error('No PowerShell sessions available');
+    }
+
+    try {
+      // session.status is already set to 'busy' by getAvailableSession()
+      session.lastUsed = Date.now();
+
+      // Generate a unique marker for this command
+      const marker = `###COMMAND_COMPLETE_${Date.now()}_${Math.random().toString(36).substr(2, 9)}###`;
+
+      return new Promise<string>((resolve, reject) => {
+        const timeoutHandle = setTimeout(() => {
+          session.process.stdout?.off('data', onStdout);
+          session.process.stderr?.off('data', onStderr);
+          session.status = 'idle';  // Release session back to pool
+          reject(new Error('Command execution timed out'));
+        }, timeout);
+
+        let output = '';
+        let errorOutput = '';
+        let commandComplete = false;
+
+        const onStdout = (data: Buffer) => {
+          const text = data.toString();
+          output += text;
+
+          // Check if we've received the completion marker
+          if (text.includes(marker)) {
+            commandComplete = true;
+            clearTimeout(timeoutHandle);
+            session.process.stdout?.off('data', onStdout);
+            session.process.stderr?.off('data', onStderr);
+            session.status = 'idle';  // Release session back to pool
+
+            // Remove the marker from output
+            const cleanOutput = output.replace(marker, '').trim();
+
+            if (errorOutput) {
+              reject(new Error(errorOutput));
+            } else {
+              resolve(cleanOutput);
+            }
+          }
+        };
+
+        const onStderr = (data: Buffer) => {
+          errorOutput += data.toString();
+        };
+
+        session.process.stdout?.on('data', onStdout);
+        session.process.stderr?.on('data', onStderr);
+
+        // Send command to PowerShell process with completion marker
+        session.process.stdin?.write(command + '\n');
+        session.process.stdin?.write(`Write-Host "${marker}"\n`);
+      });
+    } catch (error) {
+      session.status = 'idle';  // Release session back to pool
+      throw error;
+    }
+  }
+
+  /**
    * Execute a PowerShell module function
    * @param modulePath Path to module file
    * @param functionName Function to invoke

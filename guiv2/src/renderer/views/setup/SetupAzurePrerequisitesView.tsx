@@ -606,13 +606,17 @@ const LogViewer: React.FC<{
 // ============================================================================
 
 const SetupAzurePrerequisitesView: React.FC = () => {
+  console.log('[SetupAzurePrerequisitesView] Component rendering');
+
   // Module state
-  const [modules, setModules] = useState<PowerShellModule[]>(() =>
-    POWERSHELL_MODULES.map((m) => ({ ...m, status: 'unknown' as const, installedVersion: undefined, errorMessage: undefined }))
-  );
-  const [selectedModules, setSelectedModules] = useState<Set<string>>(() =>
-    new Set(POWERSHELL_MODULES.filter((m) => m.required).map((m) => m.name))
-  );
+  const [modules, setModules] = useState<PowerShellModule[]>(() => {
+    console.log('[SetupAzurePrerequisitesView] Initializing modules state');
+    return POWERSHELL_MODULES.map((m) => ({ ...m, status: 'unknown' as const, installedVersion: undefined, errorMessage: undefined }));
+  });
+  const [selectedModules, setSelectedModules] = useState<Set<string>>(() => {
+    console.log('[SetupAzurePrerequisitesView] Initializing selected modules');
+    return new Set(POWERSHELL_MODULES.filter((m) => m.required).map((m) => m.name));
+  });
   const [expandedModule, setExpandedModule] = useState<string | null>(null);
 
   // System requirements
@@ -654,12 +658,17 @@ const SetupAzurePrerequisitesView: React.FC = () => {
 
   // Check system requirements
   const checkRequirements = useCallback(async () => {
+    console.log('[SetupAzurePrerequisitesView] checkRequirements called');
     setIsCheckingRequirements(true);
     addLog('System', 'Check', 'info', 'Checking system requirements...');
 
     try {
+      console.log('[SetupAzurePrerequisitesView] Checking if electronAPI exists:', !!window.electronAPI);
+      console.log('[SetupAzurePrerequisitesView] Checking if executeScript exists:', !!window.electronAPI?.executeScript);
+
       // Check admin rights
       if (window.electronAPI?.executeScript) {
+        console.log('[SetupAzurePrerequisitesView] Executing admin check script');
         const adminResult = await window.electronAPI.executeScript({
           script: `
             $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -670,6 +679,8 @@ const SetupAzurePrerequisitesView: React.FC = () => {
           timeout: 10000,
         });
 
+        console.log('[SetupAzurePrerequisitesView] Admin check result:', adminResult);
+
         if (adminResult.success && adminResult.data) {
           const parsed = typeof adminResult.data === 'string' ? JSON.parse(adminResult.data) : adminResult.data;
           setRequirements((prev) => ({ ...prev, elevated: parsed.IsAdmin }));
@@ -678,10 +689,13 @@ const SetupAzurePrerequisitesView: React.FC = () => {
         }
 
         // Check PowerShell version
+        console.log('[SetupAzurePrerequisitesView] Executing PowerShell version check');
         const versionResult = await window.electronAPI.executeScript({
           script: `$PSVersionTable.PSVersion.ToString()`,
           timeout: 10000,
         });
+
+        console.log('[SetupAzurePrerequisitesView] PowerShell version result:', versionResult);
 
         if (versionResult.success && versionResult.data) {
           const version = versionResult.data.toString().trim();
@@ -697,6 +711,7 @@ const SetupAzurePrerequisitesView: React.FC = () => {
           addLog('System', 'VersionCheck', 'info', `PowerShell version: ${version}`);
         }
       } else {
+        console.warn('[SetupAzurePrerequisitesView] electronAPI.executeScript not available - using simulated data');
         // Simulated for development
         await new Promise((resolve) => setTimeout(resolve, 1000));
         setRequirements((prev) => ({
@@ -717,14 +732,17 @@ const SetupAzurePrerequisitesView: React.FC = () => {
         setSetupComplete(!!completedFlag);
       }
     } catch (error: any) {
+      console.error('[SetupAzurePrerequisitesView] checkRequirements error:', error);
       addLog('System', 'Check', 'error', `Environment check failed: ${error.message}`);
     } finally {
+      console.log('[SetupAzurePrerequisitesView] checkRequirements complete');
       setIsCheckingRequirements(false);
     }
   }, [addLog]);
 
   // Verify module status
   const verifyModules = useCallback(async () => {
+    console.log('[SetupAzurePrerequisitesView] verifyModules called, module count:', modules.length);
     setIsVerifying(true);
     addLog('Modules', 'Verify', 'info', 'Checking installed modules...');
 
@@ -733,11 +751,13 @@ const SetupAzurePrerequisitesView: React.FC = () => {
 
     for (let i = 0; i < updatedModules.length; i++) {
       const module = updatedModules[i];
+      console.log(`[SetupAzurePrerequisitesView] Checking module ${i + 1}/${updatedModules.length}: ${module.name}`);
       module.status = 'checking';
       setModules([...updatedModules]);
 
       try {
         if (window.electronAPI?.executeScript) {
+          console.log(`[SetupAzurePrerequisitesView] Executing Get-Module for: ${module.name}`);
           const result = await window.electronAPI.executeScript({
             script: `
               $module = Get-Module -ListAvailable -Name '${module.name}' | Select-Object -First 1
@@ -749,6 +769,8 @@ const SetupAzurePrerequisitesView: React.FC = () => {
             `,
             timeout: 30000,
           });
+
+          console.log(`[SetupAzurePrerequisitesView] Module ${module.name} check result:`, result);
 
           if (result.success && result.data) {
             const parsed = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
@@ -763,6 +785,7 @@ const SetupAzurePrerequisitesView: React.FC = () => {
             }
           }
         } else {
+          console.warn(`[SetupAzurePrerequisitesView] electronAPI.executeScript not available for module: ${module.name}`);
           // Simulated for development
           await new Promise((resolve) => setTimeout(resolve, 200));
           const isInstalled = Math.random() > 0.4;
@@ -771,6 +794,7 @@ const SetupAzurePrerequisitesView: React.FC = () => {
           if (isInstalled) installedCount++;
         }
       } catch (error: any) {
+        console.error(`[SetupAzurePrerequisitesView] Module ${module.name} check error:`, error);
         module.status = 'error';
         module.errorMessage = error.message;
         addLog(module.name, 'Verify', 'error', error.message);
@@ -896,11 +920,34 @@ const SetupAzurePrerequisitesView: React.FC = () => {
     return { installed, total: modules.length, required, requiredInstalled };
   }, [modules]);
 
-  // Initial check
+  // Initial check on mount only
   useEffect(() => {
-    checkRequirements();
-    verifyModules();
-  }, []);
+    console.log('[SetupAzurePrerequisitesView] useEffect - Component mounted, starting initialization');
+    let mounted = true;
+
+    const initialize = async () => {
+      console.log('[SetupAzurePrerequisitesView] initialize - Starting...');
+      if (!mounted) {
+        console.log('[SetupAzurePrerequisitesView] initialize - Component unmounted, aborting');
+        return;
+      }
+      await checkRequirements();
+      if (!mounted) {
+        console.log('[SetupAzurePrerequisitesView] initialize - Component unmounted after checkRequirements');
+        return;
+      }
+      await verifyModules();
+      console.log('[SetupAzurePrerequisitesView] initialize - Complete');
+    };
+
+    initialize();
+
+    return () => {
+      console.log('[SetupAzurePrerequisitesView] useEffect cleanup - Component unmounting');
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   const allRequirementsMet =
     requirements.powershellVersion.met !== false && requirements.networkAccess !== false;

@@ -606,6 +606,8 @@ const ConfirmationDialog: React.FC<{
 // ============================================================================
 
 const SetupCompanyView: React.FC = () => {
+  console.log('[SetupCompanyView] Component rendering');
+
   // App registration hook
   const {
     state: appRegState,
@@ -615,6 +617,8 @@ const SetupCompanyView: React.FC = () => {
     stopMonitoring,
     reset: resetAppRegistration
   } = useAppRegistration();
+
+  console.log('[SetupCompanyView] App registration state:', appRegState);
 
   // Wizard state
   const [currentStep, setCurrentStep] = useState(0);
@@ -733,6 +737,7 @@ const SetupCompanyView: React.FC = () => {
 
   // Check connectivity
   const checkConnectivity = useCallback(async () => {
+    console.log('[SetupCompanyView] checkConnectivity called');
     setIsCheckingConnectivity(true);
     setConnectivity({ internet: 'checking', graph: 'checking', azure: 'checking' });
 
@@ -816,6 +821,9 @@ const SetupCompanyView: React.FC = () => {
 
   // Actually launch the setup after confirmation
   const confirmAndLaunch = useCallback(() => {
+    console.log('[SetupCompanyView] confirmAndLaunch called');
+    console.log('[SetupCompanyView] Company name:', companyName);
+    console.log('[SetupCompanyView] Options:', { showWindow, autoInstallModules, secretValidityYears, skipAzureRoles });
     setShowConfirmation(false);
 
     // Launch the real PowerShell script via the hook
@@ -857,7 +865,11 @@ const SetupCompanyView: React.FC = () => {
 
   // Check connectivity on mount
   useEffect(() => {
+    console.log('[SetupCompanyView] useEffect - Component mounted, checking connectivity');
     checkConnectivity();
+    return () => {
+      console.log('[SetupCompanyView] useEffect cleanup - Component unmounting');
+    };
   }, [checkConnectivity]);
 
   // Can proceed check

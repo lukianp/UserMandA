@@ -1,0 +1,28 @@
+# Build outputs
+guiv2/.webpack/
+guiv2/out/
+guiv2/dist/
+
+# Node modules
+node_modules/
+guiv2/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Environment files
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.temp

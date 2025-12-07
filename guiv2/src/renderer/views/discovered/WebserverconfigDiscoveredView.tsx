@@ -1,4 +1,4 @@
-/**
+ished/**
  * Web Server Config Discovered View
  *
  * Auto-generated discovered data view for Web Server Config.
@@ -9,19 +9,47 @@
  * @category infrastructure
  */
 
-import React from 'react';
-import { DiscoveredViewWrapper } from '../../components/organisms/DiscoveredViewWrapper';
+import React, { useState, useCallback } from 'react';
+import { DiscoveredViewTemplate } from '../../components/organisms/DiscoveredViewTemplate';
+import { useCsvDataLoader } from '../../hooks/useCsvDataLoader';
 
 /**
  * Web Server Config discovered data view component
  */
 export const WebserverconfigDiscoveredView: React.FC = () => {
+  const [searchText, setSearchText] = useState('');
+
+  const {
+    data,
+    columns,
+    loading,
+    error,
+    lastRefresh,
+    reload,
+  } = useCsvDataLoader('WebServerConfigDiscovery.csv');
+
+  const handleRefresh = useCallback(() => {
+    reload();
+  }, [reload]);
+
+  const handleExport = useCallback(() => {
+    // Export functionality handled by VirtualizedDataGrid
+    console.log('[WebserverconfigDiscoveredView] Export requested');
+  }, []);
+
   return (
-    <DiscoveredViewWrapper
-      moduleName="Web Server Config"
-      csvPath="WebServerConfigDiscovery.csv"
+    <DiscoveredViewTemplate
       title="Web Server Config"
       description="IIS/Apache web server configurations and bindings"
+      data={data}
+      columns={columns}
+      loading={loading}
+      error={error}
+      searchText={searchText}
+      onSearchChange={setSearchText}
+      onRefresh={handleRefresh}
+      onExport={handleExport}
+      lastRefresh={lastRefresh}
       enableSearch={true}
       enableExport={true}
       data-cy="webserverconfig-discovered-view"

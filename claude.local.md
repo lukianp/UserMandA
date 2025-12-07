@@ -1,3 +1,161 @@
+# Build and Deployment Instructions
+
+## ⚠️ CRITICAL: Always Build in Deployment Directory
+
+The application MUST be built in the deployment directory (`C:\enterprisediscovery\guiv2`) before running.
+
+## 🚨 CRITICAL: THREE Webpack Bundles Required
+
+The application requires **THREE** webpack bundles to be built:
+1. **Main Process** (`webpack.main.config.js`) → `.webpack/main/main.js`
+2. **Preload Script** (`webpack.preload.config.js`) → `.webpack/preload/index.js` ⚠️ **CRITICAL!**
+3. **Renderer Process** (`webpack.renderer.config.js`) → `.webpack/renderer/main_window/`
+
+**If the PRELOAD script is missing**, you will see:
+- ❌ `Cannot find module 'C:\enterprisediscovery\guiv2\.webpack\preload\index.js'`
+- ❌ `Using fallback Electron API - running in development mode without Electron`
+- ❌ `[ProfileStore] Loaded profiles: Array(0)` (no profiles loaded)
+- ❌ **Dashboard stuck in loading spinner forever** (waiting for profile)
+
+### Quick Build & Launch (COMPLETE VERSION)
+
+```powershell
+cd C:\enterprisediscovery\guiv2
+
+# Kill any running Electron processes
+Get-Process -Name electron -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# Build ALL THREE webpack bundles
+npm run build:main
+npx webpack --config webpack.preload.config.js --mode=production
+npm run build:renderer
+
+# Launch
+npm start
+```
+
+### Complete Build Process (After Making Changes)
+
+```powershell
+# 1. Kill any running Electron processes
+Get-Process -Name electron -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# 2. Copy modified files from workspace to deployment
+Copy-Item -Path 'D:\Scripts\UserMandA\guiv2\src\*' -Destination 'C:\enterprisediscovery\guiv2\src\' -Recurse -Force
+
+# 3. Clean previous build
+cd C:\enterprisediscovery\guiv2
+if (Test-Path '.webpack') { Remove-Item -Recurse -Force '.webpack' }
+
+# 4. Build ALL THREE webpack bundles (CRITICAL - don't skip preload!)
+npm run build:main
+npx webpack --config webpack.preload.config.js --mode=production
+npm run build:renderer
+
+# 5. Launch
+npm start
+```
+
+### NPM Scripts
+
+The following npm scripts are available in `package.json`:
+
+- **`npm run build:main`** - Build main Electron process only
+- **`npm run build:renderer`** - Build renderer (UI) process only
+- **`npm run build`** - Build BOTH main and renderer (REQUIRED for full rebuild)
+- **`npm start`** - Launch the Electron app
+- **`npm run dev`** - Build + Start in one command
+
+### What Gets Built
+
+⚠️ **IMPORTANT:** `npm run build` only builds main and renderer, **NOT preload!**
+
+When you run `npm run build`, it executes:
+
+1. **Main Process Build** (`webpack --config webpack.main.config.js`)
+   - Compiles: `src/main/*.ts`
+   - Output: `.webpack/main/main.js`
+
+2. **Renderer Process Build** (`webpack --config webpack.renderer.config.js`)
+   - Compiles: `src/renderer.tsx`, `src/renderer/**/*.tsx`
+   - Output: `.webpack/renderer/main_window/index.html`, `.webpack/renderer/main_window/index.js`
+
+**MISSING:** Preload script must be built separately!
+```powershell
+npx webpack --config webpack.preload.config.js --mode=production
+```
+
+### Common Issues & Solutions
+
+#### Issue: Dashboard Stuck in Loading Spinner (Infinite Loop)
+
+**Symptoms:**
+- Dashboard shows loading spinner forever
+- Console shows: `[useDashboardLogic] Waiting for profile to be selected...`
+- Console shows: `Using fallback Electron API - running in development mode without Electron`
+- Console shows: `Cannot find module 'C:\enterprisediscovery\guiv2\.webpack\preload\index.js'`
+- Profile store returns 0 profiles
+
+**Root Cause:** PRELOAD script was not built
+
+**Solution:**
+```powershell
+cd C:\enterprisediscovery\guiv2
+Get-Process -Name electron -ErrorAction SilentlyContinue | Stop-Process -Force
+npx webpack --config webpack.preload.config.js --mode=production
+npm start
+```
+
+#### Issue: "Cannot find module preload.js" or blank window
+
+**Cause:** Preload script was not built (or renderer was not built)
+
+**Solution:**
+```powershell
+cd C:\enterprisediscovery\guiv2
+npm run build:renderer
+npm start
+```
+
+#### Issue: "EBUSY: resource busy or locked" when building
+
+**Cause:** Previous Electron process or webpack dev server still running
+
+**Solution:**
+```powershell
+# Kill all Electron processes
+Get-Process -Name electron -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# Clean .webpack directory
+cd C:\enterprisediscovery\guiv2
+Remove-Item -Recurse -Force '.webpack' -ErrorAction SilentlyContinue
+
+# Rebuild
+npm run build
+npm start
+```
+
+#### Issue: Electron Forge (`npx electron-forge start`) fails with "Module parse failed: Unexpected token"
+
+**Cause:** Electron Forge's webpack plugin cannot handle TypeScript `import type` statements
+
+**Solution:** DO NOT use `npx electron-forge start`. Use the custom build scripts instead:
+```powershell
+npm run build
+npm start
+```
+
+### Why Not Use Electron Forge?
+
+While Electron Forge is configured in the project, its webpack plugin has issues compiling TypeScript:
+- ❌ Cannot parse `import type { ... }` statements
+- ❌ Cannot handle JSX/TSX without additional configuration
+- ✅ Custom webpack configs (`webpack.main.config.js`, `webpack.renderer.config.js`) work perfectly
+
+**Always use `npm run build` instead of `npx electron-forge start`**
+
+---
+
 # PowerShell to GUI Integration Pattern
 
 This document describes the pattern for real-time communication between PowerShell scripts and the Electron GUI (guiv2).
@@ -626,3 +784,195 @@ import { Button } from '../components/atoms/Button';
 import { Modal } from '../components/organisms/Modal';
 import { ProgressBar } from '../components/molecules/ProgressBar';
 ```
+
+---
+
+# Debugging Pattern: Comprehensive Console Logging
+
+**IMPORTANT:** All views MUST implement comprehensive debugging as a default pattern. This is critical for troubleshooting and development.
+
+## Standard Practice
+
+Every view component should include detailed console logging throughout its lifecycle and key operations.
+
+## Implementation Pattern
+
+### 1. Component Lifecycle Logging
+
+```typescript
+const MyView: React.FC = () => {
+  console.log('[MyView] Component rendering');
+
+  // State initialization
+  const [myState, setMyState] = useState(() => {
+    console.log('[MyView] Initializing myState');
+    return initialValue;
+  });
+
+  // useEffect hooks
+  useEffect(() => {
+    console.log('[MyView] useEffect - Component mounted, starting initialization');
+
+    const initialize = async () => {
+      console.log('[MyView] initialize - Starting...');
+      // ... initialization logic
+      console.log('[MyView] initialize - Complete');
+    };
+
+    initialize();
+
+    return () => {
+      console.log('[MyView] useEffect cleanup - Component unmounting');
+    };
+  }, []);
+};
+```
+
+### 2. Function Call Logging
+
+```typescript
+const checkRequirements = useCallback(async () => {
+  console.log('[MyView] checkRequirements called');
+
+  try {
+    console.log('[MyView] Checking if API exists:', !!window.electronAPI);
+    console.log('[MyView] Checking if method exists:', !!window.electronAPI?.myMethod);
+
+    if (window.electronAPI?.myMethod) {
+      console.log('[MyView] Executing API call...');
+      const result = await window.electronAPI.myMethod(params);
+      console.log('[MyView] API call result:', result);
+
+      if (result.success) {
+        console.log('[MyView] Operation successful');
+        // ... handle success
+      } else {
+        console.warn('[MyView] Operation failed:', result.error);
+        // ... handle failure
+      }
+    } else {
+      console.warn('[MyView] API method not available - using fallback');
+      // ... fallback logic
+    }
+  } catch (error: any) {
+    console.error('[MyView] checkRequirements error:', error);
+    // ... error handling
+  } finally {
+    console.log('[MyView] checkRequirements complete');
+  }
+}, []);
+```
+
+### 3. Loop/Iteration Logging
+
+```typescript
+for (let i = 0; i < items.length; i++) {
+  const item = items[i];
+  console.log(`[MyView] Processing item ${i + 1}/${items.length}: ${item.name}`);
+
+  try {
+    const result = await processItem(item);
+    console.log(`[MyView] Item ${item.name} processed:`, result);
+  } catch (error: any) {
+    console.error(`[MyView] Item ${item.name} error:`, error);
+  }
+}
+```
+
+### 4. State Changes
+
+```typescript
+const updateState = useCallback((newValue: any) => {
+  console.log('[MyView] updateState called with:', newValue);
+  setMyState(newValue);
+}, []);
+```
+
+### 5. API Availability Checks
+
+Always log API availability before use:
+
+```typescript
+console.log('[MyView] Checking electronAPI availability');
+console.log('[MyView] electronAPI exists:', !!window.electronAPI);
+console.log('[MyView] executeScript exists:', !!window.electronAPI?.executeScript);
+console.log('[MyView] getConfig exists:', !!window.electronAPI?.getConfig);
+```
+
+## Naming Convention
+
+- **Always** prefix with the view name in square brackets: `[MyView]`
+- Use descriptive action names: `checkRequirements`, `verifyModules`, `initialize`
+- Include context: counts, indices, item names, operation status
+- Use appropriate log levels:
+  - `console.log()` - Normal operation
+  - `console.warn()` - Warnings, fallback usage
+  - `console.error()` - Errors, exceptions
+
+## What to Log
+
+### Required Logging Points
+
+1. **Component Mount/Unmount**
+   ```typescript
+   console.log('[MyView] Component rendering');
+   console.log('[MyView] useEffect - Component mounted');
+   console.log('[MyView] useEffect cleanup - Component unmounting');
+   ```
+
+2. **State Initialization**
+   ```typescript
+   console.log('[MyView] Initializing state');
+   ```
+
+3. **Function Entry/Exit**
+   ```typescript
+   console.log('[MyView] functionName called');
+   console.log('[MyView] functionName complete');
+   ```
+
+4. **API Calls**
+   ```typescript
+   console.log('[MyView] Executing API call: methodName');
+   console.log('[MyView] API result:', result);
+   ```
+
+5. **Conditionals & Branching**
+   ```typescript
+   if (condition) {
+     console.log('[MyView] Taking path A');
+   } else {
+     console.warn('[MyView] Taking fallback path B');
+   }
+   ```
+
+6. **Errors**
+   ```typescript
+   console.error('[MyView] Operation failed:', error);
+   ```
+
+7. **Loop Progress**
+   ```typescript
+   console.log(`[MyView] Processing ${i + 1}/${total}: ${item.name}`);
+   ```
+
+## Reference Implementations
+
+These views demonstrate comprehensive debugging:
+- `guiv2/src/renderer/views/setup/SetupCompanyView.tsx`
+- `guiv2/src/renderer/views/setup/SetupAzurePrerequisitesView.tsx`
+- `guiv2/src/renderer/views/setup/SetupInstallersView.tsx`
+
+## Benefits
+
+1. **Easier Debugging** - Trace execution flow through console
+2. **Faster Development** - Immediately see what's happening
+3. **Better Error Diagnosis** - Know exactly where failures occur
+4. **User Support** - Users can share console logs for troubleshooting
+5. **Performance Monitoring** - See timing and sequence of operations
+
+## Production Considerations
+
+Console logs are automatically removed in production builds through webpack's minification process, so there's no performance impact in the final application.
+
+**Bottom Line:** When in doubt, add more logging. It's better to have too much information in the console than too little.
