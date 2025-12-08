@@ -94,8 +94,13 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
   const [currentToken, setCurrentToken] = useState<string | null>(null);
   const currentTokenRef = useRef<string | null>(null);
 
-  // Additional state for view compatibility
+  // Additional state for view compatibility - Application Discovery Configuration
   const [config, setConfig] = useState<any>({
+    IncludeAzureADApps: true,        // Include Azure AD Enterprise Apps & App Registrations
+    IncludeServicePrincipals: true,  // Include Service Principals (Enterprise Apps)
+    IncludeAppRegistrations: true,   // Include App Registrations
+    IncludeIntuneApps: true,         // Include Intune managed applications
+    // Legacy properties for backwards compatibility
     includeSoftware: true,
     includeProcesses: true,
     includeServices: true,
@@ -224,12 +229,14 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
 
     try {
       // Call PowerShell module - Application Discovery uses Microsoft Graph for cloud applications
-      // It doesn't accept ScanRegistry, ScanFilesystem, or ScanPorts parameters
+      // Pass configuration parameters to control what gets discovered
       const result = await window.electron.executeDiscovery({
         moduleName: 'Application',
         parameters: {
-          // Application discovery parameters are handled via AdditionalParams in the PowerShell module
-          // The module automatically discovers enterprise applications from Microsoft Graph
+          IncludeAzureADApps: config.IncludeAzureADApps,
+          IncludeServicePrincipals: config.IncludeServicePrincipals,
+          IncludeAppRegistrations: config.IncludeAppRegistrations,
+          IncludeIntuneApps: config.IncludeIntuneApps,
         },
         executionOptions: {
           showWindow: false, // Don't show PowerShell console window

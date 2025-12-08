@@ -821,36 +821,61 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    * Test connection for a profile
    * Validates Azure credentials by making actual API call to Microsoft Graph
    */
-  ipcMain.handle('profile:testConnection', async (_, profileId: string) => {
+  ipcMain.handle('profile:testConnection', async (_, profileIdOrData: string | { profileId: string; tenantId?: string; clientId?: string; clientSecret?: string }) => {
     try {
-      console.log(`[IPC profile:testConnection] Testing connection for profile: ${profileId}`);
+      let profileId: string;
+      let providedCreds: { tenantId?: string; clientId?: string; clientSecret?: string } | null = null;
 
-      const { CredentialService } = await import('./services/credentialService');
-      const credService = new CredentialService();
-      await credService.initialize();
-
-      // First check if credentials exist at all
-      const hasCredentials = await credService.hasCredential(profileId);
-      if (!hasCredentials) {
-        console.log(`[IPC profile:testConnection] No credential files found for profile: ${profileId}`);
-        console.log(`[IPC profile:testConnection] Checked locations:`);
-        console.log(`  - ENV variables: AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET`);
-        console.log(`  - safeStorage: ${credService['credentialsPath']}`);
-        console.log(`  - Legacy file: C:\\DiscoveryData\\${profileId}\\Credentials\\discoverycredentials.config`);
-        return {
-          success: false,
-          error: `No credentials configured for profile '${profileId}'. Please create a credential file first using the Azure setup script.`
+      // Check if credentials were provided directly
+      if (typeof profileIdOrData === 'object') {
+        profileId = profileIdOrData.profileId;
+        providedCreds = {
+          tenantId: profileIdOrData.tenantId,
+          clientId: profileIdOrData.clientId,
+          clientSecret: profileIdOrData.clientSecret
         };
+        console.log(`[IPC profile:testConnection] Testing connection with provided credentials for profile: ${profileId}`);
+      } else {
+        profileId = profileIdOrData;
+        console.log(`[IPC profile:testConnection] Testing connection for profile: ${profileId}`);
       }
 
-      const creds = await credService.getCredential(profileId);
+      let creds: { tenantId?: string; clientId?: string; clientSecret?: string; username?: string; password?: string; connectionType?: string } | null = null;
 
-      if (!creds) {
-        console.log(`[IPC profile:testConnection] Credentials exist but could not be loaded for profile: ${profileId}`);
-        return {
-          success: false,
-          error: 'Credentials exist but could not be loaded. Please check the credential file format.'
-        };
+      // If credentials were provided directly, use them (from newly created profile)
+      if (providedCreds && providedCreds.tenantId && providedCreds.clientId && providedCreds.clientSecret) {
+        console.log(`[IPC profile:testConnection] Using provided credentials`);
+        creds = providedCreds;
+      } else {
+        // Otherwise, try to load from CredentialService (for existing profiles)
+        console.log(`[IPC profile:testConnection] Loading credentials from CredentialService`);
+        const { CredentialService } = await import('./services/credentialService');
+        const credService = new CredentialService();
+        await credService.initialize();
+
+        // First check if credentials exist at all
+        const hasCredentials = await credService.hasCredential(profileId);
+        if (!hasCredentials) {
+          console.log(`[IPC profile:testConnection] No credential files found for profile: ${profileId}`);
+          console.log(`[IPC profile:testConnection] Checked locations:`);
+          console.log(`  - ENV variables: AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET`);
+          console.log(`  - safeStorage: ${credService['credentialsPath']}`);
+          console.log(`  - Legacy file: C:\\DiscoveryData\\${profileId}\\Credentials\\discoverycredentials.config`);
+          return {
+            success: false,
+            error: `No credentials configured for profile '${profileId}'. Please create a credential file first using the Azure setup script.`
+          };
+        }
+
+        creds = await credService.getCredential(profileId);
+
+        if (!creds) {
+          console.log(`[IPC profile:testConnection] Credentials exist but could not be loaded for profile: ${profileId}`);
+          return {
+            success: false,
+            error: 'Credentials exist but could not be loaded. Please check the credential file format.'
+          };
+        }
       }
 
       // Validate required Azure fields

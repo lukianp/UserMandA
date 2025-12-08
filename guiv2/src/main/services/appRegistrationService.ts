@@ -778,12 +778,12 @@ export async function decryptCredentialFile(
 
     const script = `
       try {
-        $enc = Get-Content -Raw -Path '${escapedPath}'
-        $ss = ConvertTo-SecureString -String $enc
+        $enc = (Get-Content -Raw -Path '${escapedPath}').Trim()
+        $ss = $enc | ConvertTo-SecureString
         $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ss)
         $json = [Runtime.InteropServices.Marshal]::PtrToStringUni($bstr)
         [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
-        $credData = ConvertFrom-Json $json
+        $credData = $json | ConvertFrom-Json
         Write-Output $credData.ClientSecret
       } catch {
         Write-Error $_.Exception.Message

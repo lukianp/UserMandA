@@ -1877,8 +1877,13 @@ function Save-EnhancedCredentials {
             RoleAssignmentSuccess = $script:ConnectionStatus.Azure.RoleAssignmentSuccess
         }
         
-        # Cross-platform encryption
-        if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+        # Cross-platform encryption - detect OS
+        $isWindowsOS = $true
+        if ($PSVersionTable.PSVersion.Major -ge 6) {
+            $isWindowsOS = $IsWindows -or $PSVersionTable.Platform -eq 'Win32NT'
+        }
+
+        if ($isWindowsOS) {
             Write-EnhancedLog "Encrypting credentials using Windows DPAPI..." -Level PROGRESS
             Write-EnhancedLog "  Target User: $env:USERNAME" -Level INFO
             Write-EnhancedLog "  Target Computer: $env:COMPUTERNAME" -Level INFO
@@ -1889,13 +1894,15 @@ function Save-EnhancedCredentials {
         }
         
         $jsonData = $credentialData | ConvertTo-Json -Depth 4
-        
-        if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+
+        if ($isWindowsOS) {
             # Windows: Use DPAPI encryption
+            Write-EnhancedLog "Encrypting credentials using Windows DPAPI..." -Level INFO
             $secureString = ConvertTo-SecureString -String $jsonData -AsPlainText -Force
             $encryptedData = $secureString | ConvertFrom-SecureString
         } else {
             # Linux/macOS: Store as plain JSON (rely on file permissions for security)
+            Write-EnhancedLog "Storing credentials as plain JSON (Linux/macOS)..." -Level WARN
             $encryptedData = $jsonData
         }
         
@@ -1917,7 +1924,7 @@ function Save-EnhancedCredentials {
         
         # Apply secure file permissions
         try {
-            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+            if ($isWindowsOS) {
                 # Windows-specific ACL permissions
                 $acl = Get-Acl $EncryptedOutputPath
                 $acl.SetAccessRuleProtection($true, $false)  # Disable inheritance, remove existing

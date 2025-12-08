@@ -248,12 +248,20 @@ export class CredentialService {
   }
 
   /**
-   * Load legacy unencrypted credentials from C:\DiscoveryData\{profile}\Credentials\discoverycredentials.config
+   * Load legacy credentials from C:\DiscoveryData\{profile}\Credentials\discoverycredentials.config
+   * Supports both DPAPI-encrypted (default) and unencrypted (legacy) formats
    */
   private async loadLegacyCredentials(profileId: string): Promise<LegacyDiscoveryCredential | null> {
     try {
       const legacyPath = path.join('C:', 'DiscoveryData', profileId, 'Credentials', 'discoverycredentials.config');
       console.log(`[CredentialService] Checking legacy credentials at: ${legacyPath}`);
+
+      // Check if file exists
+      try {
+        await fs.access(legacyPath);
+      } catch {
+        return null;
+      }
 
       let data = await fs.readFile(legacyPath, 'utf-8');
 
@@ -262,19 +270,110 @@ export class CredentialService {
         data = data.slice(1);
       }
 
-      const creds = JSON.parse(data) as LegacyDiscoveryCredential;
+      data = data.trim();
 
-      // Validate required fields
-      if (!creds.TenantId || !creds.ClientId || !creds.ClientSecret) {
-        console.warn(`[CredentialService] Legacy credentials missing required fields`);
-        return null;
+      // Try to parse as JSON first (unencrypted legacy format)
+      try {
+        const creds = JSON.parse(data) as LegacyDiscoveryCredential;
+
+        // Validate required fields
+        if (!creds.TenantId || !creds.ClientId || !creds.ClientSecret) {
+          console.warn(`[CredentialService] Legacy credentials missing required fields`);
+          return null;
+        }
+
+        console.log(`[CredentialService] ✅ Loaded unencrypted legacy credentials`);
+        return creds;
+      } catch (jsonError) {
+        // Not JSON - try DPAPI decryption
+        console.log(`[CredentialService] File is not JSON, attempting DPAPI decryption...`);
+        return await this.decryptLegacyCredentialsDPAPI(legacyPath);
       }
-
-      return creds;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         console.error(`[CredentialService] Error loading legacy credentials:`, error);
       }
+      return null;
+    }
+  }
+
+  /**
+   * Decrypt DPAPI-encrypted credential file using PowerShell
+   */
+  private async decryptLegacyCredentialsDPAPI(filePath: string): Promise<LegacyDiscoveryCredential | null> {
+    try {
+      console.log(`[CredentialService] Decrypting DPAPI file: ${filePath}`);
+
+      const { spawn } = await import('child_process');
+      const escapedPath = filePath.replace(/\\/g, '\\\\');
+
+      // PowerShell script to decrypt DPAPI file
+      const script = `
+        try {
+          $enc = (Get-Content -Raw -Path '${escapedPath}').Trim()
+          $ss = $enc | ConvertTo-SecureString
+          $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ss)
+          $json = [Runtime.InteropServices.Marshal]::PtrToStringUni($bstr)
+          [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+          Write-Output $json
+        } catch {
+          Write-Error $_.Exception.Message
+          exit 1
+        }
+      `;
+
+      return new Promise((resolve, reject) => {
+        const child = spawn('powershell.exe', [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          script
+        ]);
+
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout?.on('data', (data) => {
+          stdout += data.toString();
+        });
+
+        child.stderr?.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        child.on('close', (code) => {
+          if (code !== 0) {
+            console.error(`[CredentialService] DPAPI decryption failed:`, stderr);
+            resolve(null);
+            return;
+          }
+
+          try {
+            const creds = JSON.parse(stdout.trim()) as LegacyDiscoveryCredential;
+
+            // Validate required fields
+            if (!creds.TenantId || !creds.ClientId || !creds.ClientSecret) {
+              console.warn(`[CredentialService] Decrypted credentials missing required fields`);
+              resolve(null);
+              return;
+            }
+
+            console.log(`[CredentialService] ✅ Successfully decrypted DPAPI credentials`);
+            console.log(`[CredentialService] ClientSecret length: ${creds.ClientSecret?.length || 0} characters`);
+            resolve(creds);
+          } catch (error) {
+            console.error(`[CredentialService] Failed to parse decrypted credentials:`, error);
+            resolve(null);
+          }
+        });
+
+        child.on('error', (error) => {
+          console.error(`[CredentialService] PowerShell process error:`, error);
+          resolve(null);
+        });
+      });
+    } catch (error) {
+      console.error(`[CredentialService] Error in DPAPI decryption:`, error);
       return null;
     }
   }
