@@ -1,0 +1,48 @@
+{
+  "entryPoints": [
+    "src/main",
+    "src/renderer"
+  ],
+  "entryPointStrategy": "expand",
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/node_modules/**",
+    "**/*.d.ts"
+  ],
+  "tsconfig": "tsconfig.typedoc.json",
+  "out": "docs/api",
+  "name": "M&A Discovery Suite GUI v2 - API Documentation",
+  "readme": "README.md",
+  "plugin": [],
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Main Process",
+    "Services",
+    "Components",
+    "Views",
+    "Stores",
+    "Hooks",
+    "Types",
+    "*"
+  ],
+  "sort": ["source-order"],
+  "includeVersion": true,
+  "excludePrivate": false,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/your-org/UserMandA"
+  },
+  "searchInComments": true,
+  "searchInDocuments": true,
+  "validation": {
+    "notExported": false,
+    "invalidLink": false,
+    "notDocumented": false
+  },
+  "treatWarningsAsErrors": false,
+  "treatValidationWarningsAsErrors": false,
+  "skipErrorChecking": true
+}

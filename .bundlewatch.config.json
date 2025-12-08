@@ -1,0 +1,95 @@
+{
+  "files": [
+    {
+      "path": ".webpack/renderer/main_window/main_window.js",
+      "maxSize": "5 MB",
+      "compression": "gzip",
+      "name": "Main Bundle"
+    },
+    {
+      "path": ".webpack/main/index.js",
+      "maxSize": "2 MB",
+      "compression": "none",
+      "name": "Main Process"
+    },
+    {
+      "path": ".webpack/renderer/main_window/vendor*.js",
+      "maxSize": "2 MB",
+      "compression": "gzip",
+      "name": "Vendor Bundle"
+    },
+    {
+      "path": ".webpack/renderer/main_window/react-core*.js",
+      "maxSize": "150 KB",
+      "compression": "gzip",
+      "name": "React Core"
+    },
+    {
+      "path": ".webpack/renderer/main_window/react-router*.js",
+      "maxSize": "100 KB",
+      "compression": "gzip",
+      "name": "React Router"
+    },
+    {
+      "path": ".webpack/renderer/main_window/ag-grid-core*.js",
+      "maxSize": "500 KB",
+      "compression": "gzip",
+      "name": "AG Grid Core"
+    },
+    {
+      "path": ".webpack/renderer/main_window/ag-grid-enterprise*.js",
+      "maxSize": "400 KB",
+      "compression": "gzip",
+      "name": "AG Grid Enterprise"
+    },
+    {
+      "path": ".webpack/renderer/main_window/ag-grid-react*.js",
+      "maxSize": "100 KB",
+      "compression": "gzip",
+      "name": "AG Grid React"
+    },
+    {
+      "path": ".webpack/renderer/main_window/recharts*.js",
+      "maxSize": "400 KB",
+      "compression": "gzip",
+      "name": "Recharts"
+    },
+    {
+      "path": ".webpack/renderer/main_window/d3-libs*.js",
+      "maxSize": "300 KB",
+      "compression": "gzip",
+      "name": "D3 Libraries"
+    },
+    {
+      "path": ".webpack/renderer/main_window/state-management*.js",
+      "maxSize": "50 KB",
+      "compression": "gzip",
+      "name": "State Management (Zustand)"
+    },
+    {
+      "path": ".webpack/renderer/main_window/ui-libs*.js",
+      "maxSize": "200 KB",
+      "compression": "gzip",
+      "name": "UI Libraries"
+    },
+    {
+      "path": ".webpack/renderer/main_window/*.css",
+      "maxSize": "500 KB",
+      "compression": "gzip",
+      "name": "CSS Styles"
+    },
+    {
+      "path": ".webpack/renderer/main_window/runtime*.js",
+      "maxSize": "50 KB",
+      "compression": "gzip",
+      "name": "Runtime Chunk"
+    }
+  ],
+  "ci": {
+    "trackBranches": ["main", "develop"],
+    "repoBranchBase": "main",
+    "commitMessage": "[bundlewatch] Bundle size ${status}"
+  },
+  "defaultCompression": "gzip",
+  "reportOutput": ["json", "cli"]
+}
