@@ -2,10 +2,26 @@
 guiv2/.webpack/
 guiv2/out/
 guiv2/dist/
+dist/
+out/
 
 # Node modules
 node_modules/
 guiv2/node_modules/
+
+# Test results and coverage
+coverage/
+guiv2/coverage/
+guiv2/test-results/
+guiv2/playwright-report/
+test-results/
+playwright-report/
+
+# Build artifacts
+guiv2/obj/
+obj/
+bin/
+*.esproj.FileListAbsolute.txt
 
 # Logs
 *.log
@@ -26,3 +42,16 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+nul
+.junk/
+
+# Binary executables
+*.exe
+*.dll
+*.zip
+*.tar.gz
+
+# Duplicate directories (cleanup artifacts)
+Core/Core/
+Modules/Modules/
+Scripts/Scripts/

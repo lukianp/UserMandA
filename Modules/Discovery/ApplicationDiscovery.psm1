@@ -192,7 +192,9 @@ function Get-AzureADApplications {
                     try {
                         $ownersUri = "https://graph.microsoft.com/v1.0/servicePrincipals/$($sp.id)/owners"
                         $ownersData = Invoke-GraphAPIWithPaging -Uri $ownersUri -ModuleName "ApplicationDiscovery"
-                        $owners = $ownersData | ForEach-Object { $_.userPrincipalName -or $_.displayName }
+                        if ($ownersData) {
+                            $owners = @($ownersData | ForEach-Object { $_.userPrincipalName -or $_.displayName })
+                        }
                     } catch {
                         Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Could not get owners for $($sp.displayName)" -Level "WARN"
                     }
@@ -200,7 +202,10 @@ function Get-AzureADApplications {
                     # Get app role assignments TO this service principal (who can access it)
                     try {
                         $appRoleAssignedToUri = "https://graph.microsoft.com/v1.0/servicePrincipals/$($sp.id)/appRoleAssignedTo"
-                        $appRoleAssignedTo = Invoke-GraphAPIWithPaging -Uri $appRoleAssignedToUri -ModuleName "ApplicationDiscovery"
+                        $result = Invoke-GraphAPIWithPaging -Uri $appRoleAssignedToUri -ModuleName "ApplicationDiscovery"
+                        if ($result) {
+                            $appRoleAssignedTo = @($result)
+                        }
                     } catch {
                         Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Could not get app role assignments for $($sp.displayName)" -Level "WARN"
                     }
@@ -208,7 +213,10 @@ function Get-AzureADApplications {
                     # Get OAuth2 permission grants (delegated permissions)
                     try {
                         $oauth2Uri = "https://graph.microsoft.com/v1.0/servicePrincipals/$($sp.id)/oauth2PermissionGrants"
-                        $oauth2PermissionGrants = Invoke-GraphAPIWithPaging -Uri $oauth2Uri -ModuleName "ApplicationDiscovery"
+                        $result = Invoke-GraphAPIWithPaging -Uri $oauth2Uri -ModuleName "ApplicationDiscovery"
+                        if ($result) {
+                            $oauth2PermissionGrants = @($result)
+                        }
                     } catch {
                         Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Could not get OAuth2 grants for $($sp.displayName)" -Level "WARN"
                     }
@@ -216,7 +224,10 @@ function Get-AzureADApplications {
                     # Get app role assignments FROM this service principal (app permissions it has)
                     try {
                         $appRoleAssignmentsUri = "https://graph.microsoft.com/v1.0/servicePrincipals/$($sp.id)/appRoleAssignments"
-                        $appRoleAssignments = Invoke-GraphAPIWithPaging -Uri $appRoleAssignmentsUri -ModuleName "ApplicationDiscovery"
+                        $result = Invoke-GraphAPIWithPaging -Uri $appRoleAssignmentsUri -ModuleName "ApplicationDiscovery"
+                        if ($result) {
+                            $appRoleAssignments = @($result)
+                        }
                     } catch {
                         Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Could not get app role assignments from $($sp.displayName)" -Level "WARN"
                     }
@@ -235,17 +246,17 @@ function Get-AzureADApplications {
                         ObjectId = $sp.id
                         Name = $sp.displayName
                         AppType = "ServicePrincipal"
-                        Publisher = $sp.publisherName
-                        ApplicationTemplateId = $sp.applicationTemplateId
-                        Homepage = $sp.homepage
-                        ReplyUrls = ($sp.replyUrls -join '; ')
-                        ServicePrincipalType = $sp.servicePrincipalType
-                        SignInAudience = $sp.signInAudience
-                        AppRoleAssignmentRequired = $sp.appRoleAssignmentRequired
-                        PreferredSingleSignOnMode = $sp.preferredSingleSignOnMode
-                        Tags = ($sp.tags -join '; ')
-                        CreatedDateTime = $sp.createdDateTime
-                        AccountEnabled = $sp.accountEnabled
+                        Publisher = if ($sp.PSObject.Properties['publisherName']) { $sp.publisherName } else { $null }
+                        ApplicationTemplateId = if ($sp.PSObject.Properties['applicationTemplateId']) { $sp.applicationTemplateId } else { $null }
+                        Homepage = if ($sp.PSObject.Properties['homepage']) { $sp.homepage } else { $null }
+                        ReplyUrls = if ($sp.PSObject.Properties['replyUrls']) { ($sp.replyUrls -join '; ') } else { $null }
+                        ServicePrincipalType = if ($sp.PSObject.Properties['servicePrincipalType']) { $sp.servicePrincipalType } else { $null }
+                        SignInAudience = if ($sp.PSObject.Properties['signInAudience']) { $sp.signInAudience } else { $null }
+                        AppRoleAssignmentRequired = if ($sp.PSObject.Properties['appRoleAssignmentRequired']) { $sp.appRoleAssignmentRequired } else { $false }
+                        PreferredSingleSignOnMode = if ($sp.PSObject.Properties['preferredSingleSignOnMode']) { $sp.preferredSingleSignOnMode } else { $null }
+                        Tags = if ($sp.PSObject.Properties['tags']) { ($sp.tags -join '; ') } else { $null }
+                        CreatedDateTime = if ($sp.PSObject.Properties['createdDateTime']) { $sp.createdDateTime } else { $null }
+                        AccountEnabled = if ($sp.PSObject.Properties['accountEnabled']) { $sp.accountEnabled } else { $null }
                         # Enrichment data
                         Owners = ($owners -join '; ')
                         OwnerCount = $owners.Count
@@ -254,15 +265,15 @@ function Get-AzureADApplications {
                         OAuth2Scopes = (($oauth2PermissionGrants | ForEach-Object { $_.scope }) -join '; ')
                         AppRoleAssignmentsCount = $appRoleAssignments.Count
                         AppRolePermissions = (($appRoleAssignments | ForEach-Object { $_.appRoleId }) -join '; ')
-                        LastSignInDateTime = $signInActivity.lastSignInActivity.lastSignInDateTime
-                        LastDelegateUserSignInDateTime = $signInActivity.delegatedClientSignInActivity.lastSignInDateTime
-                        LastAppSignInDateTime = $signInActivity.applicationAuthenticationClientSignInActivity.lastSignInDateTime
+                        LastSignInDateTime = if ($signInActivity) { $signInActivity.lastSignInActivity.lastSignInDateTime } else { $null }
+                        LastDelegateUserSignInDateTime = if ($signInActivity) { $signInActivity.delegatedClientSignInActivity.lastSignInDateTime } else { $null }
+                        LastAppSignInDateTime = if ($signInActivity) { $signInActivity.applicationAuthenticationClientSignInActivity.lastSignInDateTime } else { $null }
                         # Key vault references
-                        KeyCredentialsCount = $sp.keyCredentials.Count
-                        PasswordCredentialsCount = $sp.passwordCredentials.Count
+                        KeyCredentialsCount = if ($sp.PSObject.Properties['keyCredentials']) { $sp.keyCredentials.Count } else { 0 }
+                        PasswordCredentialsCount = if ($sp.PSObject.Properties['passwordCredentials']) { $sp.passwordCredentials.Count } else { 0 }
                         # Standard fields
                         Platform = "Azure AD"
-                        Category = if ($sp.servicePrincipalType -eq "ManagedIdentity") { "Managed Identity" } else { "Enterprise Application" }
+                        Category = if ($sp.PSObject.Properties['servicePrincipalType'] -and $sp.servicePrincipalType -eq "ManagedIdentity") { "Managed Identity" } else { "Enterprise Application" }
                         DiscoverySource = "AzureAD"
                         DiscoveredAt = Get-Date
                         # Detailed permissions

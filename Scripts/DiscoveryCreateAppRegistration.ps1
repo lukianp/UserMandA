@@ -236,6 +236,8 @@ $script:AppConfig = @{
         "DeviceManagementConfiguration.Read.All" = "Read device management configuration"
         "DeviceManagementManagedDevices.Read.All" = "Read managed devices in Intune"
         "DeviceManagementApps.Read.All" = "Read device management applications"
+        "DeviceManagementServiceConfig.Read.All" = "Read Intune service configuration and policies"
+        "DeviceManagement.Read.All" = "Read Microsoft Intune device management data"
         
         # Policy and governance
         "Policy.Read.All" = "Read policies including conditional access"
