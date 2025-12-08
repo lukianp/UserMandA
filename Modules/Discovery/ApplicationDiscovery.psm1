@@ -62,12 +62,9 @@ function Get-IntuneApplications {
     
     process {
         try {
-            # Ensure Graph authentication
-            $authResult = Test-GraphConnection -RequiredScopes @('DeviceManagementApps.Read.All', 'Application.Read.All')
-            if (-not $authResult) {
-                throw "Failed to authenticate with Microsoft Graph"
-            }
-            
+            # Graph connection is already validated by the calling function
+            # No need to re-test here
+
             # Get managed applications
             $mobileAppsUri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps?`$top=999"
             $mobileApps = Invoke-GraphAPIWithPaging -Uri $mobileAppsUri -ModuleName "ApplicationDiscovery"
@@ -171,11 +168,8 @@ function Get-AzureADApplications {
 
     process {
         try {
-            # Ensure Graph authentication
-            $authResult = Test-GraphConnection -RequiredScopes @('Application.Read.All', 'Directory.Read.All')
-            if (-not $authResult) {
-                throw "Failed to authenticate with Microsoft Graph"
-            }
+            # Graph connection is already validated by the calling function
+            # No need to re-test here
 
             # Get Enterprise Applications (Service Principals) - COMPREHENSIVE
             if ($IncludeServicePrincipals) {
