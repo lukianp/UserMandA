@@ -44,6 +44,10 @@ Thumbs.db
 *.temp
 nul
 .junk/
+temp_files.txt
+
+# Local settings
+.claude/settings.local.json
 
 # Binary executables
 *.exe
@@ -55,3 +59,13 @@ nul
 Core/Core/
 Modules/Modules/
 Scripts/Scripts/
+
+# Old GUI build artifacts
+GUI/bin/
+GUI/*.log
+GUI/obj/
+
+# Documentation temp files
+Documentation/*.txt
+Documentation/*.backup
+Documentation/*.log
