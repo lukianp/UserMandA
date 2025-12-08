@@ -143,6 +143,327 @@ function Get-IntuneApplications {
 
 <#
 .SYNOPSIS
+    Discovers Azure AD Enterprise Applications and App Registrations
+.DESCRIPTION
+    Retrieves enterprise applications (service principals) and app registrations from Azure AD
+    using Microsoft Graph API.
+#>
+function Get-AzureADApplications {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludeServicePrincipals = $true,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludeAppRegistrations = $true,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludePermissions
+    )
+
+    begin {
+        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Starting Azure AD application discovery..." -Level "INFO"
+        $discoveredApps = @()
+    }
+
+    process {
+        try {
+            # Ensure Graph authentication
+            $authResult = Test-GraphConnection -RequiredScopes @('Application.Read.All', 'Directory.Read.All')
+            if (-not $authResult) {
+                throw "Failed to authenticate with Microsoft Graph"
+            }
+
+            # Get Enterprise Applications (Service Principals) - COMPREHENSIVE
+            if ($IncludeServicePrincipals) {
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovering enterprise applications (service principals)..." -Level "INFO"
+
+                $spUri = "https://graph.microsoft.com/v1.0/servicePrincipals?`$top=999"
+                $servicePrincipals = Invoke-GraphAPIWithPaging -Uri $spUri -ModuleName "ApplicationDiscovery"
+
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Found $($servicePrincipals.Count) service principals" -Level "INFO"
+
+                foreach ($sp in $servicePrincipals) {
+                    # Get additional enrichment data
+                    $owners = @()
+                    $appRoleAssignedTo = @()
+                    $oauth2PermissionGrants = @()
+                    $appRoleAssignments = @()
+                    $signInActivity = $null
+
+                    # Get owners
+                    try {
+                        $ownersUri = "https://graph.microsoft.com/v1.0/servicePrincipals/$($sp.id)/owners"
+                        $ownersData = Invoke-GraphAPIWithPaging -Uri $ownersUri -ModuleName "ApplicationDiscovery"
+                        $owners = $ownersData | ForEach-Object { $_.userPrincipalName -or $_.displayName }
+                    } catch {
+                        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Could not get owners for $($sp.displayName)" -Level "WARN"
+                    }
+
+                    # Get app role assignments TO this service principal (who can access it)
+                    try {
+                        $appRoleAssignedToUri = "https://graph.microsoft.com/v1.0/servicePrincipals/$($sp.id)/appRoleAssignedTo"
+                        $appRoleAssignedTo = Invoke-GraphAPIWithPaging -Uri $appRoleAssignedToUri -ModuleName "ApplicationDiscovery"
+                    } catch {
+                        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Could not get app role assignments for $($sp.displayName)" -Level "WARN"
+                    }
+
+                    # Get OAuth2 permission grants (delegated permissions)
+                    try {
+                        $oauth2Uri = "https://graph.microsoft.com/v1.0/servicePrincipals/$($sp.id)/oauth2PermissionGrants"
+                        $oauth2PermissionGrants = Invoke-GraphAPIWithPaging -Uri $oauth2Uri -ModuleName "ApplicationDiscovery"
+                    } catch {
+                        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Could not get OAuth2 grants for $($sp.displayName)" -Level "WARN"
+                    }
+
+                    # Get app role assignments FROM this service principal (app permissions it has)
+                    try {
+                        $appRoleAssignmentsUri = "https://graph.microsoft.com/v1.0/servicePrincipals/$($sp.id)/appRoleAssignments"
+                        $appRoleAssignments = Invoke-GraphAPIWithPaging -Uri $appRoleAssignmentsUri -ModuleName "ApplicationDiscovery"
+                    } catch {
+                        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Could not get app role assignments from $($sp.displayName)" -Level "WARN"
+                    }
+
+                    # Get sign-in activity (beta endpoint)
+                    try {
+                        $signInUri = "https://graph.microsoft.com/beta/servicePrincipals/$($sp.id)?`$select=signInActivity"
+                        $signInData = Invoke-MgGraphRequest -Uri $signInUri -Method GET -ErrorAction SilentlyContinue
+                        $signInActivity = $signInData.signInActivity
+                    } catch {
+                        # Sign-in activity might not be available for all apps
+                    }
+
+                    $appData = [PSCustomObject]@{
+                        AppId = $sp.appId
+                        ObjectId = $sp.id
+                        Name = $sp.displayName
+                        AppType = "ServicePrincipal"
+                        Publisher = $sp.publisherName
+                        ApplicationTemplateId = $sp.applicationTemplateId
+                        Homepage = $sp.homepage
+                        ReplyUrls = ($sp.replyUrls -join '; ')
+                        ServicePrincipalType = $sp.servicePrincipalType
+                        SignInAudience = $sp.signInAudience
+                        AppRoleAssignmentRequired = $sp.appRoleAssignmentRequired
+                        PreferredSingleSignOnMode = $sp.preferredSingleSignOnMode
+                        Tags = ($sp.tags -join '; ')
+                        CreatedDateTime = $sp.createdDateTime
+                        AccountEnabled = $sp.accountEnabled
+                        # Enrichment data
+                        Owners = ($owners -join '; ')
+                        OwnerCount = $owners.Count
+                        AssignedUsers = $appRoleAssignedTo.Count
+                        OAuth2PermissionGrantsCount = $oauth2PermissionGrants.Count
+                        OAuth2Scopes = (($oauth2PermissionGrants | ForEach-Object { $_.scope }) -join '; ')
+                        AppRoleAssignmentsCount = $appRoleAssignments.Count
+                        AppRolePermissions = (($appRoleAssignments | ForEach-Object { $_.appRoleId }) -join '; ')
+                        LastSignInDateTime = $signInActivity.lastSignInActivity.lastSignInDateTime
+                        LastDelegateUserSignInDateTime = $signInActivity.delegatedClientSignInActivity.lastSignInDateTime
+                        LastAppSignInDateTime = $signInActivity.applicationAuthenticationClientSignInActivity.lastSignInDateTime
+                        # Key vault references
+                        KeyCredentialsCount = $sp.keyCredentials.Count
+                        PasswordCredentialsCount = $sp.passwordCredentials.Count
+                        # Standard fields
+                        Platform = "Azure AD"
+                        Category = if ($sp.servicePrincipalType -eq "ManagedIdentity") { "Managed Identity" } else { "Enterprise Application" }
+                        DiscoverySource = "AzureAD"
+                        DiscoveredAt = Get-Date
+                        # Detailed permissions
+                        DetailedPermissions = if ($IncludePermissions) { ($appRoleAssignments | ConvertTo-Json -Compress) } else { $null }
+                        DetailedOAuth2Grants = if ($IncludePermissions) { ($oauth2PermissionGrants | ConvertTo-Json -Compress) } else { $null }
+                    }
+
+                    $discoveredApps += $appData
+                }
+
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovered $($servicePrincipals.Count) enterprise applications with enriched data" -Level "SUCCESS"
+            }
+
+            # Get App Registrations - COMPREHENSIVE
+            if ($IncludeAppRegistrations) {
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovering app registrations with comprehensive details..." -Level "INFO"
+
+                $appRegUri = "https://graph.microsoft.com/v1.0/applications?`$top=999"
+                $appRegistrations = Invoke-GraphAPIWithPaging -Uri $appRegUri -ModuleName "ApplicationDiscovery"
+
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Found $($appRegistrations.Count) app registrations" -Level "INFO"
+
+                foreach ($app in $appRegistrations) {
+                    # Get additional enrichment data for App Registration
+                    $owners = @()
+                    $federatedCredentials = @()
+                    $apiPermissionDetails = @()
+                    $appRoles = @()
+
+                    # Get owners
+                    try {
+                        $ownersUri = "https://graph.microsoft.com/v1.0/applications/$($app.id)/owners"
+                        $ownerResults = Invoke-MgGraphRequest -Uri $ownersUri -Method GET -ErrorAction SilentlyContinue
+                        if ($ownerResults.value) {
+                            $owners = $ownerResults.value | ForEach-Object {
+                                if ($_.userPrincipalName) { $_.userPrincipalName }
+                                elseif ($_.displayName) { $_.displayName }
+                                else { $_.id }
+                            }
+                        }
+                    } catch {
+                        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Could not retrieve owners for app $($app.displayName): $($_.Exception.Message)" -Level "WARN"
+                    }
+
+                    # Get federated identity credentials (for workload identity scenarios)
+                    try {
+                        $federatedUri = "https://graph.microsoft.com/v1.0/applications/$($app.id)/federatedIdentityCredentials"
+                        $federatedResults = Invoke-MgGraphRequest -Uri $federatedUri -Method GET -ErrorAction SilentlyContinue
+                        if ($federatedResults.value) {
+                            $federatedCredentials = $federatedResults.value
+                        }
+                    } catch {
+                        # Federated credentials may not be available for all apps
+                    }
+
+                    # Parse required API permissions with details
+                    if ($app.requiredResourceAccess) {
+                        foreach ($resource in $app.requiredResourceAccess) {
+                            foreach ($access in $resource.resourceAccess) {
+                                $apiPermissionDetails += [PSCustomObject]@{
+                                    ResourceAppId = $resource.resourceAppId
+                                    PermissionId = $access.id
+                                    PermissionType = $access.type # Scope (delegated) or Role (application)
+                                }
+                            }
+                        }
+                    }
+
+                    # Get app roles defined BY this app (roles it exposes to other apps)
+                    if ($app.appRoles) {
+                        $appRoles = $app.appRoles
+                    }
+
+                    # Calculate password and certificate expiry information
+                    $passwordExpiryInfo = @()
+                    $certificateExpiryInfo = @()
+                    $nearestPasswordExpiry = $null
+                    $nearestCertificateExpiry = $null
+
+                    if ($app.passwordCredentials) {
+                        foreach ($pwd in $app.passwordCredentials) {
+                            $expiryDate = [datetime]$pwd.endDateTime
+                            $daysUntilExpiry = ($expiryDate - (Get-Date)).Days
+                            $passwordExpiryInfo += "$($pwd.displayName): expires $($expiryDate.ToString('yyyy-MM-dd')) ($daysUntilExpiry days)"
+
+                            if ($null -eq $nearestPasswordExpiry -or $expiryDate -lt $nearestPasswordExpiry) {
+                                $nearestPasswordExpiry = $expiryDate
+                            }
+                        }
+                    }
+
+                    if ($app.keyCredentials) {
+                        foreach ($cert in $app.keyCredentials) {
+                            $expiryDate = [datetime]$cert.endDateTime
+                            $daysUntilExpiry = ($expiryDate - (Get-Date)).Days
+                            $certificateExpiryInfo += "$($cert.displayName): expires $($expiryDate.ToString('yyyy-MM-dd')) ($daysUntilExpiry days)"
+
+                            if ($null -eq $nearestCertificateExpiry -or $expiryDate -lt $nearestCertificateExpiry) {
+                                $nearestCertificateExpiry = $expiryDate
+                            }
+                        }
+                    }
+
+                    # Categorize redirect URIs by type
+                    $webRedirectUris = if ($app.web.redirectUris) { $app.web.redirectUris -join '; ' } else { '' }
+                    $spaRedirectUris = if ($app.spa.redirectUris) { $app.spa.redirectUris -join '; ' } else { '' }
+                    $publicClientRedirectUris = if ($app.publicClient.redirectUris) { $app.publicClient.redirectUris -join '; ' } else { '' }
+
+                    # Build comprehensive app registration data object
+                    $appData = [PSCustomObject]@{
+                        AppId = $app.appId
+                        ObjectId = $app.id
+                        Name = $app.displayName
+                        AppType = "AppRegistration"
+                        Publisher = $app.publisherDomain
+                        SignInAudience = $app.signInAudience
+                        CreatedDateTime = $app.createdDateTime
+
+                        # Ownership
+                        Owners = ($owners -join '; ')
+                        OwnerCount = $owners.Count
+
+                        # Authentication & Credentials
+                        PasswordCredentialsCount = $app.passwordCredentials.Count
+                        KeyCredentialsCount = $app.keyCredentials.Count
+                        FederatedCredentialsCount = $federatedCredentials.Count
+                        PasswordExpiryDetails = ($passwordExpiryInfo -join '; ')
+                        CertificateExpiryDetails = ($certificateExpiryInfo -join '; ')
+                        NearestPasswordExpiry = if ($nearestPasswordExpiry) { $nearestPasswordExpiry.ToString('yyyy-MM-dd') } else { '' }
+                        NearestCertificateExpiry = if ($nearestCertificateExpiry) { $nearestCertificateExpiry.ToString('yyyy-MM-dd') } else { '' }
+
+                        # Redirect URIs
+                        IdentifierUris = ($app.identifierUris -join '; ')
+                        WebRedirectUris = $webRedirectUris
+                        SpaRedirectUris = $spaRedirectUris
+                        PublicClientRedirectUris = $publicClientRedirectUris
+                        Web_HomePageUrl = $app.web.homePageUrl
+                        Web_LogoutUrl = $app.web.logoutUrl
+
+                        # API Permissions
+                        ApiPermissionsCount = $apiPermissionDetails.Count
+                        ApiPermissionsSummary = ($apiPermissionDetails | ForEach-Object { "$($_.ResourceAppId):$($_.PermissionType)" }) -join '; '
+                        DelegatedPermissionsCount = ($apiPermissionDetails | Where-Object { $_.PermissionType -eq 'Scope' }).Count
+                        ApplicationPermissionsCount = ($apiPermissionDetails | Where-Object { $_.PermissionType -eq 'Role' }).Count
+
+                        # App Roles Exposed (roles this app defines for others to use)
+                        AppRolesExposedCount = $appRoles.Count
+                        AppRolesExposed = ($appRoles | ForEach-Object { $_.value }) -join '; '
+
+                        # Optional Claims
+                        HasOptionalClaims = ($null -ne $app.optionalClaims)
+                        OptionalClaimsSummary = if ($app.optionalClaims) {
+                            "AccessToken:$($app.optionalClaims.accessToken.Count) IdToken:$($app.optionalClaims.idToken.Count) Saml2Token:$($app.optionalClaims.saml2Token.Count)"
+                        } else { '' }
+
+                        # Platform Configuration
+                        IsFallbackPublicClient = $app.isFallbackPublicClient
+                        DefaultRedirectUri = $app.defaultRedirectUri
+
+                        # Security & Compliance
+                        Notes = $app.notes
+                        Tags = ($app.tags -join '; ')
+
+                        Platform = "Azure AD"
+                        Category = "App Registration"
+                        DiscoverySource = "AzureAD"
+                        DiscoveredAt = Get-Date
+
+                        # Detailed JSON for deep analysis (if permissions flag enabled)
+                        DetailedApiPermissions = if ($IncludePermissions) { ($apiPermissionDetails | ConvertTo-Json -Compress) } else { $null }
+                        DetailedAppRoles = if ($IncludePermissions) { ($appRoles | ConvertTo-Json -Compress) } else { $null }
+                        DetailedFederatedCredentials = if ($IncludePermissions -and $federatedCredentials) { ($federatedCredentials | ConvertTo-Json -Compress) } else { $null }
+                    }
+
+                    $discoveredApps += $appData
+                }
+
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovered $($appRegistrations.Count) app registrations with comprehensive details" -Level "SUCCESS"
+            }
+
+            # Cache results
+            $script:ApplicationCache["AzureAD"] = $discoveredApps
+
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Azure AD discovery completed. Found $($discoveredApps.Count) total applications" -Level "SUCCESS"
+            return $discoveredApps
+
+        } catch {
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Failed to discover Azure AD applications: $($_.Exception.Message)" -Level "ERROR"
+            throw
+        }
+    }
+}
+
+<#
+.SYNOPSIS
     Discovers applications through DNS record analysis
 .DESCRIPTION
     Analyzes DNS records to identify web applications and services in the environment.
@@ -1689,6 +2010,30 @@ function Invoke-ApplicationDiscovery {
 
         $allDiscoveredData = [System.Collections.ArrayList]::new()
 
+        # Get Azure AD applications if enabled (Enterprise Apps & App Registrations)
+        if ($Configuration.ContainsKey('IncludeAzureADApps') -and $Configuration.IncludeAzureADApps) {
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovering Azure AD applications..." -Level "INFO"
+            try {
+                $includeServicePrincipals = $Configuration.ContainsKey('IncludeServicePrincipals') -and $Configuration.IncludeServicePrincipals
+                $includeAppRegistrations = $Configuration.ContainsKey('IncludeAppRegistrations') -and $Configuration.IncludeAppRegistrations
+
+                $azureADApps = Get-AzureADApplications -Configuration $Configuration `
+                    -IncludeServicePrincipals:$includeServicePrincipals `
+                    -IncludeAppRegistrations:$includeAppRegistrations `
+                    -IncludePermissions
+
+                if ($azureADApps) {
+                    $allDiscoveredData.AddRange($azureADApps)
+                    Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Found $($azureADApps.Count) Azure AD applications" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "No Azure AD applications found" -Level "WARN"
+                }
+            } catch {
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Azure AD discovery failed: $($_.Exception.Message)" -Level "ERROR"
+                $result.AddError("Azure AD discovery failed: $($_.Exception.Message)", $_.Exception, @{Section="AzureAD"})
+            }
+        }
+
         # Get Intune applications if enabled
         if ($Configuration.ContainsKey('IncludeIntuneApps') -and $Configuration.IncludeIntuneApps) {
             Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovering Intune applications..." -Level "INFO"
@@ -1844,8 +2189,9 @@ function Invoke-ApplicationDiscovery {
 
 # Export module functions
 Export-ModuleMember -Function @(
+    'Get-AzureADApplications',
     'Get-IntuneApplications',
-    'Get-DNSApplications', 
+    'Get-DNSApplications',
     'Search-ApplicationDetails',
     'New-ApplicationCatalog',
     'Get-ApplicationMigrationPath',
