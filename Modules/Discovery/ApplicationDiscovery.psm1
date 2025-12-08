@@ -1652,10 +1652,22 @@ function Invoke-ApplicationDiscovery {
         }
 
         # 3. AUTHENTICATE & CONNECT (Use client credentials from company configuration)
-        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Getting authentication for Graph service..." -Level "INFO"
+        Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Initializing authentication service..." -Level "INFO"
 
         try {
-            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+            # Initialize authentication service with credentials from Configuration
+            $authResult = Initialize-AuthenticationService -Configuration $Configuration -Context $Context
+
+            if (-not $authResult.Success) {
+                throw "Authentication initialization failed: $($authResult.Error)"
+            }
+
+            $actualSessionId = $authResult.SessionId
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Authentication session created: $actualSessionId" -Level "SUCCESS"
+
+            # Get Graph connection using the initialized session
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Getting authentication for Graph service..." -Level "INFO"
+            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $actualSessionId
 
             # Validate Graph connection
             $testUri = "https://graph.microsoft.com/v1.0/organization"
@@ -1791,7 +1803,7 @@ function Invoke-ApplicationDiscovery {
         # 5. FINALIZE METADATA
         $result.Metadata["TotalRecords"] = $result.RecordCount
         $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
-        $result.Metadata["SessionId"] = $SessionId
+        $result.Metadata["SessionId"] = if ($actualSessionId) { $actualSessionId } else { $SessionId }
         $result.Metadata["ConfigurationApplied"] = $Configuration
 
     } catch [System.UnauthorizedAccessException] {
@@ -1809,11 +1821,14 @@ function Invoke-ApplicationDiscovery {
 
         Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Discovery completed with $($result.RecordCount) records" -Level $(if($result.Success){"SUCCESS"}else{"ERROR"})
 
-        # Disconnect Graph API
+        # Clean up authentication session and disconnect services
         try {
-            Disconnect-MgGraph -ErrorAction SilentlyContinue
+            if (Get-Command Stop-AuthenticationService -ErrorAction SilentlyContinue) {
+                Stop-AuthenticationService -ErrorAction SilentlyContinue
+                Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Authentication service stopped" -Level "INFO"
+            }
         } catch {
-            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Error disconnecting Graph API: $($_.Exception.Message)" -Level "WARN"
+            Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Error stopping authentication service: $($_.Exception.Message)" -Level "WARN"
         }
 
         $stopwatch.Stop()
