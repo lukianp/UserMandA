@@ -820,174 +820,60 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   /**
    * Test connection for a profile
    * Validates Azure credentials by making actual API call to Microsoft Graph
+   * Uses Node.js fetch() for direct OAuth2 testing (more reliable than PowerShell)
    */
   ipcMain.handle('profile:testConnection', async (_, profileIdOrData: string | { profileId: string; tenantId?: string; clientId?: string; clientSecret?: string }) => {
     try {
-      let profileId: string;
-      let providedCreds: { tenantId?: string; clientId?: string; clientSecret?: string } | null = null;
+      console.log(`[IPC profile:testConnection] ========================================`);
+      console.log(`[IPC profile:testConnection] Starting connection test`);
 
-      // Check if credentials were provided directly
+      let profileId: string;
+
+      // Extract profileId from input
       if (typeof profileIdOrData === 'object') {
         profileId = profileIdOrData.profileId;
-        providedCreds = {
-          tenantId: profileIdOrData.tenantId,
-          clientId: profileIdOrData.clientId,
-          clientSecret: profileIdOrData.clientSecret
-        };
-        console.log(`[IPC profile:testConnection] Testing connection with provided credentials for profile: ${profileId}`);
+        console.log(`[IPC profile:testConnection] Testing with provided credentials for profile: ${profileId}`);
       } else {
         profileId = profileIdOrData;
-        console.log(`[IPC profile:testConnection] Testing connection for profile: ${profileId}`);
+        console.log(`[IPC profile:testConnection] Testing stored credentials for profile: ${profileId}`);
       }
 
-      let creds: { tenantId?: string; clientId?: string; clientSecret?: string; username?: string; password?: string; connectionType?: string } | null = null;
+      // Use CredentialService's testConnection method which handles:
+      // - Credential retrieval (ENV, safeStorage, legacy DPAPI)
+      // - DPAPI decryption with multiple fallback strategies
+      // - Credential structure validation
+      // - Graph API OAuth2 token request
+      console.log(`[IPC profile:testConnection] Initializing CredentialService`);
+      const { CredentialService } = await import('./services/credentialService');
+      const credService = new CredentialService();
+      await credService.initialize();
 
-      // If credentials were provided directly, use them (from newly created profile)
-      if (providedCreds && providedCreds.tenantId && providedCreds.clientId && providedCreds.clientSecret) {
-        console.log(`[IPC profile:testConnection] Using provided credentials`);
-        creds = providedCreds;
-      } else {
-        // Otherwise, try to load from CredentialService (for existing profiles)
-        console.log(`[IPC profile:testConnection] Loading credentials from CredentialService`);
-        const { CredentialService } = await import('./services/credentialService');
-        const credService = new CredentialService();
-        await credService.initialize();
+      console.log(`[IPC profile:testConnection] Calling credentialService.testConnection()`);
+      const result = await credService.testConnection(profileId);
 
-        // First check if credentials exist at all
-        const hasCredentials = await credService.hasCredential(profileId);
-        if (!hasCredentials) {
-          console.log(`[IPC profile:testConnection] No credential files found for profile: ${profileId}`);
-          console.log(`[IPC profile:testConnection] Checked locations:`);
-          console.log(`  - ENV variables: AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET`);
-          console.log(`  - safeStorage: ${credService['credentialsPath']}`);
-          console.log(`  - Legacy file: C:\\DiscoveryData\\${profileId}\\Credentials\\discoverycredentials.config`);
-          return {
-            success: false,
-            error: `No credentials configured for profile '${profileId}'. Please create a credential file first using the Azure setup script.`
-          };
-        }
+      console.log(`[IPC profile:testConnection] Test complete: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}`);
+      console.log(`[IPC profile:testConnection] ========================================`);
 
-        creds = await credService.getCredential(profileId);
-
-        if (!creds) {
-          console.log(`[IPC profile:testConnection] Credentials exist but could not be loaded for profile: ${profileId}`);
-          return {
-            success: false,
-            error: 'Credentials exist but could not be loaded. Please check the credential file format.'
-          };
-        }
-      }
-
-      // Validate required Azure fields
-      const hasTenantId = !!(creds.tenantId);
-      const hasClientId = !!(creds.clientId || creds.username);
-      const hasClientSecret = !!(creds.clientSecret || creds.password);
-
-      if (!hasTenantId || !hasClientId || !hasClientSecret) {
-        const missingFields = [];
-        if (!hasTenantId) missingFields.push('TenantId');
-        if (!hasClientId) missingFields.push('ClientId');
-        if (!hasClientSecret) missingFields.push('ClientSecret');
-
-        console.log(`[IPC profile:testConnection] Missing required fields: ${missingFields.join(', ')}`);
-        return {
-          success: false,
-          error: `Missing required Azure credentials: ${missingFields.join(', ')}`
-        };
-      }
-
-      console.log(`[IPC profile:testConnection] Credentials found, testing with Azure API...`);
-
-      // Actually test the credentials by getting an Azure token
-      const testScript = `
-        $tenantId = "${creds.tenantId}"
-        $clientId = "${creds.clientId || creds.username}"
-        $clientSecret = "${creds.clientSecret || creds.password}"
-
-        try {
-          $body = @{
-            grant_type    = "client_credentials"
-            scope         = "https://graph.microsoft.com/.default"
-            client_id     = $clientId
-            client_secret = $clientSecret
-          }
-
-          $response = Invoke-RestMethod \`
-            -Method Post \`
-            -Uri "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token" \`
-            -Body $body \`
-            -ErrorAction Stop
-
-          if ($response.access_token) {
-            Write-Output "SUCCESS: Token acquired"
-          } else {
-            Write-Error "No access token in response"
-            exit 1
-          }
-        } catch {
-          Write-Error $_.Exception.Message
-          exit 1
-        }
-      `;
-
-      // Use the already-initialized psService instance from module scope
-      // Write script to temp file since executeScript expects a file path
-      const os = await import('os');
-      const tmpPath = path.join(os.tmpdir(), `test-azure-creds-${Date.now()}.ps1`);
-
-      try {
-        await fs.writeFile(tmpPath, testScript, 'utf-8');
-
-        const result = await psService.executeScript(tmpPath, [], {
-          timeout: 30000,
-        });
-
-        // Clean up temp file
-        try {
-          await fs.unlink(tmpPath);
-        } catch (cleanupError) {
-          console.warn('[IPC profile:testConnection] Failed to delete temp script file:', cleanupError);
-        }
-
-        // Check if the script executed successfully
-        // PowerShellService tries to parse all output as JSON and sets success=false when it fails
-        // But that doesn't mean the script failed - check exit code and stdout content instead
-        const scriptSucceeded = result.exitCode === 0 && result.stdout?.includes('SUCCESS');
-
-        if (!scriptSucceeded) {
-          // Script actually failed - check stderr for error message
-          const errorMsg = result.stderr || result.error || 'Failed to authenticate with Azure';
-          console.log(`[IPC profile:testConnection] ❌ Azure authentication failed: ${errorMsg}`);
-          return {
-            success: false,
-            error: `Azure authentication failed: ${errorMsg}`
-          };
-        }
-
-        console.log(`[IPC profile:testConnection] ✅ Successfully validated credentials with Azure API`);
-        return {
-          success: true,
-          message: 'Successfully authenticated with Azure',
-          data: {
-            connectionType: creds.connectionType,
-            tenantId: creds.tenantId,
-            clientId: creds.clientId || creds.username,
-            hasSecret: true
-          }
-        };
-      } catch (scriptError) {
-        // Clean up temp file on error too
-        try {
-          await fs.unlink(tmpPath);
-        } catch (cleanupError) {
-          // Ignore cleanup errors
-        }
-        throw scriptError;
-      }
+      // Return result in expected format
+      return {
+        success: result.success,
+        decryptionSuccess: result.decryptionSuccess,
+        connectionSuccess: result.connectionSuccess,
+        message: result.details || (result.success ? 'Successfully authenticated with Azure' : undefined),
+        error: result.error,
+        data: result.success ? {
+          connectionType: 'AzureAD',
+          hasCredentials: true,
+          hasSecret: true
+        } : undefined
+      };
     } catch (error: unknown) {
-      console.error(`[IPC profile:testConnection] Error: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`[IPC profile:testConnection] Unhandled error:`, error);
+      console.log(`[IPC profile:testConnection] ========================================`);
       return {
         success: false,
+        decryptionSuccess: false,
+        connectionSuccess: false,
         error: error instanceof Error ? error.message : String(error)
       };
     }

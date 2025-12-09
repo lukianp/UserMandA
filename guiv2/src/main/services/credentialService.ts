@@ -717,6 +717,207 @@ export class CredentialService {
   }
 
   /**
+   * Validate credential structure for Azure AD
+   * Ensures all required fields are present and valid
+   */
+  validateCredentialStructure(creds: any): boolean {
+    console.log('[CredentialService] Validating credential structure');
+
+    if (!creds) {
+      console.error('[CredentialService] ❌ Credentials object is null/undefined');
+      return false;
+    }
+
+    // Check TenantId
+    if (!creds.TenantId || typeof creds.TenantId !== 'string') {
+      console.error('[CredentialService] ❌ TenantId missing or invalid');
+      return false;
+    }
+
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(creds.TenantId)) {
+      console.error('[CredentialService] ❌ TenantId is not a valid GUID');
+      return false;
+    }
+
+    // Check ClientId
+    if (!creds.ClientId || typeof creds.ClientId !== 'string') {
+      console.error('[CredentialService] ❌ ClientId missing or invalid');
+      return false;
+    }
+
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(creds.ClientId)) {
+      console.error('[CredentialService] ❌ ClientId is not a valid GUID');
+      return false;
+    }
+
+    // Check ClientSecret
+    if (!creds.ClientSecret || typeof creds.ClientSecret !== 'string') {
+      console.error('[CredentialService] ❌ ClientSecret missing or invalid');
+      return false;
+    }
+
+    if (creds.ClientSecret.length < 8) {
+      console.error('[CredentialService] ❌ ClientSecret too short (minimum 8 characters)');
+      return false;
+    }
+
+    console.log('[CredentialService] ✅ Credential structure is valid');
+    console.log(`[CredentialService]   TenantId: ${creds.TenantId.substring(0, 8)}...`);
+    console.log(`[CredentialService]   ClientId: ${creds.ClientId.substring(0, 8)}...`);
+    console.log(`[CredentialService]   ClientSecret length: ${creds.ClientSecret.length} chars`);
+
+    return true;
+  }
+
+  /**
+   * Test Azure AD connection with credentials
+   * Returns detailed result including decryption status and Graph API connectivity
+   */
+  async testConnection(profileId: string): Promise<{
+    success: boolean;
+    decryptionSuccess: boolean;
+    connectionSuccess: boolean;
+    details?: string;
+    error?: string;
+  }> {
+    console.log(`[CredentialService] ========================================`);
+    console.log(`[CredentialService] Testing connection for profile: ${profileId}`);
+    console.log(`[CredentialService] ========================================`);
+
+    try {
+      // Step 1: Try to get credentials
+      console.log('[CredentialService] Step 1: Retrieving credentials');
+      const creds = await this.getCredential(profileId);
+
+      if (!creds) {
+        console.error('[CredentialService] ❌ No credentials found');
+        return {
+          success: false,
+          decryptionSuccess: false,
+          connectionSuccess: false,
+          error: 'No credentials found for this profile'
+        };
+      }
+
+      console.log('[CredentialService] ✅ Credentials retrieved successfully');
+
+      // Step 2: Validate credential structure
+      console.log('[CredentialService] Step 2: Validating credential structure');
+      const legacyCreds = await this.loadLegacyCredentials(profileId);
+      if (legacyCreds && !this.validateCredentialStructure(legacyCreds)) {
+        console.error('[CredentialService] ❌ Credential structure validation failed');
+        return {
+          success: false,
+          decryptionSuccess: true,
+          connectionSuccess: false,
+          error: 'Invalid credential structure - missing required fields or invalid format'
+        };
+      }
+
+      console.log('[CredentialService] ✅ Credential structure valid');
+
+      // Step 3: Test Graph API connection
+      console.log('[CredentialService] Step 3: Testing Microsoft Graph API connection');
+      const testResult = await this.testGraphAPIConnection(creds.tenantId, creds.clientId, creds.clientSecret);
+
+      if (testResult.success) {
+        console.log('[CredentialService] ✅ Graph API connection successful');
+        console.log(`[CredentialService] Token expires in: ${testResult.expiresIn} seconds`);
+        console.log(`[CredentialService] ========================================`);
+        return {
+          success: true,
+          decryptionSuccess: true,
+          connectionSuccess: true,
+          details: `Authentication successful. Token valid for ${Math.floor(testResult.expiresIn / 60)} minutes.`
+        };
+      } else {
+        console.error('[CredentialService] ❌ Graph API connection failed');
+        console.error(`[CredentialService] Error: ${testResult.error}`);
+        console.log(`[CredentialService] ========================================`);
+        return {
+          success: false,
+          decryptionSuccess: true,
+          connectionSuccess: false,
+          error: testResult.error
+        };
+      }
+    } catch (error) {
+      console.error('[CredentialService] ❌ Connection test failed with exception:', error);
+      console.log(`[CredentialService] ========================================`);
+      return {
+        success: false,
+        decryptionSuccess: false,
+        connectionSuccess: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  /**
+   * Test Microsoft Graph API connection by requesting an OAuth2 token
+   */
+  private async testGraphAPIConnection(
+    tenantId: string,
+    clientId: string,
+    clientSecret: string
+  ): Promise<{ success: boolean; expiresIn?: number; error?: string }> {
+    try {
+      const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+
+      const params = new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: clientId,
+        client_secret: clientSecret,
+        scope: 'https://graph.microsoft.com/.default'
+      });
+
+      console.log(`[CredentialService] Requesting token from: ${tokenUrl}`);
+
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString()
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[CredentialService] Token request failed: ${response.status} ${response.statusText}`);
+        console.error(`[CredentialService] Response: ${errorText}`);
+
+        // Parse Azure AD error if available
+        try {
+          const errorJson = JSON.parse(errorText);
+          return {
+            success: false,
+            error: `Azure AD authentication failed: ${errorJson.error_description || errorJson.error || 'Unknown error'}`
+          };
+        } catch {
+          return {
+            success: false,
+            error: `HTTP ${response.status}: ${response.statusText}`
+          };
+        }
+      }
+
+      const tokenData = await response.json();
+      console.log(`[CredentialService] Token acquired successfully`);
+
+      return {
+        success: true,
+        expiresIn: tokenData.expires_in || 3600
+      };
+    } catch (error) {
+      console.error('[CredentialService] Exception during Graph API test:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error during authentication'
+      };
+    }
+  }
+
+  /**
    * Ensure service is initialized
    */
   private async ensureInitialized(): Promise<void> {

@@ -324,11 +324,18 @@ function parsePowerShellOutput(line: string): ParsedPowerShellOutput | null {
 }
 
 /**
+ * Get the path to the registration status file
+ */
+function getStatusFilePath(companyName: string): string {
+  return path.join('C:', 'DiscoveryData', companyName, 'Logs', 'MandADiscovery_Registration_Log_status.json');
+}
+
+/**
  * Writes status to JSON file for GUI polling
  */
 async function writeStatusFile(companyName: string, status: ParsedPowerShellOutput): Promise<void> {
   try {
-    const statusPath = path.join('C:', 'DiscoveryData', companyName, 'Logs', 'MandADiscovery_Registration_Log_status.json');
+    const statusPath = getStatusFilePath(companyName);
     const dir = path.dirname(statusPath);
 
     await fs.promises.mkdir(dir, { recursive: true });
@@ -382,6 +389,118 @@ function broadcastStatusUpdate(status: ParsedPowerShellOutput): void {
 }
 
 /**
+ * Monitors status file for detached PowerShell processes
+ * Used when showWindow: true (interactive mode)
+ */
+function startFileBasedMonitoring(companyName: string): void {
+  const statusFilePath = getStatusFilePath(companyName);
+  const credentialSummaryPath = path.join('C:', 'DiscoveryData', companyName, 'Credentials', 'credential_summary.json');
+
+  console.log(`[AppRegistrationService] ========================================`);
+  console.log(`[AppRegistrationService] Starting file-based status monitoring`);
+  console.log(`[AppRegistrationService] Status file: ${statusFilePath}`);
+  console.log(`[AppRegistrationService] Credential file: ${credentialSummaryPath}`);
+  console.log(`[AppRegistrationService] Poll interval: 1000ms`);
+  console.log(`[AppRegistrationService] Max duration: 10 minutes`);
+  console.log(`[AppRegistrationService] ========================================`);
+
+  const startTime = Date.now();
+  const maxDuration = 10 * 60 * 1000; // 10 minutes timeout
+  let lastStatusContent = '';
+
+  const pollInterval = setInterval(async () => {
+    try {
+      // Check timeout
+      const elapsed = Date.now() - startTime;
+      if (elapsed > maxDuration) {
+        clearInterval(pollInterval);
+        console.warn(`[AppRegistrationService] ⚠️ File monitoring timeout after ${Math.round(elapsed / 1000)}s`);
+
+        const timeoutStatus: ParsedPowerShellOutput = {
+          status: 'failed',
+          step: 'Error',
+          message: 'Operation timed out after 10 minutes',
+          progress: 50,
+          timestamp: new Date().toISOString(),
+          error: 'Timeout exceeded'
+        };
+
+        await writeStatusFile(companyName, timeoutStatus);
+        broadcastStatusUpdate(timeoutStatus);
+        return;
+      }
+
+      // Check if credentials file exists (completion indicator)
+      if (fs.existsSync(credentialSummaryPath)) {
+        clearInterval(pollInterval);
+        console.log(`[AppRegistrationService] ✅ Credential file detected - registration complete!`);
+
+        const successStatus: ParsedPowerShellOutput = {
+          status: 'completed',
+          step: 'Complete',
+          message: 'App registration completed successfully',
+          progress: 100,
+          timestamp: new Date().toISOString()
+        };
+
+        await writeStatusFile(companyName, successStatus);
+        broadcastStatusUpdate(successStatus);
+        return;
+      }
+
+      // Check status file
+      if (fs.existsSync(statusFilePath)) {
+        const content = fs.readFileSync(statusFilePath, 'utf-8');
+
+        // Only process if content changed (avoid redundant broadcasts)
+        if (content !== lastStatusContent) {
+          lastStatusContent = content;
+
+          try {
+            const status: RegistrationStatus = JSON.parse(content);
+
+            console.log(`[AppRegistrationService] 📄 Status file update:`, {
+              status: status.status,
+              step: status.step,
+              progress: status.progress,
+              message: status.message.substring(0, 50) + '...'
+            });
+
+            // Convert to ParsedPowerShellOutput format for broadcasting
+            const parsedStatus: ParsedPowerShellOutput = {
+              status: status.status === 'success' ? 'completed' :
+                      status.status === 'failed' ? 'failed' : 'in_progress',
+              step: status.step as RegistrationStepId,
+              message: status.message,
+              progress: status.progress || 0,
+              timestamp: status.timestamp,
+              error: status.error
+            };
+
+            broadcastStatusUpdate(parsedStatus);
+
+            // Stop monitoring if completed or failed
+            if (status.status === 'success' || status.status === 'failed') {
+              clearInterval(pollInterval);
+              console.log(`[AppRegistrationService] ${status.status === 'success' ? '✅ SUCCESS' : '❌ FAILED'} - monitoring stopped`);
+            }
+          } catch (parseError) {
+            console.warn(`[AppRegistrationService] ⚠️ Failed to parse status file:`, parseError);
+          }
+        }
+      } else {
+        // Status file doesn't exist yet - script still initializing
+        console.log(`[AppRegistrationService] ⏳ Waiting for status file... (${Math.round(elapsed / 1000)}s elapsed)`);
+      }
+    } catch (error) {
+      console.error(`[AppRegistrationService] ❌ Error in file monitoring:`, error);
+    }
+  }, 1000); // Poll every 1 second
+
+  console.log(`[AppRegistrationService] File monitoring started (interval: ${pollInterval})`);
+}
+
+/**
  * Launches the Azure App Registration PowerShell script
  *
  * Pattern from GUI/MainViewModel.cs:2041-2087 (RunAppRegistrationAsync)
@@ -416,7 +535,7 @@ export async function launchAppRegistration(
       const command = `start powershell -NoProfile -ExecutionPolicy Bypass -NoExit ${scriptArgs}`;
 
       console.log(`[AppRegistrationService] ========================================`);
-      console.log(`[AppRegistrationService] LAUNCHING POWERSHELL WINDOW`);
+      console.log(`[AppRegistrationService] LAUNCHING POWERSHELL WINDOW (FILE-BASED MONITORING)`);
       console.log(`[AppRegistrationService] Full command: ${command}`);
       console.log(`[AppRegistrationService] Args array:`, args);
       console.log(`[AppRegistrationService] Script args: ${scriptArgs}`);
@@ -432,9 +551,13 @@ export async function launchAppRegistration(
 
       console.log(`[AppRegistrationService] PowerShell window launched, PID: ${child.pid}`);
 
+      // Start file-based status monitoring for detached process
+      // The PowerShell script writes to a status file which we poll
+      startFileBasedMonitoring(options.companyName);
+
       return {
         success: true,
-        message: 'App registration script launched in new window',
+        message: 'App registration script launched in new window (file-based monitoring active)',
         processId: child.pid
       };
     } else {
