@@ -156,16 +156,24 @@ export class CredentialService {
   } | null> {
     await this.ensureInitialized();
 
+    console.log(`[CredentialService] ========================================`);
+    console.log(`[CredentialService] getCredential called for profile: ${profileId}`);
+    console.log(`[CredentialService] ========================================`);
+
     // 1. Check ENV variables (highest priority)
     const envCreds = this.getCredentialsFromEnv();
     if (envCreds) {
-      console.log(`[CredentialService] Using ENV variables for profile: ${profileId}`);
+      console.log(`[CredentialService] ✅ Using ENV variables for profile: ${profileId}`);
+      console.log(`[CredentialService] TenantId: ${envCreds.tenantId?.substring(0, 8)}...`);
+      console.log(`[CredentialService] ClientId: ${envCreds.clientId?.substring(0, 8)}...`);
       return envCreds;
     }
 
     // 2. Check safeStorage (encrypted, preferred)
     const credential = this.store.credentials.find((c) => c.profileId === profileId);
     if (credential) {
+      console.log(`[CredentialService] Found safeStorage credentials for profile: ${profileId}`);
+
       if (!safeStorage.isEncryptionAvailable()) {
         throw new Error('Encryption not available - cannot decrypt credentials');
       }
@@ -179,7 +187,12 @@ export class CredentialService {
         credential.lastUsed = new Date().toISOString();
         await this.save();
 
-        console.log(`[CredentialService] Using safeStorage credentials for profile: ${profileId}`);
+        console.log(`[CredentialService] ✅ Successfully decrypted safeStorage credentials`);
+        console.log(`[CredentialService] Username: ${credential.username}`);
+        console.log(`[CredentialService] Connection type: ${credential.connectionType}`);
+        console.log(`[CredentialService] TenantId: ${credential.tenantId?.substring(0, 8)}...`);
+        console.log(`[CredentialService] ClientId: ${credential.clientId?.substring(0, 8)}...`);
+
         return {
           username: credential.username,
           password,
@@ -190,16 +203,22 @@ export class CredentialService {
           clientSecret: password,
         };
       } catch (error) {
-        console.error('Error decrypting credential:', error);
+        console.error('[CredentialService] ❌ Error decrypting safeStorage credential:', error);
         throw new Error('Failed to decrypt credential');
       }
     }
 
-    // 3. Check legacy unencrypted file (C:\DiscoveryData\{profile}\Credentials\discoverycredentials.config)
+    // 3. Check legacy file (C:\DiscoveryData\{profile}\Credentials\discoverycredentials.config)
+    console.log(`[CredentialService] No safeStorage credentials found, checking legacy file...`);
     const legacyCreds = await this.loadLegacyCredentials(profileId);
+
     if (legacyCreds) {
-      console.log(`[CredentialService] Found legacy credentials for profile: ${profileId}`);
-      console.warn(`[CredentialService] ⚠️ Legacy credentials are UNENCRYPTED - migrating to safeStorage`);
+      console.log(`[CredentialService] ✅ Successfully loaded legacy credentials for profile: ${profileId}`);
+      console.log(`[CredentialService] TenantId: ${legacyCreds.TenantId?.substring(0, 8)}...`);
+      console.log(`[CredentialService] ClientId: ${legacyCreds.ClientId?.substring(0, 8)}...`);
+      console.log(`[CredentialService] ClientSecret length: ${legacyCreds.ClientSecret?.length || 0} characters`);
+      console.log(`[CredentialService] Domain: ${legacyCreds.Domain || 'N/A'}`);
+      console.warn(`[CredentialService] ⚠️ Migrating legacy credentials to safeStorage`);
 
       // Auto-migrate to safeStorage
       await this.migrateLegacyCredentials(profileId, legacyCreds);
@@ -214,7 +233,9 @@ export class CredentialService {
       };
     }
 
-    console.log(`[CredentialService] No credentials found for profile: ${profileId}`);
+    console.warn(`[CredentialService] ⚠️ No credentials found for profile: ${profileId}`);
+    console.warn(`[CredentialService] Checked legacy path: C:\\DiscoveryData\\${profileId}\\Credentials\\discoverycredentials.config`);
+    console.log(`[CredentialService] ========================================`);
     return null;
   }
 
@@ -298,93 +319,281 @@ export class CredentialService {
   }
 
   /**
-   * Decrypt DPAPI-encrypted credential file using PowerShell
+   * Validate credential file format and integrity
    */
-  private async decryptLegacyCredentialsDPAPI(filePath: string): Promise<LegacyDiscoveryCredential | null> {
+  private async validateCredentialFile(filePath: string): Promise<{
+    isValid: boolean;
+    format: 'plain' | 'dpapi' | 'corrupted';
+    details: string;
+  }> {
     try {
-      console.log(`[CredentialService] Decrypting DPAPI file: ${filePath}`);
+      const stats = await fs.stat(filePath);
+      console.log(`[CredentialService] File size: ${stats.size} bytes, modified: ${stats.mtime}`);
 
-      const { spawn } = await import('child_process');
-      const escapedPath = filePath.replace(/\\/g, '\\\\');
+      const content = await fs.readFile(filePath, 'utf-8');
+      const trimmed = content.trim();
 
-      // PowerShell script to decrypt DPAPI file
-      const script = `
-        try {
-          $enc = (Get-Content -Raw -Path '${escapedPath}').Trim()
-          $ss = $enc | ConvertTo-SecureString
-          $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ss)
-          $json = [Runtime.InteropServices.Marshal]::PtrToStringUni($bstr)
-          [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
-          Write-Output $json
-        } catch {
-          Write-Error $_.Exception.Message
-          exit 1
+      // Check for BOM
+      const hasBOM = content.charCodeAt(0) === 0xFEFF;
+      console.log(`[CredentialService] Has BOM: ${hasBOM}`);
+
+      // Try parsing as JSON first
+      try {
+        const parsed = JSON.parse(hasBOM ? content.slice(1) : content);
+        console.log(`[CredentialService] File is valid JSON with keys: ${Object.keys(parsed).join(', ')}`);
+        return { isValid: true, format: 'plain', details: 'Valid JSON format' };
+      } catch {
+        // Not JSON, assume DPAPI encrypted
+        console.log(`[CredentialService] File is not JSON, likely DPAPI encrypted`);
+        return { isValid: true, format: 'dpapi', details: 'Non-JSON content, likely DPAPI encrypted' };
+      }
+    } catch (error) {
+      return {
+        isValid: false,
+        format: 'corrupted',
+        details: `File read error: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
+  }
+
+  /**
+   * Execute PowerShell script to decrypt credentials
+   */
+  private async executePowerShellDecryption(script: string, filePath: string): Promise<LegacyDiscoveryCredential | null> {
+    const { spawn } = await import('child_process');
+
+    return new Promise((resolve) => {
+      const child = spawn('powershell.exe', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy', 'Bypass',
+        '-Command',
+        script
+      ]);
+
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout?.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      child.stderr?.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      child.on('close', (code) => {
+        if (code !== 0) {
+          console.error(`[CredentialService] PowerShell exit code: ${code}`);
+          console.error(`[CredentialService] stderr: ${stderr}`);
+          resolve(null);
+          return;
         }
-      `;
 
-      return new Promise((resolve, reject) => {
-        const child = spawn('powershell.exe', [
-          '-NoProfile',
-          '-NonInteractive',
-          '-Command',
-          script
-        ]);
+        try {
+          const trimmedOutput = stdout.trim();
+          console.log(`[CredentialService] PowerShell output length: ${trimmedOutput.length} characters`);
 
-        let stdout = '';
-        let stderr = '';
+          const creds = JSON.parse(trimmedOutput) as LegacyDiscoveryCredential;
 
-        child.stdout?.on('data', (data) => {
-          stdout += data.toString();
-        });
-
-        child.stderr?.on('data', (data) => {
-          stderr += data.toString();
-        });
-
-        child.on('close', (code) => {
-          if (code !== 0) {
-            console.error(`[CredentialService] DPAPI decryption failed:`, stderr);
+          // Validate required fields
+          if (!creds.TenantId || !creds.ClientId || !creds.ClientSecret) {
+            console.warn(`[CredentialService] Decrypted credentials missing required fields`);
+            console.warn(`[CredentialService] Has TenantId: ${!!creds.TenantId}, Has ClientId: ${!!creds.ClientId}, Has ClientSecret: ${!!creds.ClientSecret}`);
             resolve(null);
             return;
           }
 
-          try {
-            const creds = JSON.parse(stdout.trim()) as LegacyDiscoveryCredential;
-
-            // Validate required fields
-            if (!creds.TenantId || !creds.ClientId || !creds.ClientSecret) {
-              console.warn(`[CredentialService] Decrypted credentials missing required fields`);
-              resolve(null);
-              return;
-            }
-
-            console.log(`[CredentialService] ✅ Successfully decrypted DPAPI credentials`);
-            console.log(`[CredentialService] ClientSecret length: ${creds.ClientSecret?.length || 0} characters`);
-            resolve(creds);
-          } catch (error) {
-            console.error(`[CredentialService] Failed to parse decrypted credentials:`, error);
-            resolve(null);
-          }
-        });
-
-        child.on('error', (error) => {
-          console.error(`[CredentialService] PowerShell process error:`, error);
+          console.log(`[CredentialService] ✅ Successfully parsed decrypted credentials`);
+          console.log(`[CredentialService] ClientSecret length: ${creds.ClientSecret?.length || 0} characters`);
+          resolve(creds);
+        } catch (error) {
+          console.error(`[CredentialService] Failed to parse PowerShell output as JSON:`, error);
+          console.error(`[CredentialService] Output was: ${stdout.substring(0, 200)}...`);
           resolve(null);
-        });
+        }
       });
+
+      child.on('error', (error) => {
+        console.error(`[CredentialService] PowerShell process error:`, error);
+        resolve(null);
+      });
+    });
+  }
+
+  /**
+   * Decrypt DPAPI-encrypted credential file using PowerShell
+   * Tries multiple decryption approaches for maximum compatibility
+   */
+  private async decryptLegacyCredentialsDPAPI(filePath: string): Promise<LegacyDiscoveryCredential | null> {
+    try {
+      console.log(`[CredentialService] ========================================`);
+      console.log(`[CredentialService] Starting DPAPI decryption for: ${filePath}`);
+      console.log(`[CredentialService] ========================================`);
+
+      // Validate file first
+      const validation = await this.validateCredentialFile(filePath);
+      console.log(`[CredentialService] File validation: ${validation.format} - ${validation.details}`);
+
+      if (!validation.isValid) {
+        console.error(`[CredentialService] ❌ File validation failed: ${validation.details}`);
+        return null;
+      }
+
+      const escapedPath = filePath.replace(/\\/g, '\\\\');
+
+      // Define multiple decryption strategies
+      const decryptionScripts = [
+        {
+          name: 'Standard DPAPI SecureString (ConvertTo-SecureString)',
+          script: `
+            try {
+              $enc = (Get-Content -Raw -Path '${escapedPath}').Trim()
+              if ($enc[0] -eq [char]0xFEFF) { $enc = $enc.Substring(1) }
+              $ss = $enc | ConvertTo-SecureString
+              $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ss)
+              $json = [Runtime.InteropServices.Marshal]::PtrToStringUni($bstr)
+              [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+              Write-Output $json
+            } catch {
+              Write-Error $_.Exception.Message
+              exit 1
+            }
+          `
+        },
+        {
+          name: 'DPAPI ProtectedData.Unprotect (Base64)',
+          script: `
+            try {
+              Add-Type -AssemblyName System.Security
+              $encContent = (Get-Content -Raw -Path '${escapedPath}').Trim()
+              if ($encContent[0] -eq [char]0xFEFF) { $encContent = $encContent.Substring(1) }
+
+              $encryptedBytes = [System.Convert]::FromBase64String($encContent)
+              $decryptedBytes = [System.Security.Cryptography.ProtectedData]::Unprotect(
+                $encryptedBytes,
+                $null,
+                [System.Security.Cryptography.DataProtectionScope]::CurrentUser
+              )
+              $json = [System.Text.Encoding]::UTF8.GetString($decryptedBytes)
+              Write-Output $json
+            } catch {
+              Write-Error $_.Exception.Message
+              exit 1
+            }
+          `
+        },
+        {
+          name: 'Check if already plain JSON',
+          script: `
+            try {
+              $content = (Get-Content -Raw -Path '${escapedPath}').Trim()
+              if ($content[0] -eq [char]0xFEFF) { $content = $content.Substring(1) }
+
+              if ($content -match '^\\s*[{\\[]') {
+                Write-Output $content
+              } else {
+                Write-Error "Not plain JSON"
+                exit 1
+              }
+            } catch {
+              Write-Error $_.Exception.Message
+              exit 1
+            }
+          `
+        },
+        {
+          name: 'Hybrid approach (try DPAPI, fallback to plain)',
+          script: `
+            try {
+              $content = (Get-Content -Raw -Path '${escapedPath}').Trim()
+              if ($content[0] -eq [char]0xFEFF) { $content = $content.Substring(1) }
+
+              # Check if it's plain JSON first
+              if ($content -match '^\\s*[{\\[]') {
+                Write-Output $content
+              } else {
+                # Try DPAPI decryption
+                try {
+                  $ss = $content | ConvertTo-SecureString -ErrorAction Stop
+                  $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ss)
+                  $json = [Runtime.InteropServices.Marshal]::PtrToStringUni($bstr)
+                  [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+                  Write-Output $json
+                } catch {
+                  # Try Base64 DPAPI
+                  Add-Type -AssemblyName System.Security
+                  $encryptedBytes = [System.Convert]::FromBase64String($content)
+                  $decryptedBytes = [System.Security.Cryptography.ProtectedData]::Unprotect(
+                    $encryptedBytes,
+                    $null,
+                    [System.Security.Cryptography.DataProtectionScope]::CurrentUser
+                  )
+                  $json = [System.Text.Encoding]::UTF8.GetString($decryptedBytes)
+                  Write-Output $json
+                }
+              }
+            } catch {
+              Write-Error $_.Exception.Message
+              exit 1
+            }
+          `
+        }
+      ];
+
+      // Try each decryption approach in order
+      for (const [index, approach] of decryptionScripts.entries()) {
+        console.log(`[CredentialService] ----------------------------------------`);
+        console.log(`[CredentialService] Trying approach ${index + 1}/${decryptionScripts.length}: ${approach.name}`);
+        console.log(`[CredentialService] ----------------------------------------`);
+
+        try {
+          const result = await this.executePowerShellDecryption(approach.script, filePath);
+          if (result) {
+            console.log(`[CredentialService] ✅ Decryption approach ${index + 1} succeeded: ${approach.name}`);
+            console.log(`[CredentialService] ========================================`);
+            return result;
+          } else {
+            console.warn(`[CredentialService] ⚠️ Approach ${index + 1} returned null: ${approach.name}`);
+          }
+        } catch (error) {
+          console.warn(`[CredentialService] ⚠️ Approach ${index + 1} failed: ${approach.name}`, error);
+        }
+      }
+
+      console.error(`[CredentialService] ❌ All ${decryptionScripts.length} DPAPI decryption approaches failed`);
+      console.log(`[CredentialService] ========================================`);
+      return null;
     } catch (error) {
-      console.error(`[CredentialService] Error in DPAPI decryption:`, error);
+      console.error(`[CredentialService] ❌ Error in DPAPI decryption:`, error);
       return null;
     }
   }
 
   /**
-   * Migrate legacy credentials to safeStorage
+   * Migrate legacy credentials to safeStorage with backup
    */
   private async migrateLegacyCredentials(profileId: string, legacyCreds: LegacyDiscoveryCredential): Promise<void> {
     try {
-      console.log(`[CredentialService] Migrating legacy credentials for profile: ${profileId}`);
+      console.log(`[CredentialService] ========================================`);
+      console.log(`[CredentialService] Starting credential migration for profile: ${profileId}`);
+      console.log(`[CredentialService] ========================================`);
 
+      // Validate credentials before migration
+      if (!legacyCreds.TenantId || !legacyCreds.ClientId || !legacyCreds.ClientSecret) {
+        const missing = [];
+        if (!legacyCreds.TenantId) missing.push('TenantId');
+        if (!legacyCreds.ClientId) missing.push('ClientId');
+        if (!legacyCreds.ClientSecret) missing.push('ClientSecret');
+        throw new Error(`Legacy credentials missing required fields: ${missing.join(', ')}`);
+      }
+
+      console.log(`[CredentialService] Validation passed - all required fields present`);
+      console.log(`[CredentialService] TenantId: ${legacyCreds.TenantId.substring(0, 8)}...`);
+      console.log(`[CredentialService] ClientId: ${legacyCreds.ClientId.substring(0, 8)}...`);
+      console.log(`[CredentialService] ClientSecret length: ${legacyCreds.ClientSecret.length} characters`);
+
+      // Store in safeStorage
       await this.storeCredential(
         profileId,
         legacyCreds.ClientId,
@@ -395,9 +604,27 @@ export class CredentialService {
         legacyCreds.ClientId
       );
 
+      console.log(`[CredentialService] ✅ Credentials stored in safeStorage`);
+
+      // Backup original file
+      try {
+        const legacyPath = path.join('C:', 'DiscoveryData', profileId, 'Credentials', 'discoverycredentials.config');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const backupPath = `${legacyPath}.migrated.${timestamp}`;
+
+        await fs.copyFile(legacyPath, backupPath);
+        console.log(`[CredentialService] ✅ Backed up original credentials to: ${backupPath}`);
+      } catch (backupError) {
+        console.warn(`[CredentialService] ⚠️ Failed to backup original file (non-fatal):`, backupError);
+      }
+
       console.log(`[CredentialService] ✅ Successfully migrated credentials for profile: ${profileId}`);
+      console.log(`[CredentialService] ========================================`);
     } catch (error) {
-      console.error(`[CredentialService] Failed to migrate credentials:`, error);
+      console.error(`[CredentialService] ❌ Migration failed:`, error);
+      console.error(`[CredentialService] Error details:`, error instanceof Error ? error.message : String(error));
+      console.log(`[CredentialService] ========================================`);
+      throw new Error(`Failed to migrate credentials: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

@@ -2096,54 +2096,64 @@ PowerShell: $($PSVersionTable.PSVersion)
     # Module management
     Write-RegistrationStatus -Status 'running' -Message 'Loading PowerShell modules...' -Step 'ModuleManagement'
     Ensure-RequiredModules
+    Start-Sleep -Milliseconds 250  # Brief pause to ensure GUI catches this step
 
     # Establish connections
     Write-RegistrationStatus -Status 'running' -Message 'Connecting to Microsoft Graph...' -Step 'GraphConnection'
     if (-not (Connect-EnhancedGraph)) {
         throw "Failed to establish Microsoft Graph connection"
     }
-    
+    Start-Sleep -Milliseconds 250  # Brief pause to ensure GUI catches this step
+
+    Write-RegistrationStatus -Status 'running' -Message 'Connecting to Azure...' -Step 'AzureConnection'
     if (-not (Connect-EnhancedAzure)) {
         if (-not $SkipAzureRoles) {
             Write-EnhancedLog "Azure connection failed. Subscription role assignments will be skipped." -Level WARN
         }
     }
-    
+    Start-Sleep -Milliseconds 250  # Brief pause to ensure GUI catches this step
+
     # Get tenant information with enhanced details
     $context = Get-MgContext
     $tenantId = $context.TenantId
     $tenantInfo = Get-MgOrganization | Select-Object -First 1
-    
+
     Write-EnhancedLog "Operating in tenant: $tenantId" -Level SUCCESS
     Write-EnhancedLog "  Organization: $($tenantInfo.DisplayName)" -Level INFO
     Write-EnhancedLog "  Verified Domains: $($tenantInfo.VerifiedDomains.Count)" -Level INFO
     if ($tenantInfo.CreatedDateTime) {
         Write-EnhancedLog "  Tenant Created: $($tenantInfo.CreatedDateTime.ToString('yyyy-MM-dd'))" -Level INFO
     }
-    
+
     # Create app registration
     Write-RegistrationStatus -Status 'running' -Message 'Creating Azure AD application...' -Step 'AppRegistration'
     $appRegistration = New-EnhancedAppRegistration
+    Start-Sleep -Milliseconds 250  # Brief pause to ensure GUI catches this step
 
     # Grant admin consent and create service principal
     Write-RegistrationStatus -Status 'running' -Message 'Granting admin consent and creating service principal...' -Step 'PermissionGrant'
     $servicePrincipal = Grant-EnhancedAdminConsent -AppRegistration $appRegistration
+    Start-Sleep -Milliseconds 250  # Brief pause to ensure GUI catches this step
 
     # Assign roles
     Write-RegistrationStatus -Status 'running' -Message 'Assigning directory roles...' -Step 'RoleAssignment'
     Set-EnhancedRoleAssignments -ServicePrincipal $servicePrincipal
+    Start-Sleep -Milliseconds 250  # Brief pause to ensure GUI catches this step
 
     # Add service principal ObjectId to all subscriptions
     Write-RegistrationStatus -Status 'running' -Message 'Configuring subscription access...' -Step 'SubscriptionAccess'
     Add-ServicePrincipalToAllSubscriptions -ServicePrincipal $servicePrincipal
+    Start-Sleep -Milliseconds 250  # Brief pause to ensure GUI catches this step
 
     # Create client secret
     Write-RegistrationStatus -Status 'running' -Message 'Creating client secret...' -Step 'SecretCreation'
     $clientSecret = New-EnhancedClientSecret -AppRegistration $appRegistration
+    Start-Sleep -Milliseconds 250  # Brief pause to ensure GUI catches this step
 
     # Save encrypted credentials
     Write-RegistrationStatus -Status 'running' -Message 'Saving encrypted credentials...' -Step 'CredentialStorage'
     Save-EnhancedCredentials -AppRegistration $appRegistration -ClientSecret $clientSecret -TenantId $tenantId
+    Start-Sleep -Milliseconds 250  # Brief pause to ensure GUI catches this step
     
     # Calculate final metrics
     $script:Metrics.EndTime = Get-Date
@@ -2193,6 +2203,48 @@ PowerShell: $($PSVersionTable.PSVersion)
     Write-EnhancedLog "  * Backup credentials file is stored securely" -Level IMPORTANT -NoTimestamp
     Write-EnhancedLog "  * Review and audit permissions regularly" -Level IMPORTANT -NoTimestamp
     
+    # Validate credentials by decrypting and testing
+    Write-RegistrationStatus -Status 'running' -Message 'Validating credentials...' -Step 'Complete'
+    Start-Sleep -Milliseconds 250
+
+    try {
+        Write-EnhancedLog "Validating encrypted credentials..." -Level INFO
+
+        # Decrypt the credential file we just created
+        $encryptedContent = (Get-Content -Raw -Path $EncryptedOutputPath).Trim()
+        $secureString = $encryptedContent | ConvertTo-SecureString
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureString)
+        $decryptedJson = [Runtime.InteropServices.Marshal]::PtrToStringUni($bstr)
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+
+        $decryptedCreds = $decryptedJson | ConvertFrom-Json
+
+        # Validate decrypted credentials match what we created
+        if ($decryptedCreds.TenantId -eq $tenantId -and
+            $decryptedCreds.ClientId -eq $appRegistration.AppId -and
+            $decryptedCreds.ClientSecret -eq $clientSecret.SecretText) {
+
+            Write-EnhancedLog "✓ Credential validation successful" -Level SUCCESS
+            Write-EnhancedLog "  TenantId matches: $($decryptedCreds.TenantId)" -Level INFO
+            Write-EnhancedLog "  ClientId matches: $($decryptedCreds.ClientId)" -Level INFO
+            Write-EnhancedLog "  ClientSecret length: $($decryptedCreds.ClientSecret.Length) characters" -Level INFO
+        } else {
+            Write-EnhancedLog "Credential validation mismatch detected" -Level WARN
+            if ($decryptedCreds.TenantId -ne $tenantId) {
+                Write-EnhancedLog "  TenantId mismatch!" -Level WARN
+            }
+            if ($decryptedCreds.ClientId -ne $appRegistration.AppId) {
+                Write-EnhancedLog "  ClientId mismatch!" -Level WARN
+            }
+            if ($decryptedCreds.ClientSecret -ne $clientSecret.SecretText) {
+                Write-EnhancedLog "  ClientSecret mismatch!" -Level WARN
+            }
+        }
+    } catch {
+        Write-EnhancedLog "Credential validation warning: $($_.Exception.Message)" -Level WARN
+        Write-EnhancedLog "This may be normal if credentials are still being written to disk" -Level WARN
+    }
+
     Write-EnhancedLog "Azure AD App Registration completed successfully!" -Level SUCCESS
     Write-EnhancedLog "Ready to proceed with environment discovery using script 2" -Level SUCCESS
 

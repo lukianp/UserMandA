@@ -410,15 +410,27 @@ export async function launchAppRegistration(
     await writeInitialStatus(options.companyName);
 
     if (options.showWindow) {
-      // Launch in new window (user-interactive mode)
-      const child = spawn('powershell.exe', args, {
+      // Launch in new window (user-interactive mode) with -NoExit to keep window open
+      // Build complete PowerShell command with all necessary flags
+      const scriptArgs = args.slice(args.indexOf('-File')).join(' ');
+      const command = `start powershell -NoProfile -ExecutionPolicy Bypass -NoExit ${scriptArgs}`;
+
+      console.log(`[AppRegistrationService] ========================================`);
+      console.log(`[AppRegistrationService] LAUNCHING POWERSHELL WINDOW`);
+      console.log(`[AppRegistrationService] Full command: ${command}`);
+      console.log(`[AppRegistrationService] Args array:`, args);
+      console.log(`[AppRegistrationService] Script args: ${scriptArgs}`);
+      console.log(`[AppRegistrationService] ========================================`);
+
+      const child = spawn('cmd.exe', ['/c', command], {
         detached: true,
-        shell: true,
         stdio: 'ignore',
         windowsHide: false
       });
 
       child.unref(); // Allow parent to exit
+
+      console.log(`[AppRegistrationService] PowerShell window launched, PID: ${child.pid}`);
 
       return {
         success: true,
