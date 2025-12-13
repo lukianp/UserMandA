@@ -680,10 +680,12 @@ export class AuthorizationService extends EventEmitter {
         log = log.filter(a => a.allowed === filter.allowed);
       }
       if (filter.startDate) {
-        log = log.filter(a => a.timestamp >= filter.startDate);
+        const startDate = filter.startDate;
+        log = log.filter(a => a.timestamp >= startDate);
       }
       if (filter.endDate) {
-        log = log.filter(a => a.timestamp <= filter.endDate);
+        const endDate = filter.endDate;
+        log = log.filter(a => a.timestamp <= endDate);
       }
     }
 

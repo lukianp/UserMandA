@@ -51,6 +51,7 @@ import { Modal } from '../../components/organisms/Modal';
 import { ProgressBar } from '../../components/molecules/ProgressBar';
 import LoadingSpinner from '../../components/atoms/LoadingSpinner';
 import { useAppRegistration } from '../../hooks/useAppRegistration';
+import { useProfileStore } from '../../store/useProfileStore';
 
 // ============================================================================
 // Types
@@ -608,6 +609,9 @@ const ConfirmationDialog: React.FC<{
 const SetupCompanyView: React.FC = () => {
   console.log('[SetupCompanyView] Component rendering');
 
+  // Get selected profile from store
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+
   // App registration hook
   const {
     state: appRegState,
@@ -627,8 +631,8 @@ const SetupCompanyView: React.FC = () => {
   // Confirmation dialog state
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  // Form state
-  const [companyName, setCompanyName] = useState('');
+  // Form state - default company name to selected profile's company name
+  const [companyName, setCompanyName] = useState(selectedSourceProfile?.companyName || '');
   const [tenantId, setTenantId] = useState('');
   const [showWindow, setShowWindow] = useState(true);
   const [autoInstallModules, setAutoInstallModules] = useState(true);
@@ -862,6 +866,14 @@ const SetupCompanyView: React.FC = () => {
     setHasExistingCredentials(false);
     resetAppRegistration();
   }, [resetAppRegistration]);
+
+  // Update company name when selected profile changes
+  useEffect(() => {
+    if (selectedSourceProfile?.companyName) {
+      console.log('[SetupCompanyView] Updating company name from profile:', selectedSourceProfile.companyName);
+      setCompanyName(selectedSourceProfile.companyName);
+    }
+  }, [selectedSourceProfile]);
 
   // Check connectivity on mount
   useEffect(() => {

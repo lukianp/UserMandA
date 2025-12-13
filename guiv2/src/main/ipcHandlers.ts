@@ -903,7 +903,19 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('profile:updateSource', async (_, id: string, updates: any) => {
     try {
-      const profile = await profileService.updateProfile({ id, ...updates });
+      // CRITICAL: Get the full existing profile first before merging updates
+      // This prevents undefined values (like companyName) from breaking updateProfile()
+      const profiles = await profileService.getProfiles();
+      const existing = profiles.find(p => p.id === id);
+
+      if (!existing) {
+        throw new Error(`Profile with ID "${id}" not found`);
+      }
+
+      // Merge updates with existing profile to ensure all required fields are present
+      const updatedProfile = { ...existing, ...updates };
+      const profile = await profileService.updateProfile(updatedProfile);
+
       console.log(`Updated source profile: ${id}`);
       return { success: true, profile };
     } catch (error: unknown) {

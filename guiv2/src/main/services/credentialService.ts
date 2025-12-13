@@ -818,17 +818,31 @@ export class CredentialService {
 
       // Step 3: Test Graph API connection
       console.log('[CredentialService] Step 3: Testing Microsoft Graph API connection');
-      const testResult = await this.testGraphAPIConnection(creds.tenantId, creds.clientId, creds.clientSecret);
+
+      // Ensure all required Azure AD fields are available
+      const { tenantId, clientId, clientSecret } = creds;
+      if (!tenantId || !clientId || !clientSecret) {
+        console.error('[CredentialService] ❌ Missing required Azure AD credentials');
+        return {
+          success: false,
+          decryptionSuccess: true,
+          connectionSuccess: false,
+          error: 'Missing required Azure AD credentials (tenantId, clientId, or clientSecret)'
+        };
+      }
+
+      const testResult = await this.testGraphAPIConnection(tenantId, clientId, clientSecret);
 
       if (testResult.success) {
         console.log('[CredentialService] ✅ Graph API connection successful');
-        console.log(`[CredentialService] Token expires in: ${testResult.expiresIn} seconds`);
+        const expiresIn = testResult.expiresIn ?? 3600; // Default to 1 hour if not provided
+        console.log(`[CredentialService] Token expires in: ${expiresIn} seconds`);
         console.log(`[CredentialService] ========================================`);
         return {
           success: true,
           decryptionSuccess: true,
           connectionSuccess: true,
-          details: `Authentication successful. Token valid for ${Math.floor(testResult.expiresIn / 60)} minutes.`
+          details: `Authentication successful. Token valid for ${Math.floor(expiresIn / 60)} minutes.`
         };
       } else {
         console.error('[CredentialService] ❌ Graph API connection failed');

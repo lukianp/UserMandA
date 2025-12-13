@@ -976,3 +976,205 @@ These views demonstrate comprehensive debugging:
 Console logs are automatically removed in production builds through webpack's minification process, so there's no performance impact in the final application.
 
 **Bottom Line:** When in doubt, add more logging. It's better to have too much information in the console than too little.
+
+---
+
+# 🚨 CRITICAL: Launching PowerShell Scripts in Visible Windows
+
+## The Problem
+
+Launching PowerShell scripts in visible windows from Electron is **EXTREMELY TRICKY** on Windows due to:
+1. Windows `start` command syntax quirks
+2. Multiple layers of command parsing (Node.js → cmd.exe → start → PowerShell)
+3. Quote escaping requirements
+4. Smart quotes vs regular quotes in PowerShell scripts
+
+## ✅ THE CORRECT WAY (Reference: PowerShellService.ts)
+
+**ALWAYS** use this pattern when launching PowerShell in a visible window:
+
+```typescript
+// Build PowerShell script arguments array
+const scriptArgs: string[] = ['-CompanyName', `"${options.companyName}"`];
+
+if (options.autoInstallModules) {
+  scriptArgs.push('-AutoInstallModules');
+}
+
+if (options.secretValidityYears) {
+  scriptArgs.push('-SecretValidityYears', options.secretValidityYears.toString());
+}
+
+// Build cmd.exe arguments array
+const cmdArgs = [
+  '/c',  // Run command and terminate
+  'start',  // Start a new window
+  '""',  // ⚠️ CRITICAL: Empty title (required by start command)
+  'powershell.exe',
+  '-NoProfile',
+  '-ExecutionPolicy', 'Bypass',
+  '-NoExit',  // Keep window open after script completes
+  '-File',
+  `"${scriptPath}"`,  // Quote the path
+  ...scriptArgs  // Script arguments
+];
+
+// Spawn with shell: true
+const child = spawn('cmd.exe', cmdArgs, {
+  detached: true,
+  stdio: 'ignore',
+  windowsHide: false,
+  shell: true  // ⚠️ CRITICAL: Required to properly handle 'start' command
+});
+```
+
+## ❌ WRONG WAYS (DO NOT USE)
+
+### Wrong 1: Single String Command
+```typescript
+// ❌ WRONG - Passing command as single string
+const command = `start "Title" "powershell.exe" -NoProfile -File "${scriptPath}" ${paramString}`;
+const child = spawn('cmd.exe', ['/c', command], { shell: false });
+```
+
+**Why it fails:** Arguments are not properly escaped and Windows cannot parse them correctly.
+
+### Wrong 2: Missing Empty Title
+```typescript
+// ❌ WRONG - Missing empty title for start command
+const cmdArgs = [
+  '/c', 'start',
+  'powershell.exe',  // This gets interpreted as the window title!
+  '-NoProfile', '-File', scriptPath
+];
+```
+
+**Why it fails:** Windows `start` command treats the first quoted argument as the window title, so `"powershell.exe"` becomes the title and nothing executes.
+
+### Wrong 3: Using Custom Title Without Quotes
+```typescript
+// ❌ WRONG - Using title without proper empty title
+const cmdArgs = [
+  '/c', 'start',
+  'M&A Discovery',  // This is interpreted as multiple arguments!
+  'powershell.exe', '-NoProfile', '-File', scriptPath
+];
+```
+
+**Why it fails:** The title is split on spaces and causes parsing errors.
+
+## 🔑 Key Points
+
+1. **Empty Title is CRITICAL**
+   - Always use `'""'` as the first argument after `start`
+   - This tells Windows "here's an empty title, the next argument is the executable"
+
+2. **Use Array of Arguments, NOT String**
+   - Pass each argument as a separate array element
+   - Let Node.js handle the escaping
+
+3. **shell: true is REQUIRED**
+   - The `start` command only works with `shell: true`
+   - Without it, cmd.exe won't properly execute the start command
+
+4. **Quote File Paths**
+   - Always quote the script path: `"${scriptPath}"`
+   - Quote parameters that might contain spaces: `"${options.companyName}"`
+
+## 🐛 PowerShell Script Syntax Issues
+
+### Smart Quotes Problem
+
+PowerShell does NOT accept smart/curly quotes (" "). It ONLY accepts straight quotes (" ").
+
+**Symptoms:**
+```powershell
+# ❌ WRONG - Smart quotes (copy-pasted from Word/web)
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+# Error: The string is missing the terminator: ".
+```
+
+**Solution:**
+```powershell
+# ✅ CORRECT - Regular straight quotes
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+```
+
+**How to Fix:**
+Use PowerShell's `-replace` operator to fix smart quotes:
+```powershell
+$content = Get-Content -Path $scriptPath -Raw -Encoding UTF8
+$content = $content -replace '\u201D', '"'  # Right double quotation mark
+$content = $content -replace '\u201C', '"'  # Left double quotation mark
+Set-Content -Path $scriptPath -Value $content -Encoding UTF8 -NoNewline
+```
+
+## 📋 Reference Implementations
+
+**Correct implementations to copy from:**
+- `guiv2/src/main/services/powerShellService.ts` (lines 396-424)
+- `guiv2/src/main/services/appRegistrationService.ts` (lines 531-576) ✅ Fixed version
+
+**DO NOT copy from:**
+- Any code that uses `spawn('cmd.exe', ['/c', commandString])` with a single string
+
+## 🧪 Testing PowerShell Window Launch
+
+### Manual Test from Command Line
+```powershell
+# Test the exact command that will be generated
+cd C:\enterprisediscovery\Scripts
+start "" "powershell.exe" -NoProfile -ExecutionPolicy Bypass -NoExit -File "C:\enterprisediscovery\Scripts\DiscoveryCreateAppRegistration.ps1" -CompanyName "ljpops" -AutoInstallModules -SecretValidityYears 2
+```
+
+**Expected:** PowerShell window opens and script executes
+
+### Verify Script Syntax
+```powershell
+# Check for smart quotes and syntax errors
+$errors = $null
+$null = [System.Management.Automation.PSParser]::Tokenize((Get-Content 'C:\enterprisediscovery\Scripts\DiscoveryCreateAppRegistration.ps1' -Raw), [ref]$errors)
+if ($errors) {
+  $errors | ForEach-Object { Write-Output "Line $($_.Token.StartLine): $($_.Message)" }
+} else {
+  Write-Output 'No syntax errors found'
+}
+```
+
+## 🎯 Why This Was So Hard
+
+This issue was difficult because it involved **THREE separate problems**:
+
+1. **PowerShell Script Syntax Error**
+   - Smart quotes (") in the script caused parsing failure
+   - Script appeared to execute but immediately failed
+   - Error message was cryptic: "The string is missing the terminator"
+
+2. **Incorrect spawn() Usage**
+   - Passing command as single string instead of array
+   - Windows couldn't parse the arguments correctly
+   - Process would spawn but PowerShell wouldn't execute
+
+3. **Windows start Command Quirks**
+   - Requires empty title as first argument
+   - First quoted string gets interpreted as title if no empty title provided
+   - Causes confusion between window title and executable name
+
+**The combination of all three made debugging very difficult** because:
+- The PowerShell window would appear to launch (PID was created)
+- But the script wouldn't execute (stuck at "Initialization")
+- No clear error messages in the Electron console
+- Manual testing in cmd.exe worked, but programmatic spawning didn't
+
+## 💡 Prevention Checklist
+
+Before implementing PowerShell window launching:
+
+- [ ] Use array of arguments, NOT single command string
+- [ ] Include `'""'` (empty title) as first argument after `start`
+- [ ] Set `shell: true` in spawn options
+- [ ] Quote all file paths and parameters with spaces
+- [ ] Verify PowerShell script has NO smart quotes (use straight quotes only)
+- [ ] Test manually with `start ""` command first
+- [ ] Copy pattern from `PowerShellService.ts` lines 396-424
+- [ ] Check script syntax with `PSParser::Tokenize()` before deployment

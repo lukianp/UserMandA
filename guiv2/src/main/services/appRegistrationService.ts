@@ -530,21 +530,49 @@ export async function launchAppRegistration(
 
     if (options.showWindow) {
       // Launch in new window (user-interactive mode) with -NoExit to keep window open
-      // Build complete PowerShell command with all necessary flags
-      const scriptArgs = args.slice(args.indexOf('-File')).join(' ');
-      const command = `start powershell -NoProfile -ExecutionPolicy Bypass -NoExit ${scriptArgs}`;
+      // Use cmd.exe with 'start' to create a visible PowerShell window
+
+      // Build PowerShell script arguments array
+      const scriptArgs: string[] = ['-CompanyName', `"${options.companyName}"`];
+
+      if (options.autoInstallModules) {
+        scriptArgs.push('-AutoInstallModules');
+      }
+
+      if (options.secretValidityYears) {
+        scriptArgs.push('-SecretValidityYears', options.secretValidityYears.toString());
+      }
+
+      if (options.skipAzureRoles) {
+        scriptArgs.push('-SkipAzureRoles');
+      }
+
+      // Build cmd.exe arguments array
+      // Using 'start' to open new window - first arg is empty title "", second is the program
+      const cmdArgs = [
+        '/c',  // Run command and terminate
+        'start',  // Start a new window
+        '""',  // Empty title (required by start command)
+        'powershell.exe',
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-NoExit',  // Keep window open after script completes
+        '-File',
+        `"${scriptPath}"`,  // Quote the path
+        ...scriptArgs  // Script arguments already quoted where needed
+      ];
 
       console.log(`[AppRegistrationService] ========================================`);
       console.log(`[AppRegistrationService] LAUNCHING POWERSHELL WINDOW (FILE-BASED MONITORING)`);
-      console.log(`[AppRegistrationService] Full command: ${command}`);
-      console.log(`[AppRegistrationService] Args array:`, args);
-      console.log(`[AppRegistrationService] Script args: ${scriptArgs}`);
+      console.log(`[AppRegistrationService] Script path: ${scriptPath}`);
+      console.log(`[AppRegistrationService] Cmd args: ${JSON.stringify(cmdArgs)}`);
       console.log(`[AppRegistrationService] ========================================`);
 
-      const child = spawn('cmd.exe', ['/c', command], {
+      const child = spawn('cmd.exe', cmdArgs, {
         detached: true,
         stdio: 'ignore',
-        windowsHide: false
+        windowsHide: false,
+        shell: true  // Use shell to properly handle 'start' command
       });
 
       child.unref(); // Allow parent to exit

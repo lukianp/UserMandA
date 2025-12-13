@@ -43,7 +43,14 @@
       "Bash(Copy-Item -Path 'D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\appRegistrationService.ts' -Destination 'C:\\enterprisediscovery\\guiv2\\src\\main\\services\\appRegistrationService.ts' -Force)",
       "Bash(Copy-Item -Path 'D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useAppRegistration.ts' -Destination 'C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useAppRegistration.ts' -Force)",
       "Bash(Copy-Item -Path 'D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\credentialService.ts' -Destination 'C:\\enterprisediscovery\\guiv2\\src\\main\\services\\credentialService.ts' -Force)",
-      "Bash(Copy-Item -Path 'C:\\enterprisediscovery\\guiv2\\src\\main\\services\\appRegistrationService.ts' -Destination 'D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\appRegistrationService.ts' -Force)"
+      "Bash(Copy-Item -Path 'C:\\enterprisediscovery\\guiv2\\src\\main\\services\\appRegistrationService.ts' -Destination 'D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\appRegistrationService.ts' -Force)",
+      "mcp__ide__getDiagnostics",
+      "Bash(cd:*)",
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"Get-Content .\\DiscoveryCreateAppRegistration.ps1 -TotalCount 2315 | Select-Object -Last 1\")",
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -File check_syntax.ps1)",
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -File fix_syntax.ps1)",
+      "Bash(Copy-Item -Path 'C:\\\\enterprisediscovery\\\\Scripts\\\\DiscoveryCreateAppRegistration.ps1' -Destination 'D:\\\\Scripts\\\\UserMandA\\\\Scripts\\\\DiscoveryCreateAppRegistration.ps1' -Force)",
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"& .\\DiscoveryCreateAppRegistration.ps1 -CompanyName ''test'' -ValidateOnly 2>&1 | Select-Object -First 50\")"
     ],
     "deny": [],
     "ask": []

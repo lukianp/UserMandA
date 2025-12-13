@@ -74,7 +74,7 @@ export function useAppRegistration() {
   });
 
   const monitorIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const { addTargetProfile, updateTargetProfile } = useProfileStore();
+  const { addTargetProfile, updateTargetProfile, updateSourceProfile } = useProfileStore();
 
   /**
    * Starts monitoring for credential files and status updates
@@ -181,6 +181,29 @@ export function useAppRegistration() {
                   lastModified: new Date().toISOString()
                 });
 
+                // CRITICAL: Also update the source CompanyProfile with new Azure AD credentials
+                // This ensures ProfileSelector shows the correct Application ID and connection tests work
+                const sourceProfiles = useProfileStore.getState().sourceProfiles;
+                const sourceProfile = sourceProfiles.find(p => p.companyName === companyName);
+
+                if (sourceProfile) {
+                  console.log('[useAppRegistration] Updating source profile with new Azure AD credentials');
+                  console.log('[useAppRegistration] Old tenantId:', sourceProfile.tenantId);
+                  console.log('[useAppRegistration] New tenantId:', summary.TenantId);
+                  console.log('[useAppRegistration] Old clientId:', sourceProfile.clientId);
+                  console.log('[useAppRegistration] New clientId:', summary.ClientId);
+
+                  await updateSourceProfile(sourceProfile.id, {
+                    tenantId: summary.TenantId,
+                    clientId: summary.ClientId,
+                    lastModified: new Date().toISOString()
+                  });
+
+                  console.log('[useAppRegistration] Source profile updated successfully');
+                } else {
+                  console.warn('[useAppRegistration] Source profile not found for company:', companyName);
+                }
+
                 setState({
                   isRunning: false,
                   isMonitoring: false,
@@ -221,6 +244,29 @@ export function useAppRegistration() {
                   isActive: false,
                   createdAt: summary.Created,
                 } as any);
+
+                // CRITICAL: Also update the source CompanyProfile with new Azure AD credentials
+                // This ensures ProfileSelector shows the correct Application ID and connection tests work
+                const sourceProfiles = useProfileStore.getState().sourceProfiles;
+                const sourceProfile = sourceProfiles.find(p => p.companyName === companyName);
+
+                if (sourceProfile) {
+                  console.log('[useAppRegistration] Updating source profile with new Azure AD credentials (new profile created)');
+                  console.log('[useAppRegistration] Old tenantId:', sourceProfile.tenantId);
+                  console.log('[useAppRegistration] New tenantId:', summary.TenantId);
+                  console.log('[useAppRegistration] Old clientId:', sourceProfile.clientId);
+                  console.log('[useAppRegistration] New clientId:', summary.ClientId);
+
+                  await updateSourceProfile(sourceProfile.id, {
+                    tenantId: summary.TenantId,
+                    clientId: summary.ClientId,
+                    lastModified: new Date().toISOString()
+                  });
+
+                  console.log('[useAppRegistration] Source profile updated successfully');
+                } else {
+                  console.warn('[useAppRegistration] Source profile not found for company:', companyName);
+                }
 
                 setState({
                   isRunning: false,

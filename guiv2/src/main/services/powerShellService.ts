@@ -953,9 +953,15 @@ class PowerShellExecutionService extends EventEmitter {
       const marker = `###COMMAND_COMPLETE_${Date.now()}_${Math.random().toString(36).substr(2, 9)}###`;
 
       return new Promise<string>((resolve, reject) => {
+        // Ensure session has a valid process
+        if (!session.process) {
+          reject(new Error('Session process is not available'));
+          return;
+        }
+
         const timeoutHandle = setTimeout(() => {
-          session.process.stdout?.off('data', onStdout);
-          session.process.stderr?.off('data', onStderr);
+          session.process!.stdout?.off('data', onStdout);
+          session.process!.stderr?.off('data', onStderr);
           session.status = 'idle';  // Release session back to pool
           reject(new Error('Command execution timed out'));
         }, timeout);
@@ -972,8 +978,8 @@ class PowerShellExecutionService extends EventEmitter {
           if (text.includes(marker)) {
             commandComplete = true;
             clearTimeout(timeoutHandle);
-            session.process.stdout?.off('data', onStdout);
-            session.process.stderr?.off('data', onStderr);
+            session.process!.stdout?.off('data', onStdout);
+            session.process!.stderr?.off('data', onStderr);
             session.status = 'idle';  // Release session back to pool
 
             // Remove the marker from output

@@ -1,4 +1,4 @@
-# -*- coding: utf-8-bom -*-
+﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
@@ -2017,7 +2017,7 @@ function Write-RegistrationStatus {
         [ValidateSet('running', 'success', 'failed')]
         [string]$Status,
         [string]$Message = '',
-        [string]$Error = '',
+        [string]$ErrorMessage = '',
         [string]$Step = ''
     )
 
@@ -2025,7 +2025,7 @@ function Write-RegistrationStatus {
     $statusObj = @{
         status = $Status
         message = $Message
-        error = $Error
+        error = $ErrorMessage
         step = $Step
         timestamp = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
         logFile = $LogPath
@@ -2253,7 +2253,7 @@ PowerShell: $($PSVersionTable.PSVersion)
 
 } catch {
     # Signal failure to GUI
-    Write-RegistrationStatus -Status 'failed' -Message 'App registration failed' -Error $_.Exception.Message -Step 'Error'
+    Write-RegistrationStatus -Status 'failed' -Message 'App registration failed' -ErrorMessage $_.Exception.Message -Step 'Error'
 
     Write-EnhancedLog "CRITICAL ERROR: $($_.Exception.Message)" -Level CRITICAL
     if ($_.Exception.InnerException) {
