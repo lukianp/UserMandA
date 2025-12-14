@@ -126,7 +126,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, [addLog, addResult]); // Empty dependency array - set up once on mount
+  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
 
   /**
    * Start the Active Directory discovery process
@@ -165,6 +165,10 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
           IncludeGroups: config.includeGroups,
           IncludeComputers: config.includeComputers,
           IncludeOUs: config.includeOUs,
+        },
+        executionOptions: {  // ✅ ADDED: Missing execution options
+          timeout: 300000,   // 5 minutes for Active Directory discovery
+          showWindow: false, // Use integrated dialog
         },
         executionId: token, // ✅ CRITICAL: Pass token for event matching
       });

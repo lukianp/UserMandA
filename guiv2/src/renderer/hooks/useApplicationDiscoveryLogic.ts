@@ -197,7 +197,7 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, [addLog, addDiscoveryResult]);
+  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
 
   /**
    * Start the application discovery process
@@ -362,7 +362,6 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
     isCancelling,
     progress,
     results,
-    result: results,
     error,
     logs,
     startDiscovery,

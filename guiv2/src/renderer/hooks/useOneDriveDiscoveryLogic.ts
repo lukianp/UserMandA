@@ -157,7 +157,7 @@ export const useOneDriveDiscoveryLogic = () => {
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, [addResult]); // Set up once on mount
+  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
 
   /**
    * Load discovery templates
@@ -229,6 +229,10 @@ export const useOneDriveDiscoveryLogic = () => {
         moduleName: 'OneDrive',
         parameters: {
           Config: state.config,
+        },
+        executionOptions: {  // ✅ ADDED: Missing execution options
+          timeout: 300000,   // 5 minutes for OneDrive discovery
+          showWindow: false, // Use integrated dialog
         },
         executionId: token, // ✅ CRITICAL: Pass token for event matching
       });

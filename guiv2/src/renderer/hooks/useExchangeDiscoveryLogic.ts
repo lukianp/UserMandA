@@ -328,7 +328,7 @@ export function useExchangeDiscoveryLogic() {
       if (unsubscribeError) unsubscribeError();
       if (unsubscribeCancelled) unsubscribeCancelled(); // ✅ ADDED: Cleanup for cancelled
     };
-  }, [addDiscoveryResult, addLog]);
+  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
 
   const loadTemplates = async () => {
     try {
@@ -400,8 +400,10 @@ export function useExchangeDiscoveryLogic() {
           IncludeMobileDevices: config.includeMobileDevices,
           IncludeGroupMembership: config.includeGroupMembership,
           IncludeNestedGroups: config.includeNestedGroups,
-          showWindow: false,
-          timeout: 300000,
+        },
+        executionOptions: {  // ✅ FIXED: Moved to executionOptions
+          timeout: 300000,   // 5 minutes for Exchange discovery
+          showWindow: false, // Use integrated dialog
         },
         executionId: token,
       });

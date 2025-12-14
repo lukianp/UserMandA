@@ -146,7 +146,7 @@ export const useConditionalAccessDiscoveryLogic = () => {
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, [addResult]); // Empty dependency array - set up once on mount
+  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
 
   // Start discovery
   // ✅ FIXED: Now uses event-driven executeDiscovery API
@@ -184,6 +184,10 @@ export const useConditionalAccessDiscoveryLogic = () => {
           IncludeAssignments: state.config.includeAssignments,
           IncludeConditions: state.config.includeConditions,
           IncludeControls: state.config.includeControls,
+        },
+        executionOptions: {  // ✅ ADDED: Missing execution options
+          timeout: 300000,   // 5 minutes for Conditional Access discovery
+          showWindow: false, // Use integrated dialog
         },
         executionId: token, // ✅ CRITICAL: Pass token for event matching
       });

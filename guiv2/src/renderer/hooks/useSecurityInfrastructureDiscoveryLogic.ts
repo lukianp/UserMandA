@@ -3,7 +3,7 @@
  * Manages state and business logic for security infrastructure discovery operations
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ColDef } from 'ag-grid-community';
 
 import {
@@ -22,6 +22,7 @@ import {
 
 import { useDebounce } from './useDebounce';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import { useProfileStore } from '../store/useProfileStore';
 
 /**
  * Security Discovery View State
@@ -53,7 +54,9 @@ interface SecurityDiscoveryState {
  * Security Infrastructure Discovery Logic Hook
  */
 export const useSecurityInfrastructureDiscoveryLogic = () => {
-  const { getResultsByModuleName } = useDiscoveryStore();
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult, getResultsByModuleName } = useDiscoveryStore();
+  const currentTokenRef = useRef<string | null>(null);
 
   // State
   const [state, setState] = useState<SecurityDiscoveryState>({
@@ -78,7 +81,7 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
     if (previousResults && previousResults.length > 0) {
       console.log('[SecurityInfrastructureDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
       const latestResult = previousResults[previousResults.length - 1];
-      setState(prev => ({ ...prev, currentResult: latestResult }));
+      setState(prev => ({ ...prev, currentResult: latestResult.additionalData as SecurityDiscoveryResult }));
     }
   }, [getResultsByModuleName]);
 
@@ -88,18 +91,86 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
     loadHistoricalResults();
   }, []);
 
-  // Subscribe to discovery progress
+  // Event listeners for discovery events - set up ONCE on mount
   useEffect(() => {
-    const unsubscribe = window.electronAPI?.onProgress?.((data: any) => {
-      if (data.type === 'security-discovery') {
-        setState(prev => ({ ...prev, progress: data }));
+    console.log('[SecurityInfrastructureDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[SecurityInfrastructureDiscoveryHook] Discovery output:', data.message);
+        setState(prev => ({
+          ...prev,
+          progress: prev.progress ? {
+            ...prev.progress,
+            currentOperation: data.message,
+          } : null
+        }));
+      }
+    });
+
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[SecurityInfrastructureDiscoveryHook] Discovery complete:', data);
+
+        const result = {
+          id: `security-discovery-${Date.now()}`,
+          name: 'Security Infrastructure Discovery',
+          moduleName: 'SecurityInfrastructureDiscovery',
+          displayName: 'Security Infrastructure Discovery',
+          itemCount: data?.result?.totalItems || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalItems || 0} security items`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setState(prev => ({
+          ...prev,
+          currentResult: data.result as SecurityDiscoveryResult,
+          isDiscovering: false,
+          progress: null,
+        }));
+
+        addResult(result);
+        loadHistoricalResults();
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.error('[SecurityInfrastructureDiscoveryHook] Discovery error:', data.error);
+        setState(prev => ({
+          ...prev,
+          errors: [data.error],
+          isDiscovering: false,
+          progress: null,
+        }));
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[SecurityInfrastructureDiscoveryHook] Discovery cancelled');
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          progress: null,
+        }));
       }
     });
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
     };
-  }, []);
+  }, []); // Empty dependency array - critical for proper event handling
 
   /**
    * Load discovery templates
@@ -143,6 +214,17 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
    * Start security infrastructure discovery
    */
   const startDiscovery = async () => {
+    if (!selectedSourceProfile) {
+      setState(prev => ({
+        ...prev,
+        errors: ['No company profile selected. Please select a profile first.']
+      }));
+      return;
+    }
+
+    const token = `security-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    currentTokenRef.current = token;
+
     setState(prev => ({
       ...prev,
       isDiscovering: true,
@@ -151,36 +233,33 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
     }));
 
     try {
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/SecurityInfrastructureDiscovery.psm1',
-        functionName: 'Invoke-SecurityInfrastructureDiscovery',
-        parameters: { config: state.config },
-        options: { streamOutput: true },
+      console.log('[SecurityInfrastructureDiscoveryHook] Starting discovery with token:', token);
+
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'SecurityInfrastructure',
+        parameters: {
+          IncludeDevices: state.config.discoverDevices,
+          IncludePolicies: state.config.discoverPolicies,
+          IncludeIncidents: state.config.discoverIncidents,
+          IncludeVulnerabilities: state.config.discoverVulnerabilities,
+        },
+        executionOptions: {
+          timeout: state.config.timeout || 600000,
+          showWindow: false,
+        },
+        executionId: token,
       });
 
-      if (result.success && result.data) {
-        setState(prev => ({
-          ...prev,
-          currentResult: result.data,
-          isDiscovering: false,
-          progress: null,
-        }));
-        await loadHistoricalResults();
-      } else {
-        setState(prev => ({
-          ...prev,
-          errors: [result.error || 'Discovery failed'],
-          isDiscovering: false,
-          progress: null,
-        }));
-      }
+      console.log('[SecurityInfrastructureDiscoveryHook] Discovery execution initiated:', result);
     } catch (error: any) {
+      console.error('[SecurityInfrastructureDiscoveryHook] Discovery error:', error);
       setState(prev => ({
         ...prev,
         errors: [error.message || 'Discovery failed unexpectedly'],
         isDiscovering: false,
         progress: null,
       }));
+      currentTokenRef.current = null;
     }
   };
 
@@ -188,15 +267,28 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
    * Cancel ongoing discovery
    */
   const cancelDiscovery = async () => {
+    if (!currentTokenRef.current) return;
+
     try {
-      await window.electronAPI.cancelExecution('security-discovery');
+      console.log('[SecurityInfrastructureDiscoveryHook] Cancelling discovery:', currentTokenRef.current);
+      await window.electron.cancelDiscovery(currentTokenRef.current);
+
+      setTimeout(() => {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          progress: null,
+        }));
+        currentTokenRef.current = null;
+      }, 2000);
+    } catch (error) {
+      console.error('[SecurityInfrastructureDiscoveryHook] Failed to cancel discovery:', error);
       setState(prev => ({
         ...prev,
         isDiscovering: false,
         progress: null,
       }));
-    } catch (error) {
-      console.error('Failed to cancel security discovery:', error);
+      currentTokenRef.current = null;
     }
   };
 

@@ -1178,3 +1178,154 @@ Before implementing PowerShell window launching:
 - [ ] Test manually with `start ""` command first
 - [ ] Copy pattern from `PowerShellService.ts` lines 396-424
 - [ ] Check script syntax with `PSParser::Tokenize()` before deployment
+
+---
+
+# Discovery Hooks Event-Driven API Migration
+
+**Last Updated:** December 14, 2025
+**Status:** 9 hooks fixed, 2 not found, 4 use wrapper pattern (no fixes needed)
+
+## Quick Reference Documentation
+
+The following documentation files contain comprehensive information about the discovery hooks migration to the event-driven API pattern:
+
+### Main Documentation Files
+
+1. **REMAINING_HOOKS_FIX_GUIDE.md** - Master guide with fix template and status tracking
+2. **DISCOVERY_HOOK_FIX_TEMPLATE.md** - Standard pattern template (287 lines)
+3. **DISCOVERY_HOOKS_FIX_SUMMARY.md** - Summary of 12 completed hooks (previously)
+4. **DISCOVERY_HOOKS_FIX_COMPLETE_SUMMARY.md** - Complete audit report
+
+### Category-Specific Documentation
+
+**Infrastructure Hooks (5 fixed):**
+- **INFRASTRUCTURE_HOOKS_FIX_INSTRUCTIONS.md** (600+ lines)
+  - useFileSystemDiscoveryLogic.ts
+  - useVMwareDiscoveryLogic.ts
+  - useSQLServerDiscoveryLogic.ts
+  - useWebServerDiscoveryLogic.ts
+  - useNetworkDiscoveryLogic.ts
+
+**Security & Compliance Hooks (3 fixed):**
+- useDataLossPreventionDiscoveryLogic.ts
+- useIdentityGovernanceDiscoveryLogic.ts
+- useLicensingDiscoveryLogic.ts
+
+**Cloud & Identity Hooks (1 fixed, 2 not found):**
+- **CLOUD_IDENTITY_HOOKS_FIX_SUMMARY.md** (400+ lines)
+  - useGoogleWorkspaceDiscoveryLogic.ts (10 issues identified)
+  - useGraphDiscoveryLogic.ts (NOT FOUND)
+  - useEntraIDAppDiscoveryLogic.ts (NOT FOUND)
+
+**Data & Collaboration Hooks (wrapper pattern - no fixes needed):**
+- usePowerBIDiscovery.ts
+- useDataClassificationDiscovery.ts
+- useApplicationDependencyDiscovery.ts
+- useApplicationDependencyMappingDiscovery.ts
+
+## Standard Event-Driven Pattern
+
+All complex discovery hooks must follow this pattern:
+
+### Critical Changes Required
+
+1. **Add `useRef` import:**
+   ```typescript
+   import { useState, useCallback, useEffect, useRef } from 'react';
+   ```
+
+2. **Add token ref:**
+   ```typescript
+   const currentTokenRef = useRef<string | null>(null);
+   ```
+
+3. **Event listeners with empty dependency array:**
+   ```typescript
+   useEffect(() => {
+     const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
+       if (data.executionId === currentTokenRef.current) {
+         // Handle completion
+         addResult(result); // Persist to store
+       }
+     });
+     return () => { unsubscribeComplete?.(); };
+   }, []); // ✅ CRITICAL: Empty array
+   ```
+
+4. **Update API call:**
+   ```typescript
+   const token = `module-discovery-${Date.now()}`;
+   currentTokenRef.current = token; // BEFORE API call
+
+   await window.electron.executeDiscovery({
+     moduleName: 'ModuleName',
+     parameters: { ... },
+     executionOptions: { timeout: 300000, showWindow: false },
+     executionId: token
+   });
+   ```
+
+5. **Update cancel method:**
+   ```typescript
+   await window.electron.cancelDiscovery(currentTokenRef.current);
+   ```
+
+## Common Issues Fixed
+
+1. **Stale Closures** - Using `useRef` eliminates stale closure issues in event listeners
+2. **Event Matching** - Proper `executionId` matching ensures events are handled by correct hook instance
+3. **Result Persistence** - `addResult()` calls ensure results are stored and persist across sessions
+4. **Memory Leaks** - Empty dependency array prevents duplicate event listener registrations
+5. **Cancellation** - Proper token-based cancellation with 2-second timeout
+6. **API Deprecation** - Migrated from old `executeModule` to new `executeDiscovery`
+
+## Testing After Fixes
+
+For each fixed hook, verify:
+- [ ] Hook loads without errors
+- [ ] Discovery can be started
+- [ ] Progress updates appear in real-time
+- [ ] Discovery completes successfully
+- [ ] Results are stored in discovery store
+- [ ] Results persist across page refreshes
+- [ ] Discovery can be cancelled
+- [ ] Cancellation cleans up state properly
+- [ ] No duplicate event listeners registered
+- [ ] No memory leaks from uncleaned listeners
+
+## Files Modified (9 hooks)
+
+**Infrastructure:**
+1. D:\Scripts\UserMandA\guiv2\src\renderer\hooks\useFileSystemDiscoveryLogic.ts
+2. D:\Scripts\UserMandA\guiv2\src\renderer\hooks\useVMwareDiscoveryLogic.ts
+3. D:\Scripts\UserMandA\guiv2\src\renderer\hooks\useSQLServerDiscoveryLogic.ts
+4. D:\Scripts\UserMandA\guiv2\src\renderer\hooks\useWebServerDiscoveryLogic.ts
+5. D:\Scripts\UserMandA\guiv2\src\renderer\hooks\useNetworkDiscoveryLogic.ts
+
+**Security & Compliance:**
+6. D:\Scripts\UserMandA\guiv2\src\renderer\hooks\useDataLossPreventionDiscoveryLogic.ts
+7. D:\Scripts\UserMandA\guiv2\src\renderer\hooks\useIdentityGovernanceDiscoveryLogic.ts
+8. D:\Scripts\UserMandA\guiv2\src\renderer\hooks\useLicensingDiscoveryLogic.ts
+
+**Cloud & Identity:**
+9. D:\Scripts\UserMandA\guiv2\src\renderer\hooks\useGoogleWorkspaceDiscoveryLogic.ts
+
+## Deployment
+
+After making changes, deploy to the production directory:
+
+```powershell
+# Copy modified hooks
+Copy-Item -Path "D:\Scripts\UserMandA\guiv2\src\renderer\hooks\use*DiscoveryLogic.ts" `
+          -Destination "C:\enterprisediscovery\guiv2\src\renderer\hooks\" `
+          -Force
+
+# Build all three webpack bundles
+cd C:\enterprisediscovery\guiv2
+Get-Process -Name electron -ErrorAction SilentlyContinue | Stop-Process -Force
+npm run build:main
+npx webpack --config webpack.preload.config.js --mode=production
+npm run build:renderer
+npm start
+```

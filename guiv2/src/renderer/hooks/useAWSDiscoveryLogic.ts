@@ -3,13 +3,14 @@
  * Manages state and business logic for AWS resource discovery operations
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import { AWSDiscoveryConfig, AWSDiscoveryResult, AWSFilterState, AWSResourceType, EC2Instance, S3Bucket, RDSInstance } from '../types/models/aws';
 
 import { useDebounce } from './useDebounce';
 import { useProfileStore } from '../store/useProfileStore';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { getElectronAPI } from '../lib/electron-api-fallback';
 
 type TabType = 'overview' | 'ec2' | 's3' | 'rds';
@@ -53,6 +54,8 @@ interface AWSDiscoveryState {
 export const useAWSDiscoveryLogic = () => {
   // Get selected company profile from store
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult } = useDiscoveryStore();
+  const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
 
   // State
   const [state, setState] = useState<AWSDiscoveryState>({
@@ -84,13 +87,13 @@ export const useAWSDiscoveryLogic = () => {
   // Subscribe to discovery progress and output events
   useEffect(() => {
     const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
-      if (data.executionId === state.cancellationToken) {
+      if (data.executionId === currentTokenRef.current) {
         setState(prev => ({
           ...prev,
           progress: {
             phase: data.currentPhase,
             progress: data.percentage,
-            currentRegion: data.currentItem,
+            currentRegion: data.currentPhase,
             currentResourceType: data.currentPhase,
             itemsProcessed: data.itemsProcessed,
             totalItems: data.totalItems,
@@ -101,13 +104,30 @@ export const useAWSDiscoveryLogic = () => {
     });
 
     const unsubscribeOutput = window.electron.onDiscoveryOutput((data) => {
-      if (data.executionId === state.cancellationToken) {
+      if (data.executionId === currentTokenRef.current) {
         // Results are handled by onDiscoveryComplete
       }
     });
 
     const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
-      if (data.executionId === state.cancellationToken) {
+      if (data.executionId === currentTokenRef.current) {
+        const discoveryResult = {
+          id: `aws-discovery-${Date.now()}`,
+          name: 'AWS Discovery',
+          moduleName: 'AWSDiscovery',
+          displayName: 'AWS Cloud Infrastructure Discovery',
+          itemCount: data?.result?.totalResources || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalResources || 0} AWS resources`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
         setState(prev => ({
           ...prev,
           result: data.result,
@@ -115,11 +135,13 @@ export const useAWSDiscoveryLogic = () => {
           progress: null,
           cancellationToken: null,
         }));
+
+        addResult(discoveryResult); // ✅ ADDED: Store in discovery store
       }
     });
 
     const unsubscribeError = window.electron.onDiscoveryError((data) => {
-      if (data.executionId === state.cancellationToken) {
+      if (data.executionId === currentTokenRef.current) {
         setState(prev => ({
           ...prev,
           isDiscovering: false,
@@ -136,7 +158,7 @@ export const useAWSDiscoveryLogic = () => {
       if (unsubscribeComplete) unsubscribeComplete();
       if (unsubscribeError) unsubscribeError();
     };
-  }, [state.cancellationToken]);
+  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
 
   /**
    * Start AWS Discovery
@@ -152,6 +174,7 @@ export const useAWSDiscoveryLogic = () => {
     }
 
     const token = `aws-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
 
     console.log(`[AWSDiscoveryHook] Starting AWS discovery for company: ${selectedSourceProfile.companyName}`);
     console.log(`[AWSDiscoveryHook] Parameters:`, {
@@ -171,29 +194,25 @@ export const useAWSDiscoveryLogic = () => {
     }));
 
     try {
-      const electronAPI = getElectronAPI();
-
-      // Execute discovery module with credentials from the profile
-      const result = await electronAPI.executeDiscoveryModule(
-        'AWS',
-        selectedSourceProfile.companyName,
-        {
+      // ✅ FIXED: Use new event-driven executeDiscovery API
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'AWS',
+        parameters: {
           Regions: state.config.awsRegions,
           ResourceTypes: state.config.resourceTypes,
           IncludeTagDetails: state.config.includeTagDetails,
           IncludeCostEstimates: state.config.includeCostEstimates,
           IncludeSecurityAnalysis: state.config.includeSecurityAnalysis,
         },
-        {
+        executionOptions: {  // ✅ ADDED: Missing execution options
           timeout: state.config.timeout || 300000,
-        }
-      );
+          showWindow: false, // Use integrated dialog
+        },
+        executionId: token, // ✅ CRITICAL: Pass token for event matching
+      });
 
-      if (result.success) {
-        console.log(`[AWSDiscoveryHook] ✅ AWS discovery completed successfully`);
-      } else {
-        console.error(`[AWSDiscoveryHook] ❌ AWS discovery failed:`, result.error);
-      }
+      console.log('[AWSDiscoveryHook] Discovery execution initiated:', result);
+      // Note: Completion will be handled by the discovery:complete event listener
     } catch (error: any) {
       console.error(`[AWSDiscoveryHook] Error:`, error);
       setState(prev => ({
@@ -203,6 +222,7 @@ export const useAWSDiscoveryLogic = () => {
         progress: null,
         cancellationToken: null,
       }));
+      currentTokenRef.current = null;
     }
   }, [state.config, selectedSourceProfile]);
 

@@ -1131,6 +1131,10 @@ export interface ElectronAPI {
   executeDiscovery: (params: {
     moduleName: string;
     parameters: Record<string, any>;
+    executionOptions?: {
+      timeout?: number;
+      showWindow?: boolean;
+    };
     executionId?: string;
   }) => Promise<DiscoveryExecutionResult>;
 

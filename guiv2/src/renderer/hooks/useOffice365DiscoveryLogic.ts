@@ -3,7 +3,7 @@
  * Manages state and business logic for Office 365 discovery operations
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ColDef } from 'ag-grid-community';
 
 import {
@@ -20,6 +20,7 @@ import {
 
 import { useDebounce } from './useDebounce';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import { useProfileStore } from '../store/useProfileStore';
 
 /**
  * Office 365 Discovery View State
@@ -51,7 +52,9 @@ interface Office365DiscoveryState {
  * Office 365 Discovery Logic Hook
  */
 export const useOffice365DiscoveryLogic = () => {
-  const { getResultsByModuleName } = useDiscoveryStore();
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult, getResultsByModuleName } = useDiscoveryStore();
+  const currentTokenRef = useRef<string | null>(null);
 
   // State
   const [state, setState] = useState<Office365DiscoveryState>({
@@ -76,7 +79,7 @@ export const useOffice365DiscoveryLogic = () => {
     if (previousResults && previousResults.length > 0) {
       console.log('[Office365DiscoveryHook] Restoring', previousResults.length, 'previous results from store');
       const latestResult = previousResults[previousResults.length - 1];
-      setState(prev => ({ ...prev, currentResult: latestResult }));
+      setState(prev => ({ ...prev, currentResult: latestResult.additionalData as Office365DiscoveryResult }));
     }
   }, [getResultsByModuleName]);
 
@@ -86,18 +89,86 @@ export const useOffice365DiscoveryLogic = () => {
     loadHistoricalResults();
   }, []);
 
-  // Subscribe to discovery progress
+  // Event listeners for discovery events - set up ONCE on mount
   useEffect(() => {
-    const unsubscribe = window.electronAPI?.onProgress?.((data: any) => {
-      if (data.type === 'office365-discovery') {
-        setState(prev => ({ ...prev, progress: data }));
+    console.log('[Office365DiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[Office365DiscoveryHook] Discovery output:', data.message);
+        setState(prev => ({
+          ...prev,
+          progress: prev.progress ? {
+            ...prev.progress,
+            currentOperation: data.message,
+          } : null
+        }));
+      }
+    });
+
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[Office365DiscoveryHook] Discovery complete:', data);
+
+        const result = {
+          id: `office365-discovery-${Date.now()}`,
+          name: 'Office 365 Discovery',
+          moduleName: 'Office365Discovery',
+          displayName: 'Office 365 Discovery',
+          itemCount: data?.result?.totalItems || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalItems || 0} Office 365 items`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setState(prev => ({
+          ...prev,
+          currentResult: data.result as Office365DiscoveryResult,
+          isDiscovering: false,
+          progress: null,
+        }));
+
+        addResult(result);
+        loadHistoricalResults();
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.error('[Office365DiscoveryHook] Discovery error:', data.error);
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          errors: [...prev.errors, data.error],
+          progress: null,
+        }));
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[Office365DiscoveryHook] Discovery cancelled');
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          progress: null,
+        }));
       }
     });
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
     };
-  }, []);
+  }, []); // Empty dependency array - critical for proper event handling
 
   /**
    * Load discovery templates
@@ -141,15 +212,25 @@ export const useOffice365DiscoveryLogic = () => {
    * Start Office 365 Discovery
    */
   const startDiscovery = useCallback(async () => {
+    if (!selectedSourceProfile) {
+      setState(prev => ({
+        ...prev,
+        errors: ['No company profile selected. Please select a profile first.']
+      }));
+      return;
+    }
+
+    const token = `office365-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    currentTokenRef.current = token;
+
     setState(prev => ({ ...prev, isDiscovering: true, errors: [], progress: null }));
 
     try {
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/Office365Discovery.psm1',
-        functionName: 'Invoke-Office365Discovery',
+      console.log('[Office365DiscoveryHook] Starting discovery with token:', token);
+
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'Office365',
         parameters: {
-          TenantId: state.config.tenantId,
-          TenantDomain: state.config.tenantDomain,
           IncludeUsers: state.config.includeUsers,
           IncludeGuests: state.config.includeGuests,
           IncludeLicenses: state.config.includeLicenses,
@@ -160,49 +241,47 @@ export const useOffice365DiscoveryLogic = () => {
           IncludeMFAStatus: state.config.includeMFAStatus,
           IncludeAdminRoles: state.config.includeAdminRoles,
           IncludeServiceHealth: state.config.includeServiceHealth,
-          StreamProgress: true,
         },
+        executionOptions: {
+          timeout: state.config.timeout || 600000,
+          showWindow: false,
+        },
+        executionId: token,
       });
 
-      if (result.success && result.data) {
-        const discoveryResult: Office365DiscoveryResult = result.data;
-        setState(prev => ({
-          ...prev,
-          currentResult: discoveryResult,
-          isDiscovering: false,
-          progress: null,
-        }));
-      } else {
-        throw new Error(result.error || 'Discovery failed');
-      }
+      console.log('[Office365DiscoveryHook] Discovery execution initiated:', result);
     } catch (error: any) {
+      console.error('[Office365DiscoveryHook] Discovery error:', error);
       setState(prev => ({
         ...prev,
         isDiscovering: false,
         errors: [...prev.errors, error.message || 'Unknown error occurred'],
         progress: null,
       }));
+      currentTokenRef.current = null;
     }
-  }, [state.config]);
+  }, [state.config, selectedSourceProfile]);
 
   /**
    * Cancel ongoing discovery
    */
   const cancelDiscovery = useCallback(async () => {
-    if (!state.currentResult?.id) return;
+    if (!currentTokenRef.current) return;
 
     try {
-      await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/Office365Discovery.psm1',
-        functionName: 'Stop-Office365Discovery',
-        parameters: { ResultId: state.currentResult.id },
-      });
+      console.log('[Office365DiscoveryHook] Cancelling discovery:', currentTokenRef.current);
+      await window.electron.cancelDiscovery(currentTokenRef.current);
 
-      setState(prev => ({ ...prev, isDiscovering: false, progress: null }));
+      setTimeout(() => {
+        setState(prev => ({ ...prev, isDiscovering: false, progress: null }));
+        currentTokenRef.current = null;
+      }, 2000);
     } catch (error) {
-      console.error('Failed to cancel discovery:', error);
+      console.error('[Office365DiscoveryHook] Failed to cancel discovery:', error);
+      setState(prev => ({ ...prev, isDiscovering: false, progress: null }));
+      currentTokenRef.current = null;
     }
-  }, [state.currentResult?.id]);
+  }, []);
 
   /**
    * Update discovery configuration

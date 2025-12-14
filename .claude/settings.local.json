@@ -67,7 +67,14 @@
       "Bash(powershell.exe -Command \"Copy-Item -Path ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useActiveDirectoryDiscoveryLogic.ts'' -Destination ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useActiveDirectoryDiscoveryLogic.ts'' -Force\")",
       "Bash(powershell.exe -Command \"Copy-Item -Path ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useSharePointDiscoveryLogic.ts'' -Destination ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useSharePointDiscoveryLogic.ts'' -Force\")",
       "Bash(powershell.exe:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(Copy-Item -Path 'D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useActiveDirectoryDiscoveryLogic.ts' -Destination 'C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\' -Force)",
+      "Bash(powershell.exe -Command \"Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\*.ts'' -Destination ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\'' -Force\")",
+      "Bash(powershell.exe -Command \"Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\types\\electron.d.ts'' -Destination ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\types\\'' -Force\")",
+      "Bash(powershell.exe -Command \"cd C:\\enterprisediscovery\\guiv2; if (Test-Path ''.webpack'') { Remove-Item -Recurse -Force ''.webpack'' }\")",
+      "Bash(Select-String -Pattern \"(useAWSDiscoveryLogic|useHyperVDiscoveryLogic|useOffice365DiscoveryLogic|usePowerPlatformDiscoveryLogic|useSecurityInfrastructureDiscoveryLogic)\")",
+      "Bash(Select-Object -First 20)",
+      "Bash(Select-String -Pattern \"useAWSDiscoveryLogic|useHyperVDiscoveryLogic|useOffice365DiscoveryLogic|usePowerPlatformDiscoveryLogic|useSecurityInfrastructureDiscoveryLogic\")"
     ],
     "deny": [],
     "ask": []

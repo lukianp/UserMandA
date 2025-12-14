@@ -179,7 +179,7 @@ export const useIntuneDiscoveryLogic = () => {
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, [addResult]); // Empty dependency array - set up once on mount
+  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
 
   const startDiscovery = useCallback(async () => {
     if (!selectedSourceProfile) {
@@ -222,6 +222,10 @@ export const useIntuneDiscoveryLogic = () => {
           IncludeConfigurationPolicies: state.config.includeConfigurationPolicies,
           IncludeCompliancePolicies: state.config.includeCompliancePolicies,
           IncludeAppProtectionPolicies: state.config.includeAppProtectionPolicies
+        },
+        executionOptions: {  // ✅ ADDED: Missing execution options
+          timeout: 300000,   // 5 minutes for Intune discovery
+          showWindow: false, // Use integrated dialog
         },
         executionId: token, // CRITICAL: Pass token for event matching
       });

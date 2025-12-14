@@ -128,7 +128,7 @@ export function useSharePointDiscoveryLogic() {
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, [addResult]);
+  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
 
   useEffect(() => {
     loadTemplates();
@@ -195,6 +195,10 @@ export function useSharePointDiscoveryLogic() {
           IncludeListItems: config.includeListItems,
           SiteUrlPattern: config.siteUrlPattern,
           MaxListItemsToScan: config.maxListItemsToScan,
+        },
+        executionOptions: {  // ✅ ADDED: Missing execution options
+          timeout: 300000,   // 5 minutes for SharePoint discovery
+          showWindow: false, // Use integrated dialog
         },
         executionId: token, // ✅ CRITICAL: Pass token for event matching
       });

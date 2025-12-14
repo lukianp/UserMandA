@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import type {
@@ -9,6 +9,8 @@ import type {
   PowerConnector,
   PowerPlatformDiscoveryConfig
 } from '../types/models/powerplatform';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import { useProfileStore } from '../store/useProfileStore';
 
 type TabType = 'overview' | 'environments' | 'apps' | 'flows' | 'connectors';
 
@@ -47,6 +49,10 @@ interface PowerPlatformStats {
 }
 
 export const usePowerPlatformDiscoveryLogic = () => {
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult, getResultsByModuleName } = useDiscoveryStore();
+  const currentTokenRef = useRef<string | null>(null);
+
   const [state, setState] = useState<PowerPlatformDiscoveryState>({
     config: {
       tenantId: '',
@@ -75,29 +81,108 @@ export const usePowerPlatformDiscoveryLogic = () => {
     error: null
   });
 
-  // IPC progress tracking
+  // Load previous discovery results from store on mount
   useEffect(() => {
-    const unsubscribe = window.electronAPI?.onProgress?.((data: any) => {
-      if (data.type === 'powerplatform-discovery' && data.token === state.cancellationToken) {
+    const previousResults = getResultsByModuleName('PowerPlatformDiscovery');
+    if (previousResults && previousResults.length > 0) {
+      console.log('[PowerPlatformDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
+      const latestResult = previousResults[previousResults.length - 1];
+      setState(prev => ({ ...prev, result: latestResult.additionalData as PowerPlatformDiscoveryResult }));
+    }
+  }, [getResultsByModuleName]);
+
+  // Event listeners for discovery events - set up ONCE on mount
+  useEffect(() => {
+    console.log('[PowerPlatformDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[PowerPlatformDiscoveryHook] Discovery output:', data.message);
         setState(prev => ({
           ...prev,
           progress: {
-            current: data.current || 0,
-            total: data.total || 100,
-            message: data.message || '',
-            percentage: data.percentage || 0
+            ...prev.progress,
+            message: data.message
           }
         }));
       }
     });
 
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[PowerPlatformDiscoveryHook] Discovery complete:', data);
+
+        const result = {
+          id: `powerplatform-discovery-${Date.now()}`,
+          name: 'Power Platform Discovery',
+          moduleName: 'PowerPlatformDiscovery',
+          displayName: 'Power Platform Discovery',
+          itemCount: data?.result?.totalItems || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalItems || 0} Power Platform items`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setState(prev => ({
+          ...prev,
+          result: data.result as PowerPlatformDiscoveryResult,
+          isDiscovering: false,
+          progress: { current: 100, total: 100, message: 'Discovery completed', percentage: 100 }
+        }));
+
+        addResult(result);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.error('[PowerPlatformDiscoveryHook] Discovery error:', data.error);
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          error: data.error,
+          progress: { current: 0, total: 100, message: 'Discovery failed', percentage: 0 }
+        }));
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[PowerPlatformDiscoveryHook] Discovery cancelled');
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
+        }));
+      }
+    });
+
     return () => {
-      if (unsubscribe) unsubscribe();
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
     };
-  }, [state.cancellationToken]);
+  }, []); // Empty dependency array - critical for proper event handling
 
   const startDiscovery = useCallback(async () => {
+    if (!selectedSourceProfile) {
+      setState(prev => ({
+        ...prev,
+        error: 'No company profile selected. Please select a profile first.'
+      }));
+      return;
+    }
+
     const token = `powerplatform-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    currentTokenRef.current = token;
 
     setState(prev => ({
       ...prev,
@@ -108,53 +193,60 @@ export const usePowerPlatformDiscoveryLogic = () => {
     }));
 
     try {
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/PowerPlatformDiscovery.psm1',
-        functionName: 'Invoke-PowerPlatformDiscovery',
+      console.log('[PowerPlatformDiscoveryHook] Starting discovery with token:', token);
+
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'PowerPlatform',
         parameters: {
-          TenantId: state.config.tenantId,
           IncludeApps: state.config.includeApps,
           IncludeFlows: state.config.includeFlows,
           IncludeConnectors: state.config.includeConnectors,
           IncludeEnvironments: state.config.includeEnvironments,
-          Timeout: state.config.timeout,
-          CancellationToken: token
         },
-        options: {
-          timeout: state.config.timeout,
-          streamOutput: true
-        }
+        executionOptions: {
+          timeout: state.config.timeout || 600000,
+          showWindow: false,
+        },
+        executionId: token,
       });
 
-      setState(prev => ({
-        ...prev,
-        result: result.data,
-        isDiscovering: false,
-        progress: { current: 100, total: 100, message: 'Discovery completed', percentage: 100 }
-      }));
+      console.log('[PowerPlatformDiscoveryHook] Discovery execution initiated:', result);
     } catch (error: any) {
+      console.error('[PowerPlatformDiscoveryHook] Discovery error:', error);
       setState(prev => ({
         ...prev,
         isDiscovering: false,
         error: error.message || 'Discovery failed',
         progress: { current: 0, total: 100, message: 'Discovery failed', percentage: 0 }
       }));
+      currentTokenRef.current = null;
     }
-  }, [state.config]);
+  }, [state.config, selectedSourceProfile]);
 
   const cancelDiscovery = useCallback(async () => {
-    if (state.cancellationToken) {
-      try {
-        await window.electronAPI.cancelExecution(state.cancellationToken);
+    if (!state.cancellationToken) return;
+
+    try {
+      console.log('[PowerPlatformDiscoveryHook] Cancelling discovery:', state.cancellationToken);
+      await window.electron.cancelDiscovery(state.cancellationToken);
+
+      setTimeout(() => {
         setState(prev => ({
           ...prev,
           isDiscovering: false,
           cancellationToken: null,
           progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
         }));
-      } catch (error: any) {
-        console.error('Failed to cancel discovery:', error);
-      }
+        currentTokenRef.current = null;
+      }, 2000);
+    } catch (error: any) {
+      console.error('[PowerPlatformDiscoveryHook] Failed to cancel discovery:', error);
+      setState(prev => ({
+        ...prev,
+        isDiscovering: false,
+        cancellationToken: null,
+      }));
+      currentTokenRef.current = null;
     }
   }, [state.cancellationToken]);
 

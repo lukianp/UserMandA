@@ -3,7 +3,7 @@
  * Contains all business logic for Teams discovery view
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import {
@@ -67,6 +67,8 @@ export function useTeamsDiscoveryLogic() {
 
   const loadTemplates = async () => {
     try {
+      // TODO: Replace with new API when available, for now use direct file access
+      // This is acceptable for non-discovery operations
       const result = await window.electronAPI.executeModule({
         modulePath: 'Modules/Discovery/TeamsDiscovery.psm1',
         functionName: 'Get-TeamsDiscoveryTemplates',
@@ -144,7 +146,7 @@ export function useTeamsDiscoveryLogic() {
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, [addResult]);
+  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
 
   // ============================================================================
   // Discovery Execution
@@ -181,11 +183,15 @@ export function useTeamsDiscoveryLogic() {
     console.log('[TeamsDiscoveryHook] Starting Teams discovery for', selectedSourceProfile.companyName);
 
     try {
-      // Use new event-driven API instead of deprecated executeModule
+      // ✅ CORRECT: Use new event-driven API with executionOptions
       const result = await window.electron.executeDiscovery({
         moduleName: 'Teams',
         parameters: {
           Config: config,
+        },
+        executionOptions: {  // ✅ ADDED: Missing execution options
+          timeout: 300000,   // 5 minutes for Teams discovery
+          showWindow: false, // Use integrated dialog
         },
         executionId: token, // CRITICAL: Pass token for event matching
       });
@@ -240,6 +246,8 @@ export function useTeamsDiscoveryLogic() {
 
   const saveAsTemplate = useCallback(async (name: string, description: string) => {
     try {
+      // TODO: Replace with new API when available, for now use direct module call
+      // This is acceptable for non-discovery operations
       await window.electronAPI.executeModule({
         modulePath: 'Modules/Discovery/TeamsDiscovery.psm1',
         functionName: 'Save-TeamsDiscoveryTemplate',
@@ -389,258 +397,242 @@ export function useTeamsDiscoveryLogic() {
   // AG Grid Column Definitions
   // ============================================================================
 
-  const teamColumns = useMemo<ColDef<Team>[]>(
-    () => [
-      {
-        field: 'displayName',
-        headerName: 'Team Name',
-        sortable: true,
-        filter: true,
-        pinned: 'left',
-        width: 250,
-      },
-      {
-        field: 'description',
-        headerName: 'Description',
-        sortable: true,
-        filter: true,
-        width: 300,
-      },
-      {
-        field: 'visibility',
-        headerName: 'Visibility',
-        sortable: true,
-        filter: true,
-        width: 120,
-      },
-      {
-        field: 'memberCount',
-        headerName: 'Members',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        width: 100,
-      },
-      {
-        field: 'ownerCount',
-        headerName: 'Owners',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        width: 90,
-      },
-      {
-        field: 'guestCount',
-        headerName: 'Guests',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        width: 90,
-      },
-      {
-        field: 'channelCount',
-        headerName: 'Channels',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        width: 100,
-      },
-      {
-        field: 'isArchived',
-        headerName: 'Status',
-        sortable: true,
-        filter: true,
-        valueFormatter: (params) => (params.value ? 'Archived' : 'Active'),
-        width: 100,
-      },
-      {
-        field: 'lastActivityDate',
-        headerName: 'Last Activity',
-        sortable: true,
-        filter: 'agDateColumnFilter',
-        valueFormatter: (params) =>
-          params.value ? new Date(params.value).toLocaleDateString() : 'N/A',
-        width: 130,
-      },
-      {
-        field: 'createdDateTime',
-        headerName: 'Created',
-        sortable: true,
-        filter: 'agDateColumnFilter',
-        valueFormatter: (params) => new Date(params.value).toLocaleDateString(),
-        width: 120,
-      },
-    ],
-    []
-  );
+  const teamColumns = useMemo<ColDef<Team>[]>(() => [
+    {
+      field: 'displayName',
+      headerName: 'Team Name',
+      sortable: true,
+      filter: true,
+      pinned: 'left',
+      width: 250,
+    },
+    {
+      field: 'description',
+      headerName: 'Description',
+      sortable: true,
+      filter: true,
+      width: 300,
+    },
+    {
+      field: 'visibility',
+      headerName: 'Visibility',
+      sortable: true,
+      filter: true,
+      width: 120,
+    },
+    {
+      field: 'memberCount',
+      headerName: 'Members',
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+      width: 100,
+    },
+    {
+      field: 'ownerCount',
+      headerName: 'Owners',
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+      width: 90,
+    },
+    {
+      field: 'guestCount',
+      headerName: 'Guests',
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+      width: 90,
+    },
+    {
+      field: 'channelCount',
+      headerName: 'Channels',
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+      width: 100,
+    },
+    {
+      field: 'isArchived',
+      headerName: 'Status',
+      sortable: true,
+      filter: true,
+      valueFormatter: (params) => (params.value ? 'Archived' : 'Active'),
+      width: 100,
+    },
+    {
+      field: 'lastActivityDate',
+      headerName: 'Last Activity',
+      sortable: true,
+      filter: 'agDateColumnFilter',
+      valueFormatter: (params) => params.value ? new Date(params.value).toLocaleDateString() : 'N/A',
+      width: 130,
+    },
+    {
+      field: 'createdDateTime',
+      headerName: 'Created',
+      sortable: true,
+      filter: 'agDateColumnFilter',
+      valueFormatter: (params) => new Date(params.value).toLocaleDateString(),
+      width: 120,
+    },
+  ], []);
 
-  const channelColumns = useMemo<ColDef<TeamChannel>[]>(
-    () => [
-      {
-        field: 'displayName',
-        headerName: 'Channel Name',
-        sortable: true,
-        filter: true,
-        pinned: 'left',
-        width: 250,
-      },
-      {
-        field: 'channelType',
-        headerName: 'Type',
-        sortable: true,
-        filter: true,
-        width: 120,
-      },
-      {
-        field: 'description',
-        headerName: 'Description',
-        sortable: true,
-        filter: true,
-        width: 300,
-      },
-      {
-        field: 'messageCount',
-        headerName: 'Messages',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        valueFormatter: (params) => params.value.toLocaleString(),
-        width: 110,
-      },
-      {
-        field: 'replyCount',
-        headerName: 'Replies',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        valueFormatter: (params) => params.value.toLocaleString(),
-        width: 100,
-      },
-      {
-        field: 'memberCount',
-        headerName: 'Members',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        width: 100,
-      },
-      {
-        field: 'fileCount',
-        headerName: 'Files',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        width: 80,
-      },
-      {
-        field: 'lastActivityDate',
-        headerName: 'Last Activity',
-        sortable: true,
-        filter: 'agDateColumnFilter',
-        valueFormatter: (params) =>
-          params.value ? new Date(params.value).toLocaleDateString() : 'N/A',
-        width: 130,
-      },
-    ],
-    []
-  );
+  const channelColumns = useMemo<ColDef<TeamChannel>[]>(() => [
+    {
+      field: 'displayName',
+      headerName: 'Channel Name',
+      sortable: true,
+      filter: true,
+      pinned: 'left',
+      width: 250,
+    },
+    {
+      field: 'channelType',
+      headerName: 'Type',
+      sortable: true,
+      filter: true,
+      width: 120,
+    },
+    {
+      field: 'description',
+      headerName: 'Description',
+      sortable: true,
+      filter: true,
+      width: 300,
+    },
+    {
+      field: 'messageCount',
+      headerName: 'Messages',
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+      valueFormatter: (params) => params.value.toLocaleString(),
+      width: 110,
+    },
+    {
+      field: 'replyCount',
+      headerName: 'Replies',
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+      valueFormatter: (params) => params.value.toLocaleString(),
+      width: 100,
+    },
+    {
+      field: 'memberCount',
+      headerName: 'Members',
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+      width: 100,
+    },
+    {
+      field: 'fileCount',
+      headerName: 'Files',
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+      width: 80,
+    },
+    {
+      field: 'lastActivityDate',
+      headerName: 'Last Activity',
+      sortable: true,
+      filter: 'agDateColumnFilter',
+      valueFormatter: (params) => params.value ? new Date(params.value).toLocaleDateString() : 'N/A',
+      width: 130,
+    },
+  ], []);
 
-  const memberColumns = useMemo<ColDef<TeamMember>[]>(
-    () => [
-      {
-        field: 'displayName',
-        headerName: 'Display Name',
-        sortable: true,
-        filter: true,
-        pinned: 'left',
-        width: 200,
-      },
-      {
-        field: 'email',
-        headerName: 'Email',
-        sortable: true,
-        filter: true,
-        width: 250,
-      },
-      {
-        field: 'role',
-        headerName: 'Role',
-        sortable: true,
-        filter: true,
-        width: 100,
-      },
-      {
-        field: 'isGuest',
-        headerName: 'Type',
-        sortable: true,
-        filter: true,
-        valueFormatter: (params) => (params.value ? 'Guest' : 'Member'),
-        width: 100,
-      },
-      {
-        field: 'accountEnabled',
-        headerName: 'Account Status',
-        sortable: true,
-        filter: true,
-        valueFormatter: (params) => (params.value ? 'Active' : 'Disabled'),
-        width: 130,
-      },
-      {
-        field: 'messageCount',
-        headerName: 'Messages',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        valueFormatter: (params) => params.value?.toLocaleString() ?? 'N/A',
-        width: 100,
-      },
-      {
-        field: 'lastActiveDate',
-        headerName: 'Last Active',
-        sortable: true,
-        filter: 'agDateColumnFilter',
-        valueFormatter: (params) =>
-          params.value ? new Date(params.value).toLocaleDateString() : 'N/A',
-        width: 120,
-      },
-    ],
-    []
-  );
+  const memberColumns = useMemo<ColDef<TeamMember>[]>(() => [
+    {
+      field: 'displayName',
+      headerName: 'Display Name',
+      sortable: true,
+      filter: true,
+      pinned: 'left',
+      width: 200,
+    },
+    {
+      field: 'email',
+      headerName: 'Email',
+      sortable: true,
+      filter: true,
+      width: 250,
+    },
+    {
+      field: 'role',
+      headerName: 'Role',
+      sortable: true,
+      filter: true,
+      width: 100,
+    },
+    {
+      field: 'isGuest',
+      headerName: 'Type',
+      sortable: true,
+      filter: true,
+      valueFormatter: (params) => (params.value ? 'Guest' : 'Member'),
+      width: 100,
+    },
+    {
+      field: 'accountEnabled',
+      headerName: 'Account Status',
+      sortable: true,
+      filter: true,
+      valueFormatter: (params) => (params.value ? 'Active' : 'Disabled'),
+      width: 130,
+    },
+    {
+      field: 'messageCount',
+      headerName: 'Messages',
+      sortable: true,
+      filter: 'agNumberColumnFilter',
+      valueFormatter: (params) => params.value?.toLocaleString() ?? 'N/A',
+      width: 100,
+    },
+    {
+      field: 'lastActiveDate',
+      headerName: 'Last Active',
+      sortable: true,
+      filter: 'agDateColumnFilter',
+      valueFormatter: (params) => params.value ? new Date(params.value).toLocaleDateString() : 'N/A',
+      width: 120,
+    },
+  ], []);
 
-  const appColumns = useMemo<ColDef<TeamApp>[]>(
-    () => [
-      {
-        field: 'displayName',
-        headerName: 'App Name',
-        sortable: true,
-        filter: true,
-        pinned: 'left',
-        width: 250,
-      },
-      {
-        field: 'version',
-        headerName: 'Version',
-        sortable: true,
-        filter: true,
-        width: 100,
-      },
-      {
-        field: 'distributionMethod',
-        headerName: 'Distribution',
-        sortable: true,
-        filter: true,
-        width: 140,
-      },
-      {
-        field: 'installedBy',
-        headerName: 'Installed By',
-        sortable: true,
-        filter: true,
-        width: 200,
-      },
-      {
-        field: 'installedDate',
-        headerName: 'Installed',
-        sortable: true,
-        filter: 'agDateColumnFilter',
-        valueFormatter: (params) =>
-          params.value ? new Date(params.value).toLocaleDateString() : 'N/A',
-        width: 120,
-      },
-    ],
-    []
-  );
+  const appColumns = useMemo<ColDef<TeamApp>[]>(() => [
+    {
+      field: 'displayName',
+      headerName: 'App Name',
+      sortable: true,
+      filter: true,
+      pinned: 'left',
+      width: 250,
+    },
+    {
+      field: 'version',
+      headerName: 'Version',
+      sortable: true,
+      filter: true,
+      width: 100,
+    },
+    {
+      field: 'distributionMethod',
+      headerName: 'Distribution',
+      sortable: true,
+      filter: true,
+      width: 140,
+    },
+    {
+      field: 'installedBy',
+      headerName: 'Installed By',
+      sortable: true,
+      filter: true,
+      width: 200,
+    },
+    {
+      field: 'installedDate',
+      headerName: 'Installed',
+      sortable: true,
+      filter: 'agDateColumnFilter',
+      valueFormatter: (params) => params.value ? new Date(params.value).toLocaleDateString() : 'N/A',
+      width: 120,
+    },
+  ], []);
 
   // ============================================================================
   // Export Functionality
@@ -650,6 +642,8 @@ export function useTeamsDiscoveryLogic() {
     if (!result) return;
 
     try {
+      // TODO: Replace with new API when available, for now use direct module call
+      // This is acceptable for non-discovery operations
       await window.electronAPI.executeModule({
         modulePath: 'Modules/Export/ExportService.psm1',
         functionName: 'Export-TeamsDiscoveryData',
