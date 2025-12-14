@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import type {
@@ -14,6 +14,9 @@ import type {
   WebServerType
 } from '../types/models/webserver';
 
+import { useProfileStore } from '../store/useProfileStore';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
+
 interface WebServerDiscoveryState {
   config: Partial<WebServerDiscoveryConfig>;
   result: WebServerDiscoveryResult | null;
@@ -24,6 +27,9 @@ interface WebServerDiscoveryState {
 }
 
 export const useWebServerDiscoveryLogic = () => {
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult } = useDiscoveryStore();
+
   const [state, setState] = useState<WebServerDiscoveryState>({
     config: {
       serverAddresses: [],
@@ -47,28 +53,95 @@ export const useWebServerDiscoveryLogic = () => {
     showOnlyExpiring: false
   });
 
-  // IPC Progress Tracking
+  const currentTokenRef = useRef<string | null>(null);
+
+  // Event listeners for PowerShell streaming - Set up ONCE on mount
   useEffect(() => {
-    const progressHandler = (data: unknown) => {
-      if (typeof data === 'object' && data !== null &&
-          'type' in data && 'token' in data && 'progress' in data &&
-          (data as any).type === 'webserver-discovery' && (data as any).token === state.cancellationToken) {
+    console.log('[WebServerDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const message = data.message || '';
+        console.log('[WebServerDiscoveryHook] Progress:', message);
+      }
+    });
+
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const discoveryResult = {
+          id: `webserver-discovery-${Date.now()}`,
+          name: 'Web Server Discovery',
+          moduleName: 'WebServer',
+          displayName: 'Web Server Discovery',
+          itemCount: data?.result?.servers?.length || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.servers?.length || 0} web servers`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
         setState(prev => ({
           ...prev,
-          progress: (data as any).progress || 0
+          result: data.result as WebServerDiscoveryResult,
+          isDiscovering: false,
+          progress: 100,
+          cancellationToken: null
         }));
-      }
-    };
 
-    const unsubscribe = window.electronAPI?.onProgress?.(progressHandler);
+        addResult(discoveryResult);
+        console.log(`[WebServerDiscoveryHook] Discovery completed! Found ${discoveryResult.itemCount} servers.`);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          error: data.error,
+          isDiscovering: false,
+          cancellationToken: null
+        }));
+        console.error(`[WebServerDiscoveryHook] Discovery failed: ${data.error}`);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          progress: 0,
+          cancellationToken: null
+        }));
+        console.warn('[WebServerDiscoveryHook] Discovery cancelled by user');
+      }
+    });
+
     return () => {
-      if (unsubscribe) unsubscribe();
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
     };
-  }, [state.cancellationToken]);
+  }, []);
 
   // Start Discovery
   const startDiscovery = useCallback(async () => {
-    const token = `webserver-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setState(prev => ({ ...prev, error: errorMessage }));
+      console.error('[WebServerDiscoveryHook]', errorMessage);
+      return;
+    }
+
+    if (state.isDiscovering) return;
+
+    const token = `webserver-discovery-${Date.now()}`;
 
     setState(prev => ({
       ...prev,
@@ -78,49 +151,76 @@ export const useWebServerDiscoveryLogic = () => {
       cancellationToken: token
     }));
 
+    currentTokenRef.current = token;
+
+    console.log(`[WebServerDiscoveryHook] Starting discovery for company: ${selectedSourceProfile.companyName}`);
+    console.log(`[WebServerDiscoveryHook] Parameters:`, {
+      serverAddresses: state.config.serverAddresses,
+      serverTypes: state.config.serverTypes
+    });
+
     try {
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/WebServerDiscovery.psm1',
-        functionName: 'Invoke-WebServerDiscovery',
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'WebServer',
         parameters: {
-          ...state.config,
-          cancellationToken: token
-        }
+          ServerAddresses: state.config.serverAddresses,
+          ServerTypes: state.config.serverTypes,
+          IncludeBindings: state.config.includeBindings,
+          IncludeApplicationPools: state.config.includeApplicationPools,
+          IncludeCertificates: state.config.includeCertificates,
+        },
+        executionOptions: {
+          timeout: state.config.timeout || 300000,
+          showWindow: false,
+        },
+        executionId: token,
       });
 
+      console.log('[WebServerDiscoveryHook] Discovery execution initiated:', result);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Unknown error occurred during discovery';
+      console.error('[WebServerDiscoveryHook] Discovery failed:', errorMessage);
       setState(prev => ({
         ...prev,
-        result: result.data as WebServerDiscoveryResult,
-        isDiscovering: false,
-        progress: 100,
-        cancellationToken: null
-      }));
-    } catch (error: unknown) {
-      setState(prev => ({
-        ...prev,
-        error: error instanceof Error ? error.message : 'Discovery failed',
+        error: errorMessage,
         isDiscovering: false,
         cancellationToken: null
       }));
+      currentTokenRef.current = null;
     }
-  }, [state.config]);
+  }, [selectedSourceProfile, state.config, state.isDiscovering]);
 
   // Cancel Discovery
   const cancelDiscovery = useCallback(async () => {
-    if (state.cancellationToken) {
-      try {
-        await window.electronAPI.cancelExecution(state.cancellationToken);
-      } catch (error) {
-        console.error('Failed to cancel discovery:', error);
-      }
-    }
+    if (!state.isDiscovering || !state.cancellationToken) return;
 
-    setState(prev => ({
-      ...prev,
-      isDiscovering: false,
-      cancellationToken: null
-    }));
-  }, [state.cancellationToken]);
+    console.warn('[WebServerDiscoveryHook] Cancelling discovery...');
+
+    try {
+      await window.electron.cancelDiscovery(state.cancellationToken);
+      console.log('[WebServerDiscoveryHook] Discovery cancellation requested successfully');
+
+      setTimeout(() => {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          progress: 0,
+          cancellationToken: null
+        }));
+        currentTokenRef.current = null;
+        console.warn('[WebServerDiscoveryHook] Discovery cancelled');
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Error cancelling discovery';
+      console.error('[WebServerDiscoveryHook]', errorMessage);
+      setState(prev => ({
+        ...prev,
+        isDiscovering: false,
+        cancellationToken: null
+      }));
+      currentTokenRef.current = null;
+    }
+  }, [state.isDiscovering, state.cancellationToken]);
 
   // Update Config
   const updateConfig = useCallback((updates: Partial<WebServerDiscoveryConfig>) => {

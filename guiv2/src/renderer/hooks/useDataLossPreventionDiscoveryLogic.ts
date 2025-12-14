@@ -1,9 +1,10 @@
 /**
  * Data Loss Prevention Discovery Logic Hook
  * Production-ready business logic for DLP policy, rule, and incident discovery
+ * ✅ FIXED: Now uses event-driven architecture with streaming support
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import {
@@ -17,7 +18,7 @@ import {
   DLPMode
 } from '../types/models/dlp';
 import { useProfileStore } from '../store/useProfileStore';
-import { getElectronAPI } from '../lib/electron-api-fallback';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 type TabType = 'overview' | 'policies' | 'rules' | 'incidents' | 'sensitive-types';
 
@@ -42,6 +43,7 @@ interface DLPDiscoveryState {
 export const useDataLossPreventionDiscoveryLogic = () => {
   // Get selected profile from store
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult } = useDiscoveryStore();
 
   // Combined state
   const [state, setState] = useState<DLPDiscoveryState>({
@@ -60,28 +62,91 @@ export const useDataLossPreventionDiscoveryLogic = () => {
     error: null
   });
 
-  // Progress tracking
+  const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
+
+  // ✅ ADDED: Event listeners for PowerShell streaming - Set up ONCE on mount
   useEffect(() => {
-    const unsubscribe = window.electronAPI?.onProgress?.((data: any) => {
-      if (data.type === 'dlp-discovery' && data.token === state.cancellationToken) {
+    console.log('[DLPDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const message = data.message || '';
         setState(prev => ({
           ...prev,
           progress: {
-            current: data.current || 0,
-            total: data.total || 100,
-            message: data.message || '',
-            percentage: data.percentage || 0
+            ...prev.progress,
+            message: message
           }
         }));
       }
     });
 
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const result = {
+          id: `dlp-discovery-${Date.now()}`,
+          name: 'DLP Discovery',
+          moduleName: 'DLP',
+          displayName: 'Data Loss Prevention Discovery',
+          itemCount: data?.result?.totalItems || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalItems || 0} DLP items`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setState(prev => ({
+          ...prev,
+          result: data.result || data,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
+        }));
+
+        addResult(result); // ✅ ADDED: Store in discovery store
+        console.log(`[DLPDiscoveryHook] Discovery completed! Found ${result.itemCount} items.`);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          error: data.error
+        }));
+        console.error(`[DLPDiscoveryHook] Discovery failed: ${data.error}`);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
+        }));
+        console.warn('[DLPDiscoveryHook] Discovery cancelled by user');
+      }
+    });
+
     return () => {
-      if (unsubscribe) unsubscribe();
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
     };
-  }, [state.cancellationToken]);
+  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
 
   // Start discovery
+  // ✅ FIXED: Now uses event-driven executeDiscovery API
   const startDiscovery = useCallback(async () => {
     if (!selectedSourceProfile) {
       const errorMessage = 'No company profile selected. Please select a profile first.';
@@ -90,7 +155,7 @@ export const useDataLossPreventionDiscoveryLogic = () => {
       return;
     }
 
-    const token = `dlp-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const token = `dlp-discovery-${Date.now()}`;
     setState(prev => ({
       ...prev,
       isDiscovering: true,
@@ -98,6 +163,8 @@ export const useDataLossPreventionDiscoveryLogic = () => {
       error: null,
       progress: { current: 0, total: 100, message: 'Initializing DLP discovery...', percentage: 0 }
     }));
+
+    currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
 
     console.log(`[DLPDiscovery] Starting discovery for company: ${selectedSourceProfile.companyName}`);
     console.log(`[DLPDiscovery] Parameters:`, {
@@ -107,27 +174,24 @@ export const useDataLossPreventionDiscoveryLogic = () => {
     });
 
     try {
-      const electronAPI = getElectronAPI();
-      const discoveryResult = await electronAPI.executeDiscoveryModule(
-        'DLP',
-        selectedSourceProfile.companyName,
-        {
+      // ✅ FIXED: Use new event-driven API instead of deprecated executeDiscoveryModule
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'DLP',
+        parameters: {
           IncludePolicies: state.config.includePolicies,
           IncludeRules: state.config.includeRules,
           IncludeIncidents: state.config.includeIncidents
         },
-        { timeout: state.config.timeout || 300000 }
-      );
+        executionOptions: {  // ✅ ADDED: Missing execution options
+          timeout: state.config.timeout || 300000,
+          showWindow: false, // Use integrated dialog
+        },
+        executionId: token, // ✅ CRITICAL: Pass token for event matching
+      });
 
-      setState(prev => ({
-        ...prev,
-        result: discoveryResult.data || discoveryResult,
-        isDiscovering: false,
-        cancellationToken: null,
-        progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
-      }));
+      console.log('[DLPDiscovery] Discovery execution initiated:', result);
 
-      console.log(`[DLPDiscovery] Discovery completed successfully`);
+      // Note: Completion will be handled by the discovery:complete event listener
     } catch (error: any) {
       console.error('[DLPDiscovery] Discovery failed:', error);
       setState(prev => ({
@@ -136,24 +200,43 @@ export const useDataLossPreventionDiscoveryLogic = () => {
         cancellationToken: null,
         error: error.message || 'Discovery failed'
       }));
+      currentTokenRef.current = null;
     }
   }, [selectedSourceProfile, state.config]);
 
   // Cancel discovery
+  // ✅ FIXED: Now properly cancels PowerShell process
   const cancelDiscovery = useCallback(async () => {
-    if (state.cancellationToken) {
-      try {
-        await window.electronAPI.cancelExecution(state.cancellationToken);
-      } catch (error) {
-        console.error('Failed to cancel discovery:', error);
-      }
+    if (!state.cancellationToken) return;
+
+    console.warn('[DLPDiscoveryHook] Cancelling discovery...');
+
+    try {
+      await window.electron.cancelDiscovery(state.cancellationToken);
+      console.log('[DLPDiscoveryHook] Discovery cancellation requested successfully');
+
+      // Set timeout as fallback in case cancelled event doesn't fire
+      setTimeout(() => {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
+        }));
+        currentTokenRef.current = null;
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Error cancelling discovery';
+      console.error('[DLPDiscoveryHook]', errorMessage);
+      // Reset state even on error
+      setState(prev => ({
+        ...prev,
+        isDiscovering: false,
+        cancellationToken: null,
+        progress: { current: 0, total: 100, message: '', percentage: 0 }
+      }));
+      currentTokenRef.current = null;
     }
-    setState(prev => ({
-      ...prev,
-      isDiscovering: false,
-      cancellationToken: null,
-      progress: { current: 0, total: 100, message: 'Cancelled', percentage: 0 }
-    }));
   }, [state.cancellationToken]);
 
   // Export to CSV

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import {
@@ -109,7 +109,7 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     return profile;
   });
 
-  const { getResultsByModuleName, addResult: addDiscoveryResult } = useDiscoveryStore();
+  const { getResultsByModuleName, addResult } = useDiscoveryStore();
   console.log('[FileSystemDiscoveryHook] Discovery store hooks obtained');
 
   const [result, setResult] = useState<FileSystemDiscoveryResult | null>(null);
@@ -119,6 +119,7 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
   const [logs, setLogs] = useState<PowerShellLog[]>([]);
   const [showExecutionDialog, setShowExecutionDialog] = useState(false);
   const [currentToken, setCurrentToken] = useState<string | null>(null);
+  const currentTokenRef = useRef<string | null>(null); // For event matching
 
   const [config, setConfig] = useState<FileSystemDiscoveryConfig>(DEFAULT_FILESYSTEM_CONFIG);
   const [templates] = useState<FileSystemDiscoveryTemplate[]>([]);
@@ -148,7 +149,7 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
       console.log('[FileSystemDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
       const latestResult = previousResults[previousResults.length - 1];
       // Type assertion through unknown to avoid type errors
-      setResult(latestResult.result as unknown as FileSystemDiscoveryResult);
+      setResult(latestResult.additionalData as unknown as FileSystemDiscoveryResult);
     }
   }, [getResultsByModuleName]);
 
@@ -158,188 +159,30 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
     setLogs((prevLogs) => [...prevLogs, newLog]);
   }, []);
 
-  // ✅ REMOVED: Event-driven code - File System uses synchronous executeDiscoveryModule
-  // No event listeners needed since we get results directly from the API call
+  // Event listeners for PowerShell streaming - Set up ONCE on mount
+  useEffect(() => {
+    console.log('[FileSystemDiscoveryHook] Setting up event listeners');
 
-  const startDiscovery = useCallback(async () => {
-    console.log('[FileSystemDiscoveryHook] ========== START DISCOVERY CALLED ==========');
-    console.log('[FileSystemDiscoveryHook] startDiscovery callback triggered');
-
-    setIsRunning(true);
-    console.log('[FileSystemDiscoveryHook] setIsRunning(true) called');
-
-    setError(null);
-    console.log('[FileSystemDiscoveryHook] setError(null) called');
-
-    setLogs([]);
-    console.log('[FileSystemDiscoveryHook] setLogs([]) called');
-
-    setShowExecutionDialog(true);
-    console.log('[FileSystemDiscoveryHook] setShowExecutionDialog(true) called');
-
-    const initialProgress = {
-      phase: 'initializing' as const,
-      serversCompleted: 0,
-      totalServers: config?.servers?.length || 1,
-      sharesCompleted: 0,
-      totalShares: 0,
-      percentComplete: 0,
-      message: 'Initializing file system discovery...',
-    };
-    console.log('[FileSystemDiscoveryHook] Initial progress:', initialProgress);
-    setProgress(initialProgress);
-
-    const token = `filesystem-discovery-${Date.now()}`;
-    console.log('[FileSystemDiscoveryHook] Generated token:', token);
-    setCurrentToken(token);
-
-    // Use profile's company name (not the profile name itself)
-    const companyName = selectedSourceProfile?.companyName || selectedSourceProfile?.name || 'Unknown';
-    console.log('[FileSystemDiscoveryHook] companyName determined:', companyName);
-    console.log('[FileSystemDiscoveryHook] selectedSourceProfile:', selectedSourceProfile);
-
-    addLog('Starting File System discovery...', 'info');
-    addLog(`Company: ${companyName}`, 'info');
-    addLog(`Servers to scan: ${config.servers?.length || 0} (localhost if none)`, 'info');
-    addLog(`Include hidden shares: ${config.includeHiddenShares}`, 'info');
-    addLog(`Scan permissions: ${config.scanPermissions}`, 'info');
-    addLog(`Scan large files: ${config.scanLargeFiles}`, 'info');
-
-    console.log('[FileSystemDiscoveryHook] Config validation:');
-    console.log('[FileSystemDiscoveryHook] - servers:', config.servers);
-    console.log('[FileSystemDiscoveryHook] - includeHiddenShares:', config.includeHiddenShares);
-    console.log('[FileSystemDiscoveryHook] - scanPermissions:', config.scanPermissions);
-    console.log('[FileSystemDiscoveryHook] - scanLargeFiles:', config.scanLargeFiles);
-    console.log('[FileSystemDiscoveryHook] - largeFileThresholdMB:', config.largeFileThresholdMB);
-
-    try {
-      setProgress({
-        phase: 'initializing',
-        percentComplete: 10,
-        message: 'Initializing file system scan...',
-        serversCompleted: 0,
-        totalServers: config?.servers?.length || 1,
-        sharesCompleted: 0,
-        totalShares: 0,
-      });
-      console.log('[FileSystemDiscoveryHook] Progress updated to 10%');
-      addLog('Initializing file system scan...', 'info');
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setProgress({
-        phase: 'discovering_shares',
-        percentComplete: 30,
-        message: 'Scanning file shares...',
-        serversCompleted: 0,
-        totalServers: config?.servers?.length || 1,
-        sharesCompleted: 0,
-        totalShares: 0,
-      });
-      console.log('[FileSystemDiscoveryHook] Progress updated to 30%');
-      addLog('Scanning file shares...', 'info');
-
-      console.log('[FileSystemDiscoveryHook] Getting electronAPI...');
-      const electronAPI = window.electronAPI;
-      console.log('[FileSystemDiscoveryHook] electronAPI obtained:', !!electronAPI);
-      console.log('[FileSystemDiscoveryHook] electronAPI type:', typeof electronAPI);
-      console.log('[FileSystemDiscoveryHook] electronAPI.executeDiscovery exists:', !!(electronAPI as any).executeDiscovery);
-
-      // PRE-CALL VALIDATION
-      if (!(electronAPI as any).executeDiscovery) {
-        console.error('[FileSystemDiscoveryHook] ❌ CRITICAL: executeDiscovery method not found!');
-        console.log('[FileSystemDiscoveryHook] Available electronAPI methods:', Object.keys(electronAPI || {}));
-        setError('Electron API executeDiscovery method not available');
-        setIsRunning(false);
-        setShowExecutionDialog(false);
-        return;
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const message = data.message || '';
+        console.log('[FileSystemDiscoveryHook] Discovery output:', message);
+        addLog(message, 'info');
       }
+    });
 
-      console.log('[FileSystemDiscoveryHook] ✅ executeDiscovery method found, proceeding...');
-
-      const discoveryParams = {
-        moduleName: 'FileSystem',
-        companyName: companyName,
-        configuration: {
-          Servers: config.servers && config.servers.length > 0 ? config.servers : null,
-          IncludeHiddenShares: config.includeHiddenShares || false,
-          IncludeAdministrativeShares: config.includeAdministrativeShares || false,
-          ScanPermissions: config.scanPermissions !== false,
-          ScanLargeFiles: config.scanLargeFiles !== false,
-          LargeFileThresholdMB: config.largeFileThresholdMB || 100,
-        },
-        executionOptions: {
-          timeout: 300000,
-          showWindow: false,
-        }
-      };
-
-      console.log('[FileSystemDiscoveryHook] Calling executeDiscovery with:');
-      console.log('[FileSystemDiscoveryHook] discoveryParams:', JSON.stringify(discoveryParams, null, 2));
-
-      const result = await (electronAPI as any).executeDiscovery(discoveryParams);
-
-      console.log('[FileSystemDiscoveryHook] ✅ executeDiscoveryModule returned');
-      console.log('[FileSystemDiscoveryHook] Result type:', typeof result);
-      console.log('[FileSystemDiscoveryHook] Result keys:', result ? Object.keys(result) : 'NULL RESULT');
-      console.log('[FileSystemDiscoveryHook] Result.success:', result?.success);
-      console.log('[FileSystemDiscoveryHook] Result.error:', result?.error);
-      console.log('[FileSystemDiscoveryHook] Result.data exists:', !!result?.data);
-
-      setProgress({
-        phase: 'analyzing_storage',
-        percentComplete: 70,
-        message: 'Processing discovery results...',
-        serversCompleted: config?.servers?.length || 1,
-        totalServers: config?.servers?.length || 1,
-        sharesCompleted: 0,
-        totalShares: 0,
-      });
-      addLog('Processing discovery results...', 'info');
-
-      console.log('[FileSystemDiscoveryHook] Checking result.success:', result.success);
-
-      if (result.success) {
-        console.log('[FileSystemDiscoveryHook] ✅ Result indicates success');
-        addLog('File System discovery completed successfully', 'success');
-
-        // ✅ MAXIMUM DEBUGGING: Write raw result to C:\temp
-        const debugPath = `C:\\temp\\filesystem-result-${Date.now()}.json`;
-        try {
-          console.log('[FileSystemDiscoveryHook] ========== MAXIMUM DEBUG MODE ==========');
-          console.log('[FileSystemDiscoveryHook] Would write debug file to:', debugPath);
-          console.log('[FileSystemDiscoveryHook] Raw result (first 2000 chars):', JSON.stringify(result).slice(0, 2000));
-          console.log('[FileSystemDiscoveryHook] Full result structure:', JSON.stringify(result, null, 2));
-        } catch (e) {
-          console.warn('[FileSystemDiscoveryHook] Debug logging error:', e);
-        }
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[FileSystemDiscoveryHook] Discovery completed event received');
 
         // Extract structured data from PowerShell result
-        // PowerShell returns nested structure: result.result.data.Data = { shares: [], permissions: [], ... }
-        // The actual data is at: result.result.data.Data
-        const resultAny = result as any;
-        const psWrapper = resultAny?.result || result;
+        const resultAny = data as any;
+        const psWrapper = resultAny?.result || data;
         const psDataContainer = psWrapper?.data || psWrapper;
         const psData = psDataContainer?.Data || psDataContainer;
 
-        console.log('[FileSystemDiscoveryHook] ========== DATA EXTRACTION DEBUG ==========');
-        console.log('[FileSystemDiscoveryHook] psWrapper keys:', Object.keys(psWrapper || {}));
-        console.log('[FileSystemDiscoveryHook] psDataContainer keys:', Object.keys(psDataContainer || {}));
-        console.log('[FileSystemDiscoveryHook] psData type:', typeof psData);
-        console.log('[FileSystemDiscoveryHook] psData is array:', Array.isArray(psData));
-        console.log('[FileSystemDiscoveryHook] psData keys:', Object.keys(psData || {}));
-        console.log('[FileSystemDiscoveryHook] ===========================================');
-
-        // PowerShell returns structured data with pre-grouped arrays, NOT flat array
         let grouped;
         if (psData && typeof psData === 'object' && !Array.isArray(psData)) {
-          // Direct extraction from PowerShell structured result
-          console.log('[FileSystemDiscoveryHook] Using structured data extraction');
-          console.log('[FileSystemDiscoveryHook] psData.shares exists:', !!psData.shares);
-          console.log('[FileSystemDiscoveryHook] psData.shares length:', psData.shares?.length);
-          console.log('[FileSystemDiscoveryHook] psData.permissions length:', psData.permissions?.length);
-          console.log('[FileSystemDiscoveryHook] psData.largeFiles length:', psData.largeFiles?.length);
-          console.log('[FileSystemDiscoveryHook] psData.fileServers length:', psData.fileServers?.length);
-
           grouped = {
             shares: Array.isArray(psData.shares) ? psData.shares : [],
             permissions: Array.isArray(psData.permissions) ? psData.permissions : [],
@@ -348,8 +191,6 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
             fileAnalysis: Array.isArray(psData.fileAnalysis) ? psData.fileAnalysis : [],
           };
         } else {
-          // Fallback for unexpected structure
-          console.log('[FileSystemDiscoveryHook] Using fallback empty arrays');
           grouped = {
             shares: [],
             permissions: [],
@@ -359,168 +200,230 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
           };
         }
 
-        console.log('[FileSystemDiscoveryHook] Final grouped counts:', {
-          shares: grouped.shares.length,
-          permissions: grouped.permissions.length,
-          largeFiles: grouped.largeFiles.length,
-          fileServers: grouped.fileServers.length,
-          fileAnalysis: grouped.fileAnalysis.length,
-        });
-
-        // Use data directly - PowerShell already provides structured arrays
         const transformedShares = grouped.shares;
         const transformedPermissions = grouped.permissions;
         const transformedLargeFiles = grouped.largeFiles;
 
-        console.log('[FileSystemDiscoveryHook] Transformed counts:', {
-          shares: transformedShares.length,
-          permissions: transformedPermissions.length,
-          largeFiles: transformedLargeFiles.length,
-        });
-        console.log('[FileSystemDiscoveryHook] Sample transformed share:', transformedShares[0]);
-        console.log('[FileSystemDiscoveryHook] Sample transformed permission:', transformedPermissions[0]);
-        console.log('[FileSystemDiscoveryHook] Sample transformed large file:', transformedLargeFiles[0]);
-
-        // Extract statistics from PowerShell (may be in psData or psWrapper)
+        // Extract statistics
         const psStats = psData?.statistics || psWrapper?.statistics || {};
-        console.log('[FileSystemDiscoveryHook] psData.statistics:', JSON.stringify(psData?.statistics));
-        console.log('[FileSystemDiscoveryHook] psWrapper.statistics:', JSON.stringify(psWrapper?.statistics));
-        console.log('[FileSystemDiscoveryHook] Final psStats:', JSON.stringify(psStats));
-
-        const totalItems = transformedShares.length + transformedPermissions.length + transformedLargeFiles.length;
-        addLog(`Found ${totalItems} total items (${transformedShares.length} shares, ${transformedPermissions.length} permissions, ${transformedLargeFiles.length} large files)`, 'success');
-
-        // Convert PowerShell statistics (totalSizeMB, largestFileMB, averageFileSizeMB) to TypeScript format
         const totalSizeMB = psStats.totalSizeMB || 0;
         const totalSizeGB = totalSizeMB / 1024;
         const totalStorageBytes = totalSizeMB * 1024 * 1024;
-
         const averageFileSizeMB = psStats.averageFileSizeMB || 0;
         const averageFileSizeBytes = averageFileSizeMB * 1024 * 1024;
         const averageFileSizeFormatted = averageFileSizeMB >= 1
           ? `${averageFileSizeMB.toFixed(2)} MB`
           : `${(averageFileSizeMB * 1024).toFixed(2)} KB`;
 
-        console.log('[FileSystemDiscoveryHook] Statistics conversion:');
-        console.log('[FileSystemDiscoveryHook] - totalSizeMB:', totalSizeMB, '→', totalSizeGB.toFixed(2), 'GB');
-        console.log('[FileSystemDiscoveryHook] - averageFileSizeMB:', averageFileSizeMB, '→', averageFileSizeFormatted);
-        console.log('[FileSystemDiscoveryHook] - totalShares:', psStats.totalShares);
-        console.log('[FileSystemDiscoveryHook] - totalPermissions:', psStats.totalPermissions);
-        console.log('[FileSystemDiscoveryHook] - highRiskPermissions:', psStats.highRiskPermissions);
-
+        const token = currentTokenRef.current || `filesystem-discovery-${Date.now()}`;
         const fsResult: FileSystemDiscoveryResult = {
           id: token,
+          configId: token,
           startTime: new Date().toISOString(),
           endTime: new Date().toISOString(),
           status: 'completed',
-          config: config,
+          servers: config.servers || [],
           shares: transformedShares,
           permissions: transformedPermissions,
           largeFiles: transformedLargeFiles,
           statistics: {
-            // Raw PowerShell values (for View compatibility)
             totalSizeMB: psStats.totalSizeMB || 0,
             totalPermissions: psStats.totalPermissions || transformedPermissions.length,
             highRiskPermissions: psStats.highRiskPermissions || 0,
             averageFileSizeMB: psStats.averageFileSizeMB || 0,
-            // Converted values
             totalShares: psStats.totalShares || transformedShares.length,
-            totalLargeFiles: psStats.totalLargeFiles || transformedLargeFiles.length,
-            totalServersScanned: psStats.totalFileServers || (config.servers?.length || 1),
+            totalFiles: psStats.totalFiles || transformedLargeFiles.length,
+            totalFolders: psStats.totalFolders || 0,
             totalStorage: { bytes: totalStorageBytes, formatted: `${totalSizeGB.toFixed(2)} GB` },
             usedStorage: { bytes: totalStorageBytes, formatted: `${totalSizeGB.toFixed(2)} GB`, percent: 100 },
             freeStorage: { bytes: 0, formatted: '0 GB', percent: 0 },
-            largestShare: psStats.largestShare || { name: 'N/A', sizeGB: 0 },
-            oldestFile: psStats.oldestFile || { name: 'N/A', age: 0, lastModified: new Date().toISOString() },
-            averageFileSize: { bytes: averageFileSizeBytes, formatted: averageFileSizeFormatted },
-            mostCommonFileType: psStats.mostCommonFileType || { extension: 'N/A', count: 0 },
-            duplicateFilesCount: psStats.duplicateFilesCount || 0,
-            duplicateFilesSize: psStats.duplicateFilesSize || { bytes: 0, formatted: '0 GB' },
+            largestShare: psStats.largestShare || null,
+            oldestShare: psStats.oldestShare || null,
+            sharesWithQuota: psStats.sharesWithQuota || 0,
+            sharesWithEncryption: psStats.sharesWithEncryption || 0,
+            sharesWithDeduplication: psStats.sharesWithDeduplication || 0,
+            averageShareSize: psStats.averageShareSize || 0,
           },
+          securityRisks: [],
           errors: [],
-          warnings: result.warnings || [],
+          warnings: [],
         };
-
-        console.log('[FileSystemDiscoveryHook] Final fsResult:', {
-          id: fsResult.id,
-          sharesCount: fsResult.shares.length,
-          permissionsCount: fsResult.permissions.length,
-          largeFilesCount: fsResult.largeFiles.length,
-          statistics: fsResult.statistics,
-        });
 
         setResult(fsResult);
         setShares(fsResult.shares);
         setPermissions(fsResult.permissions);
         setLargeFiles(fsResult.largeFiles);
+        setIsRunning(false);
+        setProgress(null);
+        setShowExecutionDialog(false);
+        setCurrentToken(null);
+        currentTokenRef.current = null;
 
-        console.log('[FileSystemDiscoveryHook] State updated - shares:', fsResult.shares.length, 'permissions:', fsResult.permissions.length, 'large files:', fsResult.largeFiles.length);
+        addLog('File System discovery completed successfully', 'success');
+        addLog(`Found ${transformedShares.length} shares, ${transformedPermissions.length} permissions, ${transformedLargeFiles.length} large files`, 'success');
 
-        // Set final progress
-        setProgress({
-          phase: 'finalizing',
-          percentComplete: 100,
-          message: 'Discovery completed successfully',
-          serversCompleted: config?.servers?.length || 1,
-          totalServers: config?.servers?.length || 1,
-          sharesCompleted: transformedShares.length,
-          totalShares: transformedShares.length,
-        });
-
-        addDiscoveryResult({
+        // Add to discovery store
+        const discoveryResult = {
           id: fsResult.id,
           moduleName: 'FileSystemDiscovery',
           companyName: selectedSourceProfile?.companyName || 'Unknown',
           result: fsResult,
           timestamp: new Date().toISOString(),
-        } as any);
-      } else {
-        console.error('[FileSystemDiscoveryHook] ❌ Result indicates FAILURE');
-        const errorMsg = result?.error || 'Discovery failed with unknown error';
-        console.error('[FileSystemDiscoveryHook] Error message:', errorMsg);
-        console.error('[FileSystemDiscoveryHook] Full result object:', JSON.stringify(result, null, 2));
-        addLog(`Discovery failed: ${errorMsg}`, 'error');
-        setError(errorMsg);
+        };
+        addResult(discoveryResult as any);
+        console.log('[FileSystemDiscoveryHook] Discovery result added to store');
       }
+    });
 
-      console.log('[FileSystemDiscoveryHook] Cleaning up discovery state...');
-      setIsRunning(false);
-      setProgress(null);
-      setShowExecutionDialog(false);
-      setCurrentToken(null);
-      console.log('[FileSystemDiscoveryHook] Discovery state cleaned up');
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.error('[FileSystemDiscoveryHook] Discovery error event:', data.error);
+        setError(data.error);
+        setIsRunning(false);
+        setProgress(null);
+        setShowExecutionDialog(false);
+        setCurrentToken(null);
+        currentTokenRef.current = null;
+        addLog(`Discovery failed: ${data.error}`, 'error');
+      }
+    });
 
-    } catch (err) {
-      console.error('[FileSystemDiscoveryHook] ❌ CRITICAL: executeDiscoveryModule threw exception');
-      console.error('[FileSystemDiscoveryHook] Exception:', err);
-      console.error('[FileSystemDiscoveryHook] Exception type:', typeof err);
-      console.error('[FileSystemDiscoveryHook] Exception message:', err instanceof Error ? err.message : String(err));
-      console.error('[FileSystemDiscoveryHook] Exception stack:', err instanceof Error ? err.stack : 'No stack');
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.warn('[FileSystemDiscoveryHook] Discovery cancelled event');
+        setIsRunning(false);
+        setProgress(null);
+        setShowExecutionDialog(false);
+        setCurrentToken(null);
+        currentTokenRef.current = null;
+        addLog('Discovery cancelled by user', 'warning');
+      }
+    });
 
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      addLog(`Error: ${errorMessage}`, 'error');
+    return () => {
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
+    };
+  }, []); // ✅ CRITICAL: Empty dependency array - event listeners set up once
+
+  const startDiscovery = useCallback(async () => {
+    console.log('[FileSystemDiscoveryHook] ========== START DISCOVERY CALLED ==========');
+
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
       setError(errorMessage);
-      setProgress(null);
+      console.error('[FileSystemDiscoveryHook]', errorMessage);
+      return;
+    }
+
+    if (isRunning) {
+      console.warn('[FileSystemDiscoveryHook] Discovery already running, ignoring request');
+      return;
+    }
+
+    const token = `filesystem-discovery-${Date.now()}`;
+    console.log('[FileSystemDiscoveryHook] Generated token:', token);
+
+    setIsRunning(true);
+    setError(null);
+    setLogs([]);
+    setShowExecutionDialog(true);
+    setCurrentToken(token);
+    currentTokenRef.current = token; // CRITICAL: Set ref for event matching
+
+    const initialProgress: FileSystemProgress = {
+      phase: 'initializing',
+      serversCompleted: 0,
+      totalServers: config?.servers?.length || 1,
+      sharesCompleted: 0,
+      totalShares: 0,
+      percentComplete: 0,
+      message: 'Initializing file system discovery...',
+    };
+    setProgress(initialProgress);
+
+    const companyName = selectedSourceProfile.companyName || selectedSourceProfile.name || 'Unknown';
+    console.log('[FileSystemDiscoveryHook] Company:', companyName);
+
+    addLog('Starting File System discovery...', 'info');
+    addLog(`Company: ${companyName}`, 'info');
+    addLog(`Servers to scan: ${config.servers?.length || 0} (localhost if none)`, 'info');
+    addLog(`Include hidden shares: ${config.includeHiddenShares}`, 'info');
+    addLog(`Scan permissions: ${config.scanPermissions}`, 'info');
+    addLog(`Scan large files: ${config.scanLargeFiles}`, 'info');
+
+    try {
+      console.log('[FileSystemDiscoveryHook] Calling window.electron.executeDiscovery...');
+
+      // Use event-driven API instead of deprecated executeDiscoveryModule
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'FileSystem',
+        parameters: {
+          Servers: config.servers && config.servers.length > 0 ? config.servers : null,
+          IncludeHiddenShares: config.includeHiddenShares || false,
+          IncludeAdministrativeShares: config.includeAdministrativeShares || false,
+          ScanPermissions: config.scanPermissions !== false,
+          ScanLargeFiles: config.scanLargeFiles !== false,
+          LargeFileThresholdMB: config.largeFileThresholdMB || 100,
+        },
+        executionOptions: {
+          timeout: 300000, // 5 minutes for file system discovery
+          showWindow: false, // Use integrated dialog
+        },
+        executionId: token, // CRITICAL: Pass token for event matching
+      });
+
+      console.log('[FileSystemDiscoveryHook] Discovery execution initiated:', result);
+
+      // Note: Completion will be handled by the discovery:complete event listener
+    } catch (error: any) {
+      const errorMessage = error.message || 'Unknown error occurred during discovery';
+      console.error('[FileSystemDiscoveryHook] Discovery failed:', errorMessage);
+      setError(errorMessage);
       setIsRunning(false);
+      setProgress(null);
       setShowExecutionDialog(false);
       setCurrentToken(null);
+      currentTokenRef.current = null;
+      addLog(`Error: ${errorMessage}`, 'error');
     }
-  }, [config, selectedSourceProfile, addLog, addDiscoveryResult]);
+  }, [config, selectedSourceProfile, isRunning, addLog]);
 
   const cancelDiscovery = useCallback(async () => {
-    if (!isRunning || !currentToken) return;
+    if (!isRunning || !currentToken) {
+      console.warn('[FileSystemDiscoveryHook] Cannot cancel - not running or no token');
+      return;
+    }
+
+    console.warn('[FileSystemDiscoveryHook] Cancelling discovery...');
 
     try {
       addLog('Cancelling File System discovery...', 'warning');
       await window.electron.cancelDiscovery(currentToken);
+      console.log('[FileSystemDiscoveryHook] Discovery cancellation requested successfully');
+
+      // Set timeout as fallback in case cancelled event doesn't fire
+      setTimeout(() => {
+        setIsRunning(false);
+        setProgress(null);
+        setShowExecutionDialog(false);
+        setCurrentToken(null);
+        currentTokenRef.current = null;
+        addLog('File System discovery cancelled', 'warning');
+        console.warn('[FileSystemDiscoveryHook] Discovery cancelled (fallback timeout)');
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Error cancelling discovery';
+      console.error('[FileSystemDiscoveryHook]', errorMessage);
+      // Reset state even on error
       setIsRunning(false);
       setProgress(null);
       setShowExecutionDialog(false);
       setCurrentToken(null);
-      addLog('File System discovery cancelled', 'warning');
-    } catch (err) {
-      console.error('Failed to cancel discovery:', err);
-      addLog(`Failed to cancel: ${err instanceof Error ? err.message : 'Unknown error'}`, 'error');
+      currentTokenRef.current = null;
+      addLog(`Failed to cancel: ${errorMessage}`, 'error');
     }
   }, [isRunning, currentToken, addLog]);
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import type {
@@ -11,6 +11,7 @@ import type {
 } from '../types/models/vmware';
 import { VMWARE_TEMPLATES } from '../types/models/vmware';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import { useProfileStore } from '../store/useProfileStore';
 
 export interface VMwareDiscoveryLogicState {
   config: VMwareDiscoveryConfig;
@@ -32,7 +33,8 @@ const formatBytes = (bytes: number): string => {
 };
 
 export const useVMwareDiscoveryLogic = () => {
-  const { getResultsByModuleName } = useDiscoveryStore();
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { getResultsByModuleName, addResult } = useDiscoveryStore();
 
   const [config, setConfig] = useState<VMwareDiscoveryConfig>({
     vCenters: [],
@@ -56,6 +58,75 @@ export const useVMwareDiscoveryLogic = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'hosts' | 'vms' | 'clusters'>('overview');
+  const [cancellationToken, setCancellationToken] = useState<string | null>(null);
+
+  const currentTokenRef = useRef<string | null>(null);
+
+  // Event listeners for PowerShell streaming - Set up ONCE on mount
+  useEffect(() => {
+    console.log('[VMwareDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const message = data.message || '';
+        console.log('[VMwareDiscoveryHook] Progress:', message);
+      }
+    });
+
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const discoveryResult = {
+          id: `vmware-discovery-${Date.now()}`,
+          name: 'VMware Discovery',
+          moduleName: 'VMware',
+          displayName: 'VMware Discovery',
+          itemCount: data?.result?.vms?.length || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.vms?.length || 0} VMware VMs`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setResult(data.result as VMwareDiscoveryResult);
+        setIsLoading(false);
+        setProgress(100);
+        setCancellationToken(null);
+
+        addResult(discoveryResult);
+        console.log(`[VMwareDiscoveryHook] Discovery completed! Found ${discoveryResult.itemCount} VMs.`);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setError(data.error);
+        setIsLoading(false);
+        setCancellationToken(null);
+        console.error(`[VMwareDiscoveryHook] Discovery failed: ${data.error}`);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setIsLoading(false);
+        setProgress(0);
+        setCancellationToken(null);
+        console.warn('[VMwareDiscoveryHook] Discovery cancelled by user');
+      }
+    });
+
+    return () => {
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
+    };
+  }, []);
 
   const templates: VMwareDiscoveryTemplate[] = VMWARE_TEMPLATES.map(template => ({
     ...template,
@@ -71,24 +142,40 @@ export const useVMwareDiscoveryLogic = () => {
     if (previousResults && previousResults.length > 0) {
       console.log('[VMwareDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
       const latestResult = previousResults[previousResults.length - 1];
-      setResult(latestResult);
+      setResult(latestResult.additionalData as VMwareDiscoveryResult);
     }
   }, [getResultsByModuleName]);
 
-  const handleStartDiscovery = async () => {
+  const handleStartDiscovery = useCallback(async () => {
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setError(errorMessage);
+      console.error('[VMwareDiscoveryHook]', errorMessage);
+      return;
+    }
+
+    if (isLoading) return;
+
+    const token = `vmware-discovery-${Date.now()}`;
+
     setIsLoading(true);
     setProgress(0);
     setError(null);
     setResult(null);
+    setCancellationToken(token);
+
+    currentTokenRef.current = token;
+
+    console.log(`[VMwareDiscoveryHook] Starting discovery for company: ${selectedSourceProfile.companyName}`);
+    console.log(`[VMwareDiscoveryHook] Parameters:`, {
+      VCenters: config.vCenters,
+      IncludeHosts: config.includeHosts,
+      IncludeVMs: config.includeVMs
+    });
 
     try {
-      const progressInterval = setInterval(() => {
-        setProgress((prev) => Math.min(prev + Math.random() * 15, 95));
-      }, 500);
-
-      const scriptResult = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/VMwareDiscovery.psm1',
-        functionName: 'Invoke-VMwareDiscovery',
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'VMware',
         parameters: {
           VCenters: config.vCenters,
           IncludeHosts: config.includeHosts,
@@ -99,22 +186,48 @@ export const useVMwareDiscoveryLogic = () => {
           IncludeNetworking: config.includeNetworking,
           Timeout: config.timeout,
         },
+        executionOptions: {
+          timeout: (config.timeout || 300) * 1000,
+          showWindow: false,
+        },
+        executionId: token,
       });
 
-      clearInterval(progressInterval);
-      setProgress(100);
-
-      if (scriptResult.success) {
-        setResult(scriptResult.data as VMwareDiscoveryResult);
-      } else {
-        setError(scriptResult.error || 'VMware discovery failed');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-    } finally {
+      console.log('[VMwareDiscoveryHook] Discovery execution initiated:', result);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Unknown error occurred during discovery';
+      console.error('[VMwareDiscoveryHook] Discovery failed:', errorMessage);
+      setError(errorMessage);
       setIsLoading(false);
+      setCancellationToken(null);
+      currentTokenRef.current = null;
     }
-  };
+  }, [selectedSourceProfile, config, isLoading]);
+
+  const cancelDiscovery = useCallback(async () => {
+    if (!isLoading || !cancellationToken) return;
+
+    console.warn('[VMwareDiscoveryHook] Cancelling discovery...');
+
+    try {
+      await window.electron.cancelDiscovery(cancellationToken);
+      console.log('[VMwareDiscoveryHook] Discovery cancellation requested successfully');
+
+      setTimeout(() => {
+        setIsLoading(false);
+        setProgress(0);
+        setCancellationToken(null);
+        currentTokenRef.current = null;
+        console.warn('[VMwareDiscoveryHook] Discovery cancelled');
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Error cancelling discovery';
+      console.error('[VMwareDiscoveryHook]', errorMessage);
+      setIsLoading(false);
+      setCancellationToken(null);
+      currentTokenRef.current = null;
+    }
+  }, [isLoading, cancellationToken]);
 
   const handleApplyTemplate = (template: VMwareDiscoveryTemplate) => {
     setConfig((prev) => ({
@@ -290,6 +403,7 @@ export const useVMwareDiscoveryLogic = () => {
     setActiveTab,
     templates,
     handleStartDiscovery,
+    cancelDiscovery,
     handleApplyTemplate,
     handleExport,
     filteredHosts,

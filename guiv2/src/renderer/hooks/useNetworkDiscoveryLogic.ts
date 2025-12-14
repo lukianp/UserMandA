@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import type {
@@ -9,6 +9,9 @@ import type {
   NetworkPort,
   NetworkDiscoveryTemplate,
 } from '../types/models/network';
+
+import { useProfileStore } from '../store/useProfileStore';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 export interface NetworkDiscoveryLogicState {
   config: NetworkDiscoveryConfig;
@@ -22,6 +25,9 @@ export interface NetworkDiscoveryLogicState {
 }
 
 export const useNetworkDiscoveryLogic = () => {
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult } = useDiscoveryStore();
+
   const [config, setConfig] = useState<NetworkDiscoveryConfig>({
     subnets: ['192.168.1.0/24'],
     scanType: 'Standard',
@@ -44,6 +50,75 @@ export const useNetworkDiscoveryLogic = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'devices' | 'subnets' | 'ports'>('overview');
+  const [cancellationToken, setCancellationToken] = useState<string | null>(null);
+
+  const currentTokenRef = useRef<string | null>(null);
+
+  // Event listeners for PowerShell streaming - Set up ONCE on mount
+  useEffect(() => {
+    console.log('[NetworkDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const message = data.message || '';
+        console.log('[NetworkDiscoveryHook] Progress:', message);
+      }
+    });
+
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const discoveryResult = {
+          id: `network-discovery-${Date.now()}`,
+          name: 'Network Discovery',
+          moduleName: 'Network',
+          displayName: 'Network Discovery',
+          itemCount: data?.result?.devices?.length || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.devices?.length || 0} network devices`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setResult(data.result as NetworkDiscoveryResult);
+        setIsLoading(false);
+        setProgress(100);
+        setCancellationToken(null);
+
+        addResult(discoveryResult);
+        console.log(`[NetworkDiscoveryHook] Discovery completed! Found ${discoveryResult.itemCount} devices.`);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setError(data.error);
+        setIsLoading(false);
+        setCancellationToken(null);
+        console.error(`[NetworkDiscoveryHook] Discovery failed: ${data.error}`);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setIsLoading(false);
+        setProgress(0);
+        setCancellationToken(null);
+        console.warn('[NetworkDiscoveryHook] Discovery cancelled by user');
+      }
+    });
+
+    return () => {
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
+    };
+  }, []);
 
   const templates: NetworkDiscoveryTemplate[] = [
     {
@@ -120,20 +195,36 @@ export const useNetworkDiscoveryLogic = () => {
     },
   ];
 
-  const handleStartDiscovery = async () => {
+  const handleStartDiscovery = useCallback(async () => {
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setError(errorMessage);
+      console.error('[NetworkDiscoveryHook]', errorMessage);
+      return;
+    }
+
+    if (isLoading) return;
+
+    const token = `network-discovery-${Date.now()}`;
+
     setIsLoading(true);
     setProgress(0);
     setError(null);
     setResult(null);
+    setCancellationToken(token);
+
+    currentTokenRef.current = token;
+
+    console.log(`[NetworkDiscoveryHook] Starting discovery for company: ${selectedSourceProfile.companyName}`);
+    console.log(`[NetworkDiscoveryHook] Parameters:`, {
+      IPRanges: config.subnets,
+      IncludePortScan: config.includePortScan,
+      PortRange: config.portScanRange
+    });
 
     try {
-      const progressInterval = setInterval(() => {
-        setProgress((prev) => Math.min(prev + Math.random() * 15, 95));
-      }, 500);
-
-      const scriptResult = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/NetworkDiscovery.psm1',
-        functionName: 'Invoke-NetworkDiscovery',
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'Network',
         parameters: {
           IPRanges: config.subnets,
           IncludeDevices: config.includePingSweep,
@@ -144,22 +235,48 @@ export const useNetworkDiscoveryLogic = () => {
           PortRange: config.portScanRange || '1-1024',
           Timeout: config.timeout,
         },
+        executionOptions: {
+          timeout: (config.timeout || 300) * 1000,
+          showWindow: false,
+        },
+        executionId: token,
       });
 
-      clearInterval(progressInterval);
-      setProgress(100);
-
-      if (scriptResult.success) {
-        setResult(scriptResult.data as NetworkDiscoveryResult);
-      } else {
-        setError(scriptResult.error || 'Network discovery failed');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-    } finally {
+      console.log('[NetworkDiscoveryHook] Discovery execution initiated:', result);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Unknown error occurred during discovery';
+      console.error('[NetworkDiscoveryHook] Discovery failed:', errorMessage);
+      setError(errorMessage);
       setIsLoading(false);
+      setCancellationToken(null);
+      currentTokenRef.current = null;
     }
-  };
+  }, [selectedSourceProfile, config, isLoading]);
+
+  const cancelDiscovery = useCallback(async () => {
+    if (!isLoading || !cancellationToken) return;
+
+    console.warn('[NetworkDiscoveryHook] Cancelling discovery...');
+
+    try {
+      await window.electron.cancelDiscovery(cancellationToken);
+      console.log('[NetworkDiscoveryHook] Discovery cancellation requested successfully');
+
+      setTimeout(() => {
+        setIsLoading(false);
+        setProgress(0);
+        setCancellationToken(null);
+        currentTokenRef.current = null;
+        console.warn('[NetworkDiscoveryHook] Discovery cancelled');
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Error cancelling discovery';
+      console.error('[NetworkDiscoveryHook]', errorMessage);
+      setIsLoading(false);
+      setCancellationToken(null);
+      currentTokenRef.current = null;
+    }
+  }, [isLoading, cancellationToken]);
 
   const handleApplyTemplate = (template: NetworkDiscoveryTemplate) => {
     setConfig((prev) => ({
@@ -310,6 +427,7 @@ export const useNetworkDiscoveryLogic = () => {
     setActiveTab,
     templates,
     handleStartDiscovery,
+    cancelDiscovery,
     handleApplyTemplate,
     handleExport,
     filteredDevices,

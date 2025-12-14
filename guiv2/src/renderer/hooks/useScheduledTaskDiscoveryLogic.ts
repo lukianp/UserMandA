@@ -2,14 +2,14 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
-export const useEnvironmentDetectionDiscoveryLogic = () => {
+export const useScheduledTaskDiscoveryLogic = () => {
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const { addResult, getResultsByModuleName } = useDiscoveryStore();
   const currentTokenRef = useRef<string | null>(null);
 
   const [state, setState] = useState<{
     config: { timeout: number };
-    result: any | null;
+    result: any;
     isDiscovering: boolean;
     progress: { current: number; total: number; message: string; percentage: number };
     error: string | null;
@@ -23,21 +23,21 @@ export const useEnvironmentDetectionDiscoveryLogic = () => {
 
   // Load previous results
   useEffect(() => {
-    const previousResults = getResultsByModuleName('EnvironmentDetectionDiscovery');
+    const previousResults = getResultsByModuleName('ScheduledTaskDiscovery');
     if (previousResults && previousResults.length > 0) {
       setState(prev => ({ ...prev, result: previousResults[previousResults.length - 1].additionalData }));
     }
   }, [getResultsByModuleName]);
 
-  // Event listeners with EMPTY dependency array
+  // Event listeners
   useEffect(() => {
     const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         const discoveryResult = {
-          id: `environmentdetection-discovery-${Date.now()}`,
-          name: 'Environment Detection Discovery',
-          moduleName: 'EnvironmentDetectionDiscovery',
-          displayName: 'Environment Detection Discovery',
+          id: `scheduledtask-discovery-${Date.now()}`,
+          name: 'Scheduled Task Discovery',
+          moduleName: 'ScheduledTaskDiscovery',
+          displayName: 'Scheduled Task Discovery',
           itemCount: data?.result?.totalItems || 0,
           discoveryTime: new Date().toISOString(),
           duration: data.duration || 0,
@@ -60,8 +60,26 @@ export const useEnvironmentDetectionDiscoveryLogic = () => {
       }
     });
 
-    return () => { unsubscribeComplete?.(); unsubscribeError?.(); };
-  }, []);
+    const unsubscribeProgress = window.electron?.onDiscoveryProgress?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          progress: {
+            current: data.itemsProcessed || 0,
+            total: data.totalItems || 100,
+            message: data.currentPhase || '',
+            percentage: data.percentage || 0,
+          },
+        }));
+      }
+    });
+
+    return () => {
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeProgress?.();
+    };
+  }, [addResult]);
 
   const startDiscovery = useCallback(async () => {
     if (!selectedSourceProfile) {
@@ -69,14 +87,14 @@ export const useEnvironmentDetectionDiscoveryLogic = () => {
       return;
     }
 
-    const token = `environmentdetection-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const token = `scheduledtask-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     currentTokenRef.current = token;
-    setState(prev => ({ ...prev, isDiscovering: true, error: null }));
+    setState(prev => ({ ...prev, isDiscovering: true, error: null, result: null }));
 
     try {
       await window.electron.executeDiscovery({
-        moduleName: 'EnvironmentDetection',
-        parameters: { IncludeOS: true, IncludeHardware: true },
+        moduleName: 'ScheduledTask',
+        parameters: {},
         executionOptions: { timeout: 300000, showWindow: false },
         executionId: token,
       });
@@ -87,7 +105,9 @@ export const useEnvironmentDetectionDiscoveryLogic = () => {
 
   const cancelDiscovery = useCallback(async () => {
     if (currentTokenRef.current) {
-      await window.electron.cancelDiscovery(currentTokenRef.current);
+      await window.electron.cancelDiscovery?.(currentTokenRef.current);
+      setState(prev => ({ ...prev, isDiscovering: false }));
+      currentTokenRef.current = null;
     }
   }, []);
 

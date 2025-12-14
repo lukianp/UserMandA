@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import type {
@@ -11,6 +11,7 @@ import type {
 } from '../types/models/licensing';
 
 import { useProfileStore } from '../store/useProfileStore';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { getElectronAPI } from '../lib/electron-api-fallback';
 
 type TabType = 'overview' | 'licenses' | 'assignments' | 'subscriptions' | 'compliance';
@@ -59,6 +60,7 @@ interface LicenseStats {
 export const useLicensingDiscoveryLogic = () => {
   // Get selected profile from store
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult } = useDiscoveryStore();
 
   const [state, setState] = useState<LicensingDiscoveryState>({
     config: {
@@ -89,36 +91,100 @@ export const useLicensingDiscoveryLogic = () => {
     error: null
   });
 
-  // IPC progress tracking
+  const currentTokenRef = useRef<string | null>(null);
+
+  // Event listeners for PowerShell streaming - Set up ONCE on mount
   useEffect(() => {
-    const unsubscribe = window.electronAPI?.onProgress?.((data: any) => {
-      if (data.type === 'licensing-discovery' && data.token === state.cancellationToken) {
+    console.log('[LicensingDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const message = data.message || '';
         setState(prev => ({
           ...prev,
           progress: {
-            current: data.current || 0,
-            total: data.total || 100,
-            message: data.message || '',
-            percentage: data.percentage || 0
+            ...prev.progress,
+            message: message
           }
         }));
       }
     });
 
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const result = {
+          id: `licensing-discovery-${Date.now()}`,
+          name: 'Licensing Discovery',
+          moduleName: 'Licensing',
+          displayName: 'Licensing Discovery',
+          itemCount: data?.result?.totalLicenses || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalLicenses || 0} licenses`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setState(prev => ({
+          ...prev,
+          result: data.result || data,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
+        }));
+
+        addResult(result);
+        console.log(`[LicensingDiscoveryHook] Discovery completed! Found ${result.itemCount} items.`);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          error: data.error
+        }));
+        console.error(`[LicensingDiscoveryHook] Discovery failed: ${data.error}`);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
+        }));
+        console.warn('[LicensingDiscoveryHook] Discovery cancelled by user');
+      }
+    });
+
     return () => {
-      if (unsubscribe) unsubscribe();
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
     };
-  }, [state.cancellationToken]);
+  }, []);
 
   const startDiscovery = useCallback(async () => {
     if (!selectedSourceProfile) {
       const errorMessage = 'No company profile selected. Please select a profile first.';
       setState(prev => ({ ...prev, error: errorMessage }));
-      console.error('[LicensingDiscovery]', errorMessage);
+      console.error('[LicensingDiscoveryHook]', errorMessage);
       return;
     }
 
-    const token = `licensing-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    if (state.isDiscovering) return;
+
+    const token = `licensing-discovery-${Date.now()}`;
 
     setState(prev => ({
       ...prev,
@@ -128,8 +194,10 @@ export const useLicensingDiscoveryLogic = () => {
       progress: { current: 0, total: 100, message: 'Starting license discovery...', percentage: 0 }
     }));
 
-    console.log(`[LicensingDiscovery] Starting discovery for company: ${selectedSourceProfile.companyName}`);
-    console.log(`[LicensingDiscovery] Parameters:`, {
+    currentTokenRef.current = token;
+
+    console.log(`[LicensingDiscoveryHook] Starting discovery for company: ${selectedSourceProfile.companyName}`);
+    console.log(`[LicensingDiscoveryHook] Parameters:`, {
       IncludeMicrosoft365: state.config.includeMicrosoft365,
       IncludeAzure: state.config.includeAzure,
       IncludeOffice: state.config.includeOffice,
@@ -138,55 +206,68 @@ export const useLicensingDiscoveryLogic = () => {
     });
 
     try {
-      const electronAPI = getElectronAPI();
-      const discoveryResult = await electronAPI.executeDiscoveryModule(
-        'Licensing',
-        selectedSourceProfile.companyName,
-        {
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'Licensing',
+        parameters: {
           IncludeMicrosoft365: state.config.includeMicrosoft365,
           IncludeAzure: state.config.includeAzure,
           IncludeOffice: state.config.includeOffice,
           IncludeWindows: state.config.includeWindows,
           IncludeThirdParty: state.config.includeThirdParty
         },
-        { timeout: state.config.timeout || 600000 }
-      );
+        executionOptions: {
+          timeout: state.config.timeout || 600000,
+          showWindow: false,
+        },
+        executionId: token,
+      });
 
-      setState(prev => ({
-        ...prev,
-        result: discoveryResult.data || discoveryResult,
-        isDiscovering: false,
-        cancellationToken: null,
-        progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
-      }));
-
-      console.log(`[LicensingDiscovery] Discovery completed successfully`);
+      console.log('[LicensingDiscoveryHook] Discovery execution initiated:', result);
     } catch (error: any) {
-      console.error('[LicensingDiscovery] Discovery failed:', error);
+      const errorMessage = error.message || 'Unknown error occurred during discovery';
+      console.error('[LicensingDiscoveryHook] Discovery failed:', errorMessage);
       setState(prev => ({
         ...prev,
         isDiscovering: false,
         cancellationToken: null,
-        error: error.message || 'Discovery failed'
+        error: errorMessage,
+        progress: { current: 0, total: 100, message: '', percentage: 0 }
       }));
+      currentTokenRef.current = null;
     }
-  }, [selectedSourceProfile, state.config]);
+  }, [selectedSourceProfile, state.config, state.isDiscovering]);
 
   const cancelDiscovery = useCallback(async () => {
-    if (state.cancellationToken) {
-      try {
-        await window.electronAPI.cancelExecution(state.cancellationToken);
+    if (!state.isDiscovering || !state.cancellationToken) return;
+
+    console.warn('[LicensingDiscoveryHook] Cancelling discovery...');
+
+    try {
+      await window.electron.cancelDiscovery(state.cancellationToken);
+      console.log('[LicensingDiscoveryHook] Discovery cancellation requested successfully');
+
+      setTimeout(() => {
         setState(prev => ({
           ...prev,
           isDiscovering: false,
           cancellationToken: null,
           progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
         }));
-      } catch (error: any) {
-        console.error('Failed to cancel discovery:', error);
-      }
+        currentTokenRef.current = null;
+        console.warn('[LicensingDiscoveryHook] Discovery cancelled');
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Error cancelling discovery';
+      console.error('[LicensingDiscoveryHook]', errorMessage);
+      setState(prev => ({
+        ...prev,
+        isDiscovering: false,
+        cancellationToken: null,
+        progress: { current: 0, total: 100, message: '', percentage: 0 }
+      }));
+      currentTokenRef.current = null;
     }
-  }, [state.cancellationToken]);
+  }, [state.isDiscovering, state.cancellationToken]);
 
   const updateConfig = useCallback((updates: Partial<LicenseDiscoveryConfig>) => {
     setState(prev => ({

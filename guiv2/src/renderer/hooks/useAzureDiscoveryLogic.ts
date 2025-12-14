@@ -255,18 +255,17 @@ export const useAzureDiscoveryLogic = () => {
     addLog('Testing connection to Azure AD...', 'info');
 
     try {
-      const electronAPI = getElectronAPI();
-
-      await electronAPI.executeDiscoveryModule(
-        'Azure',
-        selectedSourceProfile.companyName,
-        {
+      await window.electron.executeDiscovery({
+        moduleName: 'Azure',
+        parameters: {
           TestConnection: true,
         },
-        {
+        executionOptions: {
           timeout: 30000,
-        }
-      );
+          showWindow: false,
+        },
+        executionId: `azure-test-${Date.now()}`,
+      });
 
       setConnectionStatus('connected');
       addLog(`Connection successful! Tenant: ${selectedSourceProfile.tenantId || selectedSourceProfile.companyName}`, 'success');
@@ -310,11 +309,11 @@ export const useAzureDiscoveryLogic = () => {
     console.log('[AzureDiscoveryHook] Full profile:', selectedSourceProfile);
 
     addLog(`Starting Azure discovery for ${selectedSourceProfile.companyName}...`, 'info');
-    const tenantId = selectedSourceProfile.tenantId || selectedSourceProfile.credentials?.azureTenantId || 'N/A';
-    const clientId = selectedSourceProfile.clientId || selectedSourceProfile.credentials?.azureClientId || 'N/A';
+    const tenantId = selectedSourceProfile.tenantId || 'N/A';
+    const clientId = selectedSourceProfile.clientId || 'N/A';
     addLog(`Tenant ID: ${tenantId}`, 'info');
     addLog(`Client ID: ${clientId}`, 'info');
-    addLog(`Profile has credentials: ${!!(selectedSourceProfile.credentials) ? 'Yes' : 'No'}`, 'info');
+    addLog(`Profile has credentials: ${!!(selectedSourceProfile.credential) ? 'Yes' : 'No'}`, 'info');
 
     // Log selected services
     const services: string[] = [];
@@ -353,8 +352,10 @@ export const useAzureDiscoveryLogic = () => {
           IncludeExchange: formData.includeExchange,
           IncludeLicenses: formData.includeLicenses,
           MaxResults: formData.maxResults,
-          timeout: formData.timeout * 1000, // Convert to milliseconds
-          showWindow: formData.showWindow, // Pass showWindow parameter
+        },
+        executionOptions: {
+          timeout: formData.timeout * 1000,
+          showWindow: formData.showWindow,
         },
         executionId: token, // Pass the token so events are matched correctly
       });

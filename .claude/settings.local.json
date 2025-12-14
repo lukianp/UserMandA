@@ -74,7 +74,17 @@
       "Bash(powershell.exe -Command \"cd C:\\enterprisediscovery\\guiv2; if (Test-Path ''.webpack'') { Remove-Item -Recurse -Force ''.webpack'' }\")",
       "Bash(Select-String -Pattern \"(useAWSDiscoveryLogic|useHyperVDiscoveryLogic|useOffice365DiscoveryLogic|usePowerPlatformDiscoveryLogic|useSecurityInfrastructureDiscoveryLogic)\")",
       "Bash(Select-Object -First 20)",
-      "Bash(Select-String -Pattern \"useAWSDiscoveryLogic|useHyperVDiscoveryLogic|useOffice365DiscoveryLogic|usePowerPlatformDiscoveryLogic|useSecurityInfrastructureDiscoveryLogic\")"
+      "Bash(Select-String -Pattern \"useAWSDiscoveryLogic|useHyperVDiscoveryLogic|useOffice365DiscoveryLogic|usePowerPlatformDiscoveryLogic|useSecurityInfrastructureDiscoveryLogic\")",
+      "Bash(powershell.exe -Command \"Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useAWSDiscoveryLogic.ts'' -Destination ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\'' -Force; Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useHyperVDiscoveryLogic.ts'' -Destination ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\'' -Force; Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useOffice365DiscoveryLogic.ts'' -Destination ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\'' -Force; Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\usePowerPlatformDiscoveryLogic.ts'' -Destination ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\'' -Force; Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useSecurityInfrastructureDiscoveryLogic.ts'' -Destination ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\'' -Force; Write-Host ''All 5 fixed discovery hook files copied to deployment directory''\")",
+      "Bash(powershell.exe -Command:*)",
+      "Bash(tee:*)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(Select-String \"DiscoveryLogic\")",
+      "Bash(Measure-Object -Line)",
+      "Bash(powershell.exe -Command \"Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\use*DiscoveryLogic.ts'' -Destination ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\'' -Force -Verbose | Select-Object -Last 10\")",
+      "Bash(powershell.exe -Command \"cd C:\\enterprisediscovery\\guiv2; npx tsc --noEmit 2>&1 | Select-String -Pattern ''use.*DiscoveryLogic'' | Select-Object -First 20\")",
+      "Bash(powershell.exe -Command \"Copy-Item -Path ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useAWSCloudInfrastructureDiscoveryLogic.ts'' -Destination ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useAWSCloudInfrastructureDiscoveryLogic.ts'' -Force\")",
+      "Bash(powershell.exe -Command \"cd C:\\enterprisediscovery\\guiv2; npm run build:main 2>&1 | Select-Object -Last 15\")"
     ],
     "deny": [],
     "ask": []

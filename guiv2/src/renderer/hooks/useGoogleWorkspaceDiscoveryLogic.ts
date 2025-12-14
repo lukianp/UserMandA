@@ -4,7 +4,7 @@
  * NO PLACEHOLDERS - Complete implementation with Users, Groups, Gmail, Drive, Calendar
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import {
@@ -45,7 +45,8 @@ interface GoogleWorkspaceDiscoveryState {
 export const useGoogleWorkspaceDiscoveryLogic = () => {
   // Get selected company profile from store
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
-  const { getResultsByModuleName } = useDiscoveryStore();
+  const { getResultsByModuleName, addResult } = useDiscoveryStore();
+  const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
 
   const [state, setState] = useState<GoogleWorkspaceDiscoveryState>({
     config: {
@@ -78,14 +79,14 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
     if (previousResults && previousResults.length > 0) {
       console.log('[GoogleWorkspaceDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
       const latestResult = previousResults[previousResults.length - 1];
-      setState(prev => ({ ...prev, result: latestResult }));
+      setState(prev => ({ ...prev, result: latestResult.additionalData as GoogleWorkspaceDiscoveryResult }));
     }
   }, [getResultsByModuleName]);
 
   // Real-time progress tracking via IPC
   useEffect(() => {
     const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
-      if (data.executionId === state.cancellationToken) {
+      if (data.executionId === currentTokenRef.current) {  // ✅ FIXED: Use ref instead of state
         setState(prev => ({
           ...prev,
           progress: {
@@ -99,11 +100,30 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
     });
 
     const unsubscribeOutput = window.electron.onDiscoveryOutput((data) => {
-      // Handle output if needed
+      if (data.executionId === currentTokenRef.current) {  // ✅ FIXED: Add token check
+        // Handle output if needed
+      }
     });
 
     const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
-      if (data.executionId === state.cancellationToken) {
+      if (data.executionId === currentTokenRef.current) {  // ✅ FIXED: Use ref instead of state
+        const discoveryResult = {
+          id: `google-workspace-discovery-${Date.now()}`,
+          name: 'Google Workspace Discovery',
+          moduleName: 'GoogleWorkspaceDiscovery',
+          displayName: 'Google Workspace Discovery',
+          itemCount: data?.result?.totalUsersFound || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalUsersFound || 0} users`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
         setState(prev => ({
           ...prev,
           result: data.result,
@@ -111,11 +131,13 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
           cancellationToken: null,
           progress: { current: 100, total: 100, message: 'Discovery completed', percentage: 100 }
         }));
+
+        addResult(discoveryResult); // ✅ ADDED: Store in discovery store
       }
     });
 
     const unsubscribeError = window.electron.onDiscoveryError((data) => {
-      if (data.executionId === state.cancellationToken) {
+      if (data.executionId === currentTokenRef.current) {  // ✅ FIXED: Use ref instead of state
         setState(prev => ({
           ...prev,
           isDiscovering: false,
@@ -132,7 +154,7 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
       if (unsubscribeComplete) unsubscribeComplete();
       if (unsubscribeError) unsubscribeError();
     };
-  }, [state.cancellationToken]);
+  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
 
   // Start discovery
   const startDiscovery = useCallback(async () => {
@@ -165,14 +187,13 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
       progress: { current: 0, total: 100, message: 'Initializing Google Workspace discovery...', percentage: 0 }
     }));
 
-    try {
-      const electronAPI = getElectronAPI();
+    currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
 
-      // Execute discovery module with credentials from the profile
-      const result = await electronAPI.executeDiscoveryModule(
-        'GoogleWorkspace',
-        selectedSourceProfile.companyName,
-        {
+    try {
+      // ✅ FIXED: Use new event-driven executeDiscovery API instead of deprecated executeDiscoveryModule
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'GoogleWorkspace',
+        parameters: {
           ServiceTypes: state.config.serviceTypes,
           IncludeUserDetails: state.config.includeUserDetails,
           IncludeGroupMembership: state.config.includeGroupMembership,
@@ -181,10 +202,12 @@ export const useGoogleWorkspaceDiscoveryLogic = () => {
           IncludeCalendarDetails: state.config.includeCalendarDetails,
           OrgUnits: state.config.orgUnits,
         },
-        {
+        executionOptions: {  // ✅ ADDED: Missing execution options
           timeout: state.config.timeout || 300000,
-        }
-      );
+          showWindow: false,
+        },
+        executionId: token, // ✅ CRITICAL: Pass token for event matching
+      });
 
       if (result.success) {
         console.log(`[GoogleWorkspaceDiscoveryHook] ✅ Google Workspace discovery completed successfully`);

@@ -1,6 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import { useProfileStore } from '../store/useProfileStore';
 
 import type {
   SQLDiscoveryConfig,
@@ -31,7 +32,8 @@ const formatBytes = (bytes: number): string => {
 };
 
 export const useSQLServerDiscoveryLogic = () => {
-  const { getResultsByModuleName } = useDiscoveryStore();
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { getResultsByModuleName, addResult } = useDiscoveryStore();
 
   const [config, setConfig] = useState<SQLDiscoveryConfig>({
     servers: [],
@@ -52,6 +54,75 @@ export const useSQLServerDiscoveryLogic = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'instances' | 'databases'>('overview');
+  const [cancellationToken, setCancellationToken] = useState<string | null>(null);
+
+  const currentTokenRef = useRef<string | null>(null);
+
+  // Event listeners for PowerShell streaming - Set up ONCE on mount
+  useEffect(() => {
+    console.log('[SQLServerDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const message = data.message || '';
+        console.log('[SQLServerDiscoveryHook] Progress:', message);
+      }
+    });
+
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const discoveryResult = {
+          id: `sqlserver-discovery-${Date.now()}`,
+          name: 'SQL Server Discovery',
+          moduleName: 'SQLServer',
+          displayName: 'SQL Server Discovery',
+          itemCount: data?.result?.instances?.length || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.instances?.length || 0} SQL Server instances`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setResult(data.result as SQLDiscoveryResult);
+        setIsLoading(false);
+        setProgress(100);
+        setCancellationToken(null);
+
+        addResult(discoveryResult);
+        console.log(`[SQLServerDiscoveryHook] Discovery completed! Found ${discoveryResult.itemCount} instances.`);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setError(data.error);
+        setIsLoading(false);
+        setCancellationToken(null);
+        console.error(`[SQLServerDiscoveryHook] Discovery failed: ${data.error}`);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setIsLoading(false);
+        setProgress(0);
+        setCancellationToken(null);
+        console.warn('[SQLServerDiscoveryHook] Discovery cancelled by user');
+      }
+    });
+
+    return () => {
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
+    };
+  }, []);
 
   // Load previous discovery results from store on mount
   useEffect(() => {
@@ -59,7 +130,7 @@ export const useSQLServerDiscoveryLogic = () => {
     if (previousResults && previousResults.length > 0) {
       console.log('[SQLServerDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
       const latestResult = previousResults[previousResults.length - 1];
-      setResult(latestResult);
+      setResult(latestResult as any);
     }
   }, [getResultsByModuleName]);
 
@@ -120,20 +191,36 @@ export const useSQLServerDiscoveryLogic = () => {
     },
   ];
 
-  const handleStartDiscovery = async () => {
+  const handleStartDiscovery = useCallback(async () => {
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setError(errorMessage);
+      console.error('[SQLServerDiscoveryHook]', errorMessage);
+      return;
+    }
+
+    if (isLoading) return;
+
+    const token = `sqlserver-discovery-${Date.now()}`;
+
     setIsLoading(true);
     setProgress(0);
     setError(null);
     setResult(null);
+    setCancellationToken(token);
+
+    currentTokenRef.current = token;
+
+    console.log(`[SQLServerDiscoveryHook] Starting discovery for company: ${selectedSourceProfile.companyName}`);
+    console.log(`[SQLServerDiscoveryHook] Parameters:`, {
+      Servers: config.servers,
+      IncludeSystemDatabases: config.includeSystemDatabases,
+      IncludeSecurityAudit: config.includeSecurityAudit
+    });
 
     try {
-      const progressInterval = setInterval(() => {
-        setProgress((prev) => Math.min(prev + Math.random() * 15, 95));
-      }, 500);
-
-      const scriptResult = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/SQLServerDiscovery.psm1',
-        functionName: 'Invoke-SQLServerDiscovery',
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'SQLServer',
         parameters: {
           Servers: config.servers,
           IncludeSystemDatabases: config.includeSystemDatabases,
@@ -146,22 +233,48 @@ export const useSQLServerDiscoveryLogic = () => {
           Timeout: config.timeout,
           ParallelScans: config.parallelScans,
         },
+        executionOptions: {
+          timeout: (config.timeout || 300) * 1000,
+          showWindow: false,
+        },
+        executionId: token,
       });
 
-      clearInterval(progressInterval);
-      setProgress(100);
-
-      if (scriptResult.success) {
-        setResult(scriptResult.data as SQLDiscoveryResult);
-      } else {
-        setError(scriptResult.error || 'SQL Server discovery failed');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-    } finally {
+      console.log('[SQLServerDiscoveryHook] Discovery execution initiated:', result);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Unknown error occurred during discovery';
+      console.error('[SQLServerDiscoveryHook] Discovery failed:', errorMessage);
+      setError(errorMessage);
       setIsLoading(false);
+      setCancellationToken(null);
+      currentTokenRef.current = null;
     }
-  };
+  }, [selectedSourceProfile, config, isLoading]);
+
+  const cancelDiscovery = useCallback(async () => {
+    if (!isLoading || !cancellationToken) return;
+
+    console.warn('[SQLServerDiscoveryHook] Cancelling discovery...');
+
+    try {
+      await window.electron.cancelDiscovery(cancellationToken);
+      console.log('[SQLServerDiscoveryHook] Discovery cancellation requested successfully');
+
+      setTimeout(() => {
+        setIsLoading(false);
+        setProgress(0);
+        setCancellationToken(null);
+        currentTokenRef.current = null;
+        console.warn('[SQLServerDiscoveryHook] Discovery cancelled');
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Error cancelling discovery';
+      console.error('[SQLServerDiscoveryHook]', errorMessage);
+      setIsLoading(false);
+      setCancellationToken(null);
+      currentTokenRef.current = null;
+    }
+  }, [isLoading, cancellationToken]);
 
   const handleApplyTemplate = (template: typeof templates[0]) => {
     setConfig(template.config as SQLDiscoveryConfig);
@@ -320,6 +433,7 @@ export const useSQLServerDiscoveryLogic = () => {
     setActiveTab,
     templates,
     handleStartDiscovery,
+    cancelDiscovery,
     handleApplyTemplate,
     handleExport,
     filteredInstances,

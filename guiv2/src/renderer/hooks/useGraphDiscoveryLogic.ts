@@ -1,7 +1,7 @@
 /**
- * Active Directory Discovery Logic Hook
- * Provides state management and business logic for Active Directory discovery operations
- * ✅ FIXED: Now uses event-driven architecture with streaming support
+ * Microsoft Graph Discovery Logic Hook
+ * Provides state management and business logic for Microsoft Graph API object discovery operations
+ * ✅ FIXED: Uses event-driven architecture with streaming support
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -16,17 +16,17 @@ import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 /**
- * Active Directory Discovery Hook Return Type
+ * Graph Discovery Hook Return Type
  */
-export type ActiveDirectoryDiscoveryHookResult = BaseDiscoveryHookResult
+export type GraphDiscoveryHookResult = BaseDiscoveryHookResult;
 
 /**
- * Custom hook for Active Directory discovery logic
+ * Custom hook for Microsoft Graph API object discovery logic
  */
-export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHookResult => {
+export const useGraphDiscoveryLogic = (): GraphDiscoveryHookResult => {
   // Get selected company profile from store
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
-  const { addResult } = useDiscoveryStore();
+  const { addResult, getResultsByModuleName } = useDiscoveryStore();
 
   const [isRunning, setIsRunning] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -43,13 +43,29 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
   const [config, setConfig] = useState<any>({
     includeUsers: true,
     includeGroups: true,
-    includeComputers: true,
-    includeOUs: true
+    includeApplications: true,
+    includeDevices: true,
+    includeDirectoryRoles: false,
+    includeServicePrincipals: false,
   });
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTab, setSelectedTab] = useState<string>('users');
   const [searchText, setSearchText] = useState<string>('');
   const [errors, setErrors] = useState<string[]>([]);
+
+  /**
+   * Load previous results from discovery store on mount
+   */
+  useEffect(() => {
+    console.log('[GraphDiscoveryHook] Loading previous results from discovery store');
+    const previousResults = getResultsByModuleName('GraphDiscovery');
+
+    if (previousResults && previousResults.length > 0) {
+      const mostRecent = previousResults[previousResults.length - 1];
+      console.log('[GraphDiscoveryHook] Found previous result:', mostRecent);
+      setResults(mostRecent);
+    }
+  }, [getResultsByModuleName]);
 
   /**
    * Add a log entry
@@ -65,7 +81,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
 
   // ✅ ADDED: Event listeners for PowerShell streaming - Set up ONCE on mount
   useEffect(() => {
-    console.log('[ADDiscoveryHook] Setting up event listeners');
+    console.log('[GraphDiscoveryHook] Setting up event listeners');
 
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
@@ -80,68 +96,26 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
         setIsCancelling(false);
         setCurrentToken(null);
 
-        // Extract the actual data from PowerShell result
-        const psData = data.result?.Data || data.result || {};
-
-        // Create the result object that the view expects
-        const adResult = {
-          id: psData?.id || `ad-discovery-${Date.now()}`,
-          configId: psData?.id || `ad-discovery-${Date.now()}`,
-          startTime: psData?.startTime || new Date().toISOString(),
-          endTime: psData?.endTime || new Date().toISOString(),
-          status: 'completed',
-          duration: data.duration || 0,
-
-          // Extract arrays with fallbacks to empty arrays
-          users: Array.isArray(psData?.users) ? psData.users : [],
-          groups: Array.isArray(psData?.groups) ? psData.groups : [],
-          computers: Array.isArray(psData?.computers) ? psData.computers : [],
-          ous: Array.isArray(psData?.ous) ? psData.ous : [],
-          gpos: Array.isArray(psData?.gpos) ? psData.gpos : [],
-
-          // Extract stats with fallbacks
-          stats: psData?.statistics || {
-            totalUsers: 0,
-            totalGroups: 0,
-            totalComputers: 0,
-            totalOUs: 0,
-            totalGPOs: 0,
-            enabledUsers: 0,
-            securityGroups: 0,
-            enabledComputers: 0,
-            objectsPerSecond: 0
-          },
-
-          // Forest information if available
-          forest: psData?.forest || null,
-
-          // Configuration
-          config: config,
-          configName: 'Default AD Discovery'
-        };
-
-        setResults(adResult);
-
-        // Create discovery store result
-        const discoveryResult = {
-          id: adResult.id,
-          name: 'Active Directory Discovery',
-          moduleName: 'ActiveDirectory',
-          displayName: 'Active Directory Discovery',
-          itemCount: adResult.users.length + adResult.groups.length + adResult.computers.length + adResult.ous.length + adResult.gpos.length,
+        const result = {
+          id: `graph-discovery-${Date.now()}`,
+          name: 'Microsoft Graph Discovery',
+          moduleName: 'GraphDiscovery',
+          displayName: 'Microsoft Graph Discovery',
+          itemCount: data?.result?.totalItems || data?.result?.RecordCount || 0,
           discoveryTime: new Date().toISOString(),
           duration: data.duration || 0,
           status: 'Completed',
           filePath: data?.result?.outputPath || '',
           success: true,
-          summary: `Discovered ${adResult.users.length} users, ${adResult.groups.length} groups, ${adResult.computers.length} computers, ${adResult.ous.length} OUs, ${adResult.gpos.length} GPOs`,
+          summary: `Discovered ${data?.result?.totalItems || 0} Microsoft Graph objects`,
           errorMessage: '',
-          additionalData: adResult,
+          additionalData: data.result,
           createdAt: new Date().toISOString(),
         };
 
-        addResult(discoveryResult); // ✅ ADDED: Store in discovery store
-        addLog('info', `Discovery completed! Found ${discoveryResult.itemCount} items.`);
+        setResults(result);
+        addResult(result); // ✅ ADDED: Store in discovery store
+        addLog('info', `Discovery completed! Found ${result.itemCount} items.`);
       }
     });
 
@@ -171,7 +145,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
   }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
 
   /**
-   * Start the Active Directory discovery process
+   * Start the Microsoft Graph discovery process
    * ✅ FIXED: Now uses event-driven executeDiscovery API
    */
   const startDiscovery = useCallback(async () => {
@@ -192,30 +166,32 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
     setError(null);
     setLogs([]);
 
-    const token = `ad-discovery-${Date.now()}`;
+    const token = `graph-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setCurrentToken(token);
     currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
 
-    addLog('info', `Starting Active Directory discovery for ${selectedSourceProfile.companyName}...`);
+    addLog('info', `Starting Microsoft Graph discovery for ${selectedSourceProfile.companyName}...`);
 
     try {
       // ✅ FIXED: Use new event-driven API instead of deprecated executeDiscoveryModule
       const result = await window.electron.executeDiscovery({
-        moduleName: 'ActiveDirectory',
+        moduleName: 'Graph',
         parameters: {
           IncludeUsers: config.includeUsers,
           IncludeGroups: config.includeGroups,
-          IncludeComputers: config.includeComputers,
-          IncludeOUs: config.includeOUs,
+          IncludeApplications: config.includeApplications,
+          IncludeDevices: config.includeDevices,
+          IncludeDirectoryRoles: config.includeDirectoryRoles,
+          IncludeServicePrincipals: config.includeServicePrincipals,
         },
         executionOptions: {  // ✅ ADDED: Missing execution options
-          timeout: 300000,   // 5 minutes for Active Directory discovery
+          timeout: 300000,   // 5 minutes for Graph discovery
           showWindow: false, // Use integrated dialog
         },
         executionId: token, // ✅ CRITICAL: Pass token for event matching
       });
 
-      console.log('[ADDiscoveryHook] Discovery execution initiated:', result);
+      console.log('[GraphDiscoveryHook] Discovery execution initiated:', result);
       addLog('info', 'Discovery execution started - monitoring progress...');
 
       // Note: Completion will be handled by the discovery:complete event listener
@@ -273,7 +249,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
       const dataStr = JSON.stringify(results, null, 2);
       const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
 
-      const exportFileDefaultName = `ad-discovery-results-${new Date().toISOString().split('T')[0]}.json`;
+      const exportFileDefaultName = `graph-discovery-results-${new Date().toISOString().split('T')[0]}.json`;
 
       const linkElement = document.createElement('a');
       linkElement.setAttribute('href', dataUri);

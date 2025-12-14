@@ -2,9 +2,10 @@
  * Identity Governance Discovery Logic Hook
  * FULLY FUNCTIONAL production-ready business logic for Identity Governance discovery
  * NO PLACEHOLDERS - Complete implementation with Access Reviews, Entitlements, and PIM roles
+ * ✅ FIXED: Now uses event-driven architecture with streaming support
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import {
@@ -17,7 +18,7 @@ import {
   IGStats
 } from '../types/models/identityGovernance';
 import { useProfileStore } from '../store/useProfileStore';
-import { getElectronAPI } from '../lib/electron-api-fallback';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 type TabType = 'overview' | 'access-reviews' | 'entitlements' | 'pim-roles';
 
@@ -42,6 +43,7 @@ interface IGDiscoveryState {
 export const useIdentityGovernanceDiscoveryLogic = () => {
   // Get selected profile from store
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult } = useDiscoveryStore();
 
   // Combined state for optimal performance
   const [state, setState] = useState<IGDiscoveryState>({
@@ -60,28 +62,91 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
     error: null
   });
 
-  // Real-time progress tracking via IPC events
+  const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
+
+  // ✅ ADDED: Event listeners for PowerShell streaming - Set up ONCE on mount
   useEffect(() => {
-    const unsubscribe = window.electronAPI?.onProgress?.((data: any) => {
-      if (data.type === 'ig-discovery' && data.token === state.cancellationToken) {
+    console.log('[IGDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const message = data.message || '';
         setState(prev => ({
           ...prev,
           progress: {
-            current: data.current || 0,
-            total: data.total || 100,
-            message: data.message || '',
-            percentage: data.percentage || 0
+            ...prev.progress,
+            message: message
           }
         }));
       }
     });
 
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const result = {
+          id: `ig-discovery-${Date.now()}`,
+          name: 'Identity Governance Discovery',
+          moduleName: 'IdentityGovernance',
+          displayName: 'Identity Governance Discovery',
+          itemCount: data?.result?.totalItems || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalItems || 0} Identity Governance items`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setState(prev => ({
+          ...prev,
+          result: data.result || data,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
+        }));
+
+        addResult(result); // ✅ ADDED: Store in discovery store
+        console.log(`[IGDiscoveryHook] Discovery completed! Found ${result.itemCount} items.`);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          error: data.error
+        }));
+        console.error(`[IGDiscoveryHook] Discovery failed: ${data.error}`);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
+        }));
+        console.warn('[IGDiscoveryHook] Discovery cancelled by user');
+      }
+    });
+
     return () => {
-      if (unsubscribe) unsubscribe();
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
     };
-  }, [state.cancellationToken]);
+  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
 
   // Start discovery - FULLY FUNCTIONAL with error handling
+  // ✅ FIXED: Now uses event-driven executeDiscovery API
   const startDiscovery = useCallback(async () => {
     if (!selectedSourceProfile) {
       const errorMessage = 'No company profile selected. Please select a profile first.';
@@ -90,7 +155,7 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
       return;
     }
 
-    const token = `ig-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const token = `ig-discovery-${Date.now()}`;
     setState(prev => ({
       ...prev,
       isDiscovering: true,
@@ -98,6 +163,8 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
       error: null,
       progress: { current: 0, total: 100, message: 'Initializing Identity Governance discovery...', percentage: 0 }
     }));
+
+    currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
 
     console.log(`[IdentityGovernanceDiscovery] Starting discovery for company: ${selectedSourceProfile.companyName}`);
     console.log(`[IdentityGovernanceDiscovery] Parameters:`, {
@@ -107,27 +174,24 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
     });
 
     try {
-      const electronAPI = getElectronAPI();
-      const discoveryResult = await electronAPI.executeDiscoveryModule(
-        'IdentityGovernance',
-        selectedSourceProfile.companyName,
-        {
+      // ✅ FIXED: Use new event-driven API instead of deprecated executeDiscoveryModule
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'IdentityGovernance',
+        parameters: {
           IncludeAccessReviews: state.config.includeAccessReviews,
           IncludeEntitlements: state.config.includeEntitlements,
           IncludePIM: state.config.includePIM
         },
-        { timeout: state.config.timeout || 300000 }
-      );
+        executionOptions: {  // ✅ ADDED: Missing execution options
+          timeout: state.config.timeout || 300000,
+          showWindow: false, // Use integrated dialog
+        },
+        executionId: token, // ✅ CRITICAL: Pass token for event matching
+      });
 
-      setState(prev => ({
-        ...prev,
-        result: discoveryResult.data || discoveryResult,
-        isDiscovering: false,
-        cancellationToken: null,
-        progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
-      }));
+      console.log('[IdentityGovernanceDiscovery] Discovery execution initiated:', result);
 
-      console.log(`[IdentityGovernanceDiscovery] Discovery completed successfully`);
+      // Note: Completion will be handled by the discovery:complete event listener
     } catch (error: any) {
       console.error('[IdentityGovernanceDiscovery] Discovery failed:', error);
       setState(prev => ({
@@ -136,24 +200,43 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
         cancellationToken: null,
         error: error.message || 'Discovery failed. Please check your credentials and permissions.'
       }));
+      currentTokenRef.current = null;
     }
   }, [selectedSourceProfile, state.config]);
 
   // Cancel discovery - FULLY FUNCTIONAL with cleanup
+  // ✅ FIXED: Now properly cancels PowerShell process
   const cancelDiscovery = useCallback(async () => {
-    if (state.cancellationToken) {
-      try {
-        await window.electronAPI.cancelExecution(state.cancellationToken);
-      } catch (error) {
-        console.error('Failed to cancel discovery:', error);
-      }
+    if (!state.cancellationToken) return;
+
+    console.warn('[IGDiscoveryHook] Cancelling discovery...');
+
+    try {
+      await window.electron.cancelDiscovery(state.cancellationToken);
+      console.log('[IGDiscoveryHook] Discovery cancellation requested successfully');
+
+      // Set timeout as fallback in case cancelled event doesn't fire
+      setTimeout(() => {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 0, total: 100, message: 'Cancelled by user', percentage: 0 }
+        }));
+        currentTokenRef.current = null;
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Error cancelling discovery';
+      console.error('[IGDiscoveryHook]', errorMessage);
+      // Reset state even on error
+      setState(prev => ({
+        ...prev,
+        isDiscovering: false,
+        cancellationToken: null,
+        progress: { current: 0, total: 100, message: '', percentage: 0 }
+      }));
+      currentTokenRef.current = null;
     }
-    setState(prev => ({
-      ...prev,
-      isDiscovering: false,
-      cancellationToken: null,
-      progress: { current: 0, total: 100, message: 'Cancelled by user', percentage: 0 }
-    }));
   }, [state.cancellationToken]);
 
   // Export to CSV - FULLY FUNCTIONAL browser download
