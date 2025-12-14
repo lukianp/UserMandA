@@ -1,9 +1,10 @@
 /**
  * Active Directory Discovery Logic Hook
  * Provides state management and business logic for Active Directory discovery operations
+ * ✅ FIXED: Now uses event-driven architecture with streaming support
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 import {
   BaseDiscoveryHookResult,
@@ -12,7 +13,7 @@ import {
   Profile
 } from './common/discoveryHookTypes';
 import { useProfileStore } from '../store/useProfileStore';
-import { getElectronAPI } from '../lib/electron-api-fallback';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 /**
  * Active Directory Discovery Hook Return Type
@@ -25,6 +26,7 @@ export type ActiveDirectoryDiscoveryHookResult = BaseDiscoveryHookResult
 export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHookResult => {
   // Get selected company profile from store
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult } = useDiscoveryStore();
 
   const [isRunning, setIsRunning] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -35,6 +37,8 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
 
   const [currentToken, setCurrentToken] = useState<string | null>(null);
+  const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
+
   // Additional state for view compatibility
   const [config, setConfig] = useState<any>({
     includeUsers: true,
@@ -59,8 +63,74 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
     setLogs(prev => [...prev, entry]);
   }, []);
 
+  // ✅ ADDED: Event listeners for PowerShell streaming - Set up ONCE on mount
+  useEffect(() => {
+    console.log('[ADDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warn' : 'info';
+        addLog(logLevel, data.message);
+      }
+    });
+
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setIsRunning(false);
+        setIsCancelling(false);
+        setCurrentToken(null);
+
+        const result = {
+          id: `ad-discovery-${Date.now()}`,
+          name: 'Active Directory Discovery',
+          moduleName: 'ActiveDirectory',
+          displayName: 'Active Directory Discovery',
+          itemCount: data?.result?.totalItems || data?.result?.RecordCount || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalItems || 0} Active Directory objects`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setResults(result);
+        addResult(result); // ✅ ADDED: Store in discovery store
+        addLog('info', `Discovery completed! Found ${result.itemCount} items.`);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setIsRunning(false);
+        setError(data.error);
+        addLog('error', `Discovery failed: ${data.error}`);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setIsRunning(false);
+        setIsCancelling(false);
+        setCurrentToken(null);
+        addLog('warn', 'Discovery cancelled by user');
+      }
+    });
+
+    return () => {
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
+    };
+  }, [addLog, addResult]); // Empty dependency array - set up once on mount
+
   /**
    * Start the Active Directory discovery process
+   * ✅ FIXED: Now uses event-driven executeDiscovery API
    */
   const startDiscovery = useCallback(async () => {
     if (isRunning) return;
@@ -80,45 +150,29 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
     setError(null);
     setLogs([]);
 
-    const token = `ad-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const token = `ad-discovery-${Date.now()}`;
     setCurrentToken(token);
+    currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
 
     addLog('info', `Starting Active Directory discovery for ${selectedSourceProfile.companyName}...`);
 
     try {
-      // Get electron API with fallback
-      const electronAPI = getElectronAPI();
-
-      // Execute discovery module with credentials from the profile
-      const result = await electronAPI.executeDiscoveryModule(
-        'ActiveDirectory',
-        selectedSourceProfile.companyName,
-        {
+      // ✅ FIXED: Use new event-driven API instead of deprecated executeDiscoveryModule
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'ActiveDirectory',
+        parameters: {
           IncludeUsers: config.includeUsers,
           IncludeGroups: config.includeGroups,
           IncludeComputers: config.includeComputers,
           IncludeOUs: config.includeOUs,
         },
-        {
-          timeout: 300000, // 5 minutes
-        }
-      );
+        executionId: token, // ✅ CRITICAL: Pass token for event matching
+      });
 
-      if (result.success) {
-        // Discovery completed successfully
-        setResults(result.output || result);
-        addLog('info', 'Active Directory discovery completed successfully');
-        addLog('info', `Results saved to C:\\DiscoveryData\\${selectedSourceProfile.companyName}\\Raw`);
-      } else {
-        // Discovery failed
-        const errorMessage = result.error || 'Discovery failed';
-        setError(errorMessage);
-        addLog('error', errorMessage);
-      }
+      console.log('[ADDiscoveryHook] Discovery execution initiated:', result);
+      addLog('info', 'Discovery execution started - monitoring progress...');
 
-      setIsRunning(false);
-      setCurrentToken(null);
-      setProgress(null);
+      // Note: Completion will be handled by the discovery:complete event listener
     } catch (err: any) {
       const errorMessage = err.message || 'Unknown error occurred during discovery';
       setError(errorMessage);
@@ -131,16 +185,34 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
 
   /**
    * Cancel the ongoing discovery process
-   * Note: PowerShell discovery modules run to completion; this sets the UI state only
+   * ✅ FIXED: Now properly cancels PowerShell process
    */
   const cancelDiscovery = useCallback(async () => {
-    if (!currentToken) return;
+    if (!isRunning || !currentToken) return;
 
-    addLog('warning', 'Discovery cancellation requested. The PowerShell process will complete, but results will be discarded.');
     setIsCancelling(true);
-    setIsRunning(false);
-    setCurrentToken(null);
-  }, [currentToken, addLog]);
+    addLog('warn', 'Cancelling discovery...');
+
+    try {
+      await window.electron.cancelDiscovery(currentToken);
+      addLog('info', 'Discovery cancellation requested successfully');
+
+      // Set timeout as fallback in case cancelled event doesn't fire
+      setTimeout(() => {
+        setIsRunning(false);
+        setIsCancelling(false);
+        setCurrentToken(null);
+        addLog('warn', 'Discovery cancelled');
+      }, 2000);
+    } catch (err: any) {
+      const errorMessage = err.message || 'Error cancelling discovery';
+      addLog('error', errorMessage);
+      // Reset state even on error
+      setIsRunning(false);
+      setIsCancelling(false);
+      setCurrentToken(null);
+    }
+  }, [isRunning, currentToken, addLog]);
 
   /**
    * Export discovery results
@@ -238,6 +310,5 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
     setSelectedTab,
     setSearchText,
     exportData,
-  
   };
 };

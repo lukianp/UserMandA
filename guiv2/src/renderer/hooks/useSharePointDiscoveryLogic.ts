@@ -1,9 +1,10 @@
 /**
  * SharePoint Discovery Logic Hook
  * Contains all business logic for SharePoint discovery view
+ * ✅ FIXED: Now uses event-driven architecture with streaming support
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import {
@@ -21,17 +22,26 @@ import {
   DEFAULT_SHAREPOINT_CONFIG,
 } from '../types/models/sharepoint';
 import type { ProgressData } from '../../shared/types';
+import { useProfileStore } from '../store/useProfileStore';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 export function useSharePointDiscoveryLogic() {
   // ============================================================================
   // State Management
   // ============================================================================
 
+  // Get selected company profile from store
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult } = useDiscoveryStore();
+
   const [config, setConfig] = useState<SharePointDiscoveryConfig>(DEFAULT_SHAREPOINT_CONFIG);
   const [result, setResult] = useState<SharePointDiscoveryResult | null>(null);
   const [progress, setProgress] = useState<SharePointDiscoveryProgress | null>(null);
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [currentToken, setCurrentToken] = useState<string | null>(null);
+  const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
 
   // Templates
   const [templates, setTemplates] = useState<SharePointDiscoveryTemplate[]>([]);
@@ -48,6 +58,77 @@ export function useSharePointDiscoveryLogic() {
   // ============================================================================
   // Data Fetching
   // ============================================================================
+
+  // ✅ ADDED: Event listeners for PowerShell streaming - Set up ONCE on mount
+  useEffect(() => {
+    console.log('[SharePointDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[SharePointDiscoveryHook] Received output:', data.message);
+        // Update progress with message
+        setProgress(prev => prev ? { ...prev, phaseLabel: data.message } : null);
+      }
+    });
+
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[SharePointDiscoveryHook] Discovery completed:', data);
+        setIsDiscovering(false);
+        setCurrentToken(null);
+
+        const discoveryResult = {
+          id: `sharepoint-discovery-${Date.now()}`,
+          name: 'SharePoint Discovery',
+          moduleName: 'SharePoint',
+          displayName: 'SharePoint Discovery',
+          itemCount: data?.result?.totalItems || data?.result?.RecordCount || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalItems || 0} SharePoint items`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        // Update local result state with the full data
+        if (data.result) {
+          setResult(data.result as SharePointDiscoveryResult);
+        }
+
+        addResult(discoveryResult); // ✅ ADDED: Store in discovery store
+        setProgress(null);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.error('[SharePointDiscoveryHook] Discovery error:', data.error);
+        setIsDiscovering(false);
+        setError(data.error);
+        setProgress(null);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[SharePointDiscoveryHook] Discovery cancelled');
+        setIsDiscovering(false);
+        setCurrentToken(null);
+        setProgress(null);
+      }
+    });
+
+    return () => {
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
+    };
+  }, [addResult]);
 
   useEffect(() => {
     loadTemplates();
@@ -70,7 +151,21 @@ export function useSharePointDiscoveryLogic() {
   // Discovery Execution
   // ============================================================================
 
+  /**
+   * Start the SharePoint discovery process
+   * ✅ FIXED: Now uses event-driven executeDiscovery API
+   */
   const startDiscovery = useCallback(async () => {
+    if (isDiscovering) return;
+
+    // Check if a profile is selected
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setError(errorMessage);
+      console.error('[SharePointDiscoveryHook]', errorMessage);
+      return;
+    }
+
     setIsDiscovering(true);
     setError(null);
     setProgress({
@@ -83,53 +178,68 @@ export function useSharePointDiscoveryLogic() {
       warnings: 0,
     });
 
-    try {
-      const unsubscribe = window.electronAPI.onProgress((data: ProgressData) => {
-        // Convert ProgressData to SharePointDiscoveryProgress
-        const progressData: SharePointDiscoveryProgress = {
-          phase: 'initializing',
-          phaseLabel: data.message || 'Processing...',
-          percentComplete: data.percentage,
-          itemsProcessed: data.itemsProcessed || 0,
-          totalItems: data.totalItems || 0,
-          errors: 0,
-          warnings: 0,
-        };
-        setProgress(progressData);
-      });
+    const token = `sharepoint-discovery-${Date.now()}`;
+    setCurrentToken(token);
+    currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
 
-      const discoveryResult = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/SharePointDiscovery.psm1',
-        functionName: 'Invoke-SharePointDiscovery',
+    console.log('[SharePointDiscoveryHook] Starting SharePoint discovery for', selectedSourceProfile.companyName);
+
+    try {
+      // ✅ FIXED: Use new event-driven API instead of deprecated executeModule
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'SharePoint',
         parameters: {
-          Config: config,
+          DiscoverLists: config.discoverLists,
+          DiscoverPermissions: config.discoverPermissions,
+          IncludeSubsites: config.includeSubsites,
+          IncludeListItems: config.includeListItems,
+          SiteUrlPattern: config.siteUrlPattern,
+          MaxListItemsToScan: config.maxListItemsToScan,
         },
+        executionId: token, // ✅ CRITICAL: Pass token for event matching
       });
 
-      if (discoveryResult.success && discoveryResult.data) {
-        setResult(discoveryResult.data as SharePointDiscoveryResult);
-      } else {
-        throw new Error(discoveryResult.error || 'Discovery failed');
-      }
-      setProgress(null);
-      unsubscribe();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Discovery failed');
-      setProgress(null);
-    } finally {
-      setIsDiscovering(false);
-    }
-  }, [config]);
+      console.log('[SharePointDiscoveryHook] Discovery execution initiated:', result);
 
-  const cancelDiscovery = useCallback(async () => {
-    try {
-      await window.electronAPI.cancelExecution('sharepoint-discovery');
+      // Note: Completion will be handled by the discovery:complete event listener
+    } catch (err: any) {
+      const errorMessage = err.message || 'Unknown error occurred during discovery';
+      setError(errorMessage);
+      console.error('[SharePointDiscoveryHook] Error starting discovery:', errorMessage);
       setIsDiscovering(false);
+      setCurrentToken(null);
       setProgress(null);
-    } catch (err) {
-      console.error('Failed to cancel discovery:', err);
     }
-  }, []);
+  }, [isDiscovering, config, selectedSourceProfile]);
+
+  /**
+   * Cancel the ongoing discovery process
+   * ✅ FIXED: Now properly cancels PowerShell process
+   */
+  const cancelDiscovery = useCallback(async () => {
+    if (!isDiscovering || !currentToken) return;
+
+    console.log('[SharePointDiscoveryHook] Cancelling discovery...');
+
+    try {
+      await window.electron.cancelDiscovery(currentToken);
+      console.log('[SharePointDiscoveryHook] Discovery cancellation requested successfully');
+
+      // Set timeout as fallback in case cancelled event doesn't fire
+      setTimeout(() => {
+        setIsDiscovering(false);
+        setCurrentToken(null);
+        setProgress(null);
+      }, 2000);
+    } catch (err: any) {
+      const errorMessage = err.message || 'Error cancelling discovery';
+      console.error('[SharePointDiscoveryHook]', errorMessage);
+      // Reset state even on error
+      setIsDiscovering(false);
+      setCurrentToken(null);
+      setProgress(null);
+    }
+  }, [isDiscovering, currentToken]);
 
   // ============================================================================
   // Template Management

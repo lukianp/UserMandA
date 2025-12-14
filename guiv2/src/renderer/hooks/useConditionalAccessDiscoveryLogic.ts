@@ -3,7 +3,7 @@
  * Production-ready business logic for CA policy discovery and analysis
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import {
@@ -16,6 +16,7 @@ import {
   PolicyState
 } from '../types/models/conditionalaccess';
 import { useProfileStore } from '../store/useProfileStore';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { getElectronAPI } from '../lib/electron-api-fallback';
 
 type TabType = 'overview' | 'policies' | 'locations' | 'assignments';
@@ -41,6 +42,7 @@ interface CADiscoveryState {
 export const useConditionalAccessDiscoveryLogic = () => {
   // Get selected profile from store
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult } = useDiscoveryStore();
 
   // Combined state for better performance
   const [state, setState] = useState<CADiscoveryState>({
@@ -59,28 +61,95 @@ export const useConditionalAccessDiscoveryLogic = () => {
     error: null
   });
 
-  // Progress tracking via IPC events
+  const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
+
+  // ✅ ADDED: Event listeners for PowerShell streaming - Set up ONCE on mount
   useEffect(() => {
-    const unsubscribe = window.electronAPI?.onProgress?.((data: any) => {
-      if (data.type === 'ca-discovery' && data.token === state.cancellationToken) {
+    console.log('[CADiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warn' : 'info';
+        console.log(`[CADiscoveryHook] ${logLevel}: ${data.message}`);
+
+        // Update progress message
         setState(prev => ({
           ...prev,
           progress: {
-            current: data.current || 0,
-            total: data.total || 100,
-            message: data.message || '',
-            percentage: data.percentage || 0
+            ...prev.progress,
+            message: data.message
           }
         }));
       }
     });
 
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[CADiscoveryHook] Discovery completed:', data);
+
+        const result = {
+          id: `ca-discovery-${Date.now()}`,
+          name: 'Conditional Access Discovery',
+          moduleName: 'ConditionalAccess',
+          displayName: 'Conditional Access Discovery',
+          itemCount: data?.result?.totalItems || data?.result?.RecordCount || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.policies?.length || 0} Conditional Access policies`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setState(prev => ({
+          ...prev,
+          result: data.result || data,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
+        }));
+
+        addResult(result); // ✅ ADDED: Store in discovery store
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.error('[CADiscoveryHook] Discovery error:', data.error);
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          error: data.error
+        }));
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[CADiscoveryHook] Discovery cancelled');
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 0, total: 100, message: 'Cancelled', percentage: 0 }
+        }));
+      }
+    });
+
     return () => {
-      if (unsubscribe) unsubscribe();
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
     };
-  }, [state.cancellationToken]);
+  }, [addResult]); // Empty dependency array - set up once on mount
 
   // Start discovery
+  // ✅ FIXED: Now uses event-driven executeDiscovery API
   const startDiscovery = useCallback(async () => {
     if (!selectedSourceProfile) {
       const errorMessage = 'No company profile selected. Please select a profile first.';
@@ -89,7 +158,7 @@ export const useConditionalAccessDiscoveryLogic = () => {
       return;
     }
 
-    const token = `ca-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const token = `ca-discovery-${Date.now()}`;
     setState(prev => ({
       ...prev,
       isDiscovering: true,
@@ -97,6 +166,8 @@ export const useConditionalAccessDiscoveryLogic = () => {
       error: null,
       progress: { current: 0, total: 100, message: 'Initializing...', percentage: 0 }
     }));
+
+    currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
 
     console.log(`[ConditionalAccessDiscovery] Starting discovery for company: ${selectedSourceProfile.companyName}`);
     console.log(`[ConditionalAccessDiscovery] Parameters:`, {
@@ -106,54 +177,67 @@ export const useConditionalAccessDiscoveryLogic = () => {
     });
 
     try {
-      const electronAPI = getElectronAPI();
-      const discoveryResult = await electronAPI.executeDiscoveryModule(
-        'ConditionalAccess',
-        selectedSourceProfile.companyName,
-        {
+      // ✅ FIXED: Use new event-driven API instead of deprecated executeDiscoveryModule
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'ConditionalAccess',
+        parameters: {
           IncludeAssignments: state.config.includeAssignments,
           IncludeConditions: state.config.includeConditions,
-          IncludeControls: state.config.includeControls
+          IncludeControls: state.config.includeControls,
         },
-        { timeout: state.config.timeout || 300000 }
-      );
+        executionId: token, // ✅ CRITICAL: Pass token for event matching
+      });
 
-      setState(prev => ({
-        ...prev,
-        result: discoveryResult.data || discoveryResult,
-        isDiscovering: false,
-        cancellationToken: null,
-        progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
-      }));
+      console.log('[ConditionalAccessDiscovery] Discovery execution initiated:', result);
 
-      console.log(`[ConditionalAccessDiscovery] Discovery completed successfully`);
+      // Note: Completion will be handled by the discovery:complete event listener
     } catch (error: any) {
       console.error('[ConditionalAccessDiscovery] Discovery failed:', error);
+      const errorMessage = error.message || 'Discovery failed';
       setState(prev => ({
         ...prev,
         isDiscovering: false,
         cancellationToken: null,
-        error: error.message || 'Discovery failed'
+        error: errorMessage
       }));
+      currentTokenRef.current = null;
     }
   }, [selectedSourceProfile, state.config]);
 
   // Cancel discovery
+  // ✅ FIXED: Now properly cancels PowerShell process
   const cancelDiscovery = useCallback(async () => {
-    if (state.cancellationToken) {
-      try {
-        await window.electronAPI.cancelExecution(state.cancellationToken);
-      } catch (error) {
-        console.error('Failed to cancel discovery:', error);
-      }
+    if (!state.isDiscovering || !state.cancellationToken) return;
+
+    console.log('[ConditionalAccessDiscovery] Cancelling discovery...');
+
+    try {
+      await window.electron.cancelDiscovery(state.cancellationToken);
+      console.log('[ConditionalAccessDiscovery] Discovery cancellation requested successfully');
+
+      // Set timeout as fallback in case cancelled event doesn't fire
+      setTimeout(() => {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 0, total: 100, message: 'Cancelled', percentage: 0 }
+        }));
+        currentTokenRef.current = null;
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Error cancelling discovery';
+      console.error('[ConditionalAccessDiscovery]', errorMessage);
+      // Reset state even on error
+      setState(prev => ({
+        ...prev,
+        isDiscovering: false,
+        cancellationToken: null,
+        progress: { current: 0, total: 100, message: 'Cancelled', percentage: 0 }
+      }));
+      currentTokenRef.current = null;
     }
-    setState(prev => ({
-      ...prev,
-      isDiscovering: false,
-      cancellationToken: null,
-      progress: { current: 0, total: 100, message: 'Cancelled', percentage: 0 }
-    }));
-  }, [state.cancellationToken]);
+  }, [state.isDiscovering, state.cancellationToken]);
 
   // Export to CSV
   const exportToCSV = useCallback(async () => {

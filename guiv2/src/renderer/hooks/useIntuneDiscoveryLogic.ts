@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import type {
@@ -12,6 +12,7 @@ import type {
 } from '../types/models/intune';
 
 import { useProfileStore } from '../store/useProfileStore';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { getElectronAPI } from '../lib/electron-api-fallback';
 
 type TabType = 'overview' | 'devices' | 'applications' | 'config-policies' | 'compliance-policies' | 'app-protection';
@@ -58,6 +59,7 @@ interface IntuneStats {
 export const useIntuneDiscoveryLogic = () => {
   // Get selected profile from store
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult } = useDiscoveryStore();
 
   const [state, setState] = useState<IntuneDiscoveryState>({
     config: {
@@ -96,36 +98,100 @@ export const useIntuneDiscoveryLogic = () => {
     error: null
   });
 
-  // IPC progress tracking
+  const currentTokenRef = useRef<string | null>(null); // For event matching
+
+  // Event listeners for PowerShell streaming - Set up ONCE on mount
   useEffect(() => {
-    const unsubscribe = window.electronAPI?.onProgress?.((data: any) => {
-      if (data.type === 'intune-discovery' && data.token === state.cancellationToken) {
+    console.log('[IntuneDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const message = data.message || '';
         setState(prev => ({
           ...prev,
           progress: {
-            current: data.current || 0,
-            total: data.total || 100,
-            message: data.message || '',
-            percentage: data.percentage || 0
+            ...prev.progress,
+            message: message
           }
         }));
       }
     });
 
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const result = {
+          id: `intune-discovery-${Date.now()}`,
+          name: 'Intune Discovery',
+          moduleName: 'Intune',
+          displayName: 'Intune Discovery',
+          itemCount: data?.result?.totalDevices || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalDevices || 0} Intune devices`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setState(prev => ({
+          ...prev,
+          result: data.result || data,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
+        }));
+
+        addResult(result);
+        console.log(`[IntuneDiscoveryHook] Discovery completed! Found ${result.itemCount} items.`);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          error: data.error
+        }));
+        console.error(`[IntuneDiscoveryHook] Discovery failed: ${data.error}`);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          cancellationToken: null,
+          progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
+        }));
+        console.warn('[IntuneDiscoveryHook] Discovery cancelled by user');
+      }
+    });
+
     return () => {
-      if (unsubscribe) unsubscribe();
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
     };
-  }, [state.cancellationToken]);
+  }, [addResult]); // Empty dependency array - set up once on mount
 
   const startDiscovery = useCallback(async () => {
     if (!selectedSourceProfile) {
       const errorMessage = 'No company profile selected. Please select a profile first.';
       setState(prev => ({ ...prev, error: errorMessage }));
-      console.error('[IntuneDiscovery]', errorMessage);
+      console.error('[IntuneDiscoveryHook]', errorMessage);
       return;
     }
 
-    const token = `intune-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    if (state.isDiscovering) return;
+
+    const token = `intune-discovery-${Date.now()}`;
 
     setState(prev => ({
       ...prev,
@@ -135,8 +201,10 @@ export const useIntuneDiscoveryLogic = () => {
       progress: { current: 0, total: 100, message: 'Starting Intune discovery...', percentage: 0 }
     }));
 
-    console.log(`[IntuneDiscovery] Starting discovery for company: ${selectedSourceProfile.companyName}`);
-    console.log(`[IntuneDiscovery] Parameters:`, {
+    currentTokenRef.current = token; // CRITICAL: Update ref for event matching
+
+    console.log(`[IntuneDiscoveryHook] Starting discovery for company: ${selectedSourceProfile.companyName}`);
+    console.log(`[IntuneDiscoveryHook] Parameters:`, {
       IncludeDevices: state.config.includeDevices,
       IncludeApplications: state.config.includeApplications,
       IncludeConfigurationPolicies: state.config.includeConfigurationPolicies,
@@ -145,55 +213,69 @@ export const useIntuneDiscoveryLogic = () => {
     });
 
     try {
-      const electronAPI = getElectronAPI();
-      const discoveryResult = await electronAPI.executeDiscoveryModule(
-        'Intune',
-        selectedSourceProfile.companyName,
-        {
+      // Use new event-driven API instead of deprecated executeDiscoveryModule
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'Intune',
+        parameters: {
           IncludeDevices: state.config.includeDevices,
           IncludeApplications: state.config.includeApplications,
           IncludeConfigurationPolicies: state.config.includeConfigurationPolicies,
           IncludeCompliancePolicies: state.config.includeCompliancePolicies,
           IncludeAppProtectionPolicies: state.config.includeAppProtectionPolicies
         },
-        { timeout: state.config.timeout || 600000 }
-      );
+        executionId: token, // CRITICAL: Pass token for event matching
+      });
 
-      setState(prev => ({
-        ...prev,
-        result: discoveryResult.data || discoveryResult,
-        isDiscovering: false,
-        cancellationToken: null,
-        progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
-      }));
+      console.log('[IntuneDiscoveryHook] Discovery execution initiated:', result);
 
-      console.log(`[IntuneDiscovery] Discovery completed successfully`);
+      // Note: Completion will be handled by the discovery:complete event listener
     } catch (error: any) {
-      console.error('[IntuneDiscovery] Discovery failed:', error);
+      const errorMessage = error.message || 'Unknown error occurred during discovery';
+      console.error('[IntuneDiscoveryHook] Discovery failed:', errorMessage);
       setState(prev => ({
         ...prev,
         isDiscovering: false,
         cancellationToken: null,
-        error: error.message || 'Discovery failed'
+        error: errorMessage,
+        progress: { current: 0, total: 100, message: '', percentage: 0 }
       }));
+      currentTokenRef.current = null;
     }
-  }, [selectedSourceProfile, state.config]);
+  }, [selectedSourceProfile, state.config, state.isDiscovering]);
 
   const cancelDiscovery = useCallback(async () => {
-    if (state.cancellationToken) {
-      try {
-        await window.electronAPI.cancelExecution(state.cancellationToken);
+    if (!state.isDiscovering || !state.cancellationToken) return;
+
+    console.warn('[IntuneDiscoveryHook] Cancelling discovery...');
+
+    try {
+      await window.electron.cancelDiscovery(state.cancellationToken);
+      console.log('[IntuneDiscoveryHook] Discovery cancellation requested successfully');
+
+      // Set timeout as fallback in case cancelled event doesn't fire
+      setTimeout(() => {
         setState(prev => ({
           ...prev,
           isDiscovering: false,
           cancellationToken: null,
           progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
         }));
-      } catch (error: any) {
-        console.error('Failed to cancel discovery:', error);
-      }
+        currentTokenRef.current = null;
+        console.warn('[IntuneDiscoveryHook] Discovery cancelled');
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Error cancelling discovery';
+      console.error('[IntuneDiscoveryHook]', errorMessage);
+      // Reset state even on error
+      setState(prev => ({
+        ...prev,
+        isDiscovering: false,
+        cancellationToken: null,
+        progress: { current: 0, total: 100, message: '', percentage: 0 }
+      }));
+      currentTokenRef.current = null;
     }
-  }, [state.cancellationToken]);
+  }, [state.isDiscovering, state.cancellationToken]);
 
   const updateConfig = useCallback((updates: Partial<IntuneDiscoveryConfig>) => {
     setState(prev => ({

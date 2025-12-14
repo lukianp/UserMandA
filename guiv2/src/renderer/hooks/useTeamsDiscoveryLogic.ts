@@ -3,7 +3,7 @@
  * Contains all business logic for Teams discovery view
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import {
@@ -23,17 +23,26 @@ import {
   DEFAULT_TEAMS_CONFIG,
 } from '../types/models/teams';
 import type { ProgressData } from '../../shared/types';
+import { useProfileStore } from '../store/useProfileStore';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 export function useTeamsDiscoveryLogic() {
   // ============================================================================
   // State Management
   // ============================================================================
 
+  // Get selected company profile from store
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult } = useDiscoveryStore();
+
   const [config, setConfig] = useState<TeamsDiscoveryConfig>(DEFAULT_TEAMS_CONFIG);
   const [result, setResult] = useState<TeamsDiscoveryResult | null>(null);
   const [progress, setProgress] = useState<TeamsDiscoveryProgress | null>(null);
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [currentToken, setCurrentToken] = useState<string | null>(null);
+  const currentTokenRef = useRef<string | null>(null); // Ref for event matching
 
   // Templates
   const [templates, setTemplates] = useState<TeamsDiscoveryTemplate[]>([]);
@@ -70,10 +79,88 @@ export function useTeamsDiscoveryLogic() {
   };
 
   // ============================================================================
+  // Event Listeners for PowerShell Streaming
+  // ============================================================================
+
+  useEffect(() => {
+    console.log('[TeamsDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[TeamsDiscoveryHook] Discovery output:', data.message);
+      }
+    });
+
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[TeamsDiscoveryHook] Discovery complete:', data);
+        setIsDiscovering(false);
+        setCurrentToken(null);
+
+        const discoveryResult = {
+          id: `teams-discovery-${Date.now()}`,
+          name: 'Teams Discovery',
+          moduleName: 'Teams',
+          displayName: 'Teams Discovery',
+          itemCount: data?.result?.totalItems || data?.result?.RecordCount || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalItems || 0} Teams objects`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setResult(data.result as TeamsDiscoveryResult);
+        addResult(discoveryResult);
+        setProgress(null);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.error('[TeamsDiscoveryHook] Discovery error:', data.error);
+        setIsDiscovering(false);
+        setError(data.error);
+        setProgress(null);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[TeamsDiscoveryHook] Discovery cancelled');
+        setIsDiscovering(false);
+        setCurrentToken(null);
+        setProgress(null);
+      }
+    });
+
+    return () => {
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
+    };
+  }, [addResult]);
+
+  // ============================================================================
   // Discovery Execution
   // ============================================================================
 
   const startDiscovery = useCallback(async () => {
+    if (isDiscovering) return;
+
+    // Check if a profile is selected
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setError(errorMessage);
+      console.error('[TeamsDiscoveryHook]', errorMessage);
+      return;
+    }
+
     setIsDiscovering(true);
     setError(null);
     setProgress({
@@ -85,54 +172,62 @@ export function useTeamsDiscoveryLogic() {
       errors: 0,
       warnings: 0,
     });
+    setResult(null);
+
+    const token = `teams-discovery-${Date.now()}`;
+    setCurrentToken(token);
+    currentTokenRef.current = token; // CRITICAL: Update ref for event matching
+
+    console.log('[TeamsDiscoveryHook] Starting Teams discovery for', selectedSourceProfile.companyName);
 
     try {
-      const unsubscribe = window.electronAPI.onProgress((data: ProgressData) => {
-        // Convert ProgressData to TeamsDiscoveryProgress
-        const progressData: TeamsDiscoveryProgress = {
-          phase: 'initializing',
-          phaseLabel: data.message || 'Processing...',
-          percentComplete: data.percentage,
-          itemsProcessed: data.itemsProcessed || 0,
-          totalItems: data.totalItems || 0,
-          errors: 0,
-          warnings: 0,
-        };
-        setProgress(progressData);
-      });
-
-      const discoveryResult = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/TeamsDiscovery.psm1',
-        functionName: 'Invoke-TeamsDiscovery',
+      // Use new event-driven API instead of deprecated executeModule
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'Teams',
         parameters: {
           Config: config,
         },
+        executionId: token, // CRITICAL: Pass token for event matching
       });
 
-      if (discoveryResult.success && discoveryResult.data) {
-        setResult(discoveryResult.data as TeamsDiscoveryResult);
-      } else {
-        throw new Error(discoveryResult.error || 'Discovery failed');
-      }
-      setProgress(null);
-      unsubscribe();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Discovery failed');
-      setProgress(null);
-    } finally {
+      console.log('[TeamsDiscoveryHook] Discovery execution initiated:', result);
+
+      // Note: Completion will be handled by the discovery:complete event listener
+    } catch (err: any) {
+      const errorMessage = err.message || 'Unknown error occurred during discovery';
+      setError(errorMessage);
+      console.error('[TeamsDiscoveryHook]', errorMessage);
       setIsDiscovering(false);
+      setCurrentToken(null);
+      setProgress(null);
     }
-  }, [config]);
+  }, [isDiscovering, config, selectedSourceProfile]);
 
   const cancelDiscovery = useCallback(async () => {
+    if (!isDiscovering || !currentToken) return;
+
+    console.log('[TeamsDiscoveryHook] Cancelling discovery...');
+
     try {
-      await window.electronAPI.cancelExecution('teams-discovery');
+      await window.electron.cancelDiscovery(currentToken);
+      console.log('[TeamsDiscoveryHook] Discovery cancellation requested successfully');
+
+      // Set timeout as fallback in case cancelled event doesn't fire
+      setTimeout(() => {
+        setIsDiscovering(false);
+        setCurrentToken(null);
+        setProgress(null);
+        console.log('[TeamsDiscoveryHook] Discovery cancelled');
+      }, 2000);
+    } catch (err: any) {
+      const errorMessage = err.message || 'Error cancelling discovery';
+      console.error('[TeamsDiscoveryHook]', errorMessage);
+      // Reset state even on error
       setIsDiscovering(false);
+      setCurrentToken(null);
       setProgress(null);
-    } catch (err) {
-      console.error('Failed to cancel discovery:', err);
     }
-  }, []);
+  }, [isDiscovering, currentToken]);
 
   // ============================================================================
   // Template Management
@@ -624,6 +719,6 @@ export function useTeamsDiscoveryLogic() {
 
     // Statistics
     statistics: result?.statistics,
-  
+
   };
 }

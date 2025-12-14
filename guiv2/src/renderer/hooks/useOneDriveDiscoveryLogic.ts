@@ -1,9 +1,10 @@
 /**
  * OneDrive Discovery View Logic Hook
  * Manages state and business logic for OneDrive discovery operations
+ * ✅ FIXED: Now uses event-driven architecture with streaming support
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ColDef } from 'ag-grid-community';
 
 import {
@@ -20,6 +21,8 @@ import {
 } from '../types/models/onedrive';
 
 import { useDebounce } from './useDebounce';
+import { useProfileStore } from '../store/useProfileStore';
+import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 /**
  * OneDrive Discovery View State
@@ -51,6 +54,10 @@ interface OneDriveDiscoveryState {
  * OneDrive Discovery Logic Hook
  */
 export const useOneDriveDiscoveryLogic = () => {
+  // Get selected company profile from store
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const { addResult } = useDiscoveryStore();
+
   // State
   const [state, setState] = useState<OneDriveDiscoveryState>({
     config: createDefaultOneDriveConfig(),
@@ -66,6 +73,9 @@ export const useOneDriveDiscoveryLogic = () => {
     errors: [],
   });
 
+  const [currentToken, setCurrentToken] = useState<string | null>(null);
+  const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
+
   const debouncedSearch = useDebounce(state.searchText, 300);
 
   // Load templates and historical results on mount
@@ -74,18 +84,80 @@ export const useOneDriveDiscoveryLogic = () => {
     loadHistoricalResults();
   }, []);
 
-  // Subscribe to discovery progress
+  // ✅ ADDED: Event listeners for PowerShell streaming - Set up ONCE on mount
   useEffect(() => {
-    const unsubscribe = window.electronAPI?.onProgress?.((data: any) => {
-      if (data.type === 'onedrive-discovery') {
-        setState(prev => ({ ...prev, progress: data }));
+    console.log('[OneDriveDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warn' : 'info';
+        console.log(`[OneDriveDiscoveryHook] ${logLevel}: ${data.message}`);
+      }
+    });
+
+    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const result = {
+          id: `onedrive-discovery-${Date.now()}`,
+          name: 'OneDrive Discovery',
+          moduleName: 'OneDrive',
+          displayName: 'OneDrive Discovery',
+          itemCount: data?.result?.totalItems || data?.result?.RecordCount || 0,
+          discoveryTime: new Date().toISOString(),
+          duration: data.duration || 0,
+          status: 'Completed',
+          filePath: data?.result?.outputPath || '',
+          success: true,
+          summary: `Discovered ${data?.result?.totalItems || 0} OneDrive items`,
+          errorMessage: '',
+          additionalData: data.result,
+          createdAt: new Date().toISOString(),
+        };
+
+        setState(prev => ({
+          ...prev,
+          currentResult: data.result,
+          isDiscovering: false,
+          progress: null,
+        }));
+
+        addResult(result); // ✅ ADDED: Store in discovery store
+        setCurrentToken(null);
+        console.log('[OneDriveDiscoveryHook] Discovery completed:', result);
+      }
+    });
+
+    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          errors: [data.error || 'Discovery failed'],
+          isDiscovering: false,
+          progress: null,
+        }));
+        console.error('[OneDriveDiscoveryHook] Discovery failed:', data.error);
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          progress: null,
+        }));
+        setCurrentToken(null);
+        console.log('[OneDriveDiscoveryHook] Discovery cancelled by user');
       }
     });
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
     };
-  }, []);
+  }, [addResult]); // Set up once on mount
 
   /**
    * Load discovery templates
@@ -127,8 +199,17 @@ export const useOneDriveDiscoveryLogic = () => {
 
   /**
    * Start OneDrive discovery
+   * ✅ FIXED: Now uses event-driven executeDiscovery API
    */
   const startDiscovery = async () => {
+    // Check if a profile is selected
+    if (!selectedSourceProfile) {
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setState(prev => ({ ...prev, errors: [errorMessage] }));
+      console.error('[OneDriveDiscoveryHook]', errorMessage);
+      return;
+    }
+
     setState(prev => ({
       ...prev,
       isDiscovering: true,
@@ -136,53 +217,72 @@ export const useOneDriveDiscoveryLogic = () => {
       errors: [],
     }));
 
+    const token = `onedrive-discovery-${Date.now()}`;
+    setCurrentToken(token);
+    currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
+
+    console.log(`[OneDriveDiscoveryHook] Starting OneDrive discovery for ${selectedSourceProfile.companyName}...`);
+
     try {
-      const result = await window.electronAPI.executeModule({
-        modulePath: 'Modules/Discovery/OneDriveDiscovery.psm1',
-        functionName: 'Invoke-OneDriveDiscovery',
-        parameters: { config: state.config },
-        options: { streamOutput: true },
+      // ✅ FIXED: Use new event-driven API instead of deprecated executeModule
+      const result = await window.electron.executeDiscovery({
+        moduleName: 'OneDrive',
+        parameters: {
+          Config: state.config,
+        },
+        executionId: token, // ✅ CRITICAL: Pass token for event matching
       });
 
-      if (result.success && result.data) {
-        setState(prev => ({
-          ...prev,
-          currentResult: result.data,
-          isDiscovering: false,
-          progress: null,
-        }));
-        await loadHistoricalResults();
-      } else {
-        setState(prev => ({
-          ...prev,
-          errors: [result.error || 'Discovery failed'],
-          isDiscovering: false,
-          progress: null,
-        }));
-      }
+      console.log('[OneDriveDiscoveryHook] Discovery execution initiated:', result);
+      await loadHistoricalResults();
+
+      // Note: Completion will be handled by the discovery:complete event listener
     } catch (error: any) {
+      const errorMessage = error.message || 'Unknown error occurred during discovery';
       setState(prev => ({
         ...prev,
-        errors: [error.message || 'Discovery failed unexpectedly'],
+        errors: [errorMessage],
         isDiscovering: false,
         progress: null,
       }));
+      console.error('[OneDriveDiscoveryHook]', errorMessage);
+      setCurrentToken(null);
     }
   };
 
   /**
    * Cancel ongoing discovery
+   * ✅ FIXED: Now properly cancels PowerShell process
    */
   const cancelDiscovery = async () => {
+    if (!state.isDiscovering || !currentToken) return;
+
+    console.log('[OneDriveDiscoveryHook] Cancelling discovery...');
+
     try {
-      await window.electronAPI.cancelExecution('onedrive-discovery');
+      await window.electron.cancelDiscovery(currentToken);
+      console.log('[OneDriveDiscoveryHook] Discovery cancellation requested successfully');
+
+      // Set timeout as fallback in case cancelled event doesn't fire
+      setTimeout(() => {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          progress: null,
+        }));
+        setCurrentToken(null);
+        console.log('[OneDriveDiscoveryHook] Discovery cancelled');
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Error cancelling discovery';
+      console.error('[OneDriveDiscoveryHook]', errorMessage);
+      // Reset state even on error
       setState(prev => ({
         ...prev,
         isDiscovering: false,
         progress: null,
       }));
-    } catch (error) {
-      console.error('Failed to cancel OneDrive discovery:', error);
+      setCurrentToken(null);
     }
   };
 

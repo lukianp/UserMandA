@@ -1,9 +1,10 @@
 /**
  * Exchange Discovery Logic Hook
  * Contains all business logic for Exchange discovery view
+ * ✅ FIXED: Now uses event-driven architecture with streaming support
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
 import {
@@ -126,11 +127,12 @@ export function useExchangeDiscoveryLogic() {
 
   // Event handlers for discovery - similar to Azure discovery pattern
   const [currentToken, setCurrentToken] = useState<string | null>(null);
+  const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
 
   useEffect(() => {
     const unsubscribeProgress = window.electron.onDiscoveryProgress((data) => {
       console.log('[ExchangeDiscoveryHook] Progress event received:', data);
-      if (data.executionId && data.executionId.startsWith('exchange-discovery-')) {
+      if (data.executionId === currentTokenRef.current) { // ✅ FIXED: Check against token ref
         // Construct progress message from available properties (no 'message' property on progress events)
         const progressMessage = data.currentPhase
           ? `${data.currentPhase}${data.itemsProcessed !== undefined && data.totalItems !== undefined ? ` (${data.itemsProcessed}/${data.totalItems})` : ''}`
@@ -142,15 +144,15 @@ export function useExchangeDiscoveryLogic() {
 
     const unsubscribeOutput = window.electron.onDiscoveryOutput?.((data) => {
       console.log('[ExchangeDiscoveryHook] Output event received:', data);
-      if (data.executionId && data.executionId.startsWith('exchange-discovery-')) {
-        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
+      if (data.executionId === currentTokenRef.current) { // ✅ FIXED: Check against token ref
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info'; // ✅ FIXED: Map PowerShell log levels
         addLog(data.message, logLevel);
       }
     });
 
     const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
       console.log('[ExchangeDiscoveryHook] Complete event received:', data);
-      if (data.executionId && data.executionId.startsWith('exchange-discovery-')) {
+      if (data.executionId === currentTokenRef.current) { // ✅ FIXED: Check against token ref
         // ENHANCED: Robust data extraction handling multiple PowerShell output formats
         // PowerShellReturnValue can be: { Success, Data: {...}, RecordCount, ... } OR { success, data: {...} } OR direct data
         const executionResult = data.result as any;
@@ -268,6 +270,8 @@ export function useExchangeDiscoveryLogic() {
         setResult(exchangeResult);
         setIsDiscovering(false);
         setProgress(null);
+        setCurrentToken(null);
+        currentTokenRef.current = null; // ✅ ADDED: Clear token ref on completion
 
         const mailboxCount = exchangeResult?.mailboxes?.length || 0;
         const groupCount = exchangeResult?.distributionGroups?.length || 0;
@@ -296,11 +300,24 @@ export function useExchangeDiscoveryLogic() {
 
     const unsubscribeError = window.electron.onDiscoveryError((data) => {
       console.log('[ExchangeDiscoveryHook] Error event received:', data);
-      if (data.executionId && data.executionId.startsWith('exchange-discovery-')) {
+      if (data.executionId === currentTokenRef.current) { // ✅ FIXED: Check against token ref
         setError(data.error);
         addLog(`Error: ${data.error}`, 'error');
         setIsDiscovering(false);
         setProgress(null);
+        setCurrentToken(null);
+        currentTokenRef.current = null;
+      }
+    });
+
+    const unsubscribeCancelled = window.electron.onDiscoveryCancelled?.((data) => { // ✅ ADDED: Missing cancelled event
+      console.log('[ExchangeDiscoveryHook] Cancelled event received:', data);
+      if (data.executionId === currentTokenRef.current) {
+        setIsDiscovering(false);
+        setProgress(null);
+        setCurrentToken(null);
+        currentTokenRef.current = null;
+        addLog('Discovery cancelled by user', 'warning');
       }
     });
 
@@ -309,6 +326,7 @@ export function useExchangeDiscoveryLogic() {
       if (unsubscribeOutput) unsubscribeOutput();
       if (unsubscribeComplete) unsubscribeComplete();
       if (unsubscribeError) unsubscribeError();
+      if (unsubscribeCancelled) unsubscribeCancelled(); // ✅ ADDED: Cleanup for cancelled
     };
   }, [addDiscoveryResult, addLog]);
 
@@ -348,6 +366,8 @@ export function useExchangeDiscoveryLogic() {
     addLog(`Starting Exchange discovery for ${selectedSourceProfile.companyName}...`, 'info');
 
     const token = `exchange-discovery-${Date.now()}`;
+    setCurrentToken(token);
+    currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
 
     setProgress({
       phase: 'initializing',
@@ -396,6 +416,8 @@ export function useExchangeDiscoveryLogic() {
         addLog(errorMsg, 'error');
         setIsDiscovering(false);
         setProgress(null);
+        setCurrentToken(null);
+        currentTokenRef.current = null;
       }
     } catch (err) {
       console.error(`[ExchangeDiscoveryHook] Error:`, err);
@@ -404,18 +426,23 @@ export function useExchangeDiscoveryLogic() {
       addLog(errorMsg, 'error');
       setIsDiscovering(false);
       setProgress(null);
+      setCurrentToken(null);
+      currentTokenRef.current = null;
     }
   }, [config, selectedSourceProfile, addLog]);
 
   const cancelDiscovery = useCallback(async () => {
+    if (!currentToken) return; // ✅ ADDED: Check if there's a token to cancel
+
     try {
-      await window.electron.cancelDiscovery('exchange-discovery');
-      setIsDiscovering(false);
-      setProgress(null);
+      await window.electron.cancelDiscovery(currentToken); // ✅ FIXED: Use actual token instead of hardcoded string
+      addLog('Cancelling discovery...', 'warning');
+      // Note: Actual state reset will be handled by onDiscoveryCancelled event listener
     } catch (err) {
       console.error('Failed to cancel discovery:', err);
+      addLog('Failed to cancel discovery', 'error');
     }
-  }, []);
+  }, [currentToken, addLog]);
 
   // ============================================================================
   // Template Management
@@ -600,7 +627,7 @@ export function useExchangeDiscoveryLogic() {
   const mailboxColumns = useMemo<ColDef<ExchangeMailbox>[]>(
     () => [
       {
-        field: 'DisplayName', // ✅ PascalCase to match PowerShell output
+        field: 'displayName', // ✅ PascalCase to match PowerShell output
         headerName: 'Display Name',
         sortable: true,
         filter: true,
@@ -608,28 +635,28 @@ export function useExchangeDiscoveryLogic() {
         width: 200,
       },
       {
-        field: 'UserPrincipalName', // ✅ PascalCase
+        field: 'userPrincipalName', // ✅ PascalCase
         headerName: 'UPN',
         sortable: true,
         filter: true,
         width: 250,
       },
       {
-        field: 'PrimarySmtpAddress', // ✅ PascalCase
+        field: 'primarySmtpAddress', // ✅ PascalCase
         headerName: 'Email',
         sortable: true,
         filter: true,
         width: 250,
       },
       {
-        field: 'MailboxType', // ✅ PascalCase
+        field: 'mailboxType', // ✅ PascalCase
         headerName: 'Type',
         sortable: true,
         filter: true,
         width: 150,
       },
       {
-        field: 'TotalItemSize', // ✅ PascalCase
+        field: 'totalItemSize', // ✅ PascalCase
         headerName: 'Size (MB)',
         sortable: true,
         filter: 'agNumberColumnFilter',
@@ -641,7 +668,7 @@ export function useExchangeDiscoveryLogic() {
         width: 120,
       },
       {
-        field: 'ItemCount', // ✅ PascalCase
+        field: 'itemCount', // ✅ PascalCase
         headerName: 'Item Count',
         sortable: true,
         filter: 'agNumberColumnFilter',
@@ -653,7 +680,7 @@ export function useExchangeDiscoveryLogic() {
         width: 120,
       },
       {
-        field: 'ArchiveEnabled', // ✅ PascalCase
+        field: 'archiveEnabled', // ✅ PascalCase
         headerName: 'Archive',
         sortable: true,
         filter: true,
@@ -661,7 +688,7 @@ export function useExchangeDiscoveryLogic() {
         width: 100,
       },
       {
-        field: 'LitigationHoldEnabled', // ✅ PascalCase
+        field: 'litigationHoldEnabled', // ✅ PascalCase
         headerName: 'Litigation Hold',
         sortable: true,
         filter: true,
@@ -669,7 +696,7 @@ export function useExchangeDiscoveryLogic() {
         width: 140,
       },
       {
-        field: 'IsInactive', // ✅ PascalCase
+        field: 'isInactive', // ✅ PascalCase
         headerName: 'Status',
         sortable: true,
         filter: true,
@@ -677,7 +704,7 @@ export function useExchangeDiscoveryLogic() {
         width: 100,
       },
       {
-        field: 'LastLogonTime', // ✅ PascalCase
+        field: 'lastLogonTime', // ✅ PascalCase
         headerName: 'Last Logon',
         sortable: true,
         filter: 'agDateColumnFilter',
@@ -702,7 +729,7 @@ export function useExchangeDiscoveryLogic() {
   const groupColumns = useMemo<ColDef<ExchangeDistributionGroup>[]>(
     () => [
       {
-        field: 'DisplayName', // ✅ PascalCase to match PowerShell output
+        field: 'displayName', // ✅ PascalCase to match PowerShell output
         headerName: 'Display Name',
         sortable: true,
         filter: true,
@@ -710,28 +737,28 @@ export function useExchangeDiscoveryLogic() {
         width: 200,
       },
       {
-        field: 'PrimarySmtpAddress', // ✅ PascalCase
+        field: 'primarySmtpAddress', // ✅ PascalCase
         headerName: 'Email',
         sortable: true,
         filter: true,
         width: 250,
       },
       {
-        field: 'GroupType', // ✅ PascalCase
+        field: 'groupType', // ✅ PascalCase
         headerName: 'Type',
         sortable: true,
         filter: true,
         width: 120,
       },
       {
-        field: 'MemberCount', // ✅ PascalCase
+        field: 'memberCount', // ✅ PascalCase
         headerName: 'Members',
         sortable: true,
         filter: 'agNumberColumnFilter',
         width: 100,
       },
       {
-        field: 'ModerationEnabled', // ✅ PascalCase
+        field: 'moderationEnabled', // ✅ PascalCase
         headerName: 'Moderation',
         sortable: true,
         filter: true,
@@ -739,7 +766,7 @@ export function useExchangeDiscoveryLogic() {
         width: 120,
       },
       {
-        field: 'HiddenFromAddressListsEnabled', // ✅ PascalCase
+        field: 'hiddenFromAddressListsEnabled', // ✅ PascalCase
         headerName: 'Hidden',
         sortable: true,
         filter: true,
@@ -747,7 +774,7 @@ export function useExchangeDiscoveryLogic() {
         width: 100,
       },
       {
-        field: 'WhenCreated', // ✅ PascalCase
+        field: 'whenCreated', // ✅ PascalCase
         headerName: 'Created',
         sortable: true,
         filter: 'agDateColumnFilter',
@@ -772,7 +799,7 @@ export function useExchangeDiscoveryLogic() {
   const ruleColumns = useMemo<ColDef<ExchangeTransportRule>[]>(
     () => [
       {
-        field: 'Name', // ✅ PascalCase to match PowerShell output
+        field: 'name', // ✅ PascalCase to match PowerShell output
         headerName: 'Rule Name',
         sortable: true,
         filter: true,
@@ -780,35 +807,35 @@ export function useExchangeDiscoveryLogic() {
         width: 250,
       },
       {
-        field: 'Description', // ✅ PascalCase
+        field: 'description', // ✅ PascalCase
         headerName: 'Description',
         sortable: true,
         filter: true,
         width: 300,
       },
       {
-        field: 'Priority', // ✅ PascalCase
+        field: 'priority', // ✅ PascalCase
         headerName: 'Priority',
         sortable: true,
         filter: 'agNumberColumnFilter',
         width: 100,
       },
       {
-        field: 'State', // ✅ PascalCase
+        field: 'state', // ✅ PascalCase
         headerName: 'State',
         sortable: true,
         filter: true,
         width: 100,
       },
       {
-        field: 'CreatedBy', // ✅ PascalCase
+        field: 'createdBy', // ✅ PascalCase
         headerName: 'Created By',
         sortable: true,
         filter: true,
         width: 150,
       },
       {
-        field: 'CreatedDate', // ✅ PascalCase
+        field: 'createdDate', // ✅ PascalCase
         headerName: 'Created',
         sortable: true,
         filter: 'agDateColumnFilter',
@@ -827,7 +854,7 @@ export function useExchangeDiscoveryLogic() {
         width: 120,
       },
       {
-        field: 'ModifiedDate', // ✅ PascalCase
+        field: 'modifiedDate', // ✅ PascalCase
         headerName: 'Modified',
         sortable: true,
         filter: 'agDateColumnFilter',
