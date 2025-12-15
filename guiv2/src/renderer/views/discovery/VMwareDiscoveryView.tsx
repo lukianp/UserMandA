@@ -133,7 +133,7 @@ const VMwareDiscoveryView: React.FC = () => {
           <Server className="w-8 h-8 text-violet-600 dark:text-violet-400" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">VMware Discovery</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Discover VMware hosts, virtual machines, and clusters</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Discover virtualized infrastructure to identify consolidation opportunities and plan hybrid cloud strategies</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

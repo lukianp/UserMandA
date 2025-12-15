@@ -68,7 +68,7 @@ const Office365DiscoveryView: React.FC = () => {
                 Office 365 Discovery
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Discover Microsoft 365 tenant, users, licenses, services, and security configuration
+                Discover cloud productivity suite to assess license optimization and plan service consolidation
               </p>
             </div>
           </div>

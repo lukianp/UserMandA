@@ -77,7 +77,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                 Security Infrastructure Discovery
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Discover security devices, policies, incidents, vulnerabilities, and compliance status
+                Discover security infrastructure and threat landscape to assess risk posture and plan security consolidation
               </p>
             </div>
           </div>

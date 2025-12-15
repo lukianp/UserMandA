@@ -18,7 +18,7 @@ ModuleRegistry.registerModules([AllCommunityModule, AllEnterpriseModule]);
 
 import App from './renderer/App';
 
-console.log('🚀 M&A Discovery Suite - Renderer Process Starting...');
+console.log('🚀 Enterprise Discovery & Migration Suite - Renderer Process Starting...');
 
 // Wait for DOM to be ready
 const rootElement = document.getElementById('root');

@@ -109,7 +109,7 @@ const IntuneDiscoveryView: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Intune Discovery</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Discover and analyze Intune devices, applications, and policies
+              Discover mobile device management configuration to assess compliance posture and plan endpoint consolidation
             </p>
           </div>
         </div>

@@ -12,6 +12,7 @@ import { ColDef } from 'ag-grid-community';
 import { GroupData, GroupType, GroupScope, MembershipType } from '../types/models/group';
 import { powerShellService } from '../services/powerShellService';
 import { useProfileStore } from '../store/useProfileStore';
+import { useModalStore } from '../store/useModalStore';
 
 import { useDebounce } from './useDebounce';
 
@@ -192,7 +193,7 @@ export const useGroupsViewLogic = () => {
 
     // Dynamically import and render GroupMembersModal
     import('../components/dialogs/GroupMembersModal').then(({ GroupMembersModal }) => {
-      const { openModal, updateModal } = require('../store/useModalStore').useModalStore.getState();
+      const { openModal, updateModal } = useModalStore.getState();
 
       const modalId = openModal({
         type: 'custom',
@@ -291,12 +292,12 @@ export const useGroupsViewLogic = () => {
 
   /**
    * Column definitions for AG Grid
-   * Updated for Epic 1 Task 1.4 - Added View Details action
+   * CRITICAL: Field names must match PowerShell PascalCase properties exactly
    */
   const columnDefs = useMemo<ColDef[]>(
     () => [
       {
-        field: 'name',
+        field: 'Name',  // ✅ PascalCase - matches PowerShell output
         headerName: 'Group Name',
         sortable: true,
         filter: true,
@@ -305,28 +306,28 @@ export const useGroupsViewLogic = () => {
         headerCheckboxSelection: true,
       },
       {
-        field: 'displayName',
+        field: 'DisplayName',  // ✅ PascalCase - matches PowerShell output
         headerName: 'Display Name',
         sortable: true,
         filter: true,
         flex: 2,
       },
       {
-        field: 'groupType',
+        field: 'Type',  // ✅ PascalCase - matches PowerShell 'Type' property
         headerName: 'Type',
         sortable: true,
         filter: true,
         width: 150,
       },
       {
-        field: 'scope',
+        field: 'Scope',  // ✅ PascalCase - matches PowerShell output
         headerName: 'Scope',
         sortable: true,
         filter: true,
         width: 130,
       },
       {
-        field: 'memberCount',
+        field: 'MemberCount',  // ✅ PascalCase - matches mapped property
         headerName: 'Members',
         sortable: true,
         filter: 'agNumberColumnFilter',
@@ -334,21 +335,21 @@ export const useGroupsViewLogic = () => {
         type: 'numericColumn',
       },
       {
-        field: 'source',
+        field: 'Source',  // ✅ PascalCase - matches mapped property
         headerName: 'Source',
         sortable: true,
         filter: true,
         width: 130,
       },
       {
-        field: 'email',
+        field: 'Email',  // ✅ PascalCase - matches PowerShell output
         headerName: 'Email',
         sortable: true,
         filter: true,
         flex: 2,
       },
       {
-        field: 'createdDate',
+        field: 'DiscoveryTimestamp',  // ✅ PascalCase - matches PowerShell output
         headerName: 'Created',
         sortable: true,
         filter: 'agDateColumnFilter',

@@ -13,6 +13,7 @@ import { ColDef } from 'ag-grid-community';
 
 import { UserData } from '../types/models/user';
 import { useProfileStore } from '../store/useProfileStore';
+import { useModalStore } from '../store/useModalStore';
 
 export const useUsersViewLogic = () => {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -156,11 +157,12 @@ export const useUsersViewLogic = () => {
 
   /**
    * Column definitions for AG Grid
+   * CRITICAL: Field names must match PowerShell PascalCase properties exactly
    */
   const columnDefs = useMemo<ColDef[]>(
     () => [
       {
-        field: 'displayName',
+        field: 'DisplayName',  // ✅ PascalCase - matches PowerShell output
         headerName: 'Display Name',
         sortable: true,
         filter: true,
@@ -169,35 +171,35 @@ export const useUsersViewLogic = () => {
         headerCheckboxSelection: true,
       },
       {
-        field: 'mail',
+        field: 'Mail',  // ✅ PascalCase - matches PowerShell output
         headerName: 'Email',
         sortable: true,
         filter: true,
         minWidth: 200,
       },
       {
-        field: 'department',
+        field: 'Dept',  // ✅ PascalCase - matches PowerShell 'Dept' property
         headerName: 'Department',
         sortable: true,
         filter: true,
         minWidth: 120,
       },
       {
-        field: 'jobTitle',
+        field: 'JobTitle',  // ✅ PascalCase - matches PowerShell output
         headerName: 'Job Title',
         sortable: true,
         filter: true,
         minWidth: 150,
       },
       {
-        field: 'officeLocation',
+        field: 'OfficeLocation',  // ✅ PascalCase - matches PowerShell output
         headerName: 'Location',
         sortable: true,
         filter: true,
         minWidth: 120,
       },
       {
-        field: 'accountEnabled',
+        field: 'Enabled',  // ✅ PascalCase - matches PowerShell 'Enabled' property
         headerName: 'Status',
         sortable: true,
         filter: true,
@@ -209,14 +211,14 @@ export const useUsersViewLogic = () => {
         }),
       },
       {
-        field: 'userSource',
+        field: 'UserSource',  // ✅ PascalCase - matches mapped property
         headerName: 'Source',
         sortable: true,
         filter: true,
         minWidth: 120,
       },
       {
-        field: 'status',
+        field: 'Status',  // ✅ PascalCase - matches mapped property
         headerName: 'Account Status',
         sortable: true,
         filter: true,
@@ -306,7 +308,7 @@ export const useUsersViewLogic = () => {
 
     // Dynamically import and render CreateUserDialog
     import('../components/dialogs/CreateUserDialog').then(({ CreateUserDialog }) => {
-      const { openModal, updateModal } = require('../store/useModalStore').useModalStore.getState();
+      const { openModal, updateModal } = useModalStore.getState();
 
       const modalId = openModal({
         type: 'custom',

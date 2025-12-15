@@ -1,6 +1,6 @@
 /**
  * Compliance Dashboard View
- * Comprehensive compliance monitoring and reporting for M&A discovery
+ * Comprehensive compliance monitoring and reporting for enterprise discovery
  */
 
 import React, { useState } from 'react';

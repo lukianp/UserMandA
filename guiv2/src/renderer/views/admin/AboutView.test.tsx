@@ -45,7 +45,7 @@ describe('AboutView', () => {
 
     it('displays the view title', () => {
       render(<AboutView />);
-      expect(screen.getByText('M&A Discovery Suite')).toBeInTheDocument();
+      expect(screen.getByText('Enterprise Discovery & Migration Suite')).toBeInTheDocument();
     });
 
     it('displays the view description', () => {

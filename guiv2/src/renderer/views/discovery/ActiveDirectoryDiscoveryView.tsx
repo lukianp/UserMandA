@@ -51,7 +51,7 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
                 Active Directory Discovery
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Discover and analyze Active Directory environments
+                Discover on-premises directory infrastructure to identify dependencies and plan cloud migration strategies
               </p>
             </div>
           </div>

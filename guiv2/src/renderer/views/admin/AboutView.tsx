@@ -6,10 +6,10 @@ import { Badge } from '../../components/atoms/Badge';
 
 export const AboutView: React.FC = () => {
   const appInfo = {
-    name: 'M&A Discovery Suite',
+    name: 'Enterprise Discovery Suite',
     version: '2.0.0',
-    buildDate: '2025-10-04',
-    buildNumber: '2025.10.04.1',
+    buildDate: '2025-12-15',
+    buildNumber: '2025.12.15.1',
     environment: process.env.NODE_ENV || 'production',
     electronVersion: process.versions.electron || 'N/A',
     chromeVersion: process.versions.chrome || 'N/A',
@@ -46,7 +46,7 @@ export const AboutView: React.FC = () => {
           </div>
           <div>
             <h1 className="text-3xl font-bold">{appInfo.name}</h1>
-            <p className="text-blue-100">Enterprise Migration & Discovery Platform</p>
+            <p className="text-blue-100">M&A Intelligence & Integration Platform</p>
           </div>
         </div>
         <div className="flex gap-4">
@@ -169,8 +169,8 @@ export const AboutView: React.FC = () => {
 
       {/* Copyright */}
       <div className="text-center text-sm text-gray-600 dark:text-gray-400 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <p>© 2024-2025 M&A Discovery Suite. All rights reserved.</p>
-        <p className="mt-1">Built with ❤️ using Electron, React, and TypeScript</p>
+        <p>© 2024-2025 Enterprise Discovery Suite. All rights reserved.</p>
+        <p className="mt-1">Professional M&A Intelligence Platform - Built with Electron, React, and TypeScript</p>
       </div>
     </div>
   );

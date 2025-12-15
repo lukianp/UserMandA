@@ -67,7 +67,7 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Data Loss Prevention</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Discover DLP policies, rules, and incidents</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Discover data protection policies to assess compliance controls and identify data exposure risks</p>
           </div>
         </div>
 

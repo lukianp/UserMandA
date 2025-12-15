@@ -79,7 +79,7 @@ const TeamsDiscoveryView: React.FC = () => {
                 Teams Discovery
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Discover Microsoft Teams, channels, members, settings, and installed apps
+                Discover team collaboration infrastructure to identify usage patterns and plan unified communications strategy
               </p>
             </div>
           </div>
@@ -492,7 +492,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
         <SummaryRow label="Public Teams" value={(result?.statistics?.publicTeams ?? 0)} />
         <SummaryRow label="Private Teams" value={(result?.statistics?.privateTeams ?? 0)} />
         <SummaryRow label="Org-Wide Teams" value="N/A" />
-        <SummaryRow label="Average Team Size" value={result.statistics.averageMembersPerTeam?.toFixed(1) || 'N/A'} />
+        <SummaryRow label="Average Team Size" value={result?.statistics?.averageMembersPerTeam?.toFixed(1) || 'N/A'} />
       </div>
     </div>
 
@@ -504,7 +504,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
         <SummaryRow label="Standard Channels" value={(result?.statistics?.standardChannels ?? 0)} />
         <SummaryRow label="Private Channels" value={(result?.statistics?.privateChannels ?? 0)} />
         <SummaryRow label="Shared Channels" value={(result?.statistics?.sharedChannels ?? 0)} />
-        <SummaryRow label="Average Channels per Team" value={result.statistics.averageChannelsPerTeam?.toFixed(1) || 'N/A'} />
+        <SummaryRow label="Average Channels per Team" value={result?.statistics?.averageChannelsPerTeam?.toFixed(1) || 'N/A'} />
       </div>
     </div>
 

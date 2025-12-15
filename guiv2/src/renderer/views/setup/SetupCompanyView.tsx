@@ -912,10 +912,10 @@ const SetupCompanyView: React.FC = () => {
               <Cloud className="w-12 h-12 text-white" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-              Welcome to Azure Setup
+              Welcome to Enterprise Discovery & Migration Suite
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8">
-              This wizard will guide you through creating an Azure App Registration for the M&A Discovery Suite.
+              This wizard will guide you through creating an Azure App Registration for your M&A transaction.
               You'll need <strong>Global Administrator</strong> or <strong>Application Administrator</strong> permissions in Azure AD.
             </p>
 
@@ -1247,8 +1247,8 @@ const SetupCompanyView: React.FC = () => {
               <Building2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Company Setup</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Azure App Registration Wizard</p>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Azure Integration Setup</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Configure credentials for automated discovery</p>
             </div>
           </div>
           <Button variant="secondary" onClick={resetForm} icon={<RefreshCw className="w-4 h-4" />}>

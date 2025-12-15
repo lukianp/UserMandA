@@ -129,7 +129,7 @@ const SQLServerDiscoveryView: React.FC = () => {
           <Database className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">SQL Server Discovery</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Discover SQL Server instances, databases, and configurations</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Discover database infrastructure to assess application dependencies and plan cloud modernization</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

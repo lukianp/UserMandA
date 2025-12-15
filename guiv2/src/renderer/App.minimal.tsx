@@ -20,12 +20,12 @@ export const App: React.FC = () => {
       fontSize: '24px'
     }}>
       <div style={{ textAlign: 'center' }}>
-        <h1 style={{ marginBottom: '20px' }}>M&A Discovery Suite v2</h1>
+        <h1 style={{ marginBottom: '20px' }}>Enterprise Discovery Suite v2.0</h1>
         <p style={{ fontSize: '16px', color: '#a0aec0' }}>
-          React is working! ✅
+          M&A Intelligence & Integration Platform
         </p>
         <p style={{ fontSize: '14px', color: '#718096', marginTop: '20px' }}>
-          Electron app is running successfully
+          Application initialized successfully ✅
         </p>
       </div>
     </div>

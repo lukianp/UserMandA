@@ -1,6 +1,6 @@
 /**
  * Common Type Definitions
- * Base utility types used throughout the M&A Discovery Suite
+ * Base utility types used throughout the Enterprise Discovery & Migration Suite
  */
 
 /**

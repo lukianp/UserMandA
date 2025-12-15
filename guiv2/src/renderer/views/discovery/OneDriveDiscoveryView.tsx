@@ -68,7 +68,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                 OneDrive Discovery
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Discover OneDrive accounts, files, storage usage, and sharing configuration
+                Discover personal cloud storage to assess compliance risk and plan content consolidation
               </p>
             </div>
           </div>

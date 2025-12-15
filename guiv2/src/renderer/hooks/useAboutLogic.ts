@@ -30,15 +30,15 @@ export interface SystemInfo {
 
 export function useAboutLogic() {
   const [aboutInfo, setAboutInfo] = useState<AboutInfo>({
-    appName: 'M&A Discovery Suite',
+    appName: 'Enterprise Discovery Suite',
     appVersion: '2.0.0',
     electronVersion: process.versions.electron || 'N/A',
     nodeVersion: process.versions.node || 'N/A',
     chromeVersion: process.versions.chrome || 'N/A',
     buildDate: new Date().toISOString().split('T')[0],
-    author: 'Enterprise Discovery Team',
-    description: 'Comprehensive discovery and migration platform for enterprise M&A activities',
-    license: 'Proprietary',
+    author: 'Enterprise Discovery Suite Team',
+    description: 'M&A Intelligence & Integration Platform - Comprehensive IT Discovery, Due Diligence & Migration Execution',
+    license: 'Enterprise License',
     homepage: 'https://github.com/enterprise/discovery-suite',
   });
 

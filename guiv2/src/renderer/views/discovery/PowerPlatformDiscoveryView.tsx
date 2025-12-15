@@ -81,7 +81,7 @@ const PowerPlatformDiscoveryView: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Power Platform Discovery</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Discover and analyze Power Apps, Power Automate, and connectors
+              Discover automation and business application development to assess shadow IT risks and integration dependencies
             </p>
           </div>
         </div>

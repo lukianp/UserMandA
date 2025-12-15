@@ -118,7 +118,7 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Web Server Configuration</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Discover IIS, Apache, Nginx, and Tomcat configurations</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Discover web server infrastructure to assess modernization needs and plan platform consolidation</p>
           </div>
         </div>
         <div className="flex gap-2">

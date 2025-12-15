@@ -242,7 +242,7 @@ const SettingsView: React.FC = () => {
               About
             </h2>
             <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-              <p><strong>Application:</strong> M&A Discovery Suite</p>
+              <p><strong>Application:</strong> Enterprise Discovery & Migration Suite</p>
               <p><strong>Version:</strong> 2.0.0</p>
               <p><strong>Framework:</strong> Electron + React + TypeScript</p>
               <p><strong>Build:</strong> {process.env.NODE_ENV}</p>

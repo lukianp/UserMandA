@@ -85,6 +85,7 @@ const rendererConfig = {
       'process/browser': false,  // Browser doesn't need process
       'process': false,
       'buffer': false,
+      'crypto': false,  // CRITICAL: Prevent crypto from being bundled for browser
     },
   },
   infrastructureLogging: {

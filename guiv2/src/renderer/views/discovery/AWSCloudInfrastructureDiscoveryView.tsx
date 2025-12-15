@@ -122,7 +122,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
                 AWS Cloud Infrastructure Discovery
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Discover and analyze AWS resources across regions
+                Discover cloud infrastructure to assess workload portability and plan hybrid cloud optimization
               </p>
             </div>
           </div>

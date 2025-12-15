@@ -191,7 +191,8 @@ export const Sidebar: React.FC = () => {
     <aside className="w-64 bg-gray-900 text-white flex flex-col relative z-50">
       {/* Logo/Title */}
       <div className="p-4 border-b border-gray-800">
-        <h1 className="text-xl font-bold">M&A Discovery Suite</h1>
+        <h1 className="text-xl font-bold">Enterprise Discovery & Migration Suite</h1>
+        <p className="text-xs text-gray-400 mt-1">Complete IT Assessment Platform</p>
       </div>
 
       {/* Profile Section */}

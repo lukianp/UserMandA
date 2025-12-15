@@ -73,7 +73,7 @@ const ApplicationDiscoveryView: React.FC = () => {
                 Application Discovery
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Discover installed software, services, processes, and network ports
+                Discover application landscape to identify dependencies, compatibility risks, and license obligations
               </p>
             </div>
           </div>

@@ -1016,9 +1016,9 @@ const SetupAzurePrerequisitesView: React.FC = () => {
                   <CheckCircle className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-green-800 dark:text-green-200">Prerequisites Complete!</h3>
+                  <h3 className="font-semibold text-green-800 dark:text-green-200">Prerequisites Installed</h3>
                   <p className="text-sm text-green-700 dark:text-green-300">
-                    All required PowerShell modules have been installed successfully.
+                    All required PowerShell modules for Enterprise Discovery & Migration Suite are installed.
                   </p>
                 </div>
               </div>
@@ -1158,7 +1158,7 @@ const SetupAzurePrerequisitesView: React.FC = () => {
               <div>
                 <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">Need Help?</h3>
                 <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-                  These modules are required for the M&A Discovery Suite to function properly. Required modules are
+                  These modules are required for the Enterprise Discovery & Migration Suite to function properly. Required modules are
                   automatically selected and cannot be deselected.
                 </p>
                 <div className="flex items-center gap-4">

@@ -88,7 +88,7 @@ const OverviewView: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-[var(--text-primary)]">Dashboard</h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
-            M&A Discovery Suite Overview
+            M&A Intelligence & Integration Platform
           </p>
         </div>
         <Button

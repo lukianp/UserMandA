@@ -340,7 +340,7 @@ class PrintService {
    * Generate header HTML
    */
   private generateHeader(options: PrintOptions): string {
-    const content = options.headerContent || options.title || 'M&A Discovery Suite';
+    const content = options.headerContent || options.title || 'Enterprise Discovery & Migration Suite';
 
     return `
       <div class="print-header">
@@ -354,7 +354,7 @@ class PrintService {
    * Generate footer HTML
    */
   private generateFooter(options: PrintOptions): string {
-    const content = options.footerContent || 'M&A Discovery Suite';
+    const content = options.footerContent || 'Enterprise Discovery & Migration Suite';
     const pageNumbers = options.pageNumbers
       ? '<span class="page-number">Page <span class="page"></span> of <span class="pages"></span></span>'
       : '';

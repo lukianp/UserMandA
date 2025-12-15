@@ -23,7 +23,7 @@ const AppMinimal: React.FC = () => {
       gap: '20px'
     }}>
       <h1 style={{ fontSize: '48px', margin: 0 }}>🎉 React is Working!</h1>
-      <p>M&A Discovery Suite v2 - Minimal Test</p>
+      <p>Enterprise Discovery & Migration Suite v2 - Minimal Test</p>
       <p style={{ fontSize: '16px', opacity: 0.8 }}>
         If you can see this, the renderer process is functional.
       </p>

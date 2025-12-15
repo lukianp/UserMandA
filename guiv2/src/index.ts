@@ -23,6 +23,7 @@ const createWindow = async (): Promise<BrowserWindow> => {
 
   // Create the browser window.
   const mainWindow = new BrowserWindow({
+    title: 'Enterprise Discovery & Migration Suite',
     height: 900,
     width: 1400,
     minHeight: 700,

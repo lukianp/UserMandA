@@ -53,7 +53,7 @@ export function useSystemConfigurationLogic() {
             {
               key: 'appName',
               label: 'Application Name',
-              value: 'M&A Discovery Suite',
+              value: 'Enterprise Discovery & Migration Suite',
               type: 'string',
               description: 'Display name of the application',
               required: true,

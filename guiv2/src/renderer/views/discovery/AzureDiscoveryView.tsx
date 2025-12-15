@@ -48,7 +48,7 @@ const AzureDiscoveryView: React.FC = () => {
                 Azure / Microsoft 365 Discovery
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Discover users, groups, Teams, SharePoint, OneDrive, and Exchange Online
+                Discover cloud identity, collaboration, and messaging infrastructure to assess consolidation opportunities and plan hybrid migrations
               </p>
             </div>
           </div>

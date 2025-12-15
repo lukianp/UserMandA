@@ -42,7 +42,7 @@ const DomainDiscoveryView: React.FC = () => {
                 Domain Discovery
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Discover Active Directory users, groups, computers, and organizational units
+                Discover directory structure to identify organizational hierarchy and access permission consolidation needs
               </p>
             </div>
           </div>

@@ -73,7 +73,7 @@ const ConditionalAccessPoliciesDiscoveryView: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Conditional Access Policies</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Discover and analyze Azure AD Conditional Access configurations</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Discover identity security policies to assess authentication requirements and risk-based access controls</p>
           </div>
         </div>
 

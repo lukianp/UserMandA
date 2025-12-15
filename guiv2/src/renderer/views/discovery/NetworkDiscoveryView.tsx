@@ -124,7 +124,7 @@ const NetworkDiscoveryView: React.FC = () => {
           <Network className="w-8 h-8 text-teal-600 dark:text-teal-400" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Network Discovery</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Discover network devices, subnets, and open ports</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Discover network topology and infrastructure to assess connectivity and identify security risks</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

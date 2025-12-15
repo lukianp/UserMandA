@@ -73,7 +73,7 @@ const LicensingDiscoveryView: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Licensing Discovery</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Discover and analyze software licenses, costs, and compliance
+              Discover software licenses to identify cost optimization opportunities and plan license consolidation
             </p>
           </div>
         </div>

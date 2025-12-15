@@ -36,11 +36,11 @@ export interface AboutDialogProps {
 const AboutDialog: React.FC<AboutDialogProps> = ({
   isOpen,
   onClose,
-  appName = 'M&A Discovery Suite',
+  appName = 'Enterprise Discovery Suite',
   version = '2.0.0',
-  copyright = `© ${new Date().getFullYear()} All Rights Reserved`,
-  license = 'Proprietary License',
-  description = 'Enterprise-grade M&A discovery and migration platform',
+  copyright = `© ${new Date().getFullYear()} Enterprise Discovery Suite. All Rights Reserved`,
+  license = 'Enterprise License',
+  description = 'M&A Intelligence & Integration Platform - Accelerating Due Diligence and Post-Merger Integration',
   logoUrl,
   'data-cy': dataCy = 'about-dialog',
 }) => {
@@ -80,8 +80,8 @@ const AboutDialog: React.FC<AboutDialogProps> = ({
               </div>
             ) : (
               <div className="flex justify-center">
-                <div className="h-20 w-20 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center">
-                  <span className="text-3xl font-bold text-white">M&A</span>
+                <div className="h-20 w-20 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center shadow-lg">
+                  <span className="text-2xl font-bold text-white tracking-tight">EDS</span>
                 </div>
               </div>
             )}

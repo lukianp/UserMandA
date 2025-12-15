@@ -80,7 +80,7 @@ describe('OverviewView', () => {
     it('displays the view description', () => {
       renderWithRouter(<OverviewView />);
       expect(
-        screen.getByText(/M&A Discovery Suite Overview/i)
+        screen.getByText(/Enterprise IT Discovery, Assessment & Migration Platform/i)
       ).toBeInTheDocument();
     });
 

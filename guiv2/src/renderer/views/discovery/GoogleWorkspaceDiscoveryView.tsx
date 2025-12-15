@@ -70,7 +70,7 @@ const GoogleWorkspaceDiscoveryView: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Google Workspace Discovery</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Discover users, groups, Gmail, Drive, and Calendar</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Discover third-party collaboration platform to assess data exposure and plan consolidation strategy</p>
           </div>
         </div>
 

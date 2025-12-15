@@ -83,7 +83,7 @@ const HyperVDiscoveryView: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Hyper-V Discovery</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Discover hosts, VMs, switches, and checkpoints</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Discover Microsoft virtualization infrastructure to assess consolidation opportunities and plan cloud migration</p>
           </div>
         </div>
 

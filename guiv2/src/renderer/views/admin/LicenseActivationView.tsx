@@ -30,7 +30,7 @@ export const LicenseActivationView: React.FC = () => {
         <div className="flex justify-between items-start mb-4">
           <div>
             <h2 className="text-2xl font-bold">{licenseInfo.type} License</h2>
-            <p className="text-blue-100">M&A Discovery Suite v2.0</p>
+            <p className="text-blue-100">Enterprise Discovery & Migration Suite v2.0</p>
           </div>
           <Badge variant="default" className="bg-white/20 text-white">
             <Check className="w-4 h-4 mr-1" />

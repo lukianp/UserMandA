@@ -77,7 +77,7 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Identity Governance</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Access Reviews, Entitlements, and Privileged Identity Management</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Discover access controls and privilege management to assess IAM consolidation needs and compliance posture</p>
           </div>
         </div>
 

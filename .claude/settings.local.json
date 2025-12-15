@@ -84,7 +84,20 @@
       "Bash(powershell.exe -Command \"Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\use*DiscoveryLogic.ts'' -Destination ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\'' -Force -Verbose | Select-Object -Last 10\")",
       "Bash(powershell.exe -Command \"cd C:\\enterprisediscovery\\guiv2; npx tsc --noEmit 2>&1 | Select-String -Pattern ''use.*DiscoveryLogic'' | Select-Object -First 20\")",
       "Bash(powershell.exe -Command \"Copy-Item -Path ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useAWSCloudInfrastructureDiscoveryLogic.ts'' -Destination ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useAWSCloudInfrastructureDiscoveryLogic.ts'' -Force\")",
-      "Bash(powershell.exe -Command \"cd C:\\enterprisediscovery\\guiv2; npm run build:main 2>&1 | Select-Object -Last 15\")"
+      "Bash(powershell.exe -Command \"cd C:\\enterprisediscovery\\guiv2; npm run build:main 2>&1 | Select-Object -Last 15\")",
+      "Bash(Copy-Item -Path \"D:\\Scripts\\UserMandA\\guiv2\\package.json\" -Destination \"C:\\enterprisediscovery\\guiv2\"\" -Force)",
+      "Bash(Copy-Item -Path \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\components\\dialogs\\AboutDialog.tsx\" -Destination \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\components\\dialogs\"\" -Force)",
+      "Bash(Copy-Item -Path \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\App.minimal.tsx\" -Destination \"C:\\enterprisediscovery\\guiv2\\src\\renderer\"\" -Force)",
+      "Bash(Copy-Item -Path \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\overview\\OverviewView.tsx\" -Destination \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\views\\overview\"\" -Force)",
+      "Bash(Copy-Item -Path \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useAboutLogic.ts\" -Destination \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\"\" -Force)",
+      "Bash(Copy-Item -Path \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\admin\\AboutView.tsx\" -Destination \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\views\\admin\"\" -Force)",
+      "Bash(powershell.exe -Command \"Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\package.json'' -Destination ''C:\\enterprisediscovery\\guiv2\\'' -Force\")",
+      "Bash(powershell.exe -Command \"Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\components\\dialogs\\AboutDialog.tsx'' -Destination ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\components\\dialogs\\'' -Force\")",
+      "Bash(powershell.exe -Command \"Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\App.minimal.tsx'' -Destination ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\'' -Force\")",
+      "Bash(powershell.exe -Command \"Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\overview\\OverviewView.tsx'' -Destination ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\views\\overview\\'' -Force\")",
+      "Bash(powershell.exe -Command \"Copy-Item -Path ''D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useAboutLogic.ts'' -Destination ''C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\'' -Force\")",
+      "Bash(Copy-Item -Path \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\discovery\\EnvironmentDetectionView.tsx\" -Destination \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\views\\discovery\"\" -Force)",
+      "Bash(Get-Date -Format \"yyyy-MM-dd HH:mm:ss\")"
     ],
     "deny": [],
     "ask": []

@@ -81,7 +81,7 @@ const ExchangeDiscoveryView: React.FC = () => {
                 Exchange Discovery
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Discover Exchange mailboxes, distribution groups, transport rules, and connectors
+                Discover messaging infrastructure to assess migration readiness and plan cloud adoption strategies
               </p>
             </div>
           </div>

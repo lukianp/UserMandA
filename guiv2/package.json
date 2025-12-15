@@ -1,8 +1,8 @@
 {
-  "name": "guiv2",
-  "productName": "guiv2",
-  "version": "1.0.0",
-  "description": "My Electron application description",
+  "name": "enterprise-discovery-suite",
+  "productName": "Enterprise Discovery Suite",
+  "version": "2.0.0",
+  "description": "M&A Intelligence & Integration Platform - Comprehensive IT Discovery, Due Diligence & Migration Execution",
   "main": ".webpack/main",
   "sideEffects": [
     "*.css",

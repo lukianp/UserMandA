@@ -77,7 +77,7 @@ const SharePointDiscoveryView: React.FC = () => {
                 SharePoint Discovery
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Discover SharePoint sites, lists, libraries, permissions, and content types
+                Discover collaboration sites and content to plan modern workplace migrations and reduce licensing costs
               </p>
             </div>
           </div>
