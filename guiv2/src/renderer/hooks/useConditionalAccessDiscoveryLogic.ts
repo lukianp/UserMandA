@@ -62,13 +62,13 @@ export const useConditionalAccessDiscoveryLogic = () => {
     error: null
   });
 
-  const [logs, setLogs] = useState<Array<{ timestamp: string; level: 'info' | 'warn' | 'error'; message: string }>>([]);
+  const [logs, setLogs] = useState<Array<{ timestamp: string; level: 'info' | 'warning' | 'error'; message: string }>>([]);
   const [showExecutionDialog, setShowExecutionDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
   const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
 
-  const addLog = useCallback((level: 'info' | 'warn' | 'error', message: string) => {
+  const addLog = useCallback((level: 'info' | 'warning' | 'error', message: string) => {
     setLogs(prev => [...prev, {
       timestamp: new Date().toLocaleTimeString(),
       level,
@@ -86,7 +86,7 @@ export const useConditionalAccessDiscoveryLogic = () => {
 
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
-        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warn' : 'info';
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
         console.log(`[CADiscoveryHook] ${logLevel}: ${data.message}`);
 
         // Update progress message
@@ -229,7 +229,7 @@ export const useConditionalAccessDiscoveryLogic = () => {
     if (!state.isDiscovering || !state.cancellationToken) return;
 
     setIsCancelling(true);
-    addLog('warn', 'Cancelling discovery...');
+    addLog('warning', 'Cancelling discovery...');
 
     try {
       await window.electron.cancelDiscovery(state.cancellationToken);

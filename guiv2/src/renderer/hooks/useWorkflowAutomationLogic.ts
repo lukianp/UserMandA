@@ -1,4 +1,4 @@
-/**
+5.1/**
  * useWorkflowAutomationLogic Hook
  *
  * Manages workflow automation with complete workflow lifecycle, step execution,
@@ -128,7 +128,7 @@ export interface WorkflowStepExecution {
  */
 export interface WorkflowExecutionLog {
   timestamp: string;
-  level: 'info' | 'warn' | 'error';
+  level: 'info' | 'warning' | 'error';
   message: string;
   stepId?: string;
   data?: any;
@@ -223,10 +223,10 @@ export const useWorkflowAutomationLogic = () => {
         trigger: triggerFilter !== 'All' ? triggerFilter : undefined,
       });
 
-      if (result.success) {
-        setWorkflows(result.data.workflows);
-        setPagination(prev => ({ ...prev, total: result.data.total }));
-        console.info('[WorkflowAutomation] Loaded workflows:', result.data.workflows.length);
+      if (result.success && result.data) {
+        setWorkflows(result.data.workflows || []);
+        setPagination(prev => ({ ...prev, total: (result.data!.total || 0) }));
+        console.info('[WorkflowAutomation] Loaded workflows:', (result.data.workflows || []).length);
       } else {
         throw new Error(result.error || 'Failed to load workflows');
       }
@@ -251,9 +251,9 @@ export const useWorkflowAutomationLogic = () => {
         limit,
       });
 
-      if (result.success) {
-        setExecutions(result.data.executions);
-        console.info('[WorkflowAutomation] Loaded executions:', result.data.executions.length);
+      if (result.success && result.data) {
+        setExecutions(result.data.executions || []);
+        console.info('[WorkflowAutomation] Loaded executions:', (result.data.executions || []).length);
       } else {
         throw new Error(result.error || 'Failed to load executions');
       }
@@ -271,8 +271,8 @@ export const useWorkflowAutomationLogic = () => {
     try {
       const result = await window.electronAPI.workflows.getStatistics();
 
-      if (result.success) {
-        setStatistics(result.data.statistics);
+      if (result.success && result.data) {
+        setStatistics(result.data!.statistics || null);
         console.info('[WorkflowAutomation] Loaded statistics');
       } else {
         throw new Error(result.error || 'Failed to load statistics');
@@ -293,7 +293,7 @@ export const useWorkflowAutomationLogic = () => {
 
       const result = await window.electronAPI.workflows.createWorkflow(workflowData);
 
-      if (result.success) {
+      if (result.success && result.data) {
         const newWorkflow = result.data;
         setWorkflows(prev => [newWorkflow, ...prev]);
         setPagination(prev => ({ ...prev, total: prev.total + 1 }));
@@ -322,7 +322,7 @@ export const useWorkflowAutomationLogic = () => {
 
       const result = await window.electronAPI.workflows.updateWorkflow(workflowId, updates);
 
-      if (result.success) {
+      if (result.success && result.data) {
         const updatedWorkflow = result.data;
         setWorkflows(prev => prev.map(workflow =>
           workflow.id === workflowId ? updatedWorkflow : workflow
@@ -380,7 +380,7 @@ export const useWorkflowAutomationLogic = () => {
 
       const result = await window.electronAPI.workflows.executeWorkflow(workflowId, executionData || {});
 
-      if (result.success) {
+      if (result.success && result.data) {
         const execution = result.data;
         setExecutions(prev => [execution, ...prev]);
         // Update workflow execution count
@@ -503,7 +503,7 @@ export const useWorkflowAutomationLogic = () => {
 
       const result = await window.electronAPI.workflows.cloneWorkflow(workflowId, { name });
 
-      if (result.success) {
+      if (result.success && result.data) {
         const clonedWorkflow = result.data;
         setWorkflows(prev => [clonedWorkflow, ...prev]);
         setPagination(prev => ({ ...prev, total: prev.total + 1 }));
@@ -553,7 +553,7 @@ export const useWorkflowAutomationLogic = () => {
 
       const result = await window.electronAPI.workflows.importWorkflow({ data: workflowData });
 
-      if (result.success) {
+      if (result.success && result.data) {
         const importedWorkflow = result.data;
         setWorkflows(prev => [importedWorkflow, ...prev]);
         setPagination(prev => ({ ...prev, total: prev.total + 1 }));
@@ -608,8 +608,8 @@ export const useWorkflowAutomationLogic = () => {
     try {
       const result = await window.electronAPI.workflows.getExecutionLogs(executionId);
 
-      if (result.success) {
-        return result.data.logs;
+      if (result.success && result.data) {
+        return result.data!.logs || [];
       } else {
         throw new Error(result.error || 'Failed to get execution logs');
       }

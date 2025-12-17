@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import { useConditionalAccessDiscoveryLogic } from '../../hooks/useConditionalAccessDiscoveryLogic';
+import type { PolicyState } from '../../types/models/conditionalaccess';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
@@ -49,7 +50,7 @@ const ConditionalAccessDiscoveryView: React.FC = () => {
 
   const policyStates = ['enabled', 'disabled', 'enabledForReportingButNotEnforced'];
 
-  const togglePolicyState = (state: string) => {
+  const togglePolicyState = (state: PolicyState) => {
     const current = filter.selectedStates || [];
     const updated = current.includes(state)
       ? current.filter(s => s !== state)
@@ -315,9 +316,9 @@ const ConditionalAccessDiscoveryView: React.FC = () => {
                     {policyStates.map(state => (
                       <button
                         key={state}
-                        onClick={() => togglePolicyState(state)}
+                        onClick={() => togglePolicyState(state as PolicyState)}
                         className={`px-3 py-1 text-sm rounded-full transition-colors capitalize ${
-                          (filter.selectedStates || []).includes(state)
+                          (filter.selectedStates || []).includes(state as PolicyState)
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }`}

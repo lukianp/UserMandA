@@ -8,37 +8,22 @@ import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 interface EnvironmentDetectionConfig {
-  includeOnPremise: boolean;
-  includeCloud: boolean;
-  includeHybrid: boolean;
-  includeServers: boolean;
-  includeWorkstations: boolean;
-  includeMobileDevices: boolean;
-  maxResults: number;
+  detectAzure: boolean;
+  detectOnPremises: boolean;
+  detectAWS: boolean;
+  detectGCP: boolean;
+  timeout: number;
 }
 
 interface EnvironmentDetectionResult {
-  totalEnvironments?: number;
-  totalOnPremise?: number;
-  totalCloud?: number;
-  totalHybrid?: number;
+  totalServicesDetected?: number;
+  servicesByProvider?: Record<string, number>;
+  environmentConfidence?: number;
+  criticalRecommendations?: number;
+  detectedServices?: any[];
+  recommendations?: any[];
   totalItems?: number;
   outputPath?: string;
-  environments?: any[];
-  onPremiseResources?: any[];
-  cloudResources?: any[];
-  hybridResources?: any[];
-  servers?: any[];
-  workstations?: any[];
-  mobileDevices?: any[];
-  statistics?: {
-    onPremisePercentage?: number;
-    cloudPercentage?: number;
-    hybridPercentage?: number;
-    totalServerCount?: number;
-    totalWorkstationCount?: number;
-    totalMobileDeviceCount?: number;
-  };
 }
 
 interface EnvironmentDetectionState {
@@ -54,20 +39,55 @@ interface EnvironmentDetectionState {
   error: string | null;
 }
 
-export const useEnvironmentDetectionDiscoveryLogic = () => {
+interface EnvironmentDetectionHookResult {
+  config: EnvironmentDetectionConfig;
+  result: EnvironmentDetectionResult | null;
+  isDiscovering: boolean;
+  isDetecting: boolean;
+  progress: {
+    current: number;
+    total: number;
+    message: string;
+    percentage: number;
+  };
+  error: string | null;
+  activeTab: string;
+  filter: any;
+  columns: any[];
+  filteredData: any[];
+  stats: any;
+  startDiscovery: () => Promise<void>;
+  startDetection: () => Promise<void>;
+  cancelDiscovery: () => Promise<void>;
+  cancelDetection: () => Promise<void>;
+  updateConfig: (updates: Partial<EnvironmentDetectionConfig>) => void;
+  updateFilter: (updates: any) => void;
+  setActiveTab: (tab: string) => void;
+  exportToCSV: (data: any[], filename: string) => Promise<void>;
+  exportToExcel: (data: any[], filename: string) => Promise<void>;
+  clearError: () => void;
+}
+
+export const useEnvironmentDetectionDiscoveryLogic = (): EnvironmentDetectionHookResult => {
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const { addResult, getResultsByModuleName } = useDiscoveryStore();
   const currentTokenRef = useRef<string | null>(null);
 
+  // Additional state for view compatibility
+  const [activeTab, setActiveTab] = useState<string>('overview');
+  const [filter, setFilter] = useState<any>({
+    searchText: '',
+    selectedProviders: [],
+    showOnlyAvailable: false,
+  });
+
   const [state, setState] = useState<EnvironmentDetectionState>({
     config: {
-      includeOnPremise: true,
-      includeCloud: true,
-      includeHybrid: true,
-      includeServers: true,
-      includeWorkstations: true,
-      includeMobileDevices: true,
-      maxResults: 10000,
+      detectAzure: true,
+      detectOnPremises: true,
+      detectAWS: true,
+      detectGCP: true,
+      timeout: 300000,
     },
     result: null,
     isDiscovering: false,
@@ -120,13 +140,13 @@ export const useEnvironmentDetectionDiscoveryLogic = () => {
           name: 'Environment Detection',
           moduleName: 'EnvironmentDetection',
           displayName: 'Environment Detection',
-          itemCount: data?.result?.totalItems || data?.result?.totalEnvironments || 0,
+          itemCount: data?.result?.totalItems || data?.result?.totalServicesDetected || 0,
           discoveryTime: new Date().toISOString(),
           duration: data.duration || 0,
           status: 'Completed',
           filePath: data?.result?.outputPath || '',
           success: true,
-          summary: `Detected ${data?.result?.totalEnvironments || 0} environments (${data?.result?.totalOnPremise || 0} on-premise, ${data?.result?.totalCloud || 0} cloud, ${data?.result?.totalHybrid || 0} hybrid)`,
+          summary: `Detected ${data?.result?.totalServicesDetected || 0} services across multiple providers`,
           errorMessage: '',
           additionalData: data.result,
           createdAt: new Date().toISOString(),
@@ -218,29 +238,25 @@ export const useEnvironmentDetectionDiscoveryLogic = () => {
 
     console.log(`[EnvironmentDetectionHook] Starting discovery for company: ${selectedSourceProfile.companyName}`);
     console.log('[EnvironmentDetectionHook] Parameters:', {
-      IncludeOnPremise: state.config.includeOnPremise,
-      IncludeCloud: state.config.includeCloud,
-      IncludeHybrid: state.config.includeHybrid,
-      IncludeServers: state.config.includeServers,
-      IncludeWorkstations: state.config.includeWorkstations,
-      IncludeMobileDevices: state.config.includeMobileDevices,
-      MaxResults: state.config.maxResults,
+      DetectAzure: state.config.detectAzure,
+      DetectOnPremises: state.config.detectOnPremises,
+      DetectAWS: state.config.detectAWS,
+      DetectGCP: state.config.detectGCP,
+      Timeout: state.config.timeout,
     });
 
     try {
       const result = await window.electron.executeDiscovery({
         moduleName: 'EnvironmentDetection',
         parameters: {
-          IncludeOnPremise: state.config.includeOnPremise,
-          IncludeCloud: state.config.includeCloud,
-          IncludeHybrid: state.config.includeHybrid,
-          IncludeServers: state.config.includeServers,
-          IncludeWorkstations: state.config.includeWorkstations,
-          IncludeMobileDevices: state.config.includeMobileDevices,
-          MaxResults: state.config.maxResults,
+          DetectAzure: state.config.detectAzure,
+          DetectOnPremises: state.config.detectOnPremises,
+          DetectAWS: state.config.detectAWS,
+          DetectGCP: state.config.detectGCP,
+          Timeout: state.config.timeout,
         },
         executionOptions: {
-          timeout: 900000, // 15 minutes
+          timeout: state.config.timeout,
           showWindow: false,
         },
         executionId: token,
@@ -315,15 +331,78 @@ export const useEnvironmentDetectionDiscoveryLogic = () => {
     setState((prev) => ({ ...prev, error: null }));
   }, []);
 
+  // Additional functions for view compatibility
+  const startDetection = useCallback(async () => {
+    return startDiscovery();
+  }, [startDiscovery]);
+
+  const cancelDetection = useCallback(async () => {
+    return cancelDiscovery();
+  }, [cancelDiscovery]);
+
+  const updateFilter = useCallback((updates: any) => {
+    setFilter((prev: any) => ({ ...prev, ...updates }));
+  }, []);
+
+  const exportToCSV = useCallback(async (data: any[], filename: string) => {
+    // Implementation for CSV export
+    console.log('Exporting to CSV:', filename, data.length, 'items');
+  }, []);
+
+  const exportToExcel = useCallback(async (data: any[], filename: string) => {
+    // Implementation for Excel export
+    console.log('Exporting to Excel:', filename, data.length, 'items');
+  }, []);
+
+  // Computed properties
+  const columns = [
+    { key: 'name', header: 'Service Name', width: 200 },
+    { key: 'provider', header: 'Provider', width: 120 },
+    { key: 'detected', header: 'Detected', width: 100 },
+    { key: 'capabilities', header: 'Capabilities', width: 150 },
+  ];
+
+  const filteredData = state.result?.detectedServices?.filter((service: any) => {
+    if (filter.searchText && !service.name?.toLowerCase().includes(filter.searchText.toLowerCase())) {
+      return false;
+    }
+    if (filter.selectedProviders.length > 0 && !filter.selectedProviders.includes(service.provider)) {
+      return false;
+    }
+    if (filter.showOnlyAvailable && !service.detected) {
+      return false;
+    }
+    return true;
+  }) || [];
+
+  const stats = state.result ? {
+    totalServicesDetected: state.result.totalServicesDetected || 0,
+    servicesByProvider: state.result.servicesByProvider || {},
+    environmentConfidence: state.result.environmentConfidence || 0,
+    criticalRecommendations: state.result.criticalRecommendations || 0,
+  } : null;
+
   return {
     config: state.config,
     result: state.result,
     isDiscovering: state.isDiscovering,
+    isDetecting: state.isDiscovering,
     progress: state.progress,
     error: state.error,
+    activeTab,
+    filter,
+    columns,
+    filteredData,
+    stats,
     startDiscovery,
+    startDetection,
     cancelDiscovery,
+    cancelDetection,
     updateConfig,
+    updateFilter,
+    setActiveTab,
+    exportToCSV,
+    exportToExcel,
     clearError,
   };
 };

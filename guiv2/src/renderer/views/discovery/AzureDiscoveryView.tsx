@@ -86,9 +86,9 @@ const AzureDiscoveryView: React.FC = () => {
                   <p className="text-sm text-gray-700 dark:text-gray-300">
                     <span className="font-semibold">Profile:</span> {selectedProfile.name}
                   </p>
-                  {selectedProfile.credentials?.azureTenantId && (
+                  {selectedProfile.tenantId && (
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      <span className="font-semibold">Tenant:</span> {selectedProfile.credentials.azureTenantId}
+                      <span className="font-semibold">Tenant:</span> {selectedProfile.tenantId}
                     </p>
                   )}
                   <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">

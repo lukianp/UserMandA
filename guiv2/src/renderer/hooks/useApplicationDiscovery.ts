@@ -193,11 +193,11 @@ export function useApplicationDiscovery(profileId: string): UseApplicationDiscov
 
     // Validate application-specific arguments
     if (args.scanLocations && args.scanLocations.length === 0) {
-      addLog('warn', 'No scan locations specified, will scan default locations only');
+      addLog('warning', 'No scan locations specified, will scan default locations only');
     }
 
     if (args.registryPaths && args.registryPaths.length === 0) {
-      addLog('warn', 'No registry paths specified, will scan standard registry locations');
+      addLog('warning', 'No registry paths specified, will scan standard registry locations');
     }
 
     // Set selected profile for context
@@ -222,7 +222,7 @@ export function useApplicationDiscovery(profileId: string): UseApplicationDiscov
 
   const exportResults = useCallback(async () => {
     if (!results) {
-      addLog('warn', 'No results to export');
+      addLog('warning', 'No results to export');
       return;
     }
 

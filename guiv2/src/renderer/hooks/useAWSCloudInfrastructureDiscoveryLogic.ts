@@ -13,7 +13,7 @@ import { useDiscoveryStore } from '../store/useDiscoveryStore';
  */
 export interface LogEntry {
   timestamp: string;
-  level: 'info' | 'warn' | 'error';
+  level: 'info' | 'warning' | 'error';
   message: string;
 }
 
@@ -91,7 +91,7 @@ export const useAWSCloudInfrastructureDiscoveryLogic = (): AWSCloudInfrastructur
 
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
-        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warn' : 'info';
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
         addLog(logLevel, data.message);
       }
     });
@@ -138,7 +138,7 @@ export const useAWSCloudInfrastructureDiscoveryLogic = (): AWSCloudInfrastructur
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
-        addLog('warn', 'Discovery cancelled by user');
+        addLog('warning', 'Discovery cancelled by user');
       }
     });
 
@@ -214,7 +214,7 @@ export const useAWSCloudInfrastructureDiscoveryLogic = (): AWSCloudInfrastructur
     if (!isRunning || !currentToken) return;
 
     setIsCancelling(true);
-    addLog('warn', 'Cancelling discovery...');
+    addLog('warning', 'Cancelling discovery...');
 
     try {
       await window.electron.cancelDiscovery(currentToken);
@@ -225,7 +225,7 @@ export const useAWSCloudInfrastructureDiscoveryLogic = (): AWSCloudInfrastructur
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
-        addLog('warn', 'Discovery cancelled');
+        addLog('warning', 'Discovery cancelled');
       }, 2000);
     } catch (err: any) {
       const errorMessage = err.message || 'Error cancelling discovery';

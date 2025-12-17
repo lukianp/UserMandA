@@ -1,4 +1,4 @@
-import * as React from 'react';
+se eimport * as React from 'react';
 import { FolderOpen, Play, XCircle, Download, Clock, HardDrive, Shield, AlertTriangle, Settings } from 'lucide-react';
 
 import { useFileSystemDiscoveryLogic } from '../../hooks/useFileSystemDiscoveryLogic';
@@ -394,7 +394,8 @@ const FileSystemDiscoveryView: React.FC = () => {
         scriptDescription="Discovering file shares and permissions"
         logs={logs}
         isRunning={isRunning}
-        onCancel={cancelDiscovery}
+        isCancelling={false}
+        onStop={cancelDiscovery}
       />
     </div>
   );

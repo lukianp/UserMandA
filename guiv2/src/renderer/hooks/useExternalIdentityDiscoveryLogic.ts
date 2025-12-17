@@ -1,4 +1,4 @@
-/**
+su/**
  * External Identity Discovery Logic Hook
  * Provides state management and business logic for external/guest identity discovery operations
  * ✅ FIXED: Uses event-driven architecture with streaming support
@@ -35,6 +35,9 @@ export const useExternalIdentityDiscoveryLogic = (): ExternalIdentityDiscoveryHo
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+
+  // PowerShell execution dialog state
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
 
   const [currentToken, setCurrentToken] = useState<string | null>(null);
   const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
@@ -83,7 +86,7 @@ export const useExternalIdentityDiscoveryLogic = (): ExternalIdentityDiscoveryHo
 
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
-        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warn' : 'info';
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
         addLog(logLevel, data.message);
       }
     });
@@ -130,7 +133,7 @@ export const useExternalIdentityDiscoveryLogic = (): ExternalIdentityDiscoveryHo
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
-        addLog('warn', 'Discovery cancelled by user');
+        addLog('warning', 'Discovery cancelled by user');
       }
     });
 
@@ -209,7 +212,7 @@ export const useExternalIdentityDiscoveryLogic = (): ExternalIdentityDiscoveryHo
     if (!isRunning || !currentToken) return;
 
     setIsCancelling(true);
-    addLog('warn', 'Cancelling discovery...');
+    addLog('warning', 'Cancelling discovery...');
 
     try {
       await window.electron.cancelDiscovery(currentToken);
@@ -220,7 +223,7 @@ export const useExternalIdentityDiscoveryLogic = (): ExternalIdentityDiscoveryHo
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
-        addLog('warn', 'Discovery cancelled');
+        addLog('warning', 'Discovery cancelled');
       }, 2000);
     } catch (err: any) {
       const errorMessage = err.message || 'Error cancelling discovery';
@@ -306,6 +309,8 @@ export const useExternalIdentityDiscoveryLogic = (): ExternalIdentityDiscoveryHo
     results,
     error,
     logs,
+    showExecutionDialog,
+    setShowExecutionDialog: (show: boolean) => setShowExecutionDialog(show),
     startDiscovery,
     cancelDiscovery,
     exportResults,

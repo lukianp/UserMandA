@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 
 import { useDNSDHCPDiscoveryLogic } from '../../hooks/useDNSDHCPDiscoveryLogic';
-import { VirtualizedDataGrid, Column } from '../../components/organisms/VirtualizedDataGrid';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { ColDef } from 'ag-grid-community';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
@@ -75,41 +76,41 @@ const DNSDHCPDiscoveryView: React.FC = () => {
   };
 
   // Data grid columns
-  const dnsServerColumns: Column[] = [
-    { key: 'name', label: 'Server Name', width: 200, sortable: true },
-    { key: 'ipAddress', label: 'IP Address', width: 150, sortable: true },
-    { key: 'zones', label: 'Zones', width: 100, sortable: true },
-    { key: 'version', label: 'Version', width: 120, sortable: true },
+  const dnsServerColumns: ColDef[] = [
+    { field: 'name', headerName: 'Server Name', width: 200, sortable: true },
+    { field: 'ipAddress', headerName: 'IP Address', width: 150, sortable: true },
+    { field: 'zones', headerName: 'Zones', width: 100, sortable: true },
+    { field: 'version', headerName: 'Version', width: 120, sortable: true },
   ];
 
-  const dnsZoneColumns: Column[] = [
-    { key: 'name', label: 'Zone Name', width: 250, sortable: true },
-    { key: 'type', label: 'Type', width: 120, sortable: true },
-    { key: 'records', label: 'Records', width: 100, sortable: true },
-    { key: 'dynamic', label: 'Dynamic', width: 100, sortable: true },
+  const dnsZoneColumns: ColDef[] = [
+    { field: 'name', headerName: 'Zone Name', width: 250, sortable: true },
+    { field: 'type', headerName: 'Type', width: 120, sortable: true },
+    { field: 'records', headerName: 'Records', width: 100, sortable: true },
+    { field: 'dynamic', headerName: 'Dynamic', width: 100, sortable: true },
   ];
 
-  const dhcpServerColumns: Column[] = [
-    { key: 'name', label: 'Server Name', width: 200, sortable: true },
-    { key: 'ipAddress', label: 'IP Address', width: 150, sortable: true },
-    { key: 'scopes', label: 'Scopes', width: 100, sortable: true },
-    { key: 'leases', label: 'Active Leases', width: 120, sortable: true },
+  const dhcpServerColumns: ColDef[] = [
+    { field: 'name', headerName: 'Server Name', width: 200, sortable: true },
+    { field: 'ipAddress', headerName: 'IP Address', width: 150, sortable: true },
+    { field: 'scopes', headerName: 'Scopes', width: 100, sortable: true },
+    { field: 'leases', headerName: 'Active Leases', width: 120, sortable: true },
   ];
 
-  const dhcpScopeColumns: Column[] = [
-    { key: 'name', label: 'Scope Name', width: 200, sortable: true },
-    { key: 'subnet', label: 'Subnet', width: 150, sortable: true },
-    { key: 'range', label: 'IP Range', width: 200, sortable: true },
-    { key: 'leases', label: 'Leases', width: 100, sortable: true },
-    { key: 'utilization', label: 'Utilization %', width: 130, sortable: true },
+  const dhcpScopeColumns: ColDef[] = [
+    { field: 'name', headerName: 'Scope Name', width: 200, sortable: true },
+    { field: 'subnet', headerName: 'Subnet', width: 150, sortable: true },
+    { field: 'range', headerName: 'IP Range', width: 200, sortable: true },
+    { field: 'leases', headerName: 'Leases', width: 100, sortable: true },
+    { field: 'utilization', headerName: 'Utilization %', width: 130, sortable: true },
   ];
 
-  const leaseColumns: Column[] = [
-    { key: 'ipAddress', label: 'IP Address', width: 150, sortable: true },
-    { key: 'hostname', label: 'Hostname', width: 200, sortable: true },
-    { key: 'mac', label: 'MAC Address', width: 180, sortable: true },
-    { key: 'expires', label: 'Expires', width: 180, sortable: true },
-    { key: 'scope', label: 'Scope', width: 150, sortable: true },
+  const leaseColumns: ColDef[] = [
+    { field: 'ipAddress', headerName: 'IP Address', width: 150, sortable: true },
+    { field: 'hostname', headerName: 'Hostname', width: 200, sortable: true },
+    { field: 'mac', headerName: 'MAC Address', width: 180, sortable: true },
+    { field: 'expires', headerName: 'Expires', width: 180, sortable: true },
+    { field: 'scope', headerName: 'Scope', width: 150, sortable: true },
   ];
 
   // Filtered data

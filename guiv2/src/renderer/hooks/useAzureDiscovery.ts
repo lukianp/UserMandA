@@ -179,11 +179,11 @@ export function useAzureDiscovery(profileId: string): UseAzureDiscoveryResult {
 
     // Validate Azure-specific arguments
     if (args.subscriptions && args.subscriptions.length === 0) {
-      addLog('warn', 'No subscriptions specified, discovery may be limited');
+      addLog('warning', 'No subscriptions specified, discovery may be limited');
     }
 
     if (args.resourceGroups && args.resourceGroups.length === 0) {
-      addLog('warn', 'No resource groups specified, will discover all accessible resources');
+      addLog('warning', 'No resource groups specified, will discover all accessible resources');
     }
 
     // Set selected profile for context
@@ -208,7 +208,7 @@ export function useAzureDiscovery(profileId: string): UseAzureDiscoveryResult {
 
   const exportResults = useCallback(async () => {
     if (!results) {
-      addLog('warn', 'No results to export');
+      addLog('warning', 'No results to export');
       return;
     }
 

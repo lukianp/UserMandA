@@ -61,8 +61,8 @@ function Start-DiscoveryModule {
         # Validate prerequisites
         $validation = Test-DiscoveryPrerequisites -ModuleName $ModuleName -Context $Context -SessionId $SessionId
         if (-not $validation.Success) {
-            foreach ($error in $validation.Errors) {
-                $result.AddError($error.Message, $null, $error.Context)
+            foreach ($validationError in $validation.Errors) {
+                $result.AddError($validationError.Message, $null, $validationError.Context)
             }
             return $result
         }
@@ -223,27 +223,31 @@ function Invoke-GraphAPIWithPaging {
         [int]$MaxRetries = 3,
         [hashtable]$Headers = @{ 'ConsistencyLevel' = 'eventual' }
     )
-    
+
     $allResults = @()
     $currentUri = $Uri
     $pageCount = 0
-    
+
     do {
         $pageCount++
         $retryCount = 0
         $response = $null
-        
+
         while ($retryCount -lt $MaxRetries -and -not $response) {
             $retryCount++
             try {
-                Write-ModuleLog -ModuleName $ModuleName -Message "Fetching page $pageCount (attempt $retryCount)" -Level "DEBUG"
+                # Only log fetching for first page or when retrying
+                if ($pageCount -eq 1 -or $retryCount -gt 1) {
+                    Write-ModuleLog -ModuleName $ModuleName -Message "Fetching page $pageCount (attempt $retryCount)" -Level "DEBUG"
+                }
                 $response = Invoke-MgGraphRequest -Uri $currentUri -Method GET -Headers $Headers -ErrorAction Stop
-                
-                if ($response.value) {
+
+                if ($response.value -and $response.value.Count -gt 0) {
                     $allResults += $response.value
+                    # Only log if we got actual data
                     Write-ModuleLog -ModuleName $ModuleName -Message "Retrieved $($response.value.Count) records from page $pageCount" -Level "DEBUG"
                 }
-                
+
             } catch {
                 if ($retryCount -lt $MaxRetries) {
                     $delay = [Math]::Pow(2, $retryCount)
@@ -254,12 +258,15 @@ function Invoke-GraphAPIWithPaging {
                 }
             }
         }
-        
+
         $currentUri = $response.'@odata.nextLink'
-        
+
     } while ($currentUri)
-    
-    Write-ModuleLog -ModuleName $ModuleName -Message "Retrieved total of $($allResults.Count) records across $pageCount pages" -Level "INFO"
+
+    # Only log summary if we got data or multiple pages
+    if ($allResults.Count -gt 0 -or $pageCount -gt 1) {
+        Write-ModuleLog -ModuleName $ModuleName -Message "Retrieved total of $($allResults.Count) records across $pageCount pages" -Level "INFO"
+    }
     return $allResults
 }
 

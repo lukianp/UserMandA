@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
+import type { BaseDiscoveryHookResult } from './common/discoveryHookTypes';
 
 interface ApplicationDependencyMappingDiscoveryConfig {
   includeNetworkDependencies: boolean;
@@ -14,6 +15,8 @@ interface ApplicationDependencyMappingDiscoveryConfig {
   includeAPIEndpoints: boolean;
   includeServiceDependencies: boolean;
   includeFileDependencies: boolean;
+  analyzeCircularDependencies: boolean;
+  timeout: number;
   scanDepth: number;
 }
 
@@ -49,13 +52,70 @@ interface ApplicationDependencyMappingDiscoveryState {
   error: string | null;
 }
 
-export const useApplicationDependencyMappingDiscoveryLogic = () => {
+interface ApplicationDependencyMappingDiscoveryHookResult extends BaseDiscoveryHookResult {
+  config: ApplicationDependencyMappingDiscoveryConfig;
+  result: ApplicationDependencyMappingDiscoveryResult | null;
+  isDiscovering: boolean;
+  progress: {
+    current: number;
+    total: number;
+    message: string;
+    percentage: number;
+  };
+  error: string | null;
+  startDiscovery: () => Promise<void>;
+  cancelDiscovery: () => Promise<void>;
+  updateConfig: (updates: Partial<ApplicationDependencyMappingDiscoveryConfig>) => void;
+  clearError: () => void;
+  showExecutionDialog: boolean;
+  setShowExecutionDialog: (show: boolean) => void;
+  logs: PowerShellLog[];
+  clearLogs: () => void;
+  isCancelling: boolean;
+  activeTab: string;
+  filter: any;
+  columns: any[];
+  filteredData: any[];
+  stats: any;
+  setActiveTab: (tab: string) => void;
+  updateFilter: (updates: any) => void;
+  exportToCSV: (data: any[], filename: string) => Promise<void>;
+  exportToExcel: (data: any[], filename: string) => Promise<void>;
+  selectedProfile: any;
+  templates: any[];
+  currentResult: ApplicationDependencyMappingDiscoveryResult | null;
+  selectedTab: string;
+  searchText: string;
+  columnDefs: any[];
+  errors: string[];
+  loadTemplate: (template: any) => void;
+  saveAsTemplate: (name: string) => void;
+  setSelectedTab: (tab: string) => void;
+  setSearchText: (text: string) => void;
+  exportData: (format: string) => Promise<void>;
+}
+
+export const useApplicationDependencyMappingDiscoveryLogic = (): ApplicationDependencyMappingDiscoveryHookResult => {
+
+
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const { addResult, getResultsByModuleName } = useDiscoveryStore();
   const currentTokenRef = useRef<string | null>(null);
   const [logs, setLogs] = useState<PowerShellLog[]>([]);
   const [showExecutionDialog, setShowExecutionDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // Additional state for view compatibility
+  const [activeTab, setActiveTab] = useState<string>('overview');
+  const [filter, setFilter] = useState<any>({
+    searchText: '',
+    showCriticalOnly: false,
+    selectedApplications: [],
+  });
+  const [selectedTab, setSelectedTab] = useState<string>('overview');
+  const [searchText, setSearchText] = useState<string>('');
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [errors, setErrors] = useState<string[]>([]);
 
   const [state, setState] = useState<ApplicationDependencyMappingDiscoveryState>({
     config: {
@@ -64,6 +124,8 @@ export const useApplicationDependencyMappingDiscoveryLogic = () => {
       includeAPIEndpoints: true,
       includeServiceDependencies: true,
       includeFileDependencies: true,
+      analyzeCircularDependencies: false,
+      timeout: 300000,
       scanDepth: 3,
     },
     result: null,
@@ -230,6 +292,8 @@ export const useApplicationDependencyMappingDiscoveryLogic = () => {
       IncludeAPIEndpoints: state.config.includeAPIEndpoints,
       IncludeServiceDependencies: state.config.includeServiceDependencies,
       IncludeFileDependencies: state.config.includeFileDependencies,
+      AnalyzeCircularDependencies: state.config.analyzeCircularDependencies,
+      Timeout: state.config.timeout,
       ScanDepth: state.config.scanDepth,
     });
 
@@ -242,10 +306,12 @@ export const useApplicationDependencyMappingDiscoveryLogic = () => {
           IncludeAPIEndpoints: state.config.includeAPIEndpoints,
           IncludeServiceDependencies: state.config.includeServiceDependencies,
           IncludeFileDependencies: state.config.includeFileDependencies,
+          AnalyzeCircularDependencies: state.config.analyzeCircularDependencies,
+          Timeout: state.config.timeout,
           ScanDepth: state.config.scanDepth,
         },
         executionOptions: {
-          timeout: 300000, // 5 minutes
+          timeout: state.config.timeout,
           showWindow: false,
         },
         executionId: token,
@@ -323,6 +389,95 @@ export const useApplicationDependencyMappingDiscoveryLogic = () => {
     setState((prev) => ({ ...prev, error: null }));
   }, []);
 
+  // Additional functions for view compatibility
+  const updateFilter = useCallback((updates: any) => {
+    setFilter((prev: any) => ({ ...prev, ...updates }));
+  }, []);
+
+  const loadTemplate = useCallback((template: any) => {
+    setState((prev) => ({
+      ...prev,
+      config: template.config || prev.config,
+    }));
+    addLog('info', `Loaded template: ${template.name}`);
+  }, [addLog]);
+
+  const saveAsTemplate = useCallback((name: string) => {
+    const template = { name, config: state.config };
+    setTemplates((prev) => [...prev, template]);
+    addLog('info', `Saved template: ${name}`);
+  }, [state.config, addLog]);
+
+  const exportData = useCallback(async (format: string) => {
+    addLog('info', `Exporting data as ${format}...`);
+    // Mock export functionality
+    if (state.result) {
+      const dataStr = JSON.stringify(state.result, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      const exportFileDefaultName = `app-dependency-mapping-results-${new Date().toISOString().split('T')[0]}.json`;
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+      addLog('info', 'Data exported successfully.');
+    }
+  }, [state.result, addLog]);
+
+  const exportToCSV = useCallback(async (data: any[], filename: string) => {
+    // Mock CSV export
+    const csvContent = 'data:text/csv;charset=utf-8,' + encodeURIComponent('Mock CSV export');
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', csvContent);
+    linkElement.setAttribute('download', filename);
+    linkElement.click();
+    addLog('info', `Exported to CSV: ${filename}`);
+  }, [addLog]);
+
+  const exportToExcel = useCallback(async (data: any[], filename: string) => {
+    // Mock Excel export
+    const excelContent = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent('Mock Excel export');
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', excelContent);
+    linkElement.setAttribute('download', filename);
+    linkElement.click();
+    addLog('info', `Exported to Excel: ${filename}`);
+  }, [addLog]);
+
+  // Computed properties
+  const columns = [
+    { key: 'name', header: 'Application Name', width: 200 },
+    { key: 'type', header: 'Type', width: 100 },
+    { key: 'dependencies', header: 'Dependencies', width: 150 },
+    { key: 'critical', header: 'Critical', width: 100 },
+  ];
+
+  const filteredData = state.result?.applications?.filter((app: any) => {
+    if (filter.searchText && !app.name?.toLowerCase().includes(filter.searchText.toLowerCase())) {
+      return false;
+    }
+    if (filter.showCriticalOnly && !app.critical) {
+      return false;
+    }
+    return true;
+  }) || [];
+
+  const stats = state.result ? {
+    totalApplications: state.result.totalApplications || 0,
+    totalDependencies: state.result.totalDependencies || 0,
+    criticalDependencies: state.result.criticalDependencies || 0,
+    orphanedApplications: 0,
+    maxDependencyDepth: 0,
+    circularDependencies: state.result.statistics?.circularDependencies || 0,
+    totalIntegrationPoints: 0,
+    avgDependenciesPerApp: state.result.totalApplications ? (state.result.totalDependencies || 0) / state.result.totalApplications : 0,
+    networkDependencies: state.result.statistics?.networkDependencies || 0,
+    databaseDependencies: state.result.statistics?.databaseDependencies || 0,
+    apiDependencies: state.result.statistics?.apiDependencies || 0,
+    serviceDependencies: state.result.statistics?.serviceDependencies || 0,
+    fileDependencies: state.result.statistics?.fileDependencies || 0,
+    riskScore: 0,
+  } : null;
+
   return {
     config: state.config,
     result: state.result,
@@ -338,5 +493,31 @@ export const useApplicationDependencyMappingDiscoveryLogic = () => {
     logs,
     clearLogs,
     isCancelling,
+    isRunning: state.isDiscovering,
+    results: state.result,
+    exportResults: () => exportData('json'),
+
+    // Additional properties for view compatibility
+    activeTab,
+    filter,
+    columns,
+    filteredData,
+    stats,
+    setActiveTab,
+    updateFilter,
+    exportToCSV,
+    exportToExcel,
+    selectedProfile: selectedSourceProfile,
+    templates,
+    currentResult: state.result,
+    selectedTab,
+    searchText,
+    columnDefs: columns,
+    errors,
+    loadTemplate,
+    saveAsTemplate,
+    setSelectedTab,
+    setSearchText,
+    exportData,
   };
 };

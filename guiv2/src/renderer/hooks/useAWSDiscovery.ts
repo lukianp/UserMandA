@@ -169,11 +169,11 @@ export function useAWSDiscovery(profileId: string): UseAWSDiscoveryResult {
 
     // Validate AWS-specific arguments
     if (args.regions && args.regions.length === 0) {
-      addLog('warn', 'No regions specified, discovery may be limited');
+      addLog('warning', 'No regions specified, discovery may be limited');
     }
 
     if (args.services && args.services.length === 0) {
-      addLog('warn', 'No services specified, will discover all supported services');
+      addLog('warning', 'No services specified, will discover all supported services');
     }
 
     // Set selected profile for context
@@ -198,7 +198,7 @@ export function useAWSDiscovery(profileId: string): UseAWSDiscoveryResult {
 
   const exportResults = useCallback(async () => {
     if (!results) {
-      addLog('warn', 'No results to export');
+      addLog('warning', 'No results to export');
       return;
     }
 

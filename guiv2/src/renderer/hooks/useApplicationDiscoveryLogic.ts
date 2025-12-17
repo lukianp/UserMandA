@@ -14,7 +14,7 @@ import type { PowerShellLog } from '../components/molecules/PowerShellExecutionD
  */
 export interface LogEntry {
   timestamp: string;
-  level: 'info' | 'warn' | 'error';
+  level: 'info' | 'warning' | 'error';
   message: string;
 }
 
@@ -140,36 +140,46 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
   useEffect(() => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
-        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warn' : 'info';
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
         addLog(logLevel, data.message);
       }
     });
 
     const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
       if (data.executionId === currentTokenRef.current) {
+        console.log('[ApplicationDiscoveryHook] onDiscoveryComplete - Full data object:', data);
+        console.log('[ApplicationDiscoveryHook] data.result:', data.result);
+        console.log('[ApplicationDiscoveryHook] data.result.RecordCount:', data?.result?.RecordCount);
+        console.log('[ApplicationDiscoveryHook] data.result.Data length:', data?.result?.Data?.length);
+
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
 
+        const recordCount = data?.result?.data?.length || data?.result?.RecordCount || data?.result?.Data?.length || data?.result?.totalItems || 0;
+        console.log('[ApplicationDiscoveryHook] Calculated recordCount:', recordCount);
+
         const result = {
           id: `application-discovery-${Date.now()}`,
           name: 'Application Discovery',
-          moduleName: 'ApplicationDiscovery',
+          moduleName: 'Application',
           displayName: 'Application Discovery',
-          itemCount: data?.result?.totalItems || data?.result?.RecordCount || 0,
+          itemCount: recordCount,
           discoveryTime: new Date().toISOString(),
           duration: data.duration || 0,
           status: 'Completed',
-          filePath: data?.result?.outputPath || '',
+          filePath: data?.result?.outputPath || data?.result?.OutputPath || '',
           success: true,
-          summary: `Discovered ${data?.result?.totalItems || data?.result?.RecordCount || 0} applications`,
+          summary: `Discovered ${recordCount} applications`,
           errorMessage: '',
           additionalData: data.result,
           createdAt: new Date().toISOString(),
         };
 
+        console.log('[ApplicationDiscoveryHook] Result object to store:', result);
         setResults(result);
         addDiscoveryResult(result);
+        console.log('[ApplicationDiscoveryHook] Called addDiscoveryResult, result should be in store now');
         addLog('info', `Discovery completed! Found ${result.itemCount} applications.`);
       }
     });
@@ -187,7 +197,7 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
-        addLog('warn', 'Discovery cancelled by user');
+        addLog('warning', 'Discovery cancelled by user');
       }
     });
 
@@ -265,7 +275,7 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
     if (!isRunning || !currentToken) return;
 
     setIsCancelling(true);
-    addLog('warn', 'Cancelling discovery...');
+    addLog('warning', 'Cancelling discovery...');
 
     try {
       await window.electron.cancelDiscovery(currentToken);
@@ -277,7 +287,7 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
         setIsCancelling(false);
         setCurrentToken(null);
         setProgress(null);
-        addLog('warn', 'Discovery cancelled - reset to start state');
+        addLog('warning', 'Discovery cancelled - reset to start state');
       }, 2000);
     } catch (err: any) {
       const errorMessage = err.message || 'Error cancelling discovery';

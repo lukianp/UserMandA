@@ -57,7 +57,7 @@ const EnvironmentDetectionView: React.FC = () => {
         <LoadingOverlay
           progress={progress.percentage}
           message={progress.message || 'Detecting environment services...'}
-          onCancel={cancelDiscovery}
+          onCancel={cancelDetection}
           data-testid="loading-overlay"
         />
       )}
@@ -77,8 +77,8 @@ const EnvironmentDetectionView: React.FC = () => {
         <div className="flex gap-3">
           {result && (
             <>
-              <Button variant="secondary" onClick={exportToCSV} icon={<Download className="w-4 h-4" />} data-testid="export-csv-btn">Export CSV</Button>
-              <Button variant="secondary" onClick={exportToExcel} icon={<FileSpreadsheet className="w-4 h-4" />} data-testid="export-excel-btn">Export Excel</Button>
+              <Button variant="secondary" onClick={() => exportToCSV(filteredData, `environment-detection-${new Date().toISOString().split('T')[0]}.csv`)} icon={<Download className="w-4 h-4" />} data-testid="export-csv-btn">Export CSV</Button>
+              <Button variant="secondary" onClick={() => exportToExcel(filteredData, `environment-detection-${new Date().toISOString().split('T')[0]}.xlsx`)} icon={<FileSpreadsheet className="w-4 h-4" />} data-testid="export-excel-btn">Export Excel</Button>
             </>
           )}
           <Button
@@ -275,7 +275,7 @@ const EnvironmentDetectionView: React.FC = () => {
                   size="sm"
                   onClick={() => {
                     const providers = filter.selectedProviders.includes('azure')
-                      ? filter.selectedProviders.filter(p => p !== 'azure')
+                      ? filter.selectedProviders.filter((p: string) => p !== 'azure')
                       : [...filter.selectedProviders, 'azure'];
                     updateFilter({ selectedProviders: providers });
                   }}
@@ -287,7 +287,7 @@ const EnvironmentDetectionView: React.FC = () => {
                   size="sm"
                   onClick={() => {
                     const providers = filter.selectedProviders.includes('on-premises')
-                      ? filter.selectedProviders.filter(p => p !== 'on-premises')
+                      ? filter.selectedProviders.filter((p: string) => p !== 'on-premises')
                       : [...filter.selectedProviders, 'on-premises'];
                     updateFilter({ selectedProviders: providers });
                   }}
@@ -299,7 +299,7 @@ const EnvironmentDetectionView: React.FC = () => {
                   size="sm"
                   onClick={() => {
                     const providers = filter.selectedProviders.includes('aws')
-                      ? filter.selectedProviders.filter(p => p !== 'aws')
+                      ? filter.selectedProviders.filter((p: string) => p !== 'aws')
                       : [...filter.selectedProviders, 'aws'];
                     updateFilter({ selectedProviders: providers });
                   }}
@@ -311,7 +311,7 @@ const EnvironmentDetectionView: React.FC = () => {
                   size="sm"
                   onClick={() => {
                     const providers = filter.selectedProviders.includes('gcp')
-                      ? filter.selectedProviders.filter(p => p !== 'gcp')
+                      ? filter.selectedProviders.filter((p: string) => p !== 'gcp')
                       : [...filter.selectedProviders, 'gcp'];
                     updateFilter({ selectedProviders: providers });
                   }}

@@ -136,7 +136,7 @@ export default function AzureResourceDiscoveryView(){
         scriptName="Azure Resource Discovery"
         scriptDescription="Discovering Azure cloud resources"
         logs={logs.map(log => ({
-          timestamp: typeof log.timestamp === 'string' ? log.timestamp : log.timestamp.toISOString(),
+          timestamp: log.timestamp,
           message: log.message,
           level: log.level as 'info' | 'success' | 'warning' | 'error'
         }))}

@@ -239,11 +239,11 @@ export function useActiveDirectoryDiscovery(profileId: string): UseActiveDirecto
 
     // Validate AD-specific arguments
     if (!args.baseDN && !args.domainControllers) {
-      addLog('warn', 'No base DN or domain controllers specified, discovery may be limited');
+      addLog('warning', 'No base DN or domain controllers specified, discovery may be limited');
     }
 
     if (args.filter && !args.filter.startsWith('(')) {
-      addLog('warn', 'LDAP filter should be enclosed in parentheses');
+      addLog('warning', 'LDAP filter should be enclosed in parentheses');
     }
 
     // Set selected profile for context
@@ -268,7 +268,7 @@ export function useActiveDirectoryDiscovery(profileId: string): UseActiveDirecto
 
   const exportResults = useCallback(async () => {
     if (!results) {
-      addLog('warn', 'No results to export');
+      addLog('warning', 'No results to export');
       return;
     }
 

@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 
 import { useBackupRecoveryDiscoveryLogic } from '../../hooks/useBackupRecoveryDiscoveryLogic';
-import { VirtualizedDataGrid, Column } from '../../components/organisms/VirtualizedDataGrid';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { ColDef } from 'ag-grid-community';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
@@ -81,38 +82,38 @@ const BackupRecoveryDiscoveryView: React.FC = () => {
   };
 
   // Data grid columns
-  const backupJobColumns: Column[] = [
-    { key: 'name', label: 'Job Name', width: 200, sortable: true },
-    { key: 'status', label: 'Status', width: 120, sortable: true },
-    { key: 'lastRun', label: 'Last Run', width: 180, sortable: true },
-    { key: 'nextRun', label: 'Next Run', width: 180, sortable: true },
-    { key: 'size', label: 'Size (GB)', width: 120, sortable: true },
-    { key: 'duration', label: 'Duration (min)', width: 140, sortable: true },
+  const backupJobColumns: ColDef[] = [
+    { field: 'name', headerName: 'Job Name', width: 200, sortable: true },
+    { field: 'status', headerName: 'Status', width: 120, sortable: true },
+    { field: 'lastRun', headerName: 'Last Run', width: 180, sortable: true },
+    { field: 'nextRun', headerName: 'Next Run', width: 180, sortable: true },
+    { field: 'size', headerName: 'Size (GB)', width: 120, sortable: true },
+    { field: 'duration', headerName: 'Duration (min)', width: 140, sortable: true },
   ];
 
-  const recoveryPointColumns: Column[] = [
-    { key: 'name', label: 'Recovery Point', width: 200, sortable: true },
-    { key: 'created', label: 'Created', width: 180, sortable: true },
-    { key: 'size', label: 'Size (GB)', width: 120, sortable: true },
-    { key: 'type', label: 'Type', width: 120, sortable: true },
+  const recoveryPointColumns: ColDef[] = [
+    { field: 'name', headerName: 'Recovery Point', width: 200, sortable: true },
+    { field: 'created', headerName: 'Created', width: 180, sortable: true },
+    { field: 'size', headerName: 'Size (GB)', width: 120, sortable: true },
+    { field: 'type', headerName: 'Type', width: 120, sortable: true },
   ];
 
-  const historyColumns: Column[] = [
-    { key: 'jobName', label: 'Job Name', width: 200, sortable: true },
-    { key: 'timestamp', label: 'Timestamp', width: 180, sortable: true },
-    { key: 'status', label: 'Status', width: 120, sortable: true },
-    { key: 'size', label: 'Size (GB)', width: 120, sortable: true },
-    { key: 'duration', label: 'Duration (min)', width: 140, sortable: true },
-    { key: 'error', label: 'Error', width: 300, sortable: true },
+  const historyColumns: ColDef[] = [
+    { field: 'jobName', headerName: 'Job Name', width: 200, sortable: true },
+    { field: 'timestamp', headerName: 'Timestamp', width: 180, sortable: true },
+    { field: 'status', headerName: 'Status', width: 120, sortable: true },
+    { field: 'size', headerName: 'Size (GB)', width: 120, sortable: true },
+    { field: 'duration', headerName: 'Duration (min)', width: 140, sortable: true },
+    { field: 'error', headerName: 'Error', width: 300, sortable: true },
   ];
 
-  const storageColumns: Column[] = [
-    { key: 'name', label: 'Storage Location', width: 200, sortable: true },
-    { key: 'type', label: 'Type', width: 120, sortable: true },
-    { key: 'capacity', label: 'Capacity (GB)', width: 140, sortable: true },
-    { key: 'used', label: 'Used (GB)', width: 120, sortable: true },
-    { key: 'free', label: 'Free (GB)', width: 120, sortable: true },
-    { key: 'utilization', label: 'Utilization %', width: 140, sortable: true },
+  const storageColumns: ColDef[] = [
+    { field: 'name', headerName: 'Storage Location', width: 200, sortable: true },
+    { field: 'type', headerName: 'Type', width: 120, sortable: true },
+    { field: 'capacity', headerName: 'Capacity (GB)', width: 140, sortable: true },
+    { field: 'used', headerName: 'Used (GB)', width: 120, sortable: true },
+    { field: 'free', headerName: 'Free (GB)', width: 120, sortable: true },
+    { field: 'utilization', headerName: 'Utilization %', width: 140, sortable: true },
   ];
 
   // Filtered data
