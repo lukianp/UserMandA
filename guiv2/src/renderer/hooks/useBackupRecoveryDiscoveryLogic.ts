@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 
 interface BackupRecoveryDiscoveryConfig {
   includeBackupJobs: boolean;
@@ -49,6 +50,20 @@ export const useBackupRecoveryDiscoveryLogic = () => {
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const { addResult, getResultsByModuleName } = useDiscoveryStore();
   const currentTokenRef = useRef<string | null>(null);
+
+  // PowerShell Execution Dialog state
+  const [logs, setLogs] = useState<PowerShellLog[]>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const addLog = useCallback((level: PowerShellLog['level'], message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setLogs(prev => [...prev, { timestamp, level, message }]);
+  }, []);
+
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
 
   const [state, setState] = useState<BackupRecoveryDiscoveryState>({
     config: {
@@ -205,6 +220,10 @@ export const useBackupRecoveryDiscoveryLogic = () => {
 
     currentTokenRef.current = token;
 
+    // Open PowerShell execution dialog
+    setShowExecutionDialog(true);
+    addLog('info', 'Starting Backup Recovery discovery...');
+
     console.log(`[BackupRecoveryDiscoveryHook] Starting discovery for company: ${selectedSourceProfile.companyName}`);
     console.log('[BackupRecoveryDiscoveryHook] Parameters:', {
       IncludeBackupJobs: state.config.includeBackupJobs,
@@ -253,11 +272,14 @@ export const useBackupRecoveryDiscoveryLogic = () => {
   const cancelDiscovery = useCallback(async () => {
     if (!state.isDiscovering || !currentTokenRef.current) return;
 
+    setIsCancelling(true);
+    addLog('warning', 'Cancelling Backup Recovery discovery...');
     console.warn('[BackupRecoveryDiscoveryHook] Cancelling discovery...');
 
     try {
       await window.electron.cancelDiscovery(currentTokenRef.current);
       console.log('[BackupRecoveryDiscoveryHook] Discovery cancellation requested successfully');
+      addLog('info', 'Backup Recovery discovery cancelled');
 
       setTimeout(() => {
         setState((prev) => ({
@@ -271,6 +293,7 @@ export const useBackupRecoveryDiscoveryLogic = () => {
           },
         }));
         currentTokenRef.current = null;
+        setIsCancelling(false);
       }, 2000);
     } catch (error: any) {
       const errorMessage = error.message || 'Error cancelling discovery';
@@ -286,8 +309,10 @@ export const useBackupRecoveryDiscoveryLogic = () => {
         },
       }));
       currentTokenRef.current = null;
+      setIsCancelling(false);
+      addLog('error', 'Failed to cancel discovery');
     }
-  }, [state.isDiscovering]);
+  }, [state.isDiscovering, addLog]);
 
   const updateConfig = useCallback((updates: Partial<BackupRecoveryDiscoveryConfig>) => {
     setState((prev) => ({
@@ -304,11 +329,16 @@ export const useBackupRecoveryDiscoveryLogic = () => {
     config: state.config,
     result: state.result,
     isDiscovering: state.isDiscovering,
+    isCancelling,
     progress: state.progress,
     error: state.error,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
     clearError,
+    logs,
+    clearLogs,
+    showExecutionDialog,
+    setShowExecutionDialog,
   };
 };

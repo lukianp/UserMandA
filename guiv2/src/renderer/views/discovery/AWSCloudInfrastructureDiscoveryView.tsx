@@ -17,6 +17,7 @@ import { Select } from '../../components/atoms/Select';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import ProgressBar from '../../components/molecules/ProgressBar';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 /**
  * AWS Cloud Infrastructure Discovery View Component
@@ -27,6 +28,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
     setConfig,
     result,
     isDiscovering,
+    isCancelling,
     progress,
     error,
     filter,
@@ -39,7 +41,11 @@ const AWSCloudInfrastructureDiscoveryView = () => {
     setActiveTab,
     columns,
     filteredData,
-    stats
+    stats,
+    logs,
+    clearLogs,
+    showExecutionDialog,
+    setShowExecutionDialog,
   } = useAWSDiscoveryLogic();
 
   // Local UI state
@@ -484,6 +490,25 @@ const AWSCloudInfrastructureDiscoveryView = () => {
           )}
         </div>
       </div>
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="AWS Discovery"
+        scriptDescription="Discovering AWS cloud infrastructure resources"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? {
+          percentage: progress,
+          message: `Discovering AWS resources...`
+        } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

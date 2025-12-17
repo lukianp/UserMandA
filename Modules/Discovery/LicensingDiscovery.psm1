@@ -2,9 +2,9 @@
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
-# Version: 1.0.0
+# Version: 1.0.1
 # Created: 2025-01-18
-# Last Modified: 2025-01-18
+# Last Modified: 2025-12-17
 
 <#
 .SYNOPSIS
@@ -15,9 +15,10 @@
     user license assignments, service plan utilization, and licensing compliance essential for M&A licensing 
     assessment and cost optimization planning.
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
     Author: Lukian Poleschtschuk
     Created: 2025-01-18
+    Updated: 2025-12-17 - Migrated to direct credential authentication from Configuration parameter
     Requires: PowerShell 5.1+, Microsoft.Graph modules, DiscoveryBase module
 #>
 
@@ -69,8 +70,8 @@ function Invoke-LicensingDiscovery {
         [string]$SessionId
     )
 
-    Write-LicensingLog -Level "HEADER" -Message "Starting Discovery (v4.0 - Clean Session Auth)" -Context $Context
-    Write-LicensingLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
+    Write-LicensingLog -Level "HEADER" -Message "Starting Discovery (v1.0.1 - Direct Credential Auth)" -Context $Context
+    Write-LicensingLog -Level "INFO" -Message "SessionId: $SessionId (using Configuration credentials)" -Context $Context
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     # Initialize result object
@@ -127,15 +128,65 @@ function Invoke-LicensingDiscovery {
             return $result
         }
         $outputPath = $Context.Paths.RawDataOutput
+        Write-LicensingLog -Level "DEBUG" -Message "Output path: $outputPath" -Context $Context
         Ensure-Path -Path $outputPath
 
-        # Authenticate using session
-        Write-LicensingLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
+        # EXTRACT AND VALIDATE CREDENTIALS FROM CONFIGURATION
+        Write-LicensingLog -Level "INFO" -Message "Extracting credentials from Configuration..." -Context $Context
+
+        $TenantId = $Configuration.TenantId
+        $ClientId = $Configuration.ClientId
+        $ClientSecret = $Configuration.ClientSecret
+
+        # Log detailed credential presence and masked values
+        Write-LicensingLog -Level "DEBUG" -Message "Credential extraction results:" -Context $Context
+        Write-LicensingLog -Level "DEBUG" -Message "  - TenantId present: $([bool]$TenantId) | Value: $(if ($TenantId) { $TenantId } else { '<MISSING>' })" -Context $Context
+        Write-LicensingLog -Level "DEBUG" -Message "  - ClientId present: $([bool]$ClientId) | Value: $(if ($ClientId) { $ClientId } else { '<MISSING>' })" -Context $Context
+        Write-LicensingLog -Level "DEBUG" -Message "  - ClientSecret present: $([bool]$ClientSecret) | Length: $(if ($ClientSecret) { $ClientSecret.Length } else { 0 }) chars | Masked: $(if ($ClientSecret -and $ClientSecret.Length -ge 4) { $ClientSecret.Substring(0,4) + '****' } else { '<MISSING>' })" -Context $Context
+
+        # Validate all required credentials are present
+        $missingCredentials = @()
+        if (-not $TenantId) { $missingCredentials += 'TenantId' }
+        if (-not $ClientId) { $missingCredentials += 'ClientId' }
+        if (-not $ClientSecret) { $missingCredentials += 'ClientSecret' }
+
+        if ($missingCredentials.Count -gt 0) {
+            $errorMessage = "Missing required credentials in Configuration parameter: $($missingCredentials -join ', ')"
+            $result.AddError($errorMessage, $null, "Credential Validation")
+            Write-LicensingLog -Level "ERROR" -Message $errorMessage -Context $Context
+            Write-LicensingLog -Level "ERROR" -Message "Configuration parameter must include: TenantId, ClientId, and ClientSecret" -Context $Context
+            Write-LicensingLog -Level "DEBUG" -Message "Available Configuration keys: $($Configuration.Keys -join ', ')" -Context $Context
+            return $result
+        }
+
+        Write-LicensingLog -Level "SUCCESS" -Message "All required credentials validated successfully" -Context $Context
+        Write-LicensingLog -Level "INFO" -Message "Using credentials - Tenant: $TenantId, ClientId: $ClientId" -Context $Context
+
+        # ESTABLISH MICROSOFT GRAPH CONNECTION
+        Write-LicensingLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
+
         try {
-            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
-            Write-LicensingLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
+            # Create credential object
+            $secureSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($ClientId, $secureSecret)
+
+            # Connect to Microsoft Graph
+            Connect-MgGraph -ClientSecretCredential $credential -TenantId $TenantId -NoWelcome -ErrorAction Stop
+
+            # Verify connection
+            $mgContext = Get-MgContext -ErrorAction Stop
+            if ($mgContext -and $mgContext.TenantId -eq $TenantId) {
+                Write-LicensingLog -Level "SUCCESS" -Message "Connected to Microsoft Graph successfully. Tenant: $($mgContext.TenantId), Scopes: $($mgContext.Scopes -join ', ')" -Context $Context
+                Write-LicensingLog -Level "INFO" -Message "Authentication status: Connected with ClientId $ClientId to tenant $TenantId" -Context $Context
+            } else {
+                $result.AddError("Microsoft Graph connection verification failed. Expected TenantId: $TenantId", $null, "Graph Connection")
+                return $result
+            }
+
         } catch {
-            $result.AddError("Failed to authenticate with Graph service: $($_.Exception.Message)", $_.Exception, $null)
+            $result.AddError("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception, "Graph Connection")
+            Write-LicensingLog -Level "ERROR" -Message "Graph connection error: $($_.Exception.Message)" -Context $Context
+            Write-LicensingLog -Level "DEBUG" -Message "Exception details: $($_.Exception | Out-String)" -Context $Context
             return $result
         }
 

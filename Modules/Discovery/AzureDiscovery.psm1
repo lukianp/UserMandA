@@ -166,7 +166,7 @@ function Invoke-AzureDiscovery {
 
         [Parameter(Mandatory=$true)]
         [hashtable]$Context,
-        
+
         [Parameter(Mandatory=$true)]
         [string]$SessionId
     )
@@ -175,15 +175,66 @@ function Invoke-AzureDiscovery {
     $discoveryScript = {
         param($Configuration, $Context, $SessionId, $Connections, $Result)
         $allDiscoveredData = [System.Collections.ArrayList]::new()
-        # Get connections
 
+        # CRITICAL: Log credential receipt and validation at start
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "=== CREDENTIAL VALIDATION START ===" -Level "INFO"
+
+        # Check if Configuration parameter exists and has credentials
+        if ($null -eq $Configuration) {
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "ERROR: Configuration parameter is NULL" -Level "ERROR"
+            $Result.AddError("Configuration parameter is NULL - cannot authenticate", $null, @{Section="Initialization"})
+        } else {
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Configuration parameter received successfully" -Level "INFO"
+
+            # Validate individual credential fields
+            $hasTenantId = $Configuration.ContainsKey('TenantId') -and -not [string]::IsNullOrWhiteSpace($Configuration.TenantId)
+            $hasClientId = $Configuration.ContainsKey('ClientId') -and -not [string]::IsNullOrWhiteSpace($Configuration.ClientId)
+            $hasClientSecret = $Configuration.ContainsKey('ClientSecret') -and -not [string]::IsNullOrWhiteSpace($Configuration.ClientSecret)
+
+            # Log credential field presence
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Credential Fields Check:" -Level "INFO"
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "  - TenantId: $(if ($hasTenantId) { 'PRESENT (' + $Configuration.TenantId.Substring(0, [Math]::Min(8, $Configuration.TenantId.Length)) + '...)' } else { 'MISSING or EMPTY' })" -Level "INFO"
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "  - ClientId: $(if ($hasClientId) { 'PRESENT (' + $Configuration.ClientId.Substring(0, [Math]::Min(8, $Configuration.ClientId.Length)) + '...)' } else { 'MISSING or EMPTY' })" -Level "INFO"
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "  - ClientSecret: $(if ($hasClientSecret) { 'PRESENT (length: ' + $Configuration.ClientSecret.Length + ' chars, masked)' } else { 'MISSING or EMPTY' })" -Level "INFO"
+
+            # Determine authentication strategy
+            if ($hasTenantId -and $hasClientId -and $hasClientSecret) {
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Authentication Strategy: Service Principal (all credentials present)" -Level "SUCCESS"
+            } else {
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Authentication Strategy: Fallback (missing credentials - will try CLI/Managed Identity/Interactive)" -Level "WARN"
+
+                # Log which specific fields are missing
+                $missingFields = @()
+                if (-not $hasTenantId) { $missingFields += "TenantId" }
+                if (-not $hasClientId) { $missingFields += "ClientId" }
+                if (-not $hasClientSecret) { $missingFields += "ClientSecret" }
+
+                if ($missingFields.Count -gt 0) {
+                    Write-ModuleLog -ModuleName "AzureDiscovery" -Message "WARNING: Missing credential fields: $($missingFields -join ', ')" -Level "WARN"
+                    $Result.AddWarning("Missing credential fields for Service Principal authentication", @{
+                        MissingFields = $missingFields -join ', '
+                        WillUseFallback = $true
+                    })
+                }
+            }
+
+            # Log all Configuration keys (without values for security)
+            $configKeys = $Configuration.Keys | Sort-Object
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Configuration Keys Present: $($configKeys -join ', ')" -Level "DEBUG"
+        }
+
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "=== CREDENTIAL VALIDATION END ===" -Level "INFO"
+
+        # Get connections
         $azureConnection = $null
+
         # Test and install required Azure modules
         if (-not (Test-AzureModules)) {
             $Result.AddWarning("Azure module installation failed, some Azure resources may not be discovered")
         }
 
         # Establish Azure connection using multiple authentication strategies
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Initiating Azure connection..." -Level "INFO"
         $azureConnection = Connect-AzureWithMultipleStrategies -Configuration $Configuration -Result $Result
         if ($azureConnection) {
             Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure authentication successful" -Level "SUCCESS"

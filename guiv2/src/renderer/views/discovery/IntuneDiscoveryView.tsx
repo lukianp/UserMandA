@@ -22,16 +22,22 @@ import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const IntuneDiscoveryView: React.FC = () => {
   const {
     config,
     result,
     isDiscovering,
+    isCancelling,
     progress,
     activeTab,
     filter,
     error,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
+    clearLogs,
     columns,
     filteredData,
     stats,
@@ -577,6 +583,25 @@ const IntuneDiscoveryView: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="Intune Discovery"
+        scriptDescription="Discovering Intune managed devices, policies, and compliance status"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? {
+          percentage: progress.percentage || 0,
+          message: progress.message || 'Processing...'
+        } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

@@ -184,16 +184,22 @@ export function useDiscovery(type: string, profileId: string, options: Discovery
 
       const executeDiscovery = async (retryCount = 0): Promise<void> => {
         try {
-          // Use existing Electron API methods - the type errors are due to type mismatches
-          // that need to be resolved in the actual Electron API implementation
-          const result = await (window as any).electronAPI.startDiscovery({
-            type,
-            profileId,
-            args,
+          // Generate execution ID
+          const executionId = `${type.toLowerCase()}-discovery-${Date.now()}`;
+
+          // Use the correct discovery API
+          const result = await (window as any).electron.executeDiscovery({
+            moduleName: type,
+            parameters: { ...args, profileId },
+            executionOptions: {
+              timeout: 300000,
+              showWindow: false
+            },
+            executionId
           });
 
-          setState(prev => ({ ...prev, runId: result?.runId }));
-          console.log(`[useDiscovery] Started ${type} discovery with runId: ${result.runId}`);
+          setState(prev => ({ ...prev, runId: executionId }));
+          console.log(`[useDiscovery] Started ${type} discovery with executionId: ${executionId}`);
         } catch (err: any) {
           if (err.name === 'AbortError') {
             console.log(`[useDiscovery] ${type} discovery was cancelled`);
@@ -391,14 +397,15 @@ export function useDiscovery(type: string, profileId: string, options: Discovery
       console.error(`[useDiscovery] ${type} error:`, e);
     };
 
-    (window as any).electronAPI.onDiscoveryProgress(onProgress);
-    (window as any).electronAPI.onDiscoveryResult(onResult);
-    (window as any).electronAPI.onDiscoveryError(onError);
+    const removeProgressListener = (window as any).electron.onDiscoveryProgress?.(onProgress);
+    const removeCompleteListener = (window as any).electron.onDiscoveryComplete?.(onResult);
+    const removeErrorListener = (window as any).electron.onDiscoveryError?.(onError);
 
-    // Cleanup listeners on unmount (if API supports it)
+    // Cleanup listeners on unmount
     return () => {
-      // Note: Electron IPC doesn't have a built-in "off" by default
-      // If you add removeListener support to preload, wire it here
+      removeProgressListener?.();
+      removeCompleteListener?.();
+      removeErrorListener?.();
     };
   }, [state.runId, state.rows, type, enableCaching, cacheTTL, getCacheKey, transformRow, validateRow]);
 

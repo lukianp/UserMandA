@@ -32,14 +32,137 @@ function Invoke-PowerPlatformDiscovery {
 
         [Parameter(Mandatory=$true)]
         [hashtable]$Context,
-        
+
         [Parameter(Mandatory=$true)]
         [string]$SessionId
     )
 
+    # ===================================================================
+    # CREDENTIAL EXTRACTION AND VALIDATION
+    # ===================================================================
+    Write-ModuleLog -ModuleName "PowerPlatform" -Message "Starting credential validation..." -Level "INFO"
+
+    $tenantId = $null
+    $clientId = $null
+    $clientSecret = $null
+    $credentialSource = "Unknown"
+
+    # Extract credentials from Configuration parameter
+    if ($Configuration.ContainsKey('TenantId') -and $Configuration.TenantId) {
+        $tenantId = $Configuration.TenantId
+        $credentialSource = "Configuration.TenantId"
+        Write-ModuleLog -ModuleName "PowerPlatform" -Message "TenantId found in Configuration: $tenantId" -Level "SUCCESS"
+    } else {
+        Write-ModuleLog -ModuleName "PowerPlatform" -Message "TenantId NOT found in Configuration" -Level "ERROR"
+    }
+
+    if ($Configuration.ContainsKey('ClientId') -and $Configuration.ClientId) {
+        $clientId = $Configuration.ClientId
+        Write-ModuleLog -ModuleName "PowerPlatform" -Message "ClientId found in Configuration: $clientId" -Level "SUCCESS"
+    } else {
+        Write-ModuleLog -ModuleName "PowerPlatform" -Message "ClientId NOT found in Configuration" -Level "ERROR"
+    }
+
+    if ($Configuration.ContainsKey('ClientSecret') -and $Configuration.ClientSecret) {
+        $clientSecret = $Configuration.ClientSecret
+        $secretLength = $clientSecret.Length
+        $secretPreview = if ($secretLength -gt 4) {
+            $clientSecret.Substring(0, 4) + "*" * ($secretLength - 4)
+        } else {
+            "*" * $secretLength
+        }
+        Write-ModuleLog -ModuleName "PowerPlatform" -Message "ClientSecret found in Configuration (length: $secretLength, preview: $secretPreview)" -Level "SUCCESS"
+    } else {
+        Write-ModuleLog -ModuleName "PowerPlatform" -Message "ClientSecret NOT found in Configuration" -Level "ERROR"
+    }
+
+    # Validate that all required credentials are present
+    $missingCredentials = @()
+    if (-not $tenantId) { $missingCredentials += "TenantId" }
+    if (-not $clientId) { $missingCredentials += "ClientId" }
+    if (-not $clientSecret) { $missingCredentials += "ClientSecret" }
+
+    if ($missingCredentials.Count -gt 0) {
+        $errorMessage = "Missing required credentials: $($missingCredentials -join ', ')"
+        Write-ModuleLog -ModuleName "PowerPlatform" -Message $errorMessage -Level "ERROR"
+
+        # Log Configuration contents for debugging
+        Write-ModuleLog -ModuleName "PowerPlatform" -Message "Configuration keys available: $($Configuration.Keys -join ', ')" -Level "INFO"
+
+        throw $errorMessage
+    }
+
+    Write-ModuleLog -ModuleName "PowerPlatform" -Message "All required credentials validated successfully" -Level "SUCCESS"
+    Write-ModuleLog -ModuleName "PowerPlatform" -Message "Credential source: $credentialSource" -Level "INFO"
+
+    # Add credentials to Configuration if they're not already there (defensive)
+    if (-not $Configuration.ContainsKey('TenantId')) { $Configuration.TenantId = $tenantId }
+    if (-not $Configuration.ContainsKey('ClientId')) { $Configuration.ClientId = $clientId }
+    if (-not $Configuration.ContainsKey('ClientSecret')) { $Configuration.ClientSecret = $clientSecret }
+
+    # ===================================================================
+    # DISCOVERY SCRIPT
+    # ===================================================================
     $discoveryScript = {
         param($Configuration, $Context, $SessionId, $Connections, $Result)
-        
+
+        # ===================================================================
+        # AUTHENTICATION STATUS LOGGING
+        # ===================================================================
+        Write-ModuleLog -ModuleName "PowerPlatform" -Message "Checking authentication status..." -Level "INFO"
+
+        # Log connection status
+        if ($Connections -and $Connections.Graph) {
+            Write-ModuleLog -ModuleName "PowerPlatform" -Message "Graph connection established successfully" -Level "SUCCESS"
+
+            # Log Graph connection details
+            if ($Connections.Graph.AccessToken) {
+                $tokenLength = $Connections.Graph.AccessToken.Length
+                $tokenPreview = if ($tokenLength -gt 10) {
+                    $Connections.Graph.AccessToken.Substring(0, 10) + "..." + $Connections.Graph.AccessToken.Substring($tokenLength - 10)
+                } else {
+                    "***"
+                }
+                Write-ModuleLog -ModuleName "PowerPlatform" -Message "Graph AccessToken available (length: $tokenLength, preview: $tokenPreview)" -Level "SUCCESS"
+            } else {
+                Write-ModuleLog -ModuleName "PowerPlatform" -Message "Graph AccessToken is NULL or empty" -Level "WARN"
+            }
+
+            if ($Connections.Graph.TenantId) {
+                Write-ModuleLog -ModuleName "PowerPlatform" -Message "Connected to Tenant: $($Connections.Graph.TenantId)" -Level "INFO"
+            }
+        } else {
+            Write-ModuleLog -ModuleName "PowerPlatform" -Message "Graph connection NOT available in Connections object" -Level "ERROR"
+            $Result.AddError("Graph connection not established", $null, @{Section="Authentication"})
+            return @()
+        }
+
+        # Verify Configuration credentials are still available in discovery script
+        Write-ModuleLog -ModuleName "PowerPlatform" -Message "Verifying Configuration credentials in discovery script..." -Level "INFO"
+
+        if ($Configuration.TenantId) {
+            Write-ModuleLog -ModuleName "PowerPlatform" -Message "Configuration.TenantId available: $($Configuration.TenantId)" -Level "SUCCESS"
+        } else {
+            Write-ModuleLog -ModuleName "PowerPlatform" -Message "Configuration.TenantId NOT available in discovery script" -Level "WARN"
+        }
+
+        if ($Configuration.ClientId) {
+            Write-ModuleLog -ModuleName "PowerPlatform" -Message "Configuration.ClientId available: $($Configuration.ClientId)" -Level "SUCCESS"
+        } else {
+            Write-ModuleLog -ModuleName "PowerPlatform" -Message "Configuration.ClientId NOT available in discovery script" -Level "WARN"
+        }
+
+        if ($Configuration.ClientSecret) {
+            Write-ModuleLog -ModuleName "PowerPlatform" -Message "Configuration.ClientSecret available (length: $($Configuration.ClientSecret.Length))" -Level "SUCCESS"
+        } else {
+            Write-ModuleLog -ModuleName "PowerPlatform" -Message "Configuration.ClientSecret NOT available in discovery script" -Level "WARN"
+        }
+
+        Write-ModuleLog -ModuleName "PowerPlatform" -Message "Authentication validation complete - proceeding with discovery" -Level "SUCCESS"
+
+        # ===================================================================
+        # DISCOVERY LOGIC
+        # ===================================================================
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         $batchSize = 100
         

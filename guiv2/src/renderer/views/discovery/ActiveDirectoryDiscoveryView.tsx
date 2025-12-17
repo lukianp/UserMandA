@@ -13,6 +13,7 @@ import { Button } from '../../components/atoms/Button';
 import { Spinner } from '../../components/atoms/Spinner';
 import Badge from '../../components/atoms/Badge';
 import ProgressBar from '../../components/molecules/ProgressBar';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 /**
  * Active Directory Discovery View Component
@@ -29,6 +30,11 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
     filteredData,
     columnDefs,
     errors,
+    showExecutionDialog,
+    setShowExecutionDialog,
+    logs,
+    clearLogs,
+    isCancelling,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
@@ -65,6 +71,8 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
                 if (template) loadTemplate(template);
               }}
               disabled={isDiscovering}
+              aria-label="Select discovery template"
+              title="Select Template"
             >
               <option value="">Select Template...</option>
               {templates.map(template => (
@@ -327,6 +335,24 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="Active Directory Discovery"
+        scriptDescription="Discovering Active Directory resources"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? {
+          percentage: progress.percentage || progress.progress || 0,
+          message: progress.message || progress.currentOperation || ''
+        } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };
@@ -416,11 +442,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Forest Information</h3>
         <div className="space-y-3">
-          <SummaryRow label="Forest Name" value={(result?.forest?.name ?? 0)} />
-          <SummaryRow label="Forest Mode" value={(result?.forest?.forestMode ?? 0)} />
-          <SummaryRow label="Domains" value={(result?.forest?.domains ?? 0).length} />
-          <SummaryRow label="Sites" value={(result?.forest?.sites ?? 0).length} />
-          <SummaryRow label="Global Catalogs" value={(result?.forest?.globalCatalogs ?? 0).length} />
+          <SummaryRow label="Forest Name" value={result?.forest?.name ?? 'N/A'} />
+          <SummaryRow label="Forest Mode" value={result?.forest?.forestMode ?? 'N/A'} />
+          <SummaryRow label="Domains" value={(result?.forest?.domains ?? []).length} />
+          <SummaryRow label="Sites" value={(result?.forest?.sites ?? []).length} />
+          <SummaryRow label="Global Catalogs" value={(result?.forest?.globalCatalogs ?? []).length} />
         </div>
       </div>
     )}

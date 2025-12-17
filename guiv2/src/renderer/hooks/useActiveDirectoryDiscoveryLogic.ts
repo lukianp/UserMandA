@@ -12,6 +12,7 @@ import {
   ProgressInfo,
   Profile
 } from './common/discoveryHookTypes';
+import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
@@ -35,6 +36,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
 
   const [currentToken, setCurrentToken] = useState<string | null>(null);
   const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
@@ -69,7 +71,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
 
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
-        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warn' : 'info';
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
         addLog(logLevel, data.message);
       }
     });
@@ -158,7 +160,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
-        addLog('warn', 'Discovery cancelled by user');
+        addLog('warning', 'Discovery cancelled by user');
       }
     });
 
@@ -185,6 +187,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
       return;
     }
 
+    setShowExecutionDialog(true);
     setIsRunning(true);
     setIsCancelling(false);
     setProgress(null);
@@ -237,7 +240,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
     if (!isRunning || !currentToken) return;
 
     setIsCancelling(true);
-    addLog('warn', 'Cancelling discovery...');
+    addLog('warning', 'Cancelling discovery...');
 
     try {
       await window.electron.cancelDiscovery(currentToken);
@@ -248,7 +251,7 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
-        addLog('warn', 'Discovery cancelled');
+        addLog('warning', 'Discovery cancelled');
       }, 2000);
     } catch (err: any) {
       const errorMessage = err.message || 'Error cancelling discovery';
@@ -334,6 +337,8 @@ export const useActiveDirectoryDiscoveryLogic = (): ActiveDirectoryDiscoveryHook
     results,
     error,
     logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
     startDiscovery,
     cancelDiscovery,
     exportResults,

@@ -7,7 +7,7 @@
  */
 export interface LogEntry {
   timestamp: string;
-  level: 'info' | 'warn' | 'error';
+  level: 'info' | 'warning' | 'success' | 'error';
   message: string;
 }
 
@@ -46,6 +46,10 @@ export interface BaseDiscoveryHookResult {
   error: string | null;
   logs: LogEntry[];
   selectedProfile: Profile | null;
+
+  // PowerShell execution dialog state
+  showExecutionDialog: boolean;
+  setShowExecutionDialog: (show: boolean) => void;
 
   // Core actions
   startDiscovery: () => Promise<void>;

@@ -14,9 +14,6 @@
  * ```
  */
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
-
 import { useState, useEffect, useCallback } from 'react';
 
 import { useProfileStore } from '../store/useProfileStore';
@@ -74,7 +71,7 @@ export function useProfileStatistics(profileId?: string) {
       console.log(`[ProfileStatistics] Loading statistics for profile: ${effectiveProfileId}`);
 
       // Get profile data path
-      const dataPathResult = await window.electronAPI.getProfileDataPath(effectiveProfileId);
+      const dataPathResult = await window.electronAPI.getProfileDataPath(effectiveProfileId) as { success: boolean; error?: string; dataPath: string };
 
       if (!dataPathResult.success) {
         throw new Error(dataPathResult.error || 'Failed to get profile data path');

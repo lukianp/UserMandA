@@ -23,6 +23,7 @@ import {
   DEFAULT_TEAMS_CONFIG,
 } from '../types/models/teams';
 import type { ProgressData } from '../../shared/types';
+import type { LogEntry } from './common/discoveryHookTypes';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
@@ -39,7 +40,10 @@ export function useTeamsDiscoveryLogic() {
   const [result, setResult] = useState<TeamsDiscoveryResult | null>(null);
   const [progress, setProgress] = useState<TeamsDiscoveryProgress | null>(null);
   const [isDiscovering, setIsDiscovering] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
 
   const [currentToken, setCurrentToken] = useState<string | null>(null);
   const currentTokenRef = useRef<string | null>(null); // Ref for event matching
@@ -56,6 +60,25 @@ export function useTeamsDiscoveryLogic() {
 
   // UI state
   const [selectedTab, setSelectedTab] = useState<'overview' | 'teams' | 'channels' | 'members'>('overview');
+
+  /**
+   * Add a log entry
+   */
+  const addLog = useCallback((level: LogEntry['level'], message: string) => {
+    const entry: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level,
+      message,
+    };
+    setLogs(prev => [...prev, entry]);
+  }, []);
+
+  /**
+   * Clear all logs
+   */
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
 
   // ============================================================================
   // Data Fetching
@@ -89,7 +112,8 @@ export function useTeamsDiscoveryLogic() {
 
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
-        console.log('[TeamsDiscoveryHook] Discovery output:', data.message);
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
+        addLog(logLevel, data.message);
       }
     });
 
@@ -97,7 +121,9 @@ export function useTeamsDiscoveryLogic() {
       if (data.executionId === currentTokenRef.current) {
         console.log('[TeamsDiscoveryHook] Discovery complete:', data);
         setIsDiscovering(false);
+        setIsCancelling(false);
         setCurrentToken(null);
+        addLog('info', `Discovery completed! Found ${data?.result?.totalItems || 0} items.`);
 
         const discoveryResult = {
           id: `teams-discovery-${Date.now()}`,
@@ -126,8 +152,10 @@ export function useTeamsDiscoveryLogic() {
       if (data.executionId === currentTokenRef.current) {
         console.error('[TeamsDiscoveryHook] Discovery error:', data.error);
         setIsDiscovering(false);
+        setIsCancelling(false);
         setError(data.error);
         setProgress(null);
+        addLog('error', `Discovery failed: ${data.error}`);
       }
     });
 
@@ -135,8 +163,10 @@ export function useTeamsDiscoveryLogic() {
       if (data.executionId === currentTokenRef.current) {
         console.log('[TeamsDiscoveryHook] Discovery cancelled');
         setIsDiscovering(false);
+        setIsCancelling(false);
         setCurrentToken(null);
         setProgress(null);
+        addLog('warning', 'Discovery cancelled by user');
       }
     });
 
@@ -146,7 +176,7 @@ export function useTeamsDiscoveryLogic() {
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
+  }, [addLog]); // Include addLog in dependencies
 
   // ============================================================================
   // Discovery Execution
@@ -164,7 +194,10 @@ export function useTeamsDiscoveryLogic() {
     }
 
     setIsDiscovering(true);
+    setIsCancelling(false);
     setError(null);
+    setLogs([]);
+    setShowExecutionDialog(true);
     setProgress({
       phase: 'initializing',
       phaseLabel: 'Initializing Teams discovery...',
@@ -180,6 +213,7 @@ export function useTeamsDiscoveryLogic() {
     setCurrentToken(token);
     currentTokenRef.current = token; // CRITICAL: Update ref for event matching
 
+    addLog('info', `Starting Teams discovery for ${selectedSourceProfile.companyName}...`);
     console.log('[TeamsDiscoveryHook] Starting Teams discovery for', selectedSourceProfile.companyName);
 
     try {
@@ -212,28 +246,35 @@ export function useTeamsDiscoveryLogic() {
   const cancelDiscovery = useCallback(async () => {
     if (!isDiscovering || !currentToken) return;
 
+    setIsCancelling(true);
+    addLog('warning', 'Cancelling discovery...');
     console.log('[TeamsDiscoveryHook] Cancelling discovery...');
 
     try {
       await window.electron.cancelDiscovery(currentToken);
+      addLog('info', 'Discovery cancellation requested successfully');
       console.log('[TeamsDiscoveryHook] Discovery cancellation requested successfully');
 
       // Set timeout as fallback in case cancelled event doesn't fire
       setTimeout(() => {
         setIsDiscovering(false);
+        setIsCancelling(false);
         setCurrentToken(null);
         setProgress(null);
+        addLog('warning', 'Discovery cancelled');
         console.log('[TeamsDiscoveryHook] Discovery cancelled');
       }, 2000);
     } catch (err: any) {
       const errorMessage = err.message || 'Error cancelling discovery';
+      addLog('error', errorMessage);
       console.error('[TeamsDiscoveryHook]', errorMessage);
       // Reset state even on error
       setIsDiscovering(false);
+      setIsCancelling(false);
       setCurrentToken(null);
       setProgress(null);
     }
-  }, [isDiscovering, currentToken]);
+  }, [isDiscovering, currentToken, addLog]);
 
   // ============================================================================
   // Template Management
@@ -670,7 +711,11 @@ export function useTeamsDiscoveryLogic() {
     currentResult: result,
     progress,
     isDiscovering,
+    isCancelling,
     error,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
 
     // Templates
     templates,
@@ -681,6 +726,7 @@ export function useTeamsDiscoveryLogic() {
     // Discovery control
     startDiscovery,
     cancelDiscovery,
+    clearLogs,
 
     // Filtered data
     teams: filteredTeams,

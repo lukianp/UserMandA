@@ -333,10 +333,11 @@ export const routes: RouteObject[] = [
     path: '/discovery/panorama-interrogation',
     element: lazyLoad(() => import('./views/discovery/PanoramaInterrogationDiscoveryView')),
   },
-  {
-    path: '/discovery/gcp',
-    element: lazyLoad(() => import('./views/discovery/GCPDiscoveryView')),
-  },
+  // Temporarily disabled - hook not implemented yet
+  // {
+  //   path: '/discovery/gcp',
+  //   element: lazyLoad(() => import('./views/discovery/GCPDiscoveryView')),
+  // },
   {
     path: '/discovery/graph',
     element: lazyLoad(() => import('./views/discovery/GraphDiscoveryView')),

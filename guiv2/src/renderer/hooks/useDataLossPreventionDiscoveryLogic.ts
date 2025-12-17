@@ -17,6 +17,7 @@ import {
   DLPStats,
   DLPMode
 } from '../types/models/dlp';
+import type { LogEntry } from './common/discoveryHookTypes';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
@@ -45,6 +46,30 @@ export const useDataLossPreventionDiscoveryLogic = () => {
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const { addResult } = useDiscoveryStore();
 
+  // Additional state for PowerShellExecutionDialog
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
+
+  /**
+   * Add a log entry
+   */
+  const addLog = useCallback((level: LogEntry['level'], message: string) => {
+    const entry: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level,
+      message,
+    };
+    setLogs(prev => [...prev, entry]);
+  }, []);
+
+  /**
+   * Clear all logs
+   */
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
+
   // Combined state
   const [state, setState] = useState<DLPDiscoveryState>({
     config: {
@@ -71,6 +96,8 @@ export const useDataLossPreventionDiscoveryLogic = () => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         const message = data.message || '';
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
+        addLog(logLevel, message);
         setState(prev => ({
           ...prev,
           progress: {
@@ -156,6 +183,7 @@ export const useDataLossPreventionDiscoveryLogic = () => {
     }
 
     const token = `dlp-discovery-${Date.now()}`;
+    setShowExecutionDialog(true);
     setState(prev => ({
       ...prev,
       isDiscovering: true,
@@ -210,6 +238,7 @@ export const useDataLossPreventionDiscoveryLogic = () => {
     if (!state.cancellationToken) return;
 
     console.warn('[DLPDiscoveryHook] Cancelling discovery...');
+    setIsCancelling(true);
 
     try {
       await window.electron.cancelDiscovery(state.cancellationToken);
@@ -224,6 +253,7 @@ export const useDataLossPreventionDiscoveryLogic = () => {
           progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
         }));
         currentTokenRef.current = null;
+        setIsCancelling(false);
       }, 2000);
     } catch (error: any) {
       const errorMessage = error.message || 'Error cancelling discovery';
@@ -236,6 +266,7 @@ export const useDataLossPreventionDiscoveryLogic = () => {
         progress: { current: 0, total: 100, message: '', percentage: 0 }
       }));
       currentTokenRef.current = null;
+      setIsCancelling(false);
     }
   }, [state.cancellationToken]);
 
@@ -460,6 +491,13 @@ export const useDataLossPreventionDiscoveryLogic = () => {
     activeTab: state.activeTab,
     filter: state.filter,
     error: state.error,
+
+    // PowerShellExecutionDialog integration
+    showExecutionDialog,
+    setShowExecutionDialog,
+    logs,
+    clearLogs,
+    isCancelling,
 
     // Data
     columns,

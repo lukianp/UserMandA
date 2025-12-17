@@ -12,8 +12,6 @@
  * - Log correlation IDs for request tracking
  */
 
-import * as crypto from 'crypto';
-
 /**
  * Log levels with numeric priorities
  */
@@ -105,7 +103,7 @@ class LoggingService {
       rotationInterval: 86400000, // 24 hours
     };
 
-    this.sessionId = crypto.randomUUID();
+    this.sessionId = globalThis.crypto.randomUUID();
 
     // Load persisted logs from localStorage
     this.loadLogs();
@@ -137,7 +135,7 @@ class LoggingService {
    * Start a correlation context
    */
   startCorrelation(id?: string): string {
-    const correlationId = id || crypto.randomUUID();
+    const correlationId = id || globalThis.crypto.randomUUID();
     this.correlationIdStack.push(correlationId);
     return correlationId;
   }
@@ -226,7 +224,7 @@ class LoggingService {
     }
 
     const entry: LogEntry = {
-      id: crypto.randomUUID(),
+      id: globalThis.crypto.randomUUID(),
       timestamp: new Date(),
       level,
       levelName: LogLevel[level],
@@ -281,7 +279,7 @@ class LoggingService {
 
     // Log performance entry
     const entry: LogEntry = {
-      id: crypto.randomUUID(),
+      id: globalThis.crypto.randomUUID(),
       timestamp: new Date(),
       level: LogLevel.DEBUG,
       levelName: 'DEBUG',

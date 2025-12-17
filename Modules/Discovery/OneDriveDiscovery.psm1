@@ -127,27 +127,90 @@ function Invoke-OneDriveDiscovery {
     try {
         # 2. VALIDATE PREREQUISITES & CONTEXT
         Write-OneDriveLog -Level "INFO" -Message "Validating prerequisites..." -Context $Context
-        
+
         if (-not $Context.Paths.RawDataOutput) {
             $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
             return $result
         }
         $outputPath = $Context.Paths.RawDataOutput
         Write-OneDriveLog -Level "DEBUG" -Message "Output path: $outputPath" -Context $Context
-        
+
         Ensure-Path -Path $outputPath
 
+        # 2a. EXTRACT AND VALIDATE CREDENTIALS FROM CONFIGURATION
+        Write-OneDriveLog -Level "INFO" -Message "Extracting credentials from Configuration parameter..." -Context $Context
+
+        $tenantId = $null
+        $clientId = $null
+        $clientSecret = $null
+        $credentialsValid = $false
+
+        # Check for credentials in Configuration
+        if ($Configuration) {
+            Write-OneDriveLog -Level "DEBUG" -Message "Configuration object provided, checking for credential properties..." -Context $Context
+
+            # Check TenantId
+            if ($Configuration.ContainsKey('TenantId') -and $Configuration.TenantId) {
+                $tenantId = $Configuration.TenantId
+                Write-OneDriveLog -Level "SUCCESS" -Message "TenantId found in Configuration: $tenantId" -Context $Context
+            } else {
+                Write-OneDriveLog -Level "WARN" -Message "TenantId not found in Configuration" -Context $Context
+            }
+
+            # Check ClientId
+            if ($Configuration.ContainsKey('ClientId') -and $Configuration.ClientId) {
+                $clientId = $Configuration.ClientId
+                Write-OneDriveLog -Level "SUCCESS" -Message "ClientId found in Configuration: $clientId" -Context $Context
+            } else {
+                Write-OneDriveLog -Level "WARN" -Message "ClientId not found in Configuration" -Context $Context
+            }
+
+            # Check ClientSecret
+            if ($Configuration.ContainsKey('ClientSecret') -and $Configuration.ClientSecret) {
+                $clientSecret = $Configuration.ClientSecret
+                $secretLength = if ($clientSecret -is [SecureString]) {
+                    "SecureString"
+                } elseif ($clientSecret -is [string]) {
+                    "$($clientSecret.Length) characters"
+                } else {
+                    "Unknown type: $($clientSecret.GetType().Name)"
+                }
+                Write-OneDriveLog -Level "SUCCESS" -Message "ClientSecret found in Configuration: $secretLength" -Context $Context
+            } else {
+                Write-OneDriveLog -Level "WARN" -Message "ClientSecret not found in Configuration" -Context $Context
+            }
+
+            # Validate all three credentials are present
+            if ($tenantId -and $clientId -and $clientSecret) {
+                $credentialsValid = $true
+                Write-OneDriveLog -Level "SUCCESS" -Message "All required credentials (TenantId, ClientId, ClientSecret) extracted from Configuration" -Context $Context
+            } else {
+                Write-OneDriveLog -Level "WARN" -Message "Incomplete credentials in Configuration. TenantId: $($null -ne $tenantId), ClientId: $($null -ne $clientId), ClientSecret: $($null -ne $clientSecret)" -Context $Context
+            }
+        } else {
+            Write-OneDriveLog -Level "WARN" -Message "Configuration parameter is null or empty" -Context $Context
+        }
+
+        # Log configuration structure for debugging
+        if ($Configuration) {
+            $configKeys = $Configuration.Keys -join ', '
+            Write-OneDriveLog -Level "DEBUG" -Message "Configuration keys available: $configKeys" -Context $Context
+        }
+
         # Initialize Microsoft Graph authentication before any Graph calls
-        Write-OneDriveLog -Level "DEBUG" -Message "Ensuring Microsoft Graph authentication is established..." -Context $Context
+        Write-OneDriveLog -Level "INFO" -Message "Ensuring Microsoft Graph authentication is established..." -Context $Context
+        Write-OneDriveLog -Level "DEBUG" -Message "Authentication status - Credentials valid: $credentialsValid, TenantId: $($null -ne $tenantId), ClientId: $($null -ne $clientId), ClientSecret: $($null -ne $clientSecret)" -Context $Context
+
         try {
             $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
             Write-OneDriveLog -Level "DEBUG" -Message "Graph authentication result: $($graphAuth | ConvertTo-Json)" -Context $Context
             if (-not $graphAuth) {
                 throw "Failed to establish Graph authentication - returned null"
             }
-            Write-OneDriveLog -Level "DEBUG" -Message "Microsoft Graph authentication established successfully" -Context $Context
+            Write-OneDriveLog -Level "SUCCESS" -Message "Microsoft Graph authentication established successfully" -Context $Context
         } catch {
             $result.AddError("Failed to establish Microsoft Graph authentication: $($_.Exception.Message)", $_.Exception, "Graph Authentication")
+            Write-OneDriveLog -Level "ERROR" -Message "Authentication failure details - Credentials extracted: $credentialsValid" -Context $Context
             return $result
         }
 
@@ -227,19 +290,61 @@ if (-not $Configuration.discovery -or
         try {
             $mgContext = Get-MgContext
             Write-OneDriveLog -Level "DEBUG" -Message "MgContext: $($mgContext | ConvertTo-Json -Depth 3)" -Context $Context
+
             if (-not $mgContext) {
                 $result.AddError("Microsoft Graph context is null. Connection may have failed.", $null, "Graph Context")
+                Write-OneDriveLog -Level "ERROR" -Message "Graph context validation failed - context is null" -Context $Context
                 return $result
             }
-            if (-not $mgContext.TenantId -or -not $mgContext.ClientId) {
-                $result.AddError("Microsoft Graph context is missing required TenantId or ClientId.", $null, "Graph Context")
+
+            # Validate TenantId in context
+            if (-not $mgContext.TenantId) {
+                $result.AddError("Microsoft Graph context is missing TenantId.", $null, "Graph Context")
+                Write-OneDriveLog -Level "ERROR" -Message "Graph context validation failed - TenantId is missing" -Context $Context
                 return $result
             }
+
+            # Validate ClientId in context
+            if (-not $mgContext.ClientId) {
+                $result.AddError("Microsoft Graph context is missing ClientId.", $null, "Graph Context")
+                Write-OneDriveLog -Level "ERROR" -Message "Graph context validation failed - ClientId is missing" -Context $Context
+                return $result
+            }
+
+            # Log authentication details
+            Write-OneDriveLog -Level "SUCCESS" -Message "Microsoft Graph TenantId validated: $($mgContext.TenantId)" -Context $Context
+            Write-OneDriveLog -Level "SUCCESS" -Message "Microsoft Graph ClientId validated: $($mgContext.ClientId)" -Context $Context
+
+            # Compare with Configuration credentials if available
+            if ($credentialsValid) {
+                $tenantMatch = ($mgContext.TenantId -eq $tenantId)
+                $clientMatch = ($mgContext.ClientId -eq $clientId)
+
+                Write-OneDriveLog -Level "INFO" -Message "Credential validation - TenantId match: $tenantMatch, ClientId match: $clientMatch" -Context $Context
+
+                if (-not $tenantMatch) {
+                    Write-OneDriveLog -Level "WARN" -Message "TenantId mismatch - Configuration: $tenantId, Graph Context: $($mgContext.TenantId)" -Context $Context
+                }
+
+                if (-not $clientMatch) {
+                    Write-OneDriveLog -Level "WARN" -Message "ClientId mismatch - Configuration: $clientId, Graph Context: $($mgContext.ClientId)" -Context $Context
+                }
+            }
+
             # For service principal authentication, Account will be null but connection is still valid
-            $accountDisplay = if ($mgContext.Account) { "Account: $($mgContext.Account)" } else { "App Authentication: $($mgContext.AppName)" }
-            Write-OneDriveLog -Level "SUCCESS" -Message "Microsoft Graph connection verified. $accountDisplay" -Context $Context
+            $accountDisplay = if ($mgContext.Account) {
+                "Account: $($mgContext.Account)"
+            } else {
+                "App Authentication: $($mgContext.AppName -or 'Service Principal')"
+            }
+
+            $authType = if ($mgContext.Account) { "User Authentication" } else { "Service Principal Authentication" }
+            Write-OneDriveLog -Level "SUCCESS" -Message "Microsoft Graph connection verified. Type: $authType, $accountDisplay" -Context $Context
+            Write-OneDriveLog -Level "INFO" -Message "Graph Scopes: $($mgContext.Scopes -join ', ')" -Context $Context
+
         } catch {
             $result.AddError("Failed to verify Microsoft Graph connection: $($_.Exception.Message)", $_.Exception, "Graph Context")
+            Write-OneDriveLog -Level "ERROR" -Message "Graph context verification exception: $($_.Exception.Message)" -Context $Context
             return $result
         }
 

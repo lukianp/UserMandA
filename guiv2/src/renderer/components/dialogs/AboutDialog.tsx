@@ -61,8 +61,10 @@ const AboutDialog: React.FC<AboutDialogProps> = ({
               onClick={onClose}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               data-cy="close-about-btn"
+              aria-label="Close dialog"
+              title="Close"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
 

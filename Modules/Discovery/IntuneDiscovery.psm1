@@ -23,6 +23,60 @@
 # Import base module
 Import-Module (Join-Path $PSScriptRoot "DiscoveryBase.psm1") -Force
 
+function Write-IntuneLog {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Message,
+        [string]$Level = "INFO",
+        [hashtable]$Context
+    )
+
+    if (Get-Command Write-MandALog -ErrorAction SilentlyContinue) {
+        Write-MandALog -Message "[Intune] $Message" -Level $Level -Component "IntuneDiscovery" -Context $Context
+    } else {
+        $color = switch ($Level) {
+            "ERROR" { "Red" }
+            "WARN" { "Yellow" }
+            "SUCCESS" { "Green" }
+            "DEBUG" { "Gray" }
+            "HEADER" { "Cyan" }
+            default { "White" }
+        }
+        Write-Host "[Intune] $Message" -ForegroundColor $color
+    }
+}
+
+function Get-AuthInfoFromConfiguration {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration
+    )
+
+    # Extract credentials from Configuration
+    $TenantId = $Configuration.TenantId
+    $ClientId = $Configuration.ClientId
+    $ClientSecret = $Configuration.ClientSecret
+
+    if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
+        Write-IntuneLog -Message "Missing credentials. TenantId: $(if($TenantId){'Present'}else{'Missing'}), ClientId: $(if($ClientId){'Present'}else{'Missing'}), ClientSecret: $(if($ClientSecret){'Present (length: ' + $ClientSecret.Length + ')'}else{'Missing'})" -Level "ERROR"
+        return @{
+            Success = $false
+            Error = "Missing required credentials: TenantId, ClientId, and ClientSecret are required"
+        }
+    }
+
+    Write-IntuneLog -Message "Credentials validated successfully. TenantId: $TenantId, ClientId: $ClientId, ClientSecret: Present (length: $($ClientSecret.Length))" -Level "SUCCESS"
+
+    return @{
+        Success = $true
+        TenantId = $TenantId
+        ClientId = $ClientId
+        ClientSecret = $ClientSecret
+    }
+}
+
 function Invoke-IntuneDiscovery {
     [CmdletBinding()]
     param(
@@ -36,12 +90,41 @@ function Invoke-IntuneDiscovery {
         [string]$SessionId
     )
 
+    Write-IntuneLog -Level "HEADER" -Message "Starting Intune Discovery (Session-based)" -Context $Context
+    Write-IntuneLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
+
+    # Validate and extract credentials
+    $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
+    if (-not $authInfo.Success) {
+        Write-IntuneLog -Level "ERROR" -Message "Authentication validation failed: $($authInfo.Error)" -Context $Context
+        # Return error result
+        if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+            Import-Module -Name "$PSScriptRoot\..\Core\ClassDefinitions.psm1" -Force -ErrorAction Stop
+        }
+        $errorResult = [DiscoveryResult]::new('Intune')
+        $errorResult.AddError($authInfo.Error, $null, @{Phase = "Authentication"})
+        $errorResult.EndTime = Get-Date
+        return $errorResult
+    }
+
     # Define discovery script
     $discoveryScript = {
         param($Configuration, $Context, $SessionId, $Connections, $Result)
-        
+
         $allDiscoveredData = [System.Collections.ArrayList]::new()
-        
+
+        # Log authentication status
+        Write-ModuleLog -ModuleName "Intune" -Message "Authentication Status - TenantId: $($Configuration.TenantId), ClientId: $($Configuration.ClientId), ClientSecret: $(if($Configuration.ClientSecret){'Present (length: ' + $Configuration.ClientSecret.Length + ')'}else{'Missing'})" -Level "INFO"
+
+        # Verify Graph connection
+        if ($Connections.Graph) {
+            Write-ModuleLog -ModuleName "Intune" -Message "Graph API connection established successfully" -Level "SUCCESS"
+        } else {
+            Write-ModuleLog -ModuleName "Intune" -Message "WARNING: Graph API connection not available" -Level "WARN"
+            $Result.AddError("Graph API connection not available", $null, @{Phase = "Connection"})
+            return $allDiscoveredData
+        }
+
         # Discover Managed Devices with enhanced retry logic
         try {
             Write-ModuleLog -ModuleName "Intune" -Message "Discovering Intune managed devices..." -Level "INFO"

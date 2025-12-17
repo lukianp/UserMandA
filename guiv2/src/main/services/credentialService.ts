@@ -59,6 +59,7 @@ interface LegacyDiscoveryCredential {
   CreatedBy?: string;
   CreatedOnComputer?: string;
   RoleAssignmentSuccess?: boolean;
+  Encrypted?: boolean;
 }
 
 export class CredentialService {
@@ -297,17 +298,34 @@ export class CredentialService {
       try {
         const creds = JSON.parse(data) as LegacyDiscoveryCredential;
 
+        // Check if specific fields are encrypted (Hybrid JSON format)
+        if (creds.Encrypted && creds.ClientSecret) {
+          console.log(`[CredentialService] 🔒 Detected encrypted fields in JSON credentials`);
+          console.log(`[CredentialService] Decrypting ClientSecret via DPAPI...`);
+          
+          const decryptedSecret = await this.decryptStringWithPowerShell(creds.ClientSecret);
+          
+          if (decryptedSecret) {
+            creds.ClientSecret = decryptedSecret;
+            creds.Encrypted = false; // Mark as decrypted
+            console.log(`[CredentialService] ✅ Successfully decrypted ClientSecret`);
+          } else {
+            console.error(`[CredentialService] ❌ Failed to decrypt ClientSecret`);
+            // Continue anyway, maybe the secret wasn't actually encrypted or will fail later
+          }
+        }
+
         // Validate required fields
         if (!creds.TenantId || !creds.ClientId || !creds.ClientSecret) {
           console.warn(`[CredentialService] Legacy credentials missing required fields`);
           return null;
         }
 
-        console.log(`[CredentialService] ✅ Loaded unencrypted legacy credentials`);
+        console.log(`[CredentialService] ✅ Loaded legacy credentials`);
         return creds;
       } catch (jsonError) {
-        // Not JSON - try DPAPI decryption
-        console.log(`[CredentialService] File is not JSON, attempting DPAPI decryption...`);
+        // Not JSON - try DPAPI decryption (whole file)
+        console.log(`[CredentialService] File is not JSON, attempting whole-file DPAPI decryption...`);
         return await this.decryptLegacyCredentialsDPAPI(legacyPath);
       }
     } catch (error) {
@@ -354,6 +372,54 @@ export class CredentialService {
         details: `File read error: ${error instanceof Error ? error.message : String(error)}`
       };
     }
+  }
+
+  /**
+   * Decrypt a single encrypted string using PowerShell (DPAPI)
+   */
+  private async decryptStringWithPowerShell(encryptedString: string): Promise<string | null> {
+    const { spawn } = await import('child_process');
+
+    const script = `
+      try {
+        $ss = ConvertTo-SecureString -String '${encryptedString}'
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ss)
+        $plain = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        Write-Output $plain
+      } catch {
+        # Silent fail for cleaner logs, caller handles null
+        exit 1
+      }
+    `;
+
+    return new Promise((resolve) => {
+      const child = spawn('powershell.exe', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy', 'Bypass',
+        '-Command',
+        script
+      ]);
+
+      let stdout = '';
+
+      child.stdout?.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      child.on('close', (code) => {
+        if (code !== 0) {
+          resolve(null);
+          return;
+        }
+        resolve(stdout.trim());
+      });
+
+      child.on('error', () => {
+        resolve(null);
+      });
+    });
   }
 
   /**
@@ -444,6 +510,59 @@ export class CredentialService {
 
       // Define multiple decryption strategies
       const decryptionScripts = [
+        {
+          name: 'Hex-encoded DPAPI (Enhanced - Roo Fix)',
+          script: `
+            try {
+              $hex = (Get-Content -Raw -Path '${escapedPath}').Trim()
+              if ($hex[0] -eq [char]0xFEFF) { $hex = $hex.Substring(1) }
+
+              # Check if it looks like hex (DPAPI blob header: 01000000d08c9ddf...)
+              if ($hex -match '^[0-9A-Fa-f]+$') {
+                 if ($hex.Length % 2 -ne 0) {
+                   Write-Error "Invalid hex string length: $($hex.Length)"
+                   exit 1
+                 }
+
+                 # Convert Hex to Byte[] using .NET for better performance
+                 $byteCount = $hex.Length / 2
+                 $bytes = New-Object byte[] $byteCount
+
+                 for ($i = 0; $i -lt $byteCount; $i++) {
+                   $bytes[$i] = [Convert]::ToByte($hex.Substring($i * 2, 2), 16)
+                 }
+
+                 # Verify DPAPI header (should start with 01000000)
+                 if ($bytes[0] -ne 0x01 -or $bytes[1] -ne 0x00 -or $bytes[2] -ne 0x00 -or $bytes[3] -ne 0x00) {
+                   Write-Error "Invalid DPAPI blob header"
+                   exit 1
+                 }
+
+                 # Decrypt using DPAPI
+                 Add-Type -AssemblyName System.Security
+                 $decryptedBytes = [System.Security.Cryptography.ProtectedData]::Unprotect(
+                   $bytes,
+                   $null,
+                   [System.Security.Cryptography.DataProtectionScope]::CurrentUser
+                 )
+
+                 # Convert to UTF-8 string
+                 $json = [System.Text.Encoding]::UTF8.GetString($decryptedBytes)
+
+                 # Verify it's valid JSON before returning
+                 $null = $json | ConvertFrom-Json -ErrorAction Stop
+
+                 Write-Output $json
+              } else {
+                 Write-Error "Content is not a hex string (expected DPAPI blob)"
+                 exit 1
+              }
+            } catch {
+              Write-Error "Hex DPAPI decryption failed: $($_.Exception.Message)"
+              exit 1
+            }
+          `
+        },
         {
           name: 'Standard DPAPI SecureString (ConvertTo-SecureString)',
           script: `

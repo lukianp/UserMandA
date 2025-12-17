@@ -34,10 +34,107 @@ function Invoke-ExchangeDiscovery {
 
         [Parameter(Mandatory=$true)]
         [hashtable]$Context,
-        
+
         [Parameter(Mandatory=$true)]
         [string]$SessionId
     )
+
+    Write-ModuleLog -ModuleName "Exchange" -Message "=== Exchange Discovery Module Starting ===" -Level "HEADER"
+
+    # CREDENTIAL VALIDATION AND EXTRACTION
+    Write-ModuleLog -ModuleName "Exchange" -Message "Extracting and validating credentials from Configuration..." -Level "INFO"
+
+    $TenantId = $Configuration.TenantId
+    $ClientId = $Configuration.ClientId
+    $ClientSecret = $Configuration.ClientSecret
+
+    # Log credential presence for debugging
+    Write-ModuleLog -ModuleName "Exchange" -Message "Credential validation check:" -Level "DEBUG"
+    Write-ModuleLog -ModuleName "Exchange" -Message "  TenantId present: $([bool]$TenantId)" -Level "DEBUG"
+    Write-ModuleLog -ModuleName "Exchange" -Message "  ClientId present: $([bool]$ClientId)" -Level "DEBUG"
+    Write-ModuleLog -ModuleName "Exchange" -Message "  ClientSecret present: $([bool]$ClientSecret)" -Level "DEBUG"
+
+    if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
+        $errorMsg = "Missing required credentials in Configuration. TenantId, ClientId, and ClientSecret are required."
+        Write-ModuleLog -ModuleName "Exchange" -Message $errorMsg -Level "ERROR"
+
+        $tenantStatus = if ($TenantId) { 'Present' } else { 'MISSING' }
+        $clientStatus = if ($ClientId) { 'Present' } else { 'MISSING' }
+        $secretStatus = if ($ClientSecret) { 'Present' } else { 'MISSING' }
+        Write-ModuleLog -ModuleName "Exchange" -Message "TenantId: $tenantStatus, ClientId: $clientStatus, ClientSecret: $secretStatus" -Level "ERROR"
+
+        $result = [PSCustomObject]@{
+            Success = $false
+            Message = $errorMsg
+            Data = @()
+            Errors = @($errorMsg)
+            Warnings = @()
+        }
+        return $result
+    }
+
+    # Mask credentials for secure logging
+    $maskedTenantId = if ($TenantId.Length -gt 8) { $TenantId.Substring(0,8) + "..." } else { "***" }
+    $maskedClientId = if ($ClientId.Length -gt 8) { $ClientId.Substring(0,8) + "..." } else { "***" }
+    $maskedSecret = "***" + $ClientSecret.Substring([Math]::Max(0, $ClientSecret.Length - 4))
+
+    Write-ModuleLog -ModuleName "Exchange" -Message "Credentials validated successfully" -Level "SUCCESS"
+    Write-ModuleLog -ModuleName "Exchange" -Message "  Tenant ID: $maskedTenantId" -Level "INFO"
+    Write-ModuleLog -ModuleName "Exchange" -Message "  Client ID: $maskedClientId" -Level "INFO"
+    Write-ModuleLog -ModuleName "Exchange" -Message "  Client Secret: $maskedSecret" -Level "DEBUG"
+
+    # MICROSOFT GRAPH AUTHENTICATION
+    Write-ModuleLog -ModuleName "Exchange" -Message "Establishing Microsoft Graph connection..." -Level "INFO"
+    Write-ModuleLog -ModuleName "Exchange" -Message "Authentication method: Client Secret Credential (Service Principal)" -Level "INFO"
+
+    try {
+        # Create credential object
+        $secureSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
+        $credential = New-Object System.Management.Automation.PSCredential($ClientId, $secureSecret)
+
+        Write-ModuleLog -ModuleName "Exchange" -Message "Connecting to Microsoft Graph with service principal..." -Level "INFO"
+
+        # Connect to Microsoft Graph
+        Connect-MgGraph -ClientSecretCredential $credential -TenantId $TenantId -NoWelcome -ErrorAction Stop
+
+        # Verify connection
+        $mgContext = Get-MgContext -ErrorAction Stop
+
+        if ($mgContext -and $mgContext.TenantId -eq $TenantId) {
+            Write-ModuleLog -ModuleName "Exchange" -Message "Successfully connected to Microsoft Graph" -Level "SUCCESS"
+            Write-ModuleLog -ModuleName "Exchange" -Message "  Tenant ID: $($mgContext.TenantId)" -Level "INFO"
+            Write-ModuleLog -ModuleName "Exchange" -Message "  App Name: $($mgContext.AppName)" -Level "INFO"
+            Write-ModuleLog -ModuleName "Exchange" -Message "  Scopes: $($mgContext.Scopes -join ', ')" -Level "INFO"
+            Write-ModuleLog -ModuleName "Exchange" -Message "  Auth Type: $($mgContext.AuthType)" -Level "INFO"
+        } else {
+            $errorMsg = "Microsoft Graph connection verification failed. Expected TenantId: $TenantId, Got: $($mgContext.TenantId)"
+            Write-ModuleLog -ModuleName "Exchange" -Message $errorMsg -Level "ERROR"
+
+            $result = [PSCustomObject]@{
+                Success = $false
+                Message = $errorMsg
+                Data = @()
+                Errors = @($errorMsg)
+                Warnings = @()
+            }
+            return $result
+        }
+
+    } catch {
+        $errorMsg = "Failed to connect to Microsoft Graph: $($_.Exception.Message)"
+        Write-ModuleLog -ModuleName "Exchange" -Message $errorMsg -Level "ERROR"
+        Write-ModuleLog -ModuleName "Exchange" -Message "Exception details: $($_.Exception.GetType().FullName)" -Level "DEBUG"
+        Write-ModuleLog -ModuleName "Exchange" -Message "Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG"
+
+        $result = [PSCustomObject]@{
+            Success = $false
+            Message = $errorMsg
+            Data = @()
+            Errors = @($errorMsg)
+            Warnings = @()
+        }
+        return $result
+    }
 
     # Define discovery script
     $discoveryScript = {
@@ -748,14 +845,77 @@ function Invoke-ExchangeDiscovery {
         
         return $allDiscoveredData
     }
-    
-    # Execute using base module
-    return Start-DiscoveryModule -ModuleName "Exchange" `
-        -Configuration $Configuration `
-        -Context $Context `
-        -SessionId $SessionId `
-        -RequiredServices @('Graph') `
-        -DiscoveryScript $discoveryScript
+
+    # Initialize result object
+    $result = [PSCustomObject]@{
+        Success = $true
+        Message = "Exchange discovery completed successfully"
+        Data = @()
+        Errors = @()
+        Warnings = @()
+    }
+
+    # Add helper methods for error/warning tracking
+    $result | Add-Member -MemberType ScriptMethod -Name "AddError" -Value {
+        param($message, $exception, $context)
+        $this.Success = $false
+        $this.Errors += [PSCustomObject]@{
+            Message = $message
+            Exception = $exception
+            Context = $context
+            Timestamp = Get-Date
+        }
+        Write-ModuleLog -ModuleName "Exchange" -Message $message -Level "ERROR"
+    }
+
+    $result | Add-Member -MemberType ScriptMethod -Name "AddWarning" -Value {
+        param($message, $context)
+        $this.Warnings += [PSCustomObject]@{
+            Message = $message
+            Context = $context
+            Timestamp = Get-Date
+        }
+        Write-ModuleLog -ModuleName "Exchange" -Message $message -Level "WARN"
+    }
+
+    # Execute discovery script
+    try {
+        Write-ModuleLog -ModuleName "Exchange" -Message "Executing discovery operations..." -Level "INFO"
+
+        $discoveryParams = @{
+            Configuration = $Configuration
+            Context = $Context
+            SessionId = $SessionId
+            Connections = @{ Graph = $mgContext }
+            Result = $result
+        }
+
+        $discoveryData = & $discoveryScript @discoveryParams
+        $result.Data = $discoveryData
+
+        if ($result.Success) {
+            $recordCount = if ($discoveryData) { $discoveryData.Count } else { 0 }
+            Write-ModuleLog -ModuleName "Exchange" -Message "Discovery completed successfully with $recordCount records discovered" -Level "SUCCESS"
+        }
+
+    } catch {
+        $result.AddError("Critical error during Exchange discovery: $($_.Exception.Message)", $_.Exception, @{ Phase = "Discovery Execution" })
+        Write-ModuleLog -ModuleName "Exchange" -Message "Exception Type: $($_.Exception.GetType().FullName)" -Level "ERROR"
+        Write-ModuleLog -ModuleName "Exchange" -Message "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG"
+    } finally {
+        # Disconnect from Graph
+        try {
+            Write-ModuleLog -ModuleName "Exchange" -Message "Disconnecting from Microsoft Graph..." -Level "INFO"
+            Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+            Write-ModuleLog -ModuleName "Exchange" -Message "Disconnected from Microsoft Graph" -Level "SUCCESS"
+        } catch {
+            Write-ModuleLog -ModuleName "Exchange" -Message "Error during Graph disconnect: $($_.Exception.Message)" -Level "WARN"
+        }
+
+        Write-ModuleLog -ModuleName "Exchange" -Message "=== Exchange Discovery Module Completed ===" -Level "HEADER"
+    }
+
+    return $result
 }
 
 # --- Module Export ---

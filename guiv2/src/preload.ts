@@ -254,6 +254,13 @@ const electronAPI: ElectronAPI = {
      * @returns Promise with test result
      */
     testConnection: (profileId: string) => ipcRenderer.invoke('profile:testConnection', profileId),
+    /**
+     * Clear credentials for a profile
+     * Forces reload from DPAPI file on next access
+     * @param profileId - Profile ID to clear
+     * @returns Promise with success result
+     */
+    clearCredentials: (profileId: string) => ipcRenderer.invoke('profile:clearCredentials', profileId),
     onProfileChanged: (callback: () => void) => {
       ipcRenderer.on('profile:changed', callback);
       return () => ipcRenderer.removeListener('profile:changed', callback);

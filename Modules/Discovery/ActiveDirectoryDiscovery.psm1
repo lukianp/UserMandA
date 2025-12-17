@@ -1,4 +1,4 @@
-# -*- coding: utf-8-bom -*-
+﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
@@ -51,12 +51,28 @@ function Get-AuthInfoFromConfiguration {
         [hashtable]$Configuration
     )
 
-    # For on-premises AD, we don't need cloud authentication
-    # Return a dummy auth object to satisfy the template
-    Write-ActiveDirectoryLog -Message "ActiveDirectory module uses Windows authentication, no cloud credentials needed" -Level "DEBUG"
+    # Extract credentials from Configuration
+    $TenantId = $Configuration.TenantId
+    $ClientId = $Configuration.ClientId
+    $ClientSecret = $Configuration.ClientSecret
+
+    if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
+        Write-ActiveDirectoryLog -Message "Missing Graph API credentials in configuration. TenantId: $($null -ne $TenantId), ClientId: $($null -ne $ClientId), ClientSecret: $($null -ne $ClientSecret)" -Level "WARN"
+        # Fallback to Windows integrated authentication for on-premises
+        Write-ActiveDirectoryLog -Message "Falling back to Windows authentication for on-premises AD" -Level "DEBUG"
+        return @{
+            AuthType = "WindowsIntegrated"
+            Domain = $Configuration.environment.domainController
+        }
+    }
+
+    Write-ActiveDirectoryLog -Message "Auth - Using Graph API credentials. Tenant: $TenantId, Client: $ClientId" -Level "INFO"
+
     return @{
-        AuthType = "WindowsIntegrated"
-        Domain = $Configuration.environment.domainController
+        AuthType = "GraphAPI"
+        TenantId = $TenantId
+        ClientId = $ClientId
+        ClientSecret = $ClientSecret
     }
 }
 
@@ -122,33 +138,64 @@ function Invoke-ActiveDirectoryDiscovery {
             return $result
         }
 
-        # 4. AUTHENTICATE & CONNECT
-        Write-ActiveDirectoryLog -Level "INFO" -Message "Checking Active Directory module..." -Context $Context
-        
-        # Check if Active Directory module is available
-        if (-not (Get-Module -Name ActiveDirectory -ListAvailable)) {
-            $result.AddError("ActiveDirectory PowerShell module is not available. Install RSAT or ActiveDirectory module.", $null, $null)
-            return $result
+        # 4. AUTHENTICATE & CONNECT
+        Write-ActiveDirectoryLog -Level "INFO" -Message "Checking authentication method..." -Context $Context
+
+        # Get authentication info
+        $authInfo = Get-AuthInfoFromConfiguration -Configuration $Configuration
+
+        # If Graph API credentials are available, connect to Microsoft Graph
+        if ($authInfo.AuthType -eq "GraphAPI") {
+            try {
+                Write-ActiveDirectoryLog -Level "INFO" -Message "Connecting to Microsoft Graph with provided credentials..." -Context $Context
+
+                # Check if Microsoft.Graph.Authentication module is available
+                if (-not (Get-Module -Name Microsoft.Graph.Authentication -ListAvailable)) {
+                    Write-ActiveDirectoryLog -Level "WARN" -Message "Microsoft.Graph.Authentication module not available, falling back to AD module" -Context $Context
+                } else {
+                    # Import the module
+                    Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
+
+                    # Connect to Microsoft Graph
+                    $secureSecret = ConvertTo-SecureString $authInfo.ClientSecret -AsPlainText -Force
+                    $credential = New-Object System.Management.Automation.PSCredential($authInfo.ClientId, $secureSecret)
+
+                    Connect-MgGraph -ClientSecretCredential $credential -TenantId $authInfo.TenantId -NoWelcome -ErrorAction Stop
+
+                    Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Connected to Microsoft Graph successfully" -Context $Context
+                    $result.Metadata['AuthenticationMethod'] = 'GraphAPI'
+                    $result.Metadata['TenantId'] = $authInfo.TenantId
+                }
+            } catch {
+                Write-ActiveDirectoryLog -Level "WARN" -Message "Failed to connect to Graph API: $($_.Exception.Message). Falling back to AD module." -Context $Context
+            }
+        }
+
+        Write-ActiveDirectoryLog -Level "INFO" -Message "Checking Active Directory module..." -Context $Context
+
+        # Check if Active Directory module is available
+        if (-not (Get-Module -Name ActiveDirectory -ListAvailable)) {
+            $result.AddError("ActiveDirectory PowerShell module is not available. Install RSAT or ActiveDirectory module.", $null, $null)
+            return $result
+        }
+
+        # Import the module if not already loaded
+        if (-not (Get-Module -Name ActiveDirectory)) {
+            Import-Module ActiveDirectory -ErrorAction Stop
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "ActiveDirectory module imported successfully" -Context $Context
+        }
+
+        # Test AD connectivity
+        try {
+            $serverParams = Get-ServerParameters -Configuration $Configuration
+            $testDomain = Get-ADDomain @serverParams -ErrorAction Stop
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Connected to domain: $($testDomain.DNSRoot)" -Context $Context
+            $result.Metadata['DomainDNSRoot'] = $testDomain.DNSRoot
+            $result.Metadata['DomainNetBIOSName'] = $testDomain.NetBIOSName
+        } catch {
+            $result.AddError("Failed to connect to Active Directory: $($_.Exception.Message)", $_.Exception, $null)
+            return $result
         }
-        
-        # Import the module if not already loaded
-        if (-not (Get-Module -Name ActiveDirectory)) {
-            Import-Module ActiveDirectory -ErrorAction Stop
-            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "ActiveDirectory module imported successfully" -Context $Context
-        }
-        
-        # Test AD connectivity
-        try {
-            $serverParams = Get-ServerParameters -Configuration $Configuration
-            $testDomain = Get-ADDomain @serverParams -ErrorAction Stop
-            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Connected to domain: $($testDomain.DNSRoot)" -Context $Context
-            $result.Metadata['DomainDNSRoot'] = $testDomain.DNSRoot
-            $result.Metadata['DomainNetBIOSName'] = $testDomain.NetBIOSName
-        } catch {
-            $result.AddError("Failed to connect to Active Directory: $($_.Exception.Message)", $_.Exception, $null)
-            return $result
-        }
-
         # 5. PERFORM DISCOVERY
         Write-ActiveDirectoryLog -Level "HEADER" -Message "?? Starting comprehensive data discovery" -Context $Context
         $allDiscoveredData = [System.Collections.ArrayList]::new()

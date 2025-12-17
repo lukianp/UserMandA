@@ -612,6 +612,13 @@ export interface ElectronAPI {
    */
   logToFile: (entry: any) => Promise<void>;
 
+  /**
+   * Get the profile data path for a company
+   * @param companyName Company name
+   * @returns Promise resolving to profile data path
+   */
+  getProfileDataPath: (companyName: string) => Promise<string>;
+
   // ========================================
   // Configuration Management
   // ========================================

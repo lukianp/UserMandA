@@ -9,6 +9,7 @@ import type {
   LicenseDiscoveryConfig,
   LicenseStatus
 } from '../types/models/licensing';
+import type { LogEntry } from './common/discoveryHookTypes';
 
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
@@ -62,6 +63,30 @@ export const useLicensingDiscoveryLogic = () => {
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const { addResult } = useDiscoveryStore();
 
+  // Additional state for PowerShellExecutionDialog
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
+
+  /**
+   * Add a log entry
+   */
+  const addLog = useCallback((level: LogEntry['level'], message: string) => {
+    const entry: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level,
+      message,
+    };
+    setLogs(prev => [...prev, entry]);
+  }, []);
+
+  /**
+   * Clear all logs
+   */
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
+
   const [state, setState] = useState<LicensingDiscoveryState>({
     config: {
       includeMicrosoft365: true,
@@ -100,6 +125,8 @@ export const useLicensingDiscoveryLogic = () => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         const message = data.message || '';
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
+        addLog(logLevel, message);
         setState(prev => ({
           ...prev,
           progress: {
@@ -185,6 +212,7 @@ export const useLicensingDiscoveryLogic = () => {
     if (state.isDiscovering) return;
 
     const token = `licensing-discovery-${Date.now()}`;
+    setShowExecutionDialog(true);
 
     setState(prev => ({
       ...prev,
@@ -241,6 +269,7 @@ export const useLicensingDiscoveryLogic = () => {
     if (!state.isDiscovering || !state.cancellationToken) return;
 
     console.warn('[LicensingDiscoveryHook] Cancelling discovery...');
+    setIsCancelling(true);
 
     try {
       await window.electron.cancelDiscovery(state.cancellationToken);
@@ -254,6 +283,7 @@ export const useLicensingDiscoveryLogic = () => {
           progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
         }));
         currentTokenRef.current = null;
+        setIsCancelling(false);
         console.warn('[LicensingDiscoveryHook] Discovery cancelled');
       }, 2000);
     } catch (error: any) {
@@ -266,6 +296,7 @@ export const useLicensingDiscoveryLogic = () => {
         progress: { current: 0, total: 100, message: '', percentage: 0 }
       }));
       currentTokenRef.current = null;
+      setIsCancelling(false);
     }
   }, [state.isDiscovering, state.cancellationToken]);
 
@@ -796,6 +827,13 @@ export const useLicensingDiscoveryLogic = () => {
     activeTab: state.activeTab,
     filter: state.filter,
     error: state.error,
+
+    // PowerShellExecutionDialog integration
+    showExecutionDialog,
+    setShowExecutionDialog,
+    logs,
+    clearLogs,
+    isCancelling,
 
     // Data
     columns,

@@ -10,6 +10,7 @@ import type {
   AppProtectionPolicy,
   IntuneDiscoveryConfig
 } from '../types/models/intune';
+import type { LogEntry } from './common/discoveryHookTypes';
 
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
@@ -98,6 +99,30 @@ export const useIntuneDiscoveryLogic = () => {
     error: null
   });
 
+  // Additional state for PowerShellExecutionDialog
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
+
+  /**
+   * Add a log entry
+   */
+  const addLog = useCallback((level: LogEntry['level'], message: string) => {
+    const entry: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level,
+      message,
+    };
+    setLogs(prev => [...prev, entry]);
+  }, []);
+
+  /**
+   * Clear all logs
+   */
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
+
   const currentTokenRef = useRef<string | null>(null); // For event matching
 
   // Event listeners for PowerShell streaming - Set up ONCE on mount
@@ -106,6 +131,8 @@ export const useIntuneDiscoveryLogic = () => {
 
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
+        addLog(logLevel, data.message);
         const message = data.message || '';
         setState(prev => ({
           ...prev,
@@ -192,6 +219,7 @@ export const useIntuneDiscoveryLogic = () => {
     if (state.isDiscovering) return;
 
     const token = `intune-discovery-${Date.now()}`;
+    setShowExecutionDialog(true);
 
     setState(prev => ({
       ...prev,
@@ -251,6 +279,7 @@ export const useIntuneDiscoveryLogic = () => {
     if (!state.isDiscovering || !state.cancellationToken) return;
 
     console.warn('[IntuneDiscoveryHook] Cancelling discovery...');
+    setIsCancelling(true);
 
     try {
       await window.electron.cancelDiscovery(state.cancellationToken);
@@ -265,6 +294,7 @@ export const useIntuneDiscoveryLogic = () => {
           progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
         }));
         currentTokenRef.current = null;
+        setIsCancelling(false);
         console.warn('[IntuneDiscoveryHook] Discovery cancelled');
       }, 2000);
     } catch (error: any) {
@@ -278,6 +308,7 @@ export const useIntuneDiscoveryLogic = () => {
         progress: { current: 0, total: 100, message: '', percentage: 0 }
       }));
       currentTokenRef.current = null;
+      setIsCancelling(false);
     }
   }, [state.isDiscovering, state.cancellationToken]);
 
@@ -879,6 +910,13 @@ export const useIntuneDiscoveryLogic = () => {
     activeTab: state.activeTab,
     filter: state.filter,
     error: state.error,
+
+    // PowerShellExecutionDialog integration
+    showExecutionDialog,
+    setShowExecutionDialog,
+    logs,
+    clearLogs,
+    isCancelling,
 
     // Data
     columns,

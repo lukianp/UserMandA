@@ -7,6 +7,7 @@ import { Button } from '../../components/atoms/Button';
 import SearchBar from '../../components/molecules/SearchBar';
 import ProgressBar from '../../components/molecules/ProgressBar';
 import FileSystemConfigDialog from '../../components/molecules/FileSystemConfigDialog';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const FileSystemDiscoveryView: React.FC = () => {
   const {
@@ -35,6 +36,9 @@ const FileSystemDiscoveryView: React.FC = () => {
     setSelectedLargeFiles,
     searchText,
     setSearchText,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
   } = useFileSystemDiscoveryLogic();
 
   const [showConfigDialog, setShowConfigDialog] = React.useState(false);
@@ -280,7 +284,7 @@ const FileSystemDiscoveryView: React.FC = () => {
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-600 dark:text-gray-400">Total Large Files:</dt>
-                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.totalLargeFiles ?? 0).toLocaleString()}</dd>
+                    <dd className="font-medium text-gray-900 dark:text-white">{(result?.statistics?.totalFiles ?? 0).toLocaleString()}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-600 dark:text-gray-400">Average File Size:</dt>
@@ -329,7 +333,7 @@ const FileSystemDiscoveryView: React.FC = () => {
 
         {activeTab === 'shares' && (
           <div className="h-full p-6">
-            {console.log('[FileSystemDiscoveryView] Rendering shares tab with data:', filteredShares?.length || 0, 'shares')}
+
             <VirtualizedDataGrid
               data={filteredShares}
               columns={shareColumnDefs}
@@ -345,7 +349,7 @@ const FileSystemDiscoveryView: React.FC = () => {
 
         {activeTab === 'permissions' && (
           <div className="h-full p-6">
-            {console.log('[FileSystemDiscoveryView] Rendering permissions tab with data:', filteredPermissions?.length || 0, 'permissions')}
+
             <VirtualizedDataGrid
               data={filteredPermissions}
               columns={permissionColumnDefs}
@@ -360,7 +364,7 @@ const FileSystemDiscoveryView: React.FC = () => {
 
         {activeTab === 'large-files' && (
           <div className="h-full p-6">
-            {console.log('[FileSystemDiscoveryView] Rendering large-files tab with data:', filteredLargeFiles?.length || 0, 'files')}
+
             <VirtualizedDataGrid
               data={filteredLargeFiles}
               columns={largeFileColumnDefs}
@@ -380,6 +384,17 @@ const FileSystemDiscoveryView: React.FC = () => {
         onClose={() => setShowConfigDialog(false)}
         config={config}
         onSave={handleSaveConfig}
+      />
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => setShowExecutionDialog(false)}
+        scriptName="File System Discovery"
+        scriptDescription="Discovering file shares and permissions"
+        logs={logs}
+        isRunning={isRunning}
+        onCancel={cancelDiscovery}
       />
     </div>
   );

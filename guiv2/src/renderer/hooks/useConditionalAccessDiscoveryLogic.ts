@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
+import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 
 import {
   CADiscoveryConfig,
@@ -61,7 +62,23 @@ export const useConditionalAccessDiscoveryLogic = () => {
     error: null
   });
 
+  const [logs, setLogs] = useState<Array<{ timestamp: string; level: 'info' | 'warn' | 'error'; message: string }>>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+
   const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
+
+  const addLog = useCallback((level: 'info' | 'warn' | 'error', message: string) => {
+    setLogs(prev => [...prev, {
+      timestamp: new Date().toLocaleTimeString(),
+      level,
+      message,
+    }]);
+  }, []);
+
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
 
   // ✅ ADDED: Event listeners for PowerShell streaming - Set up ONCE on mount
   useEffect(() => {
@@ -154,10 +171,11 @@ export const useConditionalAccessDiscoveryLogic = () => {
     if (!selectedSourceProfile) {
       const errorMessage = 'No company profile selected. Please select a profile first.';
       setState(prev => ({ ...prev, error: errorMessage }));
-      console.error('[ConditionalAccessDiscovery]', errorMessage);
+      addLog('error', errorMessage);
       return;
     }
 
+    setShowExecutionDialog(true);
     const token = `ca-discovery-${Date.now()}`;
     setState(prev => ({
       ...prev,
@@ -166,15 +184,12 @@ export const useConditionalAccessDiscoveryLogic = () => {
       error: null,
       progress: { current: 0, total: 100, message: 'Initializing...', percentage: 0 }
     }));
+    setLogs([]);
 
     currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
 
-    console.log(`[ConditionalAccessDiscovery] Starting discovery for company: ${selectedSourceProfile.companyName}`);
-    console.log(`[ConditionalAccessDiscovery] Parameters:`, {
-      includeAssignments: state.config.includeAssignments,
-      includeConditions: state.config.includeConditions,
-      includeControls: state.config.includeControls
-    });
+    addLog('info', `Starting discovery for company: ${selectedSourceProfile.companyName}`);
+    addLog('info', `Parameters: Assignments=${state.config.includeAssignments}, Conditions=${state.config.includeConditions}, Controls=${state.config.includeControls}`);
 
     try {
       // ✅ FIXED: Use new event-driven API instead of deprecated executeDiscoveryModule
@@ -213,11 +228,12 @@ export const useConditionalAccessDiscoveryLogic = () => {
   const cancelDiscovery = useCallback(async () => {
     if (!state.isDiscovering || !state.cancellationToken) return;
 
-    console.log('[ConditionalAccessDiscovery] Cancelling discovery...');
+    setIsCancelling(true);
+    addLog('warn', 'Cancelling discovery...');
 
     try {
       await window.electron.cancelDiscovery(state.cancellationToken);
-      console.log('[ConditionalAccessDiscovery] Discovery cancellation requested successfully');
+      addLog('info', 'Discovery cancellation requested successfully');
 
       // Set timeout as fallback in case cancelled event doesn't fire
       setTimeout(() => {
@@ -227,11 +243,12 @@ export const useConditionalAccessDiscoveryLogic = () => {
           cancellationToken: null,
           progress: { current: 0, total: 100, message: 'Cancelled', percentage: 0 }
         }));
+        setIsCancelling(false);
         currentTokenRef.current = null;
       }, 2000);
     } catch (error: any) {
       const errorMessage = error.message || 'Error cancelling discovery';
-      console.error('[ConditionalAccessDiscovery]', errorMessage);
+      addLog('error', errorMessage);
       // Reset state even on error
       setState(prev => ({
         ...prev,
@@ -239,9 +256,10 @@ export const useConditionalAccessDiscoveryLogic = () => {
         cancellationToken: null,
         progress: { current: 0, total: 100, message: 'Cancelled', percentage: 0 }
       }));
+      setIsCancelling(false);
       currentTokenRef.current = null;
     }
-  }, [state.isDiscovering, state.cancellationToken]);
+  }, [state.isDiscovering, state.cancellationToken, addLog]);
 
   // Export to CSV
   const exportToCSV = useCallback(async () => {
@@ -398,10 +416,14 @@ export const useConditionalAccessDiscoveryLogic = () => {
     config: state.config,
     result: state.result,
     isDiscovering: state.isDiscovering,
+    isCancelling,
     progress: state.progress,
     activeTab: state.activeTab,
     filter: state.filter,
     error: state.error,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
 
     // Data
     columns,
@@ -414,6 +436,7 @@ export const useConditionalAccessDiscoveryLogic = () => {
     setActiveTab,
     startDiscovery,
     cancelDiscovery,
+    clearLogs,
     exportToCSV,
     exportToExcel
   };

@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 
 interface DataClassificationDiscoveryConfig {
   includeSensitiveData: boolean;
@@ -55,6 +56,9 @@ export const useDataClassificationDiscoveryLogic = () => {
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const { addResult, getResultsByModuleName } = useDiscoveryStore();
   const currentTokenRef = useRef<string | null>(null);
+  const [logs, setLogs] = useState<PowerShellLog[]>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const [state, setState] = useState<DataClassificationDiscoveryState>({
     config: {
@@ -188,6 +192,15 @@ export const useDataClassificationDiscoveryLogic = () => {
     };
   }, [addResult]);
 
+  const addLog = useCallback((level: PowerShellLog['level'], message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setLogs(prev => [...prev, { timestamp, level, message }]);
+  }, []);
+
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
+
   const startDiscovery = useCallback(async () => {
     if (!selectedSourceProfile) {
       const errorMessage = 'No company profile selected. Please select a profile first.';
@@ -198,6 +211,7 @@ export const useDataClassificationDiscoveryLogic = () => {
 
     if (state.isDiscovering) return;
 
+    setShowExecutionDialog(true);
     const token = `dataclassification-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     setState((prev) => ({
@@ -268,6 +282,7 @@ export const useDataClassificationDiscoveryLogic = () => {
   const cancelDiscovery = useCallback(async () => {
     if (!state.isDiscovering || !currentTokenRef.current) return;
 
+    setIsCancelling(true);
     console.warn('[DataClassificationDiscoveryHook] Cancelling discovery...');
 
     try {
@@ -286,6 +301,7 @@ export const useDataClassificationDiscoveryLogic = () => {
           },
         }));
         currentTokenRef.current = null;
+        setIsCancelling(false);
       }, 2000);
     } catch (error: any) {
       const errorMessage = error.message || 'Error cancelling discovery';
@@ -301,6 +317,7 @@ export const useDataClassificationDiscoveryLogic = () => {
         },
       }));
       currentTokenRef.current = null;
+      setIsCancelling(false);
     }
   }, [state.isDiscovering]);
 
@@ -325,5 +342,10 @@ export const useDataClassificationDiscoveryLogic = () => {
     cancelDiscovery,
     updateConfig,
     clearError,
+    showExecutionDialog,
+    setShowExecutionDialog,
+    logs,
+    clearLogs,
+    isCancelling,
   };
 };

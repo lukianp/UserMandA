@@ -1282,7 +1282,7 @@ class PowerShellExecutionService extends EventEmitter {
     moduleName: string,
     companyName: string,
     additionalParams: Record<string, any> = {},
-    options: ExecutionOptions = {}
+    options: ExecutionOptions & { outputPath?: string } = {}
   ): Promise<ExecutionResult> {
     try {
       // Load credentials for the company profile
@@ -1318,10 +1318,29 @@ class PowerShellExecutionService extends EventEmitter {
       // - SessionId: GUID for tracking
 
       // Build Configuration hashtable
+      // ⚠️ CRITICAL: Spread additionalParams FIRST, then overwrite with CompanyName to avoid duplicate keys
       const configuration: Record<string, any> = {
-        CompanyName: companyName,
-        ...additionalParams,  // Module-specific parameters
+        ...additionalParams,  // Module-specific parameters (may contain lowercase keys)
       };
+
+      // Ensure CompanyName is set with PascalCase (PowerShell convention)
+      configuration.CompanyName = companyName;
+
+      // Remove any duplicate camelCase version that might have come from additionalParams
+      if ('companyName' in configuration && configuration.companyName !== undefined) {
+        delete configuration.companyName;
+      }
+      // Also remove profileId if it exists (not needed in Configuration)
+      if ('profileId' in configuration) {
+        delete configuration.profileId;
+      }
+      // Remove config wrapper if it exists (flatten it instead)
+      if ('config' in configuration && typeof configuration.config === 'object') {
+        const configObject = configuration.config;
+        delete configuration.config;
+        // Merge config properties into Configuration
+        Object.assign(configuration, configObject);
+      }
 
       // Add Azure credentials if needed
       if (needsAzureCredentials) {
@@ -1333,11 +1352,23 @@ class PowerShellExecutionService extends EventEmitter {
         console.log(`[PowerShellService] Local module ${moduleName} - skipping Azure credentials`);
       }
 
+      // Determine output paths
+      // Use provided outputPath or default to C:\DiscoveryData
+      // Ensure we resolve the path to be safe
+      const baseOutputPath = options.outputPath ? path.resolve(options.outputPath) : path.join('C:\\DiscoveryData', companyName);
+      const rawDataOutput = path.join(baseOutputPath, 'Raw');
+      const logsOutput = path.join(baseOutputPath, 'Logs');
+
+      console.log(`[PowerShellService] Output configuration:`);
+      console.log(`[PowerShellService]   Base: ${baseOutputPath}`);
+      console.log(`[PowerShellService]   Raw:  ${rawDataOutput}`);
+      console.log(`[PowerShellService]   Logs: ${logsOutput}`);
+
       // Build Context hashtable
       const context = {
         Paths: {
-          RawDataOutput: `C:\\DiscoveryData\\${companyName}\\Raw`,
-          Logs: `C:\\DiscoveryData\\${companyName}\\Logs`,
+          RawDataOutput: rawDataOutput,
+          Logs: logsOutput,
         },
         CompanyName: companyName,
       };

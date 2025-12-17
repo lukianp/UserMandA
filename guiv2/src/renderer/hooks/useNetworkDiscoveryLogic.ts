@@ -12,6 +12,7 @@ import type {
 
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 
 export interface NetworkDiscoveryLogicState {
   config: NetworkDiscoveryConfig;
@@ -22,6 +23,8 @@ export interface NetworkDiscoveryLogicState {
   searchText: string;
   activeTab: 'overview' | 'devices' | 'subnets' | 'ports';
   templates: NetworkDiscoveryTemplate[];
+  logs: PowerShellLog[];
+  showExecutionDialog: boolean;
 }
 
 export const useNetworkDiscoveryLogic = () => {
@@ -51,8 +54,16 @@ export const useNetworkDiscoveryLogic = () => {
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'devices' | 'subnets' | 'ports'>('overview');
   const [cancellationToken, setCancellationToken] = useState<string | null>(null);
+  const [logs, setLogs] = useState<PowerShellLog[]>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
 
   const currentTokenRef = useRef<string | null>(null);
+
+  // Utility function to add logs
+  const addLog = useCallback((message: string, level: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+    const newLog: PowerShellLog = { timestamp: new Date().toISOString(), message, level };
+    setLogs((prevLogs) => [...prevLogs, newLog]);
+  }, []);
 
   // Event listeners for PowerShell streaming - Set up ONCE on mount
   useEffect(() => {
@@ -62,6 +73,7 @@ export const useNetworkDiscoveryLogic = () => {
       if (data.executionId === currentTokenRef.current) {
         const message = data.message || '';
         console.log('[NetworkDiscoveryHook] Progress:', message);
+        addLog(message, 'info');
       }
     });
 
@@ -88,8 +100,12 @@ export const useNetworkDiscoveryLogic = () => {
         setIsLoading(false);
         setProgress(100);
         setCancellationToken(null);
+        setShowExecutionDialog(false);
+        currentTokenRef.current = null;
 
         addResult(discoveryResult);
+        addLog('Network discovery completed successfully', 'success');
+        addLog(`Found ${discoveryResult.itemCount} devices`, 'success');
         console.log(`[NetworkDiscoveryHook] Discovery completed! Found ${discoveryResult.itemCount} devices.`);
       }
     });
@@ -99,6 +115,9 @@ export const useNetworkDiscoveryLogic = () => {
         setError(data.error);
         setIsLoading(false);
         setCancellationToken(null);
+        setShowExecutionDialog(false);
+        currentTokenRef.current = null;
+        addLog(`Discovery failed: ${data.error}`, 'error');
         console.error(`[NetworkDiscoveryHook] Discovery failed: ${data.error}`);
       }
     });
@@ -108,6 +127,9 @@ export const useNetworkDiscoveryLogic = () => {
         setIsLoading(false);
         setProgress(0);
         setCancellationToken(null);
+        setShowExecutionDialog(false);
+        currentTokenRef.current = null;
+        addLog('Discovery cancelled by user', 'warning');
         console.warn('[NetworkDiscoveryHook] Discovery cancelled by user');
       }
     });
@@ -118,7 +140,7 @@ export const useNetworkDiscoveryLogic = () => {
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, []);
+  }, [addLog, addResult]);
 
   const templates: NetworkDiscoveryTemplate[] = [
     {
@@ -211,6 +233,8 @@ export const useNetworkDiscoveryLogic = () => {
     setProgress(0);
     setError(null);
     setResult(null);
+    setLogs([]);
+    setShowExecutionDialog(true);
     setCancellationToken(token);
 
     currentTokenRef.current = token;
@@ -221,6 +245,11 @@ export const useNetworkDiscoveryLogic = () => {
       IncludePortScan: config.includePortScan,
       PortRange: config.portScanRange
     });
+
+    addLog('Starting Network discovery...', 'info');
+    addLog(`Company: ${selectedSourceProfile.companyName}`, 'info');
+    addLog(`Subnets: ${config.subnets.join(', ')}`, 'info');
+    addLog(`Port scan: ${config.includePortScan ? 'Enabled' : 'Disabled'}`, 'info');
 
     try {
       const result = await window.electron.executeDiscovery({
@@ -248,10 +277,12 @@ export const useNetworkDiscoveryLogic = () => {
       console.error('[NetworkDiscoveryHook] Discovery failed:', errorMessage);
       setError(errorMessage);
       setIsLoading(false);
+      setShowExecutionDialog(false);
       setCancellationToken(null);
       currentTokenRef.current = null;
+      addLog(`Error: ${errorMessage}`, 'error');
     }
-  }, [selectedSourceProfile, config, isLoading]);
+  }, [selectedSourceProfile, config, isLoading, addLog]);
 
   const cancelDiscovery = useCallback(async () => {
     if (!isLoading || !cancellationToken) return;
@@ -259,24 +290,29 @@ export const useNetworkDiscoveryLogic = () => {
     console.warn('[NetworkDiscoveryHook] Cancelling discovery...');
 
     try {
+      addLog('Cancelling Network discovery...', 'warning');
       await window.electron.cancelDiscovery(cancellationToken);
       console.log('[NetworkDiscoveryHook] Discovery cancellation requested successfully');
 
       setTimeout(() => {
         setIsLoading(false);
         setProgress(0);
+        setShowExecutionDialog(false);
         setCancellationToken(null);
         currentTokenRef.current = null;
+        addLog('Network discovery cancelled', 'warning');
         console.warn('[NetworkDiscoveryHook] Discovery cancelled');
       }, 2000);
     } catch (error: any) {
       const errorMessage = error.message || 'Error cancelling discovery';
       console.error('[NetworkDiscoveryHook]', errorMessage);
       setIsLoading(false);
+      setShowExecutionDialog(false);
       setCancellationToken(null);
       currentTokenRef.current = null;
+      addLog(`Failed to cancel: ${errorMessage}`, 'error');
     }
-  }, [isLoading, cancellationToken]);
+  }, [isLoading, cancellationToken, addLog]);
 
   const handleApplyTemplate = (template: NetworkDiscoveryTemplate) => {
     setConfig((prev) => ({
@@ -437,5 +473,8 @@ export const useNetworkDiscoveryLogic = () => {
     subnetColumns,
     portColumns,
     stats,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
   };
 };

@@ -268,7 +268,7 @@ export const useFileSystemDiscoveryLogic = (): UseFileSystemDiscoveryLogicReturn
           moduleName: 'FileSystemDiscovery',
           companyName: selectedSourceProfile?.companyName || 'Unknown',
           result: fsResult,
-          timestamp: new Date().toISOString(),
+          timestamp: new Date().toISOString().toISOString(),
         };
         addResult(discoveryResult as any);
         console.log('[FileSystemDiscoveryHook] Discovery result added to store');

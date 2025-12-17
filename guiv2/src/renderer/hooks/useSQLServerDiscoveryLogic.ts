@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { useProfileStore } from '../store/useProfileStore';
+import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 
 import type {
   SQLDiscoveryConfig,
@@ -21,6 +22,8 @@ export interface SQLServerDiscoveryLogicState {
   searchText: string;
   activeTab: 'overview' | 'instances' | 'databases';
   templates: SQLDiscoveryTemplate[];
+  logs: PowerShellLog[];
+  showExecutionDialog: boolean;
 }
 
 const formatBytes = (bytes: number): string => {
@@ -55,8 +58,16 @@ export const useSQLServerDiscoveryLogic = () => {
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'instances' | 'databases'>('overview');
   const [cancellationToken, setCancellationToken] = useState<string | null>(null);
+  const [logs, setLogs] = useState<PowerShellLog[]>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
 
   const currentTokenRef = useRef<string | null>(null);
+
+  // Utility function to add logs
+  const addLog = useCallback((message: string, level: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+    const newLog: PowerShellLog = { timestamp: new Date().toISOString(), message, level };
+    setLogs((prevLogs) => [...prevLogs, newLog]);
+  }, []);
 
   // Event listeners for PowerShell streaming - Set up ONCE on mount
   useEffect(() => {
@@ -66,6 +77,7 @@ export const useSQLServerDiscoveryLogic = () => {
       if (data.executionId === currentTokenRef.current) {
         const message = data.message || '';
         console.log('[SQLServerDiscoveryHook] Progress:', message);
+        addLog(message, 'info');
       }
     });
 
@@ -92,8 +104,12 @@ export const useSQLServerDiscoveryLogic = () => {
         setIsLoading(false);
         setProgress(100);
         setCancellationToken(null);
+        setShowExecutionDialog(false);
+        currentTokenRef.current = null;
 
         addResult(discoveryResult);
+        addLog('SQL Server discovery completed successfully', 'success');
+        addLog(`Found ${discoveryResult.itemCount} SQL Server instances`, 'success');
         console.log(`[SQLServerDiscoveryHook] Discovery completed! Found ${discoveryResult.itemCount} instances.`);
       }
     });
@@ -103,6 +119,9 @@ export const useSQLServerDiscoveryLogic = () => {
         setError(data.error);
         setIsLoading(false);
         setCancellationToken(null);
+        setShowExecutionDialog(false);
+        currentTokenRef.current = null;
+        addLog(`Discovery failed: ${data.error}`, 'error');
         console.error(`[SQLServerDiscoveryHook] Discovery failed: ${data.error}`);
       }
     });
@@ -112,6 +131,9 @@ export const useSQLServerDiscoveryLogic = () => {
         setIsLoading(false);
         setProgress(0);
         setCancellationToken(null);
+        setShowExecutionDialog(false);
+        currentTokenRef.current = null;
+        addLog('Discovery cancelled by user', 'warning');
         console.warn('[SQLServerDiscoveryHook] Discovery cancelled by user');
       }
     });
@@ -122,7 +144,7 @@ export const useSQLServerDiscoveryLogic = () => {
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, []);
+  }, [addLog, addResult]);
 
   // Load previous discovery results from store on mount
   useEffect(() => {
@@ -207,6 +229,8 @@ export const useSQLServerDiscoveryLogic = () => {
     setProgress(0);
     setError(null);
     setResult(null);
+    setLogs([]);
+    setShowExecutionDialog(true);
     setCancellationToken(token);
 
     currentTokenRef.current = token;
@@ -217,6 +241,11 @@ export const useSQLServerDiscoveryLogic = () => {
       IncludeSystemDatabases: config.includeSystemDatabases,
       IncludeSecurityAudit: config.includeSecurityAudit
     });
+
+    addLog('Starting SQL Server discovery...', 'info');
+    addLog(`Company: ${selectedSourceProfile.companyName}`, 'info');
+    addLog(`Servers: ${config.servers.length > 0 ? config.servers.join(', ') : 'Auto-detect'}`, 'info');
+    addLog(`Security audit: ${config.includeSecurityAudit ? 'Enabled' : 'Disabled'}`, 'info');
 
     try {
       const result = await window.electron.executeDiscovery({
@@ -246,10 +275,12 @@ export const useSQLServerDiscoveryLogic = () => {
       console.error('[SQLServerDiscoveryHook] Discovery failed:', errorMessage);
       setError(errorMessage);
       setIsLoading(false);
+      setShowExecutionDialog(false);
       setCancellationToken(null);
       currentTokenRef.current = null;
+      addLog(`Error: ${errorMessage}`, 'error');
     }
-  }, [selectedSourceProfile, config, isLoading]);
+  }, [selectedSourceProfile, config, isLoading, addLog]);
 
   const cancelDiscovery = useCallback(async () => {
     if (!isLoading || !cancellationToken) return;
@@ -257,24 +288,29 @@ export const useSQLServerDiscoveryLogic = () => {
     console.warn('[SQLServerDiscoveryHook] Cancelling discovery...');
 
     try {
+      addLog('Cancelling SQL Server discovery...', 'warning');
       await window.electron.cancelDiscovery(cancellationToken);
       console.log('[SQLServerDiscoveryHook] Discovery cancellation requested successfully');
 
       setTimeout(() => {
         setIsLoading(false);
         setProgress(0);
+        setShowExecutionDialog(false);
         setCancellationToken(null);
         currentTokenRef.current = null;
+        addLog('SQL Server discovery cancelled', 'warning');
         console.warn('[SQLServerDiscoveryHook] Discovery cancelled');
       }, 2000);
     } catch (error: any) {
       const errorMessage = error.message || 'Error cancelling discovery';
       console.error('[SQLServerDiscoveryHook]', errorMessage);
       setIsLoading(false);
+      setShowExecutionDialog(false);
       setCancellationToken(null);
       currentTokenRef.current = null;
+      addLog(`Failed to cancel: ${errorMessage}`, 'error');
     }
-  }, [isLoading, cancellationToken]);
+  }, [isLoading, cancellationToken, addLog]);
 
   const handleApplyTemplate = (template: typeof templates[0]) => {
     setConfig(template.config as SQLDiscoveryConfig);
@@ -441,5 +477,8 @@ export const useSQLServerDiscoveryLogic = () => {
     instanceColumns,
     databaseColumns,
     stats,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
   };
 };

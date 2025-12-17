@@ -253,12 +253,12 @@ export function useExchangeDiscoveryLogic() {
           },
           errors: (psReturnValue?.Errors || []).map((err: any) => ({
             message: typeof err === 'string' ? err : err.message || 'Unknown error',
-            timestamp: new Date(),
+            timestamp: new Date().toISOString(),
             severity: 'error' as const
           })),
           warnings: (psReturnValue?.Warnings || []).map((warn: any) => ({
             message: typeof warn === 'string' ? warn : warn.message || 'Unknown warning',
-            timestamp: new Date(),
+            timestamp: new Date().toISOString(),
             severity: 'warning' as const
           })),
         };

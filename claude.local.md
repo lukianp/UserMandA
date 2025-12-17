@@ -40,7 +40,7 @@ npm start
 # 1. Kill any running Electron processes
 Get-Process -Name electron -ErrorAction SilentlyContinue | Stop-Process -Force
 
-# 2. Copy modified files from workspace to deployment
+# 2. Copy modified files from workspace to deployment IF worked on in the workspace, otherwise VICE VERSA
 Copy-Item -Path 'D:\Scripts\UserMandA\guiv2\src\*' -Destination 'C:\enterprisediscovery\guiv2\src\' -Recurse -Force
 
 # 3. Clean previous build

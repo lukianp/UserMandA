@@ -30,6 +30,7 @@ import { Button } from '../../components/atoms/Button';
 import Badge from '../../components/atoms/Badge';
 import ProgressBar from '../../components/molecules/ProgressBar';
 import { Select } from '../../components/atoms/Select';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 import type { TeamsDiscoveryResult } from '../../types/models/teams';
 
 /**
@@ -41,6 +42,7 @@ const TeamsDiscoveryView: React.FC = () => {
     templates,
     result,
     isDiscovering,
+    isCancelling,
     progress,
     selectedTab,
     teamFilter,
@@ -58,6 +60,9 @@ const TeamsDiscoveryView: React.FC = () => {
     memberColumns,
     appColumns,
     error,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
     startDiscovery,
     cancelDiscovery,
     loadTemplate,
@@ -318,7 +323,7 @@ const TeamsDiscoveryView: React.FC = () => {
                   <Button
                     variant="secondary"
                     icon={<Download />}
-                    onClick={() => exportData({ format: 'CSV', includeTeams: true, includeChannels: true, includeMembers: true, includeApps: true, includeStatistics: true, splitByType: false })}
+                    onClick={() => exportData({ format: 'csv', includeTeams: true, includeChannels: true, includeMembers: true, includeApps: true, includeStatistics: true, splitByType: false })}
                     data-cy="export-results-btn" data-testid="export-results-btn"
                   >
                     Export
@@ -372,6 +377,26 @@ const TeamsDiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="Teams Discovery"
+        scriptDescription="Discovering Teams, channels, members, and apps"
+        logs={logs.map(log => ({
+          timestamp: log.timestamp,
+          message: log.message,
+          level: log.level as 'info' | 'success' | 'warning' | 'error'
+        }))}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? {
+          percentage: progress.percentComplete || 0,
+          message: progress.phaseLabel || 'Processing...'
+        } : undefined}
+        onCancel={cancelDiscovery}
+      />
     </div>
   );
 };

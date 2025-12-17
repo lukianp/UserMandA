@@ -6,6 +6,7 @@ import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataG
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { Select } from '../../components/atoms/Select';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const ConfigBadge: React.FC<{ label: string; value: boolean | string | number }> = ({ label, value }) => (
   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded-md text-xs font-medium">
@@ -105,6 +106,7 @@ const NetworkDiscoveryView: React.FC = () => {
     setActiveTab,
     templates,
     handleStartDiscovery,
+    cancelDiscovery,
     handleApplyTemplate,
     handleExport,
     filteredDevices,
@@ -114,6 +116,9 @@ const NetworkDiscoveryView: React.FC = () => {
     subnetColumns,
     portColumns,
     stats,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
   } = useNetworkDiscoveryLogic();
 
   return (
@@ -327,6 +332,16 @@ const NetworkDiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => setShowExecutionDialog(false)}
+        title="Network Discovery"
+        logs={logs}
+        isRunning={isLoading}
+        onCancel={cancelDiscovery}
+      />
     </div>
   );
 };

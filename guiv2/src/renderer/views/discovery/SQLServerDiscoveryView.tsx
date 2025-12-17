@@ -6,6 +6,7 @@ import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataG
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { Select } from '../../components/atoms/Select';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return '0 B';
@@ -112,6 +113,7 @@ const SQLServerDiscoveryView: React.FC = () => {
     setActiveTab,
     templates,
     handleStartDiscovery,
+    cancelDiscovery,
     handleApplyTemplate,
     handleExport,
     filteredInstances,
@@ -119,6 +121,9 @@ const SQLServerDiscoveryView: React.FC = () => {
     instanceColumns,
     databaseColumns,
     stats,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
   } = useSQLServerDiscoveryLogic();
 
   return (
@@ -317,6 +322,16 @@ const SQLServerDiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => setShowExecutionDialog(false)}
+        title="SQL Server Discovery"
+        logs={logs}
+        isRunning={isLoading}
+        onCancel={cancelDiscovery}
+      />
     </div>
   );
 };

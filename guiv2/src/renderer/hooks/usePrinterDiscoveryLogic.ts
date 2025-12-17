@@ -1,95 +1,327 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+/**
+ * Printer Discovery Logic Hook
+ * Contains all business logic for printer discovery
+ */
+
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+
+interface PrinterDiscoveryConfig {
+  includePrinters: boolean;
+  includePrintQueues: boolean;
+  includePrintJobs: boolean;
+  includePrintDrivers: boolean;
+  includePrintServers: boolean;
+  maxResults: number;
+  timeout: number;
+  showWindow: boolean;
+}
+
+interface PrinterDiscoveryResult {
+  totalPrinters?: number;
+  totalPrintQueues?: number;
+  totalItems?: number;
+  outputPath?: string;
+  printers?: any[];
+  printQueues?: any[];
+  printJobs?: any[];
+  printDrivers?: any[];
+  printServers?: any[];
+  statistics?: {
+    activePrinters?: number;
+    totalPrintJobs?: number;
+    failedJobs?: number;
+    averageJobsPerDay?: number;
+  };
+}
+
+interface PrinterDiscoveryState {
+  config: PrinterDiscoveryConfig;
+  result: PrinterDiscoveryResult | null;
+  isDiscovering: boolean;
+  progress: {
+    current: number;
+    total: number;
+    message: string;
+    percentage: number;
+  };
+  error: string | null;
+}
 
 export const usePrinterDiscoveryLogic = () => {
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const { addResult, getResultsByModuleName } = useDiscoveryStore();
   const currentTokenRef = useRef<string | null>(null);
 
-  const [state, setState] = useState<{
-    config: { timeout: number };
-    result: any;
-    isDiscovering: boolean;
-    progress: { current: number; total: number; message: string; percentage: number };
-    error: string | null;
-  }>({
-    config: { timeout: 300000 },
+  const [state, setState] = useState<PrinterDiscoveryState>({
+    config: {
+      includePrinters: true,
+      includePrintQueues: true,
+      includePrintJobs: true,
+      includePrintDrivers: true,
+      includePrintServers: true,
+      maxResults: 1000,
+      timeout: 600,
+      showWindow: false,
+    },
     result: null,
     isDiscovering: false,
-    progress: { current: 0, total: 100, message: '', percentage: 0 },
+    progress: {
+      current: 0,
+      total: 100,
+      message: '',
+      percentage: 0,
+    },
     error: null,
   });
 
-  // Load previous results
+  // Load previous results on mount
   useEffect(() => {
+    console.log('[PrinterDiscoveryHook] Loading previous results');
     const previousResults = getResultsByModuleName('PrinterDiscovery');
     if (previousResults && previousResults.length > 0) {
-      setState(prev => ({ ...prev, result: previousResults[previousResults.length - 1].additionalData }));
+      const latestResult = previousResults[previousResults.length - 1];
+      console.log('[PrinterDiscoveryHook] Found previous result:', latestResult);
+      setState((prev) => ({
+        ...prev,
+        result: latestResult.additionalData as PrinterDiscoveryResult,
+      }));
     }
   }, [getResultsByModuleName]);
 
-  // Event listeners with EMPTY dependency array
+  // Event listeners for PowerShell streaming - Set up ONCE on mount
   useEffect(() => {
+    console.log('[PrinterDiscoveryHook] Setting up event listeners');
+
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.log('[PrinterDiscoveryHook] Discovery output:', data.message);
+        setState((prev) => ({
+          ...prev,
+          progress: {
+            ...prev.progress,
+            message: data.message || '',
+          },
+        }));
+      }
+    });
+
     const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
       if (data.executionId === currentTokenRef.current) {
+        console.log('[PrinterDiscoveryHook] Discovery completed:', data);
+
         const discoveryResult = {
           id: `printer-discovery-${Date.now()}`,
           name: 'Printer Discovery',
           moduleName: 'PrinterDiscovery',
           displayName: 'Printer Discovery',
-          itemCount: data?.result?.totalItems || 0,
+          itemCount: data?.result?.totalItems || data?.result?.totalPrinters || 0,
           discoveryTime: new Date().toISOString(),
           duration: data.duration || 0,
           status: 'Completed',
           filePath: data?.result?.outputPath || '',
           success: true,
-          summary: `Discovered ${data?.result?.totalItems || 0} items`,
+          summary: `Discovered ${data?.result?.totalPrinters || 0} printers and ${data?.result?.totalPrintQueues || 0} print queues`,
           errorMessage: '',
           additionalData: data.result,
           createdAt: new Date().toISOString(),
         };
-        setState(prev => ({ ...prev, result: data.result, isDiscovering: false }));
+
+        setState((prev) => ({
+          ...prev,
+          result: data.result as PrinterDiscoveryResult,
+          isDiscovering: false,
+          progress: {
+            current: 100,
+            total: 100,
+            message: 'Completed',
+            percentage: 100,
+          },
+        }));
+
         addResult(discoveryResult);
+        console.log(`[PrinterDiscoveryHook] Discovery completed! Found ${discoveryResult.itemCount} items.`);
       }
     });
 
     const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
       if (data.executionId === currentTokenRef.current) {
-        setState(prev => ({ ...prev, isDiscovering: false, error: data.error }));
+        console.error('[PrinterDiscoveryHook] Discovery error:', data.error);
+        setState((prev) => ({
+          ...prev,
+          isDiscovering: false,
+          error: data.error,
+          progress: {
+            current: 0,
+            total: 100,
+            message: '',
+            percentage: 0,
+          },
+        }));
       }
     });
 
-    return () => { unsubscribeComplete?.(); unsubscribeError?.(); };
-  }, []);
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        console.warn('[PrinterDiscoveryHook] Discovery cancelled');
+        setState((prev) => ({
+          ...prev,
+          isDiscovering: false,
+          progress: {
+            current: 0,
+            total: 100,
+            message: 'Discovery cancelled',
+            percentage: 0,
+          },
+        }));
+      }
+    });
+
+    return () => {
+      unsubscribeOutput?.();
+      unsubscribeComplete?.();
+      unsubscribeError?.();
+      unsubscribeCancelled?.();
+    };
+  }, [addResult]);
 
   const startDiscovery = useCallback(async () => {
     if (!selectedSourceProfile) {
-      setState(prev => ({ ...prev, error: 'No profile selected' }));
+      const errorMessage = 'No company profile selected. Please select a profile first.';
+      setState((prev) => ({ ...prev, error: errorMessage }));
+      console.error('[PrinterDiscoveryHook]', errorMessage);
       return;
     }
 
+    if (state.isDiscovering) return;
+
     const token = `printer-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    setState((prev) => ({
+      ...prev,
+      isDiscovering: true,
+      error: null,
+      progress: {
+        current: 0,
+        total: 100,
+        message: 'Starting Printer discovery...',
+        percentage: 0,
+      },
+    }));
+
     currentTokenRef.current = token;
-    setState(prev => ({ ...prev, isDiscovering: true, error: null }));
+
+    console.log(`[PrinterDiscoveryHook] Starting discovery for company: ${selectedSourceProfile.companyName}`);
+    console.log('[PrinterDiscoveryHook] Parameters:', {
+      IncludePrinters: state.config.includePrinters,
+      IncludePrintQueues: state.config.includePrintQueues,
+      IncludePrintJobs: state.config.includePrintJobs,
+      IncludePrintDrivers: state.config.includePrintDrivers,
+      IncludePrintServers: state.config.includePrintServers,
+      MaxResults: state.config.maxResults,
+      Timeout: state.config.timeout,
+      ShowWindow: state.config.showWindow,
+    });
 
     try {
-      await window.electron.executeDiscovery({
+      const result = await window.electron.executeDiscovery({
         moduleName: 'Printer',
-        parameters: { IncludePrinters: true, IncludePrintServers: true },
-        executionOptions: { timeout: 300000, showWindow: false },
+        parameters: {
+          IncludePrinters: state.config.includePrinters,
+          IncludePrintQueues: state.config.includePrintQueues,
+          IncludePrintJobs: state.config.includePrintJobs,
+          IncludePrintDrivers: state.config.includePrintDrivers,
+          IncludePrintServers: state.config.includePrintServers,
+          MaxResults: state.config.maxResults,
+          Timeout: state.config.timeout,
+          ShowWindow: state.config.showWindow,
+        },
+        executionOptions: {
+          timeout: state.config.timeout * 1000, // Convert seconds to milliseconds
+          showWindow: state.config.showWindow,
+        },
         executionId: token,
       });
+
+      console.log('[PrinterDiscoveryHook] Discovery execution initiated:', result);
     } catch (error: any) {
-      setState(prev => ({ ...prev, isDiscovering: false, error: error.message }));
+      const errorMessage = error.message || 'Unknown error occurred during discovery';
+      console.error('[PrinterDiscoveryHook] Discovery failed:', errorMessage);
+      setState((prev) => ({
+        ...prev,
+        isDiscovering: false,
+        error: errorMessage,
+        progress: {
+          current: 0,
+          total: 100,
+          message: '',
+          percentage: 0,
+        },
+      }));
+      currentTokenRef.current = null;
     }
-  }, [selectedSourceProfile]);
+  }, [selectedSourceProfile, state.config, state.isDiscovering]);
 
   const cancelDiscovery = useCallback(async () => {
-    if (currentTokenRef.current) {
+    if (!state.isDiscovering || !currentTokenRef.current) return;
+
+    console.warn('[PrinterDiscoveryHook] Cancelling discovery...');
+
+    try {
       await window.electron.cancelDiscovery(currentTokenRef.current);
+      console.log('[PrinterDiscoveryHook] Discovery cancellation requested successfully');
+
+      setTimeout(() => {
+        setState((prev) => ({
+          ...prev,
+          isDiscovering: false,
+          progress: {
+            current: 0,
+            total: 100,
+            message: 'Discovery cancelled',
+            percentage: 0,
+          },
+        }));
+        currentTokenRef.current = null;
+      }, 2000);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Error cancelling discovery';
+      console.error('[PrinterDiscoveryHook]', errorMessage);
+      setState((prev) => ({
+        ...prev,
+        isDiscovering: false,
+        progress: {
+          current: 0,
+          total: 100,
+          message: '',
+          percentage: 0,
+        },
+      }));
+      currentTokenRef.current = null;
     }
+  }, [state.isDiscovering]);
+
+  const updateConfig = useCallback((updates: Partial<PrinterDiscoveryConfig>) => {
+    setState((prev) => ({
+      ...prev,
+      config: { ...prev.config, ...updates },
+    }));
   }, []);
 
-  return { ...state, startDiscovery, cancelDiscovery };
+  const clearError = useCallback(() => {
+    setState((prev) => ({ ...prev, error: null }));
+  }, []);
+
+  return {
+    config: state.config,
+    result: state.result,
+    isDiscovering: state.isDiscovering,
+    progress: state.progress,
+    error: state.error,
+    startDiscovery,
+    cancelDiscovery,
+    updateConfig,
+    clearError,
+  };
 };

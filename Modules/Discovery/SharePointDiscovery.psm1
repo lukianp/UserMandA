@@ -87,24 +87,74 @@ function Invoke-SharePointDiscovery {
     }
 
     try {
-        # 2. VALIDATE PREREQUISITES & CONTEXT
+        # 2. VALIDATE CREDENTIALS FROM CONFIGURATION
+        Write-SharePointLog -Level "INFO" -Message "Validating credentials from Configuration..." -Context $Context
+
+        # Check if Configuration contains the required credential properties
+        $hasCredentials = $false
+        $credentialSource = "None"
+
+        if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
+            $hasCredentials = $true
+            $credentialSource = "Configuration (Root Level)"
+            Write-SharePointLog -Level "SUCCESS" -Message "Found credentials at root level of Configuration" -Context $Context
+            Write-SharePointLog -Level "DEBUG" -Message "TenantId: $($Configuration.TenantId)" -Context $Context
+            Write-SharePointLog -Level "DEBUG" -Message "ClientId: $($Configuration.ClientId)" -Context $Context
+            Write-SharePointLog -Level "DEBUG" -Message "ClientSecret: [REDACTED - Length: $($Configuration.ClientSecret.Length)]" -Context $Context
+        }
+        elseif ($Configuration.Credentials -and
+                $Configuration.Credentials.TenantId -and
+                $Configuration.Credentials.ClientId -and
+                $Configuration.Credentials.ClientSecret) {
+            $hasCredentials = $true
+            $credentialSource = "Configuration.Credentials"
+            Write-SharePointLog -Level "SUCCESS" -Message "Found credentials in Configuration.Credentials" -Context $Context
+            Write-SharePointLog -Level "DEBUG" -Message "TenantId: $($Configuration.Credentials.TenantId)" -Context $Context
+            Write-SharePointLog -Level "DEBUG" -Message "ClientId: $($Configuration.Credentials.ClientId)" -Context $Context
+            Write-SharePointLog -Level "DEBUG" -Message "ClientSecret: [REDACTED - Length: $($Configuration.Credentials.ClientSecret.Length)]" -Context $Context
+        }
+        else {
+            Write-SharePointLog -Level "WARN" -Message "No credentials found in Configuration object" -Context $Context
+            Write-SharePointLog -Level "DEBUG" -Message "Configuration.TenantId present: $($null -ne $Configuration.TenantId)" -Context $Context
+            Write-SharePointLog -Level "DEBUG" -Message "Configuration.ClientId present: $($null -ne $Configuration.ClientId)" -Context $Context
+            Write-SharePointLog -Level "DEBUG" -Message "Configuration.ClientSecret present: $($null -ne $Configuration.ClientSecret)" -Context $Context
+            Write-SharePointLog -Level "DEBUG" -Message "Configuration.Credentials present: $($null -ne $Configuration.Credentials)" -Context $Context
+
+            if ($Configuration.Credentials) {
+                Write-SharePointLog -Level "DEBUG" -Message "Configuration.Credentials.TenantId present: $($null -ne $Configuration.Credentials.TenantId)" -Context $Context
+                Write-SharePointLog -Level "DEBUG" -Message "Configuration.Credentials.ClientId present: $($null -ne $Configuration.Credentials.ClientId)" -Context $Context
+                Write-SharePointLog -Level "DEBUG" -Message "Configuration.Credentials.ClientSecret present: $($null -ne $Configuration.Credentials.ClientSecret)" -Context $Context
+            }
+        }
+
+        Write-SharePointLog -Level "INFO" -Message "Credential Status: Available=$hasCredentials, Source=$credentialSource" -Context $Context
+
+        # 3. VALIDATE PREREQUISITES & CONTEXT
         Write-SharePointLog -Level "INFO" -Message "Validating prerequisites..." -Context $Context
-        
+
         if (-not $Context.Paths.RawDataOutput) {
             $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
             return $result
         }
         $outputPath = $Context.Paths.RawDataOutput
         Write-SharePointLog -Level "DEBUG" -Message "Output path: $outputPath" -Context $Context
-        
+
         Ensure-Path -Path $outputPath
 
-        # 4. AUTHENTICATE & CONNECT (MOVED UP - NEW SESSION-BASED)
+        # 4. AUTHENTICATE & CONNECT (SESSION-BASED)
+        Write-SharePointLog -Level "HEADER" -Message "=== AUTHENTICATION PHASE ===" -Context $Context
+        Write-SharePointLog -Level "INFO" -Message "Using Session-Based Authentication (SessionId: $SessionId)" -Context $Context
         Write-SharePointLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
+
         try {
+            # Note: Session-based auth means credentials were already validated and used
+            # to establish the session. We're just retrieving the active session here.
+            Write-SharePointLog -Level "DEBUG" -Message "Calling Get-AuthenticationForService with SessionId..." -Context $Context
             $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+            Write-SharePointLog -Level "SUCCESS" -Message "Retrieved Graph authentication session" -Context $Context
 
             # Validate the connection
+            Write-SharePointLog -Level "INFO" -Message "Validating Graph connection..." -Context $Context
             $testUri = "https://graph.microsoft.com/v1.0/organization"
             $testResponse = Invoke-MgGraphRequest -Uri $testUri -Method GET -ErrorAction Stop
 
@@ -112,9 +162,22 @@ function Invoke-SharePointDiscovery {
                 throw "Graph connection test failed - no response"
             }
 
-            Write-SharePointLog -Level "SUCCESS" -Message "Graph connection validated" -Context $Context
+            Write-SharePointLog -Level "SUCCESS" -Message "Graph connection validated successfully" -Context $Context
             Write-SharePointLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
+
+            # Log organization details for confirmation
+            if ($testResponse.value -and $testResponse.value.Count -gt 0) {
+                $org = $testResponse.value[0]
+                Write-SharePointLog -Level "INFO" -Message "Connected to tenant: $($org.displayName)" -Context $Context
+                Write-SharePointLog -Level "DEBUG" -Message "Tenant ID from API: $($org.id)" -Context $Context
+            }
+
+            Write-SharePointLog -Level "HEADER" -Message "=== AUTHENTICATION SUCCESSFUL ===" -Context $Context
+
         } catch {
+            Write-SharePointLog -Level "ERROR" -Message "Graph authentication validation failed" -Context $Context
+            Write-SharePointLog -Level "ERROR" -Message "Error: $($_.Exception.Message)" -Context $Context
+            Write-SharePointLog -Level "DEBUG" -Message "Error details: $($_.Exception | Format-List * | Out-String)" -Context $Context
             $result.AddError("Graph authentication validation failed: $($_.Exception.Message)", $_.Exception, $null)
             return $result
         }
@@ -426,6 +489,16 @@ function Invoke-SharePointDiscovery {
         $result.Metadata["ListCount"] = ($allDiscoveredData | Where-Object { $_._DataType -eq 'List' }).Count
         $result.Metadata["TenantName"] = $tenantName
         $result.Metadata["SessionId"] = $SessionId
+        $result.Metadata["CredentialSource"] = $credentialSource
+        $result.Metadata["AuthenticationMethod"] = "Session-Based (Microsoft Graph)"
+
+        # Log authentication summary
+        Write-SharePointLog -Level "HEADER" -Message "=== AUTHENTICATION SUMMARY ===" -Context $Context
+        Write-SharePointLog -Level "INFO" -Message "Credentials Available: $hasCredentials" -Context $Context
+        Write-SharePointLog -Level "INFO" -Message "Credential Source: $credentialSource" -Context $Context
+        Write-SharePointLog -Level "INFO" -Message "Authentication Method: Session-Based (Microsoft Graph)" -Context $Context
+        Write-SharePointLog -Level "INFO" -Message "Session ID: $SessionId" -Context $Context
+        Write-SharePointLog -Level "HEADER" -Message "================================" -Context $Context
 
     }
     catch [System.UnauthorizedAccessException] {

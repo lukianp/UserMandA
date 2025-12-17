@@ -12,6 +12,7 @@ import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const DataLossPreventionDiscoveryView: React.FC = () => {
   const {
@@ -22,6 +23,11 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
     activeTab,
     filter,
     error,
+    showExecutionDialog,
+    setShowExecutionDialog,
+    logs,
+    clearLogs,
+    isCancelling,
     columns,
     filteredData,
     stats,
@@ -202,6 +208,25 @@ const DataLossPreventionDiscoveryView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="Data Loss Prevention Discovery"
+        scriptDescription="Discovering DLP policies, rules, and compliance incidents"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? {
+          percentage: progress.percentage || 0,
+          message: progress.message || 'Processing...'
+        } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

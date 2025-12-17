@@ -342,6 +342,14 @@ export class ProfileService {
     await fs.writeFile(configPath, content, 'utf-8');
   }
 
+  async refreshProfiles(): Promise<void> {
+    await this.autoDiscoverProfiles();
+  }
+
+  async getSourceProfiles(): Promise<CompanyProfile[]> {
+    return this.getProfiles();
+  }
+
   private async autoDiscoverProfiles(): Promise<void> {
     const profiles: CompanyProfile[] = [];
 
@@ -512,7 +520,7 @@ export class ProfileService {
   private broadcastProfileChange(): void {
     // Broadcast to all renderer processes
     const windows = require('electron').BrowserWindow.getAllWindows();
-    windows.forEach(window => {
+    windows.forEach((window: any) => {
       window.webContents.send('profile:changed');
     });
   }

@@ -9,6 +9,7 @@ import type {
   PowerConnector,
   PowerPlatformDiscoveryConfig
 } from '../types/models/powerplatform';
+import type { LogEntry } from './common/discoveryHookTypes';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { useProfileStore } from '../store/useProfileStore';
 
@@ -52,6 +53,30 @@ export const usePowerPlatformDiscoveryLogic = () => {
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const { addResult, getResultsByModuleName } = useDiscoveryStore();
   const currentTokenRef = useRef<string | null>(null);
+
+  // Additional state for PowerShellExecutionDialog
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
+
+  /**
+   * Add a log entry
+   */
+  const addLog = useCallback((level: LogEntry['level'], message: string) => {
+    const entry: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level,
+      message,
+    };
+    setLogs(prev => [...prev, entry]);
+  }, []);
+
+  /**
+   * Clear all logs
+   */
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
 
   const [state, setState] = useState<PowerPlatformDiscoveryState>({
     config: {
@@ -98,6 +123,8 @@ export const usePowerPlatformDiscoveryLogic = () => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[PowerPlatformDiscoveryHook] Discovery output:', data.message);
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
+        addLog(logLevel, data.message);
         setState(prev => ({
           ...prev,
           progress: {
@@ -183,6 +210,7 @@ export const usePowerPlatformDiscoveryLogic = () => {
 
     const token = `powerplatform-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     currentTokenRef.current = token;
+    setShowExecutionDialog(true);
 
     setState(prev => ({
       ...prev,
@@ -226,6 +254,8 @@ export const usePowerPlatformDiscoveryLogic = () => {
   const cancelDiscovery = useCallback(async () => {
     if (!state.cancellationToken) return;
 
+    setIsCancelling(true);
+
     try {
       console.log('[PowerPlatformDiscoveryHook] Cancelling discovery:', state.cancellationToken);
       await window.electron.cancelDiscovery(state.cancellationToken);
@@ -238,6 +268,7 @@ export const usePowerPlatformDiscoveryLogic = () => {
           progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
         }));
         currentTokenRef.current = null;
+        setIsCancelling(false);
       }, 2000);
     } catch (error: any) {
       console.error('[PowerPlatformDiscoveryHook] Failed to cancel discovery:', error);
@@ -247,6 +278,7 @@ export const usePowerPlatformDiscoveryLogic = () => {
         cancellationToken: null,
       }));
       currentTokenRef.current = null;
+      setIsCancelling(false);
     }
   }, [state.cancellationToken]);
 
@@ -830,6 +862,13 @@ export const usePowerPlatformDiscoveryLogic = () => {
     filter: state.filter,
     error: state.error,
 
+    // PowerShellExecutionDialog integration
+    showExecutionDialog,
+    setShowExecutionDialog,
+    logs,
+    clearLogs,
+    isCancelling,
+
     // Data
     columns,
     filteredData,
@@ -844,6 +883,6 @@ export const usePowerPlatformDiscoveryLogic = () => {
     clearError,
     exportToCSV,
     exportToExcel
-  
+
   };
 };

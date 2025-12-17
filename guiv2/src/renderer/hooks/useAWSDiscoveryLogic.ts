@@ -12,6 +12,7 @@ import { useDebounce } from './useDebounce';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { getElectronAPI } from '../lib/electron-api-fallback';
+import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 
 type TabType = 'overview' | 'ec2' | 's3' | 'rds';
 
@@ -56,6 +57,20 @@ export const useAWSDiscoveryLogic = () => {
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const { addResult } = useDiscoveryStore();
   const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
+
+  // PowerShell Execution Dialog state
+  const [logs, setLogs] = useState<PowerShellLog[]>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const addLog = useCallback((level: PowerShellLog['level'], message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setLogs(prev => [...prev, { timestamp, level, message }]);
+  }, []);
+
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
 
   // State
   const [state, setState] = useState<AWSDiscoveryState>({
@@ -193,6 +208,10 @@ export const useAWSDiscoveryLogic = () => {
       cancellationToken: token,
     }));
 
+    // Open PowerShell execution dialog
+    setShowExecutionDialog(true);
+    addLog('info', 'Starting AWS discovery...');
+
     try {
       // ✅ FIXED: Use new event-driven executeDiscovery API
       const result = await window.electron.executeDiscovery({
@@ -232,6 +251,9 @@ export const useAWSDiscoveryLogic = () => {
   const cancelDiscovery = useCallback(async () => {
     if (!state.cancellationToken) return;
 
+    setIsCancelling(true);
+    addLog('warning', 'Cancelling AWS discovery...');
+
     try {
       await window.electronAPI.cancelExecution(state.cancellationToken);
       setState(prev => ({
@@ -240,16 +262,20 @@ export const useAWSDiscoveryLogic = () => {
         progress: null,
         cancellationToken: null,
       }));
+      addLog('info', 'AWS discovery cancelled');
     } catch (error) {
       console.error('Failed to cancel discovery:', error);
+      addLog('error', 'Failed to cancel discovery');
       setState(prev => ({
         ...prev,
         isDiscovering: false,
         progress: null,
         cancellationToken: null,
       }));
+    } finally {
+      setIsCancelling(false);
     }
-  }, [state.cancellationToken]);
+  }, [state.cancellationToken, addLog]);
 
   /**
    * Update discovery configuration
@@ -505,6 +531,7 @@ export const useAWSDiscoveryLogic = () => {
     // Discovery state
     result: state.result,
     isDiscovering: state.isDiscovering,
+    isCancelling,
     progress: state.progress?.progress || 0,
     error: state.error,
 
@@ -528,6 +555,12 @@ export const useAWSDiscoveryLogic = () => {
 
     // Statistics
     stats,
+
+    // PowerShell Execution Dialog
+    logs,
+    clearLogs,
+    showExecutionDialog,
+    setShowExecutionDialog,
   };
 };
 

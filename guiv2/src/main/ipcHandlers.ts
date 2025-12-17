@@ -880,6 +880,36 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   });
 
   /**
+   * Clear credentials for a profile
+   * Forces reload from legacy DPAPI file on next access
+   * Useful for testing and forcing credential refresh
+   */
+  ipcMain.handle('profile:clearCredentials', async (_, profileId: string) => {
+    try {
+      console.log(`[IPC profile:clearCredentials] ========================================`);
+      console.log(`[IPC profile:clearCredentials] Clearing credentials for profile: ${profileId}`);
+
+      const { CredentialService } = await import('./services/credentialService');
+      const credService = new CredentialService();
+      await credService.initialize();
+      await credService.deleteCredential(profileId);
+
+      console.log(`[IPC profile:clearCredentials] ✅ Credentials cleared successfully`);
+      console.log(`[IPC profile:clearCredentials] Next credential load will use DPAPI file`);
+      console.log(`[IPC profile:clearCredentials] ========================================`);
+
+      return { success: true };
+    } catch (error: unknown) {
+      console.error(`[IPC profile:clearCredentials] ❌ Error:`, error);
+      console.log(`[IPC profile:clearCredentials] ========================================`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
    * Create a new source profile
    */
   ipcMain.handle('profile:createSource', async (_, profile: any) => {
@@ -999,7 +1029,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   ipcMain.handle('profile:refresh', async () => {
     try {
       await profileService.refreshProfiles();
-      const sourceProfiles = profileService.getSourceProfiles();
+      const sourceProfiles = await profileService.getSourceProfiles();
       console.log(`Refreshed profiles: ${sourceProfiles.length} source profiles found`);
       return { success: true, profiles: sourceProfiles };
     } catch (error: unknown) {
@@ -1016,7 +1046,14 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
    */
   ipcMain.handle('profile:getDataPath', async (_, profileId: string) => {
     try {
-      const dataPath = profileService.getProfileDataPath(profileId);
+      const profiles = await profileService.getProfiles();
+      const profile = profiles.find(p => p.id === profileId);
+
+      if (!profile) {
+        throw new Error(`Profile with ID "${profileId}" not found`);
+      }
+
+      const dataPath = profileService.getCompanyDataPath(profile.companyName);
       return { success: true, dataPath };
     } catch (error: unknown) {
       console.error(`getDataPath error: ${error instanceof Error ? error.message : String(error)}`);
@@ -2489,6 +2526,10 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       const companyName = providedCompanyName || activeProfile.companyName;
       console.log(`[IPC:discovery:execute] Using company name: ${companyName}`);
 
+      // Resolve profile path
+      const profilePath = profileService.getCompanyDataPath(companyName);
+      console.log(`[IPC:discovery:execute] Resolved profile path: ${profilePath}`);
+
       // Execute discovery module with credentials from profile
       const result = await psService.executeDiscoveryModule(
         moduleName,
@@ -2499,6 +2540,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
           streamOutput: true,
           timeout: executionOptions.timeout || 300000,
           showWindow: executionOptions.showWindow !== undefined ? executionOptions.showWindow : false,  // Default to NOT showing PowerShell window
+          outputPath: profilePath
         }
       );
 

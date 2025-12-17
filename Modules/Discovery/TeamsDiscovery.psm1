@@ -114,17 +114,114 @@ function Invoke-TeamsDiscovery {
             if ($null -ne $teamsConfig.includeFiles) { $includeFiles = $teamsConfig.includeFiles }
         }
 
-        # 4. AUTHENTICATE & CONNECT
-        Write-TeamsLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
-        try {
-            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
-            Write-TeamsLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
-        } catch {
-            $result.AddError("Failed to authenticate with Graph service: $($_.Exception.Message)", $_.Exception, $null)
+        # 4. EXTRACT & VALIDATE CREDENTIALS
+        Write-TeamsLog -Level "INFO" -Message "Extracting credentials from Configuration..." -Context $Context
+
+        # Extract credentials from Configuration parameter
+        $tenantId = $null
+        $clientId = $null
+        $clientSecret = $null
+
+        if ($Configuration.TenantId) {
+            $tenantId = $Configuration.TenantId
+            Write-TeamsLog -Level "SUCCESS" -Message "TenantId found in Configuration: $tenantId" -Context $Context
+        } else {
+            Write-TeamsLog -Level "WARN" -Message "TenantId NOT found in Configuration" -Context $Context
+        }
+
+        if ($Configuration.ClientId) {
+            $clientId = $Configuration.ClientId
+            Write-TeamsLog -Level "SUCCESS" -Message "ClientId found in Configuration: $clientId" -Context $Context
+        } else {
+            Write-TeamsLog -Level "WARN" -Message "ClientId NOT found in Configuration" -Context $Context
+        }
+
+        if ($Configuration.ClientSecret) {
+            $clientSecret = $Configuration.ClientSecret
+            $maskedSecret = if ($clientSecret.Length -gt 8) {
+                $clientSecret.Substring(0, 4) + "..." + $clientSecret.Substring($clientSecret.Length - 4)
+            } else {
+                "***"
+            }
+            Write-TeamsLog -Level "SUCCESS" -Message "ClientSecret found in Configuration: $maskedSecret" -Context $Context
+        } else {
+            Write-TeamsLog -Level "WARN" -Message "ClientSecret NOT found in Configuration" -Context $Context
+        }
+
+        # Validate all credentials are present
+        if (-not $tenantId -or -not $clientId -or -not $clientSecret) {
+            $missingCreds = @()
+            if (-not $tenantId) { $missingCreds += "TenantId" }
+            if (-not $clientId) { $missingCreds += "ClientId" }
+            if (-not $clientSecret) { $missingCreds += "ClientSecret" }
+
+            $errorMsg = "Missing required credentials in Configuration: $($missingCreds -join ', ')"
+            Write-TeamsLog -Level "ERROR" -Message $errorMsg -Context $Context
+            $result.AddError($errorMsg, $null, @{MissingCredentials=$missingCreds})
             return $result
         }
 
-        # 5. PERFORM DISCOVERY
+        Write-TeamsLog -Level "SUCCESS" -Message "All required credentials validated successfully" -Context $Context
+
+        # Store credentials in metadata for reference
+        $result.Metadata["TenantId"] = $tenantId
+        $result.Metadata["ClientId"] = $clientId
+        $result.Metadata["AuthenticationMethod"] = "ServicePrincipal"
+
+        # 5. AUTHENTICATE & CONNECT
+        Write-TeamsLog -Level "INFO" -Message "Authenticating to Microsoft Graph with Service Principal..." -Context $Context
+        Write-TeamsLog -Level "DEBUG" -Message "Authentication details - TenantId: $tenantId, ClientId: $clientId" -Context $Context
+
+        try {
+            # Try session-based authentication first (if SessionId provided)
+            if ($SessionId) {
+                Write-TeamsLog -Level "INFO" -Message "SessionId provided, attempting session-based authentication..." -Context $Context
+                try {
+                    $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
+                    Write-TeamsLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication (SessionId: $SessionId)" -Context $Context
+                } catch {
+                    Write-TeamsLog -Level "WARN" -Message "Session authentication failed, falling back to direct credential authentication: $($_.Exception.Message)" -Context $Context
+                    $SessionId = $null  # Clear SessionId to trigger direct auth below
+                }
+            }
+
+            # If no SessionId or session auth failed, use direct credential authentication
+            if (-not $SessionId) {
+                Write-TeamsLog -Level "INFO" -Message "Performing direct authentication with service principal credentials..." -Context $Context
+
+                # Convert ClientSecret to SecureString
+                $secureSecret = ConvertTo-SecureString -String $clientSecret -AsPlainText -Force
+                $credential = New-Object System.Management.Automation.PSCredential($clientId, $secureSecret)
+
+                # Connect to Microsoft Graph
+                Write-TeamsLog -Level "DEBUG" -Message "Calling Connect-MgGraph with TenantId: $tenantId" -Context $Context
+                Connect-MgGraph -TenantId $tenantId -ClientSecretCredential $credential -NoWelcome -ErrorAction Stop
+
+                Write-TeamsLog -Level "SUCCESS" -Message "Successfully authenticated to Microsoft Graph with service principal" -Context $Context
+
+                # Verify connection by getting context
+                $context = Get-MgContext
+                if ($context) {
+                    Write-TeamsLog -Level "SUCCESS" -Message "Graph connection verified - TenantId: $($context.TenantId), Scopes: $($context.Scopes -join ', ')" -Context $Context
+                    $result.Metadata["GraphTenantId"] = $context.TenantId
+                    $result.Metadata["GraphScopes"] = $context.Scopes -join ', '
+                } else {
+                    Write-TeamsLog -Level "WARN" -Message "Graph connection established but context is null" -Context $Context
+                }
+            }
+
+        } catch {
+            $errorMsg = "Failed to authenticate with Microsoft Graph: $($_.Exception.Message)"
+            Write-TeamsLog -Level "ERROR" -Message $errorMsg -Context $Context
+            Write-TeamsLog -Level "ERROR" -Message "Authentication error details: $($_.Exception.GetType().FullName)" -Context $Context
+            if ($_.Exception.InnerException) {
+                Write-TeamsLog -Level "ERROR" -Message "Inner exception: $($_.Exception.InnerException.Message)" -Context $Context
+            }
+            $result.AddError($errorMsg, $_.Exception, @{AuthenticationStage="GraphConnection"})
+            return $result
+        }
+
+        # 6. PERFORM DISCOVERY
         Write-TeamsLog -Level "HEADER" -Message "Starting data discovery" -Context $Context
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
@@ -386,7 +483,7 @@ function Invoke-TeamsDiscovery {
             }
         }
 
-        # 6. PREPARE DATA GROUPS FOR ORCHESTRATOR EXPORT
+        # 7. PREPARE DATA GROUPS FOR ORCHESTRATOR EXPORT
         if ($allDiscoveredData.Count -gt 0) {
             Write-TeamsLog -Level "INFO" -Message "Preparing $($allDiscoveredData.Count) records for export" -Context $Context
             
@@ -427,7 +524,7 @@ function Invoke-TeamsDiscovery {
             Write-TeamsLog -Level "WARN" -Message "No data discovered to prepare for export" -Context $Context
         }
 
-        # 7. FINALIZE METADATA
+        # 8. FINALIZE METADATA
         $result.RecordCount = $allDiscoveredData.Count
         $result.Metadata["TotalRecords"] = $result.RecordCount
         $result.Metadata["ElapsedTimeSeconds"] = $stopwatch.Elapsed.TotalSeconds
@@ -449,7 +546,7 @@ function Invoke-TeamsDiscovery {
         Write-TeamsLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
     }
     finally {
-        # 8. CLEANUP & COMPLETE
+        # 9. CLEANUP & COMPLETE
         Write-TeamsLog -Level "INFO" -Message "Cleaning up..." -Context $Context
         
         # Disconnect from services
