@@ -10,11 +10,12 @@ import { AgGridReact } from 'ag-grid-react';
 import { ColDef, GridApi, GridReadyEvent, SelectionChangedEvent, RowClickedEvent } from 'ag-grid-community';
 import 'ag-grid-enterprise';
 import { clsx } from 'clsx';
-import { Download, Printer, Eye, EyeOff, Filter } from 'lucide-react';
+import { Download, Printer, Eye, EyeOff, Filter, RotateCcw } from 'lucide-react';
 
 import { Button } from '../atoms/Button';
 import { Spinner } from '../atoms/Spinner';
 import { StatusBadgeCellRenderer } from '../atoms/StatusBadgeCellRenderer';
+import { useAgGridStatePersistence } from '../../hooks/useAgGridStatePersistence';
 import '../../styles/ag-grid-custom.css';
 
 // Lazy load AG Grid CSS - only load once when first grid mounts
@@ -185,6 +186,8 @@ export interface VirtualizedDataGridProps<T = any> {
   height?: string;
   /** Data attribute for Cypress testing */
   'data-cy'?: string;
+  /** Unique key for persisting grid state (columns, filters, sorting, pagination) */
+  persistenceKey?: string;
 }
 
 type VirtualizedDataGridComponent = <T = any>(
@@ -215,12 +218,20 @@ function VirtualizedDataGridInner<T = any>(
     className,
     height = '600px',
     'data-cy': dataCy,
+    persistenceKey,
   }: VirtualizedDataGridProps<T>,
   ref: React.ForwardedRef<HTMLDivElement>
 ) {
   const gridRef = useRef<AgGridReact>(null);
   const [gridApi, setGridApi] = React.useState<GridApi | null>(null);
   const [showColumnPanel, setShowColumnPanel] = React.useState(false);
+
+  // State persistence hook
+  const { savedState, saveState, clearState, isStateValid, isLoading: isLoadingState } = useAgGridStatePersistence(persistenceKey);
+
+  // Track if we've restored state to avoid re-applying on every render
+  const hasRestoredStateRef = useRef(false);
+
   const rowData = useMemo(() => {
     const result = data ?? [];
     console.log('[VirtualizedDataGrid] rowData computed:', result.length, 'rows');
@@ -300,11 +311,84 @@ function VirtualizedDataGridInner<T = any>(
     [virtualRowHeight, enableSelection, selectionMode, enableGrouping]
   );
 
-  // Handle grid ready event
+  // Handle grid ready event with state restoration
   const onGridReady = useCallback((params: GridReadyEvent) => {
     setGridApi(params.api);
-    params.api.sizeColumnsToFit();
-  }, []);
+
+    // Restore saved state if available and valid
+    if (savedState && isStateValid && !hasRestoredStateRef.current && persistenceKey) {
+      try {
+        console.log(`[VirtualizedDataGrid] Restoring saved state for ${persistenceKey}`);
+
+        // Restore column state (order, width, visibility, pinned)
+        if (savedState.columnState && savedState.columnState.length > 0) {
+          params.api.applyColumnState({
+            state: savedState.columnState,
+            applyOrder: true,
+          });
+          console.log(`[VirtualizedDataGrid] Restored ${savedState.columnState.length} column states`);
+        }
+
+        // Restore filter model
+        if (savedState.filterModel && Object.keys(savedState.filterModel).length > 0) {
+          params.api.setFilterModel(savedState.filterModel);
+          console.log(`[VirtualizedDataGrid] Restored filter model`);
+        }
+
+        // Note: Sort state is typically included in columnState for AG Grid
+
+        hasRestoredStateRef.current = true;
+      } catch (error) {
+        console.error('[VirtualizedDataGrid] Error restoring state:', error);
+        // Fall back to default sizing
+        params.api.sizeColumnsToFit();
+      }
+    } else {
+      // Default behavior - size columns to fit
+      params.api.sizeColumnsToFit();
+    }
+  }, [savedState, isStateValid, persistenceKey]);
+
+  // Reset state restoration flag when persistenceKey changes
+  useEffect(() => {
+    hasRestoredStateRef.current = false;
+  }, [persistenceKey]);
+
+  // Restore saved state when both gridApi and savedState are available
+  // This handles the case where state loads from localStorage AFTER grid is ready
+  useEffect(() => {
+    if (
+      gridApi &&
+      savedState &&
+      isStateValid &&
+      !isLoadingState &&
+      !hasRestoredStateRef.current &&
+      persistenceKey
+    ) {
+      try {
+        console.log(`[VirtualizedDataGrid] Restoring saved state (after load) for ${persistenceKey}`);
+
+        // Restore column state (order, width, visibility, pinned)
+        if (savedState.columnState && savedState.columnState.length > 0) {
+          gridApi.applyColumnState({
+            state: savedState.columnState,
+            applyOrder: true,
+          });
+          console.log(`[VirtualizedDataGrid] Restored ${savedState.columnState.length} column states`);
+        }
+
+        // Restore filter model
+        if (savedState.filterModel && Object.keys(savedState.filterModel).length > 0) {
+          gridApi.setFilterModel(savedState.filterModel);
+          console.log(`[VirtualizedDataGrid] Restored filter model`);
+        }
+
+        hasRestoredStateRef.current = true;
+      } catch (error) {
+        console.error('[VirtualizedDataGrid] Error restoring state:', error);
+      }
+    }
+  }, [gridApi, savedState, isStateValid, isLoadingState, persistenceKey]);
 
   // Handle row click
   const handleRowClick = useCallback(
@@ -370,6 +454,92 @@ function VirtualizedDataGridInner<T = any>(
     }
   }, [gridApi, enhancedColumns]);
 
+  // Reset grid state to defaults
+  const resetGridState = useCallback(() => {
+    if (gridApi) {
+      console.log(`[VirtualizedDataGrid] Resetting grid state for ${persistenceKey}`);
+
+      // Reset column state (order, visibility, width)
+      gridApi.resetColumnState();
+
+      // Clear all filters
+      gridApi.setFilterModel(null);
+
+      // Size columns to fit
+      gridApi.sizeColumnsToFit();
+
+      // Clear saved state from localStorage
+      clearState();
+
+      // Reset the restoration flag so next time we don't try to restore cleared state
+      hasRestoredStateRef.current = false;
+    }
+  }, [gridApi, clearState, persistenceKey]);
+
+  // State change event listeners - save state when columns/filters/sort change
+  useEffect(() => {
+    if (!gridApi || !persistenceKey) return;
+
+    // Debounced save for column state changes
+    let columnSaveTimeout: NodeJS.Timeout | null = null;
+
+    const handleColumnStateChange = () => {
+      // Debounce to avoid excessive saves during drag operations
+      if (columnSaveTimeout) {
+        clearTimeout(columnSaveTimeout);
+      }
+      columnSaveTimeout = setTimeout(() => {
+        const columnState = gridApi.getColumnState();
+        if (columnState) {
+          saveState({ columnState });
+        }
+      }, 500); // 500ms debounce for column changes
+    };
+
+    const handleFilterChanged = () => {
+      const filterModel = gridApi.getFilterModel();
+      saveState({ filterModel: filterModel || {} });
+    };
+
+    const handleSortChanged = () => {
+      // Sort state is included in column state, so we save column state
+      const columnState = gridApi.getColumnState();
+      if (columnState) {
+        saveState({ columnState });
+      }
+    };
+
+    // Attach event listeners
+    gridApi.addEventListener('columnMoved', handleColumnStateChange);
+    gridApi.addEventListener('columnResized', handleColumnStateChange);
+    gridApi.addEventListener('columnVisible', handleColumnStateChange);
+    gridApi.addEventListener('columnPinned', handleColumnStateChange);
+    gridApi.addEventListener('filterChanged', handleFilterChanged);
+    gridApi.addEventListener('sortChanged', handleSortChanged);
+
+    console.log(`[VirtualizedDataGrid] Attached state persistence listeners for ${persistenceKey}`);
+
+    // Cleanup
+    return () => {
+      if (columnSaveTimeout) {
+        clearTimeout(columnSaveTimeout);
+      }
+
+      if (gridApi) {
+        try {
+          gridApi.removeEventListener('columnMoved', handleColumnStateChange);
+          gridApi.removeEventListener('columnResized', handleColumnStateChange);
+          gridApi.removeEventListener('columnVisible', handleColumnStateChange);
+          gridApi.removeEventListener('columnPinned', handleColumnStateChange);
+          gridApi.removeEventListener('filterChanged', handleFilterChanged);
+          gridApi.removeEventListener('sortChanged', handleSortChanged);
+        } catch (e) {
+          // Grid may already be destroyed
+        }
+      }
+    };
+  }, [gridApi, persistenceKey, saveState]);
+
   // Container classes
   const containerClasses = clsx(
     'flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-sm',
@@ -428,6 +598,19 @@ function VirtualizedDataGridInner<T = any>(
           >
             Auto Size
           </Button>
+
+          {persistenceKey && (
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<RotateCcw size={16} />}
+              onClick={resetGridState}
+              title="Reset grid to default state"
+              data-cy="reset-grid-state"
+            >
+              Reset
+            </Button>
+          )}
 
           {enableExport && (
             <>

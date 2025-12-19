@@ -174,8 +174,18 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
 
           if (startIndex !== -1 && endIndex !== -1) {
             const jsonContent = stdout.substring(startIndex + jsonStartMarker.length, endIndex).trim();
-            applicationData = JSON.parse(jsonContent);
-            recordCount = applicationData.length;
+            const parsedResult = JSON.parse(jsonContent);
+
+            // The parsed result is an object with Data array, not an array directly
+            // Structure: { Success: bool, ModuleName: string, Data: [...], RecordCount: number, ... }
+            if (parsedResult && typeof parsedResult === 'object' && !Array.isArray(parsedResult)) {
+              applicationData = parsedResult.Data || [];
+              recordCount = parsedResult.RecordCount || applicationData.length;
+              console.log('[ApplicationDiscoveryHook] Extracted Data array from result object, count:', recordCount);
+            } else if (Array.isArray(parsedResult)) {
+              applicationData = parsedResult;
+              recordCount = applicationData.length;
+            }
           } else {
             // Fallback to other methods if JSON markers not found
             applicationData = data?.result?.data || data?.result?.Data || [];

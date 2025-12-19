@@ -41,15 +41,27 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
 
   // Additional state for view compatibility
   const [config, setConfig] = useState<any>({
+    includeAppRegistrations: true,
     includeServicePrincipals: true,
     includeAppRoles: true,
     includePermissions: true,
-    includeSecrets: false,
+    includeSecrets: true,
+    includeManagedIdentities: true,
+    analyzeSecretExpiration: true,
+    timeout: 300000,
   });
   const [templates, setTemplates] = useState<any[]>([]);
-  const [selectedTab, setSelectedTab] = useState<string>('applications');
+  const [activeTab, setActiveTab] = useState<string>('overview');
   const [searchText, setSearchText] = useState<string>('');
   const [errors, setErrors] = useState<string[]>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
+  const [filter, setFilter] = useState<any>({
+    selectedAppTypes: [],
+    selectedPermissionTypes: [],
+    searchText: '',
+    showExpiringSecretsOnly: false,
+    showHighRiskOnly: false,
+  });
 
   /**
    * Load previous results from discovery store on mount
@@ -89,31 +101,47 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
     });
 
     const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+      console.log('[EntraIDAppDiscoveryHook] onDiscoveryComplete callback fired');
+      console.log('[EntraIDAppDiscoveryHook] Event executionId:', data.executionId);
+      console.log('[EntraIDAppDiscoveryHook] currentTokenRef.current:', currentTokenRef.current);
+      console.log('[EntraIDAppDiscoveryHook] data.result:', data.result);
+      console.log('[EntraIDAppDiscoveryHook] data.result.data:', data.result?.data);
+      console.log('[EntraIDAppDiscoveryHook] data.result.data.Data length:', data.result?.data?.Data?.length);
+
       if (data.executionId === currentTokenRef.current) {
+        console.log('[EntraIDAppDiscoveryHook] ExecutionId MATCHED - processing result');
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
+
+        // Extract Data array from result - Main process wraps PowerShell result in 'data' property
+        // PowerShell returns {Success, ModuleName, Data: [...]} which becomes data.result.data
+        const dataArray = data.result?.data?.Data || [];
+        console.log('[EntraIDAppDiscoveryHook] Extracted dataArray length:', dataArray.length);
 
         const result = {
           id: `entraid-app-discovery-${Date.now()}`,
           name: 'Entra ID App Registrations Discovery',
           moduleName: 'EntraIDAppDiscovery',
           displayName: 'Entra ID App Registrations Discovery',
-          itemCount: data?.result?.totalItems || data?.result?.RecordCount || 0,
+          itemCount: dataArray.length,
           discoveryTime: new Date().toISOString(),
           duration: data.duration || 0,
           status: 'Completed',
           filePath: data?.result?.outputPath || '',
           success: true,
-          summary: `Discovered ${data?.result?.totalItems || 0} Entra ID app registrations and service principals`,
+          summary: `Discovered ${dataArray.length} Entra ID app registrations and service principals`,
           errorMessage: '',
           additionalData: data.result,
           createdAt: new Date().toISOString(),
         };
 
+        console.log('[EntraIDAppDiscoveryHook] Setting results with additionalData:', result.additionalData);
         setResults(result);
-        addResult(result); // ✅ ADDED: Store in discovery store
+        addResult(result);
         addLog('info', `Discovery completed! Found ${result.itemCount} items.`);
+      } else {
+        console.log('[EntraIDAppDiscoveryHook] ExecutionId MISMATCH - ignoring event');
       }
     });
 
@@ -299,34 +327,190 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
     await exportResults();
   }, [exportResults, addLog]);
 
+  /**
+   * Update filter settings
+   */
+  const updateFilter = useCallback((updates: any) => {
+    setFilter((prev: any) => ({ ...prev, ...updates }));
+  }, []);
+
+  /**
+   * Clear error state
+   */
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  /**
+   * Export to CSV
+   */
+  const exportToCSV = useCallback((data: any[], filename: string) => {
+    try {
+      if (!data || data.length === 0) {
+        addLog('warn', 'No data to export');
+        return;
+      }
+      const headers = Object.keys(data[0]);
+      const csvContent = [
+        headers.join(','),
+        ...data.map(row => headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+      addLog('info', `Exported ${data.length} records to ${filename}`);
+    } catch (err: any) {
+      addLog('error', `Export failed: ${err.message}`);
+    }
+  }, [addLog]);
+
+  /**
+   * Export to Excel (simplified CSV for now)
+   */
+  const exportToExcel = useCallback((data: any[], filename: string) => {
+    // Use CSV export as fallback - real Excel would need xlsx library
+    exportToCSV(data, filename.replace('.xlsx', '.csv'));
+  }, [exportToCSV]);
+
+  /**
+   * Extract raw data array from results
+   * PowerShell module returns: { Success, ModuleName, Data: [...] }
+   */
+  const rawData: any[] = results?.additionalData?.Data || [];
+
+  /**
+   * Compute statistics from results
+   */
+  const appRegistrations = rawData.filter((item: any) => item._ObjectType === 'AppRegistration');
+  const servicePrincipals = rawData.filter((item: any) => item._ObjectType === 'ServicePrincipal');
+  const enterpriseApps = rawData.filter((item: any) => item._ObjectType === 'EnterpriseApp');
+  const secrets = rawData.filter((item: any) => item._ObjectType === 'Secret');
+
+  const stats = rawData.length > 0 ? {
+    totalApplications: appRegistrations.length + enterpriseApps.length,
+    servicePrincipals: servicePrincipals.length,
+    managedIdentities: servicePrincipals.filter((sp: any) => sp.ServicePrincipalType === 'ManagedIdentity').length,
+    appsWithSecrets: secrets.length,
+    expiringSecrets: secrets.filter((s: any) => {
+      const expiry = new Date(s.EndDateTime);
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+      return expiry > new Date() && expiry <= thirtyDaysFromNow;
+    }).length,
+    expiredSecrets: secrets.filter((s: any) => new Date(s.EndDateTime) < new Date()).length,
+    delegatedPermissions: 0,
+    applicationPermissions: 0,
+    appsByType: {
+      'App Registrations': appRegistrations.length,
+      'Enterprise Apps': enterpriseApps.length,
+      'Service Principals': servicePrincipals.length,
+    },
+    permissionsByType: {},
+    topPermissions: [],
+  } : null;
+
+  /**
+   * Column definitions for the data grid
+   */
+  const columns = [
+    { field: 'DisplayName', headerName: 'Display Name', width: 250, flex: 1 },
+    { field: 'AppId', headerName: 'App ID', width: 300 },
+    { field: '_ObjectType', headerName: 'Type', width: 150 },
+    { field: 'SignInAudience', headerName: 'Sign-In Audience', width: 150 },
+    { field: 'AccountEnabled', headerName: 'Enabled', width: 100 },
+    { field: 'CreatedDateTime', headerName: 'Created', width: 180 },
+  ];
+
+  /**
+   * Filtered data based on current tab and filter settings
+   */
+  const getFilteredData = (): any[] => {
+    let data = rawData;
+
+    // Filter by active tab
+    switch (activeTab) {
+      case 'applications':
+        data = [...appRegistrations, ...enterpriseApps];
+        break;
+      case 'service-principals':
+        data = servicePrincipals;
+        break;
+      case 'secrets':
+        data = secrets;
+        break;
+      case 'permissions':
+        data = rawData.filter((item: any) => item._ObjectType === 'Permission');
+        break;
+      default:
+        // 'overview' shows all data
+        break;
+    }
+
+    // Apply search filter
+    if (filter.searchText) {
+      data = data.filter((item: any) =>
+        JSON.stringify(item).toLowerCase().includes(filter.searchText.toLowerCase())
+      );
+    }
+
+    return data;
+  };
+
+  const filteredData = getFilteredData();
+
   return {
+    // Core discovery state
     isRunning,
     isCancelling,
     progress,
     results,
+    result: results, // Alias for view compatibility
     error,
     logs,
+
+    // Discovery actions
     startDiscovery,
     cancelDiscovery,
     exportResults,
     clearLogs,
+    clearError,
+
+    // Profile
     selectedProfile,
 
-    // Additional properties
+    // Configuration
     config,
     templates,
-    currentResult: results,
-    isDiscovering: isRunning,
-    selectedTab,
-    searchText,
-    filteredData: results ? Object.values(results).flat() : [],
-    columnDefs: [],
-    errors,
     updateConfig,
     loadTemplate,
     saveAsTemplate,
-    setSelectedTab,
+
+    // View state
+    activeTab,
+    setActiveTab,
+    filter,
+    updateFilter,
+    showExecutionDialog,
+    setShowExecutionDialog,
+
+    // Data display
+    currentResult: results,
+    isDiscovering: isRunning,
+    searchText,
     setSearchText,
+    filteredData,
+    columns,
+    columnDefs: columns,
+    stats,
+    errors,
+
+    // Export functions
     exportData,
+    exportToCSV,
+    exportToExcel,
   };
 };

@@ -34,6 +34,8 @@ export interface CsvLoaderOptions {
   refreshInterval?: number;
   /** Success callback */
   onSuccess?: (data: any[], columns: ColDef[]) => void;
+  /** Return empty data instead of error for missing files (default: false) */
+  gracefulDegradation?: boolean;
 }
 
 /**
@@ -78,6 +80,7 @@ export function useCsvDataLoader<T = any>(
     enableAutoRefresh = true,
     refreshInterval = 30000, // 30 seconds
     onSuccess,
+    gracefulDegradation = false,
   } = options;
 
   // Get current profile to determine data path
@@ -182,7 +185,50 @@ export function useCsvDataLoader<T = any>(
         console.log(`[useCsvDataLoader] Profile: ${selectedSourceProfile?.companyName || 'ljpops'}`);
 
         // Read CSV file using Electron API
-        const csvText = await window.electronAPI.fs.readFile(fullPath, 'utf8');
+        // Check if file exists before reading (for graceful degradation)
+        const fs = window.electronAPI.fs;
+        const exists = await fs.access(fullPath).then(() => true).catch(() => false);
+
+        if (!exists) {
+          if (gracefulDegradation) {
+            console.warn(`[useCsvDataLoader] File not found, returning empty data: ${fullPath}`);
+            if (!isUnmountedRef.current) {
+              setData([]);
+              setColumns([]);
+              setLastRefresh(new Date());
+              setError(null);
+              setLoading(false);
+              loadInProgressRef.current = false;
+              onSuccess?.([], []);
+            }
+            return;
+          } else {
+            throw new Error(`Discovery data file not found: ${csvPath}`);
+          }
+        }
+
+        // Read CSV file using Electron API (with graceful degradation for missing files)
+        let csvText: string;
+        try {
+          csvText = await window.electronAPI.fs.readFile(fullPath, 'utf8');
+        } catch (fileError: any) {
+          // Handle file not found gracefully
+          if (gracefulDegradation && fileError?.message?.includes('ENOENT')) {
+            console.warn(`[useCsvDataLoader] File not found, returning empty data: ${fullPath}`);
+            if (!isUnmountedRef.current) {
+              setData([]);
+              setColumns([]);
+              setLastRefresh(new Date());
+              setError(null);
+              setLoading(false);
+              loadInProgressRef.current = false;
+              onSuccess?.([], []);
+            }
+            return;
+          } else {
+            throw new Error(`Discovery data file not found: ${csvPath}`);
+          }
+        }
 
         // CRITICAL: Check again after async operation
         if (isUnmountedRef.current) {

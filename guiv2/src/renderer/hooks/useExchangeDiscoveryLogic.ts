@@ -629,7 +629,7 @@ export function useExchangeDiscoveryLogic() {
   const mailboxColumns = useMemo<ColDef<ExchangeMailbox>[]>(
     () => [
       {
-        field: 'displayName', // ✅ PascalCase to match PowerShell output
+        field: 'DisplayName', // ✅ PascalCase to match PowerShell output
         headerName: 'Display Name',
         sortable: true,
         filter: true,
@@ -637,41 +637,51 @@ export function useExchangeDiscoveryLogic() {
         width: 200,
       },
       {
-        field: 'userPrincipalName', // ✅ PascalCase
+        field: 'UserPrincipalName', // ✅ PascalCase
         headerName: 'UPN',
         sortable: true,
         filter: true,
         width: 250,
       },
       {
-        field: 'primarySmtpAddress', // ✅ PascalCase
+        field: 'PrimarySmtpAddress', // ✅ PascalCase
         headerName: 'Email',
         sortable: true,
         filter: true,
         width: 250,
       },
       {
-        field: 'mailboxType', // ✅ PascalCase
+        field: 'RecipientTypeDetails', // ✅ PascalCase - use actual field from PowerShell
         headerName: 'Type',
         sortable: true,
         filter: true,
         width: 150,
       },
       {
-        field: 'totalItemSize', // ✅ PascalCase
-        headerName: 'Size (MB)',
+        field: 'Department', // ✅ PascalCase
+        headerName: 'Department',
         sortable: true,
-        filter: 'agNumberColumnFilter',
-        valueFormatter: (params) => {
-          const value = params.value;
-          if (value === null || value === undefined || isNaN(value)) return 'N/A';
-          return (Number(value) / 1024 / 1024).toFixed(2);
-        },
-        width: 120,
+        filter: true,
+        width: 150,
       },
       {
-        field: 'itemCount', // ✅ PascalCase
-        headerName: 'Item Count',
+        field: 'JobTitle', // ✅ PascalCase
+        headerName: 'Job Title',
+        sortable: true,
+        filter: true,
+        width: 150,
+      },
+      {
+        field: 'AccountEnabled', // ✅ PascalCase
+        headerName: 'Enabled',
+        sortable: true,
+        filter: true,
+        valueFormatter: (params) => (params.value ? 'Yes' : 'No'),
+        width: 100,
+      },
+      {
+        field: 'InboxItemCount', // ✅ PascalCase
+        headerName: 'Inbox Items',
         sortable: true,
         filter: 'agNumberColumnFilter',
         valueFormatter: (params) => {
@@ -682,36 +692,12 @@ export function useExchangeDiscoveryLogic() {
         width: 120,
       },
       {
-        field: 'archiveEnabled', // ✅ PascalCase
-        headerName: 'Archive',
-        sortable: true,
-        filter: true,
-        valueFormatter: (params) => (params.value ? 'Yes' : 'No'),
-        width: 100,
-      },
-      {
-        field: 'litigationHoldEnabled', // ✅ PascalCase
-        headerName: 'Litigation Hold',
-        sortable: true,
-        filter: true,
-        valueFormatter: (params) => (params.value ? 'Yes' : 'No'),
-        width: 140,
-      },
-      {
-        field: 'isInactive', // ✅ PascalCase
-        headerName: 'Status',
-        sortable: true,
-        filter: true,
-        valueFormatter: (params) => (params.value ? 'Inactive' : 'Active'),
-        width: 100,
-      },
-      {
-        field: 'lastLogonTime', // ✅ PascalCase
-        headerName: 'Last Logon',
+        field: 'CreatedDateTime', // ✅ PascalCase
+        headerName: 'Created',
         sortable: true,
         filter: 'agDateColumnFilter',
         valueFormatter: (params) => {
-          if (!params.value) return 'Never';
+          if (!params.value) return 'N/A';
           // Handle PowerShell date format
           if (params.value.value && params.value.value.startsWith('/Date(')) {
             const ts = params.value.value.match(/\/Date\((\d+)\)\//)?.[1];
@@ -724,6 +710,13 @@ export function useExchangeDiscoveryLogic() {
         },
         width: 120,
       },
+      {
+        field: 'UsageLocation', // ✅ PascalCase
+        headerName: 'Location',
+        sortable: true,
+        filter: true,
+        width: 100,
+      },
     ],
     []
   );
@@ -731,7 +724,7 @@ export function useExchangeDiscoveryLogic() {
   const groupColumns = useMemo<ColDef<ExchangeDistributionGroup>[]>(
     () => [
       {
-        field: 'displayName', // ✅ PascalCase to match PowerShell output
+        field: 'DisplayName', // ✅ PascalCase to match PowerShell output
         headerName: 'Display Name',
         sortable: true,
         filter: true,
@@ -739,44 +732,57 @@ export function useExchangeDiscoveryLogic() {
         width: 200,
       },
       {
-        field: 'primarySmtpAddress', // ✅ PascalCase
+        field: 'PrimarySmtpAddress', // ✅ PascalCase
         headerName: 'Email',
         sortable: true,
         filter: true,
         width: 250,
       },
       {
-        field: 'groupType', // ✅ PascalCase
+        field: 'GroupType', // ✅ PascalCase
         headerName: 'Type',
         sortable: true,
         filter: true,
-        width: 120,
+        width: 150,
       },
       {
-        field: 'memberCount', // ✅ PascalCase
+        field: 'RecipientTypeDetails', // ✅ PascalCase
+        headerName: 'Recipient Type',
+        sortable: true,
+        filter: true,
+        width: 150,
+      },
+      {
+        field: 'MemberCount', // ✅ PascalCase
         headerName: 'Members',
         sortable: true,
         filter: 'agNumberColumnFilter',
         width: 100,
       },
       {
-        field: 'moderationEnabled', // ✅ PascalCase
-        headerName: 'Moderation',
+        field: 'OwnerCount', // ✅ PascalCase
+        headerName: 'Owners',
+        sortable: true,
+        filter: 'agNumberColumnFilter',
+        width: 100,
+      },
+      {
+        field: 'MailEnabled', // ✅ PascalCase
+        headerName: 'Mail Enabled',
         sortable: true,
         filter: true,
         valueFormatter: (params) => (params.value ? 'Yes' : 'No'),
         width: 120,
       },
       {
-        field: 'hiddenFromAddressListsEnabled', // ✅ PascalCase
-        headerName: 'Hidden',
+        field: 'Visibility', // ✅ PascalCase
+        headerName: 'Visibility',
         sortable: true,
         filter: true,
-        valueFormatter: (params) => (params.value ? 'Yes' : 'No'),
         width: 100,
       },
       {
-        field: 'whenCreated', // ✅ PascalCase
+        field: 'CreatedDateTime', // ✅ PascalCase
         headerName: 'Created',
         sortable: true,
         filter: 'agDateColumnFilter',
@@ -801,7 +807,7 @@ export function useExchangeDiscoveryLogic() {
   const ruleColumns = useMemo<ColDef<ExchangeTransportRule>[]>(
     () => [
       {
-        field: 'name', // ✅ PascalCase to match PowerShell output
+        field: 'Name', // ✅ PascalCase to match PowerShell output
         headerName: 'Rule Name',
         sortable: true,
         filter: true,
@@ -809,35 +815,35 @@ export function useExchangeDiscoveryLogic() {
         width: 250,
       },
       {
-        field: 'description', // ✅ PascalCase
+        field: 'Description', // ✅ PascalCase
         headerName: 'Description',
         sortable: true,
         filter: true,
         width: 300,
       },
       {
-        field: 'priority', // ✅ PascalCase
+        field: 'Priority', // ✅ PascalCase
         headerName: 'Priority',
         sortable: true,
         filter: 'agNumberColumnFilter',
         width: 100,
       },
       {
-        field: 'state', // ✅ PascalCase
+        field: 'State', // ✅ PascalCase
         headerName: 'State',
         sortable: true,
         filter: true,
         width: 100,
       },
       {
-        field: 'createdBy', // ✅ PascalCase
+        field: 'CreatedBy', // ✅ PascalCase
         headerName: 'Created By',
         sortable: true,
         filter: true,
         width: 150,
       },
       {
-        field: 'createdDate', // ✅ PascalCase
+        field: 'CreatedDate', // ✅ PascalCase
         headerName: 'Created',
         sortable: true,
         filter: 'agDateColumnFilter',
@@ -856,7 +862,7 @@ export function useExchangeDiscoveryLogic() {
         width: 120,
       },
       {
-        field: 'modifiedDate', // ✅ PascalCase
+        field: 'ModifiedDate', // ✅ PascalCase
         headerName: 'Modified',
         sortable: true,
         filter: 'agDateColumnFilter',

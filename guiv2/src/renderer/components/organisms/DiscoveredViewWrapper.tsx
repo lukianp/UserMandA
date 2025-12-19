@@ -59,6 +59,7 @@ export const DiscoveredViewWrapper: React.FC<DiscoveredViewWrapperProps> = ({
   } = useCsvDataLoader(csvPath, {
     enableAutoRefresh: true,
     refreshInterval: 30000,
+    gracefulDegradation: true, // Return empty data instead of error for missing files
   });
 
   // Handle search text change
@@ -113,6 +114,7 @@ export const DiscoveredViewWrapper: React.FC<DiscoveredViewWrapperProps> = ({
       enableSearch={enableSearch}
       enableExport={enableExport}
       data-cy={dataCy}
+      persistenceKey={csvPath}
     />
   );
 };

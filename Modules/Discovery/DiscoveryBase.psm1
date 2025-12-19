@@ -113,12 +113,40 @@ function Start-DiscoveryModule {
                         $authSuccess = $true
                         Write-ModuleLog -ModuleName $ModuleName -Message "Connected to Graph via direct credentials successfully" -Level "SUCCESS"
                     } else {
-                        Write-ModuleLog -ModuleName $ModuleName -Message "Direct auth failed - missing credentials. TenantId: $($null -ne $tenantId), ClientId: $($null -ne $clientId), ClientSecret: $($null -ne $clientSecret)" -Level "ERROR"
+                        Write-ModuleLog -ModuleName $ModuleName -Message "Direct auth failed - missing credentials. TenantId: $($null -ne $tenantId), ClientId: $($null -ne $clientId), ClientSecret: $($null -ne $clientSecret)" -Level "WARN"
                     }
                 }
-                
+
+                # Fallback to interactive authentication for Graph service
+                if (-not $authSuccess -and $service -eq 'Graph') {
+                    Write-ModuleLog -ModuleName $ModuleName -Message "Attempting interactive Graph authentication..." -Level "INFO"
+                    try {
+                        # Import Microsoft Graph module if needed
+                        if (-not (Get-Module -Name Microsoft.Graph.Authentication)) {
+                            Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
+                        }
+
+                        # Connect interactively - this will open a browser for login
+                        $null = Connect-MgGraph -Scopes "Application.Read.All", "Directory.Read.All" -NoWelcome -ErrorAction Stop
+
+                        $graphContext = Get-MgContext
+                        if ($graphContext) {
+                            $connections[$service] = @{
+                                AuthType = 'Interactive'
+                                TenantId = $graphContext.TenantId
+                                Account = $graphContext.Account
+                                Connected = $true
+                            }
+                            $authSuccess = $true
+                            Write-ModuleLog -ModuleName $ModuleName -Message "Connected to Graph via interactive authentication successfully" -Level "SUCCESS"
+                        }
+                    } catch {
+                        Write-ModuleLog -ModuleName $ModuleName -Message "Interactive auth failed: $($_.Exception.Message)" -Level "ERROR"
+                    }
+                }
+
                 if (-not $authSuccess) {
-                    throw "Failed to authenticate to $service service using both session and direct methods"
+                    throw "Failed to authenticate to $service service using session, direct, and interactive methods"
                 }
             } catch {
                 $result.AddError("Failed to connect to $service service", $_.Exception, @{Service = $service})

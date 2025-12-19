@@ -680,7 +680,42 @@ function Invoke-AzureResourceDiscovery {
         
         # Store all discovered data
         $Result.RecordCount = $allDiscoveredData.Count
-        
+
+        #region Export to CSV for discovered views
+        try {
+            $outputPath = $Context.Paths.RawDataOutput
+            if ($outputPath -and (Test-Path $outputPath -IsValid)) {
+                # Ensure directory exists
+                if (-not (Test-Path $outputPath)) {
+                    $null = New-Item -Path $outputPath -ItemType Directory -Force
+                }
+
+                # Export combined CSV (this is what the UI looks for)
+                if ($allDiscoveredData.Count -gt 0) {
+                    $combinedCsvPath = Join-Path $outputPath "AzureResourceDiscovery.csv"
+                    $null = $allDiscoveredData | Export-Csv -Path $combinedCsvPath -NoTypeInformation -Force -Encoding UTF8
+                    Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Exported $($allDiscoveredData.Count) resources to $combinedCsvPath" -Level "SUCCESS"
+
+                    # Also export per-type CSV files for detailed views
+                    $groupedData = $allDiscoveredData | Group-Object -Property _DataType
+                    foreach ($group in $groupedData) {
+                        $dataType = if ($group.Name) { $group.Name } else { 'Unknown' }
+                        $fileName = "AzureResourceDiscovery_$dataType.csv"
+                        $filePath = Join-Path $outputPath $fileName
+                        $null = $group.Group | Export-Csv -Path $filePath -NoTypeInformation -Force -Encoding UTF8
+                        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Exported $($group.Count) $dataType records to $fileName" -Level "SUCCESS"
+                    }
+                } else {
+                    Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "No data to export to CSV" -Level "WARNING"
+                }
+            } else {
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Output path not available in Context, skipping CSV export" -Level "WARNING"
+            }
+        } catch {
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Failed to export CSV: $($_.Exception.Message)" -Level "ERROR"
+        }
+        #endregion
+
         # Return data grouped by type
         return $allDiscoveredData | Group-Object -Property _DataType
     }

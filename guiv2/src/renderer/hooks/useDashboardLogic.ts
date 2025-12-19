@@ -134,7 +134,7 @@ export const useDashboardLogic = (): UseDashboardLogicReturn => {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [selectedSourceProfile, loadDashboardData]); // Reload when profile changes
+  }, [selectedSourceProfile]); // Reload when profile changes
 
   return {
     stats,

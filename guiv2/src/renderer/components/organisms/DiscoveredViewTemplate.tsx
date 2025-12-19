@@ -47,6 +47,8 @@ export interface DiscoveredViewTemplateProps<T extends BaseDiscoveryData = BaseD
   enableExport?: boolean;
   /** Data-cy attribute for testing */
   'data-cy'?: string;
+  /** Unique key for persisting grid state (columns, filters, sorting) */
+  persistenceKey?: string;
 }
 
 /**
@@ -69,16 +71,17 @@ export const DiscoveredViewTemplate = React.memo<DiscoveredViewTemplateProps>(
     enableSearch = true,
     enableExport = true,
     'data-cy': dataCy,
+    persistenceKey,
   }) {
-    console.log(`[DiscoveredViewTemplate] ========== RENDER START ==========`);
-    console.log(`[DiscoveredViewTemplate] Title: "${title}"`);
-    console.log(`[DiscoveredViewTemplate] Data: ${data?.length || 0} rows`);
-    console.log(`[DiscoveredViewTemplate] Columns: ${columns?.length || 0}`);
-    console.log(`[DiscoveredViewTemplate] Loading: ${loading}`);
-    console.log(`[DiscoveredViewTemplate] Error: ${error?.message || 'none'}`);
-    console.log(`[DiscoveredViewTemplate] SearchText: "${searchText}"`);
-    console.log(`[DiscoveredViewTemplate] LastRefresh: ${lastRefresh?.toISOString() || 'null'}`);
-    console.log(`[DiscoveredViewTemplate] ========== RENDER END ==========`);
+    // Removed excessive debug logging to reduce console noise
+
+
+
+
+
+
+
+
 
     // Filter data based on search text
     const filteredData = useMemo(() => {
@@ -342,6 +345,7 @@ export const DiscoveredViewTemplate = React.memo<DiscoveredViewTemplateProps>(
               enableGrouping={true}
               height="calc(100vh - 280px)"
               data-cy={`${dataCy}-grid`}
+              persistenceKey={persistenceKey}
             />
           )}
         </div>

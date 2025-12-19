@@ -11,10 +11,14 @@ import { createRoot } from 'react-dom/client';
 // Register AG Grid modules (required for AG Grid v31+)
 import { ModuleRegistry } from 'ag-grid-community';
 import { AllCommunityModule } from 'ag-grid-community';
-import { AllEnterpriseModule } from 'ag-grid-enterprise';
+import { AllEnterpriseModule, LicenseManager } from 'ag-grid-enterprise';
 
 // Register all AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule, AllEnterpriseModule]);
+
+// Set AG Grid Enterprise license key (removes trial watermark)
+// Note: Replace with actual license key for production use
+// LicenseManager.setLicenseKey('your-ag-grid-license-key-here');
 
 import App from './renderer/App';
 
