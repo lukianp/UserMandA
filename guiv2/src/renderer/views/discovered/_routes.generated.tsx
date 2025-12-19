@@ -5,9 +5,23 @@
 import React, { lazy, Suspense } from 'react';
 import { Spinner } from '../../components/atoms/Spinner';
 
+// Loading fallback component for discovered views
+const LoadingFallback: React.FC = () => (
+  <div className="flex items-center justify-center h-full min-h-[400px]">
+    <Spinner size="lg" />
+  </div>
+);
+
+// Helper to wrap lazy components with Suspense
+const withSuspense = (Component: React.LazyExoticComponent<React.ComponentType<any>>) => (
+  <Suspense fallback={<LoadingFallback />}>
+    <Component />
+  </Suspense>
+);
+
 const ActivedirectoryDiscoveredView = lazy(() => import('./ActivedirectoryDiscoveredView'));
 const ApplicationsDiscoveredView = lazy(() => import('./ApplicationsDiscoveredView'));
-const AwsDiscoveredView = lazy(() => import('./AwsDiscoveredView'));
+const AwsDiscoveredView = lazy(() => import('./AWSDiscoveredView'));
 const AzureDiscoveredView = lazy(() => import('./AzureDiscoveredView'));
 const AzureresourceDiscoveredView = lazy(() => import('./AzureresourceDiscoveredView'));
 const BackuprecoveryDiscoveredView = lazy(() => import('./BackuprecoveryDiscoveredView'));
@@ -24,7 +38,7 @@ const ExchangeDiscoveredView = lazy(() => import('./ExchangeDiscoveredView'));
 const ExternalidentityDiscoveredView = lazy(() => import('./ExternalidentityDiscoveredView'));
 const FileserverDiscoveredView = lazy(() => import('./FileserverDiscoveredView'));
 const FilesystemDiscoveredView = lazy(() => import('./FilesystemDiscoveredView'));
-const GcpDiscoveredView = lazy(() => import('./GcpDiscoveredView'));
+const GcpDiscoveredView = lazy(() => import('./GCPDiscoveredView'));
 const GpoDiscoveredView = lazy(() => import('./GpoDiscoveredView'));
 const GraphDiscoveredView = lazy(() => import('./GraphDiscoveredView'));
 const InfrastructureDiscoveredView = lazy(() => import('./InfrastructureDiscoveredView'));
@@ -46,185 +60,185 @@ const SqlserverDiscoveredView = lazy(() => import('./SqlserverDiscoveredView'));
 const StoragearrayDiscoveredView = lazy(() => import('./StoragearrayDiscoveredView'));
 const TeamsDiscoveredView = lazy(() => import('./TeamsDiscoveredView'));
 const VirtualizationDiscoveredView = lazy(() => import('./VirtualizationDiscoveredView'));
-const VmwareDiscoveredView = lazy(() => import('./VmwareDiscoveredView'));
+const VmwareDiscoveredView = lazy(() => import('./VMwareDiscoveredView'));
 const WebserverconfigDiscoveredView = lazy(() => import('./WebserverconfigDiscoveredView'));
-const HypervDiscoveredView = lazy(() => import('./HypervDiscoveredView'));
+const HypervDiscoveredView = lazy(() => import('./HyperVDiscoveredView'));
 
 export const discoveredRoutes = [
   {
     path: '/discovered/activedirectory',
-    element: <ActivedirectoryDiscoveredView />
+    element: withSuspense(ActivedirectoryDiscoveredView)
   },
   {
     path: '/discovered/applications',
-    element: <ApplicationsDiscoveredView />
+    element: withSuspense(ApplicationsDiscoveredView)
   },
   {
     path: '/discovered/aws',
-    element: <AwsDiscoveredView />
+    element: withSuspense(AwsDiscoveredView)
   },
   {
     path: '/discovered/azure',
-    element: <AzureDiscoveredView />
+    element: withSuspense(AzureDiscoveredView)
   },
   {
     path: '/discovered/azureresource',
-    element: <AzureresourceDiscoveredView />
+    element: withSuspense(AzureresourceDiscoveredView)
   },
   {
     path: '/discovered/backuprecovery',
-    element: <BackuprecoveryDiscoveredView />
+    element: withSuspense(BackuprecoveryDiscoveredView)
   },
   {
     path: '/discovered/certificateauthority',
-    element: <CertificateauthorityDiscoveredView />
+    element: withSuspense(CertificateauthorityDiscoveredView)
   },
   {
     path: '/discovered/certificates',
-    element: <CertificatesDiscoveredView />
+    element: withSuspense(CertificatesDiscoveredView)
   },
   {
     path: '/discovered/conditionalaccess',
-    element: <ConditionalaccessDiscoveredView />
+    element: withSuspense(ConditionalaccessDiscoveredView)
   },
   {
     path: '/discovered/databaseschema',
-    element: <DatabaseschemaDiscoveredView />
+    element: withSuspense(DatabaseschemaDiscoveredView)
   },
   {
     path: '/discovered/dataclassification',
-    element: <DataclassificationDiscoveredView />
+    element: withSuspense(DataclassificationDiscoveredView)
   },
   {
     path: '/discovered/dlp',
-    element: <DlpDiscoveredView />
+    element: withSuspense(DlpDiscoveredView)
   },
   {
     path: '/discovered/dnsdhcp',
-    element: <DnsdhcpDiscoveredView />
+    element: withSuspense(DnsdhcpDiscoveredView)
   },
   {
     path: '/discovered/entraidapp',
-    element: <EntraidappDiscoveredView />
+    element: withSuspense(EntraidappDiscoveredView)
   },
   {
     path: '/discovered/environmentdetection',
-    element: <EnvironmentdetectionDiscoveredView />
+    element: withSuspense(EnvironmentdetectionDiscoveredView)
   },
   {
     path: '/discovered/exchange',
-    element: <ExchangeDiscoveredView />
+    element: withSuspense(ExchangeDiscoveredView)
   },
   {
     path: '/discovered/externalidentity',
-    element: <ExternalidentityDiscoveredView />
+    element: withSuspense(ExternalidentityDiscoveredView)
   },
   {
     path: '/discovered/fileserver',
-    element: <FileserverDiscoveredView />
+    element: withSuspense(FileserverDiscoveredView)
   },
   {
     path: '/discovered/filesystem',
-    element: <FilesystemDiscoveredView />
+    element: withSuspense(FilesystemDiscoveredView)
   },
   {
     path: '/discovered/gcp',
-    element: <GcpDiscoveredView />
+    element: withSuspense(GcpDiscoveredView)
   },
   {
     path: '/discovered/gpo',
-    element: <GpoDiscoveredView />
+    element: withSuspense(GpoDiscoveredView)
   },
   {
     path: '/discovered/graph',
-    element: <GraphDiscoveredView />
+    element: withSuspense(GraphDiscoveredView)
   },
   {
     path: '/discovered/infrastructure',
-    element: <InfrastructureDiscoveredView />
+    element: withSuspense(InfrastructureDiscoveredView)
   },
   {
     path: '/discovered/intune',
-    element: <IntuneDiscoveredView />
+    element: withSuspense(IntuneDiscoveredView)
   },
   {
     path: '/discovered/licensing',
-    element: <LicensingDiscoveredView />
+    element: withSuspense(LicensingDiscoveredView)
   },
   {
     path: '/discovered/multidomainforest',
-    element: <MultidomainforestDiscoveredView />
+    element: withSuspense(MultidomainforestDiscoveredView)
   },
   {
     path: '/discovered/networkinfrastructure',
-    element: <NetworkinfrastructureDiscoveredView />
+    element: withSuspense(NetworkinfrastructureDiscoveredView)
   },
   {
     path: '/discovered/onedrive',
-    element: <OnedriveDiscoveredView />
+    element: withSuspense(OnedriveDiscoveredView)
   },
   {
     path: '/discovered/paloalto',
-    element: <PaloaltoDiscoveredView />
+    element: withSuspense(PaloaltoDiscoveredView)
   },
   {
     path: '/discovered/panoramainterrogation',
-    element: <PanoramainterrogationDiscoveredView />
+    element: withSuspense(PanoramainterrogationDiscoveredView)
   },
   {
     path: '/discovered/physicalserver',
-    element: <PhysicalserverDiscoveredView />
+    element: withSuspense(PhysicalserverDiscoveredView)
   },
   {
     path: '/discovered/powerbi',
-    element: <PowerbiDiscoveredView />
+    element: withSuspense(PowerbiDiscoveredView)
   },
   {
     path: '/discovered/powerplatform',
-    element: <PowerplatformDiscoveredView />
+    element: withSuspense(PowerplatformDiscoveredView)
   },
   {
     path: '/discovered/printers',
-    element: <PrintersDiscoveredView />
+    element: withSuspense(PrintersDiscoveredView)
   },
   {
     path: '/discovered/scheduledtasks',
-    element: <ScheduledtasksDiscoveredView />
+    element: withSuspense(ScheduledtasksDiscoveredView)
   },
   {
     path: '/discovered/securityinfrastructure',
-    element: <SecurityinfrastructureDiscoveredView />
+    element: withSuspense(SecurityinfrastructureDiscoveredView)
   },
   {
     path: '/discovered/sharepoint',
-    element: <SharepointDiscoveredView />
+    element: withSuspense(SharepointDiscoveredView)
   },
   {
     path: '/discovered/sqlserver',
-    element: <SqlserverDiscoveredView />
+    element: withSuspense(SqlserverDiscoveredView)
   },
   {
     path: '/discovered/storagearray',
-    element: <StoragearrayDiscoveredView />
+    element: withSuspense(StoragearrayDiscoveredView)
   },
   {
     path: '/discovered/teams',
-    element: <TeamsDiscoveredView />
+    element: withSuspense(TeamsDiscoveredView)
   },
   {
     path: '/discovered/virtualization',
-    element: <VirtualizationDiscoveredView />
+    element: withSuspense(VirtualizationDiscoveredView)
   },
   {
     path: '/discovered/vmware',
-    element: <VmwareDiscoveredView />
+    element: withSuspense(VmwareDiscoveredView)
   },
   {
     path: '/discovered/webserverconfig',
-    element: <WebserverconfigDiscoveredView />
+    element: withSuspense(WebserverconfigDiscoveredView)
   },
   {
     path: '/discovered/hyperv',
-    element: <HypervDiscoveredView />
+    element: withSuspense(HypervDiscoveredView)
   },
 ];
