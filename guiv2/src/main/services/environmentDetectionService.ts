@@ -239,7 +239,7 @@ export default class EnvironmentDetectionService extends EventEmitter {
             { name: 'User Management', available: true },
             { name: 'Group Management', available: true },
             { name: 'Application Registration', available: true },
-            { name: 'Conditional Access', available: azureAdData.HasPremium, requiresLicense: true, licenseType: 'Azure AD Premium' },
+            { name: 'Conditional Access', available: azureAdData.HasPremium ?? false, requiresLicense: true, licenseType: 'Azure AD Premium' },
           ],
         });
       }
@@ -268,7 +268,7 @@ export default class EnvironmentDetectionService extends EventEmitter {
           status: 'available',
           capabilities: [
             { name: 'Mailbox Management', available: true },
-            { name: 'Advanced Threat Protection', available: exchangeData.HasATP, requiresLicense: true, licenseType: 'Exchange Online Plan 2' },
+            { name: 'Advanced Threat Protection', available: exchangeData.HasATP ?? false, requiresLicense: true, licenseType: 'Exchange Online Plan 2' },
           ],
         });
       }
@@ -297,7 +297,7 @@ export default class EnvironmentDetectionService extends EventEmitter {
           status: 'available',
           capabilities: [
             { name: 'Site Collection Management', available: true },
-            { name: 'Advanced DLP', available: sharepointData.HasAdvancedDLP, requiresLicense: true, licenseType: 'Microsoft 365 E5' },
+            { name: 'Advanced DLP', available: sharepointData.HasAdvancedDLP ?? false, requiresLicense: true, licenseType: 'Microsoft 365 E5' },
           ],
         });
       }
@@ -323,7 +323,7 @@ export default class EnvironmentDetectionService extends EventEmitter {
           status: 'available',
           capabilities: [
             { name: 'Team Management', available: true },
-            { name: 'Phone System', available: teamsData.HasPhoneSystem, requiresLicense: true, licenseType: 'Teams Phone' },
+            { name: 'Phone System', available: teamsData.HasPhoneSystem ?? false, requiresLicense: true, licenseType: 'Teams Phone' },
           ],
         });
       }
@@ -377,7 +377,7 @@ export default class EnvironmentDetectionService extends EventEmitter {
           capabilities: [
             { name: 'User Management', available: true },
             { name: 'Group Policy Management', available: true },
-            { name: 'Fine-Grained Password Policies', available: adData.SupportsFGPP },
+            { name: 'Fine-Grained Password Policies', available: adData.SupportsFGPP ?? false },
           ],
         });
       }

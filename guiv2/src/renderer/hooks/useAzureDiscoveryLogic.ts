@@ -183,26 +183,41 @@ export const useAzureDiscoveryLogic = () => {
     const unsubscribeComplete = window.electron.onDiscoveryComplete((data) => {
       console.log('[AzureDiscoveryHook] Complete event received:', data, 'currentTokenRef:', currentTokenRef.current);
       if (data.executionId === currentTokenRef.current) {
+        console.log('[AzureDiscoveryHook] onDiscoveryComplete - Full data object:', data);
+        console.log('[AzureDiscoveryHook] data.result:', data.result);
+        console.log('[AzureDiscoveryHook] data.result type:', typeof data.result);
+        console.log('[AzureDiscoveryHook] data.result keys:', data.result ? Object.keys(data.result) : 'null');
+        console.log('[AzureDiscoveryHook] data.result.totalItems:', data?.result?.totalItems);
+        console.log('[AzureDiscoveryHook] data.result.RecordCount:', data?.result?.RecordCount);
+        console.log('[AzureDiscoveryHook] data.result.Data:', data?.result?.Data);
+        console.log('[AzureDiscoveryHook] data.result.data:', data?.result?.data);
+
+        // Try multiple ways to get record count
+        const recordCount = data?.result?.totalItems || data?.result?.RecordCount || data?.result?.Data?.length || data?.result?.data?.length || 0;
+        console.log('[AzureDiscoveryHook] Calculated recordCount:', recordCount);
+
         const discoveryResult: DiscoveryResult = {
           id: `azure-discovery-${Date.now()}`,
           name: 'Azure Discovery',
           moduleName: 'AzureDiscovery',
           displayName: 'Microsoft 365 / Azure AD Discovery',
-          itemCount: data?.result?.totalItems || 0,
+          itemCount: recordCount,
           discoveryTime: new Date().toISOString(),
           duration: data.duration || 0,
           status: 'Completed',
           filePath: data?.result?.outputPath || '',
           success: true,
-          summary: `Discovered ${data?.result?.totalItems || 0} items from ${selectedSourceProfile?.companyName || 'tenant'}`,
+          summary: `Discovered ${recordCount} items from ${selectedSourceProfile?.companyName || 'tenant'}`,
           errorMessage: '',
           additionalData: data.result,
           createdAt: new Date().toISOString(),
         };
 
+        console.log('[AzureDiscoveryHook] Result object to store:', discoveryResult);
         setResults([discoveryResult]);
         addResult(discoveryResult);
-        addLog(`Discovery completed successfully! Found ${data?.result?.totalItems} items.`, 'success');
+        console.log('[AzureDiscoveryHook] Called addResult, result should be in store now');
+        addLog(`Discovery completed successfully! Found ${recordCount} items.`, 'success');
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);

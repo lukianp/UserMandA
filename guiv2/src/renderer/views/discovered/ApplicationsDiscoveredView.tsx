@@ -19,7 +19,7 @@ export const ApplicationsDiscoveredView: React.FC = () => {
   return (
     <DiscoveredViewWrapper
       moduleName="Applications"
-      csvPath="ApplicationsDiscovery.csv"
+      csvPath="ApplicationCatalog.csv"
       title="Applications"
       description="Installed applications and software inventory"
       enableSearch={true}

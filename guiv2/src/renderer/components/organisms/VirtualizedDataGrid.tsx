@@ -14,6 +14,8 @@ import { Download, Printer, Eye, EyeOff, Filter } from 'lucide-react';
 
 import { Button } from '../atoms/Button';
 import { Spinner } from '../atoms/Spinner';
+import { StatusBadgeCellRenderer } from '../atoms/StatusBadgeCellRenderer';
+import '../../styles/ag-grid-custom.css';
 
 // Lazy load AG Grid CSS - only load once when first grid mounts
 let agGridStylesLoaded = false;
@@ -25,6 +27,124 @@ const loadAgGridStyles = () => {
   import('ag-grid-community/styles/ag-theme-alpine.css');
 
   agGridStylesLoaded = true;
+};
+
+/**
+ * Enhance column definitions with auto-detected cell renderers and formatters
+ * - Status columns → StatusBadgeCellRenderer with colored badges
+ * - Date columns → formatted date/time display
+ * - Boolean columns → StatusBadgeCellRenderer with Yes/No
+ */
+const enhanceColumns = (columns: ColDef[]): ColDef[] => {
+  return columns.map(col => {
+    const field = col.field?.toLowerCase() || '';
+    const headerName = col.headerName?.toLowerCase() || '';
+
+    // Auto-detect status/state columns and apply badge renderer
+    if (
+      field.includes('status') ||
+      field.includes('state') ||
+      field.includes('enabled') ||
+      field.includes('compliant') ||
+      field.includes('active') ||
+      field.includes('health') ||
+      field.includes('condition') ||
+      headerName.includes('status') ||
+      headerName.includes('state')
+    ) {
+      return {
+        ...col,
+        cellRenderer: StatusBadgeCellRenderer,
+        cellClass: 'ag-cell-status',
+        width: col.width || 150,
+      };
+    }
+
+    // Format date columns
+    if (
+      field.includes('date') ||
+      field.includes('datetime') ||
+      field.includes('created') ||
+      field.includes('modified') ||
+      field.includes('updated') ||
+      field.includes('timestamp') ||
+      field.includes('expires') ||
+      field.includes('lastrun') ||
+      field.includes('nextrun') ||
+      headerName.includes('date') ||
+      headerName.includes('time')
+    ) {
+      return {
+        ...col,
+        valueFormatter: (params) => {
+          if (!params.value) return '';
+          try {
+            const date = new Date(params.value);
+            if (isNaN(date.getTime())) return params.value;
+            return date.toLocaleString();
+          } catch {
+            return params.value;
+          }
+        },
+        width: col.width || 180,
+      };
+    }
+
+    // Format boolean columns as badges
+    if (
+      field.startsWith('is') ||
+      field.startsWith('has') ||
+      field.startsWith('can') ||
+      field === 'enabled' ||
+      field === 'active' ||
+      field === 'disabled' ||
+      field === 'synced' ||
+      headerName.startsWith('is ') ||
+      headerName.startsWith('has ')
+    ) {
+      return {
+        ...col,
+        cellRenderer: StatusBadgeCellRenderer,
+        valueFormatter: (params) => {
+          if (params.value === null || params.value === undefined) return 'N/A';
+          // Handle string boolean values
+          if (typeof params.value === 'string') {
+            const lower = params.value.toLowerCase();
+            if (lower === 'true' || lower === 'yes' || lower === '1') return 'Yes';
+            if (lower === 'false' || lower === 'no' || lower === '0') return 'No';
+            return params.value;
+          }
+          return params.value ? 'Yes' : 'No';
+        },
+        width: col.width || 120,
+      };
+    }
+
+    // Format numeric columns
+    if (
+      field.includes('count') ||
+      field.includes('total') ||
+      field.includes('size') ||
+      field.includes('bytes') ||
+      headerName.includes('count') ||
+      headerName.includes('total')
+    ) {
+      return {
+        ...col,
+        valueFormatter: (params) => {
+          if (params.value === null || params.value === undefined) return '';
+          if (typeof params.value === 'number') {
+            return params.value.toLocaleString();
+          }
+          return params.value;
+        },
+        type: 'numericColumn',
+        width: col.width || 130,
+      };
+    }
+
+    return col;
+  });
 };
 
 export interface VirtualizedDataGridProps<T = any> {
@@ -106,6 +226,11 @@ function VirtualizedDataGridInner<T = any>(
     console.log('[VirtualizedDataGrid] rowData computed:', result.length, 'rows');
     return result;
   }, [data]);
+
+  // Enhanced columns with auto-detected cell renderers
+  const enhancedColumns = useMemo(() => {
+    return enhanceColumns(columns);
+  }, [columns]);
 
   // Load AG Grid styles on component mount
   useEffect(() => {
@@ -237,10 +362,10 @@ function VirtualizedDataGridInner<T = any>(
   // Auto-size all columns
   const autoSizeColumns = useCallback(() => {
     if (gridApi) {
-      const allColumnIds = columns.map(c => c.field).filter(Boolean) as string[];
+      const allColumnIds = enhancedColumns.map(c => c.field).filter(Boolean) as string[];
       gridApi.autoSizeColumns(allColumnIds);
     }
-  }, [gridApi, columns]);
+  }, [gridApi, enhancedColumns]);
 
   // Container classes
   const containerClasses = clsx(
@@ -364,7 +489,7 @@ function VirtualizedDataGridInner<T = any>(
           <AgGridReact
             ref={gridRef}
             rowData={rowData}
-            columnDefs={columns}
+            columnDefs={enhancedColumns}
             defaultColDef={defaultColDef}
             gridOptions={gridOptions}
             onGridReady={onGridReady}
@@ -385,7 +510,7 @@ function VirtualizedDataGridInner<T = any>(
         {showColumnPanel && (
           <div className="absolute top-0 right-0 w-64 h-full bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 p-4 overflow-y-auto z-20">
             <h3 className="font-semibold text-sm mb-3">Column Visibility</h3>
-            {columns.map((col) => (
+            {enhancedColumns.map((col) => (
               <label key={col.field} className="flex items-center gap-2 py-1">
                 <input
                   type="checkbox"

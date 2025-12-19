@@ -111,7 +111,8 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = React.memo(({
     statusColorClasses[status],
     dotSizeClasses[size],
     {
-      'animate-pulse': animate,
+      'animate-pulse': animate && !['online', 'success'].includes(status),
+      'animate-pulse-glow': animate && ['online', 'success'].includes(status),
     }
   );
 

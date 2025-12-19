@@ -1,4 +1,4 @@
-se eimport * as React from 'react';
+import * as React from 'react';
 import { FolderOpen, Play, XCircle, Download, Clock, HardDrive, Shield, AlertTriangle, Settings } from 'lucide-react';
 
 import { useFileSystemDiscoveryLogic } from '../../hooks/useFileSystemDiscoveryLogic';
@@ -51,15 +51,15 @@ const FileSystemDiscoveryView: React.FC = () => {
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="filesystem-discovery-view" data-testid="filesystem-discovery-view">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-              <FolderOpen className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-lg">
+              <FolderOpen size={28} />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">File System Discovery</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Discover file shares and storage to assess data migration scope and identify security risks</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Discover file shares and storage to assess data migration scope and identify security risks</p>
             </div>
           </div>
 

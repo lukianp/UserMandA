@@ -104,7 +104,7 @@ const UsersView: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <Button
-            onClick={loadUsers}
+            onClick={() => loadUsers()}
             variant="secondary"
             icon={<RefreshCw size={18} />}
             loading={isLoading}

@@ -21,6 +21,7 @@ import {
   Search,
   ChevronRight,
   ChevronDown,
+  ChevronLeft,
   Cloud,
   Mail,
   HardDrive,
@@ -73,6 +74,9 @@ export const Sidebar: React.FC = () => {
   const { selectedSourceProfile, selectedTargetProfile } = useProfileStore();
   const { systemStatus } = useSystemHealthLogic();
   const location = useLocation();
+
+  // State for sidebar collapse
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // State for collapsible sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -188,30 +192,58 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-64 bg-gray-900 text-white flex flex-col relative z-50">
+    <aside className={clsx(
+      'bg-gray-900 text-white flex flex-col relative z-50 transition-all duration-300 ease-in-out',
+      isCollapsed ? 'w-16' : 'w-64'
+    )}>
+      {/* Collapse/Expand Toggle Button */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className={clsx(
+          'absolute -right-3 top-20 z-50',
+          'w-6 h-6 rounded-full',
+          'bg-gray-800 border border-gray-700',
+          'flex items-center justify-center',
+          'text-gray-400 hover:text-white hover:bg-gray-700',
+          'transition-all duration-200',
+          'shadow-lg'
+        )}
+        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+      </button>
+
       {/* Logo/Title */}
       <div className="p-4 border-b border-gray-800">
-        <h1 className="text-xl font-bold">Enterprise Discovery & Migration Suite</h1>
-        <p className="text-xs text-gray-400 mt-1">Complete IT Assessment Platform</p>
+        {!isCollapsed ? (
+          <>
+            <h1 className="text-xl font-bold">Enterprise Discovery & Migration Suite</h1>
+            <p className="text-xs text-gray-400 mt-1">Complete IT Assessment Platform</p>
+          </>
+        ) : (
+          <div className="text-center text-xs font-bold">EDMS</div>
+        )}
       </div>
 
       {/* Profile Section */}
-      <div className="p-4 border-b border-gray-800">
-        <ProfileSelector
-          type="source"
-          label="Source Profile"
-          showActions={true}
-          className="mb-3"
-          data-cy="sidebar-source-profile"
-        />
-        <div className="h-px bg-gray-800 my-3" />
-        <ProfileSelector
-          type="target"
-          label="Target Profile"
-          showActions={true}
-          data-cy="sidebar-target-profile"
-        />
-      </div>
+      {!isCollapsed && (
+        <div className="p-4 border-b border-gray-800">
+          <ProfileSelector
+            type="source"
+            label="Source Profile"
+            showActions={true}
+            className="mb-3"
+            data-cy="sidebar-source-profile"
+          />
+          <div className="h-px bg-gray-800 my-3" />
+          <ProfileSelector
+            type="target"
+            label="Target Profile"
+            showActions={true}
+            data-cy="sidebar-target-profile"
+          />
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4">
@@ -221,20 +253,22 @@ export const Sidebar: React.FC = () => {
               to={item.path}
               className={({ isActive }) =>
                 clsx(
-                  'flex items-center gap-3 px-4 py-2 text-sm transition-colors',
+                  'flex items-center gap-3 px-4 py-2 text-sm transition-all duration-200',
                   'hover:bg-gray-800 hover:text-white',
+                  isCollapsed && 'justify-center px-0',
                   isActive
-                    ? 'bg-gray-800 text-white border-l-4 border-blue-500'
+                    ? 'bg-gradient-to-r from-blue-600/20 to-transparent text-white border-l-4 border-blue-500'
                     : 'text-gray-300'
                 )
               }
+              title={isCollapsed ? item.label : undefined}
             >
               {item.icon}
-              <span>{item.label}</span>
+              {!isCollapsed && <span>{item.label}</span>}
             </NavLink>
 
             {/* Child items */}
-            {item.children && (
+            {item.children && !isCollapsed && (
               <div className="ml-4">
                 {item.children.map((child) => (
                   <div key={child.path}>
@@ -242,10 +276,10 @@ export const Sidebar: React.FC = () => {
                       to={child.path}
                       className={({ isActive }) =>
                         clsx(
-                          'flex items-center gap-2 px-4 py-1.5 text-sm transition-colors',
+                          'flex items-center gap-2 px-4 py-1.5 text-sm transition-all duration-200',
                           'hover:bg-gray-800 hover:text-white',
                           isActive
-                            ? 'bg-gray-800 text-white'
+                            ? 'bg-gradient-to-r from-blue-500/10 to-transparent text-white'
                             : 'text-gray-400'
                         )
                       }
@@ -263,10 +297,10 @@ export const Sidebar: React.FC = () => {
                             to={grandchild.path}
                             className={({ isActive }) =>
                               clsx(
-                                'flex items-center gap-2 px-4 py-1.5 text-xs transition-colors',
+                                'flex items-center gap-2 px-4 py-1.5 text-xs transition-all duration-200',
                                 'hover:bg-gray-800 hover:text-white',
                                 isActive
-                                  ? 'bg-gray-800 text-white'
+                                  ? 'bg-gradient-to-r from-cyan-500/10 to-transparent text-white'
                                   : 'text-gray-500'
                               )
                             }
@@ -286,9 +320,11 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {/* System Status Section */}
-      <div className="p-4 border-t border-gray-800">
-        <SystemStatus indicators={systemStatus} showLastSync={true} />
-      </div>
+      {!isCollapsed && (
+        <div className="p-4 border-t border-gray-800">
+          <SystemStatus indicators={systemStatus} showLastSync={true} />
+        </div>
+      )}
     </aside>
   );
 };

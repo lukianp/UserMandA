@@ -65,14 +65,16 @@ const ApplicationDiscoveryView: React.FC = () => {
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="app-discovery-view" data-testid="app-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Package className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+        <div className="flex items-center justify-between p-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg">
+              <Package size={28} />
+            </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Application Discovery
               </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Discover application landscape to identify dependencies, compatibility risks, and license obligations
               </p>
             </div>

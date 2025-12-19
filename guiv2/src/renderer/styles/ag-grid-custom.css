@@ -1,0 +1,242 @@
+/* Custom AG Grid Theme for M&A Discovery Suite */
+
+/* Base theme overrides */
+.ag-theme-alpine,
+.ag-theme-alpine-dark {
+  --ag-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ag-font-size: 13px;
+  --ag-grid-size: 6px;
+  --ag-list-item-height: 32px;
+  --ag-row-height: 44px;
+  --ag-header-height: 48px;
+  --ag-header-foreground-color: #374151;
+  --ag-header-background-color: #f9fafb;
+  --ag-odd-row-background-color: #ffffff;
+  --ag-row-hover-color: #eff6ff;
+  --ag-selected-row-background-color: #dbeafe;
+  --ag-range-selection-border-color: #3b82f6;
+  --ag-border-color: #e5e7eb;
+  --ag-secondary-border-color: #f3f4f6;
+}
+
+/* Dark mode */
+.ag-theme-alpine-dark {
+  --ag-header-foreground-color: #e5e7eb;
+  --ag-header-background-color: #1f2937;
+  --ag-background-color: #111827;
+  --ag-odd-row-background-color: #111827;
+  --ag-row-hover-color: #1e3a5f;
+  --ag-selected-row-background-color: #1e40af;
+  --ag-border-color: #374151;
+  --ag-secondary-border-color: #1f2937;
+}
+
+/* Header styling */
+.ag-header-cell {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.ag-header-cell-text {
+  color: var(--ag-header-foreground-color);
+}
+
+/* Row hover effect */
+.ag-row:hover {
+  background-color: var(--ag-row-hover-color) !important;
+  transition: background-color 0.15s ease;
+}
+
+/* Cell styling */
+.ag-cell {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+}
+
+/* Status badge cell renderer */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge--success {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge--warning {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge--error {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge--info {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge--neutral {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+/* Dark mode status badges */
+.ag-theme-alpine-dark .status-badge--success {
+  background-color: #14532d;
+  color: #86efac;
+}
+
+.ag-theme-alpine-dark .status-badge--warning {
+  background-color: #78350f;
+  color: #fcd34d;
+}
+
+.ag-theme-alpine-dark .status-badge--error {
+  background-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+.ag-theme-alpine-dark .status-badge--info {
+  background-color: #1e3a8a;
+  color: #93c5fd;
+}
+
+.ag-theme-alpine-dark .status-badge--neutral {
+  background-color: #374151;
+  color: #9ca3af;
+}
+
+/* Pagination styling */
+.ag-paging-panel {
+  border-top: 1px solid var(--ag-border-color);
+  padding: 12px 16px;
+  font-size: 13px;
+}
+
+/* Floating filter styling */
+.ag-floating-filter-input {
+  border-radius: 6px;
+  border: 1px solid var(--ag-border-color);
+  padding: 4px 8px;
+}
+
+/* Toolbar styling */
+.ag-side-bar {
+  border-left: 1px solid var(--ag-border-color);
+}
+
+/* Status bar styling */
+.ag-status-bar {
+  border-top: 1px solid var(--ag-border-color);
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Selection checkbox */
+.ag-checkbox-input-wrapper {
+  border-radius: 4px;
+}
+
+.ag-checkbox-input-wrapper.ag-checked {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+/* Zebra striping for alternating rows */
+.ag-row-even {
+  background-color: var(--ag-odd-row-background-color);
+}
+
+.ag-row-odd {
+  background-color: #fafafa;
+}
+
+.ag-theme-alpine-dark .ag-row-odd {
+  background-color: #0f172a;
+}
+
+/* Column resize handle */
+.ag-header-cell-resize {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.ag-header-cell:hover .ag-header-cell-resize {
+  opacity: 1;
+}
+
+/* Loading overlay */
+.ag-overlay-loading-wrapper {
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+.ag-theme-alpine-dark .ag-overlay-loading-wrapper {
+  background-color: rgba(17, 24, 39, 0.95);
+}
+
+/* No rows overlay */
+.ag-overlay-no-rows-wrapper {
+  padding: 40px;
+  text-align: center;
+}
+
+/* Cell focus border */
+.ag-cell-focus {
+  border: 1px solid #3b82f6 !important;
+  border-radius: 2px;
+}
+
+/* Menu styling */
+.ag-menu {
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* Filter panel styling */
+.ag-filter-toolpanel-header {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+}
+
+/* Context menu styling */
+.ag-menu-option {
+  padding: 8px 12px;
+  transition: background-color 0.15s;
+}
+
+.ag-menu-option:hover {
+  background-color: #eff6ff;
+}
+
+.ag-theme-alpine-dark .ag-menu-option:hover {
+  background-color: #1e3a5f;
+}
+
+/* Column drop zone */
+.ag-column-drop-wrapper {
+  border: 2px dashed var(--ag-border-color);
+  border-radius: 8px;
+  background-color: var(--ag-header-background-color);
+}
+
+/* Sorting indicator */
+.ag-header-cell-sorted-asc .ag-header-cell-label::after,
+.ag-header-cell-sorted-desc .ag-header-cell-label::after {
+  color: #3b82f6;
+}

@@ -33,15 +33,17 @@ const DomainDiscoveryView: React.FC = () => {
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="domain-discovery-view" data-testid="domain-discovery-view">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Server className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
+              <Server size={28} />
+            </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Domain Discovery
               </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Discover directory structure to identify organizational hierarchy and access permission consolidation needs
               </p>
             </div>

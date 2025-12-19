@@ -60,9 +60,11 @@ const Office365DiscoveryView: React.FC = () => {
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="o365-discovery-view" data-testid="o365-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Cloud className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+        <div className="flex items-center justify-between p-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
+              <Cloud size={28} />
+            </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Office 365 Discovery

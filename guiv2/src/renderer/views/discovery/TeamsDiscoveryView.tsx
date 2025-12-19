@@ -395,7 +395,7 @@ const TeamsDiscoveryView: React.FC = () => {
           percentage: progress.percentComplete || 0,
           message: progress.phaseLabel || 'Processing...'
         } : undefined}
-        onCancel={cancelDiscovery}
+        onStop={cancelDiscovery}
       />
     </div>
   );

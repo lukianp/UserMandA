@@ -130,11 +130,13 @@ const SQLServerDiscoveryView: React.FC = () => {
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="sqlserver-discovery-view" data-testid="sqlserver-discovery-view">
       {/* Header */}
       <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-3">
-          <Database className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg">
+            <Database size={28} />
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">SQL Server Discovery</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Discover database infrastructure to assess application dependencies and plan cloud modernization</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Discover database infrastructure to assess application dependencies and plan cloud modernization</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -327,10 +329,11 @@ const SQLServerDiscoveryView: React.FC = () => {
       <PowerShellExecutionDialog
         isOpen={showExecutionDialog}
         onClose={() => setShowExecutionDialog(false)}
-        title="SQL Server Discovery"
+        scriptName="SQL Server Discovery"
         logs={logs}
         isRunning={isLoading}
-        onCancel={cancelDiscovery}
+        isCancelling={false}
+        onStop={cancelDiscovery}
       />
     </div>
   );

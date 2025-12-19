@@ -109,7 +109,7 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
     scanPorts: false
   });
   const [templates, setTemplates] = useState<any[]>([]);
-  const [selectedTab, setSelectedTab] = useState<string>('software');
+  const [selectedTab, setSelectedTab] = useState<string>('applications');
   const [searchText, setSearchText] = useState<string>('');
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -127,7 +127,7 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
 
   // Load previous discovery results from store on mount
   useEffect(() => {
-    const previousResults = getResultsByModuleName('ApplicationDiscovery');
+    const previousResults = getResultsByModuleName('Application');
     if (previousResults && previousResults.length > 0) {
       console.log('[ApplicationDiscoveryHook] Restoring', previousResults.length, 'previous results from store');
       const latestResult = previousResults[previousResults.length - 1];
@@ -138,14 +138,15 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
 
   // Event listeners for PowerShell streaming
   useEffect(() => {
-    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+    const electronAPI = getElectronAPI();
+    const unsubscribeOutput = electronAPI.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
         addLog(logLevel, data.message);
       }
     });
 
-    const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
+    const unsubscribeComplete = electronAPI.onDiscoveryComplete?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[ApplicationDiscoveryHook] onDiscoveryComplete - Full data object:', data);
         console.log('[ApplicationDiscoveryHook] data.result:', data.result);
@@ -156,7 +157,37 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
         setIsCancelling(false);
         setCurrentToken(null);
 
-        const recordCount = data?.result?.data?.length || data?.result?.RecordCount || data?.result?.Data?.length || data?.result?.totalItems || 0;
+        // Extract the application data from the PowerShell result
+        // Parse the JSON data from stdout field
+        let applicationData: any[] = [];
+        let recordCount = 0;
+
+        try {
+          const stdout = data?.result?.stdout || '';
+
+          // Extract JSON between markers
+          const jsonStartMarker = '<<<JSON_RESULT_START>>>';
+          const jsonEndMarker = '<<<JSON_RESULT_END>>>';
+
+          const startIndex = stdout.indexOf(jsonStartMarker);
+          const endIndex = stdout.indexOf(jsonEndMarker);
+
+          if (startIndex !== -1 && endIndex !== -1) {
+            const jsonContent = stdout.substring(startIndex + jsonStartMarker.length, endIndex).trim();
+            applicationData = JSON.parse(jsonContent);
+            recordCount = applicationData.length;
+          } else {
+            // Fallback to other methods if JSON markers not found
+            applicationData = data?.result?.data || data?.result?.Data || [];
+            recordCount = applicationData.length || data?.result?.RecordCount || data?.result?.totalItems || 0;
+          }
+        } catch (error) {
+          console.error('[ApplicationDiscoveryHook] Error parsing JSON data:', error);
+          // Fallback to other methods
+          applicationData = data?.result?.data || data?.result?.Data || [];
+          recordCount = applicationData.length || data?.result?.RecordCount || data?.result?.totalItems || 0;
+        }
+
         console.log('[ApplicationDiscoveryHook] Calculated recordCount:', recordCount);
 
         const result = {
@@ -172,6 +203,17 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
           success: true,
           summary: `Discovered ${recordCount} applications`,
           errorMessage: '',
+          // Structure data for the view
+          applications: Array.isArray(applicationData) ? applicationData : [],
+          stats: {
+            totalApplications: recordCount,
+            licensedApplications: applicationData.filter((app: any) => app.LicenseType && app.LicenseType !== 'Unknown').length,
+            totalProcesses: 0, // Not applicable for application discovery
+            totalServices: 0, // Not applicable for application discovery
+            runningServices: 0, // Not applicable for application discovery
+            applicationsNeedingUpdate: 0, // Could be calculated from version data
+            securityRisks: 0, // Could be calculated from security ratings
+          },
           additionalData: data.result,
           createdAt: new Date().toISOString(),
         };
@@ -184,7 +226,7 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
       }
     });
 
-    const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
+    const unsubscribeError = electronAPI.onDiscoveryError?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         setIsRunning(false);
         setError(data.error);
@@ -192,7 +234,7 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
       }
     });
 
-    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+    const unsubscribeCancelled = electronAPI.onDiscoveryCancelled?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         setIsRunning(false);
         setIsCancelling(false);
@@ -240,7 +282,7 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
     try {
       // Call PowerShell module - Application Discovery uses Microsoft Graph for cloud applications
       // Pass configuration parameters to control what gets discovered
-      const result = await window.electron.executeDiscovery({
+      const result = await getElectronAPI().executeDiscovery({
         moduleName: 'Application',
         parameters: {
           IncludeAzureADApps: config.IncludeAzureADApps,
@@ -389,8 +431,17 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
     isDiscovering: isRunning,
     selectedTab,
     searchText,
-    filteredData: results ? Object.values(results).flat() : [],
-    columnDefs: [],
+    filteredData: results?.applications || [],
+    columnDefs: [
+      { field: 'Name', headerName: 'Application Name', width: 200 },
+      { field: 'AppId', headerName: 'Application ID', width: 300 },
+      { field: 'AppType', headerName: 'Type', width: 120 },
+      { field: 'Vendor', headerName: 'Vendor', width: 150 },
+      { field: 'Platform', headerName: 'Platform', width: 120 },
+      { field: 'Category', headerName: 'Category', width: 150 },
+      { field: 'DiscoverySource', headerName: 'Source', width: 120 },
+      { field: 'DiscoveredAt', headerName: 'Discovered', width: 180, valueFormatter: (params: any) => new Date(params.value).toLocaleString() },
+    ],
     errors,
     updateConfig,
     loadTemplate,

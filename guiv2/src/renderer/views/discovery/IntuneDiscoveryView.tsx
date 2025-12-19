@@ -110,8 +110,10 @@ const IntuneDiscoveryView: React.FC = () => {
 
       {/* Header */}
       <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-3">
-          <Smartphone className="w-8 h-8 text-blue-600" />
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
+            <Smartphone size={28} />
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Intune Discovery</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">

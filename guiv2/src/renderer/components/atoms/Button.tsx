@@ -4,13 +4,13 @@
  * Fully accessible button with multiple variants and sizes
  */
 
-import React, { forwardRef, ButtonHTMLAttributes } from 'react';
+import React, { forwardRef, ButtonHTMLAttributes, useState } from 'react';
 import { clsx } from 'clsx';
 import { Loader2 } from 'lucide-react';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Visual style variant */
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'link';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'link' | 'gradient' | 'gradient-success';
   /** Button size */
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   /** Optional icon element */
@@ -50,6 +50,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
+    // Ripple state
+    const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([]);
+
     // Variant styles
     const variants = {
       primary: clsx(
@@ -77,6 +80,20 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         'disabled:text-blue-300 disabled:cursor-not-allowed',
         'dark:text-blue-400 dark:hover:text-blue-300'
       ),
+      gradient: clsx(
+        'bg-neon-cyan-gradient text-white',
+        'hover:gradient-shift',
+        'focus:ring-cyan-500',
+        'shadow-button hover:shadow-neon-cyan',
+        'disabled:opacity-50 disabled:cursor-not-allowed'
+      ),
+      'gradient-success': clsx(
+        'bg-success-gradient text-white',
+        'hover:gradient-shift',
+        'focus:ring-emerald-500',
+        'shadow-button hover:shadow-lg',
+        'disabled:opacity-50 disabled:cursor-not-allowed'
+      ),
     };
 
     // Size styles
@@ -90,6 +107,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     // Base button classes
     const baseClasses = clsx(
+      'relative overflow-hidden',
       'inline-flex items-center justify-center',
       'font-medium rounded-md',
       'transition-all duration-200',
@@ -101,10 +119,26 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       className
     );
 
-    // Handle click with loading state
+    // Handle click with loading state and ripple effect
     const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (!loading && !disabled && onClick) {
-        onClick(e);
+      if (!loading && !disabled) {
+        // Create ripple effect
+        const button = e.currentTarget;
+        const rect = button.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const id = Date.now();
+
+        setRipples((prev) => [...prev, { x, y, id }]);
+
+        // Remove ripple after animation
+        setTimeout(() => {
+          setRipples((prev) => prev.filter((ripple) => ripple.id !== id));
+        }, 600);
+
+        if (onClick) {
+          onClick(e);
+        }
       }
     };
 
@@ -130,6 +164,21 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         data-cy={dataCy}
         {...props}
       >
+        {/* Ripple effects */}
+        {ripples.map((ripple) => (
+          <span
+            key={ripple.id}
+            className="absolute bg-white/30 rounded-full animate-ripple pointer-events-none"
+            style={{
+              left: ripple.x,
+              top: ripple.y,
+              width: 10,
+              height: 10,
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+        ))}
+
         {iconPosition === 'leading' && renderIcon() && (
           <span className="mr-2">{renderIcon()}</span>
         )}

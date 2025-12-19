@@ -39,15 +39,17 @@ const AzureDiscoveryView: React.FC = () => {
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="azure-discovery-view" data-testid="azure-discovery-view">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Cloud className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 text-white shadow-lg">
+              <Cloud size={28} />
+            </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Azure / Microsoft 365 Discovery
               </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Discover cloud identity, collaboration, and messaging infrastructure to assess consolidation opportunities and plan hybrid migrations
               </p>
             </div>

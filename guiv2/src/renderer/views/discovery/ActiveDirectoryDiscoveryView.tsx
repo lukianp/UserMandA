@@ -49,14 +49,16 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="ad-discovery-view" data-testid="ad-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Database className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+        <div className="flex items-center justify-between p-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
+              <Database size={28} />
+            </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Active Directory Discovery
               </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Discover on-premises directory infrastructure to identify dependencies and plan cloud migration strategies
               </p>
             </div>

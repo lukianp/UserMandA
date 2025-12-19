@@ -125,11 +125,13 @@ const NetworkDiscoveryView: React.FC = () => {
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="network-discovery-view" data-testid="network-discovery-view">
       {/* Header */}
       <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-3">
-          <Network className="w-8 h-8 text-teal-600 dark:text-teal-400" />
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-lg">
+            <Network size={28} />
+          </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Network Discovery</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Discover network topology and infrastructure to assess connectivity and identify security risks</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Discover network topology and infrastructure to assess connectivity and identify security risks</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -337,10 +339,11 @@ const NetworkDiscoveryView: React.FC = () => {
       <PowerShellExecutionDialog
         isOpen={showExecutionDialog}
         onClose={() => setShowExecutionDialog(false)}
-        title="Network Discovery"
+        scriptName="Network Discovery"
         logs={logs}
         isRunning={isLoading}
-        onCancel={cancelDiscovery}
+        isCancelling={false}
+        onStop={cancelDiscovery}
       />
     </div>
   );

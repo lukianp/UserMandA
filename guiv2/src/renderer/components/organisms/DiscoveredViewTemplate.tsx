@@ -177,30 +177,84 @@ export const DiscoveredViewTemplate = React.memo<DiscoveredViewTemplateProps>(
           </div>
         </div>
 
-        {/* Search bar */}
+        {/* Search bar and Quick Filters */}
         {enableSearch && (
           <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
-            <div className="relative max-w-md">
-              <Search
-                size={18}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchText}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className={clsx(
-                  'w-full pl-10 pr-4 py-2 rounded-lg',
-                  'bg-gray-50 dark:bg-gray-700',
-                  'border border-gray-300 dark:border-gray-600',
-                  'text-gray-900 dark:text-white',
-                  'placeholder-gray-500 dark:placeholder-gray-400',
-                  'focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400',
-                  'transition-colors'
+            <div className="flex items-center gap-4">
+              {/* Search input */}
+              <div className="relative max-w-md flex-1">
+                <Search
+                  size={18}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchText}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  className={clsx(
+                    'w-full pl-10 pr-4 py-2 rounded-lg',
+                    'bg-gray-50 dark:bg-gray-700',
+                    'border border-gray-300 dark:border-gray-600',
+                    'text-gray-900 dark:text-white',
+                    'placeholder-gray-500 dark:placeholder-gray-400',
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400',
+                    'transition-colors'
+                  )}
+                  aria-label="Search discovered data"
+                />
+              </div>
+
+              {/* Quick Filter Buttons */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Quick Filters:</span>
+                <button
+                  onClick={() => onSearchChange('active')}
+                  className={clsx(
+                    'px-3 py-1 text-xs font-medium rounded-full transition-colors',
+                    'bg-green-100 text-green-800 hover:bg-green-200',
+                    'dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800'
+                  )}
+                  title="Filter for active/enabled items"
+                >
+                  Active Only
+                </button>
+                <button
+                  onClick={() => onSearchChange('error')}
+                  className={clsx(
+                    'px-3 py-1 text-xs font-medium rounded-full transition-colors',
+                    'bg-red-100 text-red-800 hover:bg-red-200',
+                    'dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800'
+                  )}
+                  title="Filter for errors or failed items"
+                >
+                  Errors Only
+                </button>
+                <button
+                  onClick={() => onSearchChange('disabled')}
+                  className={clsx(
+                    'px-3 py-1 text-xs font-medium rounded-full transition-colors',
+                    'bg-yellow-100 text-yellow-800 hover:bg-yellow-200',
+                    'dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-800'
+                  )}
+                  title="Filter for disabled or inactive items"
+                >
+                  Disabled Only
+                </button>
+                {searchText && (
+                  <button
+                    onClick={() => onSearchChange('')}
+                    className={clsx(
+                      'px-3 py-1 text-xs font-medium rounded-full transition-colors',
+                      'bg-gray-100 text-gray-800 hover:bg-gray-200',
+                      'dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
+                    )}
+                    title="Clear all filters"
+                  >
+                    Clear Filters
+                  </button>
                 )}
-                aria-label="Search discovered data"
-              />
+              </div>
             </div>
           </div>
         )}

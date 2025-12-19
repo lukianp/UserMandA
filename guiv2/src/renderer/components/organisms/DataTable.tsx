@@ -478,11 +478,11 @@ function DataTable<T = any>({
                   <tr
                     key={rowId}
                     className={clsx(
-                      'transition-colors',
-                      onRowClick && 'cursor-pointer',
+                      'transition-colors duration-150 ease-in-out',
+                      (onRowClick || contextMenu) && 'cursor-pointer',
                       isSelected
                         ? 'bg-blue-50 dark:bg-blue-900/20'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:shadow-sm'
                     )}
                     onClick={() => onRowClick?.(row)}
                     onContextMenu={(e) => handleContextMenu(e, row)}

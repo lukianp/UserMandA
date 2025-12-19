@@ -784,7 +784,7 @@ class MigrationExecutionService extends EventEmitter {
 }
 
 export default MigrationExecutionService;
-export {
+export type {
   ExecutionStep,
   UserMigrationTask,
   WaveExecutionContext,

@@ -61,19 +61,36 @@ export const ModernCard: React.FC<ModernCardProps> = React.memo(({
   // Variant-specific classes
   const variantClasses = {
     default: clsx(
-      'modern-card',
-      hoverable && 'hover:scale-[1.01]'
+      'bg-white dark:bg-gray-800',
+      'border border-gray-200 dark:border-gray-700',
+      'rounded-lg p-5',
+      'shadow-card',
+      'transition-all duration-200',
+      hoverable && 'hover:shadow-card-hover hover:scale-[1.01] hover:-translate-y-0.5'
     ),
     metric: clsx(
-      'metric-card'
+      'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-900',
+      'border border-blue-200 dark:border-cyan-900',
+      'rounded-lg p-6',
+      'shadow-metric',
+      'transition-all duration-200',
+      hoverable && 'hover:shadow-metric-hover hover:scale-[1.02]'
     ),
     section: clsx(
-      'section-border'
+      'bg-white dark:bg-gray-800',
+      'border-l-4 border-blue-500',
+      'rounded-r-lg p-5',
+      'shadow-section',
+      'transition-all duration-200'
     ),
     glass: clsx(
-      'glass-card',
-      'p-5 m-2',
-      hoverable && 'hover:scale-[1.01] hover:shadow-card-hover'
+      'bg-white/80 dark:bg-gray-800/80',
+      'backdrop-blur-sm',
+      'border border-gray-200/50 dark:border-gray-700/50',
+      'rounded-lg p-5 m-2',
+      'shadow-card',
+      'transition-all duration-200',
+      hoverable && 'hover:shadow-card-hover hover:scale-[1.01] hover:-translate-y-0.5'
     ),
   };
 

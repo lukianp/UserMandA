@@ -132,7 +132,12 @@
       "Bash(powershell.exe -Command \"cd C:\\enterprisediscovery\\guiv2; Get-Process -Name electron -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host ''Killed Electron processes''\")",
       "Bash(powershell.exe -Command \"cd C:\\enterprisediscovery\\guiv2; Get-Process -Name electron -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_Id -Force }; Start-Sleep -Seconds 2; Write-Host ''Electron processes stopped''\")",
       "Bash(powershell.exe -Command \"cd C:\\enterprisediscovery\\guiv2; npm start\")",
-      "Bash(Copy-Item -Path \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useApplicationDiscoveryLogic.ts\" -Destination \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useApplicationDiscoveryLogic.ts\" -Force)"
+      "Bash(Copy-Item -Path \"D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useApplicationDiscoveryLogic.ts\" -Destination \"C:\\enterprisediscovery\\guiv2\\src\\renderer\\hooks\\useApplicationDiscoveryLogic.ts\" -Force)",
+      "Bash(Get-Item \"D:\\\\Scripts\\\\UserMandA\\\\guiv2\\\\src\\\\renderer\\\\components\\\\molecules\\\\StatisticsCard.tsx\")",
+      "Bash(Select-Object Name, LastWriteTime)",
+      "Bash(Get-Item \"C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\components\\\\molecules\\\\StatisticsCard.tsx\" -ErrorAction SilentlyContinue)",
+      "Bash(Test-Path \"D:\\\\Scripts\\\\UserMandA\\\\guiv2\\\\src\\\\renderer\\\\components\\\\atoms\\\\Skeleton.tsx\")",
+      "Bash(Test-Path \"C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\components\\\\atoms\\\\Skeleton.tsx\")"
     ],
     "deny": [],
     "ask": []

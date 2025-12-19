@@ -53,7 +53,7 @@ export const StatisticsCard: React.FC<StatisticsCardProps> = ({
   return (
     <ModernCard
       className={clsx(
-        'transition-all duration-200',
+        'group transition-all duration-200',
         onClick && 'cursor-pointer hover:border-[var(--accent-primary)] hover:shadow-lg',
         className
       )}

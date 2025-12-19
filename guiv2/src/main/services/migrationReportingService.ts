@@ -969,4 +969,4 @@ class MigrationReportingService extends EventEmitter {
 }
 
 export default MigrationReportingService;
-export { ReportTemplate, ScheduledReport };
+export type { ReportTemplate, ScheduledReport };

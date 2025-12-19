@@ -553,3 +553,111 @@ export interface MigrationAnalysis {
   estimatedDuration: number | null; // milliseconds
   risks: string[];
 }
+
+/**
+ * Go/No-Go checkpoint checkpoint type
+ */
+export type CheckpointType = 'PreMigration' | 'MidMigration' | 'PostMigration';
+
+/**
+ * Checkpoint decision status
+ */
+export type CheckpointDecisionStatus = 'Pending' | 'InReview' | 'Go' | 'NoGo' | 'Deferred';
+
+/**
+ * Criteria evaluation status
+ */
+export type CriteriaStatus = 'NotEvaluated' | 'Pass' | 'Fail' | 'Warning' | 'Waived';
+
+/**
+ * Criteria category
+ */
+export type CriteriaCategory = 'Technical' | 'Business' | 'Security' | 'Compliance';
+
+/**
+ * Criteria evaluation type
+ */
+export type EvaluationType = 'Automatic' | 'Manual';
+
+/**
+ * Checkpoint criteria for Go/No-Go decisions
+ */
+export interface CheckpointCriteria extends Identifiable {
+  id: string;
+  name: string;
+  description: string;
+  category: CriteriaCategory;
+
+  // Evaluation
+  evaluationType: EvaluationType;
+  evaluationScript?: string;   // PowerShell script for automatic evaluation
+
+  // Status
+  status: CriteriaStatus;
+  evaluatedAt?: Date | string;
+  evaluatedBy?: string;
+  notes?: string;
+}
+
+/**
+ * Go/No-Go checkpoint for wave approval
+ */
+export interface GoNoGoCheckpoint extends Identifiable, Named, TimestampMetadata {
+  id: string;
+  waveId: string;
+  name: string;
+  description: string;
+  checkpointType: CheckpointType;
+
+  // Criteria
+  criteria: CheckpointCriteria[];
+  allCriteriaMustPass: boolean;
+
+  // Decision
+  status: CheckpointDecisionStatus;
+  decidedBy?: string;
+  decidedAt?: Date | string;
+  notes?: string;
+
+  // Escalation
+  escalationRequired: boolean;
+  escalatedTo?: string;
+  escalatedAt?: Date | string;
+}
+
+/**
+ * Migration project (enterprise level)
+ */
+export interface MigrationProject extends Identifiable, Named, TimestampMetadata {
+  id: string;
+  name: string;
+  description: string;
+  status: MigrationStatus;
+
+  // Source and Target
+  sourceProfileId: string;
+  targetProfileId: string;
+
+  // Timeline
+  plannedStartDate: Date | string;
+  plannedEndDate: Date | string;
+  actualStartDate?: Date | string;
+  actualEndDate?: Date | string;
+
+  // Progress
+  overallProgress: number;     // 0-100
+  currentPhase: string;
+
+  // Relationships
+  waves: MigrationWave[];
+  checkpoints: GoNoGoCheckpoint[];
+
+  // Audit
+  createdBy: string;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
+
+  // Metadata
+  tags: string[];
+  metadata: Dictionary<any>;
+}

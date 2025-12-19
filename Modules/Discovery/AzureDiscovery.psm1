@@ -1212,8 +1212,11 @@ function Invoke-AzureDiscovery {
             # Process subscriptions for infrastructure resources
             try {
                 $subscriptions = Get-AzSubscription -ErrorAction Stop | Where-Object { $_.State -eq 'Enabled' }
-        
-        
+            } catch {
+                $Result.AddWarning("Failed to enumerate Azure subscriptions: $($_.Exception.Message)", @{Section="Subscriptions"})
+            }
+        }
+
         #region Microsoft 365 Workloads Discovery via Graph API
         Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Discovering Microsoft 365 Workloads..." -Level "INFO"
         
@@ -1610,7 +1613,7 @@ function Invoke-AzureDiscovery {
                         foreach ($sa in $storageAccounts) {
                             # Get storage account keys and access policies
                             $saData = [PSCustomObject]@{
-                            ObjectType = "AzureStorageAccount"
+                                ObjectType = "AzureStorageAccount"
                                 SubscriptionId = $sub.Id
                                 ResourceGroup = $sa.ResourceGroupName
                                 StorageAccountName = $sa.StorageAccountName
@@ -1787,9 +1790,6 @@ function Invoke-AzureDiscovery {
         # Store all discovered data
         $Result.RecordCount = $allDiscoveredData.Count
 
-        } catch {
-            $Result.AddWarning("Process Azure infrastructure discovery failed", @{Error=$_.Exception.Message})
-        }
 
 # Return data grouped by type
 return $allDiscoveredData | Group-Object -Property _DataType
@@ -1804,7 +1804,3 @@ return $allDiscoveredData | Group-Object -Property _DataType
         -SessionId $SessionId `
         -RequiredServices @("Graph")
 }
-}
-
-# Export the module function
-Export-ModuleMember -Function Invoke-AzureDiscovery

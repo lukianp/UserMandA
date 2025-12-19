@@ -29,7 +29,7 @@ export const TabView: React.FC = () => {
             className={clsx(
               'flex items-center gap-2 px-4 py-2 border-r border-gray-200 dark:border-gray-700 cursor-pointer',
               'hover:bg-gray-50 dark:hover:bg-gray-700',
-              selectedTabId === tab.id && 'bg-gray-100 dark:bg-gray-700'
+              selectedTabId === tab.id && 'bg-gradient-to-b from-blue-50 to-transparent dark:from-blue-900/20 dark:to-transparent border-b-2 border-blue-500'
             )}
             onClick={() => setSelectedTab(tab.id)}
           >
@@ -40,6 +40,8 @@ export const TabView: React.FC = () => {
                 closeTab(tab.id);
               }}
               className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+              aria-label="Close tab"
+              title="Close tab"
             >
               <X size={14} />
             </button>

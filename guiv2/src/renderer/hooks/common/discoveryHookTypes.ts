@@ -34,6 +34,37 @@ export interface Profile {
 }
 
 /**
+ * Filter state interface
+ */
+export interface FilterState {
+  searchText: string;
+  showHttpsOnly?: boolean;
+  showExpiredCerts?: boolean;
+  [key: string]: any;
+}
+
+/**
+ * Statistics interface (generic for discovery modules)
+ */
+export interface DiscoveryStats {
+  [key: string]: number | string | boolean | undefined;
+}
+
+/**
+ * Column definition for data grids
+ */
+export interface ColumnDef {
+  field: string;
+  headerName: string;
+  sortable?: boolean;
+  filter?: boolean;
+  width?: number;
+  valueFormatter?: (params: any) => string;
+  cellRenderer?: (params: any) => any;
+  [key: string]: any;
+}
+
+/**
  * Base Discovery Hook Result
  * All discovery hooks should extend this interface
  */
@@ -43,6 +74,7 @@ export interface BaseDiscoveryHookResult {
   isCancelling: boolean;
   progress: ProgressInfo | null;
   results: any | null;
+  result: any | null;  // Alias for results (some views use 'result')
   error: string | null;
   logs: LogEntry[];
   selectedProfile: Profile | null;
@@ -56,6 +88,7 @@ export interface BaseDiscoveryHookResult {
   cancelDiscovery: () => Promise<void>;
   exportResults: () => Promise<void>;
   clearLogs: () => void;
+  clearError: () => void;
 
   // View compatibility properties
   config: any;
@@ -63,9 +96,13 @@ export interface BaseDiscoveryHookResult {
   currentResult: any | null;
   isDiscovering: boolean;
   selectedTab: string;
+  activeTab: string;  // Alias for selectedTab
   searchText: string;
+  filter: FilterState;
   filteredData: any[];
   columnDefs: any[];
+  columns: ColumnDef[];  // Alias for columnDefs
+  stats: DiscoveryStats | null;
   errors: string[];
 
   // View compatibility actions
@@ -73,8 +110,12 @@ export interface BaseDiscoveryHookResult {
   loadTemplate: (template: any) => void;
   saveAsTemplate: (name: string) => void;
   setSelectedTab: (tab: string) => void;
+  setActiveTab: (tab: string) => void;  // Alias for setSelectedTab
   setSearchText: (text: string) => void;
+  updateFilter: (updates: Partial<FilterState>) => void;
   exportData: (format: string) => Promise<void>;
+  exportToCSV: (data?: any[], filename?: string) => void;
+  exportToExcel: (data?: any[], filename?: string) => Promise<void>;
 }
 
 /**

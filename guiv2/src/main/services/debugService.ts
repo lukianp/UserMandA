@@ -516,13 +516,13 @@ export class DebugService extends EventEmitter {
     const performanceLogs = logs.filter(log =>
       log.category === LogCategory.PERFORMANCE &&
       log.data &&
-      (log.data.renderTime || log.data.apiResponseTime)
+      (log.data?.renderTime || log.data?.apiResponseTime)
     );
 
     const operationMap = new Map<string, { times: number[]; count: number }>();
     performanceLogs.forEach(log => {
-      const operation = log.data.operation || 'unknown';
-      const time = log.data.renderTime || log.data.apiResponseTime || 0;
+      const operation = log.data?.operation || 'unknown';
+      const time = log.data?.renderTime || log.data?.apiResponseTime || 0;
 
       const existing = operationMap.get(operation);
       if (existing) {
