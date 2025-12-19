@@ -1,6 +1,11 @@
 /**
- * Azure Discovery View
- * UI for Microsoft 365 / Azure AD discovery
+ * Entra ID & Microsoft 365 Discovery View
+ *
+ * Discovers identity, security, and collaboration services from Microsoft cloud:
+ * - Entra ID (Azure AD): Users, Groups, Administrative Units, Guest Accounts
+ * - Security: Conditional Access Policies, Directory Roles, App Registrations
+ * - Microsoft 365: Exchange Online, SharePoint Online, Microsoft Teams
+ * - Devices: Entra ID Joined, Hybrid Joined, Intune Managed
  */
 
 import React from 'react';
@@ -47,10 +52,10 @@ const AzureDiscoveryView: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Azure / Microsoft 365 Discovery
+                Entra ID & Microsoft 365 Discovery
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Discover cloud identity, collaboration, and messaging infrastructure to assess consolidation opportunities and plan hybrid migrations
+                Discover users, groups, security policies, and M365 services (Exchange, SharePoint, Teams) for identity consolidation and tenant migration planning
               </p>
             </div>
           </div>

@@ -1,21 +1,25 @@
 /**
- * Azure Discovery Discovered View - Enhanced with Multi-Type Tabs
+ * Entra ID & Microsoft 365 Discovered View - Multi-Type Tabbed Results
  *
- * Azure Discovery produces multiple data types from different discovery modules.
- * This view provides tabbed navigation to explore each data type separately.
+ * Displays discovered data from Entra ID (Azure AD) and Microsoft 365 services.
+ * Uses tabbed navigation to explore each data type separately.
  *
- * Data Types:
- * - Users (AzureIdentityDiscovery) - Azure AD users with migration readiness
- * - Groups (AzureIdentityDiscovery) - Security and M365 groups
- * - Administrative Units (AzureIdentityDiscovery) - Delegated admin model
- * - Applications - App registrations and service principals
- * - Devices - Azure AD and Intune managed devices
- * - Security - Conditional Access policies and directory roles
- * - Infrastructure - VMs, storage, and network resources
+ * Identity & Access:
+ * - Users: Entra ID users and guest accounts with migration readiness
+ * - Groups: Security groups, M365 groups, distribution lists
+ * - Administrative Units: Delegated administration boundaries
+ *
+ * Security Configuration:
+ * - Applications: App registrations and service principals
+ * - Conditional Access: Zero Trust security policies
+ * - Directory Roles: Privileged role assignments
+ *
+ * Devices & Endpoints:
+ * - Devices: Entra ID joined, Hybrid joined, Intune managed
  */
 
 import React, { useState } from 'react';
-import { Cloud, Users, Shield, Server, Settings, FolderTree, HardDrive } from 'lucide-react';
+import { Cloud, Users, Shield, Server, Settings, FolderTree } from 'lucide-react';
 import { DiscoveredViewWrapper } from '../../components/organisms/DiscoveredViewWrapper';
 
 // Tab configuration for Azure data types
@@ -34,7 +38,7 @@ const azureDataTabs: AzureDataTab[] = [
     label: 'Users',
     icon: Users,
     csvPath: 'AzureDiscovery_Users.csv',
-    description: 'Azure AD users and guest accounts with migration readiness assessment',
+    description: 'Entra ID users and guest accounts with migration readiness assessment',
     category: 'identity',
   },
   {
@@ -50,7 +54,7 @@ const azureDataTabs: AzureDataTab[] = [
     label: 'Administrative Units',
     icon: FolderTree,
     csvPath: 'AzureDiscovery_AdministrativeUnits.csv',
-    description: 'Administrative units for delegated administration',
+    description: 'Entra ID administrative units for delegated administration',
     category: 'identity',
   },
   {
@@ -58,7 +62,7 @@ const azureDataTabs: AzureDataTab[] = [
     label: 'Applications',
     icon: Settings,
     csvPath: 'AzureDiscovery_Applications.csv',
-    description: 'App registrations and service principals',
+    description: 'Entra ID app registrations and service principals',
     category: 'security',
   },
   {
@@ -66,15 +70,15 @@ const azureDataTabs: AzureDataTab[] = [
     label: 'Devices',
     icon: Server,
     csvPath: 'AzureDiscovery_Devices.csv',
-    description: 'Azure AD joined and Intune managed devices',
-    category: 'infrastructure',
+    description: 'Entra ID joined, Hybrid joined, and Intune managed devices',
+    category: 'identity',
   },
   {
     id: 'conditional-access',
     label: 'Conditional Access',
     icon: Shield,
     csvPath: 'AzureDiscovery_ConditionalAccessPolicies.csv',
-    description: 'Conditional Access policies for security enforcement',
+    description: 'Zero Trust Conditional Access policies and security controls',
     category: 'security',
   },
   {
@@ -82,38 +86,14 @@ const azureDataTabs: AzureDataTab[] = [
     label: 'Directory Roles',
     icon: Shield,
     csvPath: 'AzureDiscovery_DirectoryRoles.csv',
-    description: 'Azure AD directory roles and assignments',
+    description: 'Entra ID privileged roles and administrative assignments',
     category: 'security',
-  },
-  {
-    id: 'virtual-machines',
-    label: 'Virtual Machines',
-    icon: Server,
-    csvPath: 'AzureDiscovery_VirtualMachines.csv',
-    description: 'Azure VMs and compute resources',
-    category: 'infrastructure',
-  },
-  {
-    id: 'storage',
-    label: 'Storage Accounts',
-    icon: HardDrive,
-    csvPath: 'AzureDiscovery_StorageAccounts.csv',
-    description: 'Azure Storage accounts and blob containers',
-    category: 'infrastructure',
-  },
-  {
-    id: 'network',
-    label: 'Network Security',
-    icon: Shield,
-    csvPath: 'AzureDiscovery_NetworkSecurityGroups.csv',
-    description: 'Network Security Groups and firewall rules',
-    category: 'infrastructure',
   },
 ];
 
 /**
- * Azure Discovery Discovered View Component
- * Provides tabbed navigation for different Azure resource types
+ * Entra ID & Microsoft 365 Discovered View Component
+ * Provides tabbed navigation for identity, security, and device data types
  */
 export const AzureDiscoveredView: React.FC = () => {
   const [activeTab, setActiveTab] = useState('users');
@@ -122,7 +102,6 @@ export const AzureDiscoveredView: React.FC = () => {
   // Group tabs by category for visual organization
   const identityTabs = azureDataTabs.filter(t => t.category === 'identity');
   const securityTabs = azureDataTabs.filter(t => t.category === 'security');
-  const infrastructureTabs = azureDataTabs.filter(t => t.category === 'infrastructure');
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="azure-discovered-view">
@@ -133,9 +112,9 @@ export const AzureDiscoveredView: React.FC = () => {
             <Cloud size={28} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Azure Discovery Results</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Entra ID & Microsoft 365 Results</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Microsoft Azure and Entra ID resources
+              Users, groups, security policies, applications, and device configurations from your Microsoft cloud tenant
             </p>
           </div>
         </div>
@@ -168,7 +147,7 @@ export const AzureDiscoveredView: React.FC = () => {
         </div>
 
         {/* Security Section */}
-        <div className="mb-2">
+        <div className="mb-4">
           <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
             Security & Compliance
           </h3>
@@ -191,29 +170,6 @@ export const AzureDiscoveredView: React.FC = () => {
           </div>
         </div>
 
-        {/* Infrastructure Section */}
-        <div className="mb-4">
-          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
-            Infrastructure
-          </h3>
-          <div className="flex gap-1 flex-wrap">
-            {infrastructureTabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
-                }`}
-                title={tab.description}
-              >
-                <tab.icon size={16} />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Content Area */}

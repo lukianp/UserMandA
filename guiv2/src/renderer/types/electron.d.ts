@@ -744,6 +744,22 @@ export interface ElectronAPI {
     setConnectionConfig: (profileId: string, config: import('../../../shared/types/profile').ConnectionConfig) => Promise<void>;
 
     /**
+     * Test connection for a profile
+     * Validates Azure credentials and connectivity
+     * @param profileId Profile ID to test
+     * @returns Promise with test result
+     */
+    testConnection: (profileId: string) => Promise<{ success: boolean; error?: string; details?: Record<string, unknown> }>;
+
+    /**
+     * Clear credentials for a profile
+     * Forces reload from DPAPI file on next access
+     * @param profileId Profile ID to clear
+     * @returns Promise with success result
+     */
+    clearCredentials: (profileId: string) => Promise<{ success: boolean; error?: string }>;
+
+    /**
      * Register a listener for profile change events
      * @param callback Function to call when profile changes
      * @returns Cleanup function to remove listener

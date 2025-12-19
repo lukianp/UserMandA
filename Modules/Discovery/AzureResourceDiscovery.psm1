@@ -39,9 +39,17 @@ function Test-AzureModules {
     [CmdletBinding()]
     param()
 
-    # Modern approach: Use comprehensive Az module instead of individual modules
+    # Only check/install the specific Az sub-modules actually used in this module
+    # This is MUCH faster than installing the full Az umbrella module
     $requiredModules = @(
-        'Az'
+        'Az.Accounts',    # Connect-AzAccount, Get-AzSubscription
+        'Az.Resources',   # Get-AzResourceGroup
+        'Az.Compute',     # Get-AzVM, Get-AzVMExtension
+        'Az.Network',     # Get-AzNetworkInterface, Get-AzNetworkSecurityGroup, Get-AzVirtualNetwork, Get-AzPublicIpAddress
+        'Az.Storage',     # Get-AzStorageAccount, Get-AzStorageAccountKey, Get-AzStorageContainer
+        'Az.KeyVault',    # Get-AzKeyVault, Get-AzKeyVaultSecret, Get-AzKeyVaultKey, Get-AzKeyVaultCertificate
+        'Az.Websites',    # Get-AzWebApp, Get-AzAppServicePlan
+        'Az.Sql'          # Get-AzSqlServer, Get-AzSqlDatabase
     )
 
     $missingModules = @()
@@ -52,46 +60,30 @@ function Test-AzureModules {
     }
 
     if ($missingModules.Count -gt 0) {
-        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Missing required Azure module: $($missingModules -join ', ')" -Level "WARN"
-        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Installing Azure module. This includes all necessary Az sub-modules..." -Level "INFO"
+        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Missing Azure modules: $($missingModules -join ', '). Installing..." -Level "INFO"
 
         foreach ($module in $missingModules) {
             try {
-                # Use the comprehensive Az module and specify minimum version for stability
-                if ($module -eq 'Az') {
-                    Install-Module -Name $module -MinimumVersion 10.0.0 -Force -AllowClobber -Scope CurrentUser -Repository PSGallery -ErrorAction Stop
-                    Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Successfully installed Azure Az module (includes Az.Accounts, Az.Profile, Az.Resources, etc.)" -Level "SUCCESS"
-                } else {
-                    Install-Module -Name $module -Force -AllowClobber -Scope CurrentUser -Repository PSGallery -ErrorAction Stop
-                    Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Installed module: $module" -Level "SUCCESS"
-                }
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Installing $module..." -Level "INFO"
+                Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber -SkipPublisherCheck -ErrorAction Stop
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "$module installed successfully" -Level "SUCCESS"
             } catch {
-                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Failed to install module $module`: $($_.Exception.Message)" -Level "ERROR"
-                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Ensure PowerShell Gallery is accessible and you have internet connectivity" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Failed to install $module : $($_.Exception.Message)" -Level "ERROR"
                 return $false
             }
         }
     }
 
-    # Verify that key Az sub-modules are available after Az installation
-    if ($missingModules -contains 'Az' -or (Test-Path -PathType Leaf -Path 'Modules/Discovery/AzureResourceDiscovery.psm1')) {
-        $criticalSubModules = @('Az.Accounts', 'Az.Resources', 'Az.Profile')
-        $missingSubModules = @()
-        foreach ($subModule in $criticalSubModules) {
-            if (-not (Get-Module -ListAvailable -Name $subModule)) {
-                $missingSubModules += $subModule
-            }
-        }
-
-        if ($missingSubModules.Count -gt 0) {
-            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Warning: Missing some Az sub-modules even after Az installation: $($missingSubModules -join ', ')" -Level "WARN"
-            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "These will be automatically available when the Az module is imported" -Level "INFO"
-        } else {
-            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "All critical Az sub-modules are available" -Level "SUCCESS"
-        }
+    # Import Az.Accounts first (required for other Az modules)
+    try {
+        Import-Module Az.Accounts -Force -ErrorAction Stop
+        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Az modules verified and loaded" -Level "INFO"
+    } catch {
+        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Failed to import Az.Accounts: $($_.Exception.Message)" -Level "ERROR"
+        return $false
     }
 
-    return $missingModules.Count -eq 0
+    return $true
 }
 
 function Connect-AzureWithMultipleStrategies {

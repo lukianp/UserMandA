@@ -58,16 +58,16 @@ const electronAPI: ElectronAPI = {
     const promise = ipcRenderer.invoke('powershell:executeDiscoveryModule', params);
     console.log('[PRELOAD] ipcRenderer.invoke called, promise created');
 
-    promise.then((result) => {
+    promise.then((result: unknown) => {
       console.log('[PRELOAD] ✅ executeDiscoveryModule promise resolved');
       console.log('[PRELOAD] Result type:', typeof result);
-      console.log('[PRELOAD] Result keys:', result ? Object.keys(result) : 'NULL');
-      console.log('[PRELOAD] Result.success:', result?.success);
-      console.log('[PRELOAD] Result.error:', result?.error);
-    }).catch((err) => {
+      console.log('[PRELOAD] Result keys:', result ? Object.keys(result as object) : 'NULL');
+      console.log('[PRELOAD] Result.success:', (result as { success?: boolean })?.success);
+      console.log('[PRELOAD] Result.error:', (result as { error?: string })?.error);
+    }).catch((err: unknown) => {
       console.error('[PRELOAD] ❌ executeDiscoveryModule promise rejected');
       console.error('[PRELOAD] Error:', err);
-      console.error('[PRELOAD] Error message:', err?.message);
+      console.error('[PRELOAD] Error message:', (err as Error)?.message);
     });
 
     return promise;
@@ -270,8 +270,9 @@ const electronAPI: ElectronAPI = {
   // Backwards compatibility aliases for profile loading
   loadSourceProfiles: () => ipcRenderer.invoke('profile:getAll'),
   loadTargetProfiles: () => ipcRenderer.invoke('profile:getAll'),
-  updateSourceProfile: (id: string, updates: any) => ipcRenderer.invoke('profile:update', { id, ...updates }),
-  updateTargetProfile: (id: string, updates: any) => ipcRenderer.invoke('profile:update', { id, ...updates }),
+  // FIXED: Use profile:updateSource instead of profile:update to properly merge with existing profile
+  updateSourceProfile: (id: string, updates: any) => ipcRenderer.invoke('profile:updateSource', id, updates),
+  updateTargetProfile: (id: string, updates: any) => ipcRenderer.invoke('profile:updateTarget', id, updates),
   deleteSourceProfile: (id: string) => ipcRenderer.invoke('profile:deleteSource', id),
   deleteTargetProfile: (id: string) => ipcRenderer.invoke('profile:deleteTarget', id),
   createSourceProfile: (profile: any) => ipcRenderer.invoke('profile:createSource', profile),
@@ -552,16 +553,16 @@ const electronAPI: ElectronAPI = {
     const promise = ipcRenderer.invoke('discovery:execute', params);
     console.log('[PRELOAD] ipcRenderer.invoke called, promise created');
 
-    promise.then((result) => {
+    promise.then((result: unknown) => {
       console.log('[PRELOAD] ✅ executeDiscovery promise resolved');
       console.log('[PRELOAD] Result type:', typeof result);
-      console.log('[PRELOAD] Result keys:', result ? Object.keys(result) : 'NULL');
-      console.log('[PRELOAD] Result.success:', result?.success);
-      console.log('[PRELOAD] Result.error:', result?.error);
-    }).catch((err) => {
+      console.log('[PRELOAD] Result keys:', result ? Object.keys(result as object) : 'NULL');
+      console.log('[PRELOAD] Result.success:', (result as { success?: boolean })?.success);
+      console.log('[PRELOAD] Result.error:', (result as { error?: string })?.error);
+    }).catch((err: unknown) => {
       console.error('[PRELOAD] ❌ executeDiscovery promise rejected');
       console.error('[PRELOAD] Error:', err);
-      console.error('[PRELOAD] Error message:', err?.message);
+      console.error('[PRELOAD] Error message:', (err as Error)?.message);
     });
 
     return promise;

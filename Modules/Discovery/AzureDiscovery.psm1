@@ -35,9 +35,15 @@ function Test-AzureModules {
     [CmdletBinding()]
     param()
 
-    # Modern approach: Use comprehensive Az module instead of individual modules
+    # Only check/install the specific Az sub-modules actually used in this module
+    # This is MUCH faster than installing the full Az umbrella module
     $requiredModules = @(
-        'Az'
+        'Az.Accounts',    # Connect-AzAccount, Get-AzSubscription
+        'Az.Compute',     # Get-AzVM
+        'Az.Network',     # Get-AzNetworkInterface, Get-AzNetworkSecurityGroup, Get-AzLoadBalancer, Get-AzPublicIpAddress
+        'Az.Storage',     # Get-AzStorageAccount
+        'Az.KeyVault',    # Get-AzKeyVault
+        'Az.Resources'    # Get-AzResource, Get-AzRoleAssignment
     )
 
     $missingModules = @()
@@ -48,24 +54,27 @@ function Test-AzureModules {
     }
 
     if ($missingModules.Count -gt 0) {
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Missing required Azure module: $($missingModules -join ', ')" -Level "WARN"
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Installing Azure module. This includes all necessary Az sub-modules..." -Level "INFO"
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Missing Azure modules: $($missingModules -join ', '). Installing..." -Level "INFO"
 
         foreach ($module in $missingModules) {
             try {
-                # Use the comprehensive Az module and specify minimum version for stability
-                if ($module -eq 'Az') {
-                    Install-Module -Name $module -MinimumVersion 10.0.0 -Force -AllowClobber -Scope CurrentUser -Repository PSGallery -ErrorAction Stop
-                } else {
-                    Install-Module -Name $module -Force -AllowClobber -Scope CurrentUser -Repository PSGallery -ErrorAction Stop
-                }
-
-                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Successfully installed Azure Az module" -Level "SUCCESS"
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Installing $module..." -Level "INFO"
+                Install-Module -Name $module -Scope CurrentUser -Force -AllowClobber -SkipPublisherCheck -ErrorAction Stop
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "$module installed successfully" -Level "SUCCESS"
             } catch {
-                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Failed to install module $module`: $($_.Exception.Message)" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Failed to install $module : $($_.Exception.Message)" -Level "ERROR"
                 return $false
             }
         }
+    }
+
+    # Import Az.Accounts first (required for other Az modules)
+    try {
+        Import-Module Az.Accounts -Force -ErrorAction Stop
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Az modules verified and loaded" -Level "INFO"
+    } catch {
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Failed to import Az.Accounts: $($_.Exception.Message)" -Level "ERROR"
+        return $false
     }
 
     return $true
@@ -227,19 +236,22 @@ function Invoke-AzureDiscovery {
 
         # Get connections
         $azureConnection = $null
+        $azModuleAvailable = $false
 
-        # Test and install required Azure modules
+        # Test for required Azure modules (do NOT install - should be done during setup)
         if (-not (Test-AzureModules)) {
-            $Result.AddWarning("Azure module installation failed, some Azure resources may not be discovered")
-        }
-
-        # Establish Azure connection using multiple authentication strategies
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Initiating Azure connection..." -Level "INFO"
-        $azureConnection = Connect-AzureWithMultipleStrategies -Configuration $Configuration -Result $Result
-        if ($azureConnection) {
-            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure authentication successful" -Level "SUCCESS"
+            $Result.AddWarning("Az module not installed. Azure resource discovery (VMs, Storage, etc.) will be skipped. Graph API discovery (Users, Groups, Licenses) will continue.")
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Skipping Azure connection - Az module not available. Continuing with Graph API only." -Level "WARN"
         } else {
-            $Result.AddWarning("Could not establish Azure connection, will use Graph API where possible", @{Error="All authentication strategies failed"})
+            $azModuleAvailable = $true
+            # Establish Azure connection using multiple authentication strategies
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Initiating Azure connection..." -Level "INFO"
+            $azureConnection = Connect-AzureWithMultipleStrategies -Configuration $Configuration -Result $Result
+            if ($azureConnection) {
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure authentication successful" -Level "SUCCESS"
+            } else {
+                $Result.AddWarning("Could not establish Azure connection, will use Graph API where possible", @{Error="All authentication strategies failed"})
+            }
         }
         
         #region Enhanced User Discovery - Foundation for Migration Planning

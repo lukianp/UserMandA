@@ -139,14 +139,12 @@ export const Sidebar: React.FC = () => {
       path: '/discovery',
       label: 'Discovery',
       icon: <Search size={20} />,
-      children: [
-        {
-          path: '/discovered',
-          label: 'Discovered',
-          icon: <FileSearch size={18} />,
-          children: discoveredItems,
-        },
-      ],
+    },
+    {
+      path: '/discovery/discovered',
+      label: 'Discovered',
+      icon: <FileSearch size={20} />,
+      children: discoveredItems,
     },
     {
       path: '/users',
@@ -251,7 +249,7 @@ export const Sidebar: React.FC = () => {
           <div key={item.path}>
             <NavLink
               to={item.path}
-              className={({ isActive }) =>
+              className={({ isActive }: { isActive: boolean }) =>
                 clsx(
                   'flex items-center gap-3 px-4 py-2 text-sm transition-all duration-200',
                   'hover:bg-gray-800 hover:text-white',
@@ -267,47 +265,52 @@ export const Sidebar: React.FC = () => {
               {!isCollapsed && <span>{item.label}</span>}
             </NavLink>
 
-            {/* Child items */}
+            {/* Child items with visual hierarchy */}
             {item.children && !isCollapsed && (
-              <div className="ml-4">
-                {item.children.map((child) => (
-                  <div key={child.path}>
+              <div className="ml-4 border-l border-gray-700/50 relative">
+                {item.children.map((child, childIndex) => (
+                  <div key={child.path} className="relative">
+                    {/* Connecting line dot */}
+                    <div className="absolute left-0 top-3 w-2 h-px bg-gray-700/50" />
                     <NavLink
                       to={child.path}
-                      className={({ isActive }) =>
+                      className={({ isActive }: { isActive: boolean }) =>
                         clsx(
-                          'flex items-center gap-2 px-4 py-1.5 text-sm transition-all duration-200',
-                          'hover:bg-gray-800 hover:text-white',
+                          'flex items-center gap-2 ml-2 px-3 py-1.5 text-sm transition-all duration-200 rounded-r-md',
+                          'hover:bg-gray-800/70 hover:text-white hover:translate-x-0.5',
                           isActive
-                            ? 'bg-gradient-to-r from-blue-500/10 to-transparent text-white'
+                            ? 'bg-gradient-to-r from-blue-500/15 to-transparent text-white font-medium'
                             : 'text-gray-400'
                         )
                       }
                     >
-                      {child.icon}
+                      <span className="opacity-70">{child.icon}</span>
                       <span>{child.label}</span>
                     </NavLink>
 
-                    {/* Grandchild items (nested children) */}
+                    {/* Grandchild items (nested children) with deeper hierarchy */}
                     {child.children && (
-                      <div className="ml-4">
+                      <div className="ml-4 border-l border-gray-700/30 relative">
                         {child.children.map((grandchild) => (
-                          <NavLink
-                            key={grandchild.path}
-                            to={grandchild.path}
-                            className={({ isActive }) =>
-                              clsx(
-                                'flex items-center gap-2 px-4 py-1.5 text-xs transition-all duration-200',
-                                'hover:bg-gray-800 hover:text-white',
-                                isActive
-                                  ? 'bg-gradient-to-r from-cyan-500/10 to-transparent text-white'
-                                  : 'text-gray-500'
-                              )
-                            }
-                          >
-                            {grandchild.icon}
-                            <span>{grandchild.label}</span>
-                          </NavLink>
+                          <div key={grandchild.path} className="relative">
+                            {/* Deeper connecting line dot */}
+                            <div className="absolute left-0 top-2.5 w-2 h-px bg-gray-700/30" />
+                            <NavLink
+                              to={grandchild.path}
+                              className={({ isActive }: { isActive: boolean }) =>
+                                clsx(
+                                  'flex items-center gap-2 ml-2 px-3 py-1 text-xs transition-all duration-200 rounded-r-md',
+                                  'hover:bg-gray-800/50 hover:text-white hover:translate-x-0.5',
+                                  isActive
+                                    ? 'bg-gradient-to-r from-cyan-500/15 to-transparent text-white font-medium'
+                                    : 'text-gray-500'
+                                )
+                              }
+                            >
+                              <span className="opacity-60 scale-90">{grandchild.icon}</span>
+                              <span>{grandchild.label}</span>
+                            </NavLink>
+                          </div>
                         ))}
                       </div>
                     )}

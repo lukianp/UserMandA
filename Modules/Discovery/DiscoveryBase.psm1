@@ -72,8 +72,54 @@ function Start-DiscoveryModule {
         foreach ($service in $RequiredServices) {
             try {
                 Write-ModuleLog -ModuleName $ModuleName -Message "Connecting to $service service..." -Level "INFO"
-                $connections[$service] = Get-AuthenticationForService -Service $service -SessionId $SessionId
-                Write-ModuleLog -ModuleName $ModuleName -Message "Connected to $service successfully" -Level "SUCCESS"
+                
+                # Try session-based auth first
+                $authSuccess = $false
+                try {
+                    $connections[$service] = Get-AuthenticationForService -Service $service -SessionId $SessionId
+                    $authSuccess = $true
+                    Write-ModuleLog -ModuleName $ModuleName -Message "Connected to $service via session successfully" -Level "SUCCESS"
+                } catch {
+                    Write-ModuleLog -ModuleName $ModuleName -Message "Session auth failed for $service`: $($_.Exception.Message). Trying direct credential auth..." -Level "WARN"
+                }
+                
+                # Fallback to direct credential authentication for Graph service
+                if (-not $authSuccess -and $service -eq 'Graph') {
+                    # Extract credentials from Configuration
+                    $tenantId = $Configuration.TenantId
+                    $clientId = $Configuration.ClientId
+                    $clientSecret = $Configuration.ClientSecret
+                    
+                    if ($tenantId -and $clientId -and $clientSecret) {
+                        Write-ModuleLog -ModuleName $ModuleName -Message "Attempting direct Graph authentication with ClientId: $clientId" -Level "INFO"
+                        
+                        # Import Microsoft Graph module if needed
+                        if (-not (Get-Module -Name Microsoft.Graph.Authentication)) {
+                            Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
+                        }
+                        
+                        # Create credential and connect
+                        $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+                        $credential = New-Object System.Management.Automation.PSCredential($clientId, $secureSecret)
+                        
+                        Connect-MgGraph -ClientSecretCredential $credential -TenantId $tenantId -NoWelcome -ErrorAction Stop
+                        
+                        $connections[$service] = @{
+                            AuthType = 'DirectCredential'
+                            TenantId = $tenantId
+                            ClientId = $clientId
+                            Connected = $true
+                        }
+                        $authSuccess = $true
+                        Write-ModuleLog -ModuleName $ModuleName -Message "Connected to Graph via direct credentials successfully" -Level "SUCCESS"
+                    } else {
+                        Write-ModuleLog -ModuleName $ModuleName -Message "Direct auth failed - missing credentials. TenantId: $($null -ne $tenantId), ClientId: $($null -ne $clientId), ClientSecret: $($null -ne $clientSecret)" -Level "ERROR"
+                    }
+                }
+                
+                if (-not $authSuccess) {
+                    throw "Failed to authenticate to $service service using both session and direct methods"
+                }
             } catch {
                 $result.AddError("Failed to connect to $service service", $_.Exception, @{Service = $service})
                 return $result

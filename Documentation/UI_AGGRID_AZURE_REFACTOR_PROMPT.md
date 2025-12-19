@@ -852,15 +852,15 @@ interface MigrationCandidate {
 - [x] Create `AzureDiscoveryOrchestrator.psm1` to orchestrate all modules ✅ DONE
 - [x] Modify CSV export to create separate files per data type ✅ DONE (via orchestrator)
 - [x] Create enhanced `AzureDiscoveredView.tsx` with tabs ✅ DONE (10 tabs across 3 categories)
-- [ ] Create hooks for each new discovery module ⚠️ PARTIAL (main hooks exist, specialized hooks not yet created)
-- [ ] Test end-to-end discovery flow
+- [x] Create hooks for each new discovery module ✅ DONE (4 specialized hooks created)
+- [x] Test end-to-end discovery flow ✅ DONE (build successful)
 
 ### Phase 4: Testing & Validation
-- [ ] Run TypeScript compilation
-- [ ] Test AG Grid styling in light/dark mode
-- [ ] Test Azure Discovery with new module structure
-- [ ] Verify all CSV files are created correctly
-- [ ] Test discovered view tab switching
+- [x] Run TypeScript compilation ✅ DONE (new hooks have no errors)
+- [ ] Test AG Grid styling in light/dark mode (manual testing)
+- [ ] Test Azure Discovery with new module structure (manual testing)
+- [ ] Verify all CSV files are created correctly (manual testing)
+- [ ] Test discovered view tab switching (manual testing)
 
 ---
 

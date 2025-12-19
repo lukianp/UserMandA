@@ -407,7 +407,7 @@ const ProgressStepCard: React.FC<{
     {steps.map((step, index) => (
       <div
         key={step.id}
-        ref={(el) => (stepRefs.current[index] = el)}
+        ref={(el) => { stepRefs.current[index] = el; }}
         className={`
           flex items-center gap-3 p-3 rounded-lg transition-all duration-300
           ${
@@ -719,7 +719,7 @@ const SetupCompanyView: React.FC = () => {
   console.log('[SetupCompanyView] Component rendering');
 
   // Get selected profile from store
-  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const selectedSourceProfile = useProfileStore((state: { selectedSourceProfile: import('../../store/useProfileStore').CompanyProfile | null }) => state.selectedSourceProfile);
 
   // App registration hook
   const {

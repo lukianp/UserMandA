@@ -47,6 +47,7 @@ export interface RegistrationStatus {
   step: string;
   timestamp: string;
   logFile: string;
+  progress?: number;
 }
 
 export interface AppRegistrationState {
@@ -213,7 +214,7 @@ export function useAppRegistration() {
               // Check if profile already exists
               const existingProfiles = useProfileStore.getState().targetProfiles;
               const existingProfile = existingProfiles.find(
-                p => p.companyName === companyName && p.profileType === 'Azure'
+                (p: { companyName: string; profileType?: string }) => p.companyName === companyName && p.profileType === 'Azure'
               );
 
               if (existingProfile) {
@@ -229,7 +230,7 @@ export function useAppRegistration() {
                 // CRITICAL: Also update the source CompanyProfile with new Azure AD credentials
                 // This ensures ProfileSelector shows the correct Application ID and connection tests work
                 const sourceProfiles = useProfileStore.getState().sourceProfiles;
-                const sourceProfile = sourceProfiles.find(p => p.companyName === companyName);
+                const sourceProfile = sourceProfiles.find((p: { companyName: string }) => p.companyName === companyName);
 
                 if (sourceProfile) {
                   console.log('[useAppRegistration] Updating source profile with new Azure AD credentials');
@@ -296,7 +297,7 @@ export function useAppRegistration() {
                 // CRITICAL: Also update the source CompanyProfile with new Azure AD credentials
                 // This ensures ProfileSelector shows the correct Application ID and connection tests work
                 const sourceProfiles = useProfileStore.getState().sourceProfiles;
-                const sourceProfile = sourceProfiles.find(p => p.companyName === companyName);
+                const sourceProfile = sourceProfiles.find((p: { companyName: string }) => p.companyName === companyName);
 
                 if (sourceProfile) {
                   console.log('[useAppRegistration] Updating source profile with new Azure AD credentials (new profile created)');
@@ -512,7 +513,7 @@ export function useAppRegistration() {
       // Check if profile already exists
       const existingProfiles = useProfileStore.getState().targetProfiles;
       const existingProfile = existingProfiles.find(
-        p => p.companyName === companyName && p.profileType === 'Azure'
+        (p: { companyName: string; profileType?: string }) => p.companyName === companyName && p.profileType === 'Azure'
       );
 
       if (existingProfile) {

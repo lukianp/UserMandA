@@ -143,8 +143,27 @@ export class CredentialService {
   }
 
   /**
+   * Clear cached credentials for a profile
+   * Call this before reading credentials to ensure fresh data from files
+   */
+  async clearCachedCredential(profileId: string): Promise<void> {
+    await this.ensureInitialized();
+    
+    const hadCached = this.store.credentials.some((c) => c.profileId === profileId);
+    this.store.credentials = this.store.credentials.filter(
+      (c) => c.profileId !== profileId
+    );
+    
+    if (hadCached) {
+      console.log(`[CredentialService] 🗑️ Cleared cached credentials for profile: ${profileId}`);
+      await this.save();
+    }
+  }
+
+  /**
    * Retrieve credentials for a profile
-   * Follows precedence: ENV > safeStorage > Legacy File
+   * Follows precedence: ENV > Legacy File (fresh) > safeStorage (cached)
+   * IMPORTANT: Always reads from file system first to get latest credentials
    */
   async getCredential(profileId: string): Promise<{
     username: string;
@@ -170,7 +189,40 @@ export class CredentialService {
       return envCreds;
     }
 
-    // 2. Check safeStorage (encrypted, preferred)
+    // 2. ALWAYS check legacy file FIRST (fresh from disk - authoritative source)
+    // This ensures we get the latest credentials after app registration
+    console.log(`[CredentialService] Checking legacy file FIRST (fresh from disk)...`);
+    const legacyCreds = await this.loadLegacyCredentials(profileId);
+
+    if (legacyCreds) {
+      console.log(`[CredentialService] ✅ Successfully loaded FRESH credentials from file for profile: ${profileId}`);
+      console.log(`[CredentialService] TenantId: ${legacyCreds.TenantId?.substring(0, 8)}...`);
+      console.log(`[CredentialService] ClientId: ${legacyCreds.ClientId?.substring(0, 8)}...`);
+      console.log(`[CredentialService] ClientSecret length: ${legacyCreds.ClientSecret?.length || 0} characters`);
+      console.log(`[CredentialService] Domain: ${legacyCreds.Domain || 'N/A'}`);
+
+      // Check if cached credentials are stale (different clientId)
+      const cachedCred = this.store.credentials.find((c) => c.profileId === profileId);
+      if (cachedCred && cachedCred.clientId !== legacyCreds.ClientId) {
+        console.warn(`[CredentialService] ⚠️ Cached credentials are STALE (different ClientId)`);
+        console.warn(`[CredentialService] Cached: ${cachedCred.clientId}, File: ${legacyCreds.ClientId}`);
+        console.warn(`[CredentialService] Clearing stale cached credentials...`);
+        await this.clearCachedCredential(profileId);
+      }
+
+      // Return fresh credentials from file (do NOT auto-migrate to avoid caching issues)
+      return {
+        username: legacyCreds.ClientId,
+        password: legacyCreds.ClientSecret,
+        connectionType: 'AzureAD',
+        tenantId: legacyCreds.TenantId,
+        clientId: legacyCreds.ClientId,
+        clientSecret: legacyCreds.ClientSecret,
+      };
+    }
+
+    // 3. Fallback to safeStorage (cached) only if no file exists
+    console.log(`[CredentialService] No legacy file found, checking safeStorage cache as fallback...`);
     const credential = this.store.credentials.find((c) => c.profileId === profileId);
     if (credential) {
       console.log(`[CredentialService] Found safeStorage credentials for profile: ${profileId}`);
@@ -207,31 +259,6 @@ export class CredentialService {
         console.error('[CredentialService] ❌ Error decrypting safeStorage credential:', error);
         throw new Error('Failed to decrypt credential');
       }
-    }
-
-    // 3. Check legacy file (C:\DiscoveryData\{profile}\Credentials\discoverycredentials.config)
-    console.log(`[CredentialService] No safeStorage credentials found, checking legacy file...`);
-    const legacyCreds = await this.loadLegacyCredentials(profileId);
-
-    if (legacyCreds) {
-      console.log(`[CredentialService] ✅ Successfully loaded legacy credentials for profile: ${profileId}`);
-      console.log(`[CredentialService] TenantId: ${legacyCreds.TenantId?.substring(0, 8)}...`);
-      console.log(`[CredentialService] ClientId: ${legacyCreds.ClientId?.substring(0, 8)}...`);
-      console.log(`[CredentialService] ClientSecret length: ${legacyCreds.ClientSecret?.length || 0} characters`);
-      console.log(`[CredentialService] Domain: ${legacyCreds.Domain || 'N/A'}`);
-      console.warn(`[CredentialService] ⚠️ Migrating legacy credentials to safeStorage`);
-
-      // Auto-migrate to safeStorage
-      await this.migrateLegacyCredentials(profileId, legacyCreds);
-
-      return {
-        username: legacyCreds.ClientId,
-        password: legacyCreds.ClientSecret,
-        connectionType: 'AzureAD',
-        tenantId: legacyCreds.TenantId,
-        clientId: legacyCreds.ClientId,
-        clientSecret: legacyCreds.ClientSecret,
-      };
     }
 
     console.warn(`[CredentialService] ⚠️ No credentials found for profile: ${profileId}`);
@@ -762,7 +789,8 @@ export class CredentialService {
 
   /**
    * Check if credentials exist for a profile
-   * Checks all sources: ENV, safeStorage, and legacy files
+   * Checks all sources: ENV, legacy files (fresh), and safeStorage
+   * Priority: ENV > Legacy File > safeStorage
    */
   async hasCredential(profileId: string): Promise<boolean> {
     await this.ensureInitialized();
@@ -772,14 +800,18 @@ export class CredentialService {
       return true;
     }
 
-    // Check safeStorage
+    // Check legacy file FIRST (fresh from disk)
+    const legacyCreds = await this.loadLegacyCredentials(profileId);
+    if (legacyCreds !== null) {
+      return true;
+    }
+
+    // Check safeStorage as fallback
     if (this.store.credentials.some((c) => c.profileId === profileId)) {
       return true;
     }
 
-    // Check legacy file
-    const legacyCreds = await this.loadLegacyCredentials(profileId);
-    return legacyCreds !== null;
+    return false;
   }
 
   /**
@@ -889,7 +921,98 @@ export class CredentialService {
   }
 
   /**
+   * Read credentials DIRECTLY from file system (bypasses all caches)
+   * This ensures we always get the latest credentials after app registration
+   */
+  async readCredentialsFromFile(companyName: string): Promise<{
+    tenantId: string;
+    clientId: string;
+    clientSecret: string;
+  } | null> {
+    const fsSync = require('fs');
+    const { execSync } = require('child_process');
+    
+    try {
+      const credentialsDir = path.join('C:\\DiscoveryData', companyName, 'Credentials');
+      const summaryPath = path.join(credentialsDir, 'credential_summary.json');
+      const configPath = path.join(credentialsDir, 'discoverycredentials.config');
+
+      console.log(`[CredentialService] ========================================`);
+      console.log(`[CredentialService] Reading FRESH credentials from file system`);
+      console.log(`[CredentialService] Company: ${companyName}`);
+      console.log(`[CredentialService] Path: ${credentialsDir}`);
+      console.log(`[CredentialService] ========================================`);
+
+      let tenantId: string | null = null;
+      let clientId: string | null = null;
+      let clientSecret: string | null = null;
+
+      // First try credential_summary.json for tenantId and clientId
+      if (fsSync.existsSync(summaryPath)) {
+        console.log(`[CredentialService] Found credential_summary.json`);
+        const summaryContent = fsSync.readFileSync(summaryPath, 'utf-8');
+        const summary = JSON.parse(summaryContent);
+        tenantId = summary.TenantId || summary.tenantId;
+        clientId = summary.ClientId || summary.clientId;
+        console.log(`[CredentialService] From summary - TenantId: ${tenantId}, ClientId: ${clientId}`);
+      } else {
+        console.log(`[CredentialService] credential_summary.json not found`);
+      }
+
+      // Read client secret from DPAPI encrypted file
+      if (fsSync.existsSync(configPath)) {
+        console.log(`[CredentialService] Found discoverycredentials.config, decrypting...`);
+        try {
+          const encryptedContent = fsSync.readFileSync(configPath, 'utf-8').trim();
+          
+          // Use PowerShell to decrypt DPAPI
+          const psScript = `
+            Add-Type -AssemblyName System.Security
+            $bytes = [Convert]::FromBase64String('${encryptedContent.replace(/'/g, "''")}')
+            $decrypted = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
+            $json = [System.Text.Encoding]::UTF8.GetString($decrypted)
+            Write-Output $json
+          `;
+          
+          const decryptedJson = execSync(
+            `powershell -NoProfile -ExecutionPolicy Bypass -Command "${psScript.replace(/"/g, '\\"').replace(/\r?\n/g, ' ')}"`,
+            { encoding: 'utf-8', timeout: 30000 }
+          ).trim();
+          
+          const decryptedCreds = JSON.parse(decryptedJson);
+          
+          // Use values from decrypted file (these are the authoritative source)
+          tenantId = decryptedCreds.TenantId || decryptedCreds.tenantId || tenantId;
+          clientId = decryptedCreds.ClientId || decryptedCreds.clientId || clientId;
+          clientSecret = decryptedCreds.ClientSecret || decryptedCreds.clientSecret;
+          
+          console.log(`[CredentialService] ✅ Decrypted successfully`);
+          console.log(`[CredentialService] TenantId: ${tenantId}`);
+          console.log(`[CredentialService] ClientId: ${clientId}`);
+          console.log(`[CredentialService] Secret length: ${clientSecret?.length || 0}`);
+        } catch (decryptErr) {
+          console.error('[CredentialService] ❌ Failed to decrypt config file:', decryptErr);
+        }
+      } else {
+        console.log(`[CredentialService] discoverycredentials.config not found`);
+      }
+
+      if (tenantId && clientId && clientSecret) {
+        console.log(`[CredentialService] ✅ Complete credentials loaded from file system`);
+        return { tenantId, clientId, clientSecret };
+      }
+
+      console.warn('[CredentialService] ⚠️ Could not read complete credentials from files');
+      return null;
+    } catch (error) {
+      console.error('[CredentialService] ❌ Error reading credentials from file:', error);
+      return null;
+    }
+  }
+
+  /**
    * Test Azure AD connection with credentials
+   * ALWAYS clears cache and reads fresh from file system to avoid stale credentials
    * Returns detailed result including decryption status and Graph API connectivity
    */
   async testConnection(profileId: string): Promise<{
@@ -901,12 +1024,36 @@ export class CredentialService {
   }> {
     console.log(`[CredentialService] ========================================`);
     console.log(`[CredentialService] Testing connection for profile: ${profileId}`);
+    console.log(`[CredentialService] CLEARING CACHE and reading FRESH credentials from files`);
     console.log(`[CredentialService] ========================================`);
 
     try {
-      // Step 1: Try to get credentials
-      console.log('[CredentialService] Step 1: Retrieving credentials');
-      const creds = await this.getCredential(profileId);
+      // Step 0: CLEAR any cached credentials to force fresh read from files
+      console.log('[CredentialService] Step 0: Clearing cached credentials to ensure fresh read');
+      await this.clearCachedCredential(profileId);
+
+      // Step 1: Read fresh credentials from file system
+      console.log('[CredentialService] Step 1: Reading credentials DIRECTLY from file system');
+      const fileCreds = await this.readCredentialsFromFile(profileId);
+      
+      let creds: { tenantId?: string; clientId?: string; clientSecret?: string } | null = null;
+      
+      if (fileCreds) {
+        console.log('[CredentialService] ✅ Using FRESH credentials from file system');
+        console.log(`[CredentialService] ClientId from file: ${fileCreds.clientId}`);
+        creds = fileCreds;
+      } else {
+        // Try getCredential which will also read from files first (cache was just cleared)
+        console.log('[CredentialService] ⚠️ Direct file read failed, trying getCredential (will read from files)');
+        const freshCreds = await this.getCredential(profileId);
+        if (freshCreds) {
+          creds = {
+            tenantId: freshCreds.tenantId,
+            clientId: freshCreds.clientId,
+            clientSecret: freshCreds.clientSecret
+          };
+        }
+      }
 
       if (!creds) {
         console.error('[CredentialService] ❌ No credentials found');

@@ -1,5 +1,16 @@
+/**
+ * Azure Infrastructure Discovery View
+ *
+ * Discovers Azure Resource Manager (ARM) infrastructure resources:
+ * - Compute: Virtual Machines, VM Scale Sets, Availability Sets
+ * - Storage: Storage Accounts, Blob Containers, File Shares
+ * - Networking: Virtual Networks, NSGs, Load Balancers, Public IPs
+ * - Security: Key Vaults, Managed Identities
+ * - Management: Subscriptions, Resource Groups, Tags
+ */
+
 import React from "react";
-import { Play, Square, Cloud } from 'lucide-react';
+import { Play, Square, Server } from 'lucide-react';
 
 import { useProfileStore } from "../../store/useProfileStore";
 import { useAzureResourceDiscoveryLogic } from "../../hooks/useAzureResourceDiscoveryLogic";
@@ -28,13 +39,15 @@ export default function AzureResourceDiscoveryView(){
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Cloud className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg">
+              <Server size={28} />
+            </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Azure Resource Discovery
+                Azure Infrastructure Discovery
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Discover Azure cloud resources including VMs, storage accounts, and network resources
+                Discover Azure subscriptions, VMs, storage accounts, networking, and Key Vaults for infrastructure migration and consolidation planning
               </p>
             </div>
           </div>
