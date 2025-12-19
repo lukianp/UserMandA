@@ -44,35 +44,6 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke('powershell:executeModule', params);
   },
 
-  executeDiscoveryModule: (moduleName: string, companyName: string, additionalParams?: Record<string, any>, options?: ExecutionOptions) => {
-    console.log('[PRELOAD] ========== executeDiscoveryModule CALLED ==========');
-    console.log('[PRELOAD] moduleName:', moduleName);
-    console.log('[PRELOAD] companyName:', companyName);
-    console.log('[PRELOAD] additionalParams:', JSON.stringify(additionalParams, null, 2));
-    console.log('[PRELOAD] options:', JSON.stringify(options, null, 2));
-
-    const params = { moduleName, companyName, additionalParams, options };
-    console.log('[PRELOAD] Calling ipcRenderer.invoke with channel: powershell:executeDiscoveryModule');
-    console.log('[PRELOAD] Full params object:', JSON.stringify(params, null, 2));
-
-    const promise = ipcRenderer.invoke('powershell:executeDiscoveryModule', params);
-    console.log('[PRELOAD] ipcRenderer.invoke called, promise created');
-
-    promise.then((result: unknown) => {
-      console.log('[PRELOAD] ✅ executeDiscoveryModule promise resolved');
-      console.log('[PRELOAD] Result type:', typeof result);
-      console.log('[PRELOAD] Result keys:', result ? Object.keys(result as object) : 'NULL');
-      console.log('[PRELOAD] Result.success:', (result as { success?: boolean })?.success);
-      console.log('[PRELOAD] Result.error:', (result as { error?: string })?.error);
-    }).catch((err: unknown) => {
-      console.error('[PRELOAD] ❌ executeDiscoveryModule promise rejected');
-      console.error('[PRELOAD] Error:', err);
-      console.error('[PRELOAD] Error message:', (err as Error)?.message);
-    });
-
-    return promise;
-  },
-
   cancelExecution: (token: string) => {
     return ipcRenderer.invoke('powershell:cancel', token);
   },

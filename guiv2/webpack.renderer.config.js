@@ -40,10 +40,10 @@ const rendererConfig = {
     new webpack.ProvidePlugin({
       process: 'process/browser',
       Buffer: ['buffer', 'Buffer'],
+      global: path.resolve(__dirname, 'src/global-shim.js'),  // Provide global as window
     }),
-    // Define global as window for renderer context
+    // Define additional globals for renderer context
     new webpack.DefinePlugin({
-      'global': 'window',
       '__dirname': JSON.stringify(''),
       'module': JSON.stringify({}),  // Polyfill for asset-relocator-loader
     }),

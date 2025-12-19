@@ -10,7 +10,7 @@
  */
 
 import React from "react";
-import { Play, Square, Server } from 'lucide-react';
+import { Play, Square, Server, Cloud } from 'lucide-react';
 
 import { useProfileStore } from "../../store/useProfileStore";
 import { useAzureResourceDiscoveryLogic } from "../../hooks/useAzureResourceDiscoveryLogic";

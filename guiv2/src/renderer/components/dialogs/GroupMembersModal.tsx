@@ -136,8 +136,8 @@ export const GroupMembersModal: React.FC<GroupMembersModalProps> = ({ modalId, g
       headerName: 'Display Name',
       sortable: true,
       filter: true,
-      checkboxSelection: true,
-      headerCheckboxSelection: true,
+
+
       flex: 2,
     },
     {

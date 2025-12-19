@@ -768,6 +768,87 @@ export interface ElectronAPI {
   };
 
   // ========================================
+  // Backwards Compatibility Aliases for Profile Loading
+  // ========================================
+
+  /**
+   * Load all source profiles (alias for profile.getAll)
+   * @returns Promise resolving to array of CompanyProfile
+   */
+  loadSourceProfiles: () => Promise<import('../../../shared/types/profile').CompanyProfile[]>;
+
+  /**
+   * Load all target profiles (alias for profile.getAll)
+   * @returns Promise resolving to array of CompanyProfile
+   */
+  loadTargetProfiles: () => Promise<import('../../../shared/types/profile').CompanyProfile[]>;
+
+  /**
+   * Update source profile
+   * @param id Profile ID
+   * @param updates Partial profile updates
+   * @returns Promise resolving to updated profile
+   */
+  updateSourceProfile: (id: string, updates: any) => Promise<any>;
+
+  /**
+   * Update target profile
+   * @param id Profile ID
+   * @param updates Partial profile updates
+   * @returns Promise resolving to updated profile
+   */
+  updateTargetProfile: (id: string, updates: any) => Promise<any>;
+
+  /**
+   * Delete source profile
+   * @param id Profile ID
+   * @returns Promise resolving to success status
+   */
+  deleteSourceProfile: (id: string) => Promise<boolean>;
+
+  /**
+   * Delete target profile
+   * @param id Profile ID
+   * @returns Promise resolving to success status
+   */
+  deleteTargetProfile: (id: string) => Promise<boolean>;
+
+  /**
+   * Create source profile
+   * @param profile Profile data
+   * @returns Promise resolving to created profile
+   */
+  createSourceProfile: (profile: any) => Promise<any>;
+
+  /**
+   * Create target profile
+   * @param profile Profile data
+   * @returns Promise resolving to created profile
+   */
+  createTargetProfile: (profile: any) => Promise<any>;
+
+  /**
+   * Set active profile (deprecated, use setActiveSourceProfile/setActiveTargetProfile)
+   * @param id Profile ID
+   * @returns Promise resolving to success status
+   */
+  setActiveProfile: (id: string) => Promise<boolean>;
+
+  /**
+   * Set active source profile
+   * @param id Profile ID
+   * @returns Promise resolving to success status
+   */
+  setActiveSourceProfile: (id: string) => Promise<boolean>;
+
+  /**
+   * Set active target profile
+   * @param id Profile ID
+   * @returns Promise resolving to success status
+   */
+  setActiveTargetProfile: (id: string) => Promise<boolean>;
+
+  // ========================================
   // Credential Management
   // ========================================
 

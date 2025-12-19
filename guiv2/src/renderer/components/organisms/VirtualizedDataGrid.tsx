@@ -171,7 +171,7 @@ export interface VirtualizedDataGridProps<T = any> {
   /** Enable row selection */
   enableSelection?: boolean;
   /** Selection mode */
-  selectionMode?: 'single' | 'multiple';
+  selectionMode?: 'singleRow' | 'multiRow';
   /** Pagination settings */
   pagination?: boolean;
   paginationPageSize?: number;
@@ -207,7 +207,7 @@ function VirtualizedDataGridInner<T = any>(
     enableGrouping = false,
     enableFiltering = true,
     enableSelection = true,
-    selectionMode = 'multiple',
+    selectionMode = 'multiRow',
     pagination = true,
     paginationPageSize = 100,
     onRowClick,
@@ -255,8 +255,11 @@ function VirtualizedDataGridInner<T = any>(
       rowHeight: virtualRowHeight,
       headerHeight: 40,
       floatingFiltersHeight: 40,
-      suppressRowClickSelection: !enableSelection,
-      rowSelection: enableSelection ? selectionMode : undefined,
+
+      rowSelection: enableSelection ? {
+        mode: selectionMode,
+        enableClickSelection: true,
+      } : undefined,
       animateRows: true,
       // FIX: Disable charts to avoid error #200 (requires IntegratedChartsModule)
       enableCharts: false,

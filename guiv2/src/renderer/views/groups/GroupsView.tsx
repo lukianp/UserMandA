@@ -92,7 +92,7 @@ export const GroupsView: React.FC = () => {
         headerName: '',
         width: 50,
         pinned: 'left' as const,
-        suppressMenu: true,
+        suppressHeaderMenuButton: true,
         sortable: false,
         filter: false,
         resizable: false,
