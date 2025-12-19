@@ -57,6 +57,9 @@ export interface AppRegistrationState {
   success: boolean;
   currentStep: RegistrationStepId | null;
   registrationStatus: RegistrationStatus | null;
+  stepDurations: Record<string, number>; // Duration in seconds for each completed step
+  startTime: number | null; // Timestamp when registration started
+  endTime: number | null; // Timestamp when registration completed
 }
 
 /**
@@ -71,7 +74,14 @@ export function useAppRegistration() {
     success: false,
     currentStep: null,
     registrationStatus: null,
+    stepDurations: {},
+    startTime: null,
+    endTime: null,
   });
+
+  // Track step start times for duration calculation
+  const stepStartTimeRef = useRef<Record<string, number>>({});
+  const previousStepRef = useRef<string | null>(null);
 
   const monitorIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { addTargetProfile, updateTargetProfile, updateSourceProfile } = useProfileStore();
@@ -100,10 +110,42 @@ export function useAppRegistration() {
         ]);
 
         if (status) {
+          const currentStep = status.step as RegistrationStepId;
+          
+          // Track step durations
+          if (currentStep && currentStep !== previousStepRef.current) {
+            const now = Date.now();
+            
+            // Calculate duration for the previous step if it exists
+            if (previousStepRef.current && stepStartTimeRef.current[previousStepRef.current]) {
+              const prevStepStart = stepStartTimeRef.current[previousStepRef.current];
+              const duration = (now - prevStepStart) / 1000; // Convert to seconds
+              
+              // Try to extract duration from message (e.g., "⏱ 3.11s" or "took 3.11 seconds")
+              let extractedDuration = duration;
+              const durationMatch = status.message?.match(/[⏱]?\s*(\d+\.?\d*)\s*s(?:ec(?:ond)?s?)?/i);
+              if (durationMatch) {
+                extractedDuration = parseFloat(durationMatch[1]);
+              }
+              
+              setState(prev => ({
+                ...prev,
+                stepDurations: {
+                  ...prev.stepDurations,
+                  [previousStepRef.current!]: extractedDuration,
+                },
+              }));
+            }
+            
+            // Record start time for the new step
+            stepStartTimeRef.current[currentStep] = now;
+            previousStepRef.current = currentStep;
+          }
+          
           // Update state with current step and status
           setState(prev => ({
             ...prev,
-            currentStep: status.step as RegistrationStepId,
+            currentStep: currentStep,
             registrationStatus: status,
             progress: status.message,
           }));
@@ -115,7 +157,7 @@ export function useAppRegistration() {
               monitorIntervalRef.current = null;
             }
 
-            setState({
+            setState(prev => ({
               isRunning: false,
               isMonitoring: false,
               progress: '',
@@ -123,7 +165,10 @@ export function useAppRegistration() {
               success: false,
               currentStep: 'Error' as RegistrationStepId,
               registrationStatus: status,
-            });
+              stepDurations: prev.stepDurations,
+              startTime: prev.startTime,
+              endTime: Date.now(), // Record end time on failure
+            }));
             return;
           }
 
@@ -204,7 +249,7 @@ export function useAppRegistration() {
                   console.warn('[useAppRegistration] Source profile not found for company:', companyName);
                 }
 
-                setState({
+                setState(prev => ({
                   isRunning: false,
                   isMonitoring: false,
                   progress: '',
@@ -212,7 +257,10 @@ export function useAppRegistration() {
                   success: true,
                   currentStep: 'Complete',
                   registrationStatus: null,
-                });
+                  stepDurations: prev.stepDurations,
+                  startTime: prev.startTime,
+                  endTime: Date.now(), // Record end time on success
+                }));
               } else {
                 // Create new profile with required fields - cast to TargetProfile to avoid type mismatch
                 addTargetProfile({
@@ -268,7 +316,7 @@ export function useAppRegistration() {
                   console.warn('[useAppRegistration] Source profile not found for company:', companyName);
                 }
 
-                setState({
+                setState(prev => ({
                   isRunning: false,
                   isMonitoring: false,
                   progress: '',
@@ -276,7 +324,10 @@ export function useAppRegistration() {
                   success: true,
                   currentStep: 'Complete',
                   registrationStatus: null,
-                });
+                  stepDurations: prev.stepDurations,
+                  startTime: prev.startTime,
+                  endTime: Date.now(), // Record end time on success
+                }));
               }
             } else {
               throw new Error('Failed to decrypt credential file');
@@ -293,7 +344,7 @@ export function useAppRegistration() {
               monitorIntervalRef.current = null;
             }
 
-            setState({
+            setState(prev => ({
               isRunning: false,
               isMonitoring: false,
               progress: '',
@@ -301,7 +352,10 @@ export function useAppRegistration() {
               success: false,
               currentStep: null,
               registrationStatus: null,
-            });
+              stepDurations: prev.stepDurations,
+              startTime: prev.startTime,
+              endTime: Date.now(),
+            }));
           }
           // Progress is now updated from status file, no need for countdown here
         }
@@ -312,7 +366,7 @@ export function useAppRegistration() {
           monitorIntervalRef.current = null;
         }
 
-        setState({
+        setState(prev => ({
           isRunning: false,
           isMonitoring: false,
           progress: '',
@@ -320,7 +374,10 @@ export function useAppRegistration() {
           success: false,
           currentStep: null,
           registrationStatus: null,
-        });
+          stepDurations: prev.stepDurations,
+          startTime: prev.startTime,
+          endTime: Date.now(),
+        }));
       }
     }, pollInterval);
   }, [addTargetProfile, updateTargetProfile]);
@@ -350,6 +407,10 @@ export function useAppRegistration() {
       // Clear any previous status file
       await window.electronAPI.appRegistration.clearStatus(options.companyName);
 
+      // Reset duration tracking
+      stepStartTimeRef.current = {};
+      previousStepRef.current = null;
+      
       setState({
         isRunning: true,
         isMonitoring: false,
@@ -358,6 +419,9 @@ export function useAppRegistration() {
         success: false,
         currentStep: null,
         registrationStatus: null,
+        stepDurations: {},
+        startTime: Date.now(), // Record start time
+        endTime: null,
       });
 
       // Launch the PowerShell script
@@ -367,18 +431,21 @@ export function useAppRegistration() {
         // Start monitoring for credential files and status updates
         await startMonitoring(options.companyName);
       } else {
-        setState({
-          isRunning: false,
-          isMonitoring: false,
-          progress: '',
-          error: result.error || 'Failed to launch app registration script',
-          success: false,
-          currentStep: null,
-          registrationStatus: null,
-        });
+      setState(prev => ({
+        isRunning: false,
+        isMonitoring: false,
+        progress: '',
+        error: result.error || 'Failed to launch app registration script',
+        success: false,
+        currentStep: null,
+        registrationStatus: null,
+        stepDurations: prev.stepDurations,
+        startTime: prev.startTime,
+        endTime: Date.now(),
+      }));
       }
     } catch (error: any) {
-      setState({
+      setState(prev => ({
         isRunning: false,
         isMonitoring: false,
         progress: '',
@@ -386,7 +453,10 @@ export function useAppRegistration() {
         success: false,
         currentStep: null,
         registrationStatus: null,
-      });
+        stepDurations: prev.stepDurations,
+        startTime: prev.startTime,
+        endTime: Date.now(),
+      }));
     }
   }, [startMonitoring]);
 
@@ -407,7 +477,7 @@ export function useAppRegistration() {
    */
   const importExistingCredentials = useCallback(async (companyName: string) => {
     try {
-      setState({
+      setState(prev => ({
         isRunning: true,
         isMonitoring: false,
         progress: 'Importing credentials...',
@@ -415,7 +485,10 @@ export function useAppRegistration() {
         success: false,
         currentStep: null,
         registrationStatus: null,
-      });
+        stepDurations: prev.stepDurations,
+        startTime: Date.now(),
+        endTime: null,
+      }));
 
       // Read credential summary
       const summary = await window.electronAPI.appRegistration.readSummary(companyName);
@@ -468,7 +541,7 @@ export function useAppRegistration() {
         } as any);
       }
 
-      setState({
+      setState(prev => ({
         isRunning: false,
         isMonitoring: false,
         progress: '',
@@ -476,9 +549,12 @@ export function useAppRegistration() {
         success: true,
         currentStep: 'Complete',
         registrationStatus: null,
-      });
+        stepDurations: prev.stepDurations,
+        startTime: prev.startTime,
+        endTime: Date.now(),
+      }));
     } catch (error: any) {
-      setState({
+      setState(prev => ({
         isRunning: false,
         isMonitoring: false,
         progress: '',
@@ -486,7 +562,10 @@ export function useAppRegistration() {
         success: false,
         currentStep: null,
         registrationStatus: null,
-      });
+        stepDurations: prev.stepDurations,
+        startTime: prev.startTime,
+        endTime: Date.now(),
+      }));
     }
   }, [addTargetProfile, updateTargetProfile]);
 
@@ -495,6 +574,9 @@ export function useAppRegistration() {
    */
   const reset = useCallback(() => {
     stopMonitoring();
+    // Reset duration tracking refs
+    stepStartTimeRef.current = {};
+    previousStepRef.current = null;
     setState({
       isRunning: false,
       isMonitoring: false,
@@ -503,6 +585,9 @@ export function useAppRegistration() {
       success: false,
       currentStep: null,
       registrationStatus: null,
+      stepDurations: {},
+      startTime: null,
+      endTime: null,
     });
   }, [stopMonitoring]);
 

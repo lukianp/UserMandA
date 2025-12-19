@@ -10,7 +10,7 @@
  * - Beautiful card-based layout with glass morphism effects
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Building2,
   Cloud,
@@ -50,7 +50,7 @@ import { Checkbox } from '../../components/atoms/Checkbox';
 import { Modal } from '../../components/organisms/Modal';
 import { ProgressBar } from '../../components/molecules/ProgressBar';
 import LoadingSpinner from '../../components/atoms/LoadingSpinner';
-import { useAppRegistration } from '../../hooks/useAppRegistration';
+import { useAppRegistration, REGISTRATION_STEPS, type RegistrationStepId } from '../../hooks/useAppRegistration';
 import { useProfileStore } from '../../store/useProfileStore';
 
 // ============================================================================
@@ -70,6 +70,7 @@ interface ProgressStep {
   status: 'pending' | 'in_progress' | 'completed' | 'error';
   percentage: number;
   message?: string;
+  duration?: number; // Duration in seconds for completed steps
 }
 
 interface ConnectivityStatus {
@@ -301,32 +302,128 @@ const PermissionCard: React.FC<{
 );
 
 /**
- * Progress step visualization
+ * Format duration for display (short format for step durations)
+ */
+const formatDuration = (seconds: number): string => {
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`;
+  } else {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}m ${secs.toFixed(0)}s`;
+  }
+};
+
+/**
+ * Format elapsed time for display (full format for total time)
+ */
+const formatElapsedTime = (milliseconds: number): string => {
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  } else {
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+};
+
+/**
+ * Elapsed time display component with live updating
+ */
+const ElapsedTimeDisplay: React.FC<{
+  startTime: number | null;
+  endTime: number | null;
+  isRunning: boolean;
+}> = ({ startTime, endTime, isRunning }) => {
+  const [elapsed, setElapsed] = useState(0);
+  
+  useEffect(() => {
+    if (!startTime) {
+      setElapsed(0);
+      return;
+    }
+    
+    // If we have an end time, show the final duration
+    if (endTime) {
+      setElapsed(endTime - startTime);
+      return;
+    }
+    
+    // If running, update every second
+    if (isRunning) {
+      const updateElapsed = () => setElapsed(Date.now() - startTime);
+      updateElapsed(); // Initial update
+      const interval = setInterval(updateElapsed, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [startTime, endTime, isRunning]);
+  
+  if (!startTime && elapsed === 0) return null;
+  
+  return (
+    <div className="flex items-center justify-center gap-2 mb-4 py-2 px-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+      <Clock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+      <span className="text-sm text-gray-600 dark:text-gray-300">
+        {isRunning && !endTime ? 'Elapsed Time:' : 'Total Time:'}
+      </span>
+      <span className="font-mono text-lg font-semibold text-blue-600 dark:text-blue-400">
+        {formatElapsedTime(elapsed)}
+      </span>
+      {isRunning && !endTime && (
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+        </span>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Progress step visualization - compact view for 12 steps with auto-scroll
  */
 const ProgressStepCard: React.FC<{
   steps: ProgressStep[];
   currentStepIndex: number;
-}> = ({ steps, currentStepIndex }) => (
-  <div className="space-y-3">
+}> = ({ steps, currentStepIndex }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Auto-scroll to the current in-progress step
+  useEffect(() => {
+    if (currentStepIndex >= 0 && stepRefs.current[currentStepIndex]) {
+      stepRefs.current[currentStepIndex]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [currentStepIndex]);
+
+  return (
+  <div ref={containerRef} className="space-y-2 max-h-[400px] overflow-y-auto pr-2 scroll-smooth">
     {steps.map((step, index) => (
       <div
         key={step.id}
+        ref={(el) => (stepRefs.current[index] = el)}
         className={`
-          flex items-center gap-4 p-4 rounded-lg transition-all duration-300
+          flex items-center gap-3 p-3 rounded-lg transition-all duration-300
           ${
             step.status === 'in_progress'
-              ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-700'
+              ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-700 shadow-sm'
               : step.status === 'completed'
               ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
               : step.status === 'error'
               ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-              : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+              : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 opacity-60'
           }
         `}
       >
         <div
           className={`
-            w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0
+            w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
             ${
               step.status === 'completed'
                 ? 'bg-green-500 text-white'
@@ -339,42 +436,53 @@ const ProgressStepCard: React.FC<{
           `}
         >
           {step.status === 'completed' ? (
-            <Check className="w-5 h-5" />
+            <Check className="w-4 h-4" />
           ) : step.status === 'in_progress' ? (
             <LoadingSpinner size="sm" />
           ) : step.status === 'error' ? (
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           ) : (
-            <span className="text-sm font-bold">{index + 1}</span>
+            <span className="text-xs font-bold">{index + 1}</span>
           )}
         </div>
 
-        <div className="flex-1">
-          <p
-            className={`
-              font-medium
-              ${
-                step.status === 'completed'
-                  ? 'text-green-700 dark:text-green-300'
-                  : step.status === 'in_progress'
-                  ? 'text-blue-700 dark:text-blue-300'
-                  : step.status === 'error'
-                  ? 'text-red-700 dark:text-red-300'
-                  : 'text-gray-600 dark:text-gray-400'
-              }
-            `}
-          >
-            {step.label}
-          </p>
-          {step.message && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{step.message}</p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p
+              className={`
+                text-sm font-medium truncate
+                ${
+                  step.status === 'completed'
+                    ? 'text-green-700 dark:text-green-300'
+                    : step.status === 'in_progress'
+                    ? 'text-blue-700 dark:text-blue-300'
+                    : step.status === 'error'
+                    ? 'text-red-700 dark:text-red-300'
+                    : 'text-gray-500 dark:text-gray-400'
+                }
+              `}
+            >
+              {step.label}
+            </p>
+            {/* Show duration for completed steps */}
+            {step.status === 'completed' && step.duration !== undefined && (
+              <span className="text-xs text-green-600 dark:text-green-400 font-mono bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded">
+                {formatDuration(step.duration)}
+              </span>
+            )}
+          </div>
+          {step.status === 'in_progress' && step.message && (
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5 truncate">{step.message}</p>
+          )}
+          {step.status === 'error' && step.message && (
+            <p className="text-xs text-red-600 dark:text-red-400 mt-0.5 truncate">{step.message}</p>
           )}
         </div>
 
-        <div className="w-24 text-right">
+        <div className="w-12 text-right flex-shrink-0">
           <span
             className={`
-              text-sm font-medium
+              text-xs font-medium
               ${
                 step.status === 'completed'
                   ? 'text-green-600 dark:text-green-400'
@@ -390,7 +498,8 @@ const ProgressStepCard: React.FC<{
       </div>
     ))}
   </div>
-);
+  );
+};
 
 /**
  * Credential display with secure masking
@@ -650,46 +759,61 @@ const SetupCompanyView: React.FC = () => {
   // Existing credentials check
   const [hasExistingCredentials, setHasExistingCredentials] = useState(false);
 
-  // Progress steps - now driven by appRegState
+  // Progress steps - driven by appRegState.currentStep from the PowerShell script's status file
   const progressSteps: ProgressStep[] = useMemo(() => {
-    if (appRegState.success) {
-      return [
-        { id: 'launch', label: 'Launching PowerShell Script', status: 'completed', percentage: 25, message: 'Script launched' },
-        { id: 'register', label: 'Creating App Registration', status: 'completed', percentage: 50, message: 'App registered' },
-        { id: 'permissions', label: 'Configuring Permissions', status: 'completed', percentage: 75, message: 'Permissions granted' },
-        { id: 'store', label: 'Storing Credentials', status: 'completed', percentage: 100, message: 'Credentials saved' },
-      ];
-    }
-    if (appRegState.error) {
-      return [
-        { id: 'launch', label: 'Launching PowerShell Script', status: appRegState.isRunning || appRegState.isMonitoring ? 'completed' : 'error', percentage: 25 },
-        { id: 'register', label: 'Creating App Registration', status: 'pending', percentage: 50 },
-        { id: 'permissions', label: 'Configuring Permissions', status: 'pending', percentage: 75 },
-        { id: 'store', label: 'Storing Credentials', status: 'pending', percentage: 100 },
-      ];
-    }
-    if (appRegState.isMonitoring) {
-      return [
-        { id: 'launch', label: 'Launching PowerShell Script', status: 'completed', percentage: 25, message: 'Script launched' },
-        { id: 'register', label: 'Creating App Registration', status: 'in_progress', percentage: 50, message: appRegState.progress },
-        { id: 'permissions', label: 'Configuring Permissions', status: 'pending', percentage: 75 },
-        { id: 'store', label: 'Storing Credentials', status: 'pending', percentage: 100 },
-      ];
-    }
-    if (appRegState.isRunning) {
-      return [
-        { id: 'launch', label: 'Launching PowerShell Script', status: 'in_progress', percentage: 25, message: appRegState.progress },
-        { id: 'register', label: 'Creating App Registration', status: 'pending', percentage: 50 },
-        { id: 'permissions', label: 'Configuring Permissions', status: 'pending', percentage: 75 },
-        { id: 'store', label: 'Storing Credentials', status: 'pending', percentage: 100 },
-      ];
-    }
-    return [
-      { id: 'launch', label: 'Launching PowerShell Script', status: 'pending', percentage: 25 },
-      { id: 'register', label: 'Creating App Registration', status: 'pending', percentage: 50 },
-      { id: 'permissions', label: 'Configuring Permissions', status: 'pending', percentage: 75 },
-      { id: 'store', label: 'Storing Credentials', status: 'pending', percentage: 100 },
-    ];
+    // Find the current step index in REGISTRATION_STEPS
+    const currentStepIndex = appRegState.currentStep
+      ? REGISTRATION_STEPS.findIndex(s => s.id === appRegState.currentStep)
+      : -1;
+    
+    // Calculate percentage based on current step (12 steps total)
+    const totalSteps = REGISTRATION_STEPS.length;
+    
+    return REGISTRATION_STEPS.map((step, index) => {
+      let status: ProgressStep['status'] = 'pending';
+      let message: string | undefined = undefined;
+      
+      // Determine status based on current step
+      if (appRegState.success) {
+        // All steps completed on success
+        status = 'completed';
+        message = step.description;
+      } else if (appRegState.error) {
+        // Mark steps up to current as completed, current as error
+        if (index < currentStepIndex) {
+          status = 'completed';
+          message = step.description;
+        } else if (index === currentStepIndex) {
+          status = 'error';
+          message = appRegState.error;
+        }
+      } else if (appRegState.isRunning || appRegState.isMonitoring) {
+        // Active registration - use currentStep from status file
+        if (index < currentStepIndex) {
+          status = 'completed';
+          message = step.description;
+        } else if (index === currentStepIndex) {
+          status = 'in_progress';
+          // Use the actual message from the PowerShell script's status file
+          message = appRegState.registrationStatus?.message || appRegState.progress || step.description;
+        }
+      }
+      
+      // Calculate percentage for this step (evenly distributed)
+      const percentage = Math.round(((index + 1) / totalSteps) * 100);
+      
+      // Get duration for completed steps from stepDurations
+      const duration = appRegState.stepDurations?.[step.id];
+      
+      return {
+        id: step.id,
+        label: step.label,
+        status,
+        percentage,
+        message,
+        duration: status === 'completed' ? duration : undefined,
+      };
+    });
   }, [appRegState]);
 
   // Credential state
@@ -700,7 +824,22 @@ const SetupCompanyView: React.FC = () => {
   const isRunning = appRegState.isRunning || appRegState.isMonitoring;
   const error = appRegState.error;
   const success = appRegState.success;
-  const progress = appRegState.success ? 100 : appRegState.isMonitoring ? 50 : appRegState.isRunning ? 25 : 0;
+  
+  // Calculate progress based on current step from status file
+  const progress = useMemo(() => {
+    if (appRegState.success) return 100;
+    if (!appRegState.currentStep) return 0;
+    
+    // Use progress from status file if available
+    if (appRegState.registrationStatus?.progress !== undefined) {
+      return appRegState.registrationStatus.progress;
+    }
+    
+    // Fall back to calculating from step index
+    const stepIndex = REGISTRATION_STEPS.findIndex(s => s.id === appRegState.currentStep);
+    if (stepIndex === -1) return 0;
+    return Math.round(((stepIndex + 1) / REGISTRATION_STEPS.length) * 100);
+  }, [appRegState.success, appRegState.currentStep, appRegState.registrationStatus?.progress]);
 
   // Wizard steps definition
   const wizardSteps: WizardStep[] = useMemo(
@@ -1164,7 +1303,14 @@ const SetupCompanyView: React.FC = () => {
                   </div>
                 </div>
 
-                <ProgressStepCard steps={progressSteps} currentStepIndex={3} />
+                {/* Total elapsed time display */}
+                <ElapsedTimeDisplay
+                  startTime={appRegState.startTime}
+                  endTime={appRegState.endTime}
+                  isRunning={false}
+                />
+
+                <ProgressStepCard steps={progressSteps} currentStepIndex={REGISTRATION_STEPS.length - 1} />
 
                 <div className="flex justify-center gap-4 mt-8">
                   <Button variant="secondary" onClick={resetForm} icon={<RefreshCw className="w-4 h-4" />}>
@@ -1181,7 +1327,20 @@ const SetupCompanyView: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-6">
-                <ProgressStepCard steps={progressSteps} currentStepIndex={isRunning ? 1 : 0} />
+                {/* Elapsed time display - shows during registration and after completion/error */}
+                <ElapsedTimeDisplay
+                  startTime={appRegState.startTime}
+                  endTime={appRegState.endTime}
+                  isRunning={isRunning}
+                />
+
+                <ProgressStepCard 
+                  steps={progressSteps} 
+                  currentStepIndex={appRegState.currentStep 
+                    ? REGISTRATION_STEPS.findIndex(s => s.id === appRegState.currentStep) 
+                    : 0
+                  } 
+                />
 
                 {isRunning && (
                   <div className="mt-6">
