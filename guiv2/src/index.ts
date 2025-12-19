@@ -44,6 +44,7 @@ const createWindow = async (): Promise<BrowserWindow> => {
   });
 
   // Set CSP headers to allow data URIs for images and fonts (Tailwind CSS and AG Grid use them)
+  // Also allow 'unsafe-inline' for the global polyfill script in index.html
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -52,8 +53,8 @@ const createWindow = async (): Promise<BrowserWindow> => {
           "default-src 'self'; " +
           "img-src 'self' data: blob:; " +
           "font-src 'self' data: blob:; " +
-          "style-src 'self'; " +
-          "script-src 'self'; " +
+          "style-src 'self' 'unsafe-inline'; " +
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
           "connect-src 'self' ws: wss:;"
         ]
       }

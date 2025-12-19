@@ -307,14 +307,14 @@ function Connect-ToMicrosoftGraphService {
 
         Write-Verbose "[AuthService] Connecting to Microsoft Graph with TenantId: $connectionTenantId"
 
-        # Try the connection
+        # Try the connection (suppress output to prevent leaking to pipeline)
         try {
-            Connect-MgGraph -ClientSecretCredential $Credential -TenantId $connectionTenantId -NoWelcome -ErrorAction Stop
+            $null = Connect-MgGraph -ClientSecretCredential $Credential -TenantId $connectionTenantId -NoWelcome -ErrorAction Stop
         } catch {
             # If common endpoint fails and we have a specific tenant, try again once more
             if ($TenantId -and $TenantId -ne "common" -and $connectionTenantId -ne $TenantId) {
                 Write-Verbose "[AuthService] Retrying connection with original TenantId: $TenantId"
-                Connect-MgGraph -ClientSecretCredential $Credential -TenantId $TenantId -NoWelcome -ErrorAction Stop
+                $null = Connect-MgGraph -ClientSecretCredential $Credential -TenantId $TenantId -NoWelcome -ErrorAction Stop
             } else {
                 throw
             }
@@ -555,22 +555,22 @@ function Stop-AuthenticationService {
     try {
         Write-Verbose "[AuthService] Stopping authentication service..."
         
-        # Disconnect from services
+        # Disconnect from services (suppress output to prevent leaking to pipeline)
         try {
             if (Get-Command Disconnect-MgGraph -ErrorAction SilentlyContinue) {
-                Disconnect-MgGraph -ErrorAction SilentlyContinue
+                $null = Disconnect-MgGraph -ErrorAction SilentlyContinue
             }
         } catch {}
-        
+
         try {
             if (Get-Command Disconnect-AzAccount -ErrorAction SilentlyContinue) {
-                Disconnect-AzAccount -ErrorAction SilentlyContinue
+                $null = Disconnect-AzAccount -ErrorAction SilentlyContinue
             }
         } catch {}
-        
-        # Clear current session
+
+        # Clear current session (suppress output)
         if ($script:CurrentSessionId) {
-            Remove-AuthenticationSession -SessionId $script:CurrentSessionId
+            $null = Remove-AuthenticationSession -SessionId $script:CurrentSessionId
             $script:CurrentSessionId = $null
         }
         

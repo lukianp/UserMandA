@@ -848,9 +848,9 @@ function New-ApplicationCatalog {
                 CreatedAt = Get-Date
             }
             
-            # Export catalog if path specified
+            # Export catalog if path specified (suppress output to prevent leaking to pipeline)
             if ($OutputPath) {
-                Export-ApplicationCatalog -ApplicationCatalog $masterCatalog -Statistics $catalogStats -OutputPath $OutputPath
+                $null = Export-ApplicationCatalog -ApplicationCatalog $masterCatalog -Statistics $catalogStats -OutputPath $OutputPath
             }
             
             Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Master catalog created with $(@($masterCatalog).Count) unique applications (removed $duplicateCount duplicates)" -Level "SUCCESS"
@@ -2188,8 +2188,8 @@ function Invoke-ApplicationDiscovery {
                 }
             }
 
-            # Export results
-            Export-ApplicationCatalog -ApplicationCatalog $applicationCatalog -Statistics $statistics -OutputPath $outputPath
+            # Export results (suppress output to prevent leaking into return value)
+            $null = Export-ApplicationCatalog -ApplicationCatalog $applicationCatalog -Statistics $statistics -OutputPath $outputPath
             Write-ModuleLog -ModuleName "ApplicationDiscovery" -Message "Application catalog exported to: $outputPath" -Level "SUCCESS"
 
             $result.Data = $applicationCatalog
