@@ -1,4 +1,4 @@
-su/**
+/**
  * External Identity Discovery Logic Hook
  * Provides state management and business logic for external/guest identity discovery operations
  * ✅ FIXED: Uses event-driven architecture with streaming support
@@ -307,6 +307,7 @@ export const useExternalIdentityDiscoveryLogic = (): ExternalIdentityDiscoveryHo
     isCancelling,
     progress,
     results,
+    result: results, // Alias for results
     error,
     logs,
     showExecutionDialog,
@@ -315,6 +316,7 @@ export const useExternalIdentityDiscoveryLogic = (): ExternalIdentityDiscoveryHo
     cancelDiscovery,
     exportResults,
     clearLogs,
+    clearError: () => setError(null), // Clear error function
     selectedProfile,
 
     // Additional properties
@@ -323,9 +325,13 @@ export const useExternalIdentityDiscoveryLogic = (): ExternalIdentityDiscoveryHo
     currentResult: results,
     isDiscovering: isRunning,
     selectedTab,
+    activeTab: selectedTab, // Alias for selectedTab
     searchText,
+    filter: { searchText }, // Filter object with required searchText property
     filteredData: results ? Object.values(results).flat() : [],
     columnDefs: [],
+    columns: [], // Alias for columnDefs
+    stats: null, // Stats not implemented yet
     errors,
     updateConfig,
     loadTemplate,

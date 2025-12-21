@@ -149,9 +149,9 @@ function Connect-AzureWithMultipleStrategies {
 
             # Use device code flow for Graph, then bridge to Azure
             if ($Configuration.TenantId) {
-                $graphContext = Connect-MgGraph -TenantId $Configuration.TenantId -Scopes "https://management.azure.com/.default" -UseDeviceCode -ErrorAction Stop
+                Connect-MgGraph -TenantId $Configuration.TenantId -Scopes "https://management.azure.com/.default" -UseDeviceCode -ErrorAction Stop | Out-Null
             } else {
-                $graphContext = Connect-MgGraph -Scopes "https://management.azure.com/.default" -UseDeviceCode -ErrorAction Stop
+                Connect-MgGraph -Scopes "https://management.azure.com/.default" -UseDeviceCode -ErrorAction Stop | Out-Null
             }
 
             # Get access token from Graph session and use for Azure

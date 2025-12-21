@@ -281,7 +281,7 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Shield className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.securityScore ?? 0).toFixed(0)}%</div>
+                <div className="text-3xl font-bold">{(typeof stats?.securityScore === 'number' ? stats.securityScore : 0).toFixed(0)}%</div>
                 <div className="text-sm opacity-90">Security Score</div>
               </div>
             </div>
@@ -358,22 +358,24 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Providers by Type</h3>
               <div className="space-y-3">
-                {Object.entries(providersByType).map(([type, count]) => (
+                {Object.entries(providersByType).map(([type, count]) => {
+                  const countNum = typeof count === 'number' ? count : 0;
+                  return (
                   <div key={type} className="flex items-center gap-3">
                     <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">{type}</div>
                     <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6 overflow-hidden">
                       <div
                         className="bg-indigo-600 h-full flex items-center justify-end px-2 text-xs text-white font-medium"
-                        style={{ width: `${(stats?.totalProviders ?? 0) > 0 ? (count / (stats?.totalProviders ?? 0)) * 100 : 0}%` }}
+                        style={{ width: `${typeof stats?.totalProviders === 'number' && stats.totalProviders > 0 ? (countNum / stats.totalProviders) * 100 : 0}%` }}
                       >
-                        {count > 0 && `${count}`}
+                        {countNum > 0 && `${countNum}`}
                       </div>
                     </div>
                     <div className="w-16 text-sm text-gray-600 dark:text-gray-400 text-right">
-                      {(stats?.totalProviders ?? 0) > 0 ? ((count / (stats?.totalProviders ?? 0)) * 100).toFixed(1) : 0}%
+                      {typeof stats?.totalProviders === 'number' && stats.totalProviders > 0 ? ((countNum / stats.totalProviders) * 100).toFixed(1) : 0}%
                     </div>
                   </div>
-                ))}
+                )}})}
               </div>
             </div>
           </div>
@@ -400,7 +402,7 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
                         key={provider}
                         onClick={() => toggleProvider(provider)}
                         className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                          filter.selectedProviders?.includes(provider) ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                          normalizedFilter.selectedProviders.includes(provider) ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }`}
                         data-cy={`filter-provider-${provider.toLowerCase()}`}
                       >

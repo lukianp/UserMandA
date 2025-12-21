@@ -1578,6 +1578,29 @@ export interface ElectronAPI {
   };
 
   // ========================================
+  // Simple Error/Message Logging (for ErrorBoundary & logger.ts)
+  // ========================================
+
+  /**
+   * Log an error to the main process
+   * @param error - Error object with message, stack, etc.
+   * @returns Promise resolving when logged
+   */
+  logError?: (error: {
+    message: string;
+    stack?: string;
+    componentStack?: string;
+    timestamp?: string;
+  }) => Promise<void>;
+
+  /**
+   * Log a message to the main process
+   * @param message - Log message object
+   * @returns Promise resolving when logged
+   */
+  logMessage?: (message: any) => Promise<void>;
+
+  // ========================================
   // Centralized Logging API
   // ========================================
 

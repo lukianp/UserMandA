@@ -159,11 +159,18 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={baseClasses}
         onClick={handleClick}
         disabled={disabled || loading}
-        aria-busy={loading}
-        aria-disabled={disabled || loading}
+        aria-busy={loading ? "true" : undefined}
+        aria-disabled={disabled || loading ? "true" : undefined}
+        aria-pressed={variant === 'primary' ? undefined : "false"}
+        aria-describedby={loading ? 'button-loading' : undefined}
         data-cy={dataCy}
         {...props}
       >
+        {loading && (
+          <span id="button-loading" className="sr-only">
+            Loading
+          </span>
+        )}
         {/* Ripple effects */}
         {ripples.map((ripple) => (
           <span

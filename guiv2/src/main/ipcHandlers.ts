@@ -34,21 +34,60 @@ let projectService: ProjectService;
 let dashboardService: DashboardService;
 let profileService: ProfileService;
 
-// Window storage - simple pattern that webpack can't optimize away
-let _storedWindow: BrowserWindow | null = null;
+// Secure window management with proper lifecycle handling
+class WindowManager {
+  private window: BrowserWindow | null = null;
+  private eventListeners: Map<string, () => void> = new Map();
+
+  setWindow(window: BrowserWindow | null): void {
+    // Clean up previous window listeners
+    this.cleanup();
+
+    this.window = window;
+
+    if (window) {
+      // Set up window lifecycle listeners
+      const onClosed = () => {
+        this.window = null;
+        this.cleanup();
+      };
+
+      window.on('closed', onClosed);
+      this.eventListeners.set('closed', onClosed);
+    }
+  }
+
+  getWindow(): BrowserWindow | null {
+    return this.window && !this.window.isDestroyed() ? this.window : null;
+  }
+
+  hasWindow(): boolean {
+    return this.window !== null && !this.window.isDestroyed();
+  }
+
+  private cleanup(): void {
+    // Remove all event listeners
+    this.eventListeners.forEach((listener, event) => {
+      if (this.window && !this.window.isDestroyed()) {
+        this.window.removeListener(event as any, listener);
+      }
+    });
+    this.eventListeners.clear();
+  }
+}
+
+const windowManager = new WindowManager();
 
 function setMainWindow(window: BrowserWindow | null): void {
-  console.error('[WINDOW_MANAGER] 🔧 Setting window:', !!window);
-  _storedWindow = window;
-  console.error('[WINDOW_MANAGER] ✅ Window stored, valid:', !!_storedWindow);
+  windowManager.setWindow(window);
 }
 
 function getMainWindow(): BrowserWindow | null {
-  return _storedWindow;
+  return windowManager.getWindow();
 }
 
 function hasMainWindow(): boolean {
-  return _storedWindow !== null && !_storedWindow.isDestroyed();
+  return windowManager.hasWindow();
 }
 
 // Configuration storage

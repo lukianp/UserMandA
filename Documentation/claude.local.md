@@ -414,49 +414,86 @@ const cancelDiscovery = useCallback(async () => {
 
 ---
 
-# Discovery Hooks Validation Status (43 Modules)
+# Discovery Hooks Implementation Status (55 Modules)
 
-## ✅ Working Hooks (Reference Templates)
-- useApplicationDiscoveryLogic.ts (250 records, 71s, EnrichmentLevel)
+## ✅ Fully Implemented and Tested (8 Hooks)
+- useApplicationDiscoveryLogic.ts (250 records, 71s, EnrichmentLevel parameter)
 - useAzureDiscoveryLogic.ts
 - useActiveDirectoryDiscoveryLogic.ts
+- useAWSDiscoveryLogic.ts (TypeScript fixes applied)
+- useHyperVDiscoveryLogic.ts (TypeScript fixes applied)
+- useOffice365DiscoveryLogic.ts (TypeScript fixes applied)
+- usePowerPlatformDiscoveryLogic.ts (TypeScript fixes applied)
+- useSecurityInfrastructureDiscoveryLogic.ts (TypeScript fixes applied)
 
-## ✅ Fixed Hooks (TypeScript Errors)
-- useAWSDiscoveryLogic.ts (data.currentItem → data.currentPhase)
-- useHyperVDiscoveryLogic.ts (type cast)
-- useOffice365DiscoveryLogic.ts (type casts, progress properties)
-- usePowerPlatformDiscoveryLogic.ts (type cast, data.result)
-- useSecurityInfrastructureDiscoveryLogic.ts (type cast, progress, config)
+## ✅ Implemented - All Discovery Hooks (55 Total)
 
-## ⏳ To Validate (20 hooks)
-Cloud & Identity: useConditionalAccessDiscoveryLogic, useExchangeDiscoveryLogic, useOneDriveDiscoveryLogic, useTeamsDiscoveryLogic, useGoogleWorkspaceDiscoveryLogic
-
-Infrastructure: useFileSystemDiscoveryLogic, useIntuneDiscoveryLogic, useLicensingDiscoveryLogic, useNetworkDiscoveryLogic, useSharePointDiscoveryLogic, useSQLServerDiscoveryLogic, useVMwareDiscoveryLogic, useWebServerDiscoveryLogic, useAWSCloudInfrastructureDiscoveryLogic, useDataLossPreventionDiscoveryLogic, useDomainDiscoveryLogic, useEDiscoveryLogic, useIdentityGovernanceDiscoveryLogic
-
-## ❌ Missing Hooks (17 to create)
+**Cloud & Identity (15 hooks)**
+- useActiveDirectoryDiscoveryLogic.ts
+- useAzureDeviceDiscoveryLogic.ts
+- useAzureDiscoveryLogic.ts
+- useAzureInfraDiscoveryLogic.ts
+- useAzureM365DiscoveryLogic.ts
+- useAzureResourceDiscoveryLogic.ts
+- useAzureSecurityDiscoveryLogic.ts
+- useConditionalAccessDiscoveryLogic.ts
 - useEntraIDAppDiscoveryLogic.ts
+- useExchangeDiscoveryLogic.ts
 - useExternalIdentityDiscoveryLogic.ts
+- useGoogleWorkspaceDiscoveryLogic.ts
 - useGraphDiscoveryLogic.ts
-- useMultiDomainForestDiscoveryLogic.ts
+- useIdentityGovernanceDiscoveryLogic.ts
+- useOffice365DiscoveryLogic.ts
+
+**Infrastructure & Networking (17 hooks)**
+- useAWSCloudInfrastructureDiscoveryLogic.ts
+- useAWSDiscoveryLogic.ts
 - useBackupRecoveryDiscoveryLogic.ts
-- useCertificateAuthorityDiscoveryLogic.ts
-- useCertificateDiscoveryLogic.ts
-- useDatabaseSchemaDiscoveryLogic.ts
-- useDataClassificationDiscoveryLogic.ts
 - useDNSDHCPDiscoveryLogic.ts
-- useEnvironmentDetectionLogic.ts
+- useDomainDiscoveryLogic.ts
 - useFileServerDiscoveryLogic.ts
-- useGPODiscoveryLogic.ts
+- useFileSystemDiscoveryLogic.ts
+- useHyperVDiscoveryLogic.ts
 - useInfrastructureDiscoveryLogic.ts
+- useNetworkDiscoveryLogic.ts
 - useNetworkInfrastructureDiscoveryLogic.ts
 - usePhysicalServerDiscoveryLogic.ts
 - usePrinterDiscoveryLogic.ts
-- useScheduledTaskDiscoveryLogic.ts
 - useStorageArrayDiscoveryLogic.ts
 - useVirtualizationDiscoveryLogic.ts
-- useWebServerConfigDiscoveryLogic.ts
-- usePowerBIDiscoveryLogic.ts
+- useVMwareDiscoveryLogic.ts
+- useWebServerDiscoveryLogic.ts
+
+**Security & Compliance (10 hooks)**
+- useCertificateAuthorityDiscoveryLogic.ts
+- useCertificateDiscoveryLogic.ts
+- useDataClassificationDiscoveryLogic.ts
+- useDataLossPreventionDiscoveryLogic.ts
+- useEDiscoveryLogic.ts
+- useIntuneDiscoveryLogic.ts
+- useLicensingDiscoveryLogic.ts
 - usePaloAltoDiscoveryLogic.ts
+- usePanoramaInterrogationDiscoveryLogic.ts
+- useSecurityInfrastructureDiscoveryLogic.ts
+
+**Applications & Data (13 hooks)**
+- useApplicationDependencyMappingDiscoveryLogic.ts
+- useApplicationDiscoveryLogic.ts
+- useDatabaseSchemaDiscoveryLogic.ts
+- useGPODiscoveryLogic.ts
+- useMultiDomainForestDiscoveryLogic.ts
+- useOneDriveDiscoveryLogic.ts
+- usePowerBIDiscoveryLogic.ts
+- usePowerPlatformDiscoveryLogic.ts
+- useScheduledTaskDiscoveryLogic.ts
+- useSharePointDiscoveryLogic.ts
+- useSQLServerDiscoveryLogic.ts
+- useTeamsDiscoveryLogic.ts
+- useWebServerConfigDiscoveryLogic.ts
+
+## 📋 Known Issues to Address
+- useExchangeDiscoveryLogic.ts: Contains debug console.log statements (needs cleanup)
+- useTeamsDiscoveryLogic.ts: Contains TODO comments for API replacement (low priority)
 
 ---
 
@@ -682,3 +719,306 @@ npm start
 Copy-Item -Path "C:\enterprisediscovery\guiv2\src\*" -Destination "D:\Scripts\UserMandA\guiv2\src\" -Recurse -Force
 Copy-Item -Path "C:\enterprisediscovery\Modules\*" -Destination "D:\Scripts\UserMandA\Modules\" -Recurse -Force
 ```
+
+---
+
+# Webpack & Electron Build Critical Patterns
+
+## CSP Plugin Conflicts with Webpack Chunk Loading
+
+**Problem:** CspHtmlWebpackPlugin creates nonce-based CSP headers that break webpack chunk loading
+
+**Root Cause:** When CSP headers include nonces or hashes, browsers ignore 'unsafe-inline' directive, preventing webpack from loading dynamic chunks
+
+**Error Symptoms:**
+```
+Refused to execute inline script because it violates CSP directive
+global is not defined at jsonp chunk loading
+```
+
+**Solution:** Disable CspHtmlWebpackPlugin for Electron apps
+
+```javascript
+// webpack.renderer.config.js - DISABLE CSP PLUGIN
+// new CspHtmlWebpackPlugin({ ... }), // ❌ Breaks webpack chunks in Electron
+
+// Instead, use meta tag in index.html for basic security
+// Electron apps run locally, so strict CSP is less critical than web apps
+```
+
+**Why This Works:**
+- Electron apps are sandboxed desktop applications, not exposed web apps
+- webpack needs inline script execution for chunk loading
+- Meta tag CSP in HTML provides sufficient baseline security
+
+## Global Variable Polyfill for Webpack
+
+**Problem:** `global is not defined` in webpack bundles
+
+**Solution:** Create global-shim.js and configure ProvidePlugin
+
+**CREATE FILE:** `guiv2/src/global-shim.js`
+```javascript
+/**
+ * Global shim for Electron renderer process
+ */
+if (typeof global === 'undefined') {
+  window.global = window;
+}
+
+if (typeof globalThis === 'undefined') {
+  window.globalThis = window;
+}
+
+module.exports = window;
+```
+
+**CONFIGURE WEBPACK:** `webpack.renderer.config.js`
+```javascript
+new webpack.ProvidePlugin({
+  process: 'process/browser',
+  Buffer: ['buffer', 'Buffer'],
+  global: path.resolve(__dirname, 'src/global-shim.js'),
+}),
+```
+
+## Critical: Always Build Preload Bundle
+
+**Problem:** Application fails to start with "Cannot load preload script"
+
+**Cause:** `npm run build` only builds main + renderer, NOT preload
+
+**Solution:** Build all 3 bundles explicitly
+
+```powershell
+# COMPLETE BUILD - ALL 3 BUNDLES REQUIRED
+cd C:\enterprisediscovery\guiv2
+npm run build:main                                                  # Main process
+npx webpack --config webpack.preload.config.js --mode=production   # Preload (CRITICAL!)
+npm run build:renderer                                             # Renderer UI
+```
+
+**Why Preload is Critical:**
+- Preload script establishes secure bridge between main and renderer
+- Without it, renderer has no access to Electron APIs
+- Must be rebuilt separately - not included in `npm run build`
+
+## Bundle Analyzer Performance Tip
+
+**Problem:** Bundle analyzer runs on every build, slowing development
+
+**Solution:** Make it conditional
+
+```javascript
+// webpack.renderer.config.js
+...(process.env.ANALYZE_BUNDLE === 'true' ? [
+  new BundleAnalyzerPlugin({
+    analyzerMode: 'static',
+    openAnalyzer: false,
+    reportFilename: 'bundle-analysis.html',
+  })
+] : []),
+```
+
+**Usage:**
+```powershell
+# Normal build (fast)
+npm run build:renderer
+
+# Analyze bundle (slow, generates report)
+$env:ANALYZE_BUNDLE='true'; npm run build:renderer
+```
+
+---
+
+# Production Security Patterns
+
+## Remove Debug Logging for Production
+
+**Security Risk:** console.log statements leak sensitive data in production
+
+**Pattern:** Remove all console.log, keep console.error/warn
+
+```typescript
+// ❌ REMOVE in production
+console.log('[Component] User data:', userData);
+console.log('[API] Auth token:', token);
+console.log('[Service] Processing:', sensitiveData);
+
+// ✅ KEEP for error handling
+console.error('[Component] Error:', error);
+console.warn('[Service] Warning:', warning);
+```
+
+**Implementation:**
+- Use agent to search and remove: `Grep console\.log`
+- Replace with structured logger that filters by NODE_ENV
+- Use `logger.debug()` for development, `logger.error()` for production
+
+## Stack Trace Protection in Error Boundaries
+
+**Security Risk:** Stack traces expose code structure and file paths
+
+**Pattern:** Only show stack traces in development
+
+```typescript
+// ErrorBoundary.tsx
+{process.env.NODE_ENV === 'development' && error?.stack && (
+  <pre>{error.stack}</pre>
+)}
+
+// In production: error.stack is hidden
+```
+
+## Input Sanitization Utilities
+
+**Create:** `guiv2/src/shared/security.ts`
+
+```typescript
+// Prevent directory traversal
+export function sanitizeFilePath(filePath: string): string {
+  return filePath
+    .replace(/\.\./g, '')           // Remove ../
+    .replace(/[<>:"|?*]/g, '')     // Remove forbidden chars
+    .replace(/^[\/\\]/, '')         // Remove leading slashes
+    .trim();
+}
+
+// Prevent XSS
+export function sanitizeSearchQuery(query: string): string {
+  return query
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .trim();
+}
+```
+
+---
+
+# TypeScript Type Safety Patterns
+
+## Event Listener Type Errors in Electron
+
+**Problem:** TypeScript can't infer event types for removeListener
+
+**Error:**
+```
+Argument of type 'string' is not assignable to parameter of type 'will-resize'
+```
+
+**Solution:** Type assertion with `as any`
+
+```typescript
+// windowManager.ts or ipcHandlers.ts
+private cleanup(): void {
+  this.eventListeners.forEach((listener, event) => {
+    if (this.window && !this.window.isDestroyed()) {
+      this.window.removeListener(event as any, listener); // ✅ Type assertion
+    }
+  });
+  this.eventListeners.clear();
+}
+```
+
+**Why This Works:**
+- Electron's event system uses dynamic event names
+- TypeScript can't validate all possible event strings
+- We know the event name is valid from the Map
+
+## Optional API Methods Pattern
+
+**Problem:** Optional Electron API methods throw type errors
+
+**Solution:** Optional chaining with try-catch
+
+```typescript
+// ErrorBoundary.tsx
+try {
+  window.electron?.logError?.({ error, errorInfo });
+} catch (e) {
+  // Logging not available, ignore
+}
+```
+
+---
+
+# Component Architecture Patterns
+
+## Simplified State Persistence
+
+**Anti-Pattern:** Complex custom hooks for localStorage
+
+```typescript
+// ❌ COMPLEX: Custom hook with validation, loading states, cache
+const { savedState, saveState, isLoading } = useAgGridStatePersistence(key);
+```
+
+**Better Pattern:** Direct localStorage with error handling
+
+```typescript
+// ✅ SIMPLE: Direct localStorage with try-catch
+const [savedState, setSavedState] = useState<any>(null);
+
+useEffect(() => {
+  if (persistenceKey) {
+    try {
+      const stored = localStorage.getItem(`ag-grid-state-${persistenceKey}`);
+      if (stored) setSavedState(JSON.parse(stored));
+    } catch (error) {
+      console.warn('Failed to load grid state:', error);
+    }
+  }
+}, [persistenceKey]);
+
+const saveState = useCallback((state: any) => {
+  if (persistenceKey) {
+    try {
+      localStorage.setItem(`ag-grid-state-${persistenceKey}`, JSON.stringify(state));
+    } catch (error) {
+      console.warn('Failed to save grid state:', error);
+    }
+  }
+}, [persistenceKey]);
+```
+
+**Benefits:**
+- Fewer dependencies
+- Easier to debug
+- More maintainable
+- Handles errors gracefully
+
+## Accessibility: ARIA Labels for Data Grids
+
+**Pattern:** Add semantic HTML and ARIA attributes
+
+```typescript
+<div
+  ref={ref}
+  className={containerClasses}
+  role="region"                    // Semantic role
+  aria-label="Data grid"           // Screen reader label
+  aria-live="polite"                // Announce updates
+>
+  {/* Grid content */}
+</div>
+```
+
+**Benefits:**
+- Screen reader support
+- Keyboard navigation hints
+- Better semantic structure
+
+---
+
+# Quick Reference: Common Build Errors
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `CSP violation: inline script` | CspHtmlWebpackPlugin with nonces | Disable plugin, use meta tag |
+| `global is not defined` | Missing global polyfill | Add global-shim.js + ProvidePlugin |
+| `Cannot load preload script` | Preload not built | `npx webpack --config webpack.preload.config.js` |
+| `EBUSY: resource busy` | Electron still running | `Get-Process electron \| Stop-Process -Force` |
+| Stack traces in production | No NODE_ENV check | Add `process.env.NODE_ENV === 'development'` |
+| TypeScript event errors | Strict type checking | Use `as any` for dynamic events |

@@ -1,9 +1,9 @@
 const path = require('path');
+
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
-const CspHtmlWebpackPlugin = require('csp-html-webpack-plugin');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const CompressionPlugin = require('compression-webpack-plugin');
 
@@ -44,24 +44,29 @@ const rendererConfig = {
     }),
     // Define additional globals for renderer context
     new webpack.DefinePlugin({
-      '__dirname': JSON.stringify(''),
-      'module': JSON.stringify({}),  // Polyfill for asset-relocator-loader
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
     }),
-    // CSP plugin disabled - causing issues with inline polyfill script
-    // The meta CSP in index.html provides sufficient security
+    // CSP plugin disabled - causes conflicts with webpack chunk loading
+    // The meta CSP in index.html provides sufficient security for Electron
     // new CspHtmlWebpackPlugin({
     //   'default-src': ["'self'"],
     //   'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
     //   'style-src': ["'self'", "'unsafe-inline'"],
     //   'img-src': ["'self'", 'data:', 'blob:'],
-    //   'connect-src': ["'self'", 'ws:', 'wss:'],
-    //   'font-src': ["'self'", 'data:', 'blob:'],
+    //   'connect-src': ["'self'"],
+    //   'font-src': ["'self'", 'data:'],
+    //   'object-src': ["'none'"],
+    //   'base-uri': ["'self'"],
+    //   'form-action': ["'self'"],
     // }),
-    new BundleAnalyzerPlugin({
-      analyzerMode: 'static',
-      openAnalyzer: false,
-      reportFilename: 'bundle-analysis.html',
-    }),
+    // Only enable bundle analyzer when explicitly requested
+    ...(process.env.ANALYZE_BUNDLE === 'true' ? [
+      new BundleAnalyzerPlugin({
+        analyzerMode: 'static',
+        openAnalyzer: false,
+        reportFilename: 'bundle-analysis.html',
+      })
+    ] : []),
     new CompressionPlugin({
       algorithm: 'gzip',
       test: /\.js$|\.css$|\.html$|\.svg$/,
@@ -141,41 +146,21 @@ const rendererConfig = {
     ],
     splitChunks: {
       chunks: 'all',
-      maxInitialRequests: 25,
-      minSize: 20000,
-      maxSize: 244000,
       cacheGroups: {
-        reactCore: {
-          test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
-          name: 'react-core',
-          priority: 30,
-          reuseExistingChunk: true,
-          enforce: true,
-        },
         vendor: {
           test: /[\\/]node_modules[\\/]/,
-          name: 'vendor-common',
-          priority: 5,
-          reuseExistingChunk: true,
+          name: 'vendor',
+          chunks: 'all',
         },
         discovery: {
           test: /[\\/]src[\\/]renderer[\\/]views[\\/]discovery[\\/]/,
-          name: 'discovery',
-          priority: 20,
-          reuseExistingChunk: true,
-          enforce: true,
+          name: 'discovery-views',
+          chunks: 'all',
         },
         migration: {
           test: /[\\/]src[\\/]renderer[\\/]views[\\/]migration[\\/]/,
-          name: 'migration',
-          priority: 20,
-          reuseExistingChunk: true,
-          enforce: true,
-        },
-        default: {
-          minChunks: 2,
-          priority: -20,
-          reuseExistingChunk: true,
+          name: 'migration-views',
+          chunks: 'all',
         },
       },
     },

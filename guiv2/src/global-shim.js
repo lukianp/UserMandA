@@ -1,3 +1,16 @@
-// Global shim for renderer process
-// This provides 'global' as 'window' for npm packages that expect Node.js environment
-module.exports = typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : this;
+/**
+ * Global shim for Electron renderer process
+ * Provides global and globalThis references for webpack bundles
+ */
+
+// Map global to window for browser environment
+if (typeof global === 'undefined') {
+  window.global = window;
+}
+
+// Ensure globalThis is available
+if (typeof globalThis === 'undefined') {
+  window.globalThis = window;
+}
+
+module.exports = window;

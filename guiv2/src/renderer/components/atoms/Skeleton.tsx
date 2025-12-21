@@ -1,116 +1,273 @@
 /**
- * Skeleton Component
+ * Skeleton loading component
+ * Provides visual feedback during data loading
  *
- * Placeholder loading state with shimmer animation.
- * Used for improving perceived performance during data loading.
+ * @module Skeleton
+ * @since 1.0.0
  */
 
 import React from 'react';
-import { clsx } from 'clsx';
 
+/**
+ * Skeleton component props
+ */
 export interface SkeletonProps {
-  /** Skeleton variant type */
-  variant?: 'text' | 'circular' | 'rectangular' | 'rounded';
-  /** Width (CSS value or number for pixels) */
+  /** Width of the skeleton (CSS value or number in px) */
   width?: string | number;
-  /** Height (CSS value or number for pixels) */
+  /** Height of the skeleton (CSS value or number in px) */
   height?: string | number;
-  /** Number of lines for text variant */
-  lines?: number;
   /** Additional CSS classes */
   className?: string;
-  /** Cypress test selector */
-  'data-cy'?: string;
+  /** Visual variant of the skeleton */
+  variant?: 'text' | 'rectangular' | 'circular';
+  /** Animation speed */
+  animation?: 'pulse' | 'wave' | 'none';
+  /** Number of skeleton lines to render (for text variant) */
+  count?: number;
 }
 
 /**
- * Skeleton Loader Component
+ * Skeleton Loading Component
  *
- * Provides visual feedback while content is loading.
+ * Displays a placeholder animation while content is loading,
+ * improving perceived performance and user experience.
+ *
+ * @example
+ * ```tsx
+ * // Single text line
+ * <Skeleton width="80%" height="1rem" variant="text" />
+ *
+ * // Multiple text lines
+ * <Skeleton variant="text" count={3} />
+ *
+ * // Circular avatar placeholder
+ * <Skeleton width={40} height={40} variant="circular" />
+ *
+ * // Rectangular image placeholder
+ * <Skeleton width="100%" height={200} variant="rectangular" />
+ *
+ * // Card skeleton
+ * <div>
+ *   <Skeleton variant="circular" width={40} height={40} />
+ *   <Skeleton variant="text" width="60%" />
+ *   <Skeleton variant="text" width="80%" />
+ *   <Skeleton variant="rectangular" height={200} />
+ * </div>
+ * ```
  */
 export const Skeleton: React.FC<SkeletonProps> = ({
+  width = '100%',
+  height = '1rem',
+  className = '',
   variant = 'text',
-  width,
-  height,
-  lines = 1,
-  className,
-  'data-cy': dataCy,
+  animation = 'pulse',
+  count = 1,
 }) => {
-  const baseClasses = clsx(
-    'animate-pulse bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700',
-    'bg-[length:200%_100%] animate-shimmer'
-  );
+  // Convert number to px string
+  const widthStr = typeof width === 'number' ? `${width}px` : width;
+  const heightStr = typeof height === 'number' ? `${height}px` : height;
 
+  // Base classes for all skeletons
+  const baseClasses = 'bg-gray-200 dark:bg-gray-700';
+
+  // Animation classes
+  const animationClasses = {
+    pulse: 'animate-pulse',
+    wave: 'skeleton-wave',
+    none: '',
+  };
+
+  // Variant-specific classes
   const variantClasses = {
-    text: 'h-4 rounded',
+    text: 'rounded',
+    rectangular: 'rounded-lg',
     circular: 'rounded-full',
-    rectangular: '',
-    rounded: 'rounded-lg',
   };
 
-  const skeletonClasses = clsx(baseClasses, variantClasses[variant], className);
-
-  const style: React.CSSProperties = {
-    width: typeof width === 'number' ? `${width}px` : width,
-    height: typeof height === 'number' ? `${height}px` : height,
-  };
-
-  // For circular variant, ensure width and height are equal
-  if (variant === 'circular') {
-    const size = width || height || 40;
-    style.width = typeof size === 'number' ? `${size}px` : size;
-    style.height = typeof size === 'number' ? `${size}px` : size;
-  }
+  const combinedClasses = `${baseClasses} ${animationClasses[animation]} ${variantClasses[variant]} ${className}`.trim();
 
   // For text variant with multiple lines
-  if (variant === 'text' && lines > 1) {
+  if (count > 1 && variant === 'text') {
     return (
-      <div className="space-y-2" data-cy={dataCy}>
-        {Array.from({ length: lines }).map((_, index) => (
+      <div className="space-y-2" role="status" aria-label="Loading content">
+        {Array.from({ length: count }).map((_, index) => (
           <div
             key={index}
-            className={skeletonClasses}
+            className={combinedClasses}
             style={{
-              ...style,
-              // Make last line shorter for natural appearance
-              width: index === lines - 1 ? '70%' : style.width || '100%',
+              width: index === count - 1 ? '60%' : widthStr, // Last line is shorter
+              height: heightStr,
             }}
             aria-hidden="true"
           />
         ))}
+        <span className="sr-only">Loading...</span>
       </div>
     );
   }
 
-  // Single skeleton element
-  return <div className={skeletonClasses} style={style} data-cy={dataCy} aria-hidden="true" />;
+  // Single skeleton
+  return (
+    <div
+      className={combinedClasses}
+      style={{ width: widthStr, height: heightStr }}
+      role="status"
+      aria-label="Loading content"
+      aria-hidden="true"
+    >
+      <span className="sr-only">Loading...</span>
+    </div>
+  );
 };
 
-// Pre-built skeleton patterns for common use cases
-export const SkeletonText: React.FC<Omit<SkeletonProps, 'variant'>> = (props) => (
-  <Skeleton variant="text" {...props} />
-);
+/**
+ * Skeleton Table Component
+ *
+ * Pre-configured skeleton for table/grid loading states
+ *
+ * @example
+ * ```tsx
+ * <SkeletonTable rows={5} columns={4} />
+ * ```
+ */
+export interface SkeletonTableProps {
+  /** Number of rows to display */
+  rows?: number;
+  /** Number of columns to display */
+  columns?: number;
+  /** Show header row */
+  showHeader?: boolean;
+}
 
-export const SkeletonCircular: React.FC<Omit<SkeletonProps, 'variant'>> = (props) => (
-  <Skeleton variant="circular" {...props} />
-);
-
-export const SkeletonRectangular: React.FC<Omit<SkeletonProps, 'variant'>> = (props) => (
-  <Skeleton variant="rectangular" {...props} />
-);
-
-export const SkeletonCard: React.FC = () => (
-  <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg space-y-4">
-    <div className="flex items-center space-x-4">
-      <SkeletonCircular width={40} height={40} />
-      <div className="flex-1 space-y-2">
-        <SkeletonText width="60%" />
-        <SkeletonText width="40%" />
-      </div>
+export const SkeletonTable: React.FC<SkeletonTableProps> = ({
+  rows = 5,
+  columns = 4,
+  showHeader = true,
+}) => {
+  return (
+    <div className="space-y-2" role="status" aria-label="Loading table">
+      {showHeader && (
+        <div className="flex gap-2">
+          {Array.from({ length: columns }).map((_, colIndex) => (
+            <Skeleton
+              key={`header-${colIndex}`}
+              width="100%"
+              height="2rem"
+              variant="rectangular"
+            />
+          ))}
+        </div>
+      )}
+      {Array.from({ length: rows }).map((_, rowIndex) => (
+        <div key={`row-${rowIndex}`} className="flex gap-2">
+          {Array.from({ length: columns }).map((_, colIndex) => (
+            <Skeleton
+              key={`cell-${rowIndex}-${colIndex}`}
+              width="100%"
+              height="1.5rem"
+              variant="text"
+            />
+          ))}
+        </div>
+      ))}
+      <span className="sr-only">Loading table data...</span>
     </div>
-    <SkeletonRectangular height={100} />
-    <SkeletonText lines={3} />
-  </div>
-);
+  );
+};
 
-export default Skeleton;
+/**
+ * Skeleton Card Component
+ *
+ * Pre-configured skeleton for card loading states
+ *
+ * @example
+ * ```tsx
+ * <SkeletonCard />
+ * ```
+ */
+export interface SkeletonCardProps {
+  /** Show avatar */
+  showAvatar?: boolean;
+  /** Show image */
+  showImage?: boolean;
+  /** Number of text lines */
+  lines?: number;
+}
+
+export const SkeletonCard: React.FC<SkeletonCardProps> = ({
+  showAvatar = false,
+  showImage = true,
+  lines = 3,
+}) => {
+  return (
+    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg space-y-3" role="status" aria-label="Loading card">
+      {showAvatar && (
+        <div className="flex items-center gap-3">
+          <Skeleton width={40} height={40} variant="circular" />
+          <div className="flex-1">
+            <Skeleton width="60%" height="1rem" variant="text" />
+            <Skeleton width="40%" height="0.875rem" variant="text" />
+          </div>
+        </div>
+      )}
+      {showImage && (
+        <Skeleton width="100%" height={200} variant="rectangular" />
+      )}
+      <div className="space-y-2">
+        {Array.from({ length: lines }).map((_, index) => (
+          <Skeleton
+            key={index}
+            width={index === lines - 1 ? '60%' : '100%'}
+            height="1rem"
+            variant="text"
+          />
+        ))}
+      </div>
+      <span className="sr-only">Loading card content...</span>
+    </div>
+  );
+};
+
+/**
+ * Skeleton List Component
+ *
+ * Pre-configured skeleton for list loading states
+ *
+ * @example
+ * ```tsx
+ * <SkeletonList items={5} showAvatar />
+ * ```
+ */
+export interface SkeletonListProps {
+  /** Number of list items */
+  items?: number;
+  /** Show avatar for each item */
+  showAvatar?: boolean;
+  /** Show secondary line */
+  showSecondary?: boolean;
+}
+
+export const SkeletonList: React.FC<SkeletonListProps> = ({
+  items = 5,
+  showAvatar = false,
+  showSecondary = true,
+}) => {
+  return (
+    <div className="space-y-3" role="status" aria-label="Loading list">
+      {Array.from({ length: items }).map((_, index) => (
+        <div key={index} className="flex items-center gap-3">
+          {showAvatar && (
+            <Skeleton width={40} height={40} variant="circular" />
+          )}
+          <div className="flex-1 space-y-1">
+            <Skeleton width="80%" height="1rem" variant="text" />
+            {showSecondary && (
+              <Skeleton width="60%" height="0.875rem" variant="text" />
+            )}
+          </div>
+        </div>
+      ))}
+      <span className="sr-only">Loading list items...</span>
+    </div>
+  );
+};

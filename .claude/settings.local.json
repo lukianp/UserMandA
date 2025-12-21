@@ -141,7 +141,8 @@
       "Bash(cmd /c \"tasklist | findstr electron\")",
       "Bash(cmd /c \"dir /s /b C:\\\\DiscoveryData\\\\*EntraID*.csv 2>nul\")",
       "Bash(cmd /c \"tasklist | findstr node\")",
-      "Bash(cmd /c \"tasklist | findstr /i electron\")"
+      "Bash(cmd /c \"tasklist | findstr /i electron\")",
+      "Bash(cmd /c \"tasklist | findstr /i node\")"
     ],
     "deny": [],
     "ask": []

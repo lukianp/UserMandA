@@ -78,7 +78,7 @@ export function useCsvDataLoader<T = any>(
     transform,
     onError,
     enableAutoRefresh = true,
-    refreshInterval = 30000, // 30 seconds
+    refreshInterval = 120000, // 2 minutes - reduce server load
     onSuccess,
     gracefulDegradation = false,
   } = options;
@@ -104,19 +104,16 @@ export function useCsvDataLoader<T = any>(
   const loadInProgressRef = useRef(false);
 
   const reload = useCallback(() => {
-    console.log('[useCsvDataLoader] Manual reload triggered');
     retryCountRef.current = 0; // Reset retry count on manual reload
     setReloadCounter((c) => c + 1);
   }, []);
 
   // CRITICAL DEBUG: Track loading state changes
   useEffect(() => {
-    console.log(`[useCsvDataLoader] 🔄 Loading state changed to: ${loading}`);
   }, [loading]);
 
   // CRITICAL DEBUG: Track data state changes
   useEffect(() => {
-    console.log(`[useCsvDataLoader] 📊 Data state changed to: ${data.length} rows`);
   }, [data]);
 
   useEffect(() => {
@@ -124,14 +121,12 @@ export function useCsvDataLoader<T = any>(
     const now = Date.now();
     const timeSinceLastMount = now - lastMountTimeRef.current;
 
-    console.log(`[useCsvDataLoader] ⚙️  Effect triggered - Mount #${mountCountRef.current}, timeSince: ${timeSinceLastMount}ms, csvPath: ${csvPath}`);
 
     lastMountTimeRef.current = now;
     isUnmountedRef.current = false;
 
     // CRITICAL: Reset loadInProgressRef on each mount to prevent stale state from React Strict Mode double-mount
     if (mountCountRef.current > 1 && loadInProgressRef.current) {
-      console.log(`[useCsvDataLoader] ⚠️  Resetting stale loadInProgressRef from previous mount`);
       loadInProgressRef.current = false;
     }
 
@@ -153,7 +148,6 @@ export function useCsvDataLoader<T = any>(
 
     const loadCsvData = async (isRetry = false) => {
       if (loadInProgressRef.current || isUnmountedRef.current) {
-        console.log('[useCsvDataLoader] Load already in progress or unmounted, skipping');
         return;
       }
 
@@ -167,7 +161,6 @@ export function useCsvDataLoader<T = any>(
       }
 
       setLoading(true);
-      console.log(`[useCsvDataLoader] 🔄 setLoading(true) called`);
 
       if (!isRetry) {
         setError(null);
@@ -181,9 +174,6 @@ export function useCsvDataLoader<T = any>(
         // Construct full file path
         const fullPath = `${rawDir}\\${csvPath.replace(/^\/+/, '')}`;
 
-        console.log(`[useCsvDataLoader] Loading CSV from: ${fullPath}`);
-        console.log(`[useCsvDataLoader] Profile: ${selectedSourceProfile?.companyName || 'ljpops'}`);
-
         // Read CSV file using Electron API
         // Check if file exists before reading (for graceful degradation)
         const fs = window.electronAPI.fs;
@@ -191,7 +181,6 @@ export function useCsvDataLoader<T = any>(
 
         if (!exists) {
           if (gracefulDegradation) {
-            console.warn(`[useCsvDataLoader] File not found, returning empty data: ${fullPath}`);
             if (!isUnmountedRef.current) {
               setData([]);
               setColumns([]);
@@ -214,7 +203,6 @@ export function useCsvDataLoader<T = any>(
         } catch (fileError: any) {
           // Handle file not found gracefully
           if (gracefulDegradation && fileError?.message?.includes('ENOENT')) {
-            console.warn(`[useCsvDataLoader] File not found, returning empty data: ${fullPath}`);
             if (!isUnmountedRef.current) {
               setData([]);
               setColumns([]);
@@ -248,8 +236,6 @@ export function useCsvDataLoader<T = any>(
 
         setRawCsv(csvText);
 
-        console.log(`[useCsvDataLoader] CSV loaded successfully, size: ${csvText.length} bytes`);
-
         // Parse CSV with PapaParse
         Papa.parse<T>(csvText, {
           header: true,
@@ -262,8 +248,6 @@ export function useCsvDataLoader<T = any>(
           complete: (results: Papa.ParseResult<T>) => {
             if (isUnmountedRef.current) return;
 
-            console.log(`[useCsvDataLoader] Parsed ${results.data.length} rows`);
-
             // Check row limit
             if (results.data.length > maxRows) {
               console.warn(`[useCsvDataLoader] Row count ${results.data.length} exceeds limit ${maxRows}, truncating`);
@@ -275,7 +259,6 @@ export function useCsvDataLoader<T = any>(
             if (transform) {
               try {
                 finalData = transform(results.data);
-                console.log(`[useCsvDataLoader] Transformed data: ${finalData.length} rows`);
               } catch (transformError) {
                 console.error('[useCsvDataLoader] Transform error:', transformError);
                 throw new Error(`Data transformation failed: ${transformError instanceof Error ? transformError.message : 'Unknown error'}`);
@@ -301,8 +284,6 @@ export function useCsvDataLoader<T = any>(
               };
             });
 
-            console.log(`[useCsvDataLoader] Generated ${generatedColumns.length} columns:`, generatedColumns.map(c => c.field));
-
             // Log parsing errors (non-fatal)
             if (results.errors.length > 0) {
               console.warn('[useCsvDataLoader] Parse warnings:', results.errors);
@@ -319,9 +300,6 @@ export function useCsvDataLoader<T = any>(
               // CRITICAL: Set loading to false LAST and log it
               setLoading(false);
               loadInProgressRef.current = false;
-
-              console.log(`[useCsvDataLoader] ✅ SUCCESS: Data loaded, loading set to FALSE`);
-              console.log(`[useCsvDataLoader] ✅ Data: ${finalData.length} rows, Columns: ${generatedColumns.length}`);
 
               onSuccess?.(finalData, generatedColumns);
             } else {
@@ -349,8 +327,6 @@ export function useCsvDataLoader<T = any>(
           retryCountRef.current++;
           const retryDelay = Math.min(1000 * Math.pow(2, retryCountRef.current), 5000);
 
-          console.log(`[useCsvDataLoader] Retry ${retryCountRef.current}/${maxRetries} in ${retryDelay}ms`);
-
           setTimeout(() => {
             if (!isUnmountedRef.current) {
               loadCsvData(true);
@@ -371,27 +347,19 @@ export function useCsvDataLoader<T = any>(
     prevCsvPathRef.current = csvPath;
 
     if (shouldLoad) {
-      console.log(`[useCsvDataLoader] Initial load (mount: ${mountCountRef.current}, path: ${csvPath})`);
       loadCsvData();
     } else {
-      console.log(`[useCsvDataLoader] Skipping load - no path change (mount: ${mountCountRef.current})`);
       // CRITICAL: Ensure loading stays false when we skip the load
       setLoading(false);
-      console.log(`[useCsvDataLoader] ✅ Ensured loading=false since skipping load`);
     }
 
     // Setup auto-refresh ONLY on first mount
     if (enableAutoRefresh && mountCountRef.current === 1) {
-      console.log(`[useCsvDataLoader] Starting auto-refresh (${refreshInterval}ms interval, mount: ${mountCountRef.current})`);
-
       intervalRef.current = setInterval(() => {
         if (!isUnmountedRef.current && !loadInProgressRef.current) {
-          console.log('[useCsvDataLoader] Auto-refresh triggered');
           loadCsvData();
         }
       }, refreshInterval);
-    } else if (enableAutoRefresh) {
-      console.log(`[useCsvDataLoader] Skipping auto-refresh setup - already initialized (mount: ${mountCountRef.current})`);
     }
 
     // Cleanup on unmount
@@ -400,7 +368,6 @@ export function useCsvDataLoader<T = any>(
       loadInProgressRef.current = false;
 
       if (intervalRef.current) {
-        console.log('[useCsvDataLoader] Clearing auto-refresh interval on unmount');
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }

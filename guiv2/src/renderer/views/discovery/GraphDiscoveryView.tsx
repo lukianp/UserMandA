@@ -274,7 +274,7 @@ const GraphDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <BarChart3 className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.healthScore ?? 0).toFixed(0)}%</div>
+                <div className="text-3xl font-bold">{(typeof stats?.healthScore === 'number' ? stats.healthScore : 0).toFixed(0)}%</div>
                 <div className="text-sm opacity-90">Health Score</div>
               </div>
             </div>
@@ -348,34 +348,38 @@ const GraphDiscoveryView: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Resources by Type</h3>
               <div className="space-y-3">
-                {Object.entries(resourcesByType).map(([type, count]) => (
+                {Object.entries(resourcesByType).map(([type, count]) => {
+                  const countNum = typeof count === 'number' ? count : 0;
+                  return (
                   <div key={type} className="flex items-center gap-3">
                     <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">{type}</div>
                     <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6 overflow-hidden">
                       <div
                         className="bg-teal-600 h-full flex items-center justify-end px-2 text-xs text-white font-medium"
-                        style={{ width: `${(stats?.totalResources ?? 0) > 0 ? (count / (stats?.totalResources ?? 0)) * 100 : 0}%` }}
+                        style={{ width: `${typeof stats?.totalResources === 'number' && stats.totalResources > 0 ? (countNum / stats.totalResources) * 100 : 0}%` }}
                       >
-                        {count > 0 && `${count}`}
+                        {countNum > 0 && `${countNum}`}
                       </div>
                     </div>
                     <div className="w-16 text-sm text-gray-600 dark:text-gray-400 text-right">
-                      {(stats?.totalResources ?? 0) > 0 ? ((count / (stats?.totalResources ?? 0)) * 100).toFixed(1) : 0}%
+                      {typeof stats?.totalResources === 'number' && stats.totalResources > 0 ? ((countNum / stats.totalResources) * 100).toFixed(1) : 0}%
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">API Usage by Endpoint</h3>
               <div className="grid grid-cols-2 gap-4">
-                {Object.entries(apiUsageByEndpoint).map(([endpoint, calls]) => (
+                {Object.entries(apiUsageByEndpoint).map(([endpoint, calls]) => {
+                  const callsNum = typeof calls === 'number' ? calls : 0;
+                  return (
                   <div key={endpoint} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{endpoint}</span>
-                    <span className="text-lg font-bold text-teal-600">{calls.toLocaleString()}</span>
+                    <span className="text-lg font-bold text-teal-600">{callsNum.toLocaleString()}</span>
                   </div>
-                ))}
+                )})}
               </div>
             </div>
 
@@ -421,7 +425,7 @@ const GraphDiscoveryView: React.FC = () => {
                         key={type}
                         onClick={() => toggleResourceType(type)}
                         className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                          filter.selectedResourceTypes?.includes(type) ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                          normalizedFilter.selectedResourceTypes.includes(type) ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }`}
                         data-cy={`filter-type-${type.toLowerCase()}`}
                       >

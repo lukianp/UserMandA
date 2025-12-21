@@ -56,14 +56,18 @@ export class ErrorBoundary extends Component<Props, State> {
       this.props.onError(error, errorInfo);
     }
 
-    // Send error to main process for logging
-    if (window.electron?.logError) {
-      window.electron.logError({
-        message: error.message,
-        stack: error.stack || '',
-        componentStack: errorInfo.componentStack || '',
-        timestamp: new Date().toISOString(),
-      });
+    // Send error to main process for logging (if available)
+    try {
+      if (window.electron?.logError) {
+        window.electron.logError({
+          message: error.message,
+          stack: error.stack || '',
+          componentStack: errorInfo.componentStack || '',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      // Logging not available, ignore
     }
   }
 
@@ -143,11 +147,11 @@ export class ErrorBoundary extends Component<Props, State> {
                       </p>
                     </div>
 
-                    {/* Stack Trace */}
-                    {error?.stack && (
+                    {/* Stack Trace - REMOVED FOR SECURITY */}
+                    {process.env.NODE_ENV === 'development' && error?.stack && (
                       <div>
                         <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                          Stack Trace:
+                          Stack Trace (Development Only):
                         </h3>
                         <pre className="text-xs text-gray-700 dark:text-gray-300 font-mono overflow-x-auto bg-white dark:bg-gray-800 p-2 rounded">
                           {error.stack}
@@ -199,10 +203,40 @@ export class ErrorBoundary extends Component<Props, State> {
               </Button>
             </div>
 
-            {/* Additional Info */}
+            {/* Helpful Tips */}
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                Common Solutions:
+              </h3>
+              <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2 mb-4">
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 dark:text-blue-400">•</span>
+                  <span>Try refreshing the page or navigating back to home</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 dark:text-blue-400">•</span>
+                  <span>Clear your browser cache if the error persists</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 dark:text-blue-400">•</span>
+                  <span>Check your internet connection for network-related errors</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 dark:text-blue-400">•</span>
+                  <span>Restart the application if the problem continues</span>
+                </li>
+              </ul>
               <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-                If this problem persists, please contact support with the error details above.
+                If this problem persists, please{' '}
+                <a
+                  href="https://github.com/anthropics/claude-code/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  report the issue
+                </a>
+                {' '}with the error details above.
               </p>
             </div>
           </div>

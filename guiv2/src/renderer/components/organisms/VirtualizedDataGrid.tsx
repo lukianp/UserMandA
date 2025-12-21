@@ -5,7 +5,7 @@
  * Handles 100,000+ rows with virtual scrolling at 60 FPS
  */
 
-import React, { useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef, GridApi, GridReadyEvent, SelectionChangedEvent, RowClickedEvent } from 'ag-grid-community';
 import 'ag-grid-enterprise';
@@ -15,7 +15,6 @@ import { Download, Printer, Eye, EyeOff, Filter, RotateCcw } from 'lucide-react'
 import { Button } from '../atoms/Button';
 import { Spinner } from '../atoms/Spinner';
 import { StatusBadgeCellRenderer } from '../atoms/StatusBadgeCellRenderer';
-import { useAgGridStatePersistence } from '../../hooks/useAgGridStatePersistence';
 import '../../styles/ag-grid-custom.css';
 
 // Lazy load AG Grid CSS - only load once when first grid mounts
@@ -226,11 +225,40 @@ function VirtualizedDataGridInner<T = any>(
   const [gridApi, setGridApi] = React.useState<GridApi | null>(null);
   const [showColumnPanel, setShowColumnPanel] = React.useState(false);
 
-  // State persistence hook
-  const { savedState, saveState, clearState, isStateValid, isLoading: isLoadingState } = useAgGridStatePersistence(persistenceKey);
-
-  // Track if we've restored state to avoid re-applying on every render
+  // Simplified state persistence
+  const [savedState, setSavedState] = useState<any>(null);
   const hasRestoredStateRef = useRef(false);
+
+  // Load state on mount
+  useEffect(() => {
+    if (persistenceKey) {
+      try {
+        const stored = localStorage.getItem(`ag-grid-state-${persistenceKey}`);
+        if (stored) {
+          setSavedState(JSON.parse(stored));
+        }
+      } catch (error) {
+        console.warn('Failed to load grid state:', error);
+      }
+    }
+  }, [persistenceKey]);
+
+  // Save state function
+  const saveState = useCallback((state: any) => {
+    if (persistenceKey) {
+      try {
+        localStorage.setItem(`ag-grid-state-${persistenceKey}`, JSON.stringify(state));
+      } catch (error) {
+        console.warn('Failed to save grid state:', error);
+      }
+    }
+  }, [persistenceKey]);
+
+  const clearState = useCallback(() => {
+    if (persistenceKey) {
+      localStorage.removeItem(`ag-grid-state-${persistenceKey}`);
+    }
+  }, [persistenceKey]);
 
   const rowData = useMemo(() => {
     const result = data ?? [];
@@ -276,9 +304,8 @@ function VirtualizedDataGridInner<T = any>(
       enableCharts: false,
       // FIX: Use cellSelection instead of deprecated enableRangeSelection
       cellSelection: true,
-      // FIX: Use legacy theme to prevent theming API conflict (error #239)
-      // Must be set to 'legacy' to use v32 style themes with CSS files
-      theme: 'legacy' as any,
+      // Use default theme - remove legacy theme override
+      theme: 'legacy' as any, // FIX: Use legacy theme to avoid conflict with CSS themes (AG Grid v34+)
       statusBar: {
         statusPanels: [
           { statusPanel: 'agTotalAndFilteredRowCountComponent', align: 'left' },
@@ -315,8 +342,8 @@ function VirtualizedDataGridInner<T = any>(
   const onGridReady = useCallback((params: GridReadyEvent) => {
     setGridApi(params.api);
 
-    // Restore saved state if available and valid
-    if (savedState && isStateValid && !hasRestoredStateRef.current && persistenceKey) {
+    // Restore saved state if available
+    if (savedState && !hasRestoredStateRef.current && persistenceKey) {
       try {
         console.log(`[VirtualizedDataGrid] Restoring saved state for ${persistenceKey}`);
 
@@ -347,7 +374,7 @@ function VirtualizedDataGridInner<T = any>(
       // Default behavior - size columns to fit
       params.api.sizeColumnsToFit();
     }
-  }, [savedState, isStateValid, persistenceKey]);
+  }, [savedState, persistenceKey]);
 
   // Reset state restoration flag when persistenceKey changes
   useEffect(() => {
@@ -360,8 +387,6 @@ function VirtualizedDataGridInner<T = any>(
     if (
       gridApi &&
       savedState &&
-      isStateValid &&
-      !isLoadingState &&
       !hasRestoredStateRef.current &&
       persistenceKey
     ) {
@@ -388,7 +413,7 @@ function VirtualizedDataGridInner<T = any>(
         console.error('[VirtualizedDataGrid] Error restoring state:', error);
       }
     }
-  }, [gridApi, savedState, isStateValid, isLoadingState, persistenceKey]);
+  }, [gridApi, savedState, persistenceKey]);
 
   // Handle row click
   const handleRowClick = useCallback(
@@ -547,7 +572,14 @@ function VirtualizedDataGridInner<T = any>(
   );
 
   return (
-    <div ref={ref} className={containerClasses} data-cy={dataCy}>
+    <div
+      ref={ref}
+      className={containerClasses}
+      data-cy={dataCy}
+      role="region"
+      aria-label="Data grid"
+      aria-live="polite"
+    >
       {/* Toolbar */}
       <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
