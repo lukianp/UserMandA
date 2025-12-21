@@ -476,6 +476,189 @@ console.error('[MyView] Error:', error);
 
 ---
 
+# Azure Authentication Strategies (Multi-Fallback Pattern)
+
+## Problem: Window Handle Error in Headless Environments
+
+**Error:** "InteractiveBrowserCredential authentication failed: A window handle must be configured"
+
+**Root Cause:** Interactive browser authentication requires GUI context (WAM - Web Account Manager)
+
+**Solution:** Implement multi-strategy authentication fallback with headless-friendly methods
+
+## Authentication Strategy Order (6 Strategies)
+
+```powershell
+# Strategy 1: Service Principal with Client Secret (preferred for automation)
+- Requires: TenantId, ClientId, ClientSecret
+- Use case: Production deployments, CI/CD pipelines
+- Headless: ✅ Yes
+
+# Strategy 2: Azure CLI Token (developer convenience)
+- Requires: Azure CLI installed and logged in (az login)
+- Use case: Developer workstations, manual runs
+- Headless: ✅ Yes (if CLI already authenticated)
+
+# Strategy 3: Microsoft Graph API with Device Code (cross-platform auth bridge)
+- Requires: Microsoft.Graph.Authentication module
+- Use case: Cross-service authentication, Graph + Azure hybrid
+- Headless: ✅ Yes (device code flow)
+- Gets Graph token with Azure scope, bridges to Connect-AzAccount
+
+# Strategy 4: Managed Identity (Azure-hosted resources)
+- Requires: Running on Azure VM, Function, Container Instance, etc.
+- Use case: Production Azure workloads
+- Headless: ✅ Yes
+
+# Strategy 5: Device Code Authentication (headless-friendly interactive)
+- Requires: Internet browser access (can be different device)
+- Use case: Headless environments, SSH sessions, containers
+- Headless: ✅ Yes (displays code, auth on any device)
+- User sees: "To sign in, use a web browser to open https://microsoft.com/devicelogin and enter code XXXXXXXXX"
+
+# Strategy 6: Interactive Browser Authentication (GUI required - last resort)
+- Requires: GUI/display context, window handle
+- Use case: Desktop applications, workstations with GUI
+- Headless: ❌ No (fails with window handle error)
+```
+
+## Implementation Pattern (Apply to All Azure/Graph Modules)
+
+```powershell
+function Connect-AzureWithMultipleStrategies {
+    param($Configuration, $Result)
+
+    # Strategy 1: Service Principal
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
+        try {
+            $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
+            $context = Connect-AzAccount -ServicePrincipal -Credential $credential -Tenant $Configuration.TenantId -WarningAction SilentlyContinue -ErrorAction Stop
+            return $context
+        } catch {
+            Write-ModuleLog "Service Principal auth failed: $($_.Exception.Message)" -Level "WARN"
+        }
+    }
+
+    # Strategy 2: Azure CLI Token
+    try {
+        $cliAccount = az account show 2>$null | ConvertFrom-Json
+        if ($cliAccount) {
+            $token = az account get-access-token --resource https://management.azure.com/ 2>$null | ConvertFrom-Json
+            if ($token) {
+                $accessToken = ConvertTo-SecureString $token.accessToken -AsPlainText -Force
+                $context = Connect-AzAccount -AccessToken $accessToken -AccountId $cliAccount.user.name -TenantId $cliAccount.tenantId -ErrorAction Stop
+                return $context
+            }
+        }
+    } catch {
+        Write-ModuleLog "Azure CLI auth failed: $($_.Exception.Message)" -Level "WARN"
+    }
+
+    # Strategy 3: Microsoft Graph API
+    try {
+        if (Get-Module -ListAvailable -Name Microsoft.Graph.Authentication) {
+            Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
+
+            if ($Configuration.TenantId) {
+                $graphContext = Connect-MgGraph -TenantId $Configuration.TenantId -Scopes "https://management.azure.com/.default" -UseDeviceCode -ErrorAction Stop
+            } else {
+                $graphContext = Connect-MgGraph -Scopes "https://management.azure.com/.default" -UseDeviceCode -ErrorAction Stop
+            }
+
+            $graphToken = Get-MgContext | Select-Object -ExpandProperty AccessToken
+            if ($graphToken) {
+                $accessToken = ConvertTo-SecureString $graphToken -AsPlainText -Force
+                $accountId = (Get-MgContext).Account
+                $tenantId = (Get-MgContext).TenantId
+                $context = Connect-AzAccount -AccessToken $accessToken -AccountId $accountId -TenantId $tenantId -ErrorAction Stop
+                return $context
+            }
+        }
+    } catch {
+        Write-ModuleLog "Graph API auth failed: $($_.Exception.Message)" -Level "WARN"
+    }
+
+    # Strategy 4: Managed Identity
+    try {
+        $context = Connect-AzAccount -Identity -ErrorAction Stop
+        return $context
+    } catch {
+        Write-ModuleLog "Managed Identity auth failed: $($_.Exception.Message)" -Level "WARN"
+    }
+
+    # Strategy 5: Device Code (CRITICAL for headless)
+    try {
+        if ($Configuration.TenantId) {
+            $context = Connect-AzAccount -Tenant $Configuration.TenantId -DeviceCode -ErrorAction Stop
+        } else {
+            $context = Connect-AzAccount -DeviceCode -ErrorAction Stop
+        }
+        return $context
+    } catch {
+        Write-ModuleLog "Device code auth failed: $($_.Exception.Message)" -Level "WARN"
+    }
+
+    # Strategy 6: Interactive Browser (last resort)
+    try {
+        if ($Configuration.TenantId) {
+            $context = Connect-AzAccount -Tenant $Configuration.TenantId -ErrorAction Stop
+        } else {
+            $context = Connect-AzAccount -ErrorAction Stop
+        }
+        return $context
+    } catch {
+        Write-ModuleLog "Interactive browser auth failed: $($_.Exception.Message)" -Level "ERROR"
+        $Result.AddError("All authentication strategies failed (Service Principal, Azure CLI, Microsoft Graph API, Managed Identity, Device Code, Interactive Browser)", $_.Exception, @{Section="Authentication"})
+    }
+
+    return $null
+}
+```
+
+## Modules Requiring Authentication Updates
+
+**Apply this pattern to:**
+- AzureResourceDiscovery.psm1 ✅ (Updated with all 6 strategies)
+- AzureDiscovery.psm1
+- EntraIDDiscovery.psm1
+- Office365Discovery.psm1
+- SharePointDiscovery.psm1
+- OneDriveDiscovery.psm1
+- TeamsDiscovery.psm1
+- ExchangeDiscovery.psm1
+- IntuneDiscovery.psm1
+- PowerPlatformDiscovery.psm1
+- Any module using Connect-AzAccount, Connect-MgGraph, Connect-ExchangeOnline, etc.
+
+## Testing Authentication Strategies
+
+```powershell
+# Test in order from most automated to least
+# 1. Service Principal (production)
+$config = @{
+    TenantId = "your-tenant-id"
+    ClientId = "your-client-id"
+    ClientSecret = "your-client-secret"
+}
+
+# 2. Azure CLI (developer)
+az login
+az account show
+
+# 3. Graph API (hybrid)
+Install-Module Microsoft.Graph.Authentication
+Connect-MgGraph -UseDeviceCode
+
+# 4. Device Code (headless)
+Connect-AzAccount -DeviceCode
+
+# 5. Interactive (GUI only)
+Connect-AzAccount
+```
+
+---
+
 # Deployment Workflow
 
 ```powershell

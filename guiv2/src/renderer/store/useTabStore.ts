@@ -1,213 +1,95 @@
-/**
- * Tab Store
- *
- * Manages the tabbed interface navigation.
- * Tracks open tabs, selected tab, and provides tab lifecycle operations.
- */
-
 import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
-export interface Tab {
-  /** Unique tab identifier */
+export interface TabInfo {
   id: string;
-  /** Display title shown in tab header */
   title: string;
-  /** Component name to render (maps to view component) */
-  component: string;
-  /** Icon identifier (Lucide icon name) */
-  icon?: string;
-  /** Whether tab can be closed */
-  closable: boolean;
-  /** Optional data to pass to component */
+  type: string;
   data?: any;
-  /** Timestamp when tab was opened */
-  openedAt: number;
+  isActive?: boolean;
+  isDirty?: boolean;
 }
 
-interface TabState {
-  // State
-  tabs: Tab[];
-  selectedTabId: string | null;
-
-  // Actions
-  openTab: (tab: Omit<Tab, 'id' | 'openedAt'>) => void;
-  closeTab: (tabId: string) => void;
+export interface TabStore {
+  tabs: TabInfo[];
+  activeTabId: string | null;
+  addTab: (tabInfo: TabInfo) => void;
+  removeTab: (tabId: string) => void;
+  setActiveTab: (tabId: string) => void;
+  updateTab: (tabId: string, updates: Partial<TabInfo>) => void;
   closeAllTabs: () => void;
-  closeOtherTabs: (tabId: string) => void;
-  setSelectedTab: (tabId: string) => void;
-  updateTab: (tabId: string, updates: Partial<Tab>) => void;
-  getTab: (tabId: string) => Tab | undefined;
-  getSelectedTab: () => Tab | undefined;
+  getTabById: (tabId: string) => TabInfo | undefined;
 }
 
-export const useTabStore = create<TabState>()(
-  devtools(
-    persist(
-      (set, get) => ({
-        // Initial state
-        tabs: [
-          // Always start with Overview tab
-          {
-            id: 'overview',
-            title: 'Overview',
-            component: 'OverviewView',
-            icon: 'LayoutDashboard',
-            closable: false,
-            openedAt: Date.now(),
-          },
-        ],
-        selectedTabId: 'overview',
+export const useTabStore = create<TabStore>()(
+  persist(
+    (set: any, get: any) => ({
+      tabs: [] as TabInfo[],
+      activeTabId: null as string | null,
 
-        // Actions
+      addTab: (tabInfo: TabInfo) => {
+        set((state: any) => {
+          const newTabs = [...state.tabs, { ...tabInfo, isActive: true }];
+          return {
+            tabs: newTabs,
+            activeTabId: tabInfo.id,
+          };
+        });
+      },
 
-        /**
-         * Open a new tab or switch to existing tab with same component
-         */
-        openTab: (tabInfo) => {
-          const { tabs } = get();
+      removeTab: (tabId: string) => {
+        set((state: any) => {
+          const newTabs = state.tabs.filter((t: TabInfo) => t.id !== tabId);
+          let newActiveTabId = state.activeTabId;
 
-          // Check if tab with same component already exists
-          const existingTab = tabs.find(t => t.component === tabInfo.component);
-
-          if (existingTab) {
-            // Switch to existing tab
-            set({ selectedTabId: existingTab.id });
-          } else {
-            // Create new tab
-            const newTab: Tab = {
-              ...tabInfo,
-              id: crypto.randomUUID(),
-              openedAt: Date.now(),
-            };
-
-            set({
-              tabs: [...tabs, newTab],
-              selectedTabId: newTab.id,
-            });
-          }
-        },
-
-        /**
-         * Close a tab by ID
-         */
-        closeTab: (tabId) => {
-          const { tabs, selectedTabId } = get();
-
-          const tab = tabs.find(t => t.id === tabId);
-          if (!tab) return;
-
-          // Don't close non-closable tabs
-          if (!tab.closable) {
-            console.warn(`Cannot close non-closable tab: ${tabId}`);
-            return;
-          }
-
-          const newTabs = tabs.filter(t => t.id !== tabId);
-
-          // If closing the selected tab, select the previous tab or first tab
-          let newSelectedTabId = selectedTabId;
-          if (selectedTabId === tabId) {
-            const closedIndex = tabs.findIndex(t => t.id === tabId);
-            if (closedIndex > 0) {
-              newSelectedTabId = tabs[closedIndex - 1].id;
-            } else if (newTabs.length > 0) {
-              newSelectedTabId = newTabs[0].id;
+          if (state.activeTabId === tabId) {
+            const removedIndex = state.tabs.findIndex((t: TabInfo) => t.id === tabId);
+            if (newTabs.length > 0) {
+              newActiveTabId = newTabs[Math.min(removedIndex, newTabs.length - 1)].id;
             } else {
-              newSelectedTabId = null;
+              newActiveTabId = null;
             }
           }
 
-          set({
+          return {
             tabs: newTabs,
-            selectedTabId: newSelectedTabId,
-          });
-        },
+            activeTabId: newActiveTabId,
+          };
+        });
+      },
 
-        /**
-         * Close all closable tabs
-         */
-        closeAllTabs: () => {
-          const { tabs } = get();
-          const nonClosableTabs = tabs.filter(t => !t.closable);
+      setActiveTab: (tabId: string) => {
+        set((state: any) => ({
+          activeTabId: tabId,
+          tabs: state.tabs.map((t: TabInfo) => ({
+            ...t,
+            isActive: t.id === tabId,
+          })),
+        }));
+      },
 
-          set({
-            tabs: nonClosableTabs,
-            selectedTabId: nonClosableTabs.length > 0 ? nonClosableTabs[0].id : null,
-          });
-        },
-
-        /**
-         * Close all tabs except the specified one
-         */
-        closeOtherTabs: (tabId) => {
-          const { tabs } = get();
-          const tab = tabs.find(t => t.id === tabId);
-
-          if (!tab) return;
-
-          // Keep non-closable tabs and the specified tab
-          const newTabs = tabs.filter(t => !t.closable || t.id === tabId);
-
-          set({
-            tabs: newTabs,
-            selectedTabId: tabId,
-          });
-        },
-
-        /**
-         * Set the currently selected tab
-         */
-        setSelectedTab: (tabId) => {
-          const { tabs } = get();
-
-          if (tabs.some(t => t.id === tabId)) {
-            set({ selectedTabId: tabId });
-          } else {
-            console.warn(`Tab ${tabId} not found`);
-          }
-        },
-
-        /**
-         * Update tab properties
-         */
-        updateTab: (tabId, updates) => {
-          const { tabs } = get();
-
-          const newTabs = tabs.map(t =>
+      updateTab: (tabId: string, updates: Partial<TabInfo>) => {
+        set((state: any) => ({
+          tabs: state.tabs.map((t: TabInfo) =>
             t.id === tabId ? { ...t, ...updates } : t
-          );
+          ),
+        }));
+      },
 
-          set({ tabs: newTabs });
-        },
+      closeAllTabs: () => {
+        set(() => ({
+          tabs: [],
+          activeTabId: null,
+        }));
+      },
 
-        /**
-         * Get a tab by ID
-         */
-        getTab: (tabId) => {
-          return get().tabs.find(t => t.id === tabId);
-        },
-
-        /**
-         * Get the currently selected tab
-         */
-        getSelectedTab: () => {
-          const { tabs, selectedTabId } = get();
-          if (!selectedTabId) return undefined;
-          return tabs.find(t => t.id === selectedTabId);
-        },
-      }),
-      {
-        name: 'tab-storage',
-        // Persist tabs and selected tab
-        partialize: (state) => ({
-          tabs: state.tabs,
-          selectedTabId: state.selectedTabId,
-        }),
-      }
-    ),
+      getTabById: (tabId: string) => {
+        return get().tabs.find((t: TabInfo) => t.id === tabId);
+      },
+    }),
     {
-      name: 'TabStore',
+      name: 'tab-store',
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );

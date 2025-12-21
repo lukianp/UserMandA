@@ -139,7 +139,9 @@
       "Bash(Test-Path \"D:\\\\Scripts\\\\UserMandA\\\\guiv2\\\\src\\\\renderer\\\\components\\\\atoms\\\\Skeleton.tsx\")",
       "Bash(Test-Path \"C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\components\\\\atoms\\\\Skeleton.tsx\")",
       "Bash(cmd /c \"tasklist | findstr electron\")",
-      "Bash(cmd /c \"dir /s /b C:\\\\DiscoveryData\\\\*EntraID*.csv 2>nul\")"
+      "Bash(cmd /c \"dir /s /b C:\\\\DiscoveryData\\\\*EntraID*.csv 2>nul\")",
+      "Bash(cmd /c \"tasklist | findstr node\")",
+      "Bash(cmd /c \"tasklist | findstr /i electron\")"
     ],
     "deny": [],
     "ask": []

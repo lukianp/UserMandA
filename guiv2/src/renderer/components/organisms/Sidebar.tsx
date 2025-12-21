@@ -85,6 +85,10 @@ export const Sidebar: React.FC = () => {
     migration: false,
   });
 
+  // State for profile section collapse
+  const [isSourceProfileExpanded, setIsSourceProfileExpanded] = useState(true);
+  const [isTargetProfileExpanded, setIsTargetProfileExpanded] = useState(true);
+
   // Toggle section expansion
   const toggleSection = useCallback((section: string) => {
     setExpandedSections(prev => ({
@@ -225,21 +229,70 @@ export const Sidebar: React.FC = () => {
 
       {/* Profile Section */}
       {!isCollapsed && (
-        <div className="p-4 border-b border-gray-800">
-          <ProfileSelector
-            type="source"
-            label="Source Profile"
-            showActions={true}
-            className="mb-3"
-            data-cy="sidebar-source-profile"
-          />
-          <div className="h-px bg-gray-800 my-3" />
-          <ProfileSelector
-            type="target"
-            label="Target Profile"
-            showActions={true}
-            data-cy="sidebar-target-profile"
-          />
+        <div className="border-b border-gray-800">
+          {/* Source Profile - Collapsible */}
+          <div className="p-4 pb-2">
+            <button
+              onClick={() => setIsSourceProfileExpanded(!isSourceProfileExpanded)}
+              className="flex items-center justify-between w-full text-left mb-2 hover:opacity-80 transition-opacity"
+            >
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                Source Profile
+              </span>
+              {isSourceProfileExpanded ? (
+                <ChevronDown size={16} className="text-gray-400" />
+              ) : (
+                <ChevronRight size={16} className="text-gray-400" />
+              )}
+            </button>
+            <div
+              className={clsx(
+                'overflow-hidden transition-all duration-300 ease-in-out',
+                isSourceProfileExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+              )}
+            >
+              <ProfileSelector
+                type="source"
+                label=""
+                showActions={true}
+                className="pb-2"
+                data-cy="sidebar-source-profile"
+              />
+            </div>
+          </div>
+
+          {/* Separator */}
+          <div className="h-px bg-gray-800 mx-4" />
+
+          {/* Target Profile - Collapsible */}
+          <div className="p-4 pt-2">
+            <button
+              onClick={() => setIsTargetProfileExpanded(!isTargetProfileExpanded)}
+              className="flex items-center justify-between w-full text-left mb-2 hover:opacity-80 transition-opacity"
+            >
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                Target Profile
+              </span>
+              {isTargetProfileExpanded ? (
+                <ChevronDown size={16} className="text-gray-400" />
+              ) : (
+                <ChevronRight size={16} className="text-gray-400" />
+              )}
+            </button>
+            <div
+              className={clsx(
+                'overflow-hidden transition-all duration-300 ease-in-out',
+                isTargetProfileExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+              )}
+            >
+              <ProfileSelector
+                type="target"
+                label=""
+                showActions={true}
+                data-cy="sidebar-target-profile"
+              />
+            </div>
+          </div>
         </div>
       )}
 

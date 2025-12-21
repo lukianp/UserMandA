@@ -138,8 +138,42 @@ function Connect-AzureWithMultipleStrategies {
     } catch {
         Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Azure CLI token authentication failed: $($_.Exception.Message)" -Level "WARN"
     }
-    
-    # Strategy 3: Managed Identity (if running on Azure VM/Function/etc.)
+
+    # Strategy 3: Microsoft Graph API with Device Code (alternative auth path)
+    try {
+        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Attempting Microsoft Graph API authentication..." -Level "INFO"
+
+        # Check if Microsoft.Graph module is available
+        if (Get-Module -ListAvailable -Name Microsoft.Graph.Authentication) {
+            Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
+
+            # Use device code flow for Graph, then bridge to Azure
+            if ($Configuration.TenantId) {
+                $graphContext = Connect-MgGraph -TenantId $Configuration.TenantId -Scopes "https://management.azure.com/.default" -UseDeviceCode -ErrorAction Stop
+            } else {
+                $graphContext = Connect-MgGraph -Scopes "https://management.azure.com/.default" -UseDeviceCode -ErrorAction Stop
+            }
+
+            # Get access token from Graph session and use for Azure
+            $graphToken = Get-MgContext | Select-Object -ExpandProperty AccessToken
+            if ($graphToken) {
+                $accessToken = ConvertTo-SecureString $graphToken -AsPlainText -Force
+                $accountId = (Get-MgContext).Account
+                $tenantId = (Get-MgContext).TenantId
+
+                $context = Connect-AzAccount -AccessToken $accessToken -AccountId $accountId -TenantId $tenantId -WarningAction SilentlyContinue -ErrorAction Stop
+
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Microsoft Graph API authentication successful" -Level "SUCCESS"
+                return $context
+            }
+        }
+
+    } catch {
+        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Microsoft Graph API authentication failed: $($_.Exception.Message)" -Level "WARN"
+        $Result.AddWarning("Microsoft Graph API authentication failed", @{Error=$_.Exception.Message})
+    }
+
+    # Strategy 4: Managed Identity (if running on Azure VM/Function/etc.)
     try {
         Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Attempting Managed Identity authentication..." -Level "INFO"
         
@@ -152,22 +186,40 @@ function Connect-AzureWithMultipleStrategies {
         Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Managed Identity authentication failed: $($_.Exception.Message)" -Level "WARN"
     }
     
-    # Strategy 4: Interactive Authentication (last resort)
+    # Strategy 4: Device Code Authentication (headless-friendly)
     try {
-        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Attempting interactive authentication..." -Level "INFO"
-        
+        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Attempting device code authentication..." -Level "INFO"
+
+        if ($Configuration.TenantId) {
+            $context = Connect-AzAccount -Tenant $Configuration.TenantId -DeviceCode -WarningAction SilentlyContinue -ErrorAction Stop
+        } else {
+            $context = Connect-AzAccount -DeviceCode -WarningAction SilentlyContinue -ErrorAction Stop
+        }
+
+        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Device code authentication successful" -Level "SUCCESS"
+        return $context
+
+    } catch {
+        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Device code authentication failed: $($_.Exception.Message)" -Level "WARN"
+        $Result.AddWarning("Device code authentication failed", @{Error=$_.Exception.Message})
+    }
+
+    # Strategy 5: Interactive Browser Authentication (last resort - requires GUI)
+    try {
+        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Attempting interactive browser authentication..." -Level "INFO"
+
         if ($Configuration.TenantId) {
             $context = Connect-AzAccount -Tenant $Configuration.TenantId -WarningAction SilentlyContinue -ErrorAction Stop
         } else {
             $context = Connect-AzAccount -WarningAction SilentlyContinue -ErrorAction Stop
         }
-        
-        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Interactive authentication successful" -Level "SUCCESS"
+
+        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Interactive browser authentication successful" -Level "SUCCESS"
         return $context
-        
+
     } catch {
-        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Interactive authentication failed: $($_.Exception.Message)" -Level "ERROR"
-        $Result.AddError("All authentication strategies failed", $_.Exception, @{Section="Authentication"})
+        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Interactive browser authentication failed: $($_.Exception.Message)" -Level "ERROR"
+        $Result.AddError("All authentication strategies failed (Service Principal, Azure CLI, Microsoft Graph API, Managed Identity, Device Code, Interactive Browser)", $_.Exception, @{Section="Authentication"})
     }
     
     return $null

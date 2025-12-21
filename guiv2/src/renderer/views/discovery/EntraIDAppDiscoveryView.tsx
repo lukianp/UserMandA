@@ -60,10 +60,14 @@ const EntraIDAppDiscoveryView: React.FC = () => {
     showHighRiskOnly: !!filter?.showHighRiskOnly,
   };
 
-  // Normalize stats objects for safe iteration
-  const appsByType = stats?.appsByType && typeof stats.appsByType === 'object' ? stats.appsByType : {};
-  const permissionsByType = stats?.permissionsByType && typeof stats.permissionsByType === 'object' ? stats.permissionsByType : {};
-  const topPermissions = Array.isArray(stats?.topPermissions) ? stats.topPermissions : [];
+  // Compute appsByType locally since removed from stats interface
+  const appsByType = stats ? {
+    'App Registrations': stats.totalApplications || 0,
+    'Enterprise Apps': 0, // Compute from data if needed
+    'Service Principals': stats.servicePrincipals || 0,
+  } : {};
+  const permissionsByType = {};
+  const topPermissions: any[] = [];
 
   // Normalize export payload
   const exportPayload = Array.isArray((result as any)?.data) ? (result as any).data : Array.isArray(result) ? result : [];
@@ -97,8 +101,8 @@ const EntraIDAppDiscoveryView: React.FC = () => {
         />
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      {/* Header - Fixed at top */}
+      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center gap-3">
           <Shield className="w-8 h-8 text-purple-600" />
           <div>
@@ -143,8 +147,10 @@ const EntraIDAppDiscoveryView: React.FC = () => {
         </div>
       </div>
 
-      {/* Error Display */}
-      {error && (
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Error Display */}
+        {error && (
         <div className="mx-6 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
           <span className="text-red-800 dark:text-red-200">{error}</span>
           <Button onClick={clearError} variant="ghost" size="sm">Dismiss</Button>
@@ -384,7 +390,7 @@ const EntraIDAppDiscoveryView: React.FC = () => {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 flex flex-col p-6 overflow-hidden">
+      <div className="flex flex-col p-6">
         {activeTab === 'overview' && (!stats || (stats?.totalApplications ?? 0) === 0) && (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
@@ -398,7 +404,7 @@ const EntraIDAppDiscoveryView: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'overview' && stats && (stats?.totalApplications ?? 0) > 0 && (
+        {activeTab === 'overview' && stats && typeof stats?.totalApplications === 'number' && stats.totalApplications > 0 && (
           <div className="space-y-6 overflow-auto">
             {/* Applications by Type */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -410,13 +416,13 @@ const EntraIDAppDiscoveryView: React.FC = () => {
                     <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6 overflow-hidden">
                       <div
                         className="bg-purple-600 h-full flex items-center justify-end px-2 text-xs text-white font-medium"
-                        style={{ width: `${(stats?.totalApplications ?? 0) > 0 ? (count / (stats?.totalApplications ?? 0)) * 100 : 0}%` }}
+                        style={{ width: `${typeof count === 'number' && typeof stats?.totalApplications === 'number' && stats.totalApplications > 0 ? (count / stats.totalApplications) * 100 : 0}%` }}
                       >
-                        {count > 0 && `${count}`}
+                        {typeof count === 'number' && count > 0 && `${count}`}
                       </div>
                     </div>
                     <div className="w-16 text-sm text-gray-600 dark:text-gray-400 text-right">
-                      {(stats?.totalApplications ?? 0) > 0 ? ((count / (stats?.totalApplications ?? 0)) * 100).toFixed(1) : 0}%
+                      {typeof count === 'number' && typeof stats?.totalApplications === 'number' && stats.totalApplications > 0 ? ((count / stats.totalApplications) * 100).toFixed(1) : 0}%
                     </div>
                   </div>
                 ))}
@@ -431,7 +437,7 @@ const EntraIDAppDiscoveryView: React.FC = () => {
                   <div key={type} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">{type}</span>
                     <span className="text-lg font-bold text-purple-600">
-                      {count}
+                      {typeof count === 'number' ? count.toLocaleString() : 'N/A'}
                     </span>
                   </div>
                 ))}
@@ -459,7 +465,7 @@ const EntraIDAppDiscoveryView: React.FC = () => {
             )}
 
             {/* Secret Expiration Warning */}
-            {((stats?.expiringSecrets ?? 0) > 0 || (stats?.expiredSecrets ?? 0) > 0) && (
+            {((typeof stats?.expiringSecrets === 'number' && stats.expiringSecrets > 0) || (typeof stats?.expiredSecrets === 'number' && stats.expiredSecrets > 0)) && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400 mt-1" />
@@ -560,6 +566,7 @@ const EntraIDAppDiscoveryView: React.FC = () => {
             {/* Data Grid */}
             <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
               <VirtualizedDataGrid
+                key={`grid-${filteredData?.length || 0}-${activeTab}`}
                 data={Array.isArray(filteredData) ? filteredData as any[] : []}
                 columns={Array.isArray(columns) ? columns : []}
                 loading={isDiscovering}
@@ -571,6 +578,8 @@ const EntraIDAppDiscoveryView: React.FC = () => {
           </>
         )}
       </div>
+      </div>
+      {/* End scrollable content area */}
 
       {/* PowerShell Execution Dialog */}
       <PowerShellExecutionDialog

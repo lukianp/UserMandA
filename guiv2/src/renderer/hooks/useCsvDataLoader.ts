@@ -94,7 +94,7 @@ export function useCsvDataLoader<T = any>(
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [reloadCounter, setReloadCounter] = useState(0);
 
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef(0);
   const maxRetries = 3;
   const isUnmountedRef = useRef(false);
@@ -187,7 +187,7 @@ export function useCsvDataLoader<T = any>(
         // Read CSV file using Electron API
         // Check if file exists before reading (for graceful degradation)
         const fs = window.electronAPI.fs;
-        const exists = await fs.access(fullPath).then(() => true).catch(() => false);
+        const exists = await window.electronAPI.fileExists(fullPath);
 
         if (!exists) {
           if (gracefulDegradation) {
@@ -259,7 +259,7 @@ export function useCsvDataLoader<T = any>(
             // Preserve PascalCase from PowerShell output
             return header.trim();
           },
-          complete: (results) => {
+          complete: (results: Papa.ParseResult<T>) => {
             if (isUnmountedRef.current) return;
 
             console.log(`[useCsvDataLoader] Parsed ${results.data.length} rows`);
@@ -284,12 +284,12 @@ export function useCsvDataLoader<T = any>(
 
             // Generate AG Grid columns from CSV headers (CRITICAL: preserve PascalCase)
             const fields = results.meta.fields || [];
-            const generatedColumns: ColDef[] = fields.map(field => {
+            const generatedColumns: ColDef[] = fields.map((field: string) => {
               // Convert PascalCase to readable header: "DisplayName" → "Display Name"
               const headerName = field
                 .replace(/([A-Z])/g, ' $1')
                 .trim()
-                .replace(/^./, str => str.toUpperCase());
+                .replace(/^./, (str: string) => str.toUpperCase());
 
               return {
                 field: field, // CRITICAL: Keep original PascalCase field name
@@ -328,7 +328,7 @@ export function useCsvDataLoader<T = any>(
               console.warn('[useCsvDataLoader] ⚠️  Component unmounted during parse, skipping state update');
             }
           },
-          error: (parseError) => {
+          error: (parseError: Error) => {
             const err = new Error(`CSV parse error: ${parseError.message}`);
             console.error('[useCsvDataLoader] Parse error:', parseError);
             setError(err);
@@ -402,7 +402,7 @@ export function useCsvDataLoader<T = any>(
       if (intervalRef.current) {
         console.log('[useCsvDataLoader] Clearing auto-refresh interval on unmount');
         clearInterval(intervalRef.current);
-        intervalRef.current = undefined;
+        intervalRef.current = null;
       }
     };
   }, [csvPath, reloadCounter]); // MINIMAL dependencies to prevent loops

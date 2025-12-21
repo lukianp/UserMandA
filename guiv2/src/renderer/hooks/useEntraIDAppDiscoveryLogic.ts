@@ -4,7 +4,7 @@
  * ✅ FIXED: Uses event-driven architecture with streaming support
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 
 import {
   BaseDiscoveryHookResult,
@@ -25,7 +25,7 @@ export type EntraIDAppDiscoveryHookResult = BaseDiscoveryHookResult;
  */
 export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => {
   // Get selected company profile from store
-  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const selectedSourceProfile = useProfileStore((state: any) => state.selectedSourceProfile);
   const { addResult, getResultsByModuleName } = useDiscoveryStore();
 
   const [isRunning, setIsRunning] = useState(false);
@@ -68,7 +68,7 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
    */
   useEffect(() => {
     console.log('[EntraIDAppDiscoveryHook] Loading previous results from discovery store');
-    const previousResults = getResultsByModuleName('EntraIDAppDiscovery');
+    const previousResults = getResultsByModuleName('EntraIDApp');
 
     if (previousResults && previousResults.length > 0) {
       const mostRecent = previousResults[previousResults.length - 1];
@@ -95,7 +95,7 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
 
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
-        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warn' : 'info';
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
         addLog(logLevel, data.message);
       }
     });
@@ -122,7 +122,7 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
         const result = {
           id: `entraid-app-discovery-${Date.now()}`,
           name: 'Entra ID App Registrations Discovery',
-          moduleName: 'EntraIDAppDiscovery',
+          moduleName: 'EntraIDApp',
           displayName: 'Entra ID App Registrations Discovery',
           itemCount: dataArray.length,
           discoveryTime: new Date().toISOString(),
@@ -137,6 +137,8 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
         };
 
         console.log('[EntraIDAppDiscoveryHook] Setting results with additionalData:', result.additionalData);
+        console.log('[EntraIDAppDiscoveryHook] Result moduleName:', result.moduleName);
+        console.log('[EntraIDAppDiscoveryHook] Store will persist under key:', result.moduleName);
         setResults(result);
         addResult(result);
         addLog('info', `Discovery completed! Found ${result.itemCount} items.`);
@@ -158,7 +160,7 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
-        addLog('warn', 'Discovery cancelled by user');
+        addLog('warning', 'Discovery cancelled by user');
       }
     });
 
@@ -237,7 +239,7 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
     if (!isRunning || !currentToken) return;
 
     setIsCancelling(true);
-    addLog('warn', 'Cancelling discovery...');
+    addLog('warning', 'Cancelling discovery...');
 
     try {
       await window.electron.cancelDiscovery(currentToken);
@@ -248,7 +250,7 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
-        addLog('warn', 'Discovery cancelled');
+        addLog('warning', 'Discovery cancelled');
       }, 2000);
     } catch (err: any) {
       const errorMessage = err.message || 'Error cancelling discovery';
@@ -344,12 +346,13 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
   /**
    * Export to CSV
    */
-  const exportToCSV = useCallback((data: any[], filename: string) => {
+  const exportToCSV = useCallback((data?: any[], filename?: string) => {
     try {
       if (!data || data.length === 0) {
-        addLog('warn', 'No data to export');
+        addLog('warning', 'No data to export');
         return;
       }
+      const defaultFilename = filename || `export-${new Date().toISOString().split('T')[0]}.csv`;
       const headers = Object.keys(data[0]);
       const csvContent = [
         headers.join(','),
@@ -359,10 +362,10 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = filename;
+      link.download = defaultFilename;
       link.click();
       URL.revokeObjectURL(url);
-      addLog('info', `Exported ${data.length} records to ${filename}`);
+      addLog('info', `Exported ${data.length} records to ${defaultFilename}`);
     } catch (err: any) {
       addLog('error', `Export failed: ${err.message}`);
     }
@@ -371,16 +374,24 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
   /**
    * Export to Excel (simplified CSV for now)
    */
-  const exportToExcel = useCallback((data: any[], filename: string) => {
+  const exportToExcel = useCallback(async (data?: any[], filename?: string): Promise<void> => {
     // Use CSV export as fallback - real Excel would need xlsx library
-    exportToCSV(data, filename.replace('.xlsx', '.csv'));
+    const defaultFilename = filename || `export-${new Date().toISOString().split('T')[0]}.xlsx`;
+    exportToCSV(data, defaultFilename.replace('.xlsx', '.csv'));
   }, [exportToCSV]);
 
   /**
    * Extract raw data array from results
    * PowerShell module returns: { Success, ModuleName, Data: [...] }
    */
-  const rawData: any[] = results?.additionalData?.Data || [];
+  const rawData: any[] = results?.additionalData?.data?.Data || [];
+  console.log('[EntraIDAppDiscoveryHook] rawData computed:', rawData.length, 'items');
+  console.log('[EntraIDAppDiscoveryHook] results structure:', {
+    hasResults: !!results,
+    hasAdditionalData: !!results?.additionalData,
+    additionalDataKeys: results?.additionalData ? Object.keys(results.additionalData) : [],
+    dataLength: results?.additionalData?.data?.Data?.length || 0
+  });
 
   /**
    * Compute statistics from results
@@ -404,13 +415,8 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
     expiredSecrets: secrets.filter((s: any) => new Date(s.EndDateTime) < new Date()).length,
     delegatedPermissions: 0,
     applicationPermissions: 0,
-    appsByType: {
-      'App Registrations': appRegistrations.length,
-      'Enterprise Apps': enterpriseApps.length,
-      'Service Principals': servicePrincipals.length,
-    },
-    permissionsByType: {},
-    topPermissions: [],
+    // Remove complex object properties that violate DiscoveryStats interface
+    // These will be computed in the view component instead
   } : null;
 
   /**
@@ -461,6 +467,7 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
   };
 
   const filteredData = getFilteredData();
+  console.log('[EntraIDAppDiscoveryHook] filteredData computed:', filteredData.length, 'items, activeTab:', activeTab);
 
   return {
     // Core discovery state
@@ -492,6 +499,8 @@ export const useEntraIDAppDiscoveryLogic = (): EntraIDAppDiscoveryHookResult => 
     // View state
     activeTab,
     setActiveTab,
+    selectedTab: activeTab,  // Alias for BaseDiscoveryHookResult compatibility
+    setSelectedTab: setActiveTab,  // Alias for BaseDiscoveryHookResult compatibility
     filter,
     updateFilter,
     showExecutionDialog,
