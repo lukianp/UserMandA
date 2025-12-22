@@ -4,8 +4,9 @@ const { MakerDeb } = require('@electron-forge/maker-deb');
 const { MakerRpm } = require('@electron-forge/maker-rpm');
 const { AutoUnpackNativesPlugin } = require('@electron-forge/plugin-auto-unpack-natives');
 const { WebpackPlugin } = require('@electron-forge/plugin-webpack');
-const { FusesPlugin } = require('@electron-forge/plugin-fuses');
-const { FuseV1Options, FuseVersion } = require('@electron/fuses');
+// FusesPlugin disabled - uncomment when ready to configure Electron Fuses
+// const { FusesPlugin } = require('@electron-forge/plugin-fuses');
+// const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 const mainConfig = require('./webpack.main.config');
 const { rendererConfig } = require('./webpack.renderer.config');

@@ -79,8 +79,8 @@ interface ApplicationDependencyMappingDiscoveryHookResult extends BaseDiscoveryH
   stats: any;
   setActiveTab: (tab: string) => void;
   updateFilter: (updates: any) => void;
-  exportToCSV: (data: any[], filename: string) => Promise<void>;
-  exportToExcel: (data: any[], filename: string) => Promise<void>;
+  exportToCSV: (data?: any[], filename?: string) => void;
+  exportToExcel: (data?: any[], filename?: string) => Promise<void>;
   selectedProfile: any;
   templates: any[];
   currentResult: ApplicationDependencyMappingDiscoveryResult | null;

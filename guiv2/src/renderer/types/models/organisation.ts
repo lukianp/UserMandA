@@ -61,6 +61,7 @@ export interface SankeyNode extends SankeyNodeMinimal<SankeyNode, SankeyLink> {
   factSheet: FactSheetData;
   metadata: {
     source: string;
+    sourceFile?: string; // Full path to source file
     record: any;
     priority: number; // For LeanIX layer ordering (1=Infrastructure, 4=Business Capabilities)
     category?: string; // LeanIX-style entity category

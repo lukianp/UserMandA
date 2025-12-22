@@ -412,9 +412,16 @@ export const MigrationDashboardView: React.FC = () => {
     console.log('[MigrationDashboardView] Start wave clicked');
     const nextWave = mockWaves.find(w => w.status === 'Planned' || w.status === 'Ready');
     if (nextWave) {
-      await startWave(nextWave.id);
+      // TODO: Implement startWave in useMigrationStore
+      console.log(`[MigrationDashboardView] Would start wave: ${nextWave.id}`);
+      addAlert({
+        type: 'Info',
+        title: 'Wave Start',
+        message: `Starting wave: ${nextWave.name}`,
+        actionRequired: false,
+      });
     }
-  }, [mockWaves, startWave]);
+  }, [mockWaves, addAlert]);
 
   const handlePauseAll = useCallback(async () => {
     console.log('[MigrationDashboardView] Pause all clicked');

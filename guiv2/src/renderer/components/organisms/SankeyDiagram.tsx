@@ -12,9 +12,8 @@
  */
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-// @ts-expect-error - d3 types not installed, runtime functionality works
 import * as d3 from 'd3';
-// @ts-expect-error - d3-sankey types not installed, runtime functionality works
+// @ts-expect-error - d3-sankey types may be incomplete
 import { sankey, sankeyLinkHorizontal, sankeyLeft, sankeyRight, sankeyCenter, sankeyJustify } from 'd3-sankey';
 import { SankeyNode, SankeyLink, EntityType } from '../../types/models/organisation';
 
@@ -358,7 +357,7 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
         .style('z-index', 10000);
 
       node
-        .on('mousemove', function(this: SVGGElement, event: any, d: any) {
+        .on('mousemove', function(event: any, d: any) {
           const category = d.metadata?.category || 'Unknown';
           const layer = PRIORITY_LAYERS[getNodePriority(d)] || 'Unknown Layer';
 
@@ -481,15 +480,15 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
 
     // Add link hover effect
     link
-      .on('mouseenter', function(this: SVGPathElement, event: any, d: any) {
-        d3.select(this)
+      .on('mouseenter', function(event: any, d: any) {
+        d3.select(event.currentTarget)
           .attr('opacity', 0.6)
-          .attr('stroke-width', (d: any) => Math.max(2, d.width + 2));
+          .attr('stroke-width', Math.max(2, d.width + 2));
       })
-      .on('mouseleave', function(this: SVGPathElement) {
-        d3.select(this)
+      .on('mouseleave', function(event: any, d: any) {
+        d3.select(event.currentTarget)
           .attr('opacity', 0.3)
-          .attr('stroke-width', (d: any) => Math.max(1, d.width));
+          .attr('stroke-width', Math.max(1, d.width));
       });
 
     // Draw nodes
@@ -573,7 +572,7 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
       .style('z-index', 10000);
 
     node
-      .on('mousemove', function(this: SVGGElement, event: any, d: any) {
+      .on('mousemove', function(event: any, d: any) {
         const category = d.metadata?.category || 'Unknown';
         const layer = PRIORITY_LAYERS[getNodePriority(d)] || 'Unknown Layer';
         const sourceFile = d.metadata?.sourceFile || '';
