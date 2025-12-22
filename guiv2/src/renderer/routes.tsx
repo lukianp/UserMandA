@@ -9,7 +9,7 @@ import React, { Suspense, lazy } from 'react';
 import { RouteObject } from 'react-router-dom';
 
 import { Spinner } from './components/atoms/Spinner';
-import { discoveredRoutes } from './views/discovered/_routes.generated.tsx';
+import { discoveredRoutes } from './views/discovered/_routes.generated';
 
 /**
  * Loading fallback component
@@ -354,7 +354,15 @@ export const routes: RouteObject[] = [
   // Auto-generated discovered data routes (CSV display views)
   ...discoveredRoutes,
 
-  // Migration routes
+  // Migration Control Plane routes
+  {
+    path: '/migration',
+    element: lazyLoad(() => import('./views/migration/MigrationDashboardView')),
+  },
+  {
+    path: '/migration/dashboard',
+    element: lazyLoad(() => import('./views/migration/MigrationDashboardView')),
+  },
   {
     path: '/migration/planning',
     element: lazyLoad(() => import('./views/migration/MigrationPlanningView')),
@@ -368,8 +376,63 @@ export const routes: RouteObject[] = [
     element: lazyLoad(() => import('./views/migration/MigrationValidationView')),
   },
   {
+    path: '/migration/go-no-go',
+    element: lazyLoad(() => import('./views/migration/GoNoGoCheckpointView')),
+  },
+  {
     path: '/migration/execution',
     element: lazyLoad(() => import('./views/migration/MigrationExecutionView')),
+  },
+  {
+    path: '/migration/gantt',
+    element: lazyLoad(() => import('./views/migration/GanttChartView')),
+  },
+  {
+    path: '/migration/monitor',
+    element: lazyLoad(() => import('./views/migration/MigrationMonitorView')),
+  },
+  // Migration Workload routes
+  {
+    path: '/migration/workloads',
+    element: lazyLoad(() => import('./views/migration/UserMigrationView')),
+  },
+  {
+    path: '/migration/workloads/users',
+    element: lazyLoad(() => import('./views/migration/UserMigrationView')),
+  },
+  {
+    path: '/migration/workloads/mailboxes',
+    element: lazyLoad(() => import('./views/migration/MailboxMigrationView')),
+  },
+  {
+    path: '/migration/workloads/sharepoint',
+    element: lazyLoad(() => import('./views/migration/SharePointMigrationView')),
+  },
+  {
+    path: '/migration/workloads/onedrive',
+    element: lazyLoad(() => import('./views/migration/OneDriveMigrationView')),
+  },
+  {
+    path: '/migration/workloads/teams',
+    element: lazyLoad(() => import('./views/migration/TeamsMigrationView')),
+  },
+  {
+    path: '/migration/workloads/devices',
+    element: lazyLoad(() => import('./views/migration/DeviceMigrationView')),
+  },
+
+  // Enhanced Migration Control Plane routes
+  {
+    path: '/migration/domain-mapping',
+    element: lazyLoad(() => import('./views/migration/DomainMappingView')),
+  },
+  {
+    path: '/migration/azure-resources',
+    element: lazyLoad(() => import('./views/migration/AzureResourceMigrationView')),
+  },
+  {
+    path: '/migration/engineering',
+    element: lazyLoad(() => import('./views/migration/MigrationEngineeringView')),
   },
 
   // Users & Groups

@@ -48,6 +48,11 @@ import {
   Wrench,
   Building2,
   Download,
+  Activity,
+  GanttChartSquare,
+  GitBranch,
+  CloudCog,
+  Gauge,
 } from 'lucide-react';
 
 import { useProfileStore } from '../../store/useProfileStore';
@@ -189,10 +194,30 @@ export const Sidebar: React.FC = () => {
       label: 'Migration',
       icon: <ArrowRightLeft size={20} />,
       children: [
-        { path: '/migration/planning', label: 'Planning', icon: <ChevronRight size={16} /> },
-        { path: '/migration/mapping', label: 'Mapping', icon: <ChevronRight size={16} /> },
+        { path: '/migration/dashboard', label: 'Dashboard', icon: <BarChart3 size={16} /> },
+        { path: '/migration/planning', label: 'Wave Planning', icon: <Calendar size={16} /> },
+        { path: '/migration/domain-mapping', label: 'Domain Mapping', icon: <GitBranch size={16} /> },
+        { path: '/migration/mapping', label: 'Resource Mapping', icon: <ChevronRight size={16} /> },
         { path: '/migration/validation', label: 'Validation', icon: <ChevronRight size={16} /> },
+        { path: '/migration/go-no-go', label: 'Go/No-Go', icon: <Shield size={16} /> },
         { path: '/migration/execution', label: 'Execution', icon: <ChevronRight size={16} /> },
+        { path: '/migration/gantt', label: 'Gantt Chart', icon: <GanttChartSquare size={16} /> },
+        { path: '/migration/monitor', label: 'Monitor', icon: <Activity size={16} /> },
+        { path: '/migration/azure-resources', label: 'Azure Resources', icon: <CloudCog size={16} /> },
+        { path: '/migration/engineering', label: 'Engineering', icon: <Gauge size={16} /> },
+        {
+          path: '/migration/workloads',
+          label: 'Workloads',
+          icon: <Layers size={16} />,
+          children: [
+            { path: '/migration/workloads/users', label: 'Users', icon: <Users size={14} /> },
+            { path: '/migration/workloads/mailboxes', label: 'Mailboxes', icon: <Mail size={14} /> },
+            { path: '/migration/workloads/sharepoint', label: 'SharePoint', icon: <Globe size={14} /> },
+            { path: '/migration/workloads/onedrive', label: 'OneDrive', icon: <HardDrive size={14} /> },
+            { path: '/migration/workloads/teams', label: 'Teams', icon: <MessageSquare size={14} /> },
+            { path: '/migration/workloads/devices', label: 'Devices', icon: <Cpu size={14} /> },
+          ],
+        },
       ],
     },
     {

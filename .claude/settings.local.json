@@ -145,7 +145,8 @@
       "Bash(cmd /c \"tasklist | findstr /i node\")",
       "Bash(Length: 0 chars)",
       "Bash(Value: 4c54e13b-5380-483b-a9af-32e1f265f614)",
-      "Bash(Select-Object -Last 10)"
+      "Bash(Select-Object -Last 10)",
+      "Bash(timeout /t 10 /nobreak)"
     ],
     "deny": [],
     "ask": []

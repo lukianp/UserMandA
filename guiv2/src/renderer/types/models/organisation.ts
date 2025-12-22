@@ -62,6 +62,8 @@ export interface SankeyNode extends SankeyNodeMinimal<SankeyNode, SankeyLink> {
   metadata: {
     source: string;
     record: any;
+    priority: number; // For LeanIX layer ordering (1=Infrastructure, 4=Business Capabilities)
+    category?: string; // LeanIX-style entity category
   };
 }
 

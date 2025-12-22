@@ -9,6 +9,9 @@ import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { getElectronAPI } from '../lib/electron-api-fallback';
 import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 
+// Demo mode flag - set to true for demo version
+const DEMO_MODE = true;
+
 /**
  * Log entry interface
  */
@@ -288,6 +291,101 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
     currentTokenRef.current = token;
 
     addLog('info', `Starting application discovery for ${selectedSourceProfile.companyName}...`);
+
+    if (DEMO_MODE) {
+      // Demo mode: simulate discovery with dummy data
+      addLog('info', 'Running in demo mode - generating sample data...');
+
+      // Simulate progress
+      setTimeout(() => {
+        setProgress({
+          current: 50,
+          total: 100,
+          percentage: 50,
+          message: 'Processing applications...',
+          currentOperation: 'Processing',
+          objectsProcessed: 50,
+          estimatedTimeRemaining: '2s'
+        });
+        addLog('info', 'Processing applications...');
+      }, 1000);
+
+      // Simulate completion
+      setTimeout(() => {
+        const dummyApplications = [
+          {
+            Name: 'Microsoft Office 365',
+            AppId: '00000003-0000-0000-c000-000000000000',
+            AppType: 'Enterprise App',
+            Vendor: 'Microsoft',
+            Platform: 'Cloud',
+            Category: 'Productivity',
+            DiscoverySource: 'Azure AD',
+            DiscoveredAt: new Date().toISOString(),
+            LicenseType: 'Subscription'
+          },
+          {
+            Name: 'Salesforce',
+            AppId: 'salesforce-app-id',
+            AppType: 'Enterprise App',
+            Vendor: 'Salesforce',
+            Platform: 'Cloud',
+            Category: 'CRM',
+            DiscoverySource: 'Azure AD',
+            DiscoveredAt: new Date().toISOString(),
+            LicenseType: 'Subscription'
+          },
+          {
+            Name: 'Slack',
+            AppId: 'slack-app-id',
+            AppType: 'Enterprise App',
+            Vendor: 'Slack',
+            Platform: 'Cloud',
+            Category: 'Communication',
+            DiscoverySource: 'Azure AD',
+            DiscoveredAt: new Date().toISOString(),
+            LicenseType: 'Free'
+          }
+        ];
+
+        const result = {
+          id: `application-discovery-${Date.now()}`,
+          name: 'Application Discovery',
+          moduleName: 'Application',
+          displayName: 'Application Discovery',
+          itemCount: dummyApplications.length,
+          discoveryTime: new Date().toISOString(),
+          duration: 2500,
+          status: 'Completed',
+          filePath: '',
+          success: true,
+          summary: `Discovered ${dummyApplications.length} applications`,
+          errorMessage: '',
+          applications: dummyApplications,
+          stats: {
+            totalApplications: dummyApplications.length,
+            licensedApplications: dummyApplications.filter(app => app.LicenseType !== 'Free').length,
+            totalProcesses: 0,
+            totalServices: 0,
+            runningServices: 0,
+            applicationsNeedingUpdate: 0,
+            securityRisks: 0,
+          },
+          additionalData: {},
+          createdAt: new Date().toISOString(),
+        };
+
+        setResults(result);
+        addDiscoveryResult(result);
+        setIsRunning(false);
+        setIsCancelling(false);
+        setCurrentToken(null);
+        setProgress(null);
+        addLog('info', `Demo discovery completed! Found ${result.itemCount} applications.`);
+      }, 2500);
+
+      return;
+    }
 
     try {
       // Call PowerShell module - Application Discovery uses Microsoft Graph for cloud applications

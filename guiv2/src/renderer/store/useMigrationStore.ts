@@ -23,7 +23,29 @@ import {
   ConflictResolution,
   ValidationError,
   ValidationWarning,
- ValidationResult } from '../types/models/migration';
+  ValidationResult,
+  MigrationProject,
+  GoNoGoCheckpoint,
+  CheckpointDecisionStatus,
+  CriteriaStatus,
+  MigrationAlert,
+  ActiveTask,
+  GanttTask,
+  MigrationDashboardStats,
+  // Enhanced Migration Control Plane types
+  DomainMapping,
+  UserMigrationPlan,
+  AzureResourceMigration,
+  CrossDomainDependency,
+  MigrationEngineeringMetrics,
+  MigrationHealthScore,
+  Domain,
+  AttributeMapping,
+  LicenseMapping,
+  DomainMappingStatus,
+  UserMigrationStatus,
+  ResourceMigrationStatus,
+} from '../types/models/migration';
 import type { ProgressData } from '../../shared/types';
 
 // ValidationResult is imported from migration types
@@ -164,6 +186,38 @@ export interface MigrationProgressSummary {
 }
 
 /**
+ * Dashboard KPIs for executive overview
+ */
+export interface DashboardKPIs {
+  totalUsers: number;
+  migratedUsers: number;
+  totalMailboxes: number;
+  migratedMailboxes: number;
+  totalSharePointSites: number;
+  migratedSharePointSites: number;
+  totalOneDriveAccounts: number;
+  migratedOneDriveAccounts: number;
+  totalTeams: number;
+  migratedTeams: number;
+  totalDevices: number;
+  migratedDevices: number;
+  overallProgress: number;
+  activeWaveCount: number;
+  completedWaveCount: number;
+  pendingWaveCount: number;
+}
+
+/**
+ * Activity feed item
+ */
+export interface ActivityItem {
+  id: string;
+  type: 'task' | 'wave' | 'checkpoint' | 'alert' | 'project';
+  message: string;
+  timestamp: Date | string;
+}
+
+/**
  * License validation result
  */
 export interface LicenseValidationResult {
@@ -240,6 +294,49 @@ interface MigrationState {
   // NEW: Delta sync
   lastSyncTimestamp: Date | null;
   deltaSyncEnabled: boolean;
+
+  // NEW: Project management (Migration Control Plane)
+  projects: MigrationProject[];
+  selectedProjectId: string | null;
+  selectedProject: MigrationProject | null;
+
+  // NEW: Checkpoints (Go/No-Go)
+  checkpoints: GoNoGoCheckpoint[];
+  selectedCheckpointId: string | null;
+
+  // NEW: Real-time monitoring
+  activeTasks: ActiveTask[];
+  alerts: MigrationAlert[];
+  unreadAlertCount: number;
+
+  // NEW: Dashboard
+  dashboardKPIs: DashboardKPIs;
+  recentActivity: ActivityItem[];
+
+  // NEW: Gantt chart
+  ganttTasks: GanttTask[];
+
+  // ==================== ENHANCED MIGRATION CONTROL PLANE STATE ====================
+
+  // Domain Mappings
+  domainMappings: DomainMapping[];
+  domains: Domain[];
+  selectedDomainMappingId: string | null;
+
+  // User Migration Plans
+  userMigrationPlans: UserMigrationPlan[];
+  selectedUserMigrationPlanId: string | null;
+
+  // Azure Resource Migrations
+  azureResourceMigrations: AzureResourceMigration[];
+  selectedAzureResourceMigrationId: string | null;
+
+  // Cross-Domain Dependencies
+  crossDomainDependencies: CrossDomainDependency[];
+
+  // Engineering Metrics
+  engineeringMetrics: MigrationEngineeringMetrics[];
+  healthScore: MigrationHealthScore | null;
 
   // Validation hook compatibility properties
   selectedWave: MigrationWave | null;
@@ -321,6 +418,103 @@ interface MigrationState {
   validateLicenses: (waveId: string) => Promise<LicenseValidationResult>;
   validatePermissions: (waveId: string) => Promise<PermissionValidationResult>;
   validateConnectivity: () => Promise<ConnectivityValidationResult>;
+
+  // NEW: Project CRUD (Migration Control Plane)
+  loadProjects: () => Promise<void>;
+  createProject: (project: Omit<MigrationProject, 'id' | 'createdAt' | 'waves' | 'checkpoints'>) => Promise<string>;
+  updateProject: (id: string, updates: Partial<MigrationProject>) => Promise<void>;
+  deleteProject: (id: string) => Promise<void>;
+  selectProject: (id: string | null) => void;
+
+  // NEW: Checkpoint management (Go/No-Go)
+  loadCheckpoints: (waveId: string) => Promise<void>;
+  createCheckpoint: (waveId: string, checkpoint: Omit<GoNoGoCheckpoint, 'id' | 'createdAt'>) => Promise<string>;
+  updateCheckpoint: (checkpointId: string, updates: Partial<GoNoGoCheckpoint>) => Promise<void>;
+  evaluateCheckpoint: (checkpointId: string) => Promise<void>;
+  setGoNoGoDecision: (checkpointId: string, decision: CheckpointDecisionStatus, notes?: string) => Promise<void>;
+  updateCriteriaStatus: (checkpointId: string, criteriaId: string, status: CriteriaStatus, notes?: string) => void;
+
+  // NEW: Real-time monitoring
+  updateActiveTasks: (tasks: ActiveTask[]) => void;
+  addActiveTask: (task: ActiveTask) => void;
+  removeActiveTask: (taskId: string) => void;
+  updateActiveTaskProgress: (taskId: string, progress: number, currentItem?: string) => void;
+
+  // NEW: Alerts
+  addAlert: (alert: Omit<MigrationAlert, 'id' | 'timestamp' | 'isRead'>) => void;
+  markAlertAsRead: (alertId: string) => void;
+  markAllAlertsAsRead: () => void;
+  clearAlerts: () => void;
+  dismissAlert: (alertId: string) => void;
+
+  // NEW: Dashboard
+  refreshDashboard: () => Promise<void>;
+  loadDashboardKPIs: (projectId: string) => Promise<void>;
+
+  // NEW: Gantt chart
+  loadGanttTasks: (projectId: string) => Promise<void>;
+  updateGanttTask: (taskId: string, updates: Partial<GanttTask>) => void;
+  rescheduleGanttTask: (taskId: string, newStart: Date, newEnd: Date) => Promise<void>;
+
+  // NEW: Activity feed
+  addActivity: (type: 'task' | 'wave' | 'checkpoint' | 'alert' | 'project', message: string) => void;
+
+  // NEW: Computed getters
+  getProjectById: (id: string) => MigrationProject | undefined;
+  getCheckpointById: (id: string) => GoNoGoCheckpoint | undefined;
+  getPendingCheckpoints: () => GoNoGoCheckpoint[];
+  getCriticalAlerts: () => MigrationAlert[];
+
+  // ==================== ENHANCED MIGRATION CONTROL PLANE ACTIONS ====================
+
+  // Domain Mapping Actions
+  loadDomainMappings: () => Promise<void>;
+  createDomainMapping: (mapping: Omit<DomainMapping, 'id' | 'createdAt'>) => Promise<string>;
+  updateDomainMapping: (id: string, updates: Partial<DomainMapping>) => Promise<void>;
+  deleteDomainMapping: (id: string) => Promise<void>;
+  validateDomainMapping: (id: string) => Promise<ValidationResult>;
+  selectDomainMapping: (id: string | null) => void;
+  getDomainMappingById: (id: string) => DomainMapping | undefined;
+
+  // Domain Actions
+  loadDomains: () => Promise<void>;
+  testDomainConnectivity: (domainId: string) => Promise<{ connected: boolean; error?: string }>;
+
+  // User Migration Plan Actions
+  loadUserMigrationPlans: (waveId?: string) => Promise<void>;
+  createUserMigrationPlan: (plan: Omit<UserMigrationPlan, 'id' | 'createdAt'>) => Promise<string>;
+  updateUserMigrationPlan: (id: string, updates: Partial<UserMigrationPlan>) => Promise<void>;
+  deleteUserMigrationPlan: (id: string) => Promise<void>;
+  validateUserMigrationPlan: (id: string) => Promise<ValidationResult>;
+  executeUserMigration: (planId: string) => Promise<void>;
+  selectUserMigrationPlan: (id: string | null) => void;
+  getUserMigrationPlanById: (id: string) => UserMigrationPlan | undefined;
+  bulkCreateUserMigrationPlans: (plans: Array<Omit<UserMigrationPlan, 'id' | 'createdAt'>>) => Promise<string[]>;
+
+  // Azure Resource Migration Actions
+  loadAzureResourceMigrations: (waveId?: string) => Promise<void>;
+  createAzureResourceMigration: (migration: Omit<AzureResourceMigration, 'id' | 'createdAt'>) => Promise<string>;
+  updateAzureResourceMigration: (id: string, updates: Partial<AzureResourceMigration>) => Promise<void>;
+  deleteAzureResourceMigration: (id: string) => Promise<void>;
+  assessAzureResource: (id: string) => Promise<{ complexity: string; risks: string[]; estimatedDowntime: number }>;
+  executeAzureMigration: (id: string) => Promise<void>;
+  selectAzureResourceMigration: (id: string | null) => void;
+  getAzureResourceMigrationById: (id: string) => AzureResourceMigration | undefined;
+
+  // Cross-Domain Dependency Actions
+  loadCrossDomainDependencies: (domainMappingId?: string) => Promise<void>;
+  analyzeDependencies: (entityId: string, entityType: string) => Promise<CrossDomainDependency[]>;
+  resolveDependency: (dependencyId: string, resolutionStrategy: string) => Promise<void>;
+
+  // Engineering Metrics Actions
+  loadEngineeringMetrics: (waveId?: string, timeRange?: { start: Date; end: Date }) => Promise<void>;
+  calculateHealthScore: () => Promise<MigrationHealthScore>;
+  getMetricsSummary: () => {
+    avgSuccessRate: number;
+    avgThroughput: number;
+    totalProcessed: number;
+    totalFailed: number;
+  };
 }
 
 // Enable MapSet plugin for Immer to handle Maps and Sets in state
@@ -363,6 +557,66 @@ export const useMigrationStore = create<MigrationState>()(
           // NEW: Delta sync state
           lastSyncTimestamp: null,
           deltaSyncEnabled: false,
+
+          // NEW: Project management state (Migration Control Plane)
+          projects: [] as MigrationProject[],
+          selectedProjectId: null as string | null,
+          selectedProject: null as MigrationProject | null,
+
+          // NEW: Checkpoints state
+          checkpoints: [] as GoNoGoCheckpoint[],
+          selectedCheckpointId: null as string | null,
+
+          // NEW: Real-time monitoring state
+          activeTasks: [] as ActiveTask[],
+          alerts: [] as MigrationAlert[],
+          unreadAlertCount: 0,
+
+          // NEW: Dashboard state
+          dashboardKPIs: {
+            totalUsers: 0,
+            migratedUsers: 0,
+            totalMailboxes: 0,
+            migratedMailboxes: 0,
+            totalSharePointSites: 0,
+            migratedSharePointSites: 0,
+            totalOneDriveAccounts: 0,
+            migratedOneDriveAccounts: 0,
+            totalTeams: 0,
+            migratedTeams: 0,
+            totalDevices: 0,
+            migratedDevices: 0,
+            overallProgress: 0,
+            activeWaveCount: 0,
+            completedWaveCount: 0,
+            pendingWaveCount: 0,
+          } as DashboardKPIs,
+          recentActivity: [] as ActivityItem[],
+
+          // NEW: Gantt chart state
+          ganttTasks: [] as GanttTask[],
+
+          // ==================== ENHANCED MIGRATION CONTROL PLANE INITIAL STATE ====================
+
+          // Domain Mappings
+          domainMappings: [] as DomainMapping[],
+          domains: [] as Domain[],
+          selectedDomainMappingId: null as string | null,
+
+          // User Migration Plans
+          userMigrationPlans: [] as UserMigrationPlan[],
+          selectedUserMigrationPlanId: null as string | null,
+
+          // Azure Resource Migrations
+          azureResourceMigrations: [] as AzureResourceMigration[],
+          selectedAzureResourceMigrationId: null as string | null,
+
+          // Cross-Domain Dependencies
+          crossDomainDependencies: [] as CrossDomainDependency[],
+
+          // Engineering Metrics
+          engineeringMetrics: [] as MigrationEngineeringMetrics[],
+          healthScore: null as MigrationHealthScore | null,
 
           // Migration execution state
           executionProgress: null,
@@ -1779,6 +2033,1651 @@ export const useMigrationStore = create<MigrationState>()(
           };
         }
       },
+
+      // ==================== PROJECT MANAGEMENT (Migration Control Plane) ====================
+
+      /**
+       * Load all migration projects
+       */
+      loadProjects: async () => {
+        set((state) => {
+          state.isLoading = true;
+          state.error = null;
+        });
+
+        try {
+          console.log('[MigrationStore] Loading projects...');
+          // For now, load from localStorage. In production, this would call IPC
+          const savedProjects = localStorage.getItem('migration-projects');
+          const projects = savedProjects ? JSON.parse(savedProjects) : [];
+
+          set((state) => {
+            state.projects = projects;
+            state.isLoading = false;
+          });
+          console.log(`[MigrationStore] Loaded ${projects.length} projects`);
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to load projects:', error);
+          set((state) => {
+            state.error = error.message || 'Failed to load projects';
+            state.isLoading = false;
+          });
+        }
+      },
+
+      /**
+       * Create a new migration project
+       */
+      createProject: async (projectData) => {
+        try {
+          const newProject: MigrationProject = {
+            ...projectData,
+            id: crypto.randomUUID(),
+            waves: [],
+            checkpoints: [],
+            createdAt: new Date().toISOString(),
+          };
+
+          console.log('[MigrationStore] Creating project:', newProject.name);
+
+          set((state) => {
+            state.projects.push(newProject);
+            state.selectedProjectId = newProject.id;
+            state.selectedProject = newProject;
+          });
+
+          // Persist to localStorage
+          const projects = get().projects;
+          localStorage.setItem('migration-projects', JSON.stringify(projects));
+
+          get().addActivity('project', `Project "${newProject.name}" created`);
+          return newProject.id;
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to create project:', error);
+          set((state) => {
+            state.error = error.message;
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Update a migration project
+       */
+      updateProject: async (id, updates) => {
+        try {
+          console.log('[MigrationStore] Updating project:', id);
+
+          set((state) => {
+            const index = state.projects.findIndex((p) => p.id === id);
+            if (index !== -1) {
+              state.projects[index] = { ...state.projects[index], ...updates, updatedAt: new Date().toISOString() };
+              if (state.selectedProjectId === id) {
+                state.selectedProject = state.projects[index];
+              }
+            }
+          });
+
+          // Persist to localStorage
+          const projects = get().projects;
+          localStorage.setItem('migration-projects', JSON.stringify(projects));
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to update project:', error);
+          set((state) => {
+            state.error = error.message;
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Delete a migration project
+       */
+      deleteProject: async (id) => {
+        try {
+          console.log('[MigrationStore] Deleting project:', id);
+
+          set((state) => {
+            state.projects = state.projects.filter((p) => p.id !== id);
+            if (state.selectedProjectId === id) {
+              state.selectedProjectId = null;
+              state.selectedProject = null;
+            }
+          });
+
+          // Persist to localStorage
+          const projects = get().projects;
+          localStorage.setItem('migration-projects', JSON.stringify(projects));
+
+          get().addActivity('project', 'Project deleted');
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to delete project:', error);
+          set((state) => {
+            state.error = error.message;
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Select a project
+       */
+      selectProject: (id) => {
+        set((state) => {
+          state.selectedProjectId = id;
+          state.selectedProject = id ? state.projects.find((p) => p.id === id) || null : null;
+          // Clear wave selection when project changes
+          state.selectedWaveId = null;
+          state.selectedWave = null;
+        });
+
+        if (id) {
+          // Load waves and dashboard for selected project
+          get().loadDashboardKPIs(id);
+          get().loadGanttTasks(id);
+        }
+      },
+
+      // ==================== CHECKPOINT MANAGEMENT (Go/No-Go) ====================
+
+      /**
+       * Load checkpoints for a wave
+       */
+      loadCheckpoints: async (waveId) => {
+        try {
+          console.log('[MigrationStore] Loading checkpoints for wave:', waveId);
+          // For now, use local state. In production, this would call IPC
+          set((state) => {
+            state.checkpoints = [];
+          });
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to load checkpoints:', error);
+        }
+      },
+
+      /**
+       * Create a checkpoint
+       */
+      createCheckpoint: async (waveId, checkpointData) => {
+        try {
+          const newCheckpoint: GoNoGoCheckpoint = {
+            ...checkpointData,
+            id: crypto.randomUUID(),
+            waveId,
+            createdAt: new Date().toISOString(),
+          };
+
+          console.log('[MigrationStore] Creating checkpoint:', newCheckpoint.name);
+
+          set((state) => {
+            state.checkpoints.push(newCheckpoint);
+          });
+
+          get().addActivity('checkpoint', `Checkpoint "${newCheckpoint.name}" created`);
+          return newCheckpoint.id;
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to create checkpoint:', error);
+          throw error;
+        }
+      },
+
+      /**
+       * Update a checkpoint
+       */
+      updateCheckpoint: async (checkpointId, updates) => {
+        try {
+          set((state) => {
+            const index = state.checkpoints.findIndex((c) => c.id === checkpointId);
+            if (index !== -1) {
+              state.checkpoints[index] = { ...state.checkpoints[index], ...updates };
+            }
+          });
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to update checkpoint:', error);
+          throw error;
+        }
+      },
+
+      /**
+       * Evaluate checkpoint criteria
+       */
+      evaluateCheckpoint: async (checkpointId) => {
+        try {
+          console.log('[MigrationStore] Evaluating checkpoint:', checkpointId);
+
+          set((state) => {
+            const index = state.checkpoints.findIndex((c) => c.id === checkpointId);
+            if (index !== -1) {
+              state.checkpoints[index].status = 'InReview';
+            }
+          });
+
+          get().addActivity('checkpoint', 'Checkpoint evaluation started');
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to evaluate checkpoint:', error);
+          throw error;
+        }
+      },
+
+      /**
+       * Set Go/No-Go decision
+       */
+      setGoNoGoDecision: async (checkpointId, decision, notes) => {
+        try {
+          console.log('[MigrationStore] Setting Go/No-Go decision:', checkpointId, decision);
+
+          set((state) => {
+            const index = state.checkpoints.findIndex((c) => c.id === checkpointId);
+            if (index !== -1) {
+              state.checkpoints[index].status = decision;
+              state.checkpoints[index].decidedAt = new Date().toISOString();
+              if (notes) {
+                state.checkpoints[index].notes = notes;
+              }
+            }
+          });
+
+          get().addActivity('checkpoint', `Go/No-Go decision: ${decision}`);
+          get().addAlert({
+            type: decision === 'Go' ? 'Success' : decision === 'NoGo' ? 'Warning' : 'Info',
+            title: `Go/No-Go Decision: ${decision}`,
+            message: notes || `Checkpoint decision has been made: ${decision}`,
+            actionRequired: decision === 'NoGo',
+          });
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to set decision:', error);
+          throw error;
+        }
+      },
+
+      /**
+       * Update criteria status
+       */
+      updateCriteriaStatus: (checkpointId, criteriaId, status, notes) => {
+        set((state) => {
+          const checkpointIndex = state.checkpoints.findIndex((c) => c.id === checkpointId);
+          if (checkpointIndex !== -1) {
+            const criteriaIndex = state.checkpoints[checkpointIndex].criteria.findIndex(
+              (c) => c.id === criteriaId
+            );
+            if (criteriaIndex !== -1) {
+              state.checkpoints[checkpointIndex].criteria[criteriaIndex].status = status;
+              state.checkpoints[checkpointIndex].criteria[criteriaIndex].evaluatedAt = new Date().toISOString();
+              if (notes) {
+                state.checkpoints[checkpointIndex].criteria[criteriaIndex].notes = notes;
+              }
+            }
+          }
+        });
+      },
+
+      // ==================== REAL-TIME MONITORING ====================
+
+      /**
+       * Update active tasks
+       */
+      updateActiveTasks: (tasks) => {
+        set((state) => {
+          state.activeTasks = tasks;
+        });
+      },
+
+      /**
+       * Add an active task
+       */
+      addActiveTask: (task) => {
+        set((state) => {
+          state.activeTasks.push(task);
+        });
+      },
+
+      /**
+       * Remove an active task
+       */
+      removeActiveTask: (taskId) => {
+        set((state) => {
+          state.activeTasks = state.activeTasks.filter((t) => t.id !== taskId);
+        });
+      },
+
+      /**
+       * Update active task progress
+       */
+      updateActiveTaskProgress: (taskId, progress, currentItem) => {
+        set((state) => {
+          const index = state.activeTasks.findIndex((t) => t.id === taskId);
+          if (index !== -1) {
+            state.activeTasks[index].progress = progress;
+            if (currentItem) {
+              state.activeTasks[index].currentItem = currentItem;
+            }
+          }
+        });
+      },
+
+      // ==================== ALERTS ====================
+
+      /**
+       * Add an alert
+       */
+      addAlert: (alertData) => {
+        const newAlert: MigrationAlert = {
+          ...alertData,
+          id: crypto.randomUUID(),
+          timestamp: new Date().toISOString(),
+          isRead: false,
+        };
+
+        set((state) => {
+          state.alerts.unshift(newAlert);
+          state.unreadAlertCount = state.alerts.filter((a) => !a.isRead).length;
+          // Keep only last 100 alerts
+          if (state.alerts.length > 100) {
+            state.alerts = state.alerts.slice(0, 100);
+          }
+        });
+      },
+
+      /**
+       * Mark an alert as read
+       */
+      markAlertAsRead: (alertId) => {
+        set((state) => {
+          const index = state.alerts.findIndex((a) => a.id === alertId);
+          if (index !== -1) {
+            state.alerts[index].isRead = true;
+            state.unreadAlertCount = state.alerts.filter((a) => !a.isRead).length;
+          }
+        });
+      },
+
+      /**
+       * Mark all alerts as read
+       */
+      markAllAlertsAsRead: () => {
+        set((state) => {
+          state.alerts.forEach((a) => {
+            a.isRead = true;
+          });
+          state.unreadAlertCount = 0;
+        });
+      },
+
+      /**
+       * Clear all alerts
+       */
+      clearAlerts: () => {
+        set((state) => {
+          state.alerts = [];
+          state.unreadAlertCount = 0;
+        });
+      },
+
+      /**
+       * Dismiss an alert
+       */
+      dismissAlert: (alertId) => {
+        set((state) => {
+          state.alerts = state.alerts.filter((a) => a.id !== alertId);
+          state.unreadAlertCount = state.alerts.filter((a) => !a.isRead).length;
+        });
+      },
+
+      // ==================== DASHBOARD ====================
+
+      /**
+       * Refresh dashboard data
+       */
+      refreshDashboard: async () => {
+        const projectId = get().selectedProjectId;
+        if (projectId) {
+          await get().loadDashboardKPIs(projectId);
+          await get().loadGanttTasks(projectId);
+        }
+      },
+
+      /**
+       * Load dashboard KPIs
+       */
+      loadDashboardKPIs: async (projectId) => {
+        try {
+          console.log('[MigrationStore] Loading dashboard KPIs for project:', projectId);
+
+          // Calculate KPIs from current state
+          const project = get().projects.find((p) => p.id === projectId);
+          if (!project) return;
+
+          const waves = project.waves || [];
+          const completedWaves = waves.filter((w) => w.status === 'Completed');
+          const activeWaves = waves.filter((w) => w.status === 'InProgress');
+          const pendingWaves = waves.filter((w) => w.status === 'NotStarted' || w.status === 'Planning');
+
+          // Calculate overall progress
+          const totalProgress = waves.reduce((acc, w) => acc + (w.progressPercentage || 0), 0);
+          const overallProgress = waves.length > 0 ? totalProgress / waves.length : 0;
+
+          set((state) => {
+            state.dashboardKPIs = {
+              ...state.dashboardKPIs,
+              overallProgress: Math.round(overallProgress),
+              activeWaveCount: activeWaves.length,
+              completedWaveCount: completedWaves.length,
+              pendingWaveCount: pendingWaves.length,
+            };
+          });
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to load dashboard KPIs:', error);
+        }
+      },
+
+      // ==================== GANTT CHART ====================
+
+      /**
+       * Load Gantt tasks for a project
+       */
+      loadGanttTasks: async (projectId) => {
+        try {
+          console.log('[MigrationStore] Loading Gantt tasks for project:', projectId);
+
+          const project = get().projects.find((p) => p.id === projectId);
+          if (!project) return;
+
+          // Convert waves and tasks to Gantt format
+          const ganttTasks: GanttTask[] = [];
+
+          // Add project as root
+          ganttTasks.push({
+            id: project.id,
+            name: project.name,
+            start: project.plannedStartDate,
+            end: project.plannedEndDate,
+            progress: project.overallProgress || 0,
+            type: 'project',
+          });
+
+          // Add waves
+          (project.waves || []).forEach((wave) => {
+            ganttTasks.push({
+              id: wave.id,
+              name: wave.name,
+              start: wave.plannedStartDate,
+              end: wave.plannedEndDate || wave.plannedStartDate,
+              progress: wave.progressPercentage || 0,
+              type: 'task',
+              parentId: project.id,
+              waveId: wave.id,
+              dependencies: wave.prerequisites,
+            });
+
+            // Add wave tasks
+            (wave.tasks || []).forEach((task) => {
+              ganttTasks.push({
+                id: task.id,
+                name: task.name,
+                start: task.dueDate || wave.plannedStartDate,
+                end: task.completedDate || task.dueDate || wave.plannedStartDate,
+                progress: task.status === 'Completed' ? 100 : 0,
+                type: 'task',
+                parentId: wave.id,
+                dependencies: task.dependencies,
+                assignedTo: task.assignedTo,
+              });
+            });
+          });
+
+          set((state) => {
+            state.ganttTasks = ganttTasks;
+          });
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to load Gantt tasks:', error);
+        }
+      },
+
+      /**
+       * Update a Gantt task
+       */
+      updateGanttTask: (taskId, updates) => {
+        set((state) => {
+          const index = state.ganttTasks.findIndex((t) => t.id === taskId);
+          if (index !== -1) {
+            state.ganttTasks[index] = { ...state.ganttTasks[index], ...updates };
+          }
+        });
+      },
+
+      /**
+       * Reschedule a Gantt task
+       */
+      rescheduleGanttTask: async (taskId, newStart, newEnd) => {
+        try {
+          console.log('[MigrationStore] Rescheduling Gantt task:', taskId);
+
+          set((state) => {
+            const index = state.ganttTasks.findIndex((t) => t.id === taskId);
+            if (index !== -1) {
+              state.ganttTasks[index].start = newStart.toISOString();
+              state.ganttTasks[index].end = newEnd.toISOString();
+            }
+          });
+
+          get().addActivity('task', 'Task rescheduled');
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to reschedule task:', error);
+          throw error;
+        }
+      },
+
+      // ==================== ACTIVITY FEED ====================
+
+      /**
+       * Add an activity to the feed
+       */
+      addActivity: (type, message) => {
+        set((state) => {
+          state.recentActivity.unshift({
+            id: crypto.randomUUID(),
+            type,
+            message,
+            timestamp: new Date().toISOString(),
+          });
+          // Keep only last 50 activities
+          if (state.recentActivity.length > 50) {
+            state.recentActivity = state.recentActivity.slice(0, 50);
+          }
+        });
+      },
+
+      // ==================== COMPUTED GETTERS ====================
+
+      /**
+       * Get project by ID
+       */
+      getProjectById: (id) => get().projects.find((p) => p.id === id),
+
+      /**
+       * Get checkpoint by ID
+       */
+      getCheckpointById: (id) => get().checkpoints.find((c) => c.id === id),
+
+      /**
+       * Get pending checkpoints
+       */
+      getPendingCheckpoints: () =>
+        get().checkpoints.filter((c) => c.status === 'Pending' || c.status === 'InReview'),
+
+      /**
+       * Get critical alerts
+       */
+      getCriticalAlerts: () =>
+        get().alerts.filter((a) => a.type === 'Error' && a.actionRequired && !a.isRead),
+
+      // ==================== ENHANCED MIGRATION CONTROL PLANE ACTIONS ====================
+
+      // -------------------- DOMAIN MAPPING ACTIONS --------------------
+
+      /**
+       * Load all domain mappings
+       */
+      loadDomainMappings: async () => {
+        set((state) => {
+          state.isLoading = true;
+          state.error = null;
+        });
+
+        try {
+          console.log('[MigrationStore] Loading domain mappings...');
+          const savedMappings = localStorage.getItem('domain-mappings');
+          const domainMappings = savedMappings ? JSON.parse(savedMappings) : [];
+
+          set((state) => {
+            state.domainMappings = domainMappings;
+            state.isLoading = false;
+          });
+          console.log(`[MigrationStore] Loaded ${domainMappings.length} domain mappings`);
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to load domain mappings:', error);
+          set((state) => {
+            state.error = error.message || 'Failed to load domain mappings';
+            state.isLoading = false;
+          });
+        }
+      },
+
+      /**
+       * Create a new domain mapping
+       */
+      createDomainMapping: async (mappingData) => {
+        try {
+          const newMapping: DomainMapping = {
+            ...mappingData,
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+            isValidated: false,
+            validationErrors: [],
+            totalUsers: 0,
+            mappedUsers: 0,
+            totalGroups: 0,
+            mappedGroups: 0,
+          } as DomainMapping;
+
+          console.log('[MigrationStore] Creating domain mapping:', newMapping.sourceDomain, '->', newMapping.targetDomain);
+
+          set((state) => {
+            state.domainMappings.push(newMapping);
+            state.selectedDomainMappingId = newMapping.id;
+          });
+
+          // Persist to localStorage
+          const mappings = get().domainMappings;
+          localStorage.setItem('domain-mappings', JSON.stringify(mappings));
+
+          get().addActivity('project', `Domain mapping "${newMapping.sourceDomain} → ${newMapping.targetDomain}" created`);
+          return newMapping.id;
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to create domain mapping:', error);
+          set((state) => {
+            state.error = error.message;
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Update a domain mapping
+       */
+      updateDomainMapping: async (id, updates) => {
+        try {
+          console.log('[MigrationStore] Updating domain mapping:', id);
+
+          set((state) => {
+            const index = state.domainMappings.findIndex((m) => m.id === id);
+            if (index !== -1) {
+              state.domainMappings[index] = { ...state.domainMappings[index], ...updates, updatedAt: new Date().toISOString() };
+            }
+          });
+
+          // Persist to localStorage
+          const mappings = get().domainMappings;
+          localStorage.setItem('domain-mappings', JSON.stringify(mappings));
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to update domain mapping:', error);
+          set((state) => {
+            state.error = error.message;
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Delete a domain mapping
+       */
+      deleteDomainMapping: async (id) => {
+        try {
+          console.log('[MigrationStore] Deleting domain mapping:', id);
+
+          set((state) => {
+            state.domainMappings = state.domainMappings.filter((m) => m.id !== id);
+            if (state.selectedDomainMappingId === id) {
+              state.selectedDomainMappingId = null;
+            }
+          });
+
+          // Persist to localStorage
+          const mappings = get().domainMappings;
+          localStorage.setItem('domain-mappings', JSON.stringify(mappings));
+
+          get().addActivity('project', 'Domain mapping deleted');
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to delete domain mapping:', error);
+          set((state) => {
+            state.error = error.message;
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Validate a domain mapping
+       */
+      validateDomainMapping: async (id) => {
+        try {
+          console.log('[MigrationStore] Validating domain mapping:', id);
+
+          const mapping = get().domainMappings.find((m) => m.id === id);
+          if (!mapping) {
+            throw new Error('Domain mapping not found');
+          }
+
+          // Perform validation checks
+          const errors: Array<{ field: string; message: string; severity: 'error' | 'warning' | 'info' }> = [];
+          const warnings: Array<{ field: string; message: string }> = [];
+
+          // Check source domain
+          if (!mapping.sourceDomain) {
+            errors.push({ field: 'sourceDomain', message: 'Source domain is required', severity: 'error' });
+          }
+
+          // Check target domain
+          if (!mapping.targetDomain) {
+            errors.push({ field: 'targetDomain', message: 'Target domain is required', severity: 'error' });
+          }
+
+          // Check mapping rules
+          if (!mapping.userMappingRules || mapping.userMappingRules.length === 0) {
+            warnings.push({ field: 'userMappingRules', message: 'No user attribute mapping rules defined' });
+          }
+
+          const result: ValidationResult = {
+            isValid: errors.length === 0,
+            errors,
+            warnings,
+          };
+
+          // Update the mapping with validation result
+          set((state) => {
+            const index = state.domainMappings.findIndex((m) => m.id === id);
+            if (index !== -1) {
+              state.domainMappings[index].isValidated = result.isValid;
+              state.domainMappings[index].validationErrors = errors.map((e) => e.message);
+              state.domainMappings[index].lastValidatedAt = new Date().toISOString();
+            }
+          });
+
+          // Persist to localStorage
+          const mappings = get().domainMappings;
+          localStorage.setItem('domain-mappings', JSON.stringify(mappings));
+
+          return result;
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to validate domain mapping:', error);
+          return {
+            isValid: false,
+            errors: [{ field: 'general', message: error.message, severity: 'error' as const }],
+            warnings: [],
+          };
+        }
+      },
+
+      /**
+       * Select a domain mapping
+       */
+      selectDomainMapping: (id) => {
+        set((state) => {
+          state.selectedDomainMappingId = id;
+        });
+      },
+
+      /**
+       * Get domain mapping by ID
+       */
+      getDomainMappingById: (id) => get().domainMappings.find((m) => m.id === id),
+
+      // -------------------- DOMAIN ACTIONS --------------------
+
+      /**
+       * Load all domains
+       */
+      loadDomains: async () => {
+        try {
+          console.log('[MigrationStore] Loading domains...');
+          const savedDomains = localStorage.getItem('migration-domains');
+          const domains = savedDomains ? JSON.parse(savedDomains) : [];
+
+          set((state) => {
+            state.domains = domains;
+          });
+          console.log(`[MigrationStore] Loaded ${domains.length} domains`);
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to load domains:', error);
+        }
+      },
+
+      /**
+       * Test domain connectivity
+       */
+      testDomainConnectivity: async (domainId) => {
+        try {
+          console.log('[MigrationStore] Testing domain connectivity:', domainId);
+
+          const domain = get().domains.find((d) => d.id === domainId);
+          if (!domain) {
+            return { connected: false, error: 'Domain not found' };
+          }
+
+          // In production, this would call PowerShell to test connectivity
+          // For now, simulate a successful connection
+          set((state) => {
+            const index = state.domains.findIndex((d) => d.id === domainId);
+            if (index !== -1) {
+              state.domains[index].isConnected = true;
+              state.domains[index].lastSyncTime = new Date().toISOString();
+            }
+          });
+
+          return { connected: true };
+        } catch (error: any) {
+          console.error('[MigrationStore] Domain connectivity test failed:', error);
+          return { connected: false, error: error.message };
+        }
+      },
+
+      // -------------------- USER MIGRATION PLAN ACTIONS --------------------
+
+      /**
+       * Load user migration plans
+       */
+      loadUserMigrationPlans: async (waveId) => {
+        set((state) => {
+          state.isLoading = true;
+          state.error = null;
+        });
+
+        try {
+          console.log('[MigrationStore] Loading user migration plans...', waveId ? `for wave ${waveId}` : '');
+          const savedPlans = localStorage.getItem('user-migration-plans');
+          let plans: UserMigrationPlan[] = savedPlans ? JSON.parse(savedPlans) : [];
+
+          // Filter by wave if specified
+          if (waveId) {
+            plans = plans.filter((p) => p.migrationWaveId === waveId);
+          }
+
+          set((state) => {
+            state.userMigrationPlans = plans;
+            state.isLoading = false;
+          });
+          console.log(`[MigrationStore] Loaded ${plans.length} user migration plans`);
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to load user migration plans:', error);
+          set((state) => {
+            state.error = error.message || 'Failed to load user migration plans';
+            state.isLoading = false;
+          });
+        }
+      },
+
+      /**
+       * Create a new user migration plan
+       */
+      createUserMigrationPlan: async (planData) => {
+        try {
+          const newPlan: UserMigrationPlan = {
+            ...planData,
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+            status: 'Pending',
+            progress: 0,
+            preValidationPassed: false,
+            preValidationErrors: [],
+          } as UserMigrationPlan;
+
+          console.log('[MigrationStore] Creating user migration plan for:', newPlan.userDisplayName);
+
+          set((state) => {
+            state.userMigrationPlans.push(newPlan);
+          });
+
+          // Persist to localStorage
+          const allPlans = JSON.parse(localStorage.getItem('user-migration-plans') || '[]');
+          allPlans.push(newPlan);
+          localStorage.setItem('user-migration-plans', JSON.stringify(allPlans));
+
+          get().addActivity('task', `User migration plan created for ${newPlan.userDisplayName}`);
+          return newPlan.id;
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to create user migration plan:', error);
+          set((state) => {
+            state.error = error.message;
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Update a user migration plan
+       */
+      updateUserMigrationPlan: async (id, updates) => {
+        try {
+          console.log('[MigrationStore] Updating user migration plan:', id);
+
+          set((state) => {
+            const index = state.userMigrationPlans.findIndex((p) => p.id === id);
+            if (index !== -1) {
+              state.userMigrationPlans[index] = { ...state.userMigrationPlans[index], ...updates, updatedAt: new Date().toISOString() };
+            }
+          });
+
+          // Update in localStorage
+          const allPlans = JSON.parse(localStorage.getItem('user-migration-plans') || '[]');
+          const idx = allPlans.findIndex((p: UserMigrationPlan) => p.id === id);
+          if (idx !== -1) {
+            allPlans[idx] = { ...allPlans[idx], ...updates, updatedAt: new Date().toISOString() };
+            localStorage.setItem('user-migration-plans', JSON.stringify(allPlans));
+          }
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to update user migration plan:', error);
+          set((state) => {
+            state.error = error.message;
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Delete a user migration plan
+       */
+      deleteUserMigrationPlan: async (id) => {
+        try {
+          console.log('[MigrationStore] Deleting user migration plan:', id);
+
+          set((state) => {
+            state.userMigrationPlans = state.userMigrationPlans.filter((p) => p.id !== id);
+            if (state.selectedUserMigrationPlanId === id) {
+              state.selectedUserMigrationPlanId = null;
+            }
+          });
+
+          // Remove from localStorage
+          const allPlans = JSON.parse(localStorage.getItem('user-migration-plans') || '[]');
+          const filtered = allPlans.filter((p: UserMigrationPlan) => p.id !== id);
+          localStorage.setItem('user-migration-plans', JSON.stringify(filtered));
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to delete user migration plan:', error);
+          set((state) => {
+            state.error = error.message;
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Validate a user migration plan
+       */
+      validateUserMigrationPlan: async (id) => {
+        try {
+          console.log('[MigrationStore] Validating user migration plan:', id);
+
+          const plan = get().userMigrationPlans.find((p) => p.id === id);
+          if (!plan) {
+            throw new Error('User migration plan not found');
+          }
+
+          const errors: Array<{ field: string; message: string; severity: 'error' | 'warning' | 'info' }> = [];
+          const warnings: Array<{ field: string; message: string }> = [];
+
+          // Validate required fields
+          if (!plan.userId) {
+            errors.push({ field: 'userId', message: 'User ID is required', severity: 'error' });
+          }
+          if (!plan.sourceDomain) {
+            errors.push({ field: 'sourceDomain', message: 'Source domain is required', severity: 'error' });
+          }
+          if (!plan.targetDomain) {
+            errors.push({ field: 'targetDomain', message: 'Target domain is required', severity: 'error' });
+          }
+
+          // Check attribute mappings
+          if (!plan.attributeMappings || plan.attributeMappings.length === 0) {
+            warnings.push({ field: 'attributeMappings', message: 'No attribute mappings defined, defaults will be used' });
+          }
+
+          // Check license mappings
+          if (!plan.licenseMappings || plan.licenseMappings.length === 0) {
+            warnings.push({ field: 'licenseMappings', message: 'No license mappings defined' });
+          }
+
+          const result: ValidationResult = {
+            isValid: errors.length === 0,
+            errors,
+            warnings,
+          };
+
+          // Update the plan with validation result
+          set((state) => {
+            const index = state.userMigrationPlans.findIndex((p) => p.id === id);
+            if (index !== -1) {
+              state.userMigrationPlans[index].preValidationPassed = result.isValid;
+              state.userMigrationPlans[index].preValidationErrors = errors.map((e) => e.message);
+              if (result.isValid) {
+                state.userMigrationPlans[index].status = 'Validated';
+              }
+            }
+          });
+
+          return result;
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to validate user migration plan:', error);
+          return {
+            isValid: false,
+            errors: [{ field: 'general', message: error.message, severity: 'error' as const }],
+            warnings: [],
+          };
+        }
+      },
+
+      /**
+       * Execute user migration
+       */
+      executeUserMigration: async (planId) => {
+        try {
+          console.log('[MigrationStore] Executing user migration:', planId);
+
+          const plan = get().userMigrationPlans.find((p) => p.id === planId);
+          if (!plan) {
+            throw new Error('User migration plan not found');
+          }
+
+          // Update status to InProgress
+          set((state) => {
+            const index = state.userMigrationPlans.findIndex((p) => p.id === planId);
+            if (index !== -1) {
+              state.userMigrationPlans[index].status = 'InProgress';
+              state.userMigrationPlans[index].startedAt = new Date().toISOString();
+              state.userMigrationPlans[index].progress = 0;
+            }
+          });
+
+          get().addActiveTask({
+            id: planId,
+            name: `Migrating ${plan.userDisplayName}`,
+            type: 'UserMigration',
+            workloadType: 'Users',
+            waveId: plan.migrationWaveId,
+            waveName: '',
+            status: 'Running',
+            progress: 0,
+            currentItem: plan.userDisplayName,
+            itemsProcessed: 0,
+            totalItems: 1,
+            startedAt: new Date().toISOString(),
+          });
+
+          // Simulate migration progress (in production, this would call PowerShell)
+          for (let progress = 0; progress <= 100; progress += 10) {
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            set((state) => {
+              const index = state.userMigrationPlans.findIndex((p) => p.id === planId);
+              if (index !== -1) {
+                state.userMigrationPlans[index].progress = progress;
+              }
+            });
+            get().updateActiveTaskProgress(planId, progress, plan.userDisplayName);
+          }
+
+          // Complete the migration
+          set((state) => {
+            const index = state.userMigrationPlans.findIndex((p) => p.id === planId);
+            if (index !== -1) {
+              state.userMigrationPlans[index].status = 'Completed';
+              state.userMigrationPlans[index].completedAt = new Date().toISOString();
+              state.userMigrationPlans[index].progress = 100;
+              state.userMigrationPlans[index].postValidationPassed = true;
+            }
+          });
+
+          get().removeActiveTask(planId);
+          get().addActivity('task', `User migration completed for ${plan.userDisplayName}`);
+          get().addAlert({
+            type: 'Success',
+            title: 'User Migration Complete',
+            message: `Successfully migrated ${plan.userDisplayName}`,
+            actionRequired: false,
+          });
+        } catch (error: any) {
+          console.error('[MigrationStore] User migration failed:', error);
+
+          set((state) => {
+            const index = state.userMigrationPlans.findIndex((p) => p.id === planId);
+            if (index !== -1) {
+              state.userMigrationPlans[index].status = 'Failed';
+              state.userMigrationPlans[index].preValidationErrors = [error.message];
+            }
+          });
+
+          get().removeActiveTask(planId);
+          get().addAlert({
+            type: 'Error',
+            title: 'User Migration Failed',
+            message: error.message,
+            actionRequired: true,
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Select a user migration plan
+       */
+      selectUserMigrationPlan: (id) => {
+        set((state) => {
+          state.selectedUserMigrationPlanId = id;
+        });
+      },
+
+      /**
+       * Get user migration plan by ID
+       */
+      getUserMigrationPlanById: (id) => get().userMigrationPlans.find((p) => p.id === id),
+
+      /**
+       * Bulk create user migration plans
+       */
+      bulkCreateUserMigrationPlans: async (plans) => {
+        try {
+          console.log('[MigrationStore] Bulk creating', plans.length, 'user migration plans');
+
+          const newPlans: UserMigrationPlan[] = plans.map((planData) => ({
+            ...planData,
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+            status: 'Pending' as UserMigrationStatus,
+            progress: 0,
+            preValidationPassed: false,
+            preValidationErrors: [],
+          })) as UserMigrationPlan[];
+
+          set((state) => {
+            state.userMigrationPlans.push(...newPlans);
+          });
+
+          // Persist to localStorage
+          const allPlans = JSON.parse(localStorage.getItem('user-migration-plans') || '[]');
+          allPlans.push(...newPlans);
+          localStorage.setItem('user-migration-plans', JSON.stringify(allPlans));
+
+          get().addActivity('task', `Created ${newPlans.length} user migration plans`);
+          return newPlans.map((p) => p.id);
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to bulk create user migration plans:', error);
+          throw error;
+        }
+      },
+
+      // -------------------- AZURE RESOURCE MIGRATION ACTIONS --------------------
+
+      /**
+       * Load Azure resource migrations
+       */
+      loadAzureResourceMigrations: async (waveId) => {
+        set((state) => {
+          state.isLoading = true;
+          state.error = null;
+        });
+
+        try {
+          console.log('[MigrationStore] Loading Azure resource migrations...', waveId ? `for wave ${waveId}` : '');
+          const savedMigrations = localStorage.getItem('azure-resource-migrations');
+          let migrations: AzureResourceMigration[] = savedMigrations ? JSON.parse(savedMigrations) : [];
+
+          // Filter by wave if specified
+          if (waveId) {
+            migrations = migrations.filter((m) => m.migrationWaveId === waveId);
+          }
+
+          set((state) => {
+            state.azureResourceMigrations = migrations;
+            state.isLoading = false;
+          });
+          console.log(`[MigrationStore] Loaded ${migrations.length} Azure resource migrations`);
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to load Azure resource migrations:', error);
+          set((state) => {
+            state.error = error.message || 'Failed to load Azure resource migrations';
+            state.isLoading = false;
+          });
+        }
+      },
+
+      /**
+       * Create a new Azure resource migration
+       */
+      createAzureResourceMigration: async (migrationData) => {
+        try {
+          const newMigration: AzureResourceMigration = {
+            ...migrationData,
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+            status: 'Discovered',
+            progress: 0,
+            preValidationPassed: false,
+            preValidationErrors: [],
+          } as AzureResourceMigration;
+
+          console.log('[MigrationStore] Creating Azure resource migration:', newMigration.resourceName);
+
+          set((state) => {
+            state.azureResourceMigrations.push(newMigration);
+          });
+
+          // Persist to localStorage
+          const allMigrations = JSON.parse(localStorage.getItem('azure-resource-migrations') || '[]');
+          allMigrations.push(newMigration);
+          localStorage.setItem('azure-resource-migrations', JSON.stringify(allMigrations));
+
+          get().addActivity('task', `Azure resource migration created for ${newMigration.resourceName}`);
+          return newMigration.id;
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to create Azure resource migration:', error);
+          set((state) => {
+            state.error = error.message;
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Update an Azure resource migration
+       */
+      updateAzureResourceMigration: async (id, updates) => {
+        try {
+          console.log('[MigrationStore] Updating Azure resource migration:', id);
+
+          set((state) => {
+            const index = state.azureResourceMigrations.findIndex((m) => m.id === id);
+            if (index !== -1) {
+              state.azureResourceMigrations[index] = { ...state.azureResourceMigrations[index], ...updates, updatedAt: new Date().toISOString() };
+            }
+          });
+
+          // Update in localStorage
+          const allMigrations = JSON.parse(localStorage.getItem('azure-resource-migrations') || '[]');
+          const idx = allMigrations.findIndex((m: AzureResourceMigration) => m.id === id);
+          if (idx !== -1) {
+            allMigrations[idx] = { ...allMigrations[idx], ...updates, updatedAt: new Date().toISOString() };
+            localStorage.setItem('azure-resource-migrations', JSON.stringify(allMigrations));
+          }
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to update Azure resource migration:', error);
+          set((state) => {
+            state.error = error.message;
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Delete an Azure resource migration
+       */
+      deleteAzureResourceMigration: async (id) => {
+        try {
+          console.log('[MigrationStore] Deleting Azure resource migration:', id);
+
+          set((state) => {
+            state.azureResourceMigrations = state.azureResourceMigrations.filter((m) => m.id !== id);
+            if (state.selectedAzureResourceMigrationId === id) {
+              state.selectedAzureResourceMigrationId = null;
+            }
+          });
+
+          // Remove from localStorage
+          const allMigrations = JSON.parse(localStorage.getItem('azure-resource-migrations') || '[]');
+          const filtered = allMigrations.filter((m: AzureResourceMigration) => m.id !== id);
+          localStorage.setItem('azure-resource-migrations', JSON.stringify(filtered));
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to delete Azure resource migration:', error);
+          set((state) => {
+            state.error = error.message;
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Assess an Azure resource for migration
+       */
+      assessAzureResource: async (id) => {
+        try {
+          console.log('[MigrationStore] Assessing Azure resource:', id);
+
+          const migration = get().azureResourceMigrations.find((m) => m.id === id);
+          if (!migration) {
+            throw new Error('Azure resource migration not found');
+          }
+
+          // Simulate assessment (in production, this would call Azure APIs)
+          const complexity = migration.dependencies.length > 5 ? 'High' : migration.dependencies.length > 2 ? 'Medium' : 'Low';
+          const risks: string[] = [];
+          const estimatedDowntime = migration.migrationMethod === 'LiftAndShift' ? 30 : 60;
+
+          if (migration.resourceType === 'SQLDatabase') {
+            risks.push('Data consistency during migration');
+          }
+          if (migration.resourceType === 'VirtualMachine') {
+            risks.push('Network configuration may need adjustment');
+          }
+          if (migration.dependencies.length > 0) {
+            risks.push(`${migration.dependencies.length} dependent resources must be migrated first`);
+          }
+
+          // Update the migration with assessment
+          set((state) => {
+            const index = state.azureResourceMigrations.findIndex((m) => m.id === id);
+            if (index !== -1) {
+              state.azureResourceMigrations[index].complexity = complexity as any;
+              state.azureResourceMigrations[index].risks = risks;
+              state.azureResourceMigrations[index].estimatedDowntime = estimatedDowntime;
+              state.azureResourceMigrations[index].status = 'Analyzed';
+            }
+          });
+
+          return { complexity, risks, estimatedDowntime };
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to assess Azure resource:', error);
+          throw error;
+        }
+      },
+
+      /**
+       * Execute Azure resource migration
+       */
+      executeAzureMigration: async (id) => {
+        try {
+          console.log('[MigrationStore] Executing Azure resource migration:', id);
+
+          const migration = get().azureResourceMigrations.find((m) => m.id === id);
+          if (!migration) {
+            throw new Error('Azure resource migration not found');
+          }
+
+          // Update status to InProgress
+          set((state) => {
+            const index = state.azureResourceMigrations.findIndex((m) => m.id === id);
+            if (index !== -1) {
+              state.azureResourceMigrations[index].status = 'InProgress';
+              state.azureResourceMigrations[index].startedAt = new Date().toISOString();
+              state.azureResourceMigrations[index].progress = 0;
+            }
+          });
+
+          get().addActiveTask({
+            id,
+            name: `Migrating ${migration.resourceName}`,
+            type: 'ServerMigration',
+            workloadType: 'Servers',
+            waveId: migration.migrationWaveId || '',
+            waveName: '',
+            status: 'Running',
+            progress: 0,
+            currentItem: migration.resourceName,
+            itemsProcessed: 0,
+            totalItems: 1,
+            startedAt: new Date().toISOString(),
+          });
+
+          // Simulate migration progress
+          for (let progress = 0; progress <= 100; progress += 5) {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            set((state) => {
+              const index = state.azureResourceMigrations.findIndex((m) => m.id === id);
+              if (index !== -1) {
+                state.azureResourceMigrations[index].progress = progress;
+              }
+            });
+            get().updateActiveTaskProgress(id, progress, migration.resourceName);
+          }
+
+          // Complete the migration
+          set((state) => {
+            const index = state.azureResourceMigrations.findIndex((m) => m.id === id);
+            if (index !== -1) {
+              state.azureResourceMigrations[index].status = 'Completed';
+              state.azureResourceMigrations[index].completedAt = new Date().toISOString();
+              state.azureResourceMigrations[index].progress = 100;
+              state.azureResourceMigrations[index].postValidationPassed = true;
+            }
+          });
+
+          get().removeActiveTask(id);
+          get().addActivity('task', `Azure resource migration completed for ${migration.resourceName}`);
+          get().addAlert({
+            type: 'Success',
+            title: 'Azure Migration Complete',
+            message: `Successfully migrated ${migration.resourceName}`,
+            actionRequired: false,
+          });
+        } catch (error: any) {
+          console.error('[MigrationStore] Azure resource migration failed:', error);
+
+          set((state) => {
+            const index = state.azureResourceMigrations.findIndex((m) => m.id === id);
+            if (index !== -1) {
+              state.azureResourceMigrations[index].status = 'Failed';
+              state.azureResourceMigrations[index].preValidationErrors = [error.message];
+            }
+          });
+
+          get().removeActiveTask(id);
+          get().addAlert({
+            type: 'Error',
+            title: 'Azure Migration Failed',
+            message: error.message,
+            actionRequired: true,
+          });
+          throw error;
+        }
+      },
+
+      /**
+       * Select an Azure resource migration
+       */
+      selectAzureResourceMigration: (id) => {
+        set((state) => {
+          state.selectedAzureResourceMigrationId = id;
+        });
+      },
+
+      /**
+       * Get Azure resource migration by ID
+       */
+      getAzureResourceMigrationById: (id) => get().azureResourceMigrations.find((m) => m.id === id),
+
+      // -------------------- CROSS-DOMAIN DEPENDENCY ACTIONS --------------------
+
+      /**
+       * Load cross-domain dependencies
+       */
+      loadCrossDomainDependencies: async (domainMappingId) => {
+        try {
+          console.log('[MigrationStore] Loading cross-domain dependencies...', domainMappingId ? `for mapping ${domainMappingId}` : '');
+          const savedDeps = localStorage.getItem('cross-domain-dependencies');
+          let deps: CrossDomainDependency[] = savedDeps ? JSON.parse(savedDeps) : [];
+
+          if (domainMappingId) {
+            // Filter by source or target domain from the mapping
+            const mapping = get().domainMappings.find((m) => m.id === domainMappingId);
+            if (mapping) {
+              deps = deps.filter(
+                (d) => d.sourceDomain === mapping.sourceDomain || d.targetDomain === mapping.targetDomain
+              );
+            }
+          }
+
+          set((state) => {
+            state.crossDomainDependencies = deps;
+          });
+          console.log(`[MigrationStore] Loaded ${deps.length} cross-domain dependencies`);
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to load cross-domain dependencies:', error);
+        }
+      },
+
+      /**
+       * Analyze dependencies for an entity
+       */
+      analyzeDependencies: async (entityId, entityType) => {
+        try {
+          console.log('[MigrationStore] Analyzing dependencies for:', entityId, entityType);
+
+          // In production, this would call PowerShell/Graph API to discover dependencies
+          // For now, return empty array
+          const dependencies: CrossDomainDependency[] = [];
+
+          set((state) => {
+            state.crossDomainDependencies = [...state.crossDomainDependencies, ...dependencies];
+          });
+
+          return dependencies;
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to analyze dependencies:', error);
+          return [];
+        }
+      },
+
+      /**
+       * Resolve a dependency
+       */
+      resolveDependency: async (dependencyId, resolutionStrategy) => {
+        try {
+          console.log('[MigrationStore] Resolving dependency:', dependencyId, 'with strategy:', resolutionStrategy);
+
+          set((state) => {
+            const index = state.crossDomainDependencies.findIndex((d) => d.id === dependencyId);
+            if (index !== -1) {
+              state.crossDomainDependencies[index].status = 'Resolved';
+              state.crossDomainDependencies[index].resolutionStrategy = resolutionStrategy;
+            }
+          });
+
+          // Persist to localStorage
+          const deps = get().crossDomainDependencies;
+          localStorage.setItem('cross-domain-dependencies', JSON.stringify(deps));
+
+          get().addActivity('task', 'Cross-domain dependency resolved');
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to resolve dependency:', error);
+          throw error;
+        }
+      },
+
+      // -------------------- ENGINEERING METRICS ACTIONS --------------------
+
+      /**
+       * Load engineering metrics
+       */
+      loadEngineeringMetrics: async (waveId, timeRange) => {
+        try {
+          console.log('[MigrationStore] Loading engineering metrics...', waveId ? `for wave ${waveId}` : '');
+
+          // In production, this would aggregate from real migration data
+          // For now, generate sample metrics
+          const sampleMetrics: MigrationEngineeringMetrics = {
+            timestamp: new Date().toISOString(),
+            waveId,
+            itemsPerHour: 45,
+            bytesPerSecond: 10485760, // 10 MB/s
+            averageItemDuration: 80000, // 80 seconds
+            successRate: 98.5,
+            failureRate: 1.5,
+            retryRate: 3.2,
+            queuedItems: 120,
+            processingItems: 5,
+            completedItems: 350,
+            failedItems: 5,
+            cpuUsage: 45,
+            memoryUsage: 62,
+            networkUtilization: 78,
+            errorsByType: { 'Timeout': 2, 'PermissionDenied': 3 },
+            topErrors: [
+              { code: 'TIMEOUT', message: 'Operation timed out', count: 2 },
+              { code: 'PERMISSION_DENIED', message: 'Insufficient permissions', count: 3 },
+            ],
+          };
+
+          set((state) => {
+            state.engineeringMetrics.push(sampleMetrics);
+            // Keep only last 100 metrics entries
+            if (state.engineeringMetrics.length > 100) {
+              state.engineeringMetrics = state.engineeringMetrics.slice(-100);
+            }
+          });
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to load engineering metrics:', error);
+        }
+      },
+
+      /**
+       * Calculate health score
+       */
+      calculateHealthScore: async () => {
+        try {
+          console.log('[MigrationStore] Calculating health score...');
+
+          const metrics = get().engineeringMetrics;
+          const lastMetric = metrics[metrics.length - 1];
+
+          // Calculate scores based on metrics
+          const successRateScore = lastMetric ? lastMetric.successRate : 100;
+          const performanceScore = lastMetric ? Math.min(100, (lastMetric.itemsPerHour / 100) * 100) : 50;
+
+          const healthScore: MigrationHealthScore = {
+            overall: Math.round((successRateScore + performanceScore) / 2),
+            categories: {
+              userMigration: successRateScore,
+              azureMigration: successRateScore,
+              domainMapping: 85,
+              dataIntegrity: 95,
+              performance: performanceScore,
+            },
+            issues: [],
+            lastCalculated: new Date().toISOString(),
+          };
+
+          // Add issues based on thresholds
+          if (healthScore.categories.userMigration < 90) {
+            healthScore.issues.push({
+              category: 'userMigration',
+              severity: 'Medium',
+              description: 'User migration success rate below target',
+              recommendation: 'Review failed migrations and address common errors',
+            });
+          }
+
+          if (healthScore.categories.performance < 70) {
+            healthScore.issues.push({
+              category: 'performance',
+              severity: 'High',
+              description: 'Migration throughput is below optimal levels',
+              recommendation: 'Consider increasing concurrency or optimizing network',
+            });
+          }
+
+          set((state) => {
+            state.healthScore = healthScore;
+          });
+
+          return healthScore;
+        } catch (error: any) {
+          console.error('[MigrationStore] Failed to calculate health score:', error);
+          throw error;
+        }
+      },
+
+      /**
+       * Get metrics summary
+       */
+      getMetricsSummary: () => {
+        const metrics = get().engineeringMetrics;
+        if (metrics.length === 0) {
+          return {
+            avgSuccessRate: 0,
+            avgThroughput: 0,
+            totalProcessed: 0,
+            totalFailed: 0,
+          };
+        }
+
+        const avgSuccessRate = metrics.reduce((acc, m) => acc + m.successRate, 0) / metrics.length;
+        const avgThroughput = metrics.reduce((acc, m) => acc + m.itemsPerHour, 0) / metrics.length;
+        const totalProcessed = metrics.reduce((acc, m) => acc + m.completedItems, 0);
+        const totalFailed = metrics.reduce((acc, m) => acc + m.failedItems, 0);
+
+        return {
+          avgSuccessRate: Math.round(avgSuccessRate * 100) / 100,
+          avgThroughput: Math.round(avgThroughput),
+          totalProcessed,
+          totalFailed,
+        };
+      },
         }))
       ),
       {
@@ -1788,6 +3687,14 @@ export const useMigrationStore = create<MigrationState>()(
           rollbackPoints: state.rollbackPoints,
           mappings: state.mappings,
           waveDependencies: state.waveDependencies,
+          projects: state.projects,
+          selectedProjectId: state.selectedProjectId,
+          // Enhanced Migration Control Plane state
+          domainMappings: state.domainMappings,
+          domains: state.domains,
+          userMigrationPlans: state.userMigrationPlans,
+          azureResourceMigrations: state.azureResourceMigrations,
+          crossDomainDependencies: state.crossDomainDependencies,
         }),
       }
     )

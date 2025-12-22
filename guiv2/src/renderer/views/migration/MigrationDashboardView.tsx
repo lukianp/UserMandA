@@ -9,7 +9,7 @@
  * - Quick actions for migration management
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users,
   Mail,
@@ -27,13 +27,17 @@ import {
   Clock,
   ArrowRight,
   BarChart3,
+  Plus,
+  RefreshCw,
+  XCircle,
+  LucideIcon,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { clsx } from 'clsx';
 
-import { useMigrationStore } from '../../store/useMigrationStore';
+import { useMigrationStore, DashboardKPIs, ActivityItem } from '../../store/useMigrationStore';
 import { Button } from '../../components/atoms/Button';
-import type { MigrationProject, MigrationWave, MigrationStatus } from '../../types/models/migration';
+import type { MigrationProject, MigrationWave, MigrationStatus, MigrationAlert, ActiveTask } from '../../types/models/migration';
 
 /**
  * KPI Card Component
@@ -42,7 +46,7 @@ interface KPICardProps {
   label: string;
   total: number;
   migrated: number;
-  icon: React.ComponentType<{ className?: string; size?: number }>;
+  icon: LucideIcon;
   colorGradient: string;
   iconColor: string;
 }
@@ -230,35 +234,59 @@ const AlertItem: React.FC<AlertItemProps> = ({ type, message, timestamp }) => {
  * Migration Dashboard View
  */
 export const MigrationDashboardView: React.FC = () => {
-  const [currentProject, setCurrentProject] = useState<MigrationProject | null>(null);
-  const [dashboardStats, setDashboardStats] = useState({
-    totalUsers: 12500,
-    migratedUsers: 8750,
-    totalMailboxes: 11200,
-    migratedMailboxes: 7840,
-    totalSites: 450,
-    migratedSites: 315,
-    totalOneDrive: 12500,
-    migratedOneDrive: 8750,
-    totalTeams: 180,
-    migratedTeams: 126,
-    totalDevices: 15000,
-    migratedDevices: 10500,
-  });
+  // Store state
+  const {
+    projects,
+    selectedProject,
+    selectedProjectId,
+    waves,
+    dashboardKPIs,
+    activeTasks,
+    alerts,
+    recentActivity,
+    isLoading,
+    error,
+    loadProjects,
+    selectProject,
+    createProject,
+    refreshDashboard,
+    pauseWave,
+    markAlertAsRead,
+    dismissAlert,
+    addAlert,
+  } = useMigrationStore();
 
-  const [activeTasks, setActiveTasks] = useState([
-    { id: '1', name: 'Mailbox sync - jsmith@contoso.com', progress: 45, status: 'running' },
-    { id: '2', name: 'SPO migration - Marketing site', progress: 78, status: 'running' },
-    { id: '3', name: 'User provision - Wave 3 batch 1', progress: 23, status: 'running' },
-  ]);
+  // Local state for new project modal
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
 
-  const [alerts, setAlerts] = useState([
-    { id: '1', type: 'warning' as const, message: '3 mailboxes exceeding size limit', timestamp: new Date() },
-    { id: '2', type: 'warning' as const, message: 'License shortage detected (50 users)', timestamp: new Date() },
-    { id: '3', type: 'success' as const, message: 'Wave 2 completed successfully', timestamp: new Date() },
-  ]);
+  // Load projects on mount
+  useEffect(() => {
+    console.log('[MigrationDashboardView] Component mounted, loading projects...');
+    loadProjects();
+  }, [loadProjects]);
 
-  const mockWaves: MigrationWave[] = [
+  // Get waves from selected project or store
+  const projectWaves = selectedProject?.waves || waves;
+
+  // Mock data for demo (will be replaced with real data from discovery)
+  const dashboardStats = {
+    totalUsers: dashboardKPIs.totalUsers || 12500,
+    migratedUsers: dashboardKPIs.migratedUsers || 8750,
+    totalMailboxes: dashboardKPIs.totalMailboxes || 11200,
+    migratedMailboxes: dashboardKPIs.migratedMailboxes || 7840,
+    totalSites: dashboardKPIs.totalSharePointSites || 450,
+    migratedSites: dashboardKPIs.migratedSharePointSites || 315,
+    totalOneDrive: dashboardKPIs.totalOneDriveAccounts || 12500,
+    migratedOneDrive: dashboardKPIs.migratedOneDriveAccounts || 8750,
+    totalTeams: dashboardKPIs.totalTeams || 180,
+    migratedTeams: dashboardKPIs.migratedTeams || 126,
+    totalDevices: dashboardKPIs.totalDevices || 15000,
+    migratedDevices: dashboardKPIs.migratedDevices || 10500,
+  };
+
+  // Default mock waves if no project waves exist
+  const mockWaves: MigrationWave[] = projectWaves.length > 0 ? projectWaves : [
     {
       id: '1',
       name: 'Wave 1',
@@ -361,27 +389,81 @@ export const MigrationDashboardView: React.FC = () => {
     },
   ];
 
-  const handleWaveClick = (waveId: string) => {
+  // Mock active tasks if none from store
+  const displayActiveTasks = activeTasks.length > 0 ? activeTasks : [
+    { id: '1', name: 'Mailbox sync - jsmith@contoso.com', type: 'MailboxMigration' as const, workloadType: 'Mailboxes' as const, waveId: '3', waveName: 'Wave 3', status: 'Running' as const, progress: 45, itemsProcessed: 45, totalItems: 100, startedAt: new Date().toISOString() },
+    { id: '2', name: 'SPO migration - Marketing site', type: 'SharePointMigration' as const, workloadType: 'SharePoint' as const, waveId: '3', waveName: 'Wave 3', status: 'Running' as const, progress: 78, itemsProcessed: 78, totalItems: 100, startedAt: new Date().toISOString() },
+    { id: '3', name: 'User provision - Wave 3 batch 1', type: 'UserMigration' as const, workloadType: 'Users' as const, waveId: '3', waveName: 'Wave 3', status: 'Running' as const, progress: 23, itemsProcessed: 23, totalItems: 100, startedAt: new Date().toISOString() },
+  ];
+
+  // Mock alerts if none from store
+  const displayAlerts = alerts.length > 0 ? alerts : [
+    { id: '1', type: 'Warning' as const, title: 'Size Warning', message: '3 mailboxes exceeding size limit', timestamp: new Date().toISOString(), isRead: false, actionRequired: true },
+    { id: '2', type: 'Warning' as const, title: 'License Warning', message: 'License shortage detected (50 users)', timestamp: new Date().toISOString(), isRead: false, actionRequired: true },
+    { id: '3', type: 'Success' as const, title: 'Wave Complete', message: 'Wave 2 completed successfully', timestamp: new Date().toISOString(), isRead: false, actionRequired: false },
+  ];
+
+  const handleWaveClick = useCallback((waveId: string) => {
     console.log('[MigrationDashboardView] Wave clicked:', waveId);
     // Navigate to wave details or open modal
-  };
+  }, []);
 
-  const handleStartWave = () => {
+  const handleStartWave = useCallback(async () => {
     console.log('[MigrationDashboardView] Start wave clicked');
-  };
+    const nextWave = mockWaves.find(w => w.status === 'Planned' || w.status === 'Ready');
+    if (nextWave) {
+      await startWave(nextWave.id);
+    }
+  }, [mockWaves, startWave]);
 
-  const handlePauseAll = () => {
+  const handlePauseAll = useCallback(async () => {
     console.log('[MigrationDashboardView] Pause all clicked');
-  };
+    const activeWave = mockWaves.find(w => w.status === 'InProgress');
+    if (activeWave) {
+      await pauseWave(activeWave.id);
+    }
+  }, [mockWaves, pauseWave]);
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = useCallback(() => {
     console.log('[MigrationDashboardView] Generate report clicked');
-  };
+    addAlert({
+      type: 'Info',
+      title: 'Report Generation',
+      message: 'Report generation started. This may take a few minutes.',
+      actionRequired: false,
+    });
+  }, [addAlert]);
+
+  const handleRefresh = useCallback(async () => {
+    console.log('[MigrationDashboardView] Refresh clicked');
+    await refreshDashboard();
+  }, [refreshDashboard]);
+
+  const handleCreateProject = useCallback(async () => {
+    if (newProjectName.trim()) {
+      await createProject({
+        name: newProjectName,
+        description: `Migration project: ${newProjectName}`,
+        status: 'Planning',
+        sourceProfileId: '',
+        targetProfileId: '',
+        plannedStartDate: new Date().toISOString(),
+        plannedEndDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days from now
+        overallProgress: 0,
+        currentPhase: 'Planning',
+        createdBy: 'System',
+        tags: [],
+        metadata: {},
+      });
+      setNewProjectName('');
+      setShowNewProjectModal(false);
+    }
+  }, [newProjectName, createProject]);
 
   // Calculate overall progress
   const completedWaves = mockWaves.filter(w => w.status === 'Completed').length;
   const totalWaves = mockWaves.length;
-  const overallProgress = Math.round((completedWaves / totalWaves) * 100);
+  const overallProgress = dashboardKPIs.overallProgress || Math.round((completedWaves / totalWaves) * 100);
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
@@ -401,6 +483,9 @@ export const MigrationDashboardView: React.FC = () => {
 
         {/* Quick Actions */}
         <div className="flex items-center gap-3">
+          <Button variant="ghost" icon={<RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />} onClick={handleRefresh}>
+            Refresh
+          </Button>
           <Button variant="ghost" icon={<FileText size={18} />} onClick={handleGenerateReport}>
             Generate Report
           </Button>
@@ -410,8 +495,32 @@ export const MigrationDashboardView: React.FC = () => {
           <Button variant="primary" icon={<PlayCircle size={18} />} onClick={handleStartWave}>
             Start Wave
           </Button>
+          <Button variant="primary" icon={<Plus size={18} />} onClick={() => setShowNewProjectModal(true)}>
+            New Project
+          </Button>
         </div>
       </div>
+
+      {/* New Project Modal */}
+      {showNewProjectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-[400px] shadow-2xl">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Create New Migration Project</h2>
+            <input
+              type="text"
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              placeholder="Project name (e.g., Contoso Acquisition)"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-4"
+              autoFocus
+            />
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setShowNewProjectModal(false)}>Cancel</Button>
+              <Button variant="primary" onClick={handleCreateProject}>Create Project</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-6 space-y-6">
@@ -502,7 +611,7 @@ export const MigrationDashboardView: React.FC = () => {
               <Activity className="h-5 w-5 text-blue-600" />
             </div>
             <div className="space-y-1 divide-y divide-gray-200 dark:divide-gray-700">
-              {activeTasks.map((task) => (
+              {displayActiveTasks.map((task) => (
                 <ActiveTaskItem
                   key={task.id}
                   taskName={task.name}
@@ -511,7 +620,7 @@ export const MigrationDashboardView: React.FC = () => {
                 />
               ))}
             </div>
-            {activeTasks.length === 0 && (
+            {displayActiveTasks.length === 0 && (
               <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
                 No active tasks
               </p>
@@ -525,22 +634,54 @@ export const MigrationDashboardView: React.FC = () => {
               <AlertTriangle className="h-5 w-5 text-orange-600" />
             </div>
             <div className="space-y-2">
-              {alerts.map((alert) => (
-                <AlertItem
-                  key={alert.id}
-                  type={alert.type}
-                  message={alert.message}
-                  timestamp={alert.timestamp}
-                />
+              {displayAlerts.map((alert) => (
+                <div key={alert.id} className="relative">
+                  <AlertItem
+                    type={alert.type.toLowerCase() as 'error' | 'warning' | 'success'}
+                    message={alert.message}
+                    timestamp={new Date(alert.timestamp)}
+                  />
+                  <button
+                    onClick={() => dismissAlert(alert.id)}
+                    className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <XCircle size={14} />
+                  </button>
+                </div>
               ))}
             </div>
-            {alerts.length === 0 && (
+            {displayAlerts.length === 0 && (
               <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
                 No alerts
               </p>
             )}
           </div>
         </div>
+
+        {/* Recent Activity */}
+        {recentActivity.length > 0 && (
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h3>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {recentActivity.slice(0, 10).map((activity) => (
+                <div key={activity.id} className="flex items-center gap-3 text-sm">
+                  <div className={clsx(
+                    'w-2 h-2 rounded-full',
+                    activity.type === 'task' && 'bg-blue-500',
+                    activity.type === 'wave' && 'bg-green-500',
+                    activity.type === 'checkpoint' && 'bg-purple-500',
+                    activity.type === 'alert' && 'bg-orange-500',
+                    activity.type === 'project' && 'bg-cyan-500',
+                  )} />
+                  <span className="flex-1 text-gray-700 dark:text-gray-300">{activity.message}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {format(new Date(activity.timestamp), 'HH:mm')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
