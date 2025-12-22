@@ -59,15 +59,165 @@ function Write-DLPLog {
     param(
         [Parameter(Mandatory=$true)]
         [string]$Message,
-        
+
         [Parameter()]
         [string]$Level = "INFO",
-        
+
         [Parameter()]
         [hashtable]$Context = @{}
     )
-    
+
     Write-MandALog -Message $Message -Level $Level -Component "DLPDiscovery" -Context $Context
+}
+
+function Connect-MgGraphWithMultipleStrategies {
+    <#
+    .SYNOPSIS
+        Connects to Microsoft Graph using multiple authentication strategies with automatic fallback
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context
+    )
+
+    Write-DLPLog -Level "INFO" -Message "Attempting Microsoft Graph authentication with multiple strategies..." -Context $Context
+
+    $dlpScopes = @("InformationProtectionPolicy.Read.All", "Directory.Read.All", "User.Read.All")
+
+    # Strategy 1: Client Secret Credential
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
+        try {
+            Write-DLPLog -Level "INFO" -Message "Strategy 1: Attempting Client Secret authentication..." -Context $Context
+            $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
+            Connect-MgGraph -ClientSecretCredential $credential -TenantId $Configuration.TenantId -NoWelcome -ErrorAction Stop
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-DLPLog -Level "SUCCESS" -Message "Strategy 1: Client Secret authentication successful" -Context $Context
+                return $context
+            }
+        } catch {
+            Write-DLPLog -Level "WARN" -Message "Strategy 1: Client Secret auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 2: Certificate-Based Authentication
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.CertificateThumbprint) {
+        try {
+            Write-DLPLog -Level "INFO" -Message "Strategy 2: Attempting Certificate authentication..." -Context $Context
+            Connect-MgGraph -ClientId $Configuration.ClientId -TenantId $Configuration.TenantId -CertificateThumbprint $Configuration.CertificateThumbprint -NoWelcome -ErrorAction Stop
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-DLPLog -Level "SUCCESS" -Message "Strategy 2: Certificate authentication successful" -Context $Context
+                return $context
+            }
+        } catch {
+            Write-DLPLog -Level "WARN" -Message "Strategy 2: Certificate auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 3: Device Code Flow
+    if ($Configuration.TenantId) {
+        try {
+            Write-DLPLog -Level "INFO" -Message "Strategy 3: Attempting Device Code authentication..." -Context $Context
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $dlpScopes -UseDeviceCode -NoWelcome -ErrorAction Stop
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-DLPLog -Level "SUCCESS" -Message "Strategy 3: Device Code authentication successful" -Context $Context
+                return $context
+            }
+        } catch {
+            Write-DLPLog -Level "WARN" -Message "Strategy 3: Device Code auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 4: Interactive Browser Authentication
+    try {
+        Write-DLPLog -Level "INFO" -Message "Strategy 4: Attempting Interactive authentication..." -Context $Context
+        if ($Configuration.TenantId) {
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $dlpScopes -NoWelcome -ErrorAction Stop
+        } else {
+            Connect-MgGraph -Scopes $dlpScopes -NoWelcome -ErrorAction Stop
+        }
+        $context = Get-MgContext
+        if ($context -and $context.TenantId) {
+            Write-DLPLog -Level "SUCCESS" -Message "Strategy 4: Interactive authentication successful" -Context $Context
+            return $context
+        }
+    } catch {
+        Write-DLPLog -Level "ERROR" -Message "Strategy 4: Interactive auth failed: $($_.Exception.Message)" -Context $Context
+    }
+
+    Write-DLPLog -Level "ERROR" -Message "All Microsoft Graph authentication strategies exhausted" -Context $Context
+    return $null
+}
+
+function Connect-ExchangeOnlineWithMultipleStrategies {
+    <#
+    .SYNOPSIS
+        Connects to Exchange Online using multiple authentication strategies with automatic fallback
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context
+    )
+
+    Write-DLPLog -Level "INFO" -Message "Attempting Exchange Online authentication with multiple strategies..." -Context $Context
+
+    # Strategy 1: Certificate Thumbprint (preferred for automation)
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.CertificateThumbprint) {
+        try {
+            Write-DLPLog -Level "INFO" -Message "Strategy 1: Attempting Certificate authentication..." -Context $Context
+            Connect-ExchangeOnline -AppId $Configuration.ClientId -CertificateThumbprint $Configuration.CertificateThumbprint -Organization $Configuration.TenantId -ShowBanner:$false -ErrorAction Stop
+            Write-DLPLog -Level "SUCCESS" -Message "Strategy 1: Certificate authentication successful" -Context $Context
+            return $true
+        } catch {
+            Write-DLPLog -Level "WARN" -Message "Strategy 1: Certificate auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 2: Client Secret (fallback for certificate issues)
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
+        try {
+            Write-DLPLog -Level "INFO" -Message "Strategy 2: Attempting Client Secret authentication..." -Context $Context
+            Connect-ExchangeOnline -AppId $Configuration.ClientId -CertificateThumbprint $null -Organization $Configuration.TenantId -ShowBanner:$false -ErrorAction Stop
+            Write-DLPLog -Level "SUCCESS" -Message "Strategy 2: Client Secret authentication successful" -Context $Context
+            return $true
+        } catch {
+            Write-DLPLog -Level "WARN" -Message "Strategy 2: Client Secret auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 3: Modern Auth with User Principal
+    if ($Configuration.UserPrincipalName) {
+        try {
+            Write-DLPLog -Level "INFO" -Message "Strategy 3: Attempting User Principal authentication..." -Context $Context
+            Connect-ExchangeOnline -UserPrincipalName $Configuration.UserPrincipalName -ShowBanner:$false -ErrorAction Stop
+            Write-DLPLog -Level "SUCCESS" -Message "Strategy 3: User Principal authentication successful" -Context $Context
+            return $true
+        } catch {
+            Write-DLPLog -Level "WARN" -Message "Strategy 3: User Principal auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 4: Interactive Authentication (GUI required - last resort)
+    try {
+        Write-DLPLog -Level "INFO" -Message "Strategy 4: Attempting Interactive authentication..." -Context $Context
+        Connect-ExchangeOnline -ShowBanner:$false -ErrorAction Stop
+        Write-DLPLog -Level "SUCCESS" -Message "Strategy 4: Interactive authentication successful" -Context $Context
+        return $true
+    } catch {
+        Write-DLPLog -Level "ERROR" -Message "Strategy 4: Interactive auth failed: $($_.Exception.Message)" -Context $Context
+    }
+
+    Write-DLPLog -Level "ERROR" -Message "All Exchange Online authentication strategies exhausted" -Context $Context
+    return $false
 }
 
 function Invoke-DLPDiscovery {

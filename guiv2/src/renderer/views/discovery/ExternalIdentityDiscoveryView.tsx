@@ -211,7 +211,7 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Globe className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.totalProviders ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{Number(stats?.totalProviders ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Identity Providers</div>
               </div>
             </div>
@@ -221,7 +221,7 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Users className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.totalExternalUsers ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{Number(stats?.totalExternalUsers ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">External Users</div>
               </div>
             </div>
@@ -231,7 +231,7 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <UserCheck className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.guestUsers ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{Number(stats?.guestUsers ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Guest Users</div>
               </div>
             </div>
@@ -241,7 +241,7 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Link className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.b2bConnections ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{Number(stats?.b2bConnections ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">B2B Connections</div>
               </div>
             </div>
@@ -251,7 +251,7 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <Building className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.partnerOrganizations ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{Number(stats?.partnerOrganizations ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Partner Orgs</div>
               </div>
             </div>
@@ -261,7 +261,7 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <CheckCircle className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.activeConnections ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{Number(stats?.activeConnections ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Active Connections</div>
               </div>
             </div>
@@ -271,7 +271,7 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
             <div className="flex items-center justify-between">
               <AlertTriangle className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.untrustedProviders ?? 0).toLocaleString()}</div>
+                <div className="text-3xl font-bold">{Number(stats?.untrustedProviders ?? 0).toLocaleString()}</div>
                 <div className="text-sm opacity-90">Untrusted Providers</div>
               </div>
             </div>
@@ -311,7 +311,7 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
           >
             <Shield className="w-4 h-4" />
             Providers
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalProviders ?? 0}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{Number(stats?.totalProviders ?? 0)}</span>}
           </button>
           <button
             onClick={() => setActiveTab('users')}
@@ -322,7 +322,7 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
           >
             <Users className="w-4 h-4" />
             External Users
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalExternalUsers ?? 0}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{Number(stats?.totalExternalUsers ?? 0)}</span>}
           </button>
           <button
             onClick={() => setActiveTab('connections')}
@@ -333,14 +333,14 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
           >
             <Link className="w-4 h-4" />
             B2B Connections
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.b2bConnections ?? 0}</span>}
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{Number(stats?.b2bConnections ?? 0)}</span>}
           </button>
         </div>
       </div>
 
       {/* Content Area */}
       <div className="flex-1 flex flex-col p-6 overflow-hidden">
-        {activeTab === 'overview' && (!stats || (stats?.totalProviders ?? 0) === 0) && (
+        {activeTab === 'overview' && (!stats || Number(stats?.totalProviders ?? 0) === 0) && (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -353,7 +353,7 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'overview' && stats && (stats?.totalProviders ?? 0) > 0 && (
+        {activeTab === 'overview' && stats && Number(stats?.totalProviders ?? 0) > 0 && (
           <div className="space-y-6 overflow-auto">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Providers by Type</h3>
@@ -375,7 +375,7 @@ const ExternalIdentityDiscoveryView: React.FC = () => {
                       {typeof stats?.totalProviders === 'number' && stats.totalProviders > 0 ? ((countNum / stats.totalProviders) * 100).toFixed(1) : 0}%
                     </div>
                   </div>
-                )}})}
+                )})}
               </div>
             </div>
           </div>

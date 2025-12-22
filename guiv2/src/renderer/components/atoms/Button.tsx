@@ -160,8 +160,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         onClick={handleClick}
         disabled={disabled || loading}
         aria-busy={loading ? "true" : undefined}
-        aria-disabled={disabled || loading ? "true" : undefined}
-        aria-pressed={variant === 'primary' ? undefined : "false"}
+
+
         aria-describedby={loading ? 'button-loading' : undefined}
         data-cy={dataCy}
         {...props}

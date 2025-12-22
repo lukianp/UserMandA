@@ -105,13 +105,6 @@ function Connect-AzureWithMultipleStrategies {
             Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Service Principal authentication successful" -Level "SUCCESS"
             return $context
 
-        } catch [System.AccessViolationException] {
-            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Memory corruption detected in Azure PowerShell MSAL library - falling back to alternative authentication strategies" -Level "WARN"
-            $Result.AddWarning("Service Principal authentication failed due to memory corruption in MSAL library", @{
-                Error = "System.AccessViolationException"
-                Message = $_.Exception.Message
-                Recommendation = "Using alternative authentication strategies (Graph API Bridge, Device Code, or Azure CLI)"
-            })
         } catch {
             Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Service Principal authentication failed: $($_.Exception.Message)" -Level "WARN"
             $Result.AddWarning("Service Principal authentication failed", @{Error=$_.Exception.Message})
@@ -140,40 +133,7 @@ function Connect-AzureWithMultipleStrategies {
         Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure CLI token authentication failed: $($_.Exception.Message)" -Level "WARN"
     }
 
-    # Strategy 3: Microsoft Graph API Bridge (cross-platform auth bridge)
-    try {
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting Microsoft Graph API bridge authentication..." -Level "INFO"
-
-        # Check if Microsoft.Graph module is available
-        if (Get-Module -ListAvailable -Name Microsoft.Graph.Authentication) {
-            Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
-
-            # Use device code flow for Graph, then bridge to Azure
-            if ($Configuration.TenantId) {
-                Connect-MgGraph -TenantId $Configuration.TenantId -Scopes "https://management.azure.com/.default" -UseDeviceCode -ErrorAction Stop | Out-Null
-            } else {
-                Connect-MgGraph -Scopes "https://management.azure.com/.default" -UseDeviceCode -ErrorAction Stop | Out-Null
-            }
-
-            # Get access token from Graph session and use for Azure
-            $graphToken = Get-MgContext | Select-Object -ExpandProperty AccessToken
-            if ($graphToken) {
-                $accessToken = ConvertTo-SecureString $graphToken -AsPlainText -Force
-                $accountId = (Get-MgContext).Account
-                $tenantId = (Get-MgContext).TenantId
-
-                $context = Connect-AzAccount -AccessToken $accessToken -AccountId $accountId -TenantId $tenantId -WarningAction SilentlyContinue -ErrorAction Stop
-
-                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Graph API bridge authentication successful" -Level "SUCCESS"
-                return $context
-            }
-        }
-
-    } catch {
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Graph API bridge authentication failed: $($_.Exception.Message)" -Level "WARN"
-    }
-
-    # Strategy 4: Managed Identity (if running on Azure VM/Function/etc.)
+    # Strategy 3: Managed Identity (if running on Azure VM/Function/etc.)
     try {
         Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting Managed Identity authentication..." -Level "INFO"
 
@@ -186,24 +146,7 @@ function Connect-AzureWithMultipleStrategies {
         Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Managed Identity authentication failed: $($_.Exception.Message)" -Level "WARN"
     }
 
-    # Strategy 5: Device Code Authentication (headless-friendly interactive)
-    try {
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting Device Code authentication..." -Level "INFO"
-
-        if ($Configuration.TenantId) {
-            $context = Connect-AzAccount -Tenant $Configuration.TenantId -DeviceCode -WarningAction SilentlyContinue -ErrorAction Stop
-        } else {
-            $context = Connect-AzAccount -DeviceCode -WarningAction SilentlyContinue -ErrorAction Stop
-        }
-
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Device Code authentication successful" -Level "SUCCESS"
-        return $context
-
-    } catch {
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Device Code authentication failed: $($_.Exception.Message)" -Level "WARN"
-    }
-
-    # Strategy 6: Interactive Browser Authentication (GUI required - last resort)
+    # Strategy 4: Interactive Authentication (last resort)
     try {
         Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting interactive authentication..." -Level "INFO"
 

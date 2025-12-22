@@ -24,6 +24,127 @@
 # Import base module
 Import-Module (Join-Path $PSScriptRoot "DiscoveryBase.psm1") -Force
 
+# --- Multi-Strategy Authentication Function ---
+
+function Connect-MgGraphWithMultipleStrategies {
+    <#
+    .SYNOPSIS
+        Connects to Microsoft Graph using multiple authentication strategies with automatic fallback
+    .DESCRIPTION
+        Attempts to authenticate to Microsoft Graph using 4 different strategies in order:
+        1. Client Secret Credential (preferred for automation)
+        2. Certificate-Based Authentication (secure, headless)
+        3. Device Code Flow (headless-friendly interactive)
+        4. Interactive Browser (GUI required - last resort)
+    .PARAMETER Configuration
+        Configuration hashtable containing TenantId, ClientId, ClientSecret, and/or CertificateThumbprint
+    .OUTPUTS
+        Microsoft.Graph.PowerShell.Authentication.Models.GraphContext or $null if all strategies fail
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration
+    )
+
+    Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Attempting Microsoft Graph authentication with multiple strategies..." -Level "INFO"
+
+    # Define Exchange-specific scopes
+    $exchangeScopes = @(
+        "Mail.Read",
+        "Mail.ReadBasic.All",
+        "MailboxSettings.Read",
+        "Group.Read.All",
+        "Directory.Read.All",
+        "User.Read.All",
+        "Organization.Read.All"
+    )
+
+    # Strategy 1: Client Secret Credential (preferred for automation)
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
+        try {
+            Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Strategy 1: Attempting Client Secret authentication..." -Level "INFO"
+
+            $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
+
+            Connect-MgGraph -ClientSecretCredential $credential -TenantId $Configuration.TenantId -NoWelcome -ErrorAction Stop
+
+            # Verify connection
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Strategy 1: Client Secret authentication successful" -Level "SUCCESS"
+                Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Connected to tenant: $($context.TenantId), Scopes: $($context.Scopes -join ', ')" -Level "DEBUG"
+                return $context
+            }
+        } catch {
+            Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Strategy 1: Client Secret auth failed: $($_.Exception.Message)" -Level "WARN"
+        }
+    }
+
+    # Strategy 2: Certificate-Based Authentication (secure, headless)
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.CertificateThumbprint) {
+        try {
+            Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Strategy 2: Attempting Certificate authentication..." -Level "INFO"
+
+            Connect-MgGraph -ClientId $Configuration.ClientId -TenantId $Configuration.TenantId -CertificateThumbprint $Configuration.CertificateThumbprint -NoWelcome -ErrorAction Stop
+
+            # Verify connection
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Strategy 2: Certificate authentication successful" -Level "SUCCESS"
+                Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Connected to tenant: $($context.TenantId)" -Level "DEBUG"
+                return $context
+            }
+        } catch {
+            Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Strategy 2: Certificate auth failed: $($_.Exception.Message)" -Level "WARN"
+        }
+    }
+
+    # Strategy 3: Device Code Flow (headless-friendly interactive)
+    if ($Configuration.TenantId) {
+        try {
+            Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Strategy 3: Attempting Device Code authentication..." -Level "INFO"
+
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $exchangeScopes -UseDeviceCode -NoWelcome -ErrorAction Stop
+
+            # Verify connection
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Strategy 3: Device Code authentication successful" -Level "SUCCESS"
+                Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Connected to tenant: $($context.TenantId)" -Level "DEBUG"
+                return $context
+            }
+        } catch {
+            Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Strategy 3: Device Code auth failed: $($_.Exception.Message)" -Level "WARN"
+        }
+    }
+
+    # Strategy 4: Interactive Browser Authentication (GUI required - last resort)
+    try {
+        Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Strategy 4: Attempting Interactive authentication..." -Level "INFO"
+
+        if ($Configuration.TenantId) {
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $exchangeScopes -NoWelcome -ErrorAction Stop
+        } else {
+            Connect-MgGraph -Scopes $exchangeScopes -NoWelcome -ErrorAction Stop
+        }
+
+        # Verify connection
+        $context = Get-MgContext
+        if ($context -and $context.TenantId) {
+            Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Strategy 4: Interactive authentication successful" -Level "SUCCESS"
+            Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Connected to tenant: $($context.TenantId)" -Level "DEBUG"
+            return $context
+        }
+    } catch {
+        Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Strategy 4: Interactive auth failed: $($_.Exception.Message)" -Level "ERROR"
+    }
+
+    Write-ModuleLog -ModuleName "ExchangeAuth" -Message "All Microsoft Graph authentication strategies exhausted" -Level "ERROR"
+    return $null
+}
+
 # --- Enhanced Discovery Function ---
 
 function Invoke-ExchangeDiscovery {
@@ -85,29 +206,34 @@ function Invoke-ExchangeDiscovery {
 
     # MICROSOFT GRAPH AUTHENTICATION
     Write-ModuleLog -ModuleName "Exchange" -Message "Establishing Microsoft Graph connection..." -Level "INFO"
-    Write-ModuleLog -ModuleName "Exchange" -Message "Authentication method: Client Secret Credential (Service Principal)" -Level "INFO"
 
     try {
-        # Create credential object
-        $secureSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
-        $credential = New-Object System.Management.Automation.PSCredential($ClientId, $secureSecret)
+        # Use multi-strategy authentication
+        $mgContext = Connect-MgGraphWithMultipleStrategies -Configuration $Configuration
 
-        Write-ModuleLog -ModuleName "Exchange" -Message "Connecting to Microsoft Graph with service principal..." -Level "INFO"
+        if (-not $mgContext) {
+            $errorMsg = "All Microsoft Graph authentication strategies failed"
+            Write-ModuleLog -ModuleName "Exchange" -Message $errorMsg -Level "ERROR"
 
-        # Connect to Microsoft Graph
-        Connect-MgGraph -ClientSecretCredential $credential -TenantId $TenantId -NoWelcome -ErrorAction Stop
+            $result = [PSCustomObject]@{
+                Success = $false
+                Message = $errorMsg
+                Data = @()
+                Errors = @($errorMsg)
+                Warnings = @()
+            }
+            return $result
+        }
 
         # Verify connection
-        $mgContext = Get-MgContext -ErrorAction Stop
-
-        if ($mgContext -and $mgContext.TenantId -eq $TenantId) {
+        if ($mgContext -and $mgContext.TenantId) {
             Write-ModuleLog -ModuleName "Exchange" -Message "Successfully connected to Microsoft Graph" -Level "SUCCESS"
             Write-ModuleLog -ModuleName "Exchange" -Message "  Tenant ID: $($mgContext.TenantId)" -Level "INFO"
             Write-ModuleLog -ModuleName "Exchange" -Message "  App Name: $($mgContext.AppName)" -Level "INFO"
             Write-ModuleLog -ModuleName "Exchange" -Message "  Scopes: $($mgContext.Scopes -join ', ')" -Level "INFO"
             Write-ModuleLog -ModuleName "Exchange" -Message "  Auth Type: $($mgContext.AuthType)" -Level "INFO"
         } else {
-            $errorMsg = "Microsoft Graph connection verification failed. Expected TenantId: $TenantId, Got: $($mgContext.TenantId)"
+            $errorMsg = "Microsoft Graph connection verification failed"
             Write-ModuleLog -ModuleName "Exchange" -Message $errorMsg -Level "ERROR"
 
             $result = [PSCustomObject]@{

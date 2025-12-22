@@ -55,6 +55,133 @@ function Write-TeamsLog {
     Write-MandALog -Message "[Teams] $Message" -Level $Level -Component "TeamsDiscovery" -Context $Context
 }
 
+# --- Multi-Strategy Authentication Function ---
+
+function Connect-MgGraphWithMultipleStrategies {
+    <#
+    .SYNOPSIS
+        Connects to Microsoft Graph using multiple authentication strategies with automatic fallback
+    .DESCRIPTION
+        Attempts to authenticate to Microsoft Graph using 4 different strategies in order:
+        1. Client Secret Credential (preferred for automation)
+        2. Certificate-Based Authentication (secure, headless)
+        3. Device Code Flow (headless-friendly interactive)
+        4. Interactive Browser (GUI required - last resort)
+    .PARAMETER Configuration
+        Configuration hashtable containing TenantId, ClientId, ClientSecret, and/or CertificateThumbprint
+    .PARAMETER Context
+        Context hashtable for logging
+    .OUTPUTS
+        Microsoft.Graph.PowerShell.Authentication.Models.GraphContext or $null if all strategies fail
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context
+    )
+
+    Write-TeamsLog -Level "INFO" -Message "Attempting Microsoft Graph authentication with multiple strategies..." -Context $Context
+
+    # Define Teams-specific scopes
+    $teamsScopes = @(
+        "Team.ReadBasic.All",
+        "TeamSettings.Read.All",
+        "TeamMember.Read.All",
+        "Channel.ReadBasic.All",
+        "ChannelSettings.Read.All",
+        "Group.Read.All",
+        "Directory.Read.All",
+        "User.Read.All"
+    )
+
+    # Strategy 1: Client Secret Credential (preferred for automation)
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
+        try {
+            Write-TeamsLog -Level "INFO" -Message "Strategy 1: Attempting Client Secret authentication..." -Context $Context
+
+            $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
+
+            Connect-MgGraph -ClientSecretCredential $credential -TenantId $Configuration.TenantId -NoWelcome -ErrorAction Stop
+
+            # Verify connection
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-TeamsLog -Level "SUCCESS" -Message "Strategy 1: Client Secret authentication successful" -Context $Context
+                Write-TeamsLog -Level "DEBUG" -Message "Connected to tenant: $($context.TenantId), Scopes: $($context.Scopes -join ', ')" -Context $Context
+                return $context
+            }
+        } catch {
+            Write-TeamsLog -Level "WARN" -Message "Strategy 1: Client Secret auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 2: Certificate-Based Authentication (secure, headless)
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.CertificateThumbprint) {
+        try {
+            Write-TeamsLog -Level "INFO" -Message "Strategy 2: Attempting Certificate authentication..." -Context $Context
+
+            Connect-MgGraph -ClientId $Configuration.ClientId -TenantId $Configuration.TenantId -CertificateThumbprint $Configuration.CertificateThumbprint -NoWelcome -ErrorAction Stop
+
+            # Verify connection
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-TeamsLog -Level "SUCCESS" -Message "Strategy 2: Certificate authentication successful" -Context $Context
+                Write-TeamsLog -Level "DEBUG" -Message "Connected to tenant: $($context.TenantId)" -Context $Context
+                return $context
+            }
+        } catch {
+            Write-TeamsLog -Level "WARN" -Message "Strategy 2: Certificate auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 3: Device Code Flow (headless-friendly interactive)
+    if ($Configuration.TenantId) {
+        try {
+            Write-TeamsLog -Level "INFO" -Message "Strategy 3: Attempting Device Code authentication..." -Context $Context
+
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $teamsScopes -UseDeviceCode -NoWelcome -ErrorAction Stop
+
+            # Verify connection
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-TeamsLog -Level "SUCCESS" -Message "Strategy 3: Device Code authentication successful" -Context $Context
+                Write-TeamsLog -Level "DEBUG" -Message "Connected to tenant: $($context.TenantId)" -Context $Context
+                return $context
+            }
+        } catch {
+            Write-TeamsLog -Level "WARN" -Message "Strategy 3: Device Code auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 4: Interactive Browser Authentication (GUI required - last resort)
+    try {
+        Write-TeamsLog -Level "INFO" -Message "Strategy 4: Attempting Interactive authentication..." -Context $Context
+
+        if ($Configuration.TenantId) {
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $teamsScopes -NoWelcome -ErrorAction Stop
+        } else {
+            Connect-MgGraph -Scopes $teamsScopes -NoWelcome -ErrorAction Stop
+        }
+
+        # Verify connection
+        $context = Get-MgContext
+        if ($context -and $context.TenantId) {
+            Write-TeamsLog -Level "SUCCESS" -Message "Strategy 4: Interactive authentication successful" -Context $Context
+            Write-TeamsLog -Level "DEBUG" -Message "Connected to tenant: $($context.TenantId)" -Context $Context
+            return $context
+        }
+    } catch {
+        Write-TeamsLog -Level "ERROR" -Message "Strategy 4: Interactive auth failed: $($_.Exception.Message)" -Context $Context
+    }
+
+    Write-TeamsLog -Level "ERROR" -Message "All Microsoft Graph authentication strategies exhausted" -Context $Context
+    return $null
+}
+
 # --- Main Discovery Function ---
 
 function Invoke-TeamsDiscovery {
@@ -169,45 +296,50 @@ function Invoke-TeamsDiscovery {
         $result.Metadata["AuthenticationMethod"] = "ServicePrincipal"
 
         # 5. AUTHENTICATE & CONNECT
-        Write-TeamsLog -Level "INFO" -Message "Authenticating to Microsoft Graph with Service Principal..." -Context $Context
+        Write-TeamsLog -Level "INFO" -Message "Authenticating to Microsoft Graph..." -Context $Context
         Write-TeamsLog -Level "DEBUG" -Message "Authentication details - TenantId: $tenantId, ClientId: $clientId" -Context $Context
 
         try {
             # Try session-based authentication first (if SessionId provided)
+            $graphContext = $null
             if ($SessionId) {
                 Write-TeamsLog -Level "INFO" -Message "SessionId provided, attempting session-based authentication..." -Context $Context
                 try {
                     $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
-                    Write-TeamsLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication (SessionId: $SessionId)" -Context $Context
+                    $graphContext = Get-MgContext
+                    if ($graphContext -and $graphContext.TenantId) {
+                        Write-TeamsLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication (SessionId: $SessionId)" -Context $Context
+                    } else {
+                        Write-TeamsLog -Level "WARN" -Message "Session authentication did not establish Graph context" -Context $Context
+                        $graphContext = $null
+                    }
                 } catch {
-                    Write-TeamsLog -Level "WARN" -Message "Session authentication failed, falling back to direct credential authentication: $($_.Exception.Message)" -Context $Context
-                    $SessionId = $null  # Clear SessionId to trigger direct auth below
+                    Write-TeamsLog -Level "WARN" -Message "Session authentication failed: $($_.Exception.Message)" -Context $Context
+                    $graphContext = $null
                 }
             }
 
-            # If no SessionId or session auth failed, use direct credential authentication
-            if (-not $SessionId) {
-                Write-TeamsLog -Level "INFO" -Message "Performing direct authentication with service principal credentials..." -Context $Context
+            # If no SessionId or session auth failed, use multi-strategy authentication
+            if (-not $graphContext) {
+                Write-TeamsLog -Level "INFO" -Message "Attempting multi-strategy authentication..." -Context $Context
+                $graphContext = Connect-MgGraphWithMultipleStrategies -Configuration $Configuration -Context $Context
 
-                # Convert ClientSecret to SecureString
-                $secureSecret = ConvertTo-SecureString -String $clientSecret -AsPlainText -Force
-                $credential = New-Object System.Management.Automation.PSCredential($clientId, $secureSecret)
-
-                # Connect to Microsoft Graph
-                Write-TeamsLog -Level "DEBUG" -Message "Calling Connect-MgGraph with TenantId: $tenantId" -Context $Context
-                Connect-MgGraph -TenantId $tenantId -ClientSecretCredential $credential -NoWelcome -ErrorAction Stop
-
-                Write-TeamsLog -Level "SUCCESS" -Message "Successfully authenticated to Microsoft Graph with service principal" -Context $Context
-
-                # Verify connection by getting context
-                $context = Get-MgContext
-                if ($context) {
-                    Write-TeamsLog -Level "SUCCESS" -Message "Graph connection verified - TenantId: $($context.TenantId), Scopes: $($context.Scopes -join ', ')" -Context $Context
-                    $result.Metadata["GraphTenantId"] = $context.TenantId
-                    $result.Metadata["GraphScopes"] = $context.Scopes -join ', '
-                } else {
-                    Write-TeamsLog -Level "WARN" -Message "Graph connection established but context is null" -Context $Context
+                if (-not $graphContext) {
+                    $errorMsg = "All Microsoft Graph authentication strategies failed"
+                    Write-TeamsLog -Level "ERROR" -Message $errorMsg -Context $Context
+                    $result.AddError($errorMsg, $null, @{AuthenticationStage="GraphConnection"})
+                    return $result
                 }
+            }
+
+            # Verify connection and log details
+            Write-TeamsLog -Level "SUCCESS" -Message "Successfully authenticated to Microsoft Graph" -Context $Context
+            if ($graphContext) {
+                Write-TeamsLog -Level "SUCCESS" -Message "Graph connection verified - TenantId: $($graphContext.TenantId), Scopes: $($graphContext.Scopes -join ', ')" -Context $Context
+                $result.Metadata["GraphTenantId"] = $graphContext.TenantId
+                $result.Metadata["GraphScopes"] = $graphContext.Scopes -join ', '
+            } else {
+                Write-TeamsLog -Level "WARN" -Message "Graph connection established but context is null" -Context $Context
             }
 
         } catch {

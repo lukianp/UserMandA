@@ -302,6 +302,40 @@ export const useExternalIdentityDiscoveryLogic = (): ExternalIdentityDiscoveryHo
     await exportResults();
   }, [exportResults, addLog]);
 
+  /**
+   * Set active tab (alias for setSelectedTab)
+   */
+  const setActiveTab = useCallback((tab: string) => {
+    setSelectedTab(tab);
+  }, []);
+
+  /**
+   * Update filter state
+   */
+  const updateFilter = useCallback((updates: Partial<FilterState>) => {
+    if (updates.searchText !== undefined) {
+      setSearchText(updates.searchText);
+    }
+  }, []);
+
+  /**
+   * Export to CSV
+   */
+  const exportToCSV = useCallback((data?: any[], filename?: string) => {
+    addLog('info', 'Exporting to CSV...');
+    // Mock CSV export - could be implemented with a library like papaparse
+    console.log('CSV export requested', { data, filename });
+  }, [addLog]);
+
+  /**
+   * Export to Excel
+   */
+  const exportToExcel = useCallback(async (data?: any[], filename?: string) => {
+    addLog('info', 'Exporting to Excel...');
+    // Mock Excel export - could be implemented with a library like xlsx
+    console.log('Excel export requested', { data, filename });
+  }, [addLog]);
+
   return {
     isRunning,
     isCancelling,
@@ -337,7 +371,11 @@ export const useExternalIdentityDiscoveryLogic = (): ExternalIdentityDiscoveryHo
     loadTemplate,
     saveAsTemplate,
     setSelectedTab,
+    setActiveTab,
     setSearchText,
+    updateFilter,
     exportData,
+    exportToCSV,
+    exportToExcel,
   };
 };

@@ -78,6 +78,103 @@ function Write-ConditionalAccessLog {
     Write-MandALog -Message $Message -Level $Level -Component "ConditionalAccessDiscovery" -Context $Context
 }
 
+function Connect-MgGraphWithMultipleStrategies {
+    <#
+    .SYNOPSIS
+        Connects to Microsoft Graph using multiple authentication strategies with automatic fallback
+    .DESCRIPTION
+        Attempts to authenticate to Microsoft Graph using 4 different strategies in order:
+        1. Client Secret Credential (preferred for automation)
+        2. Certificate-Based Authentication (secure, headless)
+        3. Device Code Flow (headless-friendly interactive)
+        4. Interactive Browser (GUI required - last resort)
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context
+    )
+
+    Write-ConditionalAccessLog -Level "INFO" -Message "Attempting Microsoft Graph authentication with multiple strategies..." -Context $Context
+
+    # Define Conditional Access-specific scopes
+    $caScopes = @(
+        "Policy.Read.All",
+        "Policy.ReadWrite.ConditionalAccess",
+        "Directory.Read.All",
+        "Application.Read.All"
+    )
+
+    # Strategy 1: Client Secret Credential (preferred for automation)
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
+        try {
+            Write-ConditionalAccessLog -Level "INFO" -Message "Strategy 1: Attempting Client Secret authentication..." -Context $Context
+            $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
+            Connect-MgGraph -ClientSecretCredential $credential -TenantId $Configuration.TenantId -NoWelcome -ErrorAction Stop
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-ConditionalAccessLog -Level "SUCCESS" -Message "Strategy 1: Client Secret authentication successful" -Context $Context
+                return $context
+            }
+        } catch {
+            Write-ConditionalAccessLog -Level "WARN" -Message "Strategy 1: Client Secret auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 2: Certificate-Based Authentication (secure, headless)
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.CertificateThumbprint) {
+        try {
+            Write-ConditionalAccessLog -Level "INFO" -Message "Strategy 2: Attempting Certificate authentication..." -Context $Context
+            Connect-MgGraph -ClientId $Configuration.ClientId -TenantId $Configuration.TenantId -CertificateThumbprint $Configuration.CertificateThumbprint -NoWelcome -ErrorAction Stop
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-ConditionalAccessLog -Level "SUCCESS" -Message "Strategy 2: Certificate authentication successful" -Context $Context
+                return $context
+            }
+        } catch {
+            Write-ConditionalAccessLog -Level "WARN" -Message "Strategy 2: Certificate auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 3: Device Code Flow (headless-friendly interactive)
+    if ($Configuration.TenantId) {
+        try {
+            Write-ConditionalAccessLog -Level "INFO" -Message "Strategy 3: Attempting Device Code authentication..." -Context $Context
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $caScopes -UseDeviceCode -NoWelcome -ErrorAction Stop
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-ConditionalAccessLog -Level "SUCCESS" -Message "Strategy 3: Device Code authentication successful" -Context $Context
+                return $context
+            }
+        } catch {
+            Write-ConditionalAccessLog -Level "WARN" -Message "Strategy 3: Device Code auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 4: Interactive Browser Authentication (GUI required - last resort)
+    try {
+        Write-ConditionalAccessLog -Level "INFO" -Message "Strategy 4: Attempting Interactive authentication..." -Context $Context
+        if ($Configuration.TenantId) {
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $caScopes -NoWelcome -ErrorAction Stop
+        } else {
+            Connect-MgGraph -Scopes $caScopes -NoWelcome -ErrorAction Stop
+        }
+        $context = Get-MgContext
+        if ($context -and $context.TenantId) {
+            Write-ConditionalAccessLog -Level "SUCCESS" -Message "Strategy 4: Interactive authentication successful" -Context $Context
+            return $context
+        }
+    } catch {
+        Write-ConditionalAccessLog -Level "ERROR" -Message "Strategy 4: Interactive auth failed: $($_.Exception.Message)" -Context $Context
+    }
+
+    Write-ConditionalAccessLog -Level "ERROR" -Message "All Microsoft Graph authentication strategies exhausted" -Context $Context
+    return $null
+}
+
 function Invoke-ConditionalAccessDiscovery {
     [CmdletBinding()]
     param(
@@ -176,61 +273,38 @@ function Invoke-ConditionalAccessDiscovery {
         Write-ConditionalAccessLog -Level "INFO" -Message "Using credentials - Tenant: $TenantId, ClientId: $ClientId" -Context $Context
 
         # 4. ESTABLISH MICROSOFT GRAPH CONNECTION
-        Write-ConditionalAccessLog -Level "INFO" -Message "Establishing Microsoft Graph connection using client credentials..." -Context $Context
-        Write-ConditionalAccessLog -Level "DEBUG" -Message "Authentication parameters:" -Context $Context
-        Write-ConditionalAccessLog -Level "DEBUG" -Message "  - TenantId: $TenantId" -Context $Context
-        Write-ConditionalAccessLog -Level "DEBUG" -Message "  - ClientId: $ClientId" -Context $Context
-        Write-ConditionalAccessLog -Level "DEBUG" -Message "  - ClientSecret: $(if ($ClientSecret.Length -ge 4) { $ClientSecret.Substring(0,4) + '****' } else { '****' }) ($($ClientSecret.Length) characters)" -Context $Context
+        Write-ConditionalAccessLog -Level "INFO" -Message "Establishing Microsoft Graph connection..." -Context $Context
 
         try {
-            # Create credential object
-            Write-ConditionalAccessLog -Level "DEBUG" -Message "Converting client secret to secure string..." -Context $Context
-            $secureSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
-
-            Write-ConditionalAccessLog -Level "DEBUG" -Message "Creating PSCredential object with ClientId as username..." -Context $Context
-            $credential = New-Object System.Management.Automation.PSCredential($ClientId, $secureSecret)
-
-            # Attempt Graph connection
-            Write-ConditionalAccessLog -Level "INFO" -Message "Connecting to Microsoft Graph API with client credentials..." -Context $Context
-            Connect-MgGraph -ClientSecretCredential $credential -TenantId $TenantId -NoWelcome -ErrorAction Stop
-            Write-ConditionalAccessLog -Level "DEBUG" -Message "Connect-MgGraph command completed without errors" -Context $Context
-
-            # Verify connection
-            Write-ConditionalAccessLog -Level "DEBUG" -Message "Verifying Graph connection context..." -Context $Context
-            $mgContext = Get-MgContext -ErrorAction Stop
+            # Use multi-strategy authentication
+            $mgContext = Connect-MgGraphWithMultipleStrategies -Configuration $Configuration -Context $Context
 
             if (-not $mgContext) {
-                $errorMessage = "Microsoft Graph context is null after connection attempt"
+                $errorMessage = "All Microsoft Graph authentication strategies failed"
                 $result.AddError($errorMessage, $null, "Graph Connection")
                 Write-ConditionalAccessLog -Level "ERROR" -Message $errorMessage -Context $Context
                 return $result
             }
 
-            Write-ConditionalAccessLog -Level "DEBUG" -Message "Graph context retrieved successfully" -Context $Context
-            Write-ConditionalAccessLog -Level "DEBUG" -Message "Context details:" -Context $Context
-            Write-ConditionalAccessLog -Level "DEBUG" -Message "  - TenantId: $($mgContext.TenantId)" -Context $Context
-            Write-ConditionalAccessLog -Level "DEBUG" -Message "  - ClientId: $($mgContext.ClientId)" -Context $Context
-            Write-ConditionalAccessLog -Level "DEBUG" -Message "  - AuthType: $($mgContext.AuthType)" -Context $Context
-            Write-ConditionalAccessLog -Level "DEBUG" -Message "  - Scopes: $($mgContext.Scopes -join ', ')" -Context $Context
-            Write-ConditionalAccessLog -Level "DEBUG" -Message "  - Account: $($mgContext.Account)" -Context $Context
-
-            # Validate tenant ID matches
-            if ($mgContext.TenantId -ne $TenantId) {
-                $errorMessage = "Microsoft Graph connection tenant mismatch. Expected: $TenantId, Got: $($mgContext.TenantId)"
+            # Verify connection
+            if ($mgContext -and $mgContext.TenantId) {
+                Write-ConditionalAccessLog -Level "SUCCESS" -Message "Microsoft Graph connection established and verified successfully" -Context $Context
+                Write-ConditionalAccessLog -Level "INFO" -Message "Connected to tenant: $($mgContext.TenantId) with scopes: $($mgContext.Scopes -join ', ')" -Context $Context
+                Write-ConditionalAccessLog -Level "DEBUG" -Message "  - ClientId: $($mgContext.ClientId)" -Context $Context
+                Write-ConditionalAccessLog -Level "DEBUG" -Message "  - AuthType: $($mgContext.AuthType)" -Context $Context
+                Write-ConditionalAccessLog -Level "DEBUG" -Message "  - Account: $($mgContext.Account)" -Context $Context
+            } else {
+                $errorMessage = "Microsoft Graph connection verification failed"
                 $result.AddError($errorMessage, $null, "Graph Connection")
                 Write-ConditionalAccessLog -Level "ERROR" -Message $errorMessage -Context $Context
                 return $result
             }
-
-            Write-ConditionalAccessLog -Level "SUCCESS" -Message "Microsoft Graph connection established and verified successfully" -Context $Context
-            Write-ConditionalAccessLog -Level "INFO" -Message "Connected to tenant: $($mgContext.TenantId) with scopes: $($mgContext.Scopes -join ', ')" -Context $Context
 
         } catch {
             $errorMessage = "Failed to connect to Microsoft Graph: $($_.Exception.Message)"
             $result.AddError($errorMessage, $_.Exception, "Graph Connection")
             Write-ConditionalAccessLog -Level "ERROR" -Message $errorMessage -Context $Context
             Write-ConditionalAccessLog -Level "ERROR" -Message "Exception type: $($_.Exception.GetType().FullName)" -Context $Context
-            Write-ConditionalAccessLog -Level "ERROR" -Message "Stack trace: $($_.Exception.StackTrace)" -Context $Context
 
             if ($_.Exception.InnerException) {
                 Write-ConditionalAccessLog -Level "ERROR" -Message "Inner exception: $($_.Exception.InnerException.Message)" -Context $Context

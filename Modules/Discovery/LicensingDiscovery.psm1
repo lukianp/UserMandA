@@ -57,6 +57,87 @@ function Write-LicensingLog {
     Write-MandALog -Message "[Licensing] $Message" -Level $Level -Component "LicensingDiscovery" -Context $Context
 }
 
+function Connect-MgGraphWithMultipleStrategies {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context
+    )
+
+    Write-LicensingLog -Level "INFO" -Message "Attempting Microsoft Graph authentication with multiple strategies..." -Context $Context
+
+    $licensingScopes = @("Organization.Read.All", "Directory.Read.All", "User.Read.All")
+
+    # Strategy 1: Client Secret Credential
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
+        try {
+            Write-LicensingLog -Level "INFO" -Message "Strategy 1: Attempting Client Secret authentication..." -Context $Context
+            $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
+            Connect-MgGraph -ClientSecretCredential $credential -TenantId $Configuration.TenantId -NoWelcome -ErrorAction Stop
+            $mgContext = Get-MgContext
+            if ($mgContext -and $mgContext.TenantId) {
+                Write-LicensingLog -Level "SUCCESS" -Message "Strategy 1: Client Secret authentication successful" -Context $Context
+                return $mgContext
+            }
+        } catch {
+            Write-LicensingLog -Level "WARN" -Message "Strategy 1: Client Secret auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 2: Certificate-Based Authentication
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.CertificateThumbprint) {
+        try {
+            Write-LicensingLog -Level "INFO" -Message "Strategy 2: Attempting Certificate authentication..." -Context $Context
+            Connect-MgGraph -ClientId $Configuration.ClientId -TenantId $Configuration.TenantId -CertificateThumbprint $Configuration.CertificateThumbprint -NoWelcome -ErrorAction Stop
+            $mgContext = Get-MgContext
+            if ($mgContext -and $mgContext.TenantId) {
+                Write-LicensingLog -Level "SUCCESS" -Message "Strategy 2: Certificate authentication successful" -Context $Context
+                return $mgContext
+            }
+        } catch {
+            Write-LicensingLog -Level "WARN" -Message "Strategy 2: Certificate auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 3: Device Code Flow
+    if ($Configuration.TenantId) {
+        try {
+            Write-LicensingLog -Level "INFO" -Message "Strategy 3: Attempting Device Code authentication..." -Context $Context
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $licensingScopes -UseDeviceCode -NoWelcome -ErrorAction Stop
+            $mgContext = Get-MgContext
+            if ($mgContext -and $mgContext.TenantId) {
+                Write-LicensingLog -Level "SUCCESS" -Message "Strategy 3: Device Code authentication successful" -Context $Context
+                return $mgContext
+            }
+        } catch {
+            Write-LicensingLog -Level "WARN" -Message "Strategy 3: Device Code auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 4: Interactive Browser Authentication
+    try {
+        Write-LicensingLog -Level "INFO" -Message "Strategy 4: Attempting Interactive authentication..." -Context $Context
+        if ($Configuration.TenantId) {
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $licensingScopes -NoWelcome -ErrorAction Stop
+        } else {
+            Connect-MgGraph -Scopes $licensingScopes -NoWelcome -ErrorAction Stop
+        }
+        $mgContext = Get-MgContext
+        if ($mgContext -and $mgContext.TenantId) {
+            Write-LicensingLog -Level "SUCCESS" -Message "Strategy 4: Interactive authentication successful" -Context $Context
+            return $mgContext
+        }
+    } catch {
+        Write-LicensingLog -Level "ERROR" -Message "Strategy 4: Interactive auth failed: $($_.Exception.Message)" -Context $Context
+    }
+
+    Write-LicensingLog -Level "ERROR" -Message "All Microsoft Graph authentication strategies exhausted" -Context $Context
+    return $null
+}
+
 function Invoke-LicensingDiscovery {
     [CmdletBinding()]
     param(
@@ -152,7 +233,7 @@ function Invoke-LicensingDiscovery {
 
         if ($missingCredentials.Count -gt 0) {
             $errorMessage = "Missing required credentials in Configuration parameter: $($missingCredentials -join ', ')"
-            $result.AddError($errorMessage, $null, "Credential Validation")
+            $result.AddError($errorMessage, $null, @{Section="Credential Validation"})
             Write-LicensingLog -Level "ERROR" -Message $errorMessage -Context $Context
             Write-LicensingLog -Level "ERROR" -Message "Configuration parameter must include: TenantId, ClientId, and ClientSecret" -Context $Context
             Write-LicensingLog -Level "DEBUG" -Message "Available Configuration keys: $($Configuration.Keys -join ', ')" -Context $Context
@@ -166,25 +247,25 @@ function Invoke-LicensingDiscovery {
         Write-LicensingLog -Level "INFO" -Message "Connecting to Microsoft Graph..." -Context $Context
 
         try {
-            # Create credential object
-            $secureSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
-            $credential = New-Object System.Management.Automation.PSCredential($ClientId, $secureSecret)
+            # Use multi-strategy authentication
+            $mgContext = Connect-MgGraphWithMultipleStrategies -Configuration $Configuration -Context $Context
 
-            # Connect to Microsoft Graph
-            Connect-MgGraph -ClientSecretCredential $credential -TenantId $TenantId -NoWelcome -ErrorAction Stop
+            if (-not $mgContext) {
+                $result.AddError("All Microsoft Graph authentication strategies failed", $null, @{Section="Graph Connection"})
+                return $result
+            }
 
             # Verify connection
-            $mgContext = Get-MgContext -ErrorAction Stop
-            if ($mgContext -and $mgContext.TenantId -eq $TenantId) {
+            if ($mgContext -and $mgContext.TenantId) {
                 Write-LicensingLog -Level "SUCCESS" -Message "Connected to Microsoft Graph successfully. Tenant: $($mgContext.TenantId), Scopes: $($mgContext.Scopes -join ', ')" -Context $Context
-                Write-LicensingLog -Level "INFO" -Message "Authentication status: Connected with ClientId $ClientId to tenant $TenantId" -Context $Context
+                Write-LicensingLog -Level "INFO" -Message "Authentication status: Connected to tenant $($mgContext.TenantId)" -Context $Context
             } else {
-                $result.AddError("Microsoft Graph connection verification failed. Expected TenantId: $TenantId", $null, "Graph Connection")
+                $result.AddError("Microsoft Graph connection verification failed", $null, @{Section="Graph Connection"})
                 return $result
             }
 
         } catch {
-            $result.AddError("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception, "Graph Connection")
+            $result.AddError("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception, @{Section="Graph Connection"})
             Write-LicensingLog -Level "ERROR" -Message "Graph connection error: $($_.Exception.Message)" -Context $Context
             Write-LicensingLog -Level "DEBUG" -Message "Exception details: $($_.Exception | Out-String)" -Context $Context
             return $result

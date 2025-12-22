@@ -1307,9 +1307,29 @@ class PowerShellExecutionService extends EventEmitter {
       });
 
       // Determine if this module needs Azure credentials
-      // Local discovery modules (FileSystem, PhysicalServer) don't need cloud credentials
-      // Application uses Microsoft Graph/Intune, so it needs Azure credentials
-      const azureModules = ['Azure', 'Exchange', 'SharePoint', 'OneDrive', 'Teams', 'Application'];
+      // Local discovery modules (FileSystem, PhysicalServer, Network) don't need cloud credentials
+      // Most discovery modules use Microsoft Graph/Azure APIs and need credentials
+      const azureModules = [
+        'Azure',
+        'AzureResource',
+        'Exchange',
+        'SharePoint',
+        'OneDrive',
+        'Teams',
+        'Application',
+        'Graph',
+        'Licensing',
+        'ConditionalAccess',
+        'ActiveDirectory',  // Entra ID discovery via Graph
+        'DLP',
+        'EntraIDApp',
+        'ExternalIdentity',
+        'Intune',
+        'Office365',
+        'PowerPlatform',
+        'SecurityInfrastructure',
+        'SQL'  // May use Azure SQL authentication
+      ];
       const needsAzureCredentials = azureModules.includes(moduleName);
 
       // ALL Invoke-*Discovery functions use the same structure:

@@ -24,6 +24,128 @@
 # Import base module
 Import-Module (Join-Path $PSScriptRoot "DiscoveryBase.psm1") -Force
 
+function Connect-MgGraphWithMultipleStrategies {
+    <#
+    .SYNOPSIS
+        Connects to Microsoft Graph using multiple authentication strategies with automatic fallback
+    .DESCRIPTION
+        Attempts to authenticate to Microsoft Graph using 4 different strategies in order:
+        1. Client Secret Credential (preferred for automation)
+        2. Certificate-Based Authentication (secure, headless)
+        3. Device Code Flow (headless-friendly interactive)
+        4. Interactive Browser (GUI required - last resort)
+    .PARAMETER Configuration
+        Configuration hashtable containing TenantId, ClientId, ClientSecret, and/or CertificateThumbprint
+    .PARAMETER Result
+        Result object for tracking warnings and errors
+    .OUTPUTS
+        Microsoft.Graph.PowerShell.Authentication.Models.GraphContext or $null if all strategies fail
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [object]$Result
+    )
+
+    Write-ModuleLog -ModuleName "GraphAuth" -Message "Attempting Microsoft Graph authentication with multiple strategies..." -Level "INFO"
+
+    # Define Graph-specific scopes
+    $graphScopes = @(
+        "User.Read.All",
+        "Group.Read.All",
+        "Application.Read.All",
+        "Device.Read.All",
+        "Directory.Read.All"
+    )
+
+    # Strategy 1: Client Secret Credential (preferred for automation)
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
+        try {
+            Write-ModuleLog -ModuleName "GraphAuth" -Message "Strategy 1: Attempting Client Secret authentication..." -Level "INFO"
+
+            $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
+
+            Connect-MgGraph -ClientSecretCredential $credential -TenantId $Configuration.TenantId -NoWelcome -ErrorAction Stop
+
+            # Verify connection
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-ModuleLog -ModuleName "GraphAuth" -Message "Strategy 1: Client Secret authentication successful" -Level "SUCCESS"
+                return $context
+            }
+        } catch {
+            Write-ModuleLog -ModuleName "GraphAuth" -Message "Strategy 1: Client Secret auth failed: $($_.Exception.Message)" -Level "WARN"
+            $Result.AddWarning("Client Secret authentication failed", @{Error=$_.Exception.Message})
+        }
+    }
+
+    # Strategy 2: Certificate-Based Authentication (secure, headless)
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.CertificateThumbprint) {
+        try {
+            Write-ModuleLog -ModuleName "GraphAuth" -Message "Strategy 2: Attempting Certificate authentication..." -Level "INFO"
+
+            Connect-MgGraph -ClientId $Configuration.ClientId -TenantId $Configuration.TenantId -CertificateThumbprint $Configuration.CertificateThumbprint -NoWelcome -ErrorAction Stop
+
+            # Verify connection
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-ModuleLog -ModuleName "GraphAuth" -Message "Strategy 2: Certificate authentication successful" -Level "SUCCESS"
+                return $context
+            }
+        } catch {
+            Write-ModuleLog -ModuleName "GraphAuth" -Message "Strategy 2: Certificate auth failed: $($_.Exception.Message)" -Level "WARN"
+            $Result.AddWarning("Certificate authentication failed", @{Error=$_.Exception.Message})
+        }
+    }
+
+    # Strategy 3: Device Code Flow (headless-friendly interactive)
+    if ($Configuration.TenantId) {
+        try {
+            Write-ModuleLog -ModuleName "GraphAuth" -Message "Strategy 3: Attempting Device Code authentication..." -Level "INFO"
+
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $graphScopes -UseDeviceCode -NoWelcome -ErrorAction Stop
+
+            # Verify connection
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-ModuleLog -ModuleName "GraphAuth" -Message "Strategy 3: Device Code authentication successful" -Level "SUCCESS"
+                return $context
+            }
+        } catch {
+            Write-ModuleLog -ModuleName "GraphAuth" -Message "Strategy 3: Device Code auth failed: $($_.Exception.Message)" -Level "WARN"
+            $Result.AddWarning("Device Code authentication failed", @{Error=$_.Exception.Message})
+        }
+    }
+
+    # Strategy 4: Interactive Browser Authentication (GUI required - last resort)
+    try {
+        Write-ModuleLog -ModuleName "GraphAuth" -Message "Strategy 4: Attempting Interactive authentication..." -Level "INFO"
+
+        if ($Configuration.TenantId) {
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $graphScopes -NoWelcome -ErrorAction Stop
+        } else {
+            Connect-MgGraph -Scopes $graphScopes -NoWelcome -ErrorAction Stop
+        }
+
+        # Verify connection
+        $context = Get-MgContext
+        if ($context -and $context.TenantId) {
+            Write-ModuleLog -ModuleName "GraphAuth" -Message "Strategy 4: Interactive authentication successful" -Level "SUCCESS"
+            return $context
+        }
+    } catch {
+        Write-ModuleLog -ModuleName "GraphAuth" -Message "Strategy 4: Interactive auth failed: $($_.Exception.Message)" -Level "ERROR"
+        $Result.AddError("All Microsoft Graph authentication strategies failed", $_.Exception, @{Section="GraphAuthentication"})
+    }
+
+    Write-ModuleLog -ModuleName "GraphAuth" -Message "All Graph authentication strategies exhausted" -Level "ERROR"
+    return $null
+}
+
 function Invoke-GraphDiscovery {
     [CmdletBinding()]
     param(
@@ -187,14 +309,88 @@ function Invoke-GraphDiscovery {
         
         return $allData
     }
-    
-    # Execute using base module
-    return Start-DiscoveryModule -ModuleName "Graph" `
-        -Configuration $Configuration `
-        -Context $Context `
-        -SessionId $SessionId `
-        -RequiredServices @('Graph') `
-        -DiscoveryScript $discoveryScript
+
+    # Initialize result object
+    $result = [PSCustomObject]@{
+        Success = $true
+        Message = "Graph discovery completed successfully"
+        Data = @()
+        Errors = @()
+        Warnings = @()
+    }
+
+    # Helper methods for error/warning tracking
+    $result | Add-Member -MemberType ScriptMethod -Name "AddError" -Value {
+        param($message, $exception, $context)
+        $this.Success = $false
+        $this.Errors += [PSCustomObject]@{
+            Message = $message
+            Exception = $exception
+            Context = $context
+            Timestamp = Get-Date
+        }
+        Write-ModuleLog -ModuleName "Graph" -Message $message -Level "ERROR"
+    }
+
+    $result | Add-Member -MemberType ScriptMethod -Name "AddWarning" -Value {
+        param($message, $context)
+        $this.Warnings += [PSCustomObject]@{
+            Message = $message
+            Context = $context
+            Timestamp = Get-Date
+        }
+        Write-ModuleLog -ModuleName "Graph" -Message $message -Level "WARN"
+    }
+
+    try {
+        # Direct multi-strategy authentication
+        Write-ModuleLog -ModuleName "Graph" -Message "Connecting to Graph service..." -Level "INFO"
+        $graphContext = Connect-MgGraphWithMultipleStrategies -Configuration $Configuration -Result $result
+
+        if (-not $graphContext) {
+            Write-ModuleLog -ModuleName "Graph" -Message "Session auth failed for Graph. Trying direct credential auth..." -Level "WARN"
+            Write-ModuleLog -ModuleName "Graph" -Message "Direct auth failed - missing credentials. TenantId: $([bool]$Configuration.TenantId), ClientId: $([bool]$Configuration.ClientId), ClientSecret: $([bool]$Configuration.ClientSecret)" -Level "ERROR"
+            Write-ModuleLog -ModuleName "Graph" -Message "Attempting interactive Graph authentication..." -Level "INFO"
+
+            # Try interactive as final fallback
+            try {
+                Connect-MgGraph -Scopes "User.Read.All", "Group.Read.All", "Application.Read.All", "Device.Read.All", "Directory.Read.All" -NoWelcome -ErrorAction Stop
+                $graphContext = Get-MgContext
+                Write-ModuleLog -ModuleName "Graph" -Message "Connected to Graph via interactive authentication successfully" -Level "SUCCESS"
+            } catch {
+                $result.AddError("All Graph authentication methods failed", $_.Exception, @{Section="Authentication"})
+                return $result
+            }
+        }
+
+        # Execute discovery script with authenticated connection
+        Write-ModuleLog -ModuleName "Graph" -Message "Starting Graph discovery..." -Level "INFO"
+
+        # Create connections object for discovery script
+        $connections = @{
+            Graph = $graphContext
+        }
+
+        # Execute the discovery script
+        $discoveryData = & $discoveryScript $Configuration $Context $SessionId $connections $result
+
+        if ($result.Success) {
+            $result.Data = $discoveryData
+            Write-ModuleLog -ModuleName "Graph" -Message "Discovery completed successfully. Discovered $($discoveryData.Count) items." -Level "SUCCESS"
+        }
+
+    } catch {
+        $result.AddError("Critical error during Graph discovery: $($_.Exception.Message)", $_.Exception, @{Phase="Execution"})
+    } finally {
+        # Disconnect from Graph
+        try {
+            Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+        } catch {
+            # Ignore disconnect errors
+        }
+    }
+
+    return $result
 }
 
 Export-ModuleMember -Function Invoke-GraphDiscovery

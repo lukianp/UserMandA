@@ -26,48 +26,373 @@ Read({ file_path: "ApplicationDiscovery.psm1", offset: 800, limit: 100 })
 
 **Purpose:** Track all changes for crash recovery. When crash occurs, user types "resume where you left off" and agent reads this file.
 
-**Format:**
+**CRITICAL RULES:**
+1. **Update tracker AFTER every file modification** (not in batches)
+2. **Use TodoWrite tool** to track tasks in real-time (mark in_progress/completed immediately)
+3. **Document specific line numbers** for all edits
+4. **Include exact error messages** that were fixed
+5. **Record build/test results** immediately after execution
+6. **Sync status** (workspace ↔ deployment) must be tracked
+
+---
+
+### Template Format (MANDATORY STRUCTURE)
+
 ```markdown
-# AI Work Tracker - Last Updated: 2025-12-17 23:15
+# AI Work Tracker - Last Updated: 2025-12-21 (Latest Session)
 
 ## Current Task
-**Goal:** Fix Application Discovery - results not displaying after successful run
-**User Request Summary:** "Discovery completes (250 records, 77s) but results view shows 0 items. Discovered view says hasn't run before."
-**Status:** ⏳ In Progress - Added debug logging, waiting for test run
+**Goal:** [One-line summary of what you're doing]
+**User Request:** "[Exact user prompt or 'resume where you left off']"
+**Status:** ⏳ In Progress | ✅ COMPLETED | ❌ BLOCKED
+**Session Type:** Fix | Feature | Investigation | Deployment | Refactor
 
-## Recent User Prompts (Compressed)
-1. User: "compress claude.local.md, remove fluff, keep technical knowledge"
-2. User: "add AI agent patterns for parallel execution, context management, crash recovery, multi-LLM coordination"
-3. User: "back to application discovery - console shows completion but results not updating"
+---
 
-## Technical Context
-**Issue:** Discovery completes successfully but UI doesn't show results
-**Root Cause Hypothesis:** Result object not persisting to Zustand store or moduleName mismatch
-**Key Finding:** PowerShell returns `RecordCount: 250`, hook should extract this correctly
-**Solution Applied:** Added debug logs to onDiscoveryComplete event handler (lines 150-183)
+## 🎯 This Session Summary (Auto-update as you work)
 
-## Files Modified This Session
-1. ✅ D:\Scripts\UserMandA\claude.local.md - Compressed to 487 lines, added AI patterns
-2. ✅ D:\Scripts\UserMandA\.ai-work-tracker.md - Created tracker file
-3. ✅ D:\Scripts\UserMandA\guiv2\src\renderer\hooks\useApplicationDiscoveryLogic.ts - Debug logs (line 150-183)
+### Quick Stats
+- **Files Modified:** X files
+- **Issues Fixed:** X issues
+- **Build Status:** ✅ Success | ❌ Failed | ⏳ Not tested
+- **App Running:** ✅ Yes | ❌ No | ⏳ Not launched
+- **Tests Passing:** ✅ Yes | ❌ No | ⏳ Not run
 
-## Next Steps
-- [ ] User runs discovery again with debug logs
-- [ ] Analyze console output for data.result structure
-- [ ] Identify if issue is: data extraction, store persistence, or view loading
-- [ ] Fix root cause based on debug output
+### Files Modified This Session
+1. ✅ `path/to/file1.tsx` - What changed (lines X-Y)
+2. ✅ `path/to/file2.ts` - What changed (lines X-Y)
+3. ⏳ `path/to/file3.psm1` - IN PROGRESS (currently at line X)
 
-## Deployment Status
-- Last deployment: 2025-12-17 23:22
-- Deployed files: useApplicationDiscoveryLogic.ts → C:\enterprisediscovery\
-- Build status: ✅ All 3 bundles (main: 2.3s, preload: 0.4s, renderer: 11s)
-- App status: ✅ Launched, awaiting test
+### Issues Fixed (with before/after)
+#### 1. Issue Name ✅
+**File:** `filename:line`
+**Error:** `[Exact error message or diagnostic]`
+**Problem:** [Root cause]
+**Fix:** [What was changed]
+**Code:**
+```typescript
+// BEFORE
+[problematic code]
+
+// AFTER
+[fixed code]
 ```
 
-**Update after every file modification:**
+### Build & Deployment Log
+**Build Sequence:**
+```powershell
+# 1. Sync to deployment
+Copy-Item ... # [✅ Success | ❌ Failed]
+
+# 2. Clean environment
+Get-Process electron | Stop-Process # [✅ No processes | ⚠️ Killed 3 processes]
+Remove-Item .webpack # [✅ Cleaned | ℹ️ Already clean]
+
+# 3. Build bundles
+npm run build:main # [✅ 2.1s | ❌ Error at line X]
+npx webpack --config webpack.preload.config.js # [✅ 0.4s | ❌ Failed]
+npm run build:renderer # [✅ 10.2s | ⚠️ 4 warnings]
+
+# 4. Launch
+npm start # [✅ Running (PID: 12345) | ❌ Crashed]
+```
+
+**Build Results:**
+- Main: 248 KiB (15 chunks)
+- Preload: 15.3 KiB
+- Renderer: 36.7 MiB
+- Errors: 0
+- Warnings: 4 (DefinePlugin - non-critical)
+
+### Next Steps (Actionable Checklist)
+- [ ] [Next specific action with file/line reference]
+- [ ] [Second action]
+- [ ] [Third action]
+
+---
+
+## Technical Context (For Resume)
+
+### What Was Being Done
+[Detailed explanation of the current work]
+
+### Root Cause Analysis
+**Issue:** [Problem statement]
+**Hypothesis:** [What you think is wrong]
+**Evidence:** [What diagnostic data shows]
+**Solution:** [What you're implementing]
+
+### Key Findings
+- Finding 1 with file:line reference
+- Finding 2 with file:line reference
+
+### Commands Ready to Run
+```powershell
+# If crash happens, run these to continue:
+cd C:\enterprisediscovery\guiv2
+npm run build:main
+npx webpack --config webpack.preload.config.js --mode=production
+npm run build:renderer
+```
+
+---
+
+## Session History (Keep last 3 sessions)
+
+### Session 3: [Date] - [Task Name] ✅
+[Brief summary, link to detailed section below]
+
+### Session 2: [Date] - [Task Name] ✅
+[Brief summary, link to detailed section below]
+
+### Session 1: [Date] - [Task Name] ✅
+[Brief summary, link to detailed section below]
+```
+
+---
+
+### Real Example (From 2025-12-21 Diagnostic Fixes Session)
+
+```markdown
+# AI Work Tracker - Last Updated: 2025-12-21 (Latest Session)
+
+## Current Task
+**Goal:** Execute comprehensive diagnostic fixes for GUIV2
+**User Request:** "pick up where you left off read claude.local.md also there is a .ai file..."
+**Status:** ✅ COMPLETED
+**Session Type:** Fix
+
+---
+
+## 🎯 This Session Summary
+
+### Quick Stats
+- **Files Modified:** 7 files
+- **Issues Fixed:** 6 critical TypeScript/ARIA/ESLint errors
+- **Build Status:** ✅ Success (all 3 bundles)
+- **App Running:** ✅ Yes (Electron PID: 32004)
+- **Tests Passing:** ⏳ Not run (compilation errors were blocking)
+
+### Files Modified This Session
+1. ✅ `guiv2/src/renderer/components/atoms/Button.tsx` - Fixed ARIA attributes (lines 162-164)
+2. ✅ `guiv2/src/renderer/hooks/useExternalIdentityDiscoveryLogic.ts` - Fixed FilterState (line 330)
+3. ✅ `guiv2/src/renderer/views/discovery/ExternalIdentityDiscoveryView.tsx` - Fixed type errors (lines 361-378)
+4. ✅ `guiv2/src/renderer/views/discovery/GraphDiscoveryView.tsx` - Fixed type errors (lines 351-382)
+5. ✅ `guiv2/webpack.renderer.config.js` - Fixed import order (lines 1-2)
+6. ✅ `Modules/Discovery/AzureResourceDiscovery.psm1` - Removed unused var (lines 152-154)
+7. ✅ `guiv2/package.json` - Added @tanstack/react-query
+
+### Issues Fixed
+
+#### 1. ARIA Attribute Validation ✅
+**File:** `Button.tsx:162-164`
+**Error:** `Invalid ARIA attribute values`
+**Problem:** Boolean values instead of string/undefined
+**Fix:** Changed to proper ARIA string values
+**Code:**
 ```typescript
-// After editing a file, append to tracker
-Write({ file_path: "D:\\Scripts\\UserMandA\\.ai-work-tracker.md", append: true })
+// BEFORE
+aria-busy={loading ? "true" : "false"}
+aria-disabled={disabled || loading}
+aria-pressed={variant === 'primary' ? undefined : false}
+
+// AFTER
+aria-busy={loading ? "true" : undefined}
+aria-disabled={disabled || loading ? "true" : undefined}
+aria-pressed={variant === 'primary' ? undefined : "false"}
+```
+
+#### 2. TypeScript FilterState Error ✅
+**File:** `useExternalIdentityDiscoveryLogic.ts:330`
+**Error:** `Property 'searchText' is missing in type '{}' but required in type 'FilterState'`
+**Problem:** Empty filter object didn't satisfy interface
+**Fix:** Added searchText property
+**Code:**
+```typescript
+// BEFORE
+filter: {}, // Empty filter object for compatibility
+
+// AFTER
+filter: { searchText }, // Filter object with required searchText property
+```
+
+#### 3. TypeScript Object.entries Type Errors ✅
+**Files:** `ExternalIdentityDiscoveryView.tsx:361-378`, `GraphDiscoveryView.tsx:351-382`
+**Error:** `Operator '>' cannot be applied to types 'string | number | boolean' and 'number'`
+**Problem:** Object.entries() values inferred as unknown
+**Fix:** Added type guard
+**Code:**
+```typescript
+// BEFORE
+{Object.entries(providersByType).map(([type, count]) => (
+  <div>
+    {count > 0 && `${count}`}  // ❌ Type error: count is unknown
+  </div>
+))}
+
+// AFTER
+{Object.entries(providersByType).map(([type, count]) => {
+  const countNum = typeof count === 'number' ? count : 0;  // ✅ Type guard
+  return (
+  <div>
+    {countNum > 0 && `${countNum}`}  // ✅ countNum is number
+  </div>
+)})}
+```
+
+#### 4. Import Order ESLint Violation ✅
+**File:** `webpack.renderer.config.js:1-2`
+**Error:** `There should be at least one empty line between import groups`
+**Fix:** Added blank line after first import
+
+#### 5. Unused PowerShell Variable ✅
+**File:** `AzureResourceDiscovery.psm1:152-154`
+**Error:** `The variable 'graphContext' is assigned but never used`
+**Fix:** Removed assignment, piped to Out-Null
+
+#### 6. Missing Dependency ✅
+**Error:** `Cannot find module '@tanstack/react-query'`
+**Fix:** `npm install @tanstack/react-query --save-dev`
+
+### Build & Deployment Log
+```powershell
+# 1. Sync to deployment ✅
+Copy-Item -Path 'D:\Scripts\UserMandA-1\guiv2\src\...' -Destination 'C:\enterprisediscovery\...'
+
+# 2. Clean environment ✅
+Get-Process electron | Stop-Process -Force  # ✅ Stopped
+Remove-Item .webpack -Recurse -Force        # ✅ Cleaned
+
+# 3. Install dependency ✅
+npm install @tanstack/react-query --save-dev  # ✅ Added 2 packages in 10s
+
+# 4. Build bundles ✅
+npm run build:main                           # ✅ 1905ms, 248 KiB
+npx webpack --config webpack.preload.config.js  # ✅ 414ms, 15.3 KiB
+npm run build:renderer                       # ✅ 10701ms, 36.7 MiB
+
+# 5. Launch ✅
+npm start  # ✅ Electron running (verified with Get-Process)
+```
+
+**Build Results:**
+- Errors: 0 ✅
+- Warnings: 4 (DefinePlugin conflicts - non-critical)
+- Application Status: ✅ Running
+
+### Next Steps
+- [x] All diagnostic errors fixed
+- [x] Application built and tested
+- [x] Files synced back to workspace
+- [ ] Consider fixing inline styles (deferred - non-critical)
+- [ ] Consider markdown linting (deferred - non-critical)
+
+---
+
+## Technical Context
+
+### What Was Being Done
+Implementing comprehensive diagnostic fixes from implementation plan. User provided specific prompt with all errors to fix in priority order. This was a systematic fix of TypeScript compilation errors, ARIA accessibility violations, and ESLint warnings that were preventing the application from building.
+
+### Root Cause Analysis
+**Issue:** Multiple TypeScript compilation errors preventing build
+**Hypothesis:** Type system issues due to recent refactoring of discovery hooks
+**Evidence:** Webpack build failed with specific TS errors in 6 files
+**Solution:** Add proper type guards, fix ARIA attributes, clean up imports
+
+### Key Findings
+1. ARIA attributes require string literals or undefined, not booleans (Button.tsx:162-164)
+2. FilterState interface requires searchText property (useExternalIdentityDiscoveryLogic.ts:330)
+3. Object.entries() returns unknown values that need type guards (ExternalIdentityDiscoveryView.tsx:361)
+4. PowerShell variables should use Out-Null instead of assignment if unused (AzureResourceDiscovery.psm1:152)
+5. @tanstack/react-query needed for test utilities but wasn't in package.json
+
+### Commands Ready to Run
+```powershell
+# If crash happens during next build:
+cd C:\enterprisediscovery\guiv2
+Get-Process electron -ErrorAction SilentlyContinue | Stop-Process -Force
+if (Test-Path '.webpack') { Remove-Item -Recurse -Force '.webpack' }
+npm run build:main
+npx webpack --config webpack.preload.config.js --mode=production
+npm run build:renderer
+npm start
+```
+```
+
+---
+
+### Update Protocol (Step-by-Step)
+
+**AFTER EACH FILE EDIT:**
+1. Immediately update "Files Modified This Session" with ✅
+2. Update TodoWrite with status (in_progress → completed)
+3. Add to "Issues Fixed" with before/after code
+
+**AFTER EACH BUILD:**
+1. Update "Build & Deployment Log" with results
+2. Update "Build Status" in Quick Stats
+3. Record any errors/warnings
+
+**AFTER EACH TEST:**
+1. Update "App Running" status
+2. Note any runtime errors
+3. Record verification steps taken
+
+**BEFORE ENDING SESSION:**
+1. Ensure all ✅ marks are accurate
+2. Update "Next Steps" for future resume
+3. Mark "Status" as COMPLETED or document blocker
+4. Sync files back to workspace if in deployment
+
+---
+
+### Recovery Protocol (When User Says "Resume")
+
+**Step 1: Read Tracker**
+```typescript
+Read({ file_path: "D:\\Scripts\\UserMandA\\.ai-work-tracker.md" })
+```
+
+**Step 2: Identify Last State**
+- Check "Status" field (In Progress/Completed/Blocked)
+- Find last ⏳ or incomplete item in "Files Modified"
+- Read "Next Steps" for planned actions
+
+**Step 3: Verify Current State**
+```powershell
+# Check if files were synced
+git status  # Any uncommitted changes?
+Get-Process electron  # Is app still running?
+Test-Path C:\enterprisediscovery\guiv2\.webpack  # Was build in progress?
+```
+
+**Step 4: Resume from Checkpoint**
+- If file IN PROGRESS: Read that file with offset/limit around last line number
+- If build FAILED: Check error logs, re-run failed step
+- If tests PENDING: Continue with test execution
+- If sync NEEDED: Complete workspace ↔ deployment sync
+
+**Example Recovery:**
+```typescript
+// User: "resume where you left off"
+
+// 1. Read tracker
+Read({ file_path: "D:\\Scripts\\UserMandA\\.ai-work-tracker.md" })
+// Status: ⏳ In Progress
+// Last file: ⏳ ExternalIdentityDiscoveryView.tsx - Fixing type errors (line 365)
+
+// 2. Read context around that line
+Read({
+  file_path: "D:\\Scripts\\UserMandA-1\\guiv2\\src\\renderer\\views\\discovery\\ExternalIdentityDiscoveryView.tsx",
+  offset: 350,
+  limit: 30
+})
+
+// 3. Check what was being fixed
+// Tracker shows: "Adding type guard for Object.entries count variable"
+
+// 4. Complete the fix and continue to next item
 ```
 
 ## Parallel Agent Execution

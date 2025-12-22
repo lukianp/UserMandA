@@ -87,6 +87,104 @@ function Write-ActiveDirectoryLog {
     Write-MandALog -Message "[ActiveDirectory] $Message" -Level $Level -Component "ActiveDirectoryDiscovery" -Context $Context
 }
 
+function Connect-MgGraphWithMultipleStrategies {
+    <#
+    .SYNOPSIS
+        Connects to Microsoft Graph using multiple authentication strategies with automatic fallback
+    .DESCRIPTION
+        Attempts to authenticate to Microsoft Graph using 4 different strategies in order:
+        1. Client Secret Credential (preferred for automation)
+        2. Certificate-Based Authentication (secure, headless)
+        3. Device Code Flow (headless-friendly interactive)
+        4. Interactive Browser (GUI required - last resort)
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context
+    )
+
+    Write-ActiveDirectoryLog -Level "INFO" -Message "Attempting Microsoft Graph authentication with multiple strategies..." -Context $Context
+
+    # Define AD-specific scopes
+    $adScopes = @(
+        "Directory.Read.All",
+        "Domain.Read.All",
+        "User.Read.All",
+        "Group.Read.All",
+        "GroupMember.Read.All"
+    )
+
+    # Strategy 1: Client Secret Credential (preferred for automation)
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
+        try {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "Strategy 1: Attempting Client Secret authentication..." -Context $Context
+            $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
+            Connect-MgGraph -ClientSecretCredential $credential -TenantId $Configuration.TenantId -NoWelcome -ErrorAction Stop
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Strategy 1: Client Secret authentication successful" -Context $Context
+                return $context
+            }
+        } catch {
+            Write-ActiveDirectoryLog -Level "WARN" -Message "Strategy 1: Client Secret auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 2: Certificate-Based Authentication (secure, headless)
+    if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.CertificateThumbprint) {
+        try {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "Strategy 2: Attempting Certificate authentication..." -Context $Context
+            Connect-MgGraph -ClientId $Configuration.ClientId -TenantId $Configuration.TenantId -CertificateThumbprint $Configuration.CertificateThumbprint -NoWelcome -ErrorAction Stop
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Strategy 2: Certificate authentication successful" -Context $Context
+                return $context
+            }
+        } catch {
+            Write-ActiveDirectoryLog -Level "WARN" -Message "Strategy 2: Certificate auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 3: Device Code Flow (headless-friendly interactive)
+    if ($Configuration.TenantId) {
+        try {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "Strategy 3: Attempting Device Code authentication..." -Context $Context
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $adScopes -UseDeviceCode -NoWelcome -ErrorAction Stop
+            $context = Get-MgContext
+            if ($context -and $context.TenantId) {
+                Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Strategy 3: Device Code authentication successful" -Context $Context
+                return $context
+            }
+        } catch {
+            Write-ActiveDirectoryLog -Level "WARN" -Message "Strategy 3: Device Code auth failed: $($_.Exception.Message)" -Context $Context
+        }
+    }
+
+    # Strategy 4: Interactive Browser Authentication (GUI required - last resort)
+    try {
+        Write-ActiveDirectoryLog -Level "INFO" -Message "Strategy 4: Attempting Interactive authentication..." -Context $Context
+        if ($Configuration.TenantId) {
+            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $adScopes -NoWelcome -ErrorAction Stop
+        } else {
+            Connect-MgGraph -Scopes $adScopes -NoWelcome -ErrorAction Stop
+        }
+        $context = Get-MgContext
+        if ($context -and $context.TenantId) {
+            Write-ActiveDirectoryLog -Level "SUCCESS" -Message "Strategy 4: Interactive authentication successful" -Context $Context
+            return $context
+        }
+    } catch {
+        Write-ActiveDirectoryLog -Level "ERROR" -Message "Strategy 4: Interactive auth failed: $($_.Exception.Message)" -Context $Context
+    }
+
+    Write-ActiveDirectoryLog -Level "ERROR" -Message "All Microsoft Graph authentication strategies exhausted" -Context $Context
+    return $null
+}
+
 # --- Main Discovery Function ---
 
 function Invoke-ActiveDirectoryDiscovery {
