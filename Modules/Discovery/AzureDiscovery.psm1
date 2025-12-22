@@ -92,6 +92,36 @@ function Connect-AzureWithMultipleStrategies {
 
     Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting Azure authentication with multiple strategies..." -Level "INFO"
 
+    # CRITICAL FIX: Clear all existing Az contexts to prevent MSAL memory corruption
+    try {
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Clearing existing Azure contexts and token cache..." -Level "INFO"
+
+        # Disconnect any existing sessions
+        try {
+            Disconnect-AzAccount -ErrorAction SilentlyContinue | Out-Null
+        } catch {
+            # Ignore errors if no session exists
+        }
+
+        # Clear all Az contexts (force removes all cached credentials)
+        Clear-AzContext -Force -ErrorAction SilentlyContinue | Out-Null
+
+        # Clear MSAL token cache directory to prevent corruption
+        $msalCachePath = Join-Path $env:LOCALAPPDATA '.IdentityService'
+        if (Test-Path $msalCachePath) {
+            try {
+                Remove-Item -Path $msalCachePath -Recurse -Force -ErrorAction SilentlyContinue
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "MSAL token cache cleared successfully" -Level "INFO"
+            } catch {
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Could not clear MSAL cache (non-critical): $($_.Exception.Message)" -Level "WARN"
+            }
+        }
+
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure context cleanup completed" -Level "INFO"
+    } catch {
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Context cleanup failed (continuing anyway): $($_.Exception.Message)" -Level "WARN"
+    }
+
     # Strategy 1: Service Principal with Client Secret
     if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
         try {
@@ -242,6 +272,7 @@ function Invoke-AzureDiscovery {
         param($Configuration, $Context, $SessionId, $Connections, $Result)
         $allDiscoveredData = [System.Collections.ArrayList]::new()
 
+        try {
         # CRITICAL: Log credential receipt and validation at start
         Write-ModuleLog -ModuleName "AzureDiscovery" -Message "=== CREDENTIAL VALIDATION START ===" -Level "INFO"
 
@@ -1860,9 +1891,25 @@ function Invoke-AzureDiscovery {
         $Result.RecordCount = $allDiscoveredData.Count
 
 
-# Return data grouped by type
-return $allDiscoveredData | Group-Object -Property _DataType
+        # Return data grouped by type
+        return $allDiscoveredData | Group-Object -Property _DataType
 
+        } finally {
+            # CRITICAL: Always cleanup Azure contexts to prevent memory leaks
+            try {
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Cleaning up Azure connection..." -Level "INFO"
+
+                # Disconnect from Azure
+                Disconnect-AzAccount -ErrorAction SilentlyContinue | Out-Null
+
+                # Clear contexts
+                Clear-AzContext -Force -ErrorAction SilentlyContinue | Out-Null
+
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure connection cleanup completed" -Level "INFO"
+            } catch {
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Cleanup warning (non-critical): $($_.Exception.Message)" -Level "WARN"
+            }
+        }
     }
     # Execute discovery using the base module
     Start-DiscoveryModule `
