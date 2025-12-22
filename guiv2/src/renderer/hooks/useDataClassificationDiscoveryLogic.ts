@@ -190,7 +190,7 @@ export const useDataClassificationDiscoveryLogic = () => {
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, [addResult]);
+  }, []); // ✅ CRITICAL: Empty dependency array for event listeners
 
   const addLog = useCallback((level: PowerShellLog['level'], message: string) => {
     const timestamp = new Date().toLocaleTimeString();

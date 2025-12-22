@@ -85,9 +85,23 @@ export const Sidebar: React.FC = () => {
     migration: false,
   });
 
-  // State for profile section collapse
-  const [isSourceProfileExpanded, setIsSourceProfileExpanded] = useState(true);
-  const [isTargetProfileExpanded, setIsTargetProfileExpanded] = useState(true);
+  // State for profile section collapse (default to collapsed)
+  const [isSourceProfileExpanded, setIsSourceProfileExpanded] = useState(false);
+  const [isTargetProfileExpanded, setIsTargetProfileExpanded] = useState(false);
+
+  // Helper function to get profile display name
+  const getProfileDisplayName = (profile: any): string => {
+    if (profile?.companyName) {
+      return profile.companyName;
+    }
+    if (profile?.name) {
+      return profile.name;
+    }
+    if (profile?.id) {
+      return profile.id;
+    }
+    return 'No Profile';
+  };
 
   // Toggle section expansion
   const toggleSection = useCallback((section: string) => {
@@ -216,14 +230,14 @@ export const Sidebar: React.FC = () => {
       </button>
 
       {/* Logo/Title */}
-      <div className="p-4 border-b border-gray-800">
+      <div className="p-4 border-b border-gray-800 text-center">
         {!isCollapsed ? (
           <>
             <h1 className="text-xl font-bold">Enterprise Discovery & Migration Suite</h1>
             <p className="text-xs text-gray-400 mt-1">Complete IT Assessment Platform</p>
           </>
         ) : (
-          <div className="text-center text-xs font-bold">EDMS</div>
+          <div className="text-xs font-bold">EDMS</div>
         )}
       </div>
 
@@ -237,7 +251,7 @@ export const Sidebar: React.FC = () => {
               className="flex items-center justify-between w-full text-left mb-2 hover:opacity-80 transition-opacity"
             >
               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                Source Profile
+                Source Profile{selectedSourceProfile ? ` (${getProfileDisplayName(selectedSourceProfile)})` : ''}
               </span>
               {isSourceProfileExpanded ? (
                 <ChevronDown size={16} className="text-gray-400" />
@@ -271,7 +285,7 @@ export const Sidebar: React.FC = () => {
               className="flex items-center justify-between w-full text-left mb-2 hover:opacity-80 transition-opacity"
             >
               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                Target Profile
+                Target Profile{selectedTargetProfile ? ` (${getProfileDisplayName(selectedTargetProfile)})` : ''}
               </span>
               {isTargetProfileExpanded ? (
                 <ChevronDown size={16} className="text-gray-400" />

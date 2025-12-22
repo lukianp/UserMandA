@@ -185,7 +185,7 @@ export const useGPODiscoveryLogic = () => {
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, [addResult]);
+  }, []); // ✅ CRITICAL: Empty dependency array for event listeners
 
   const startDiscovery = useCallback(async () => {
     if (!selectedSourceProfile) {

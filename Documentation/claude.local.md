@@ -414,49 +414,68 @@ const cancelDiscovery = useCallback(async () => {
 
 ---
 
-# Discovery Hooks Validation Status (43 Modules)
+# Discovery Hooks Validation Status (55+ Modules) - Updated 2025-12-22
 
-## ✅ Working Hooks (Reference Templates)
-- useApplicationDiscoveryLogic.ts (250 records, 71s, EnrichmentLevel)
-- useAzureDiscoveryLogic.ts
-- useActiveDirectoryDiscoveryLogic.ts
+## ✅ ALL HOOKS EXIST AND VALIDATED
 
-## ✅ Fixed Hooks (TypeScript Errors)
-- useAWSDiscoveryLogic.ts (data.currentItem → data.currentPhase)
-- useHyperVDiscoveryLogic.ts (type cast)
-- useOffice365DiscoveryLogic.ts (type casts, progress properties)
-- usePowerPlatformDiscoveryLogic.ts (type cast, data.result)
-- useSecurityInfrastructureDiscoveryLogic.ts (type cast, progress, config)
+All discovery hooks now exist and follow the correct event-driven pattern with:
+- `useRef` for `currentTokenRef`
+- Empty dependency array `[]` for event listeners
+- `executionId` matching in event handlers
+- `addResult()` call to persist to store
 
-## ⏳ To Validate (20 hooks)
-Cloud & Identity: useConditionalAccessDiscoveryLogic, useExchangeDiscoveryLogic, useOneDriveDiscoveryLogic, useTeamsDiscoveryLogic, useGoogleWorkspaceDiscoveryLogic
+## ✅ Fixed Dependency Array Issues (21 hooks - 2025-12-22)
+The following hooks had incorrect useEffect dependency arrays (`[addResult]` or `[addLog, addResult, setProgress]`).
+All fixed to use empty array `[]`:
 
-Infrastructure: useFileSystemDiscoveryLogic, useIntuneDiscoveryLogic, useLicensingDiscoveryLogic, useNetworkDiscoveryLogic, useSharePointDiscoveryLogic, useSQLServerDiscoveryLogic, useVMwareDiscoveryLogic, useWebServerDiscoveryLogic, useAWSCloudInfrastructureDiscoveryLogic, useDataLossPreventionDiscoveryLogic, useDomainDiscoveryLogic, useEDiscoveryLogic, useIdentityGovernanceDiscoveryLogic
-
-## ❌ Missing Hooks (17 to create)
-- useEntraIDAppDiscoveryLogic.ts
-- useExternalIdentityDiscoveryLogic.ts
-- useGraphDiscoveryLogic.ts
-- useMultiDomainForestDiscoveryLogic.ts
+- useApplicationDependencyMappingDiscoveryLogic.ts
+- useAzureDeviceDiscoveryLogic.ts
+- useAzureInfraDiscoveryLogic.ts
+- useAzureM365DiscoveryLogic.ts
+- useAzureSecurityDiscoveryLogic.ts
 - useBackupRecoveryDiscoveryLogic.ts
 - useCertificateAuthorityDiscoveryLogic.ts
 - useCertificateDiscoveryLogic.ts
 - useDatabaseSchemaDiscoveryLogic.ts
 - useDataClassificationDiscoveryLogic.ts
 - useDNSDHCPDiscoveryLogic.ts
-- useEnvironmentDetectionLogic.ts
 - useFileServerDiscoveryLogic.ts
 - useGPODiscoveryLogic.ts
 - useInfrastructureDiscoveryLogic.ts
 - useNetworkInfrastructureDiscoveryLogic.ts
+- usePaloAltoDiscoveryLogic.ts
+- usePanoramaInterrogationDiscoveryLogic.ts
 - usePhysicalServerDiscoveryLogic.ts
-- usePrinterDiscoveryLogic.ts
 - useScheduledTaskDiscoveryLogic.ts
-- useStorageArrayDiscoveryLogic.ts
 - useVirtualizationDiscoveryLogic.ts
 - useWebServerConfigDiscoveryLogic.ts
-- usePowerBIDiscoveryLogic.ts
-- usePaloAltoDiscoveryLogic.ts
+
+## ✅ Reference Template Hooks
+- useApplicationDiscoveryLogic.ts (250 records, 71s, EnrichmentLevel)
+- useAzureDiscoveryLogic.ts
+- useActiveDirectoryDiscoveryLogic.ts
+- useAWSCloudInfrastructureDiscoveryLogic.ts
+- useConditionalAccessDiscoveryLogic.ts
+- useAzureResourceDiscoveryLogic.ts
+
+## ✅ All Existing Hooks (Complete List)
+useAWSCloudInfrastructureDiscoveryLogic, useAWSDiscoveryLogic, useActiveDirectoryDiscoveryLogic,
+useApplicationDependencyMappingDiscoveryLogic, useApplicationDiscoveryLogic, useAzureDeviceDiscoveryLogic,
+useAzureDiscoveryLogic, useAzureInfraDiscoveryLogic, useAzureM365DiscoveryLogic, useAzureResourceDiscoveryLogic,
+useAzureSecurityDiscoveryLogic, useBackupRecoveryDiscoveryLogic, useCertificateAuthorityDiscoveryLogic,
+useCertificateDiscoveryLogic, useConditionalAccessDiscoveryLogic, useDNSDHCPDiscoveryLogic,
+useDataClassificationDiscoveryLogic, useDataLossPreventionDiscoveryLogic, useDatabaseSchemaDiscoveryLogic,
+useDomainDiscoveryLogic, useEDiscoveryLogic, useEntraIDAppDiscoveryLogic, useEnvironmentDetectionLogic,
+useExchangeDiscoveryLogic, useExternalIdentityDiscoveryLogic, useFileServerDiscoveryLogic,
+useFileSystemDiscoveryLogic, useGPODiscoveryLogic, useGoogleWorkspaceDiscoveryLogic, useGraphDiscoveryLogic,
+useHyperVDiscoveryLogic, useIdentityGovernanceDiscoveryLogic, useInfrastructureDiscoveryLogic,
+useIntuneDiscoveryLogic, useLicensingDiscoveryLogic, useMultiDomainForestDiscoveryLogic, useNetworkDiscoveryLogic,
+useNetworkInfrastructureDiscoveryLogic, useOffice365DiscoveryLogic, useOneDriveDiscoveryLogic,
+usePaloAltoDiscoveryLogic, usePanoramaInterrogationDiscoveryLogic, usePhysicalServerDiscoveryLogic,
+usePowerBIDiscoveryLogic, usePowerPlatformDiscoveryLogic, usePrinterDiscoveryLogic, useSQLServerDiscoveryLogic,
+useScheduledTaskDiscoveryLogic, useSecurityInfrastructureDiscoveryLogic, useSharePointDiscoveryLogic,
+useStorageArrayDiscoveryLogic, useTeamsDiscoveryLogic, useVMwareDiscoveryLogic, useVirtualizationDiscoveryLogic,
+useWebServerConfigDiscoveryLogic, useWebServerDiscoveryLogic, useEnvironmentDetectionDiscovery
 
 ---
 

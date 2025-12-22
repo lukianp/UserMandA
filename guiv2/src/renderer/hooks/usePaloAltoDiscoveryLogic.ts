@@ -79,7 +79,7 @@ export const usePaloAltoDiscoveryLogic = () => {
       unsubscribeError?.();
       unsubscribeProgress?.();
     };
-  }, [addResult]);
+  }, []); // ✅ CRITICAL: Empty dependency array for event listeners
 
   const startDiscovery = useCallback(async () => {
     if (!selectedSourceProfile) {

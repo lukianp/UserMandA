@@ -162,7 +162,7 @@ export const useAzureSecurityDiscoveryLogic = () => {
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, [addLog, addResult, setProgress]);
+  }, []); // ✅ CRITICAL: Empty dependency array for event listeners
 
   // Start discovery
   const startDiscovery = useCallback(async () => {
