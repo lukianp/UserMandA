@@ -92,26 +92,61 @@ function Connect-AzureWithMultipleStrategies {
 
     Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Attempting Azure authentication with multiple strategies..." -Level "INFO"
 
-    # CRITICAL FIX: Clear all existing Az contexts to prevent MSAL memory corruption
+    # CRITICAL FIX: Aggressively clear ALL Azure state to prevent MSAL memory corruption
     try {
-        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Clearing existing Azure contexts and token cache..." -Level "INFO"
+        Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Performing aggressive Azure context and MSAL cache cleanup..." -Level "INFO"
 
-        # Disconnect any existing sessions
+        # Step 1: Disconnect any existing sessions at all scopes
         try {
-            Disconnect-AzAccount -ErrorAction SilentlyContinue | Out-Null
+            Disconnect-AzAccount -Scope Process -ErrorAction SilentlyContinue | Out-Null
+            Disconnect-AzAccount -Scope CurrentUser -ErrorAction SilentlyContinue | Out-Null
         } catch {
             # Ignore errors if no session exists
         }
 
-        # Clear all Az contexts (force removes all cached credentials)
-        Clear-AzContext -Force -ErrorAction SilentlyContinue | Out-Null
+        # Step 2: Clear ALL Az contexts at all scopes with force
+        try {
+            Clear-AzContext -Scope Process -Force -ErrorAction SilentlyContinue | Out-Null
+            Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue | Out-Null
+        } catch {
+            # Ignore errors
+        }
 
-        # Clear MSAL token cache directory to prevent corruption
+        # Step 3: Remove and reimport Az.Accounts module to clear in-memory MSAL state
+        try {
+            Remove-Module Az.Accounts -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 500  # Give it time to unload
+            Import-Module Az.Accounts -Force -ErrorAction Stop
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Az.Accounts module reloaded successfully" -Level "INFO"
+        } catch {
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Could not reload Az.Accounts module: $($_.Exception.Message)" -Level "WARN"
+        }
+
+        # Step 4: Clear MSAL token cache directory to prevent corruption
         $msalCachePath = Join-Path $env:LOCALAPPDATA '.IdentityService'
         if (Test-Path $msalCachePath) {
             try {
-                Remove-Item -Path $msalCachePath -Recurse -Force -ErrorAction SilentlyContinue
-                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "MSAL token cache cleared successfully" -Level "INFO"
+                # Force close any file handles by retrying
+                $retries = 3
+                $success = $false
+                for ($i = 0; $i -lt $retries; $i++) {
+                    try {
+                        Remove-Item -Path $msalCachePath -Recurse -Force -ErrorAction Stop
+                        $success = $true
+                        break
+                    } catch {
+                        if ($i -lt ($retries - 1)) {
+                            Start-Sleep -Milliseconds 200
+                        }
+                    }
+                }
+
+                if ($success) {
+                    Write-ModuleLog -ModuleName "AzureDiscovery" -Message "MSAL token cache cleared successfully" -Level "INFO"
+                    Start-Sleep -Milliseconds 500  # Give MSAL time to release resources
+                } else {
+                    Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Could not clear MSAL cache after $retries attempts (non-critical)" -Level "WARN"
+                }
             } catch {
                 Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Could not clear MSAL cache (non-critical): $($_.Exception.Message)" -Level "WARN"
             }
@@ -130,7 +165,8 @@ function Connect-AzureWithMultipleStrategies {
             $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
             $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
 
-            $context = Connect-AzAccount -ServicePrincipal -Credential $credential -Tenant $Configuration.TenantId -WarningAction SilentlyContinue -ErrorAction Stop
+            # Use -Scope Process to avoid polluting global/user Azure contexts
+            $context = Connect-AzAccount -ServicePrincipal -Credential $credential -Tenant $Configuration.TenantId -Scope Process -WarningAction SilentlyContinue -ErrorAction Stop
 
             Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Service Principal authentication successful" -Level "SUCCESS"
             return $context
