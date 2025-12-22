@@ -102,15 +102,26 @@ function Connect-AzureWithMultipleStrategies {
     if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
         try {
             Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Attempting Service Principal authentication..." -Level "INFO"
-            
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "  Client ID: $($Configuration.ClientId)" -Level "INFO"
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "  Tenant ID: $($Configuration.TenantId)" -Level "INFO"
+
             $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
             $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
-            
+
             $context = Connect-AzAccount -ServicePrincipal -Credential $credential -Tenant $Configuration.TenantId -WarningAction SilentlyContinue -ErrorAction Stop
-            
+
+            # Log successful connection details
             Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Service Principal authentication successful" -Level "SUCCESS"
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "  Connected Account: $($context.Context.Account.Id)" -Level "SUCCESS"
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "  Connected Tenant: $($context.Context.Tenant.Id)" -Level "SUCCESS"
+            if ($context.Context.Subscription) {
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "  Default Subscription: $($context.Context.Subscription.Name) ($($context.Context.Subscription.Id))" -Level "SUCCESS"
+            } else {
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "  Default Subscription: None (may indicate no subscription access)" -Level "WARN"
+            }
+
             return $context
-            
+
         } catch {
             Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Service Principal authentication failed: $($_.Exception.Message)" -Level "WARN"
             $Result.AddWarning("Service Principal authentication failed", @{Error=$_.Exception.Message})
@@ -258,12 +269,83 @@ function Invoke-AzureResourceDiscovery {
         }
         
         Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Azure authentication successful, starting resource discovery..." -Level "SUCCESS"
-        
+
+        # CRITICAL: Log authenticated context details for diagnostics
+        try {
+            $currentContext = Get-AzContext
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "=== AUTHENTICATED CONTEXT DETAILS ===" -Level "INFO"
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Account: $($currentContext.Account.Id)" -Level "INFO"
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Account Type: $($currentContext.Account.Type)" -Level "INFO"
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Tenant ID: $($currentContext.Tenant.Id)" -Level "INFO"
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Subscription ID: $($currentContext.Subscription.Id)" -Level "INFO"
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Subscription Name: $($currentContext.Subscription.Name)" -Level "INFO"
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Environment: $($currentContext.Environment.Name)" -Level "INFO"
+
+            # Store context info in metadata
+            $Result.Metadata["AuthenticatedAccount"] = $currentContext.Account.Id
+            $Result.Metadata["AuthenticatedAccountType"] = $currentContext.Account.Type
+            $Result.Metadata["TenantId"] = $currentContext.Tenant.Id
+
+        } catch {
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Failed to retrieve context details: $($_.Exception.Message)" -Level "WARN"
+        }
+
         try {
             #region Azure Subscriptions Discovery
             Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Discovering Azure Subscriptions..." -Level "INFO"
-            
-            $subscriptions = Get-AzSubscription -ErrorAction Stop
+
+            # Get subscriptions with explicit error handling
+            $subscriptions = @()
+            try {
+                $subscriptions = @(Get-AzSubscription -ErrorAction Stop)
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Get-AzSubscription returned $($subscriptions.Count) subscriptions" -Level "INFO"
+            } catch {
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Get-AzSubscription failed: $($_.Exception.Message)" -Level "ERROR"
+                $Result.AddError("Failed to retrieve subscriptions", $_.Exception, @{Section="Subscriptions"})
+            }
+
+            # CRITICAL: If no subscriptions found, provide detailed diagnostics
+            if ($subscriptions.Count -eq 0) {
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "=== NO SUBSCRIPTIONS FOUND - DIAGNOSTIC INFORMATION ===" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "This Service Principal/Account has no accessible Azure subscriptions." -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Common Causes:" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "1. Service Principal not assigned 'Reader' role on target subscriptions" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "2. Service Principal exists in wrong tenant (check TenantId configuration)" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "3. Subscription access restrictions or policies blocking SP access" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "4. Service Principal not granted 'Microsoft.ResourceGraph/resources/read' permission" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Remediation Steps:" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "1. In Azure Portal, navigate to: Subscriptions > Access Control (IAM)" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "2. Click 'Add role assignment'" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "3. Select 'Reader' role" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "4. Assign to Service Principal: $($currentContext.Account.Id)" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "5. Wait 5-10 minutes for permissions to propagate" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Verify with Azure CLI: az account list --output table" -Level "ERROR"
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Verify with PowerShell: Get-AzSubscription | Format-Table" -Level "ERROR"
+
+                $Result.AddError(
+                    "No Azure subscriptions accessible. Service Principal may need 'Reader' role assigned at subscription scope.",
+                    $null,
+                    @{
+                        Section="Subscriptions"
+                        ServicePrincipal=$currentContext.Account.Id
+                        TenantId=$currentContext.Tenant.Id
+                        Remediation="Assign 'Reader' role to Service Principal in Azure Portal: Subscriptions > Access Control (IAM) > Add role assignment"
+                    }
+                )
+
+                # Return empty data but don't crash
+                return $allDiscoveredData
+            }
+
+            # Log all discovered subscriptions
+            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "=== DISCOVERED SUBSCRIPTIONS ===" -Level "INFO"
+            foreach ($sub in $subscriptions) {
+                Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "  - $($sub.Name) (ID: $($sub.Id), State: $($sub.State), Tenant: $($sub.TenantId))" -Level "INFO"
+            }
+
             $subscriptionCount = 0
             
             foreach ($subscription in $subscriptions) {
@@ -274,6 +356,7 @@ function Invoke-AzureResourceDiscovery {
                     
                     $subData = [PSCustomObject]@{
                         ObjectType = "AzureSubscription"
+                        Name = $subscription.Name  # CONSISTENT NAME FIELD FOR UI
                         SubscriptionId = $subscription.Id
                         SubscriptionName = $subscription.Name
                         State = $subscription.State
@@ -296,6 +379,7 @@ function Invoke-AzureResourceDiscovery {
                         foreach ($rg in $resourceGroups) {
                             $rgData = [PSCustomObject]@{
                                 ObjectType = "AzureResourceGroup"
+                                Name = $rg.ResourceGroupName  # CONSISTENT NAME FIELD FOR UI
                                 SubscriptionId = $subscription.Id
                                 ResourceGroupName = $rg.ResourceGroupName
                                 Location = $rg.Location
@@ -354,6 +438,7 @@ function Invoke-AzureResourceDiscovery {
                             
                             $vmData = [PSCustomObject]@{
                                 ObjectType = "AzureVirtualMachine"
+                                Name = $vm.Name  # CONSISTENT NAME FIELD FOR UI
                                 SubscriptionId = $subscription.Id
                                 ResourceGroupName = $vm.ResourceGroupName
                                 VMName = $vm.Name
@@ -412,6 +497,7 @@ function Invoke-AzureResourceDiscovery {
                             
                             $saData = [PSCustomObject]@{
                                 ObjectType = "AzureStorageAccount"
+                                Name = $sa.StorageAccountName  # CONSISTENT NAME FIELD FOR UI
                                 SubscriptionId = $subscription.Id
                                 ResourceGroupName = $sa.ResourceGroupName
                                 StorageAccountName = $sa.StorageAccountName
@@ -493,6 +579,7 @@ function Invoke-AzureResourceDiscovery {
                             
                             $kvData = [PSCustomObject]@{
                                 ObjectType = "AzureKeyVault"
+                                Name = $kv.VaultName  # CONSISTENT NAME FIELD FOR UI
                                 SubscriptionId = $subscription.Id
                                 ResourceGroupName = $kv.ResourceGroupName
                                 VaultName = $kv.VaultName
@@ -558,6 +645,7 @@ function Invoke-AzureResourceDiscovery {
                             
                             $nsgData = [PSCustomObject]@{
                                 ObjectType = "AzureNetworkSecurityGroup"
+                                Name = $nsg.Name  # CONSISTENT NAME FIELD FOR UI
                                 SubscriptionId = $subscription.Id
                                 ResourceGroupName = $nsg.ResourceGroupName
                                 NSGName = $nsg.Name
@@ -603,6 +691,7 @@ function Invoke-AzureResourceDiscovery {
                             
                             $vnetData = [PSCustomObject]@{
                                 ObjectType = "AzureVirtualNetwork"
+                                Name = $vnet.Name  # CONSISTENT NAME FIELD FOR UI
                                 SubscriptionId = $subscription.Id
                                 ResourceGroupName = $vnet.ResourceGroupName
                                 VNetName = $vnet.Name
@@ -641,6 +730,7 @@ function Invoke-AzureResourceDiscovery {
                             
                             $appData = [PSCustomObject]@{
                                 ObjectType = "AzureWebApp"
+                                Name = $app.Name  # CONSISTENT NAME FIELD FOR UI
                                 SubscriptionId = $subscription.Id
                                 ResourceGroupName = $app.ResourceGroup
                                 WebAppName = $app.Name
@@ -692,6 +782,7 @@ function Invoke-AzureResourceDiscovery {
                             
                             $sqlData = [PSCustomObject]@{
                                 ObjectType = "AzureSQLServer"
+                                Name = $server.ServerName  # CONSISTENT NAME FIELD FOR UI
                                 SubscriptionId = $subscription.Id
                                 ResourceGroupName = $server.ResourceGroupName
                                 ServerName = $server.ServerName

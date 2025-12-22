@@ -74,6 +74,9 @@ export function useSharePointDiscoveryLogic() {
     const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[SharePointDiscoveryHook] Discovery completed:', data);
+        console.log('[SharePointDiscoveryHook] data.result keys:', data.result ? Object.keys(data.result) : 'null');
+        console.log('[SharePointDiscoveryHook] data.result.Data:', data.result?.Data ? `Array of ${data.result.Data.length} items` : 'undefined');
+
         setIsDiscovering(false);
         setCurrentToken(null);
 
@@ -94,9 +97,58 @@ export function useSharePointDiscoveryLogic() {
           createdAt: new Date().toISOString(),
         };
 
-        // Update local result state with the full data
+        // ✅ FIX: Transform grouped data structure to flat properties
         if (data.result) {
-          setResult(data.result as SharePointDiscoveryResult);
+          const transformedResult = { ...data.result } as any;
+
+          console.log('[SharePointDiscoveryHook] Starting transformation...');
+
+          // Check for both 'Data' (uppercase) and 'data' (lowercase)
+          const dataArray = transformedResult.Data || transformedResult.data;
+
+          console.log('[SharePointDiscoveryHook] transformedResult.Data exists?', !!transformedResult.Data);
+          console.log('[SharePointDiscoveryHook] transformedResult.data exists?', !!transformedResult.data);
+          console.log('[SharePointDiscoveryHook] dataArray exists?', !!dataArray);
+          console.log('[SharePointDiscoveryHook] dataArray isArray?', Array.isArray(dataArray));
+
+          // Extract data from grouped structure
+          if (dataArray && Array.isArray(dataArray)) {
+            console.log('[SharePointDiscoveryHook] Transforming data array with', dataArray.length, 'groups');
+
+            transformedResult.sites = [];
+            transformedResult.lists = [];
+            transformedResult.permissions = [];
+
+            dataArray.forEach((group: any, index: number) => {
+              console.log(`[SharePointDiscoveryHook] Processing group ${index}:`, group.Name, 'with', group.Group?.length || 0, 'items');
+
+              if (group.Name === 'SharePointSites' && group.Group) {
+                transformedResult.sites = group.Group;
+                console.log('[SharePointDiscoveryHook] Set sites:', transformedResult.sites.length);
+              } else if (group.Name === 'SharePointLists' && group.Group) {
+                transformedResult.lists = group.Group;
+                console.log('[SharePointDiscoveryHook] Set lists:', transformedResult.lists.length);
+              } else if (group.Name === 'SharePointSitePermissions' && group.Group) {
+                transformedResult.permissions = group.Group;
+                console.log('[SharePointDiscoveryHook] Set permissions:', transformedResult.permissions.length);
+              } else if (group.Name === 'SharePointSiteAdmins' && group.Group) {
+                if (!transformedResult.permissions) transformedResult.permissions = [];
+                transformedResult.permissions.push(...group.Group);
+                console.log('[SharePointDiscoveryHook] Added admins to permissions:', transformedResult.permissions.length);
+              }
+            });
+
+            console.log('[SharePointDiscoveryHook] Transformed data:', {
+              sites: transformedResult.sites?.length || 0,
+              lists: transformedResult.lists?.length || 0,
+              permissions: transformedResult.permissions?.length || 0,
+            });
+          } else {
+            console.warn('[SharePointDiscoveryHook] Data array not found or not an array, setting result as-is');
+          }
+
+          console.log('[SharePointDiscoveryHook] Setting result with sites:', transformedResult.sites?.length || 0);
+          setResult(transformedResult as SharePointDiscoveryResult);
         }
 
         addResult(discoveryResult); // ✅ ADDED: Store in discovery store

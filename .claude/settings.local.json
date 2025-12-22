@@ -146,7 +146,9 @@
       "Bash(Length: 0 chars)",
       "Bash(Value: 4c54e13b-5380-483b-a9af-32e1f265f614)",
       "Bash(Select-Object -Last 10)",
-      "Bash(timeout /t 10 /nobreak)"
+      "Bash(timeout /t 10 /nobreak)",
+      "Bash(cmd /c \"dir /b C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\main\\\\services\\\\*Shell*\")",
+      "Bash(cmd /c \"dir /s /b C:\\\\enterprisediscovery\\\\guiv2\\\\.webpack\\\\*.js | findstr /i index\")"
     ],
     "deny": [],
     "ask": []

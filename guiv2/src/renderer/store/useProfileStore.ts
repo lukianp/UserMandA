@@ -59,6 +59,7 @@ interface ProfileState {
   loadTargetProfiles: () => Promise<void>;
   createSourceProfile: (profile: Omit<CompanyProfile, 'id' | 'createdAt'>) => Promise<string>;
   updateSourceProfile: (id: string, updates: Partial<CompanyProfile>) => Promise<void>;
+  updateProfileCredentials: (profileId: string, credentials: { clientId: string, clientSecret: string }) => Promise<void>;
   deleteSourceProfile: (id: string) => Promise<void>;
   addTargetProfile: (profile: TargetProfile) => void;
   updateTargetProfile: (id: string, updates: Partial<TargetProfile>) => void;

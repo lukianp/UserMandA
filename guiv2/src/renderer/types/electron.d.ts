@@ -202,7 +202,7 @@ export interface MigrationComplexityResult {
   data?: {
     score: number;
     level: 'Low' | 'Medium' | 'High';
-    factors: string[];
+    factors: string[];`n    estimatedDowntime?: number; // minutes
   };
   error?: string;
 }
@@ -215,7 +215,7 @@ export interface MigrationComplexityBatchResult {
   data?: Record<string, {
     score: number;
     level: 'Low' | 'Medium' | 'High';
-    factors: string[];
+    factors: string[];`n    estimatedDowntime?: number; // minutes
   }>;
   error?: string;
 }

@@ -25,10 +25,12 @@ import {
   FilterState
 } from '../types/models/organisation';
 
-// Performance constants
+// Performance constants - CRITICAL for handling large datasets
 const BATCH_SIZE = 100; // Process nodes in batches to avoid blocking
 const MAX_LINKS_PER_NODE = 20; // Limit links per node to prevent performance issues
-const CACHE_VERSION = 'v1'; // Bump to invalidate cache
+const MAX_NODES = 5000; // Maximum nodes to render (prevent browser crash with 9000+ objects)
+const MAX_LINKS = 10000; // Maximum links to render
+const CACHE_VERSION = 'v2'; // Bump to invalidate cache
 
 interface UseOrganisationMapLogicReturn {
   data: OrganisationMapData | null;
@@ -976,15 +978,60 @@ export const useOrganisationMapLogic = (): UseOrganisationMapLogicReturn => {
       // Generate cross-file relationships using optimized indices
       const crossFileLinks = generateCrossFileLinksOptimized(mergedData.nodes, nodesBySource, indices);
 
-      // Generate inferred business capabilities
-      const inferredCapabilities = inferBusinessCapabilities(mergedData.nodes);
-      const capabilityLinks = linkToBusinessCapabilities(mergedData.nodes, inferredCapabilities);
+      // REMOVED: Auto-generated business capabilities (inferred data, not from discovery)
+      // Only use real nodes from actual CSV discovery files
 
-      const finalNodes = [...mergedData.nodes, ...inferredCapabilities];
-      const finalLinks = [...mergedData.links, ...crossFileLinks, ...capabilityLinks];
+      // Apply performance limits to prevent rendering 9000+ objects
+      let finalNodes = mergedData.nodes;
+      let finalLinks = [...mergedData.links, ...crossFileLinks];
+
+      // Limit total nodes to MAX_NODES
+      if (finalNodes.length > MAX_NODES) {
+        console.warn(`[useOrganisationMapLogic] Limiting nodes from ${finalNodes.length} to ${MAX_NODES} for performance`);
+        // Prioritize nodes with more connections
+        finalNodes = finalNodes
+          .map(node => {
+            const linkCount = finalLinks.filter(l =>
+              (typeof l.source === 'string' ? l.source : l.source.id) === node.id ||
+              (typeof l.target === 'string' ? l.target : l.target.id) === node.id
+            ).length;
+            return { node, linkCount };
+          })
+          .sort((a, b) => b.linkCount - a.linkCount)
+          .slice(0, MAX_NODES)
+          .map(item => item.node);
+
+        // Filter links to only include those between remaining nodes
+        const nodeIds = new Set(finalNodes.map(n => n.id));
+        finalLinks = finalLinks.filter(l => {
+          const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+          const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+          return nodeIds.has(sourceId) && nodeIds.has(targetId);
+        });
+      }
 
       // Remove duplicate links after all linking
-      const uniqueFinalLinks = removeDuplicateLinks(finalLinks);
+      let uniqueFinalLinks = removeDuplicateLinks(finalLinks);
+
+      // Enforce MAX_LINKS_PER_NODE to prevent cluttered visualization
+      uniqueFinalLinks = enforceLinkLimits(uniqueFinalLinks, MAX_LINKS_PER_NODE);
+
+      // Limit total links to MAX_LINKS
+      if (uniqueFinalLinks.length > MAX_LINKS) {
+        console.warn(`[useOrganisationMapLogic] Limiting links from ${uniqueFinalLinks.length} to ${MAX_LINKS} for performance`);
+        // Prioritize certain link types
+        const priorityOrder: Record<string, number> = {
+          'ownership': 1,
+          'deployment': 2,
+          'provides': 3,
+          'consumes': 4,
+          'dependency': 5,
+          'realizes': 6
+        };
+        uniqueFinalLinks = uniqueFinalLinks
+          .sort((a, b) => (priorityOrder[a.type] || 99) - (priorityOrder[b.type] || 99))
+          .slice(0, MAX_LINKS);
+      }
 
       const finalData: OrganisationMapData = {
         nodes: finalNodes,
@@ -997,8 +1044,9 @@ export const useOrganisationMapLogic = (): UseOrganisationMapLogicReturn => {
         nodes: finalData.nodes.length,
         links: finalData.links.length,
         crossFileLinks: crossFileLinks.length,
-        inferredCapabilities: inferredCapabilities.length,
-        processingTimeMs: processingTime.toFixed(2)
+        removedInferredCapabilities: 'Removed - only using real discovery data',
+        processingTimeMs: processingTime.toFixed(2),
+        limits: { MAX_NODES, MAX_LINKS, MAX_LINKS_PER_NODE }
       });
 
       // Calculate stats by type
@@ -1756,138 +1804,16 @@ function generateCrossFileLinks(
 }
 
 /**
- * Infer business capabilities from user departments and group descriptions
+ * REMOVED: inferBusinessCapabilities
+ *
+ * These functions auto-generated "inferred" business capability nodes that don't exist
+ * in actual discovery data. Removed to only show real objects from CSV discovery files.
+ *
+ * If business capabilities are needed in the future, they should come from:
+ * - A dedicated business capability discovery module
+ * - Manual CSV file with business capabilities
+ * - NOT auto-inferred from user departments
  */
-function inferBusinessCapabilities(nodes: SankeyNode[]): SankeyNode[] {
-  const departments = new Set<string>();
-  const departmentKeywords = [
-    'finance', 'hr', 'human resources', 'it', 'information technology',
-    'sales', 'marketing', 'operations', 'engineering', 'admin', 'administration',
-    'accounting', 'legal', 'procurement', 'support', 'customer service',
-    'research', 'development', 'r&d', 'product', 'design', 'security',
-    'compliance', 'executive', 'management'
-  ];
-
-  // Extract departments from user records
-  nodes.forEach(node => {
-    const record = node.metadata.record;
-
-    // Direct department field
-    if (record.Department) {
-      const dept = record.Department.trim();
-      if (dept && dept.length > 1 && dept.length < 50) {
-        departments.add(dept);
-      }
-    }
-
-    // Infer from group names and descriptions
-    if (node.type === 'platform' && node.metadata.source?.includes('group')) {
-      const groupName = node.name.toLowerCase();
-      const description = (record.Description || '').toLowerCase();
-      const combined = `${groupName} ${description}`;
-
-      departmentKeywords.forEach(keyword => {
-        if (combined.includes(keyword)) {
-          const capName = keyword.charAt(0).toUpperCase() + keyword.slice(1);
-          departments.add(capName);
-        }
-      });
-    }
-  });
-
-  // Create business capability nodes for each department
-  const capabilityNodes: SankeyNode[] = [];
-
-  departments.forEach(dept => {
-    const nodeId = `business-capability-${dept.replace(/[^a-zA-Z0-9]/g, '_')}`;
-
-    // Check if this capability already exists
-    if (!nodes.find(n => n.id === nodeId)) {
-      capabilityNodes.push({
-        id: nodeId,
-        name: dept,
-        type: 'business-capability',
-        factSheet: {
-          baseInfo: {
-            name: dept,
-            type: 'business-capability',
-            description: `Inferred business capability: ${dept}`,
-            owner: '',
-            status: 'active',
-            tags: ['Inferred', 'Business Capability']
-          },
-          relations: { incoming: [], outgoing: [] },
-          itComponents: [],
-          subscriptions: [],
-          comments: [],
-          todos: [],
-          resources: [],
-          metrics: [],
-          surveys: [],
-          lastUpdate: new Date()
-        },
-        metadata: {
-          source: 'inferred',
-          record: { Department: dept },
-          priority: 4,
-          category: 'Business Capability'
-        }
-      });
-    }
-  });
-
-  return capabilityNodes;
-}
-
-/**
- * Link existing nodes to business capabilities
- */
-function linkToBusinessCapabilities(
-  nodes: SankeyNode[],
-  capabilities: SankeyNode[]
-): SankeyLink[] {
-  const links: SankeyLink[] = [];
-
-  nodes.forEach(node => {
-    const record = node.metadata.record;
-
-    // Link users to their departments
-    if (record.Department) {
-      const deptName = record.Department.trim();
-      const capNode = capabilities.find(c =>
-        c.name.toLowerCase() === deptName.toLowerCase()
-      );
-      if (capNode) {
-        links.push({
-          source: capNode.id,
-          target: node.id,
-          value: 1,
-          type: 'realizes'
-        });
-      }
-    }
-
-    // Link groups to inferred capabilities
-    if (node.type === 'platform' && node.metadata.source?.includes('group')) {
-      const groupName = node.name.toLowerCase();
-      const description = (record.Description || '').toLowerCase();
-
-      capabilities.forEach(cap => {
-        if (groupName.includes(cap.name.toLowerCase()) ||
-            description.includes(cap.name.toLowerCase())) {
-          links.push({
-            source: cap.id,
-            target: node.id,
-            value: 1,
-            type: 'realizes'
-          });
-        }
-      });
-    }
-  });
-
-  return links;
-}
 
 /**
  * Merge duplicate nodes and links
@@ -1957,6 +1883,68 @@ function removeDuplicateLinks(links: SankeyLink[]): SankeyLink[] {
     linkSet.add(key);
     return true;
   });
+}
+
+/**
+ * Enforce MAX_LINKS_PER_NODE limit to prevent cluttered visualization
+ * Keeps the most important links per node based on relationship type priority
+ */
+function enforceLinkLimits(links: SankeyLink[], maxLinksPerNode: number): SankeyLink[] {
+  // Count links per node (both incoming and outgoing)
+  const nodeLinkCounts = new Map<string, { incoming: SankeyLink[], outgoing: SankeyLink[] }>();
+
+  // Organize links by node
+  links.forEach(link => {
+    const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+    const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+
+    if (!nodeLinkCounts.has(sourceId)) {
+      nodeLinkCounts.set(sourceId, { incoming: [], outgoing: [] });
+    }
+    if (!nodeLinkCounts.has(targetId)) {
+      nodeLinkCounts.set(targetId, { incoming: [], outgoing: [] });
+    }
+
+    nodeLinkCounts.get(sourceId)!.outgoing.push(link);
+    nodeLinkCounts.get(targetId)!.incoming.push(link);
+  });
+
+  // Priority for link types (lower number = higher priority)
+  const typePriority: Record<string, number> = {
+    'ownership': 1,
+    'deployment': 2,
+    'provides': 3,
+    'consumes': 4,
+    'dependency': 5,
+    'realizes': 6
+  };
+
+  const keptLinks = new Set<SankeyLink>();
+  const halfLimit = Math.floor(maxLinksPerNode / 2);
+
+  // For each node, keep the most important incoming and outgoing links
+  nodeLinkCounts.forEach((linkGroups, nodeId) => {
+    // Sort and limit incoming links
+    const sortedIncoming = linkGroups.incoming
+      .sort((a, b) => (typePriority[a.type] || 99) - (typePriority[b.type] || 99))
+      .slice(0, halfLimit);
+
+    // Sort and limit outgoing links
+    const sortedOutgoing = linkGroups.outgoing
+      .sort((a, b) => (typePriority[a.type] || 99) - (typePriority[b.type] || 99))
+      .slice(0, halfLimit);
+
+    sortedIncoming.forEach(link => keptLinks.add(link));
+    sortedOutgoing.forEach(link => keptLinks.add(link));
+  });
+
+  const result = Array.from(keptLinks);
+
+  if (result.length < links.length) {
+    console.log(`[enforceLinkLimits] Reduced links from ${links.length} to ${result.length} (max ${maxLinksPerNode} per node)`);
+  }
+
+  return result;
 }
 
 /**

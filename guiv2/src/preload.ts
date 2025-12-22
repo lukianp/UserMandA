@@ -1036,6 +1036,121 @@ const electronAPI: ElectronAPI = {
     updateWaveStatus: (profileName: string, waveId: string, status: any) =>
       ipcRenderer.invoke('project:updateWaveStatus', profileName, waveId, status),
   },
+
+  // ========================================
+  // Enhanced Migration Control Plane APIs
+  // ========================================
+
+  /**
+   * Create domain mapping
+   */
+  createDomainMapping: (data: any) =>
+    ipcRenderer.invoke('migration:createDomainMapping', data),
+
+  /**
+   * Get domain mappings
+   */
+  getDomainMappings: () =>
+    ipcRenderer.invoke('migration:getDomainMappings'),
+
+  /**
+   * Validate domain mappings
+   */
+  validateDomainMappings: (mappings?: any[]) =>
+    ipcRenderer.invoke('migration:validateDomainMappings', mappings),
+
+  /**
+   * Create user migration plan
+   */
+  createUserMigrationPlan: (data: any) =>
+    ipcRenderer.invoke('migration:createUserMigrationPlan', data),
+
+  /**
+   * Execute user migration
+   */
+  executeUserMigration: (plan: any) =>
+    ipcRenderer.invoke('migration:executeUserMigration', plan),
+
+  /**
+   * Get user migration status
+   */
+  getUserMigrationStatus: (planId: string) =>
+    ipcRenderer.invoke('migration:getUserMigrationStatus', planId),
+
+  /**
+   * Create Azure resource migration
+   */
+  createAzureResourceMigration: (data: any) =>
+    ipcRenderer.invoke('migration:createAzureResourceMigration', data),
+
+  /**
+   * Execute Azure resource migration
+   */
+  executeAzureResourceMigration: (migration: any) =>
+    ipcRenderer.invoke('migration:executeAzureResourceMigration', migration),
+
+  /**
+   * Get Azure resource migration status
+   */
+  getAzureResourceMigrationStatus: (migrationId: string) =>
+    ipcRenderer.invoke('migration:getAzureResourceMigrationStatus', migrationId),
+
+  /**
+   * Get migration logs
+   */
+  getMigrationLogs: (filters: any) =>
+    ipcRenderer.invoke('migration:getMigrationLogs', filters),
+
+  /**
+   * Get migration metrics
+   */
+  getMigrationMetrics: (timeRange: any) =>
+    ipcRenderer.invoke('migration:getMigrationMetrics', timeRange),
+
+  /**
+   * Retry migration task
+   */
+  retryMigrationTask: (taskId: string) =>
+    ipcRenderer.invoke('migration:retryMigrationTask', taskId),
+
+  /**
+   * Rollback migration
+   */
+  rollbackMigration: (migrationId: string) =>
+    ipcRenderer.invoke('migration:rollbackMigration', migrationId),
+
+  /**
+   * Analyze cross-domain dependencies
+   */
+  analyzeCrossDomainDependencies: () =>
+    ipcRenderer.invoke('migration:analyzeCrossDomainDependencies'),
+
+  /**
+   * Register listener for migration progress events
+   */
+  onMigrationProgress: (callback: (data: any) => void) => {
+    const subscription = (_: any, data: any) => callback(data);
+    ipcRenderer.on('migration:progress', subscription);
+    return () => ipcRenderer.removeListener('migration:progress', subscription);
+  },
+
+  /**
+   * Register listener for migration complete events
+   */
+  onMigrationComplete: (callback: (data: any) => void) => {
+    const subscription = (_: any, data: any) => callback(data);
+    ipcRenderer.on('migration:complete', subscription);
+    return () => ipcRenderer.removeListener('migration:complete', subscription);
+  },
+
+  /**
+   * Register listener for migration error events
+   */
+  onMigrationError: (callback: (data: any) => void) => {
+    const subscription = (_: any, data: any) => callback(data);
+    ipcRenderer.on('migration:error', subscription);
+    return () => ipcRenderer.removeListener('migration:error', subscription);
+  },
 };
 
 // Expose the API to the renderer process

@@ -61,6 +61,7 @@ export const useIntuneDiscoveryLogic = () => {
   // Get selected profile from store
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const { addResult } = useDiscoveryStore();
+  const { updateProfileCredentials } = useProfileStore();
 
   const [state, setState] = useState<IntuneDiscoveryState>({
     config: {
@@ -103,6 +104,9 @@ export const useIntuneDiscoveryLogic = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showExecutionDialog, setShowExecutionDialog] = useState(false);
+
+  // Credentials dialog state
+  const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
 
   /**
    * Add a log entry
@@ -219,8 +223,8 @@ export const useIntuneDiscoveryLogic = () => {
     // Check for required Intune credentials
     const profile = selectedSourceProfile;
     const hasTenantId = profile.tenantId;
-    const hasClientId = profile.configuration?.clientId || profile.configuration?.applicationId;
-    const hasClientSecret = profile.configuration?.clientSecret || profile.configuration?.secretValue;
+    const hasClientId = profile.clientId || profile.configuration?.clientId || profile.configuration?.applicationId;
+    const hasClientSecret = profile.clientSecret || profile.configuration?.clientSecret || profile.configuration?.secretValue;
 
     if (!hasTenantId || !hasClientId || !hasClientSecret) {
       const missing = [];

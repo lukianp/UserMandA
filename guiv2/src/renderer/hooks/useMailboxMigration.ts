@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MigrationProgress } from '../types/models/migration';
-
-declare global {
-  interface Window {
-    electronAPI: any;
-  }
-}
+import type { ElectronAPI } from '../types/electron';
 
 /**
  * Mailbox migration hook with full progress tracking and error handling
@@ -55,7 +50,7 @@ export function useMailboxMigration(profileId: string) {
   useEffect(() => {
     if (!runId) return;
 
-    const onProgress = (event: any, data: any) => {
+    const onProgress = (data: any) => {
       if (data.runId !== runId) return;
 
       const updatedProgress: MigrationProgress = {
@@ -89,7 +84,7 @@ export function useMailboxMigration(profileId: string) {
       }
     };
 
-    const onResult = (event: any, data: any) => {
+    const onResult = (data: any) => {
       if (data.runId !== runId) return;
 
       setIsExecuting(false);
@@ -110,7 +105,7 @@ export function useMailboxMigration(profileId: string) {
       }
     };
 
-    const onError = (event: any, errorData: any) => {
+    const onError = (errorData: any) => {
       if (errorData.runId !== runId) return;
 
       setIsExecuting(false);
@@ -119,15 +114,12 @@ export function useMailboxMigration(profileId: string) {
     };
 
     // Register event listeners
-    window.electronAPI.onMigrationProgress(onProgress);
-    window.electronAPI.onMigrationResult(onResult);
-    window.electronAPI.onMigrationError?.(onError);
+    window.electronAPI.migration.onMigrationProgress(onProgress);
+    window.electronAPI.migration.onMigrationResult(onResult);
+    window.electronAPI.migration.onMigrationError?.(onError);
 
     return () => {
-      // Cleanup listeners
-      window.electronAPI.offMigrationProgress?.(onProgress);
-      window.electronAPI.offMigrationResult?.(onResult);
-      window.electronAPI.offMigrationError?.(onError);
+      // Cleanup listeners - API doesn't provide off* methods
     };
   }, [runId, error, progress.startTime]);
 
@@ -150,7 +142,7 @@ export function useMailboxMigration(profileId: string) {
     setIsPlanning(true);
 
     try {
-      const { runId: newRunId } = await window.electronAPI.planMigration({
+      const { runId: newRunId } = await window.electronAPI.migration.planMigration({
         provider: "Mailbox",
         profileId,
         args: {
@@ -201,7 +193,7 @@ export function useMailboxMigration(profileId: string) {
     setIsCompleted(false);
 
     try {
-      const { runId: executionRunId } = await window.electronAPI.executeMigration({
+      const { runId: executionRunId } = await window.electronAPI.migration.executeMigration({
         provider: "Mailbox",
         profileId,
         runId,
@@ -233,7 +225,7 @@ export function useMailboxMigration(profileId: string) {
     if (!runId) return false;
 
     try {
-      const result = await window.electronAPI.cancelMigration({ runId });
+      const result = await window.electronAPI.migration.cancelMigration({ runId });
       if (result.success) {
         setIsExecuting(false);
         setError('Migration cancelled by user');
@@ -252,7 +244,7 @@ export function useMailboxMigration(profileId: string) {
     if (!runId) return false;
 
     try {
-      const result = await window.electronAPI.pauseMigration({ runId });
+      const result = await window.electronAPI.migration.pauseMigration({ runId });
       return result.success;
     } catch (err: any) {
       console.error('Failed to pause migration:', err);
@@ -267,7 +259,7 @@ export function useMailboxMigration(profileId: string) {
     if (!runId) return false;
 
     try {
-      const result = await window.electronAPI.resumeMigration({ runId });
+      const result = await window.electronAPI.migration.resumeMigration({ runId });
       if (result.success) {
         setIsExecuting(true);
       }
@@ -285,7 +277,7 @@ export function useMailboxMigration(profileId: string) {
     if (!runId) return null;
 
     try {
-      const stats = await window.electronAPI.getMigrationStatistics({ runId });
+      const stats = await window.electronAPI.migration.getMigrationStatistics({ runId });
       return stats;
     } catch (err: any) {
       console.error('Failed to get migration statistics:', err);

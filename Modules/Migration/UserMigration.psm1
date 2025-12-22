@@ -2103,4 +2103,229 @@ function Start-DistributionListMigration {
     return [PSCustomObject]$result
 }
 
-Export-ModuleMember -Function New-UserMigration, Set-GroupMappingStrategy, Add-GroupNamingRule, Set-GroupConflictResolution, New-AdvancedGroupMapping, Import-GroupMappingTemplate, Start-UserMigration, Start-GroupMigration, Start-DistributionListMigration
+<#
+.SYNOPSIS
+    Tests connectivity between source and target domains for migration.
+
+.DESCRIPTION
+    Validates network connectivity, domain trust relationships, and basic prerequisites
+    for domain-to-domain user migration.
+
+.PARAMETER Domain
+    The source domain to test
+
+.PARAMETER TargetDomain
+    The target domain to test connectivity to
+
+.OUTPUTS
+    Returns a result object with success status and validation details
+#>
+function Test-DomainConnectivity {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain,
+
+        [Parameter(Mandatory = $true)]
+        [string]$TargetDomain
+    )
+
+    $result = @{
+        Success = $true
+        Domain = $Domain
+        TargetDomain = $TargetDomain
+        Tests = @()
+        Errors = @()
+        Warnings = @()
+        Timestamp = Get-Date -Format 'o'
+    }
+
+    try {
+        # Test 1: Resolve source domain
+        $result.Tests += @{
+            Name = 'SourceDomainResolution'
+            Status = 'Running'
+        }
+
+        try {
+            $sourceDC = Get-ADDomainController -Domain $Domain -ErrorAction Stop
+            $result.Tests[-1].Status = 'Passed'
+            $result.Tests[-1].Details = "Source DC: $($sourceDC.Name)"
+        }
+        catch {
+            $result.Success = $false
+            $result.Tests[-1].Status = 'Failed'
+            $result.Errors += "Cannot resolve source domain '$Domain': $_"
+        }
+
+        # Test 2: Resolve target domain
+        $result.Tests += @{
+            Name = 'TargetDomainResolution'
+            Status = 'Running'
+        }
+
+        try {
+            $targetDC = Get-ADDomainController -Domain $TargetDomain -ErrorAction Stop
+            $result.Tests[-1].Status = 'Passed'
+            $result.Tests[-1].Details = "Target DC: $($targetDC.Name)"
+        }
+        catch {
+            $result.Success = $false
+            $result.Tests[-1].Status = 'Failed'
+            $result.Errors += "Cannot resolve target domain '$TargetDomain': $_"
+        }
+
+        # Test 3: Check trust relationship (if both domains resolved)
+        if ($result.Tests[0].Status -eq 'Passed' -and $result.Tests[1].Status -eq 'Passed') {
+            $result.Tests += @{
+                Name = 'TrustRelationship'
+                Status = 'Running'
+            }
+
+            try {
+                $trust = Get-ADTrust -Filter "Target -eq '$TargetDomain'" -Server $Domain -ErrorAction SilentlyContinue
+                if ($trust) {
+                    $result.Tests[-1].Status = 'Passed'
+                    $result.Tests[-1].Details = "Trust type: $($trust.TrustType), Direction: $($trust.TrustDirection)"
+                }
+                else {
+                    $result.Tests[-1].Status = 'Warning'
+                    $result.Warnings += "No trust relationship found between domains (migration may still be possible with credentials)"
+                }
+            }
+            catch {
+                $result.Tests[-1].Status = 'Warning'
+                $result.Warnings += "Could not verify trust relationship: $_"
+            }
+        }
+    }
+    catch {
+        $result.Success = $false
+        $result.Errors += "Domain connectivity test failed: $_"
+    }
+
+    return [PSCustomObject]$result
+}
+
+<#
+.SYNOPSIS
+    Tests prerequisites for user migration.
+
+.DESCRIPTION
+    Validates that a user exists in the source domain and checks for potential
+    conflicts in the target domain before migration.
+
+.PARAMETER UserPrincipalName
+    The UPN of the user to migrate
+
+.PARAMETER SourceDomain
+    The source domain
+
+.PARAMETER TargetDomain
+    The target domain
+
+.OUTPUTS
+    Returns a result object with validation status and details
+#>
+function Test-UserMigrationPrerequisites {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$UserPrincipalName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$SourceDomain,
+
+        [Parameter(Mandatory = $true)]
+        [string]$TargetDomain
+    )
+
+    $result = @{
+        Success = $true
+        UserPrincipalName = $UserPrincipalName
+        SourceDomain = $SourceDomain
+        TargetDomain = $TargetDomain
+        Checks = @()
+        Errors = @()
+        Warnings = @()
+        Timestamp = Get-Date -Format 'o'
+    }
+
+    try {
+        # Check 1: User exists in source domain
+        $result.Checks += @{
+            Name = 'SourceUserExists'
+            Status = 'Running'
+        }
+
+        try {
+            $sourceUser = Get-ADUser -Filter "UserPrincipalName -eq '$UserPrincipalName'" -Server $SourceDomain -ErrorAction Stop
+            if ($sourceUser) {
+                $result.Checks[-1].Status = 'Passed'
+                $result.Checks[-1].Details = "User found: $($sourceUser.SamAccountName)"
+                $result.SourceUserSamAccountName = $sourceUser.SamAccountName
+            }
+            else {
+                $result.Success = $false
+                $result.Checks[-1].Status = 'Failed'
+                $result.Errors += "User '$UserPrincipalName' not found in source domain"
+            }
+        }
+        catch {
+            $result.Success = $false
+            $result.Checks[-1].Status = 'Failed'
+            $result.Errors += "Cannot query source domain for user: $_"
+        }
+
+        # Check 2: User does not already exist in target domain
+        $result.Checks += @{
+            Name = 'TargetUserConflict'
+            Status = 'Running'
+        }
+
+        try {
+            $targetUser = Get-ADUser -Filter "UserPrincipalName -eq '$UserPrincipalName'" -Server $TargetDomain -ErrorAction SilentlyContinue
+            if ($targetUser) {
+                $result.Checks[-1].Status = 'Warning'
+                $result.Warnings += "User with UPN '$UserPrincipalName' already exists in target domain"
+                $result.ConflictResolutionRequired = $true
+            }
+            else {
+                $result.Checks[-1].Status = 'Passed'
+                $result.Checks[-1].Details = "No conflict detected"
+            }
+        }
+        catch {
+            # If we can't query, log a warning but don't fail
+            $result.Checks[-1].Status = 'Warning'
+            $result.Warnings += "Could not check for conflicts in target domain: $_"
+        }
+
+        # Check 3: Permissions (basic check)
+        $result.Checks += @{
+            Name = 'Permissions'
+            Status = 'Running'
+        }
+
+        try {
+            # Try to read domain info as a basic permission test
+            $null = Get-ADDomain -Server $SourceDomain -ErrorAction Stop
+            $null = Get-ADDomain -Server $TargetDomain -ErrorAction Stop
+            $result.Checks[-1].Status = 'Passed'
+            $result.Checks[-1].Details = "Basic domain read permissions verified"
+        }
+        catch {
+            $result.Success = $false
+            $result.Checks[-1].Status = 'Failed'
+            $result.Errors += "Insufficient permissions: $_"
+        }
+    }
+    catch {
+        $result.Success = $false
+        $result.Errors += "User migration prerequisites test failed: $_"
+    }
+
+    return [PSCustomObject]$result
+}
+
+Export-ModuleMember -Function New-UserMigration, Set-GroupMappingStrategy, Add-GroupNamingRule, Set-GroupConflictResolution, New-AdvancedGroupMapping, Import-GroupMappingTemplate, Start-UserMigration, Start-GroupMigration, Start-DistributionListMigration, Test-DomainConnectivity, Test-UserMigrationPrerequisites

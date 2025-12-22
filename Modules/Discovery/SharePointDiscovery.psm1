@@ -1,6 +1,9 @@
 # -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# Import required modules
+Import-Module (Join-Path $PSScriptRoot "..\Authentication\AuthenticationService.psm1") -Force
+
 # Author: Lukian Poleschtschuk
 # Version: 1.0.0
 # Created: 2025-01-18
@@ -141,38 +144,66 @@ function Invoke-SharePointDiscovery {
 
         Ensure-Path -Path $outputPath
 
-        # 4. AUTHENTICATE & CONNECT (SESSION-BASED)
+        # 4. AUTHENTICATE & CONNECT (DIRECT ACCESS TOKEN)
         Write-SharePointLog -Level "HEADER" -Message "=== AUTHENTICATION PHASE ===" -Context $Context
-        Write-SharePointLog -Level "INFO" -Message "Using Session-Based Authentication (SessionId: $SessionId)" -Context $Context
-        Write-SharePointLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
+        Write-SharePointLog -Level "INFO" -Message "Using Direct Access Token Authentication" -Context $Context
 
+        $graphContext = $null
         try {
-            # Note: Session-based auth means credentials were already validated and used
-            # to establish the session. We're just retrieving the active session here.
-            Write-SharePointLog -Level "DEBUG" -Message "Calling Get-AuthenticationForService with SessionId..." -Context $Context
-            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
-            Write-SharePointLog -Level "SUCCESS" -Message "Retrieved Graph authentication session" -Context $Context
-
-            # Validate the connection
-            Write-SharePointLog -Level "INFO" -Message "Validating Graph connection..." -Context $Context
-            $testUri = "https://graph.microsoft.com/v1.0/organization"
-            $testResponse = Invoke-MgGraphRequest -Uri $testUri -Method GET -ErrorAction Stop
-
-            if (-not $testResponse) {
-                throw "Graph connection test failed - no response"
+            # Get access token using OAuth2 client credentials flow
+            Write-SharePointLog -Level "DEBUG" -Message "Requesting access token from Microsoft Identity Platform..." -Context $Context
+            $tokenBody = @{
+                grant_type    = "client_credentials"
+                client_id     = $Configuration.ClientId
+                client_secret = $Configuration.ClientSecret
+                scope         = "https://graph.microsoft.com/.default"
             }
 
-            Write-SharePointLog -Level "SUCCESS" -Message "Graph connection validated successfully" -Context $Context
-            Write-SharePointLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
+            $tokenUri = "https://login.microsoftonline.com/$($Configuration.TenantId)/oauth2/v2.0/token"
+            $tokenResponse = Invoke-RestMethod -Uri $tokenUri -Method POST -Body $tokenBody -ContentType "application/x-www-form-urlencoded" -ErrorAction Stop
 
-            # Log organization details for confirmation
-            if ($testResponse.value -and $testResponse.value.Count -gt 0) {
-                $org = $testResponse.value[0]
-                Write-SharePointLog -Level "INFO" -Message "Connected to tenant: $($org.displayName)" -Context $Context
-                Write-SharePointLog -Level "DEBUG" -Message "Tenant ID from API: $($org.id)" -Context $Context
+            if ($tokenResponse.access_token) {
+                Write-SharePointLog -Level "SUCCESS" -Message "Access token acquired successfully" -Context $Context
+
+                # Create custom context object with the access token
+                # This bypasses Connect-MgGraph entirely due to version compatibility issues
+                $graphContext = [PSCustomObject]@{
+                    AccessToken = $tokenResponse.access_token
+                    TenantId    = $Configuration.TenantId
+                    ClientId    = $Configuration.ClientId
+                    TokenType   = "Bearer"
+                    ExpiresOn   = (Get-Date).AddSeconds($tokenResponse.expires_in)
+                    Scopes      = @("https://graph.microsoft.com/.default")
+                    IsCustom    = $true  # Flag to indicate this is our custom context
+                }
+
+                # Validate the connection using direct REST API call
+                Write-SharePointLog -Level "INFO" -Message "Validating Graph connection..." -Context $Context
+                $testUri = "https://graph.microsoft.com/v1.0/organization"
+                $authHeaders = @{
+                    "Authorization" = "Bearer $($graphContext.AccessToken)"
+                    "Content-Type"  = "application/json"
+                }
+                $testResponse = Invoke-RestMethod -Uri $testUri -Method GET -Headers $authHeaders -ErrorAction Stop
+
+                if (-not $testResponse) {
+                    throw "Graph connection test failed - no response"
+                }
+
+                Write-SharePointLog -Level "SUCCESS" -Message "Graph connection validated successfully" -Context $Context
+                Write-SharePointLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via direct access token" -Context $Context
+
+                # Log organization details for confirmation
+                if ($testResponse.value -and $testResponse.value.Count -gt 0) {
+                    $org = $testResponse.value[0]
+                    Write-SharePointLog -Level "INFO" -Message "Connected to tenant: $($org.displayName)" -Context $Context
+                    Write-SharePointLog -Level "DEBUG" -Message "Tenant ID from API: $($org.id)" -Context $Context
+                }
+
+                Write-SharePointLog -Level "HEADER" -Message "=== AUTHENTICATION SUCCESSFUL ===" -Context $Context
+            } else {
+                throw "No access token in response"
             }
-
-            Write-SharePointLog -Level "HEADER" -Message "=== AUTHENTICATION SUCCESSFUL ===" -Context $Context
 
         } catch {
             Write-SharePointLog -Level "ERROR" -Message "Graph authentication validation failed" -Context $Context
@@ -214,7 +245,7 @@ function Invoke-SharePointDiscovery {
                 if (-not $tenantDetected) {
                     try {
                         Write-SharePointLog -Level "DEBUG" -Message "Attempting detection via domains list..." -Context $Context
-                        $domains = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/domains" -Method GET -ErrorAction Stop
+                        $domains = Invoke-CustomGraphRequest -Uri "https://graph.microsoft.com/v1.0/domains" -Method GET -GraphContext $graphContext -ErrorAction Stop
                         if ($domains -and $domains.value) {
                             $onMicrosoftDomain = $domains.value | Where-Object { $_.id -like "*.onmicrosoft.com" -and $_.isDefault } | Select-Object -First 1
                             if ($onMicrosoftDomain) {
@@ -233,7 +264,7 @@ function Invoke-SharePointDiscovery {
                 if (-not $tenantDetected) {
                     try {
                         Write-SharePointLog -Level "DEBUG" -Message "Attempting detection via SharePoint sites..." -Context $Context
-                        $sites = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/sites?`$top=1" -Method GET -ErrorAction Stop
+                        $sites = Invoke-CustomGraphRequest -Uri "https://graph.microsoft.com/v1.0/sites?`$top=1" -Method GET -GraphContext $graphContext -ErrorAction Stop
                         if ($sites -and $sites.value -and $sites.value.Count -gt 0) {
                             $siteUrl = $sites.value[0].webUrl
                             if ($siteUrl -match "https://([^\.]+)\.sharepoint\.com") {
@@ -314,14 +345,14 @@ function Invoke-SharePointDiscovery {
             $sitesUri = "https://graph.microsoft.com/v1.0/sites?`$top=100"
             
             do {
-                $response = Invoke-MgGraphRequest -Uri $sitesUri -Method GET -ErrorAction Stop
+                $response = Invoke-CustomGraphRequest -Uri $sitesUri -Method GET -GraphContext $graphContext -ErrorAction Stop
                 
                 foreach ($site in $response.value) {
                     # Get additional site details
                     $siteDetails = $null
                     try {
                         $siteDetailsUri = "https://graph.microsoft.com/v1.0/sites/$($site.id)?`$expand=drive"
-                        $siteDetails = Invoke-MgGraphRequest -Uri $siteDetailsUri -Method GET -ErrorAction Stop
+                        $siteDetails = Invoke-CustomGraphRequest -Uri $siteDetailsUri -Method GET -GraphContext $graphContext -ErrorAction Stop
                     } catch {
                         Write-SharePointLog -Level "DEBUG" -Message "Could not get details for site $($site.displayName): $_" -Context $Context
                     }
@@ -385,7 +416,7 @@ function Invoke-SharePointDiscovery {
                     Write-SharePointLog -Level "DEBUG" -Message "Getting lists for site: $($site.DisplayName)" -Context $Context
                     
                     $listsUri = "https://graph.microsoft.com/v1.0/sites/$($site.SiteId)/lists?`$top=$maxListsPerSite"
-                    $listsResponse = Invoke-MgGraphRequest -Uri $listsUri -Method GET -ErrorAction Stop
+                    $listsResponse = Invoke-CustomGraphRequest -Uri $listsUri -Method GET -GraphContext $graphContext -ErrorAction Stop
                     
                     foreach ($list in $listsResponse.value) {
                         # Determine if it's a list or library
@@ -442,43 +473,46 @@ function Invoke-SharePointDiscovery {
             Write-SharePointLog -Level "SUCCESS" -Message "Discovered $totalLists lists/libraries across $processedSites sites" -Context $Context
         }
 
-        # 7. EXPORT DATA TO CSV
+        # 7. PREPARE DATA GROUPS FOR ORCHESTRATOR & EXPORT
         if ($allDiscoveredData.Count -gt 0) {
-            Write-SharePointLog -Level "INFO" -Message "Exporting $($allDiscoveredData.Count) records..." -Context $Context
-            
+            Write-SharePointLog -Level "INFO" -Message "Preparing $($allDiscoveredData.Count) records for export..." -Context $Context
+
             $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-            
-            # Group by data type and export
+
+            # Group by data type
             $dataGroups = $allDiscoveredData | Group-Object -Property _DataType
-            
+            $resultGroups = @()
+
             foreach ($group in $dataGroups) {
                 $dataType = $group.Name
                 $data = $group.Group
-                
-                # Add metadata
-                $data | ForEach-Object {
-                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
-                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "SharePoint" -Force
-                    $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
+
+                # Determine group name (orchestrator appends .csv)
+                $name = switch ($dataType) {
+                    'Site' { 'SharePointSites' }
+                    'List' { 'SharePointLists' }
+                    'SitePermission' { 'SharePointSitePermissions' }
+                    'HubSite' { 'SharePointHubSites' }
+                    'SiteAdmin' { 'SharePointSiteAdmins' }
+                    default { "SharePoint_$dataType" }
                 }
-                
-                # Determine filename - MUST match orchestrator expectations
-                $fileName = switch ($dataType) {
-                    'Site' { 'SharePointSites.csv' }
-                    'List' { 'SharePointLists.csv' }
-                    'SitePermission' { 'SharePointSitePermissions.csv' }
-                    'HubSite' { 'SharePointHubSites.csv' }
-                    'SiteAdmin' { 'SharePointSiteAdmins.csv' }
-                    default { "SharePoint_$dataType.csv" }
+
+                if ($data -and $data.Count -gt 0) {
+                    $resultGroups += [PSCustomObject]@{
+                        Name = $name
+                        Group = $data
+                    }
+                    Write-SharePointLog -Level "SUCCESS" -Message "Prepared $($data.Count) $dataType records as group '$name'" -Context $Context
                 }
-                
-                $filePath = Join-Path $outputPath $fileName
-                $data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
-                
-                Write-SharePointLog -Level "SUCCESS" -Message "Exported $($data.Count) $dataType records to $fileName" -Context $Context
+            }
+
+            if ($resultGroups.Count -gt 0) {
+                $result.Data = $resultGroups
+            } else {
+                Write-SharePointLog -Level "WARN" -Message "No non-empty data groups to export" -Context $Context
             }
         } else {
-            Write-SharePointLog -Level "WARN" -Message "No data discovered to export" -Context $Context
+            Write-SharePointLog -Level "WARN" -Message "No data discovered to prepare for export" -Context $Context
         }
 
         # 8. FINALIZE METADATA
@@ -490,13 +524,13 @@ function Invoke-SharePointDiscovery {
         $result.Metadata["TenantName"] = $tenantName
         $result.Metadata["SessionId"] = $SessionId
         $result.Metadata["CredentialSource"] = $credentialSource
-        $result.Metadata["AuthenticationMethod"] = "Session-Based (Microsoft Graph)"
+        $result.Metadata["AuthenticationMethod"] = "Direct Access Token (Microsoft Graph)"
 
         # Log authentication summary
         Write-SharePointLog -Level "HEADER" -Message "=== AUTHENTICATION SUMMARY ===" -Context $Context
         Write-SharePointLog -Level "INFO" -Message "Credentials Available: $hasCredentials" -Context $Context
         Write-SharePointLog -Level "INFO" -Message "Credential Source: $credentialSource" -Context $Context
-        Write-SharePointLog -Level "INFO" -Message "Authentication Method: Session-Based (Microsoft Graph)" -Context $Context
+        Write-SharePointLog -Level "INFO" -Message "Authentication Method: Direct Access Token (Microsoft Graph)" -Context $Context
         Write-SharePointLog -Level "INFO" -Message "Session ID: $SessionId" -Context $Context
         Write-SharePointLog -Level "HEADER" -Message "================================" -Context $Context
 
@@ -516,9 +550,11 @@ function Invoke-SharePointDiscovery {
     finally {
         # 8. CLEANUP & COMPLETE
         Write-SharePointLog -Level "INFO" -Message "Cleaning up..." -Context $Context
-        
-        # Disconnect from services
-        Disconnect-MgGraph -ErrorAction SilentlyContinue
+
+        # Disconnect from services (only if using Connect-MgGraph, not custom token)
+        if (-not $graphContext.IsCustom) {
+            Disconnect-MgGraph -ErrorAction SilentlyContinue
+        }
         
         $stopwatch.Stop()
         $result.EndTime = Get-Date
@@ -534,6 +570,42 @@ function Invoke-SharePointDiscovery {
 }
 
 # --- Helper Functions ---
+
+function Invoke-CustomGraphRequest {
+    <#
+    .SYNOPSIS
+        Custom Graph API request function that uses direct access token
+    .DESCRIPTION
+        Makes REST API calls to Microsoft Graph using access token directly,
+        bypassing Connect-MgGraph version compatibility issues.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Uri,
+
+        [Parameter(Mandatory=$false)]
+        [string]$Method = "GET",
+
+        [Parameter(Mandatory=$true)]
+        $GraphContext
+    )
+
+    if ($GraphContext.IsCustom -eq $true -and $GraphContext.AccessToken) {
+        # Use direct REST API call with access token
+        $authHeaders = @{
+            "Authorization" = "Bearer $($GraphContext.AccessToken)"
+            "Content-Type"  = "application/json"
+        }
+
+        $response = Invoke-RestMethod -Uri $Uri -Method $Method -Headers $authHeaders -ErrorAction Stop
+        return $response
+    } else {
+        # Fallback to standard Invoke-MgGraphRequest (if using standard auth)
+        return Invoke-MgGraphRequest -Uri $Uri -Method $Method -ErrorAction Stop
+    }
+}
+
 function Ensure-Path {
     param($Path)
     if (-not (Test-Path -Path $Path -PathType Container)) {
@@ -547,4 +619,5 @@ function Ensure-Path {
 
 # --- Module Export ---
 Export-ModuleMember -Function Invoke-SharePointDiscovery
+
 

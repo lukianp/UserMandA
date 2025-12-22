@@ -102,20 +102,50 @@ function Connect-MgGraphWithMultipleStrategies {
         try {
             Write-TeamsLog -Level "INFO" -Message "Strategy 1: Attempting Client Secret authentication..." -Context $Context
 
-            $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
-            $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
+            # Get access token using OAuth2 client credentials flow
+            Write-TeamsLog -Level "DEBUG" -Message "Requesting access token from Microsoft Identity Platform..." -Context $Context
+            $tokenBody = @{
+                grant_type    = "client_credentials"
+                client_id     = $Configuration.ClientId
+                client_secret = $Configuration.ClientSecret
+                scope         = "https://graph.microsoft.com/.default"
+            }
 
-            Connect-MgGraph -ClientSecretCredential $credential -TenantId $Configuration.TenantId -NoWelcome -ErrorAction Stop
+            $tokenUri = "https://login.microsoftonline.com/$($Configuration.TenantId)/oauth2/v2.0/token"
+            $tokenResponse = Invoke-RestMethod -Uri $tokenUri -Method POST -Body $tokenBody -ContentType "application/x-www-form-urlencoded" -ErrorAction Stop
 
-            # Verify connection
-            $context = Get-MgContext
-            if ($context -and $context.TenantId) {
-                Write-TeamsLog -Level "SUCCESS" -Message "Strategy 1: Client Secret authentication successful" -Context $Context
-                Write-TeamsLog -Level "DEBUG" -Message "Connected to tenant: $($context.TenantId), Scopes: $($context.Scopes -join ', ')" -Context $Context
-                return $context
+            if ($tokenResponse.access_token) {
+                Write-TeamsLog -Level "DEBUG" -Message "Access token acquired successfully" -Context $Context
+
+                # Return a custom context object with the access token
+                # This bypasses Connect-MgGraph entirely due to version compatibility issues
+                $customContext = [PSCustomObject]@{
+                    AccessToken = $tokenResponse.access_token
+                    TenantId    = $Configuration.TenantId
+                    ClientId    = $Configuration.ClientId
+                    TokenType   = "Bearer"
+                    ExpiresOn   = (Get-Date).AddSeconds($tokenResponse.expires_in)
+                    Scopes      = @("https://graph.microsoft.com/.default")
+                    IsCustom    = $true  # Flag to indicate this is our custom context
+                }
+
+                Write-TeamsLog -Level "SUCCESS" -Message "Strategy 1: Client Secret authentication successful (using direct token)" -Context $Context
+                Write-TeamsLog -Level "DEBUG" -Message "Access token valid until: $($customContext.ExpiresOn)" -Context $Context
+                return $customContext
+            } else {
+                Write-TeamsLog -Level "WARN" -Message "Strategy 1: No access token in response" -Context $Context
             }
         } catch {
             Write-TeamsLog -Level "WARN" -Message "Strategy 1: Client Secret auth failed: $($_.Exception.Message)" -Context $Context
+            if ($_.Exception.Response) {
+                try {
+                    $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+                    $responseBody = $reader.ReadToEnd()
+                    Write-TeamsLog -Level "DEBUG" -Message "Token endpoint error response: $responseBody" -Context $Context
+                } catch {
+                    # Ignore errors reading response
+                }
+            }
         }
     }
 
@@ -300,44 +330,28 @@ function Invoke-TeamsDiscovery {
         Write-TeamsLog -Level "DEBUG" -Message "Authentication details - TenantId: $tenantId, ClientId: $clientId" -Context $Context
 
         try {
-            # Try session-based authentication first (if SessionId provided)
-            $graphContext = $null
-            if ($SessionId) {
-                Write-TeamsLog -Level "INFO" -Message "SessionId provided, attempting session-based authentication..." -Context $Context
-                try {
-                    $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
-                    $graphContext = Get-MgContext
-                    if ($graphContext -and $graphContext.TenantId) {
-                        Write-TeamsLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication (SessionId: $SessionId)" -Context $Context
-                    } else {
-                        Write-TeamsLog -Level "WARN" -Message "Session authentication did not establish Graph context" -Context $Context
-                        $graphContext = $null
-                    }
-                } catch {
-                    Write-TeamsLog -Level "WARN" -Message "Session authentication failed: $($_.Exception.Message)" -Context $Context
-                    $graphContext = $null
-                }
-            }
+            # Use multi-strategy authentication
+            Write-TeamsLog -Level "INFO" -Message "Attempting multi-strategy authentication..." -Context $Context
+            $graphContext = Connect-MgGraphWithMultipleStrategies -Configuration $Configuration -Context $Context
 
-            # If no SessionId or session auth failed, use multi-strategy authentication
             if (-not $graphContext) {
-                Write-TeamsLog -Level "INFO" -Message "Attempting multi-strategy authentication..." -Context $Context
-                $graphContext = Connect-MgGraphWithMultipleStrategies -Configuration $Configuration -Context $Context
-
-                if (-not $graphContext) {
-                    $errorMsg = "All Microsoft Graph authentication strategies failed"
-                    Write-TeamsLog -Level "ERROR" -Message $errorMsg -Context $Context
-                    $result.AddError($errorMsg, $null, @{AuthenticationStage="GraphConnection"})
-                    return $result
-                }
+                $errorMsg = "All Microsoft Graph authentication strategies failed"
+                Write-TeamsLog -Level "ERROR" -Message $errorMsg -Context $Context
+                $result.AddError($errorMsg, $null, @{AuthenticationStage="GraphConnection"})
+                return $result
             }
 
             # Verify connection and log details
             Write-TeamsLog -Level "SUCCESS" -Message "Successfully authenticated to Microsoft Graph" -Context $Context
             if ($graphContext) {
-                Write-TeamsLog -Level "SUCCESS" -Message "Graph connection verified - TenantId: $($graphContext.TenantId), Scopes: $($graphContext.Scopes -join ', ')" -Context $Context
-                $result.Metadata["GraphTenantId"] = $graphContext.TenantId
-                $result.Metadata["GraphScopes"] = $graphContext.Scopes -join ', '
+                $tenantIdToLog = if ($graphContext.TenantId) { $graphContext.TenantId } else { "N/A" }
+                $scopesToLog = if ($graphContext.Scopes) { $graphContext.Scopes -join ', ' } else { "N/A" }
+                $authMethod = if ($graphContext.IsCustom) { "Direct Access Token" } else { "Connect-MgGraph" }
+
+                Write-TeamsLog -Level "SUCCESS" -Message "Graph connection verified - TenantId: $tenantIdToLog, Scopes: $scopesToLog, Method: $authMethod" -Context $Context
+                $result.Metadata["GraphTenantId"] = $tenantIdToLog
+                $result.Metadata["GraphScopes"] = $scopesToLog
+                $result.Metadata["AuthMethod"] = $authMethod
             } else {
                 Write-TeamsLog -Level "WARN" -Message "Graph connection established but context is null" -Context $Context
             }
@@ -361,19 +375,19 @@ function Invoke-TeamsDiscovery {
         $teams = @()
         try {
             Write-TeamsLog -Level "INFO" -Message "Discovering Microsoft Teams..." -Context $Context
-            
+
             # Get all groups that are Teams-enabled
             $uri = "https://graph.microsoft.com/v1.0/groups?`$filter=resourceProvisioningOptions/Any(x:x eq 'Team')&`$select=id,displayName,description,visibility,createdDateTime,mailNickname,mail,isArchived&`$top=999"
-            
+
             do {
-                $response = Invoke-MgGraphRequest -Uri $uri -Method GET -Headers @{'ConsistencyLevel'='eventual'} -ErrorAction Stop
+                $response = Invoke-CustomMgGraphRequest -Uri $uri -Method GET -Headers @{'ConsistencyLevel'='eventual'} -GraphContext $graphContext -ErrorAction Stop
                 
                 foreach ($team in $response.value) {
                     # Get Teams-specific settings
                     $teamSettings = $null
                     try {
                         $teamUri = "https://graph.microsoft.com/v1.0/teams/$($team.id)"
-                        $teamSettings = Invoke-MgGraphRequest -Uri $teamUri -Method GET -ErrorAction Stop
+                        $teamSettings = Invoke-CustomMgGraphRequest -Uri $teamUri -Method GET -GraphContext $graphContext -ErrorAction Stop
                     } catch {
                         Write-TeamsLog -Level "DEBUG" -Message "Could not get settings for team $($team.displayName): $_" -Context $Context
                     }
@@ -428,9 +442,9 @@ function Invoke-TeamsDiscovery {
         foreach ($team in $teams) {
             try {
                 Write-TeamsLog -Level "DEBUG" -Message "Getting channels for team: $($team.DisplayName)" -Context $Context
-                
+
                 $channelUri = "https://graph.microsoft.com/v1.0/teams/$($team.TeamId)/channels"
-                $channelResponse = Invoke-MgGraphRequest -Uri $channelUri -Method GET -ErrorAction Stop
+                $channelResponse = Invoke-CustomMgGraphRequest -Uri $channelUri -Method GET -GraphContext $graphContext -ErrorAction Stop
                 
                 foreach ($channel in $channelResponse.value) {
                     $channelCount++
@@ -455,7 +469,7 @@ function Invoke-TeamsDiscovery {
                     if ($includeTabs) {
                         try {
                             $tabUri = "https://graph.microsoft.com/v1.0/teams/$($team.TeamId)/channels/$($channel.id)/tabs"
-                            $tabResponse = Invoke-MgGraphRequest -Uri $tabUri -Method GET -ErrorAction Stop
+                            $tabResponse = Invoke-CustomMgGraphRequest -Uri $tabUri -Method GET -GraphContext $graphContext -ErrorAction Stop
                             
                             foreach ($tab in $tabResponse.value) {
                                 $tabObj = [PSCustomObject]@{
@@ -497,10 +511,10 @@ function Invoke-TeamsDiscovery {
         foreach ($team in $teams) {
             try {
                 Write-TeamsLog -Level "DEBUG" -Message "Getting members for team: $($team.DisplayName)" -Context $Context
-                
+
                 # Get owners
                 $ownersUri = "https://graph.microsoft.com/v1.0/groups/$($team.TeamId)/owners?`$select=id,displayName,userPrincipalName,mail"
-                $ownersResponse = Invoke-MgGraphRequest -Uri $ownersUri -Method GET -ErrorAction Stop
+                $ownersResponse = Invoke-CustomMgGraphRequest -Uri $ownersUri -Method GET -GraphContext $graphContext -ErrorAction Stop
                 
                 foreach ($owner in $ownersResponse.value) {
                     $memberObj = [PSCustomObject]@{
@@ -521,7 +535,7 @@ function Invoke-TeamsDiscovery {
                 # Get members
                 $membersUri = "https://graph.microsoft.com/v1.0/groups/$($team.TeamId)/members?`$select=id,displayName,userPrincipalName,mail"
                 do {
-                    $membersResponse = Invoke-MgGraphRequest -Uri $membersUri -Method GET -ErrorAction Stop
+                    $membersResponse = Invoke-CustomMgGraphRequest -Uri $membersUri -Method GET -GraphContext $graphContext -ErrorAction Stop
                     
                     foreach ($member in $membersResponse.value) {
                         # Check if already added as owner
@@ -564,7 +578,7 @@ function Invoke-TeamsDiscovery {
                 foreach ($team in $teams) {
                     try {
                         $appsUri = "https://graph.microsoft.com/v1.0/teams/$($team.TeamId)/installedApps?`$expand=teamsApp"
-                        $appsResponse = Invoke-MgGraphRequest -Uri $appsUri -Method GET -ErrorAction Stop
+                        $appsResponse = Invoke-CustomMgGraphRequest -Uri $appsUri -Method GET -GraphContext $graphContext -ErrorAction Stop
                         
                         foreach ($app in $appsResponse.value) {
                             $appObj = [PSCustomObject]@{
@@ -590,7 +604,7 @@ function Invoke-TeamsDiscovery {
                 # Get org-wide Teams apps
                 try {
                     $orgAppsUri = "https://graph.microsoft.com/v1.0/appCatalogs/teamsApps?`$filter=distributionMethod eq 'organization'"
-                    $orgAppsResponse = Invoke-MgGraphRequest -Uri $orgAppsUri -Method GET -ErrorAction Stop
+                    $orgAppsResponse = Invoke-CustomMgGraphRequest -Uri $orgAppsUri -Method GET -GraphContext $graphContext -ErrorAction Stop
                     
                     foreach ($app in $orgAppsResponse.value) {
                         $orgAppObj = [PSCustomObject]@{
@@ -680,9 +694,11 @@ function Invoke-TeamsDiscovery {
     finally {
         # 9. CLEANUP & COMPLETE
         Write-TeamsLog -Level "INFO" -Message "Cleaning up..." -Context $Context
-        
-        # Disconnect from services
-        Disconnect-MgGraph -ErrorAction SilentlyContinue
+
+        # Disconnect from services (only if using Connect-MgGraph, not custom token)
+        if (-not $graphContext.IsCustom) {
+            Disconnect-MgGraph -ErrorAction SilentlyContinue
+        }
         
         $stopwatch.Stop()
         $result.EndTime = Get-Date
@@ -698,6 +714,51 @@ function Invoke-TeamsDiscovery {
 }
 
 # --- Helper Functions ---
+
+function Invoke-CustomMgGraphRequest {
+    <#
+    .SYNOPSIS
+        Custom Graph API request function that works with both Connect-MgGraph and direct access tokens
+    .DESCRIPTION
+        This function checks if we're using a custom context (direct token) or standard MgGraph context,
+        and makes the appropriate REST API call. This bypasses Connect-MgGraph version compatibility issues.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Uri,
+
+        [Parameter(Mandatory=$false)]
+        [string]$Method = "GET",
+
+        [Parameter(Mandatory=$false)]
+        [hashtable]$Headers = @{},
+
+        [Parameter(Mandatory=$true)]
+        $GraphContext
+    )
+
+    # Check if we're using a custom context (direct token) or standard MgGraph
+    if ($GraphContext.IsCustom -eq $true -and $GraphContext.AccessToken) {
+        # Use direct REST API call with access token
+        $authHeaders = @{
+            "Authorization" = "Bearer $($GraphContext.AccessToken)"
+            "Content-Type"  = "application/json"
+        }
+
+        # Merge any additional headers
+        foreach ($key in $Headers.Keys) {
+            $authHeaders[$key] = $Headers[$key]
+        }
+
+        $response = Invoke-RestMethod -Uri $Uri -Method $Method -Headers $authHeaders -ErrorAction Stop
+        return $response
+    } else {
+        # Use standard Invoke-MgGraphRequest (if Connect-MgGraph worked)
+        return Invoke-MgGraphRequest -Uri $Uri -Method $Method -Headers $Headers -ErrorAction Stop
+    }
+}
+
 function Ensure-Path {
     param($Path)
     if (-not (Test-Path -Path $Path -PathType Container)) {

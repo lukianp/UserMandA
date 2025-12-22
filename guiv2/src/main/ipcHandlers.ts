@@ -3030,7 +3030,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   // Migration Plan Persistence (Epic 2)
   // ========================================
   const { registerMigrationHandlers } = await import('./ipcHandlers.migration');
-  registerMigrationHandlers();
+  registerMigrationHandlers(psService);
 
   // ========================================
   // Azure App Registration (Task 3)
@@ -3460,16 +3460,39 @@ ipcMain.handle('get-discovery-files', async () => {
           if (!stat) continue;
 
           if (stat.isDirectory()) {
+            // IMPORTANT: Exclude test data and old data directories
+            const lowerFile = file.toLowerCase();
+            if (lowerFile.includes('rawold') ||
+                lowerFile.includes('testdata') ||
+                lowerFile.includes('test_') ||
+                lowerFile.includes('_test') ||
+                lowerFile.includes('backup') ||
+                lowerFile.includes('archive')) {
+              console.log('[IPC] get-discovery-files: Skipping test/archive directory:', file);
+              continue;
+            }
             await scanDirectory(fullPath);
           } else if (file.endsWith('.csv')) {
+            // IMPORTANT: Exclude test, sample, and timestamped files
+            const lowerFile = file.toLowerCase();
+            if (lowerFile.includes('test') ||
+                lowerFile.includes('sample') ||
+                lowerFile.includes('demo') ||
+                lowerFile.includes('_20') || // Timestamped files like _20251217_
+                lowerFile.includes('performance') ||
+                lowerFile.includes('placeholder')) {
+              console.log('[IPC] get-discovery-files: Skipping test file:', file);
+              continue;
+            }
+
             // Determine file type based on filename patterns
             let type = 'generic';
-            if (file.includes('Users')) type = 'users';
-            else if (file.includes('Groups')) type = 'groups';
-            else if (file.includes('Applications')) type = 'applications';
-            else if (file.includes('Infrastructure')) type = 'infrastructure';
-            else if (file.includes('Exchange')) type = 'exchange';
-            else if (file.includes('FileSystem')) type = 'filesystem';
+            if (lowerFile.includes('user')) type = 'users';
+            else if (lowerFile.includes('group')) type = 'groups';
+            else if (lowerFile.includes('application')) type = 'applications';
+            else if (lowerFile.includes('infrastructure')) type = 'infrastructure';
+            else if (lowerFile.includes('exchange')) type = 'exchange';
+            else if (lowerFile.includes('filesystem')) type = 'filesystem';
 
             csvFiles.push({ path: fullPath, type });
           }
