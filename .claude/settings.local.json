@@ -146,7 +146,11 @@
       "Bash(Length: 0 chars)",
       "Bash(Value: 4c54e13b-5380-483b-a9af-32e1f265f614)",
       "Bash(Select-Object -Last 10)",
-      "Bash(timeout /t 10 /nobreak)"
+      "Bash(timeout /t 10 /nobreak)",
+      "Bash(cmd /c \"cd /d C:\\\\enterprisediscovery\\\\guiv2 && npm start\")",
+      "Bash(cmd /c \"C: && cd \\\\enterprisediscovery\\\\guiv2 && npm start 2>&1\")",
+      "Bash(cmd /c \"tasklist | findstr /i code\")",
+      "Bash(cmd /c \"cd /d C:\\\\enterprisediscovery\\\\guiv2 && npm start 2>&1\")"
     ],
     "deny": [],
     "ask": []

@@ -16,17 +16,22 @@
 .PARAMETER IncludeElectron
     Whether to include the Electron runtime (larger package but fully standalone)
 
+.PARAMETER SkipZip
+    Skip ZIP creation (useful for large packages with Electron)
+
 .PARAMETER DemoMode
     Type of demo: 'Stub' (no real modules), 'Obfuscated' (obfuscated modules)
 
 .EXAMPLE
     .\Build-DemoPackage.ps1 -OutputPath "C:\Demo"
     .\Build-DemoPackage.ps1 -OutputPath "C:\Demo" -IncludeElectron:$false
+    .\Build-DemoPackage.ps1 -OutputPath "C:\Demo" -SkipZip
 #>
 
 param(
     [string]$OutputPath = "C:\Demo",
     [switch]$IncludeElectron = $true,
+    [switch]$SkipZip = $false,
     [ValidateSet('Stub', 'Obfuscated')]
     [string]$DemoMode = 'Stub'
 )
@@ -299,33 +304,36 @@ echo.
 echo Starting application...
 echo.
 
-REM Check if Node.js is available
+REM Check if Electron exists locally
+if exist "node_modules\.bin\electron.cmd" (
+    echo Using local Electron...
+    node_modules\.bin\electron.cmd .
+    goto :end
+)
+
+REM Check if Node.js is available for fallback install
 where node >nul 2>nul
-if %ERRORLEVEL% NEQ 0 (
-    echo ERROR: Node.js is not installed or not in PATH
-    echo Please install Node.js from https://nodejs.org/
+if errorlevel 1 (
+    echo ERROR: Electron not found and Node.js is not installed
+    echo Please ensure the demo package includes node_modules
     pause
     exit /b 1
 )
 
-REM Check for Electron in node_modules
-if exist "node_modules\.bin\electron.cmd" (
-    echo Using local Electron...
-    node_modules\.bin\electron.cmd .
-) else (
-    echo Installing Electron (one-time setup)...
-    npm install electron --save-dev --silent
-    if %ERRORLEVEL% NEQ 0 (
-        echo ERROR: Failed to install Electron
-        pause
-        exit /b 1
-    )
-    node_modules\.bin\electron.cmd .
+echo Installing Electron (one-time setup)...
+npm install electron --save-dev --silent
+if errorlevel 1 (
+    echo ERROR: Failed to install Electron
+    pause
+    exit /b 1
 )
 
-if %ERRORLEVEL% NEQ 0 (
+node_modules\.bin\electron.cmd .
+
+:end
+if errorlevel 1 (
     echo.
-    echo Application closed with error code: %ERRORLEVEL%
+    echo Application closed with an error
     pause
 )
 '@
@@ -419,19 +427,9 @@ Version: 2.1.0-demo
 "@
 Set-Content -Path "$OutputPath\README.md" -Value $readmeContent -Encoding UTF8
 
-# Create ZIP package
-Write-Host ""
-Write-Host "Creating ZIP package..." -ForegroundColor Cyan
-$zipPath = Join-Path $WorkspaceDir "enterprise-discovery-demo.zip"
-
-if (Test-Path $zipPath) {
-    Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
-}
-
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-[System.IO.Compression.ZipFile]::CreateFromDirectory($OutputPath, $zipPath, [System.IO.Compression.CompressionLevel]::Optimal, $false)
-
-$zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+# Calculate output folder size
+$folderSize = (Get-ChildItem -Path $OutputPath -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+$folderSizeMB = [math]::Round($folderSize / 1MB, 2)
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
@@ -439,7 +437,50 @@ Write-Host "Demo Package Created Successfully!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Output Directory: $OutputPath" -ForegroundColor White
-Write-Host "ZIP Package: $zipPath ($zipSize MB)" -ForegroundColor White
+Write-Host "Package Size: $folderSizeMB MB (uncompressed)" -ForegroundColor White
+
+# Create ZIP package (unless skipped)
+if ($SkipZip) {
+    Write-Host ""
+    Write-Host "ZIP creation skipped (-SkipZip parameter)" -ForegroundColor Yellow
+    Write-Host "To create ZIP manually with 7-Zip:" -ForegroundColor Gray
+    Write-Host "  & 'C:\Program Files\7-Zip\7z.exe' a -tzip 'enterprise-discovery-demo.zip' '$OutputPath\*' -mx=5" -ForegroundColor Gray
+} else {
+    Write-Host ""
+    Write-Host "Creating ZIP package..." -ForegroundColor Cyan
+
+    $zipPath = Join-Path $WorkspaceDir "enterprise-discovery-demo.zip"
+
+    if (Test-Path $zipPath) {
+        Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+    }
+
+    $zipStartTime = Get-Date
+
+    # Check for 7-Zip (much faster than Compress-Archive for large packages)
+    $sevenZipPaths = @(
+        "C:\Program Files\7-Zip\7z.exe",
+        "C:\Program Files (x86)\7-Zip\7z.exe",
+        "$env:ProgramFiles\7-Zip\7z.exe"
+    )
+    $sevenZip = $sevenZipPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+    if ($sevenZip) {
+        Write-Host "  Using 7-Zip (fast compression, ~2 minutes)" -ForegroundColor Gray
+        & $sevenZip a -tzip $zipPath "$OutputPath\*" -mx=5 -bso0 -bsp1 | Out-Null
+    } else {
+        Write-Host "  Using Compress-Archive (slow - install 7-Zip for faster builds)" -ForegroundColor Yellow
+        Write-Host "  This may take 20-30 minutes for large packages..." -ForegroundColor Gray
+        Compress-Archive -Path "$OutputPath\*" -DestinationPath $zipPath -CompressionLevel Optimal -Force
+    }
+
+    $zipDuration = (Get-Date) - $zipStartTime
+    $zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+    Write-Host "  ZIP created in $([math]::Round($zipDuration.TotalSeconds, 0)) seconds" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "ZIP Package: $zipPath ($zipSize MB)" -ForegroundColor White
+}
+
 Write-Host ""
 Write-Host "To test locally:" -ForegroundColor Yellow
 Write-Host "  cd $OutputPath" -ForegroundColor Gray

@@ -9,8 +9,8 @@ This demo package provides a fully functional preview of the Enterprise Discover
 Run the build script from PowerShell:
 
 ```powershell
-# Navigate to scripts directory
-cd D:\Scripts\UserMandA\Scripts
+# Navigate to workspace directory
+cd D:\Scripts\UserMandA
 
 # Build demo with stub modules (recommended - smallest size, IP protected)
 .\Build-DemoPackage.ps1 -OutputPath "D:\DemoPackage" -DemoMode Stub
@@ -20,6 +20,9 @@ cd D:\Scripts\UserMandA\Scripts
 
 # Build without bundled Electron (smaller, requires npm install on target)
 .\Build-DemoPackage.ps1 -OutputPath "D:\DemoPackage" -DemoMode Stub -IncludeElectron:$false
+
+# Skip ZIP creation (faster builds during development)
+.\Build-DemoPackage.ps1 -OutputPath "D:\DemoPackage" -SkipZip
 ```
 
 ## Package Contents

@@ -1,21 +1,23 @@
 /**
  * Organisation Map View
  *
- * LeanIX-style Enterprise Architecture visualization with interactive Sankey diagram.
- * Aggregates all discovery data to show relationships between entities.
+ * LeanIX-style Enterprise Architecture visualization with tiered column-based explorer.
+ * Replaces the Sankey diagram with a structured column layout for navigating entity relations.
  *
- * Phase 6: Updated with FactSheetModal integration
+ * Phase 7: Refactored to TieredExplorer layout
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useOrganisationMapLogic } from '../../hooks/useOrganisationMapLogic';
-import { SankeyDiagram } from '../../components/organisms/SankeyDiagram';
+import { useOrganisationExplorerLogic } from '../../hooks/useOrganisationExplorerLogic';
+import { TieredExplorer } from '../../components/organisms/TieredExplorer';
+import { DetailPanel } from '../../components/organisms/DetailPanel';
 import { FactSheetModal } from '../../components/organisms/FactSheetModal';
 import { OrganisationMapFilters } from '../../components/organisms/OrganisationMapFilters';
 import { SankeyNode, FilterState, EntityType, EntityStatus } from '../../types/models/organisation';
 import { Spinner } from '../../components/atoms/Spinner';
 import { Button } from '../../components/atoms/Button';
-import { Network, RefreshCw, Download, ZoomIn, ZoomOut, Info, Filter, Search } from 'lucide-react';
+import { Network, RefreshCw, Download, Home, Filter, Search, ChevronRight, X } from 'lucide-react';
 
 // Default filter state with all types and statuses selected
 const ALL_ENTITY_TYPES: EntityType[] = [
@@ -29,9 +31,8 @@ const ALL_STATUSES: EntityStatus[] = [
 
 export const OrganisationMapView: React.FC = () => {
   const { data, loading, error, refetch, stats } = useOrganisationMapLogic();
-  const [selectedNode, setSelectedNode] = useState<SankeyNode | null>(null);
-  const [hoveredNode, setHoveredNode] = useState<SankeyNode | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalNode, setModalNode] = useState<SankeyNode | null>(null);
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
 
   // Filter state
@@ -41,17 +42,9 @@ export const OrganisationMapView: React.FC = () => {
     searchQuery: '',
   });
 
-  console.log('[OrganisationMapView] Render:', {
-    loading,
-    error,
-    nodes: data?.nodes.length,
-    links: data?.links.length,
-    stats
-  });
-
   // Apply filters to the data
   const filteredData = useMemo(() => {
-    if (!data) return null;
+    if (!data) return { nodes: [], links: [] };
 
     const filteredNodes = data.nodes.filter(node => {
       // Filter by entity type
@@ -87,6 +80,72 @@ export const OrganisationMapView: React.FC = () => {
     return { nodes: filteredNodes, links: filteredLinks };
   }, [data, filters]);
 
+  // Initialize the tiered explorer logic with filtered data
+  const {
+    explorerState,
+    initializeWithEntity,
+    selectRelationGroup,
+    selectEntity,
+    focusOnEntity,
+    goToBreadcrumb,
+    getSelectedEntity,
+    closeDetailPanel
+  } = useOrganisationExplorerLogic({
+    nodes: filteredData.nodes,
+    links: filteredData.links
+  });
+
+  // Auto-initialize with an entity that has relationships
+  useEffect(() => {
+    if (filteredData.nodes.length > 0 && filteredData.links.length > 0 && explorerState.columns.length === 0) {
+      // Build a map of entity IDs to their relationship counts
+      const relationCounts = new Map<string, number>();
+
+      filteredData.links.forEach(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+        relationCounts.set(sourceId, (relationCounts.get(sourceId) || 0) + 1);
+        relationCounts.set(targetId, (relationCounts.get(targetId) || 0) + 1);
+      });
+
+      // Find entity with most relationships, preferring certain types
+      const preferredTypes: EntityType[] = ['company', 'datacenter', 'platform', 'application'];
+      let rootEntity = filteredData.nodes[0];
+      let maxRelations = 0;
+
+      // First try to find a preferred type with relationships
+      for (const type of preferredTypes) {
+        const candidates = filteredData.nodes.filter(n => n.type === type);
+        for (const candidate of candidates) {
+          const count = relationCounts.get(candidate.id) || 0;
+          if (count > maxRelations) {
+            maxRelations = count;
+            rootEntity = candidate;
+          }
+        }
+        if (maxRelations > 0) break; // Found one with relationships
+      }
+
+      // If no preferred type has relationships, find any entity with most relationships
+      if (maxRelations === 0) {
+        filteredData.nodes.forEach(node => {
+          const count = relationCounts.get(node.id) || 0;
+          if (count > maxRelations) {
+            maxRelations = count;
+            rootEntity = node;
+          }
+        });
+      }
+
+      console.log('[OrganisationMapView] Auto-initializing with root entity:', rootEntity.name, 'Type:', rootEntity.type, 'Relations:', maxRelations);
+      initializeWithEntity(rootEntity.id);
+    } else if (filteredData.nodes.length > 0 && filteredData.links.length === 0 && explorerState.columns.length === 0) {
+      // No links - just pick first entity
+      console.log('[OrganisationMapView] No links found, initializing with first entity:', filteredData.nodes[0].name);
+      initializeWithEntity(filteredData.nodes[0].id);
+    }
+  }, [filteredData.nodes, filteredData.links, explorerState.columns.length, initializeWithEntity]);
+
   // Get available categories for filter suggestions
   const availableCategories = useMemo(() => {
     if (!data) return [];
@@ -99,29 +158,52 @@ export const OrganisationMapView: React.FC = () => {
     return Array.from(categories).sort();
   }, [data]);
 
-  const handleNodeClick = useCallback((node: SankeyNode) => {
-    console.log('[OrganisationMapView] Node clicked:', node);
-    setSelectedNode(node);
-    setIsModalOpen(true);
-  }, []);
+  // Handle relation group click
+  const handleRelationGroupClick = useCallback((columnIndex: number, key: string) => {
+    console.log('[OrganisationMapView] Relation group clicked:', key, 'at column', columnIndex);
+    selectRelationGroup(columnIndex, key);
+  }, [selectRelationGroup]);
 
-  const handleNodeHover = useCallback((node: SankeyNode | null) => {
-    setHoveredNode(node);
-  }, []);
+  // Handle entity click
+  const handleEntityClick = useCallback((columnIndex: number, entityId: string) => {
+    console.log('[OrganisationMapView] Entity clicked:', entityId, 'at column', columnIndex);
+    selectEntity(columnIndex, entityId);
+  }, [selectEntity]);
+
+  // Handle entity double-click (open fact sheet modal)
+  const handleEntityDoubleClick = useCallback((entityId: string) => {
+    const node = filteredData.nodes.find(n => n.id === entityId);
+    if (node) {
+      console.log('[OrganisationMapView] Opening fact sheet for:', node.name);
+      setModalNode(node);
+      setIsModalOpen(true);
+    }
+  }, [filteredData.nodes]);
+
+  // Handle focus from detail panel
+  const handleFocusHere = useCallback((entityId: string) => {
+    console.log('[OrganisationMapView] Focus on entity:', entityId);
+    focusOnEntity(entityId);
+  }, [focusOnEntity]);
+
+  // Handle opening fact sheet from detail panel
+  const handleOpenFactSheet = useCallback((entityId: string) => {
+    const node = filteredData.nodes.find(n => n.id === entityId);
+    if (node) {
+      setModalNode(node);
+      setIsModalOpen(true);
+    }
+  }, [filteredData.nodes]);
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
   }, []);
 
   const handleNavigateToEntity = useCallback((entityId: string) => {
-    // Find the entity in the nodes and open its modal
-    const node = data?.nodes.find(n => n.id === entityId);
-    if (node) {
-      console.log('[OrganisationMapView] Navigating to entity:', node.name);
-      setSelectedNode(node);
-      // Keep modal open but switch to new entity
-    }
-  }, [data?.nodes]);
+    // Navigate in explorer and close modal
+    focusOnEntity(entityId);
+    setIsModalOpen(false);
+  }, [focusOnEntity]);
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
     setFilters(newFilters);
@@ -130,6 +212,24 @@ export const OrganisationMapView: React.FC = () => {
   const handleToggleFilters = useCallback(() => {
     setIsFiltersExpanded(prev => !prev);
   }, []);
+
+  // Reset to first entity
+  const handleResetExplorer = useCallback(() => {
+    if (filteredData.nodes.length > 0) {
+      const preferredTypes: EntityType[] = ['company', 'platform', 'application'];
+      let rootEntity = filteredData.nodes[0];
+      for (const type of preferredTypes) {
+        const found = filteredData.nodes.find(n => n.type === type);
+        if (found) {
+          rootEntity = found;
+          break;
+        }
+      }
+      initializeWithEntity(rootEntity.id);
+    }
+  }, [filteredData.nodes, initializeWithEntity]);
+
+  const selectedEntity = getSelectedEntity();
 
   if (loading) {
     return (
@@ -175,7 +275,7 @@ export const OrganisationMapView: React.FC = () => {
                 Organisation Map
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Enterprise Architecture Visualization
+                Enterprise Architecture Explorer • {filteredData.nodes.length} entities
               </p>
             </div>
           </div>
@@ -184,23 +284,12 @@ export const OrganisationMapView: React.FC = () => {
             <Button
               size="sm"
               variant="ghost"
-              icon={<Search size={16} />}
-              title="Search entities"
+              icon={<Home size={16} />}
+              onClick={handleResetExplorer}
+              title="Reset to root"
             >
-              Search
+              Reset
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              icon={<ZoomIn size={16} />}
-              title="Zoom in"
-            />
-            <Button
-              size="sm"
-              variant="ghost"
-              icon={<ZoomOut size={16} />}
-              title="Zoom out"
-            />
             <Button
               size="sm"
               variant="ghost"
@@ -228,21 +317,47 @@ export const OrganisationMapView: React.FC = () => {
         onFiltersChange={handleFiltersChange}
         availableCategories={availableCategories}
         totalCount={data?.nodes.length || 0}
-        filteredCount={filteredData?.nodes.length || 0}
+        filteredCount={filteredData.nodes.length}
         isExpanded={isFiltersExpanded}
         onToggleExpanded={handleToggleFilters}
       />
 
-      {/* Main Content Area - Sankey Diagram */}
+      {/* Breadcrumb Navigation */}
+      {explorerState.breadcrumb.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-2">
+          <div className="flex items-center gap-1 text-sm overflow-x-auto">
+            {explorerState.breadcrumb.map((item, index) => (
+              <React.Fragment key={`${item.id}-${index}`}>
+                {index > 0 && (
+                  <ChevronRight size={14} className="text-gray-400 flex-shrink-0" />
+                )}
+                <button
+                  onClick={() => goToBreadcrumb(item.columnIndex)}
+                  className={`px-2 py-1 rounded flex-shrink-0 transition-colors ${
+                    index === explorerState.breadcrumb.length - 1
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area - Tiered Explorer */}
       <div className="flex-1 relative overflow-hidden">
-        {filteredData && filteredData.nodes.length > 0 ? (
-          <SankeyDiagram
-            nodes={filteredData.nodes}
-            links={filteredData.links}
-            onNodeClick={handleNodeClick}
-            onNodeHover={handleNodeHover}
+        {filteredData.nodes.length > 0 ? (
+          <TieredExplorer
+            explorerState={explorerState}
+            onRelationGroupClick={handleRelationGroupClick}
+            onEntityClick={handleEntityClick}
+            onEntityDoubleClick={handleEntityDoubleClick}
+            height={600}
           />
-        ) : filteredData && filteredData.nodes.length === 0 ? (
+        ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-500 dark:text-gray-400">
               <Filter size={48} className="mx-auto mb-4 opacity-50" />
@@ -250,53 +365,23 @@ export const OrganisationMapView: React.FC = () => {
               <p className="text-sm">Adjust your filters to see more results.</p>
             </div>
           </div>
-        ) : null}
-      </div>
+        )}
 
-      {/* Hovered Node Info Panel */}
-      {hoveredNode && !isModalOpen && (
-        <div className="absolute bottom-20 left-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 border border-gray-200 dark:border-gray-700 max-w-sm z-40">
-          <div className="flex items-start gap-3">
-            <Info size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
-            <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                {hoveredNode.name}
-              </h3>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between gap-4">
-                  <span className="text-gray-600 dark:text-gray-400">Type:</span>
-                  <span className="text-gray-900 dark:text-white capitalize">
-                    {hoveredNode.type.replace('-', ' ')}
-                  </span>
-                </div>
-                {hoveredNode.metadata?.category && (
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-600 dark:text-gray-400">Category:</span>
-                    <span className="text-gray-900 dark:text-white">
-                      {hoveredNode.metadata.category}
-                    </span>
-                  </div>
-                )}
-                {hoveredNode.factSheet?.baseInfo?.description && (
-                  <div className="pt-2 border-t border-gray-200 dark:border-gray-700 mt-2">
-                    <p className="text-gray-600 dark:text-gray-400 text-xs">
-                      {hoveredNode.factSheet.baseInfo.description.substring(0, 100)}
-                      {hoveredNode.factSheet.baseInfo.description.length > 100 && '...'}
-                    </p>
-                  </div>
-                )}
-              </div>
-              <p className="text-xs text-blue-500 mt-2">Click to view details</p>
-            </div>
-          </div>
-        </div>
-      )}
+        {/* Detail Panel */}
+        <DetailPanel
+          selectedEntity={selectedEntity}
+          isOpen={explorerState.detailPanelOpen}
+          onClose={closeDetailPanel}
+          onFocusHere={handleFocusHere}
+          onOpenFactSheet={handleOpenFactSheet}
+        />
+      </div>
 
       {/* Fact Sheet Modal */}
       <FactSheetModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        node={selectedNode}
+        node={modalNode}
         onNavigateToEntity={handleNavigateToEntity}
       />
     </div>

@@ -3482,7 +3482,9 @@ ipcMain.handle('get-discovery-files', async () => {
           if (!stat) continue;
 
           if (stat.isDirectory()) {
-            await scanDirectory(fullPath);
+            // Skip test/old data directories - only scan Raw folders
+            const skipDirs = ['rawold', 'testdata', 'logs', 'temp', 'old', 'test', 'demo'];
+            if (!skipDirs.includes(file.toLowerCase())) await scanDirectory(fullPath);
           } else if (file.endsWith('.csv')) {
             // Determine file type based on filename patterns
             let type = 'generic';
