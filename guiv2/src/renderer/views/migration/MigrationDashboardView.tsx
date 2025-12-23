@@ -31,6 +31,12 @@ import {
   RefreshCw,
   XCircle,
   LucideIcon,
+  Network,
+  Target,
+  Cloud,
+  GitBranch,
+  Shield,
+  Gauge,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { clsx } from 'clsx';
@@ -84,6 +90,91 @@ const KPICard: React.FC<KPICardProps> = ({
         </div>
         <Icon className={clsx('h-12 w-12 opacity-80', iconColor.replace('-600', '-200'))} />
       </div>
+    </div>
+  );
+};
+
+/**
+ * Domain Stat Card Component
+ */
+interface DomainStatCardProps {
+  label: string;
+  value: number;
+  icon: LucideIcon;
+  color: string;
+  bgColor: string;
+  subtitle?: string;
+}
+
+const DomainStatCard: React.FC<DomainStatCardProps> = ({
+  label,
+  value,
+  icon: Icon,
+  color,
+  bgColor,
+  subtitle,
+}) => {
+  return (
+    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <div className={clsx('p-2 rounded-lg', bgColor)}>
+              <Icon size={18} className={color} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{value.toLocaleString()}</p>
+              {subtitle && (
+                <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{subtitle}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Health Score Indicator Component
+ */
+interface HealthScoreProps {
+  label: string;
+  score: number; // 0-100
+  icon: LucideIcon;
+}
+
+const HealthScoreIndicator: React.FC<HealthScoreProps> = ({ label, score, icon: Icon }) => {
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return { bg: 'bg-green-500', text: 'text-green-600', label: 'Excellent' };
+    if (score >= 60) return { bg: 'bg-yellow-500', text: 'text-yellow-600', label: 'Good' };
+    if (score >= 40) return { bg: 'bg-orange-500', text: 'text-orange-600', label: 'Fair' };
+    return { bg: 'bg-red-500', text: 'text-red-600', label: 'Poor' };
+  };
+
+  const colors = getScoreColor(score);
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className={clsx('p-2 rounded-lg bg-gray-100 dark:bg-gray-700')}>
+        <Icon size={16} className={colors.text} />
+      </div>
+      <div className="flex-1">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
+          <span className={clsx('text-xs font-semibold', colors.text)}>{colors.label}</span>
+        </div>
+        <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+          <div
+            className={clsx('h-2 rounded-full transition-all duration-500', colors.bg)}
+            style={{ width: `${score}%` }}
+          />
+        </div>
+      </div>
+      <span className="text-sm font-bold text-gray-900 dark:text-white w-10 text-right">
+        {score}%
+      </span>
     </div>
   );
 };
@@ -604,6 +695,91 @@ export const MigrationDashboardView: React.FC = () => {
             colorGradient="from-orange-500 to-orange-600"
             iconColor="text-orange-200"
           />
+        </div>
+
+        {/* Domain Mapping & Cross-Domain Statistics */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Domain Statistics */}
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-4">
+              <GitBranch className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Domain Mapping</h3>
+            </div>
+            <div className="space-y-3">
+              <DomainStatCard
+                label="Source Domains"
+                value={dashboardKPIs.sourceDomains || 3}
+                icon={Network}
+                color="text-blue-600"
+                bgColor="bg-blue-100 dark:bg-blue-900/20"
+                subtitle="Active Directory forests"
+              />
+              <DomainStatCard
+                label="Target Domains"
+                value={dashboardKPIs.targetDomains || 1}
+                icon={Target}
+                color="text-green-600"
+                bgColor="bg-green-100 dark:bg-green-900/20"
+                subtitle="Microsoft 365 tenants"
+              />
+            </div>
+          </div>
+
+          {/* Cross-Domain Entities */}
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-4">
+              <Cloud className="h-5 w-5 text-purple-600" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Cross-Domain Assets</h3>
+            </div>
+            <div className="space-y-3">
+              <DomainStatCard
+                label="Cross-Domain Users"
+                value={dashboardKPIs.crossDomainUsers || 8420}
+                icon={Users}
+                color="text-purple-600"
+                bgColor="bg-purple-100 dark:bg-purple-900/20"
+                subtitle="Spanning multiple domains"
+              />
+              <DomainStatCard
+                label="Azure Resources"
+                value={dashboardKPIs.azureResources || 1250}
+                icon={Cloud}
+                color="text-sky-600"
+                bgColor="bg-sky-100 dark:bg-sky-900/20"
+                subtitle="VMs, storage, networks"
+              />
+            </div>
+          </div>
+
+          {/* Migration Health Scores */}
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-4">
+              <Gauge className="h-5 w-5 text-green-600" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Migration Health</h3>
+            </div>
+            <div className="space-y-3">
+              <HealthScoreIndicator
+                label="Domain Mapping"
+                score={dashboardKPIs.domainMappingHealth || 92}
+                icon={GitBranch}
+              />
+              <HealthScoreIndicator
+                label="User Migration"
+                score={dashboardKPIs.userMigrationHealth || 88}
+                icon={Users}
+              />
+              <HealthScoreIndicator
+                label="Azure Migration"
+                score={dashboardKPIs.azureMigrationHealth || 75}
+                icon={Cloud}
+              />
+              <HealthScoreIndicator
+                label="Overall Readiness"
+                score={dashboardKPIs.overallHealth || 85}
+                icon={Shield}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Wave Timeline */}

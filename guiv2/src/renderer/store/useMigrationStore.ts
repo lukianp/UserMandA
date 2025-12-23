@@ -205,6 +205,16 @@ export interface DashboardKPIs {
   activeWaveCount: number;
   completedWaveCount: number;
   pendingWaveCount: number;
+  // Domain-specific KPIs
+  sourceDomains?: number;
+  targetDomains?: number;
+  crossDomainUsers?: number;
+  azureResources?: number;
+  // Migration health scores (0-100)
+  domainMappingHealth?: number;
+  userMigrationHealth?: number;
+  azureMigrationHealth?: number;
+  overallHealth?: number;
 }
 
 /**
