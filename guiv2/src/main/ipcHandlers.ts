@@ -9,7 +9,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
-import { ipcMain, dialog, shell, BrowserWindow } from 'electron';
+import { ipcMain, dialog, shell, BrowserWindow, app } from 'electron';
 
 import { ScriptExecutionParams, ModuleExecutionParams, ScriptTask, ExecutionOptions } from '../types/shared';
 import type { UserDetailProjection } from '../renderer/types/models/userDetail';
@@ -104,11 +104,33 @@ async function initializeServices(): Promise<void> {
   console.log('Initializing IPC services...');
 
   // Initialize PowerShell Execution Service
-  // Always use the fixed deployment directory for PowerShell modules
-  // This ensures modules are found regardless of where Electron is launched from
-  const deploymentDir = 'C:\\enterprisediscovery';
+  // Detect if running as standalone demo or from deployment directory
+  const appPath = app.getAppPath();
   const cwd = process.cwd();
-  const baseDir = cwd.endsWith('guiv2') ? path.join(cwd, '..') : deploymentDir;
+  const deploymentDir = 'C:\\enterprisediscovery';
+
+  // Determine base directory for PowerShell modules:
+  // 1. If running from a directory containing Modules folder, use that (demo/standalone mode)
+  // 2. If cwd ends with guiv2, use parent directory
+  // 3. Otherwise, use fixed deployment directory
+  let baseDir: string;
+
+  // Check if running from standalone demo (has Modules folder in app path or cwd)
+  const cwdModulesPath = path.join(cwd, 'Modules', 'Discovery');
+  const appModulesPath = path.join(appPath, '..', 'Modules', 'Discovery');
+
+  if (require('fs').existsSync(cwdModulesPath)) {
+    baseDir = cwd;
+    console.log('[IPC] Running in standalone mode (Modules found in cwd)');
+  } else if (require('fs').existsSync(appModulesPath)) {
+    baseDir = path.join(appPath, '..');
+    console.log('[IPC] Running in standalone mode (Modules found in app path)');
+  } else if (cwd.endsWith('guiv2')) {
+    baseDir = path.join(cwd, '..');
+  } else {
+    baseDir = deploymentDir;
+  }
+
   console.log(`[IPC] PowerShell scripts base directory: ${baseDir}`);
 
   psService = new PowerShellExecutionService({
