@@ -13,7 +13,7 @@
  * />
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { DiscoveredViewTemplate } from './DiscoveredViewTemplate';
 import { useCsvDataLoader } from '../../hooks/useCsvDataLoader';
 
@@ -32,6 +32,12 @@ export interface DiscoveredViewWrapperProps {
   enableExport?: boolean;
   /** Data-cy attribute for testing */
   'data-cy'?: string;
+  /** Optional filter function to apply to loaded data */
+  dataFilter?: (data: Record<string, any>[]) => Record<string, any>[];
+  /** Callback when raw data is loaded (before filtering) */
+  onDataLoaded?: (data: Record<string, any>[], columns: any[]) => void;
+  /** Optional custom header content to render */
+  headerContent?: React.ReactNode;
 }
 
 /**
@@ -45,12 +51,15 @@ export const DiscoveredViewWrapper: React.FC<DiscoveredViewWrapperProps> = ({
   enableSearch = true,
   enableExport = true,
   'data-cy': dataCy,
+  dataFilter,
+  onDataLoaded,
+  headerContent,
 }) => {
   const [searchText, setSearchText] = useState('');
 
   // Load CSV data using the hook
   const {
-    data,
+    data: rawData,
     columns,
     loading,
     error,
@@ -61,6 +70,20 @@ export const DiscoveredViewWrapper: React.FC<DiscoveredViewWrapperProps> = ({
     refreshInterval: 30000,
     gracefulDegradation: true, // Return empty data instead of error for missing files
   });
+
+  // Notify parent when raw data is loaded
+  useEffect(() => {
+    if (rawData && rawData.length > 0 && onDataLoaded) {
+      onDataLoaded(rawData, columns);
+    }
+  }, [rawData, columns, onDataLoaded]);
+
+  // Apply optional data filter
+  const data = useMemo(() => {
+    if (!rawData) return rawData;
+    if (!dataFilter) return rawData;
+    return dataFilter(rawData);
+  }, [rawData, dataFilter]);
 
   // Handle search text change
   const handleSearchChange = useCallback((value: string) => {
@@ -99,23 +122,26 @@ export const DiscoveredViewWrapper: React.FC<DiscoveredViewWrapperProps> = ({
   }, [data, columns, moduleName]);
 
   return (
-    <DiscoveredViewTemplate
-      title={title}
-      description={description}
-      data={data}
-      columns={columns}
-      loading={loading}
-      error={error}
-      searchText={searchText}
-      onSearchChange={handleSearchChange}
-      onRefresh={reload}
-      onExport={handleExport}
-      lastRefresh={lastRefresh}
-      enableSearch={enableSearch}
-      enableExport={enableExport}
-      data-cy={dataCy}
-      persistenceKey={csvPath}
-    />
+    <>
+      {headerContent}
+      <DiscoveredViewTemplate
+        title={title}
+        description={description}
+        data={data}
+        columns={columns}
+        loading={loading}
+        error={error}
+        searchText={searchText}
+        onSearchChange={handleSearchChange}
+        onRefresh={reload}
+        onExport={handleExport}
+        lastRefresh={lastRefresh}
+        enableSearch={enableSearch}
+        enableExport={enableExport}
+        data-cy={dataCy}
+        persistenceKey={csvPath}
+      />
+    </>
   );
 };
 

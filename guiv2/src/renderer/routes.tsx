@@ -435,6 +435,20 @@ export const routes: RouteObject[] = [
     element: lazyLoad(() => import('./views/migration/MigrationEngineeringView')),
   },
 
+  // Consolidated Inventory routes
+  {
+    path: '/inventory',
+    element: lazyLoad(() => import('./views/inventory/ConsolidatedInventoryView')),
+  },
+  {
+    path: '/inventory/all',
+    element: lazyLoad(() => import('./views/inventory/ConsolidatedInventoryView')),
+  },
+  {
+    path: '/inventory/entity/:entityId',
+    element: lazyLoad(() => import('./views/inventory/EntityDetailView')),
+  },
+
   // Users & Groups
   {
     path: '/users',

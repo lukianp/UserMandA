@@ -760,6 +760,36 @@ export interface ElectronAPI {
     clearCredentials: (profileId: string) => Promise<{ success: boolean; error?: string }>;
 
     /**
+     * Get application filter settings for a profile
+     * @param profileId Optional profile ID, uses active profile if not specified
+     * @returns Promise resolving to ApplicationFilterSettings
+     */
+    getApplicationFilterSettings: (profileId?: string) => Promise<import('../../../shared/types/profile').ApplicationFilterSettings>;
+
+    /**
+     * Save application filter settings for a profile
+     * @param settings ApplicationFilterSettings to save
+     * @param profileId Optional profile ID, uses active profile if not specified
+     * @returns Promise resolving when saved
+     */
+    setApplicationFilterSettings: (settings: import('../../../shared/types/profile').ApplicationFilterSettings, profileId?: string) => Promise<void>;
+
+    /**
+     * Get tenant domain information for a profile
+     * @param profileId Optional profile ID, uses active profile if not specified
+     * @returns Promise resolving to TenantDomainInfo or null
+     */
+    getTenantDomains: (profileId?: string) => Promise<import('../../../shared/types/profile').TenantDomainInfo | null>;
+
+    /**
+     * Save tenant domain information for a profile
+     * @param domains TenantDomainInfo to save
+     * @param profileId Optional profile ID, uses active profile if not specified
+     * @returns Promise resolving when saved
+     */
+    setTenantDomains: (domains: import('../../../shared/types/profile').TenantDomainInfo, profileId?: string) => Promise<void>;
+
+    /**
      * Register a listener for profile change events
      * @param callback Function to call when profile changes
      * @returns Cleanup function to remove listener
@@ -2384,6 +2414,401 @@ export interface ElectronAPI {
       status?: string;
       trigger?: string;
     }) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+  };
+
+  // ========================================
+  // Consolidated Inventory API
+  // ========================================
+
+  /**
+   * Inventory management operations
+   */
+  inventory: {
+    /**
+     * Consolidate inventory from discovery data
+     * @param params - Consolidation parameters
+     * @returns Promise with consolidation result
+     */
+    consolidate: (params: {
+      sourceProfileId: string;
+      companyName: string;
+      options?: { forceFullRebuild?: boolean };
+    }) => Promise<{
+      success: boolean;
+      data?: {
+        entitiesCreated: number;
+        entitiesUpdated: number;
+        relationsCreated: number;
+        errors: string[];
+      };
+      error?: string;
+    }>;
+
+    /**
+     * Get inventory entities with optional filtering
+     * @param filters - Filter criteria
+     * @returns Promise with entities
+     */
+    getEntities: (filters?: {
+      sourceProfileId?: string;
+      entityTypes?: string[];
+      statuses?: string[];
+      search?: string;
+      minReadinessScore?: number;
+      maxRiskScore?: number;
+      unassignedOnly?: boolean;
+      waveId?: string;
+    }) => Promise<{
+      success: boolean;
+      data?: any[];
+      error?: string;
+    }>;
+
+    /**
+     * Get single inventory entity
+     * @param entityId - Entity ID
+     * @returns Promise with entity
+     */
+    getEntity: (entityId: string) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Get entity with full details (evidence, relations)
+     * @param entityId - Entity ID
+     * @returns Promise with entity detail
+     */
+    getEntityDetail: (entityId: string) => Promise<{
+      success: boolean;
+      data?: {
+        entity: any;
+        evidence: any[];
+        relations: any[];
+        relatedEntities: any[];
+      };
+      error?: string;
+    }>;
+
+    /**
+     * Update inventory entity
+     * @param params - Update parameters
+     * @returns Promise with updated entity
+     */
+    updateEntity: (params: {
+      entityId: string;
+      updates: any;
+    }) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Delete inventory entity
+     * @param entityId - Entity ID
+     * @returns Promise with deletion result
+     */
+    deleteEntity: (entityId: string) => Promise<{
+      success: boolean;
+      data?: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Get inventory statistics
+     * @param sourceProfileId - Optional profile filter
+     * @returns Promise with statistics
+     */
+    getStatistics: (sourceProfileId?: string) => Promise<{
+      success: boolean;
+      data?: {
+        totalEntities: number;
+        byType: Record<string, number>;
+        byStatus: Record<string, number>;
+        avgReadinessScore: number;
+        avgRiskScore: number;
+        totalRelations: number;
+        relationsByType: Record<string, number>;
+      };
+      error?: string;
+    }>;
+
+    /**
+     * Get relations for an entity
+     * @param entityId - Entity ID
+     * @returns Promise with relations
+     */
+    getRelations: (entityId: string) => Promise<{
+      success: boolean;
+      data?: any[];
+      error?: string;
+    }>;
+
+    /**
+     * Get all relations with optional filtering
+     * @param filter - Filter criteria
+     * @returns Promise with relations
+     */
+    getAllRelations: (filter?: {
+      sourceProfileId?: string;
+      relationTypes?: string[];
+    }) => Promise<{
+      success: boolean;
+      data?: any[];
+      error?: string;
+    }>;
+
+    /**
+     * Get evidence for an entity
+     * @param entityId - Entity ID
+     * @returns Promise with evidence records
+     */
+    getEvidence: (entityId: string) => Promise<{
+      success: boolean;
+      data?: any[];
+      error?: string;
+    }>;
+  };
+
+  // ========================================
+  // Migration Wave Planning API
+  // ========================================
+
+  /**
+   * Migration wave planning operations
+   */
+  waves: {
+    /**
+     * Create a new migration wave
+     * @param waveData - Wave data
+     * @returns Promise with created wave
+     */
+    create: (waveData: {
+      name: string;
+      description?: string;
+      sourceProfileId: string;
+      targetProfileId: string;
+      scheduledStartDate?: string;
+      scheduledEndDate?: string;
+      priority?: number;
+    }) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Get all migration waves
+     * @param filter - Filter criteria
+     * @returns Promise with waves
+     */
+    getAll: (filter?: {
+      sourceProfileId?: string;
+      targetProfileId?: string;
+      statuses?: string[];
+    }) => Promise<{
+      success: boolean;
+      data?: any[];
+      error?: string;
+    }>;
+
+    /**
+     * Get single wave
+     * @param waveId - Wave ID
+     * @returns Promise with wave
+     */
+    get: (waveId: string) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Update wave
+     * @param params - Update parameters
+     * @returns Promise with updated wave
+     */
+    update: (params: {
+      waveId: string;
+      updates: any;
+    }) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Delete wave
+     * @param waveId - Wave ID
+     * @returns Promise with deletion result
+     */
+    delete: (waveId: string) => Promise<{
+      success: boolean;
+      data?: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Get wave summary with statistics
+     * @param waveId - Wave ID
+     * @returns Promise with wave summary
+     */
+    getSummary: (waveId: string) => Promise<{
+      success: boolean;
+      data?: {
+        wave: any;
+        totalEntities: number;
+        entitiesByType: Record<string, number>;
+        entitiesByStatus: Record<string, number>;
+        avgReadinessScore: number;
+        avgRiskScore: number;
+        blockers: any[];
+        goNoGoStatus: 'GO' | 'NO_GO' | 'PENDING';
+        criteriaMet: number;
+        criteriaTotal: number;
+      };
+      error?: string;
+    }>;
+
+    /**
+     * Assign entities to a wave
+     * @param params - Assignment parameters
+     * @returns Promise with assignment result
+     */
+    assignEntities: (params: {
+      waveId: string;
+      entityIds: string[];
+      reason?: string;
+      reasonDetails?: string;
+    }) => Promise<{
+      success: boolean;
+      data?: { assigned: number; skipped: number };
+      error?: string;
+    }>;
+
+    /**
+     * Unassign entities from a wave
+     * @param params - Unassignment parameters
+     * @returns Promise with result
+     */
+    unassignEntities: (params: {
+      waveId: string;
+      entityIds: string[];
+    }) => Promise<{
+      success: boolean;
+      data?: { unassigned: number };
+      error?: string;
+    }>;
+
+    /**
+     * Get wave assignments
+     * @param waveId - Wave ID
+     * @returns Promise with assignments
+     */
+    getAssignments: (waveId: string) => Promise<{
+      success: boolean;
+      data?: any[];
+      error?: string;
+    }>;
+
+    /**
+     * Suggest wave assignments based on entity analysis
+     * @param params - Suggestion parameters
+     * @returns Promise with suggestions
+     */
+    suggestAssignments: (params: {
+      sourceProfileId: string;
+      targetProfileId: string;
+      options?: {
+        maxEntitiesPerWave?: number;
+        minReadinessScore?: number;
+        prioritizeTypes?: string[];
+      };
+    }) => Promise<{
+      success: boolean;
+      data?: Array<{
+        suggestedWaveName: string;
+        suggestedOrder: number;
+        entityIds: string[];
+        rationale: string;
+        estimatedDuration: string;
+        risks: string[];
+      }>;
+      error?: string;
+    }>;
+
+    /**
+     * Apply wave suggestions (create waves and assign entities)
+     * @param params - Apply parameters
+     * @returns Promise with created waves
+     */
+    applySuggestions: (params: {
+      sourceProfileId: string;
+      targetProfileId: string;
+      suggestions: any[];
+    }) => Promise<{
+      success: boolean;
+      data?: any[];
+      error?: string;
+    }>;
+
+    /**
+     * Validate wave readiness
+     * @param waveId - Wave ID
+     * @returns Promise with validation result
+     */
+    validate: (waveId: string) => Promise<{
+      success: boolean;
+      data?: {
+        isValid: boolean;
+        blockers: Array<{ entityId: string; reason: string }>;
+        warnings: Array<{ entityId: string; message: string }>;
+        goNoGoStatus: 'GO' | 'NO_GO' | 'PENDING';
+      };
+      error?: string;
+    }>;
+
+    /**
+     * Start wave execution
+     * @param waveId - Wave ID
+     * @returns Promise with result
+     */
+    start: (waveId: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Pause wave execution
+     * @param waveId - Wave ID
+     * @returns Promise with result
+     */
+    pause: (waveId: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Resume wave execution
+     * @param waveId - Wave ID
+     * @returns Promise with result
+     */
+    resume: (waveId: string) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Complete wave
+     * @param waveId - Wave ID
+     * @returns Promise with result
+     */
+    complete: (waveId: string) => Promise<{
       success: boolean;
       error?: string;
     }>;

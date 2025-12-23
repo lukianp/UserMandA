@@ -22,6 +22,7 @@ import { LogicEngineService } from './services/logicEngineService';
 import { ProjectService } from './services/projectService';
 import { DashboardService } from './services/dashboardService';
 import { ProfileService } from './services/profileService';
+import { applicationFactsService } from './services/applicationFactsService';
 
 
 // Service instances
@@ -178,6 +179,11 @@ async function initializeServices(): Promise<void> {
   // Initialize Profile Service with auto-discovery
   profileService = new ProfileService();
   await profileService.initialize();
+
+  // Initialize Application Facts Service
+  await applicationFactsService.initialize();
+  applicationFactsService.registerIpcHandlers();
+  console.log('Application Facts Service initialized');
 
   // Initialize FileSystem Service
   const { FileSystemService } = await import('./services/FileSystemService');
@@ -3108,6 +3114,12 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   // ========================================
   const { registerAdvancedIpcHandlers } = await import('./ipc/handlers');
   registerAdvancedIpcHandlers();
+
+  // ========================================
+  // Inventory & Migration Wave Handlers
+  // ========================================
+  const { registerInventoryHandlers } = await import('./ipc/inventoryHandlers');
+  registerInventoryHandlers();
 
   // ========================================
   // Webhook Handlers (Legacy - moved to handlers.ts)

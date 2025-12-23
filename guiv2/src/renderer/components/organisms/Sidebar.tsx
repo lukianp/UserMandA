@@ -190,6 +190,11 @@ export const Sidebar: React.FC = () => {
       icon: <Workflow size={20} />,
     },
     {
+      path: '/inventory',
+      label: 'Inventory',
+      icon: <Database size={20} />,
+    },
+    {
       path: '/migration',
       label: 'Migration',
       icon: <ArrowRightLeft size={20} />,

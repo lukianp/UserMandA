@@ -232,6 +232,36 @@ const electronAPI: ElectronAPI = {
      * @returns Promise with success result
      */
     clearCredentials: (profileId: string) => ipcRenderer.invoke('profile:clearCredentials', profileId),
+    /**
+     * Get application filter settings for the active profile
+     * @param profileId - Optional profile ID, uses active profile if not specified
+     * @returns Promise with ApplicationFilterSettings
+     */
+    getApplicationFilterSettings: (profileId?: string) =>
+      ipcRenderer.invoke('profile:getApplicationFilterSettings', profileId),
+    /**
+     * Save application filter settings for the active profile
+     * @param settings - ApplicationFilterSettings to save
+     * @param profileId - Optional profile ID, uses active profile if not specified
+     * @returns Promise with success status
+     */
+    setApplicationFilterSettings: (settings: any, profileId?: string) =>
+      ipcRenderer.invoke('profile:setApplicationFilterSettings', settings, profileId),
+    /**
+     * Get tenant domain information for the active profile
+     * @param profileId - Optional profile ID, uses active profile if not specified
+     * @returns Promise with TenantDomainInfo or null
+     */
+    getTenantDomains: (profileId?: string) =>
+      ipcRenderer.invoke('profile:getTenantDomains', profileId),
+    /**
+     * Save tenant domain information for the active profile
+     * @param domains - TenantDomainInfo to save
+     * @param profileId - Optional profile ID, uses active profile if not specified
+     * @returns Promise with success status
+     */
+    setTenantDomains: (domains: any, profileId?: string) =>
+      ipcRenderer.invoke('profile:setTenantDomains', domains, profileId),
     onProfileChanged: (callback: () => void) => {
       ipcRenderer.on('profile:changed', callback);
       return () => ipcRenderer.removeListener('profile:changed', callback);
@@ -1035,6 +1065,360 @@ const electronAPI: ElectronAPI = {
      */
     updateWaveStatus: (profileName: string, waveId: string, status: any) =>
       ipcRenderer.invoke('project:updateWaveStatus', profileName, waveId, status),
+  },
+
+  // ========================================
+  // Application Facts API
+  // ========================================
+
+  facts: {
+    /**
+     * Get all application facts
+     * @param filter - Optional filter criteria
+     * @returns Promise with array of ApplicationFact
+     */
+    getAll: (filter?: any) =>
+      ipcRenderer.invoke('facts:getAll', filter),
+
+    /**
+     * Get a single fact by ID
+     * @param id - Fact ID
+     * @returns Promise with ApplicationFact or null
+     */
+    getById: (id: string) =>
+      ipcRenderer.invoke('facts:getById', id),
+
+    /**
+     * Get a fact by Azure AD App ID
+     * @param appId - Azure AD application ID
+     * @returns Promise with ApplicationFact or null
+     */
+    getByAppId: (appId: string) =>
+      ipcRenderer.invoke('facts:getByAppId', appId),
+
+    /**
+     * Create a new application fact
+     * @param data - Partial ApplicationFact data
+     * @returns Promise with created ApplicationFact
+     */
+    create: (data: any) =>
+      ipcRenderer.invoke('facts:create', data),
+
+    /**
+     * Update an existing fact
+     * @param id - Fact ID
+     * @param updates - Partial updates
+     * @param source - Discovery source
+     * @param notes - Optional notes
+     * @returns Promise with updated ApplicationFact
+     */
+    update: (id: string, updates: any, source?: string, notes?: string) =>
+      ipcRenderer.invoke('facts:update', id, updates, source, notes),
+
+    /**
+     * Delete a fact
+     * @param id - Fact ID
+     * @returns Promise with success boolean
+     */
+    delete: (id: string) =>
+      ipcRenderer.invoke('facts:delete', id),
+
+    /**
+     * Add a relation to a fact
+     * @param factId - Fact ID
+     * @param relation - Relation data
+     * @returns Promise with created FactRelation
+     */
+    addRelation: (factId: string, relation: any) =>
+      ipcRenderer.invoke('facts:addRelation', factId, relation),
+
+    /**
+     * Remove a relation from a fact
+     * @param factId - Fact ID
+     * @param relationId - Relation ID
+     * @returns Promise with success boolean
+     */
+    removeRelation: (factId: string, relationId: string) =>
+      ipcRenderer.invoke('facts:removeRelation', factId, relationId),
+
+    /**
+     * Get all relations for an app
+     * @param appId - App ID
+     * @returns Promise with inbound and outbound relations
+     */
+    getRelations: (appId: string) =>
+      ipcRenderer.invoke('facts:getRelations', appId),
+
+    /**
+     * Set migration plan for a fact
+     * @param factId - Fact ID
+     * @param plan - Migration plan
+     * @returns Promise with updated ApplicationFact
+     */
+    setMigrationPlan: (factId: string, plan: any) =>
+      ipcRenderer.invoke('facts:setMigrationPlan', factId, plan),
+
+    /**
+     * Get facts by migration status
+     * @param status - Migration status
+     * @returns Promise with array of ApplicationFact
+     */
+    getByMigrationStatus: (status: string) =>
+      ipcRenderer.invoke('facts:getByMigrationStatus', status),
+
+    /**
+     * Get statistics about all facts
+     * @returns Promise with FactSheetStatistics
+     */
+    getStatistics: () =>
+      ipcRenderer.invoke('facts:getStatistics'),
+
+    /**
+     * Sync facts from discovery data
+     * @param companyName - Company name
+     * @param classificationResults - Optional classification results
+     * @returns Promise with FactSheetSyncResult
+     */
+    syncFromDiscovery: (companyName: string, classificationResults?: any) =>
+      ipcRenderer.invoke('facts:syncFromDiscovery', companyName, classificationResults),
+  },
+
+  // ========================================
+  // Consolidated Inventory API
+  // ========================================
+
+  inventory: {
+    /**
+     * Consolidate discovery data into inventory entities
+     * @param params - Consolidation parameters
+     * @returns Promise with consolidation result
+     */
+    consolidate: (params: {
+      sourceProfileId: string;
+      companyName: string;
+      options?: { forceFullRebuild?: boolean };
+    }) =>
+      ipcRenderer.invoke('inventory:consolidate', params),
+
+    /**
+     * Get inventory entities with optional filtering
+     * @param filters - Entity filters
+     * @returns Promise with array of entities
+     */
+    getEntities: (filters?: any) =>
+      ipcRenderer.invoke('inventory:getEntities', filters),
+
+    /**
+     * Get a single inventory entity by ID
+     * @param entityId - Entity ID
+     * @returns Promise with entity or null
+     */
+    getEntity: (entityId: string) =>
+      ipcRenderer.invoke('inventory:getEntity', entityId),
+
+    /**
+     * Get entity with full details (evidence, relations)
+     * @param entityId - Entity ID
+     * @returns Promise with entity detail
+     */
+    getEntityDetail: (entityId: string) =>
+      ipcRenderer.invoke('inventory:getEntityDetail', entityId),
+
+    /**
+     * Update an inventory entity
+     * @param entityId - Entity ID
+     * @param updates - Partial updates
+     * @returns Promise with updated entity
+     */
+    updateEntity: (entityId: string, updates: any) =>
+      ipcRenderer.invoke('inventory:updateEntity', { entityId, updates }),
+
+    /**
+     * Delete an inventory entity
+     * @param entityId - Entity ID
+     * @returns Promise with success status
+     */
+    deleteEntity: (entityId: string) =>
+      ipcRenderer.invoke('inventory:deleteEntity', entityId),
+
+    /**
+     * Get inventory statistics
+     * @param sourceProfileId - Optional profile filter
+     * @returns Promise with statistics
+     */
+    getStatistics: (sourceProfileId?: string) =>
+      ipcRenderer.invoke('inventory:getStatistics', sourceProfileId),
+
+    /**
+     * Get relations for an entity
+     * @param entityId - Entity ID
+     * @returns Promise with array of relations
+     */
+    getRelations: (entityId: string) =>
+      ipcRenderer.invoke('inventory:getRelations', entityId),
+
+    /**
+     * Get all relations
+     * @param filter - Optional filter
+     * @returns Promise with array of relations
+     */
+    getAllRelations: (filter?: { sourceProfileId?: string; relationTypes?: string[] }) =>
+      ipcRenderer.invoke('inventory:getAllRelations', filter),
+
+    /**
+     * Get evidence for an entity
+     * @param entityId - Entity ID
+     * @returns Promise with array of evidence
+     */
+    getEvidence: (entityId: string) =>
+      ipcRenderer.invoke('inventory:getEvidence', entityId),
+  },
+
+  // ========================================
+  // Migration Wave Planning API
+  // ========================================
+
+  waves: {
+    /**
+     * Create a new migration wave
+     * @param waveData - Wave data
+     * @returns Promise with created wave
+     */
+    create: (waveData: any) =>
+      ipcRenderer.invoke('waves:create', waveData),
+
+    /**
+     * Get all migration waves
+     * @param filter - Optional filter
+     * @returns Promise with array of waves
+     */
+    getAll: (filter?: { sourceProfileId?: string; targetProfileId?: string; statuses?: string[] }) =>
+      ipcRenderer.invoke('waves:getAll', filter),
+
+    /**
+     * Get a single wave by ID
+     * @param waveId - Wave ID
+     * @returns Promise with wave or null
+     */
+    get: (waveId: string) =>
+      ipcRenderer.invoke('waves:get', waveId),
+
+    /**
+     * Update a wave
+     * @param waveId - Wave ID
+     * @param updates - Partial updates
+     * @returns Promise with updated wave
+     */
+    update: (waveId: string, updates: any) =>
+      ipcRenderer.invoke('waves:update', { waveId, updates }),
+
+    /**
+     * Delete a wave
+     * @param waveId - Wave ID
+     * @returns Promise with success status
+     */
+    delete: (waveId: string) =>
+      ipcRenderer.invoke('waves:delete', waveId),
+
+    /**
+     * Get wave summary with statistics
+     * @param waveId - Wave ID
+     * @returns Promise with wave summary
+     */
+    getSummary: (waveId: string) =>
+      ipcRenderer.invoke('waves:getSummary', waveId),
+
+    /**
+     * Assign entities to a wave
+     * @param waveId - Wave ID
+     * @param entityIds - Array of entity IDs
+     * @param reason - Assignment reason
+     * @param reasonDetails - Optional details
+     * @returns Promise with assignment result
+     */
+    assignEntities: (waveId: string, entityIds: string[], reason?: string, reasonDetails?: string) =>
+      ipcRenderer.invoke('waves:assignEntities', { waveId, entityIds, reason, reasonDetails }),
+
+    /**
+     * Unassign entities from a wave
+     * @param waveId - Wave ID
+     * @param entityIds - Array of entity IDs
+     * @returns Promise with unassignment result
+     */
+    unassignEntities: (waveId: string, entityIds: string[]) =>
+      ipcRenderer.invoke('waves:unassignEntities', { waveId, entityIds }),
+
+    /**
+     * Get wave assignments
+     * @param waveId - Wave ID
+     * @returns Promise with array of assignments
+     */
+    getAssignments: (waveId: string) =>
+      ipcRenderer.invoke('waves:getAssignments', waveId),
+
+    /**
+     * Get wave assignment suggestions
+     * @param params - Suggestion parameters
+     * @returns Promise with array of suggestions
+     */
+    suggestAssignments: (params: {
+      sourceProfileId: string;
+      targetProfileId: string;
+      options?: { maxEntitiesPerWave?: number; minReadinessScore?: number; prioritizeTypes?: string[] };
+    }) =>
+      ipcRenderer.invoke('waves:suggestAssignments', params),
+
+    /**
+     * Apply wave suggestions
+     * @param params - Suggestion application parameters
+     * @returns Promise with result
+     */
+    applySuggestions: (params: {
+      sourceProfileId: string;
+      targetProfileId: string;
+      suggestions: any[];
+    }) =>
+      ipcRenderer.invoke('waves:applySuggestions', params),
+
+    /**
+     * Validate a wave is ready for execution
+     * @param waveId - Wave ID
+     * @returns Promise with validation result
+     */
+    validate: (waveId: string) =>
+      ipcRenderer.invoke('waves:validate', waveId),
+
+    /**
+     * Start wave execution
+     * @param waveId - Wave ID
+     * @returns Promise with result
+     */
+    start: (waveId: string) =>
+      ipcRenderer.invoke('waves:start', waveId),
+
+    /**
+     * Pause wave execution
+     * @param waveId - Wave ID
+     * @returns Promise with result
+     */
+    pause: (waveId: string) =>
+      ipcRenderer.invoke('waves:pause', waveId),
+
+    /**
+     * Resume wave execution
+     * @param waveId - Wave ID
+     * @returns Promise with result
+     */
+    resume: (waveId: string) =>
+      ipcRenderer.invoke('waves:resume', waveId),
+
+    /**
+     * Complete wave
+     * @param waveId - Wave ID
+     * @returns Promise with result
+     */
+    complete: (waveId: string) =>
+      ipcRenderer.invoke('waves:complete', waveId),
   },
 };
 

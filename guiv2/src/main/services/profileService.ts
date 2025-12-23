@@ -6,7 +6,16 @@ import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 import { glob } from 'glob';
 
-import { CompanyProfile, ProfileDatabase, ProfileStatistics, ProfileValidationResult, ConnectionConfig } from '@shared/types/profile';
+import {
+  CompanyProfile,
+  ProfileDatabase,
+  ProfileStatistics,
+  ProfileValidationResult,
+  ConnectionConfig,
+  ApplicationFilterSettings,
+  TenantDomainInfo,
+  DEFAULT_APPLICATION_FILTER_SETTINGS
+} from '../../shared/types/profile';
 
 export class ProfileService {
   private db!: Low<ProfileDatabase>;
@@ -55,6 +64,16 @@ export class ProfileService {
     ipcMain.handle('profile:validate', (_, profile: CompanyProfile) => this.validateProfile(profile));
     ipcMain.handle('profile:getConnectionConfig', (_, profileId: string) => this.getConnectionConfig(profileId));
     ipcMain.handle('profile:setConnectionConfig', (_, profileId: string, config: ConnectionConfig) => this.setConnectionConfig(profileId, config));
+
+    // Application filter settings handlers
+    ipcMain.handle('profile:getApplicationFilterSettings', (_, profileId?: string) => this.getApplicationFilterSettings(profileId));
+    ipcMain.handle('profile:setApplicationFilterSettings', (_, settings: ApplicationFilterSettings, profileId?: string) =>
+      this.setApplicationFilterSettings(settings, profileId));
+
+    // Tenant domain handlers
+    ipcMain.handle('profile:getTenantDomains', (_, profileId?: string) => this.getTenantDomains(profileId));
+    ipcMain.handle('profile:setTenantDomains', (_, domains: TenantDomainInfo, profileId?: string) =>
+      this.setTenantDomains(domains, profileId));
   }
   private ensureData(): void {
     // Ensure data is initialized (file might not exist or be corrupted)
@@ -523,5 +542,145 @@ export class ProfileService {
     windows.forEach((window: any) => {
       window.webContents.send('profile:changed');
     });
+  }
+
+  // ============================================
+  // Application Filter Settings Methods
+  // ============================================
+
+  /**
+   * Get application filter settings for a profile
+   * If no profileId provided, uses current active profile
+   */
+  async getApplicationFilterSettings(profileId?: string): Promise<ApplicationFilterSettings> {
+    let profile: CompanyProfile | null = null;
+
+    if (profileId) {
+      const profiles = await this.getProfiles();
+      profile = profiles.find(p => p.id === profileId) || null;
+    } else {
+      profile = await this.getCurrentProfile();
+    }
+
+    if (!profile) {
+      console.log('[ProfileService] No profile found, returning default filter settings');
+      return { ...DEFAULT_APPLICATION_FILTER_SETTINGS };
+    }
+
+    // Get settings from profile configuration
+    const config = profile.configuration || {};
+    const settings = config.applicationFilters as ApplicationFilterSettings | undefined;
+
+    if (settings) {
+      // Merge with defaults to ensure all fields exist
+      return {
+        ...DEFAULT_APPLICATION_FILTER_SETTINGS,
+        ...settings
+      };
+    }
+
+    return { ...DEFAULT_APPLICATION_FILTER_SETTINGS };
+  }
+
+  /**
+   * Save application filter settings for a profile
+   */
+  async setApplicationFilterSettings(settings: ApplicationFilterSettings, profileId?: string): Promise<void> {
+    await this.db.read();
+    this.ensureData();
+
+    let profile: CompanyProfile | undefined;
+
+    if (profileId) {
+      profile = this.db.data.profiles.find(p => p.id === profileId);
+    } else {
+      profile = this.db.data.profiles.find(p => p.isActive);
+    }
+
+    if (!profile) {
+      throw new Error('No profile found to save filter settings');
+    }
+
+    // Initialize configuration if needed
+    if (!profile.configuration) {
+      profile.configuration = {};
+    }
+
+    // Save settings
+    profile.configuration.applicationFilters = settings;
+    profile.lastModified = new Date().toISOString();
+
+    await this.db.write();
+
+    console.log(`[ProfileService] Saved application filter settings for profile: ${profile.companyName}`);
+  }
+
+  // ============================================
+  // Tenant Domain Methods
+  // ============================================
+
+  /**
+   * Get tenant domain info for a profile
+   */
+  async getTenantDomains(profileId?: string): Promise<TenantDomainInfo | null> {
+    let profile: CompanyProfile | null = null;
+
+    if (profileId) {
+      const profiles = await this.getProfiles();
+      profile = profiles.find(p => p.id === profileId) || null;
+    } else {
+      profile = await this.getCurrentProfile();
+    }
+
+    if (!profile) {
+      return null;
+    }
+
+    const config = profile.configuration || {};
+    return config.tenantDomains as TenantDomainInfo | undefined || null;
+  }
+
+  /**
+   * Save tenant domain info for a profile
+   */
+  async setTenantDomains(domains: TenantDomainInfo, profileId?: string): Promise<void> {
+    await this.db.read();
+    this.ensureData();
+
+    let profile: CompanyProfile | undefined;
+
+    if (profileId) {
+      profile = this.db.data.profiles.find(p => p.id === profileId);
+    } else {
+      profile = this.db.data.profiles.find(p => p.isActive);
+    }
+
+    if (!profile) {
+      throw new Error('No profile found to save tenant domains');
+    }
+
+    // Initialize configuration if needed
+    if (!profile.configuration) {
+      profile.configuration = {};
+    }
+
+    // Save with timestamp
+    profile.configuration.tenantDomains = {
+      ...domains,
+      discoveredAt: new Date().toISOString()
+    };
+    profile.lastModified = new Date().toISOString();
+
+    await this.db.write();
+
+    console.log(`[ProfileService] Saved tenant domains for profile: ${profile.companyName}`, domains.verifiedDomains);
+  }
+
+  /**
+   * Get verified domains as a simple string array (convenience method)
+   */
+  async getVerifiedDomainsArray(profileId?: string): Promise<string[]> {
+    const domainInfo = await this.getTenantDomains(profileId);
+    return domainInfo?.verifiedDomains || [];
   }
 }
