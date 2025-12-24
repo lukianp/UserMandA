@@ -232,7 +232,7 @@ function Invoke-PowerBIDiscovery {
                         $discoveryData.Statistics.GroupWorkspaces++
                     }
                     
-                    $workspaceInfo = @{
+                    $workspaceInfo = [PSCustomObject]@{
                         WorkspaceId = $workspace.Id
                         Name = $workspace.Name
                         Description = $workspace.Description
@@ -243,6 +243,7 @@ function Invoke-PowerBIDiscovery {
                         IsOnDedicatedCapacity = $workspace.IsOnDedicatedCapacity
                         CapacityId = $workspace.CapacityId
                         DefaultDatasetStorageFormat = $workspace.DefaultDatasetStorageFormat
+                        Users = ''
                     }
                     
                     $discoveryData.Workspaces += $workspaceInfo
@@ -250,7 +251,9 @@ function Invoke-PowerBIDiscovery {
                     # Get workspace users/permissions
                     try {
                         $workspaceUsers = Get-PowerBIWorkspaceUser -Scope Organization -Id $workspace.Id -ErrorAction SilentlyContinue
-                        $workspaceInfo.Users = if ($workspaceUsers) { ($workspaceUsers | ForEach-Object { "$($_.UserPrincipalName):$($_.AccessRight)" }) -join ';' } else { '' }
+                        if ($workspaceUsers) {
+                            $workspaceInfo | Add-Member -MemberType NoteProperty -Name 'Users' -Value (($workspaceUsers | ForEach-Object { "$($_.UserPrincipalName):$($_.AccessRight)" }) -join ';') -Force
+                        }
                     } catch {
                         Write-PowerBILog -Level "DEBUG" -Message "Could not get users for workspace $($workspace.Name): $($_.Exception.Message)" -Context $Context
                     }
@@ -270,7 +273,7 @@ function Invoke-PowerBIDiscovery {
                 foreach ($report in $reports) {
                     $discoveryData.Statistics.TotalReports++
                     
-                    $reportInfo = @{
+                    $reportInfo = [PSCustomObject]@{
                         ReportId = $report.Id
                         Name = $report.Name
                         Description = $report.Description
@@ -303,7 +306,7 @@ function Invoke-PowerBIDiscovery {
                 foreach ($dataset in $datasets) {
                     $discoveryData.Statistics.TotalDatasets++
                     
-                    $datasetInfo = @{
+                    $datasetInfo = [PSCustomObject]@{
                         DatasetId = $dataset.Id
                         Name = $dataset.Name
                         Description = $dataset.Description
@@ -319,13 +322,14 @@ function Invoke-PowerBIDiscovery {
                         IsEffectiveIdentityRequired = $dataset.IsEffectiveIdentityRequired
                         IsEffectiveIdentityRolesRequired = $dataset.IsEffectiveIdentityRolesRequired
                         IsOnPremGatewayRequired = $dataset.IsOnPremGatewayRequired
+                        DataSources = ''
                     }
-                    
+
                     # Get dataset data sources
                     try {
                         $dataSources = Get-PowerBIDataSource -DatasetId $dataset.Id -WorkspaceId $dataset.WorkspaceId -ErrorAction SilentlyContinue
                         if ($dataSources) {
-                            $datasetInfo.DataSources = ($dataSources | ForEach-Object { "$($_.DatasourceType):$($_.ConnectionDetails.Server):$($_.ConnectionDetails.Database)" }) -join ';'
+                            $datasetInfo | Add-Member -MemberType NoteProperty -Name 'DataSources' -Value (($dataSources | ForEach-Object { "$($_.DatasourceType):$($_.ConnectionDetails.Server):$($_.ConnectionDetails.Database)" }) -join ';') -Force
                         }
                     } catch {
                         Write-PowerBILog -Level "DEBUG" -Message "Could not get data sources for dataset $($dataset.Name): $($_.Exception.Message)" -Context $Context
@@ -348,7 +352,7 @@ function Invoke-PowerBIDiscovery {
                 foreach ($dashboard in $dashboards) {
                     $discoveryData.Statistics.TotalDashboards++
                     
-                    $dashboardInfo = @{
+                    $dashboardInfo = [PSCustomObject]@{
                         DashboardId = $dashboard.Id
                         DisplayName = $dashboard.DisplayName
                         WebUrl = $dashboard.WebUrl
@@ -356,22 +360,23 @@ function Invoke-PowerBIDiscovery {
                         WorkspaceId = $dashboard.WorkspaceId
                         AppId = $dashboard.AppId
                         IsReadOnly = $dashboard.IsReadOnly
+                        TileCount = 0
                     }
                     
                     # Get dashboard tiles
                     try {
                         $tiles = Get-PowerBITile -DashboardId $dashboard.Id -WorkspaceId $dashboard.WorkspaceId -ErrorAction SilentlyContinue
                         if ($tiles) {
-                            $dashboardInfo.TileCount = $tiles.Count
-                            $dashboardInfo.Tiles = ($tiles | ForEach-Object { "$($_.Title):$($_.SubTitle):$($_.DatasetId)" }) -join ';'
+                            $dashboardInfo | Add-Member -MemberType NoteProperty -Name 'TileCount' -Value @($tiles).Count -Force
+                            $dashboardInfo | Add-Member -MemberType NoteProperty -Name 'Tiles' -Value (($tiles | ForEach-Object { "$($_.Title):$($_.SubTitle):$($_.DatasetId)" }) -join ';') -Force
                         } else {
-                            $dashboardInfo.TileCount = 0
-                            $dashboardInfo.Tiles = ''
+                            $dashboardInfo | Add-Member -MemberType NoteProperty -Name 'TileCount' -Value 0 -Force
+                            $dashboardInfo | Add-Member -MemberType NoteProperty -Name 'Tiles' -Value '' -Force
                         }
                     } catch {
                         Write-PowerBILog -Level "DEBUG" -Message "Could not get tiles for dashboard $($dashboard.DisplayName): $($_.Exception.Message)" -Context $Context
-                        $dashboardInfo.TileCount = 0
-                        $dashboardInfo.Tiles = ''
+                        $dashboardInfo | Add-Member -MemberType NoteProperty -Name 'TileCount' -Value 0 -Force
+                        $dashboardInfo | Add-Member -MemberType NoteProperty -Name 'Tiles' -Value '' -Force
                     }
                     
                     $discoveryData.Dashboards += $dashboardInfo
@@ -391,7 +396,7 @@ function Invoke-PowerBIDiscovery {
                 foreach ($app in $apps) {
                     $discoveryData.Statistics.TotalApps++
                     
-                    $appInfo = @{
+                    $appInfo = [PSCustomObject]@{
                         AppId = $app.Id
                         Name = $app.Name
                         Description = $app.Description
@@ -417,7 +422,7 @@ function Invoke-PowerBIDiscovery {
                 foreach ($gateway in $gateways) {
                     $discoveryData.Statistics.TotalGateways++
                     
-                    $gatewayInfo = @{
+                    $gatewayInfo = [PSCustomObject]@{
                         GatewayId = $gateway.Id
                         Name = $gateway.Name
                         Description = $gateway.Description
@@ -427,22 +432,19 @@ function Invoke-PowerBIDiscovery {
                         GatewayAnnotation = $gateway.GatewayAnnotation
                         ContactInformation = if ($gateway.ContactInformation) { $gateway.ContactInformation -join ';' } else { '' }
                         LoadBalancingSetting = $gateway.LoadBalancingSetting
+                        DataSourceCount = 0
+                        DataSources = ''
                     }
-                    
+
                     # Get gateway data sources
                     try {
                         $gatewayDataSources = Get-PowerBIGatewayDataSource -GatewayId $gateway.Id -ErrorAction SilentlyContinue
                         if ($gatewayDataSources) {
-                            $gatewayInfo.DataSourceCount = $gatewayDataSources.Count
-                            $gatewayInfo.DataSources = ($gatewayDataSources | ForEach-Object { "$($_.DataSourceName):$($_.DataSourceType)" }) -join ';'
-                        } else {
-                            $gatewayInfo.DataSourceCount = 0
-                            $gatewayInfo.DataSources = ''
+                            $gatewayInfo | Add-Member -MemberType NoteProperty -Name 'DataSourceCount' -Value @($gatewayDataSources).Count -Force
+                            $gatewayInfo | Add-Member -MemberType NoteProperty -Name 'DataSources' -Value (($gatewayDataSources | ForEach-Object { "$($_.DataSourceName):$($_.DataSourceType)" }) -join ';') -Force
                         }
                     } catch {
                         Write-PowerBILog -Level "DEBUG" -Message "Could not get data sources for gateway $($gateway.Name): $($_.Exception.Message)" -Context $Context
-                        $gatewayInfo.DataSourceCount = 0
-                        $gatewayInfo.DataSources = ''
                     }
                     
                     $discoveryData.Gateways += $gatewayInfo
@@ -469,7 +471,7 @@ function Invoke-PowerBIDiscovery {
                         $discoveryData.Statistics.TotalWorkspaces++
                         $discoveryData.Statistics.GroupWorkspaces++
 
-                        $workspaceInfo = @{
+                        $workspaceInfo = [PSCustomObject]@{
                             WorkspaceId = $group.id
                             Name = $group.displayName
                             Description = $group.description
@@ -480,6 +482,7 @@ function Invoke-PowerBIDiscovery {
                             SecurityEnabled = $group.securityEnabled
                             Visibility = $group.visibility
                             GraphSource = $true
+                            Users = ''
                         }
 
                         $discoveryData.Workspaces += $workspaceInfo
@@ -501,7 +504,8 @@ function Invoke-PowerBIDiscovery {
                                         default { "$($_.displayName) ($($_.PSObject.TypeNames[0]))" }
                                     }
                                 }
-                                $workspace.Users = ($memberList -join ';').Substring(0, [Math]::Min($memberList.Length, 1000))
+                                $usersString = ($memberList -join ';')
+                                $workspace | Add-Member -MemberType NoteProperty -Name 'Users' -Value $usersString.Substring(0, [Math]::Min($usersString.Length, 1000)) -Force
                             }
                         } catch {
                             Write-PowerBILog -Level "DEBUG" -Message "Could not get members for workspace $($workspace.Name): $($_.Exception.Message)" -Context $Context
@@ -531,7 +535,7 @@ function Invoke-PowerBIDiscovery {
 
                             if ($tenantSettings) {
                                 foreach ($setting in $tenantSettings) {
-                                    $settingInfo = @{
+                                    $settingInfo = [PSCustomObject]@{
                                         SettingName = $setting.displayName
                                         SettingId = $setting.id
                                         TemplateId = $setting.templateId
@@ -609,7 +613,18 @@ function Invoke-PowerBIDiscovery {
             
             # Save Statistics summary
             $statsPath = Join-Path $outputPath "PowerBIStatistics.csv"
-            @($discoveryData.Statistics) | Export-Csv -Path $statsPath -NoTypeInformation -Encoding UTF8
+            $statsObject = [PSCustomObject]@{
+                TotalWorkspaces = $discoveryData.Statistics.TotalWorkspaces
+                PersonalWorkspaces = $discoveryData.Statistics.PersonalWorkspaces
+                GroupWorkspaces = $discoveryData.Statistics.GroupWorkspaces
+                TotalReports = $discoveryData.Statistics.TotalReports
+                TotalDatasets = $discoveryData.Statistics.TotalDatasets
+                TotalDashboards = $discoveryData.Statistics.TotalDashboards
+                TotalDataflows = $discoveryData.Statistics.TotalDataflows
+                TotalApps = $discoveryData.Statistics.TotalApps
+                TotalGateways = $discoveryData.Statistics.TotalGateways
+            }
+            @($statsObject) | Export-Csv -Path $statsPath -NoTypeInformation -Encoding UTF8
             Write-PowerBILog -Level "SUCCESS" -Message "Saved Power BI statistics to $statsPath" -Context $Context
             
         } catch {

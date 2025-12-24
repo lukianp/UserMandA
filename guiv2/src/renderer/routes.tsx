@@ -452,6 +452,10 @@ export const routes: RouteObject[] = [
     path: '/inventory/infrastructure',
     element: lazyLoad(() => import('./views/inventory/ConsolidatedInfrastructureView')),
   },
+  {
+    path: '/inventory/factsheets',
+    element: lazyLoad(() => import('./views/inventory/ApplicationInventoryView')),
+  },
 
   // Users & Groups
   {

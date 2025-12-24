@@ -1,4 +1,4 @@
-ished/**
+/**
  * Web Server Config Discovered View
  *
  * Auto-generated discovered data view for Web Server Config.

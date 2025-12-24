@@ -6,6 +6,7 @@
  */
 
 import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
@@ -3098,6 +3099,79 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   // ========================================
   const { registerAdvancedIpcHandlers } = await import('./ipc/handlers');
   registerAdvancedIpcHandlers();
+
+  // ========================================
+  // Application Fact Sheet Handlers
+  // ========================================
+  const { registerApplicationFactSheetHandlers } = await import('./ipc/applicationFactSheetHandlers');
+  registerApplicationFactSheetHandlers();
+
+  // ========================================
+  // Discovery Data Access Handlers
+  // ========================================
+  ipcMain.handle('discovery:get-applications', async (_, args: { sourceProfileId: string }) => {
+    try {
+      const { sourceProfileId } = args;
+      const profileService = await import('./services/profileService');
+      const profile = await profileService.getProfileById(sourceProfileId);
+
+      // Get profile name for data path
+      const profileName = profile?.companyName || 'default';
+      const dataPath = path.join(process.env.DISCOVERY_DATA_PATH || 'C:\\DiscoveryData', profileName, 'Raw');
+
+      // Try to read ApplicationCatalog.csv first, then Applications.csv
+      const catalogPath = path.join(dataPath, 'ApplicationCatalog.csv');
+      const appsPath = path.join(dataPath, 'Applications.csv');
+
+      let filePath = '';
+      if (fsSync.existsSync(catalogPath)) {
+        filePath = catalogPath;
+      } else if (fsSync.existsSync(appsPath)) {
+        filePath = appsPath;
+      } else {
+        return { success: false, error: 'No application discovery data found' };
+      }
+
+      // Read and parse CSV
+      const content = fsSync.readFileSync(filePath, 'utf-8');
+      const lines = content.split('\n').filter((line: string) => line.trim());
+
+      if (lines.length < 2) {
+        return { success: false, error: 'No application data in file' };
+      }
+
+      // Parse headers
+      const headers = lines[0].split(',').map((h: string) => h.replace(/^"|"$/g, '').trim());
+
+      // Parse data rows
+      const applications = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].match(/("([^"]*)"|[^,]*)/g) || [];
+        const row: Record<string, string> = {};
+
+        headers.forEach((header: string, idx: number) => {
+          let value = values[idx] || '';
+          value = value.replace(/^"|"$/g, '').trim();
+          row[header] = value;
+        });
+
+        // Only add if has a name
+        if (row.Name || row.ApplicationName || row.name) {
+          applications.push(row);
+        }
+      }
+
+      return {
+        success: true,
+        data: applications,
+        sourceFile: path.basename(filePath),
+        count: applications.length
+      };
+    } catch (error) {
+      console.error('Error getting discovery applications:', error);
+      return { success: false, error: (error as Error).message };
+    }
+  });
 
   // ========================================
   // Webhook Handlers (Legacy - moved to handlers.ts)

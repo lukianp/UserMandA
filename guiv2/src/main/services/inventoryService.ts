@@ -316,6 +316,19 @@ export class InventoryService {
   }> {
     const profilePath = path.join(this.dataRootPath, sourceProfileId, 'Raw');
 
+    // Normalize record keys to camelCase for consistent access
+    const normalizeRecord = (record: any): any => {
+      const normalized: any = {};
+      for (const key of Object.keys(record)) {
+        // Convert PascalCase to camelCase (first letter lowercase)
+        const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+        normalized[camelKey] = record[key];
+        // Also keep original key for backwards compatibility
+        normalized[key] = record[key];
+      }
+      return normalized;
+    };
+
     const loadCsv = async (filename: string): Promise<any[]> => {
       const filePath = path.join(profilePath, filename);
       try {
@@ -326,7 +339,8 @@ export class InventoryService {
           dynamicTyping: true,
         });
         console.log(`[InventoryService] ✅ Loaded ${parsed.data.length} records from ${filename}`);
-        return parsed.data as any[];
+        // Normalize all records to have camelCase keys
+        return (parsed.data as any[]).map(normalizeRecord);
       } catch (error) {
         console.warn(`[InventoryService] Could not load ${filename}:`, error);
         return [];

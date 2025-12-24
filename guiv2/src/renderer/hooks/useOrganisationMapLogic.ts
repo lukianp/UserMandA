@@ -32,6 +32,39 @@ const MAX_NODES = 5000; // Maximum nodes to render (prevent browser crash with 9
 const MAX_LINKS = 10000; // Maximum links to render
 const CACHE_VERSION = 'v2'; // Bump to invalidate cache
 
+/**
+ * Case-insensitive property getter for CSV records
+ * Handles PascalCase, camelCase, and lowercase variations
+ */
+const getRecordProp = (record: any, propName: string): any => {
+  if (!record || !propName) return undefined;
+
+  // Try exact match first
+  if (record[propName] !== undefined) return record[propName];
+
+  // Try camelCase version
+  const camelCase = propName.charAt(0).toLowerCase() + propName.slice(1);
+  if (record[camelCase] !== undefined) return record[camelCase];
+
+  // Try PascalCase version
+  const pascalCase = propName.charAt(0).toUpperCase() + propName.slice(1);
+  if (record[pascalCase] !== undefined) return record[pascalCase];
+
+  // Try lowercase
+  const lowerCase = propName.toLowerCase();
+  if (record[lowerCase] !== undefined) return record[lowerCase];
+
+  // Try case-insensitive search as last resort
+  const lowerProp = propName.toLowerCase();
+  for (const key of Object.keys(record)) {
+    if (key.toLowerCase() === lowerProp) {
+      return record[key];
+    }
+  }
+
+  return undefined;
+};
+
 interface UseOrganisationMapLogicReturn {
   data: OrganisationMapData | null;
   loading: boolean;
@@ -272,30 +305,36 @@ const typeMapping: Record<string, {
     category: 'Certificate'
   },
 
-  // Backup & Recovery
+  // Backup & Recovery - Treat backup systems as applications for better visibility
   'backup_backupassessment': {
-    type: 'it-component',
-    getName: (r) => r.ComputerName || r.Name || r.BackupType,
+    type: 'application',
+    getName: (r) => r.BackupSoftware || r.BackupType || r.ComputerName || r.Name,
     priority: 2,
-    category: 'Backup'
+    category: 'Backup System'
   },
   'backup_systemrecovery': {
-    type: 'it-component',
-    getName: (r) => r.ComputerName || r.Name,
+    type: 'application',
+    getName: (r) => r.RecoveryType || r.ComputerName || r.Name,
     priority: 2,
-    category: 'Backup'
+    category: 'Backup System'
   },
   'backup_vss': {
-    type: 'it-component',
+    type: 'application',
     getName: (r) => r.ComputerName || r.Name || r.VolumeName,
     priority: 2,
-    category: 'Backup'
+    category: 'Backup System'
   },
   'backuprecoverydiscovery': {
-    type: 'it-component',
-    getName: (r) => r.Name || r.ComputerName,
+    type: 'application',
+    getName: (r) => r.BackupProduct || r.SoftwareName || r.Name || r.ComputerName,
     priority: 2,
-    category: 'Backup'
+    category: 'Backup System'
+  },
+  'backup_backupsoftware': {
+    type: 'application',
+    getName: (r) => r.ProductName || r.SoftwareName || r.Name || r.DisplayName,
+    priority: 2,
+    category: 'Backup System'
   },
 
   // Dependencies
@@ -1112,6 +1151,17 @@ function parseCSVToNodes(csvContent: string, fileTypeKey: string, filePath: stri
     return values;
   };
 
+  // Helper to clean PowerShell serialization artifacts
+  const cleanPSValue = (value: string): string => {
+    if (!value) return value;
+    // Handle "System.Collections.Hashtable+KeyCollection" and similar
+    if (value.includes('System.Collections') || value.includes('Hashtable+KeyCollection')) {
+      return ''; // These are PS artifacts, not real values
+    }
+    // Clean other common artifacts
+    return value.replace(/^\[object Object\]$/, '').trim();
+  };
+
   const headers = parseCSVLine(lines[0]);
   const nodes: SankeyNode[] = [];
 
@@ -1129,7 +1179,8 @@ function parseCSVToNodes(csvContent: string, fileTypeKey: string, filePath: stri
 
     const record: Record<string, string> = {};
     headers.forEach((header, idx) => {
-      record[header] = values[idx] || '';
+      // Clean PowerShell serialization artifacts from values
+      record[header] = cleanPSValue(values[idx] || '');
     });
 
     const node = createNodeFromRecord(record, mapping, fileTypeKey, i);
@@ -1342,10 +1393,16 @@ function generateLinksForFile(
       }
     }
 
-    // Mailbox to User (UserPrincipalName matching)
-    if (fileTypeKey.includes('mailbox') && record.UserPrincipalName) {
+    // Mailbox to User (UserPrincipalName or PrimarySmtpAddress matching)
+    if ((fileTypeKey.includes('mailbox') || fileTypeKey.includes('exchange')) &&
+        (record.UserPrincipalName || record.PrimarySmtpAddress)) {
+      const upnOrEmail = record.UserPrincipalName || record.PrimarySmtpAddress;
       const userNode = allNodes.find(n =>
-        n.metadata?.record?.UserPrincipalName === record.UserPrincipalName
+        n.metadata?.record?.UserPrincipalName === upnOrEmail ||
+        n.metadata?.record?.Mail === upnOrEmail ||
+        n.metadata?.record?.PrimarySmtpAddress === upnOrEmail ||
+        // Also check by display name for mailbox owner matching
+        (record.DisplayName && n.name === record.DisplayName && n.metadata?.source?.includes('user'))
       );
       if (userNode && userNode.id !== node.id) {
         links.push({
@@ -1353,6 +1410,25 @@ function generateLinksForFile(
           target: node.id,
           value: 1,
           type: 'ownership'
+        });
+      }
+    }
+
+    // Network Infrastructure to Servers/Datacenters
+    if (fileTypeKey.includes('network') && (record.ComputerName || record.ServerName || record.HostName)) {
+      const serverName = record.ComputerName || record.ServerName || record.HostName;
+      const serverNode = allNodes.find(n =>
+        (n.type === 'it-component' || n.type === 'datacenter') &&
+        (n.name === serverName ||
+         n.metadata?.record?.ComputerName === serverName ||
+         n.metadata?.record?.Name === serverName)
+      );
+      if (serverNode && serverNode.id !== node.id) {
+        links.push({
+          source: serverNode.id,
+          target: node.id,
+          value: 1,
+          type: 'deployment'
         });
       }
     }
@@ -1498,16 +1574,19 @@ function generateCrossFileLinksOptimized(
   databases.forEach(db => {
     const dbName = db.name.toLowerCase();
     dbIndex.set(dbName, db);
-    if (db.metadata?.record?.DatabaseName) {
-      dbIndex.set(db.metadata.record.DatabaseName.toLowerCase(), db);
+    const recordDbName = getRecordProp(db.metadata?.record, 'DatabaseName');
+    if (recordDbName) {
+      dbIndex.set(recordDbName.toLowerCase(), db);
     }
   });
 
   // Link apps to databases
   for (const app of applications) {
     const record = app.metadata.record;
-    if (record.DatabaseName || record.ConnectionString) {
-      const dbName = record.DatabaseName || extractDatabaseName(record.ConnectionString);
+    const databaseName = getRecordProp(record, 'DatabaseName');
+    const connectionString = getRecordProp(record, 'ConnectionString');
+    if (databaseName || connectionString) {
+      const dbName = databaseName || extractDatabaseName(connectionString);
       if (dbName) {
         const dbNode = dbIndex.get(dbName.toLowerCase());
         if (dbNode) {
@@ -1525,12 +1604,14 @@ function generateCrossFileLinksOptimized(
   // Create tenant index
   const tenantIndex = new Map<string, SankeyNode>();
   tenants.forEach(t => {
-    if (t.metadata.record?.Id) tenantIndex.set(t.metadata.record.Id, t);
-    if (t.metadata.record?.TenantId) tenantIndex.set(t.metadata.record.TenantId, t);
+    const tenantRecordId = getRecordProp(t.metadata.record, 'Id');
+    const tenantRecordTenantId = getRecordProp(t.metadata.record, 'TenantId');
+    if (tenantRecordId) tenantIndex.set(tenantRecordId, t);
+    if (tenantRecordTenantId) tenantIndex.set(tenantRecordTenantId, t);
   });
 
   for (const sub of subscriptions) {
-    const tenantId = sub.metadata.record?.TenantId;
+    const tenantId = getRecordProp(sub.metadata.record, 'TenantId');
     if (tenantId) {
       const tenantNode = tenantIndex.get(tenantId);
       if (tenantNode) {
@@ -1545,13 +1626,14 @@ function generateCrossFileLinksOptimized(
   // Create subscription index
   const subIndex = new Map<string, SankeyNode>();
   subscriptions.forEach(s => {
-    if (s.metadata.record?.SubscriptionId) {
-      subIndex.set(s.metadata.record.SubscriptionId, s);
+    const subscriptionId = getRecordProp(s.metadata.record, 'SubscriptionId');
+    if (subscriptionId) {
+      subIndex.set(subscriptionId, s);
     }
   });
 
   for (const rg of resourceGroups) {
-    const subId = rg.metadata.record?.SubscriptionId;
+    const subId = getRecordProp(rg.metadata.record, 'SubscriptionId');
     if (subId) {
       const subNode = subIndex.get(subId);
       if (subNode) {
@@ -1568,14 +1650,16 @@ function generateCrossFileLinksOptimized(
   const groupIndex = new Map<string, SankeyNode>();
   groups.forEach(g => {
     groupIndex.set(g.name.toLowerCase(), g);
-    if (g.metadata.record?.Id) {
-      groupIndex.set(g.metadata.record.Id, g);
+    const groupId = getRecordProp(g.metadata.record, 'Id');
+    if (groupId) {
+      groupIndex.set(groupId, g);
     }
   });
 
   for (const team of teams) {
+    const teamId = getRecordProp(team.metadata.record, 'Id');
     const groupNode = groupIndex.get(team.name.toLowerCase()) ||
-                      (team.metadata.record?.Id && groupIndex.get(team.metadata.record.Id));
+                      (teamId && groupIndex.get(teamId));
     if (groupNode) {
       addLink(groupNode.id, team.id, 'provides');
     }
@@ -1591,13 +1675,14 @@ function generateCrossFileLinksOptimized(
   // Create SP index by AppId
   const spIndex = new Map<string, SankeyNode>();
   servicePrincipals.forEach(sp => {
-    if (sp.metadata.record?.AppId) {
-      spIndex.set(sp.metadata.record.AppId, sp);
+    const spAppId = getRecordProp(sp.metadata.record, 'AppId');
+    if (spAppId) {
+      spIndex.set(spAppId, sp);
     }
   });
 
   for (const app of entraidApps) {
-    const appId = app.metadata.record?.AppId;
+    const appId = getRecordProp(app.metadata.record, 'AppId');
     if (appId) {
       const spNode = spIndex.get(appId);
       if (spNode) {
@@ -1607,18 +1692,20 @@ function generateCrossFileLinksOptimized(
   }
 
   // SharePoint Sites to Lists
-  const spSites = platforms.filter(n => n.metadata.source?.includes('sharepointsite'));
+  const spSites = platforms.filter(n => n.metadata.source?.includes('sharepointsite') || n.metadata.source?.includes('sharepoint'));
   const spLists = applications.filter(n => n.metadata.source?.includes('sharepointlist'));
 
   // Create site index by URL
   const siteIndex = new Map<string, SankeyNode>();
   spSites.forEach(site => {
-    if (site.metadata.record?.WebUrl) siteIndex.set(site.metadata.record.WebUrl, site);
-    if (site.metadata.record?.Url) siteIndex.set(site.metadata.record.Url, site);
+    const webUrl = getRecordProp(site.metadata.record, 'WebUrl');
+    const url = getRecordProp(site.metadata.record, 'Url');
+    if (webUrl) siteIndex.set(webUrl, site);
+    if (url) siteIndex.set(url, site);
   });
 
   for (const list of spLists) {
-    const siteUrl = list.metadata.record?.SiteUrl || list.metadata.record?.WebUrl;
+    const siteUrl = getRecordProp(list.metadata.record, 'SiteUrl') || getRecordProp(list.metadata.record, 'WebUrl');
     if (siteUrl) {
       const siteNode = siteIndex.get(siteUrl);
       if (siteNode) {
@@ -1627,7 +1714,69 @@ function generateCrossFileLinksOptimized(
     }
   }
 
-  console.log('[generateCrossFileLinksOptimized] Generated links:', links.length);
+  // SharePoint Sites to Owners (users)
+  const users = byType.get('application')?.filter(n =>
+    n.metadata.source?.includes('user') ||
+    n.metadata.category === 'User'
+  ) || [];
+
+  // Create user index by display name and UPN
+  const userIndex = new Map<string, SankeyNode>();
+  users.forEach(user => {
+    const displayName = user.name?.toLowerCase();
+    if (displayName) userIndex.set(displayName, user);
+    const upn = getRecordProp(user.metadata.record, 'UserPrincipalName')?.toLowerCase();
+    if (upn) userIndex.set(upn, user);
+    const mail = getRecordProp(user.metadata.record, 'Mail')?.toLowerCase();
+    if (mail) userIndex.set(mail, user);
+  });
+
+  for (const site of spSites) {
+    const ownerDisplayName = getRecordProp(site.metadata.record, 'OwnerDisplayName');
+    const owner = getRecordProp(site.metadata.record, 'Owner');
+    const ownerName = ownerDisplayName?.toLowerCase() || owner?.toLowerCase();
+    const ownerEmail = getRecordProp(site.metadata.record, 'OwnerEmail')?.toLowerCase();
+
+    const ownerNode = (ownerName && userIndex.get(ownerName)) ||
+                      (ownerEmail && userIndex.get(ownerEmail));
+    if (ownerNode) {
+      addLink(ownerNode.id, site.id, 'ownership');
+    }
+  }
+
+  // Mailboxes to Users (cross-file)
+  const mailboxes = byType.get('application')?.filter(n =>
+    n.metadata.source?.includes('mailbox') ||
+    n.metadata.source?.includes('exchange')
+  ) || [];
+
+  for (const mailbox of mailboxes) {
+    const upn = getRecordProp(mailbox.metadata.record, 'UserPrincipalName')?.toLowerCase();
+    const email = getRecordProp(mailbox.metadata.record, 'PrimarySmtpAddress')?.toLowerCase();
+    const displayName = getRecordProp(mailbox.metadata.record, 'DisplayName')?.toLowerCase();
+
+    const ownerNode = (upn && userIndex.get(upn)) ||
+                      (email && userIndex.get(email)) ||
+                      (displayName && userIndex.get(displayName));
+    if (ownerNode && ownerNode.id !== mailbox.id) {
+      addLink(ownerNode.id, mailbox.id, 'ownership');
+    }
+  }
+
+  console.log('[generateCrossFileLinksOptimized] Generated links:', links.length, {
+    applications: applications.length,
+    databases: databases.length,
+    tenants: tenants.length,
+    subscriptions: subscriptions.length,
+    resourceGroups: resourceGroups.length,
+    teams: teams.length,
+    groups: groups.length,
+    servicePrincipals: servicePrincipals.length,
+    spSites: spSites.length,
+    spLists: spLists.length,
+    users: users.length,
+    mailboxes: mailboxes.length
+  });
   return links;
 }
 

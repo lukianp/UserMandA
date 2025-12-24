@@ -81,6 +81,11 @@ export class ProfileService {
     return profiles.find(p => p.isActive) || null;
   }
 
+  async getProfileById(profileId: string): Promise<CompanyProfile | null> {
+    const profiles = await this.getProfiles();
+    return profiles.find(p => p.id === profileId || p.companyName === profileId) || null;
+  }
+
   async setCurrentProfile(profileId: string): Promise<boolean> {
     await this.db.read();
     this.ensureData();
@@ -524,4 +529,24 @@ export class ProfileService {
       window.webContents.send('profile:changed');
     });
   }
+}
+
+// Module-level singleton for utility access
+let _profileServiceInstance: ProfileService | null = null;
+
+async function getProfileServiceInstance(): Promise<ProfileService> {
+  if (!_profileServiceInstance) {
+    _profileServiceInstance = new ProfileService();
+    await _profileServiceInstance.initialize();
+  }
+  return _profileServiceInstance;
+}
+
+/**
+ * Module-level utility function to get a profile by ID
+ * Can be used in dynamic imports without needing the class instance
+ */
+export async function getProfileById(profileId: string): Promise<CompanyProfile | null> {
+  const service = await getProfileServiceInstance();
+  return service.getProfileById(profileId);
 }

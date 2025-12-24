@@ -1151,6 +1151,72 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('migration:error', subscription);
     return () => ipcRenderer.removeListener('migration:error', subscription);
   },
+
+  // ========================================
+  // Application Fact Sheet API
+  // ========================================
+
+  factsheet: {
+    create: (params: { sourceProfileId: string; name: string; inventoryEntityId?: string }) =>
+      ipcRenderer.invoke('factsheet:create', params),
+
+    getById: (id: string) =>
+      ipcRenderer.invoke('factsheet:getById', id),
+
+    getByInventoryEntity: (inventoryEntityId: string) =>
+      ipcRenderer.invoke('factsheet:getByInventoryEntity', inventoryEntityId),
+
+    getAll: (filters?: any) =>
+      ipcRenderer.invoke('factsheet:getAll', filters),
+
+    updateSection: (params: { id: string; section: string; updates: any; updatedBy?: string }) =>
+      ipcRenderer.invoke('factsheet:updateSection', params),
+
+    delete: (id: string) =>
+      ipcRenderer.invoke('factsheet:delete', id),
+
+    addObservation: (params: {
+      applicationId: string;
+      field: string;
+      value: any;
+      source: string;
+      sourceFile?: string;
+      confidence?: 'high' | 'medium' | 'low';
+    }) => ipcRenderer.invoke('factsheet:addObservation', params),
+
+    verifyObservation: (params: { applicationId: string; observationId: string; verifiedBy: string }) =>
+      ipcRenderer.invoke('factsheet:verifyObservation', params),
+
+    getObservations: (params: { applicationId: string; field?: string }) =>
+      ipcRenderer.invoke('factsheet:getObservations', params),
+
+    addRelation: (params: {
+      sourceId: string;
+      sourceType: string;
+      targetId: string;
+      targetType: string;
+      targetName: string;
+      relationType: string;
+      source: string;
+      description?: string;
+    }) => ipcRenderer.invoke('factsheet:addRelation', params),
+
+    removeRelation: (params: { applicationId: string; relationId: string }) =>
+      ipcRenderer.invoke('factsheet:removeRelation', params),
+
+    getRelations: (applicationId: string) =>
+      ipcRenderer.invoke('factsheet:getRelations', applicationId),
+
+    getStatistics: (sourceProfileId?: string) =>
+      ipcRenderer.invoke('factsheet:getStatistics', sourceProfileId),
+
+    importFromDiscovery: (params: {
+      sourceProfileId: string;
+      applications: any[];
+      source: string;
+      sourceFile: string;
+    }) => ipcRenderer.invoke('factsheet:importFromDiscovery', params),
+  },
 };
 
 // Expose the API to the renderer process

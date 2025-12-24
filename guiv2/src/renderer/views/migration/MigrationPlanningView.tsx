@@ -647,7 +647,7 @@ const MigrationPlanningView: React.FC = () => {
                            transition-all duration-200"
                   rows={3}
                   value={formData.description || ''}
-                  onChange={(value) => handleFieldChange('description', value)}
+                  onChange={(e) => handleFieldChange('description', e.target.value)}
                   placeholder="Detailed description of this migration wave..."
                   data-cy="wave-description-input" data-testid="wave-description-input"
                 />
@@ -698,7 +698,7 @@ const MigrationPlanningView: React.FC = () => {
                            transition-all duration-200"
                   rows={2}
                   value={formData.notes || ''}
-                  onChange={(value) => handleFieldChange('notes', value)}
+                  onChange={(e) => handleFieldChange('notes', e.target.value)}
                   placeholder="Additional notes or instructions..."
                   data-cy="wave-notes-input" data-testid="wave-notes-input"
                 />

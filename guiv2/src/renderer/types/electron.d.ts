@@ -202,7 +202,8 @@ export interface MigrationComplexityResult {
   data?: {
     score: number;
     level: 'Low' | 'Medium' | 'High';
-    factors: string[];`n    estimatedDowntime?: number; // minutes
+    factors: string[];
+    estimatedDowntime?: number; // minutes
   };
   error?: string;
 }
@@ -215,7 +216,8 @@ export interface MigrationComplexityBatchResult {
   data?: Record<string, {
     score: number;
     level: 'Low' | 'Medium' | 'High';
-    factors: string[];`n    estimatedDowntime?: number; // minutes
+    factors: string[];
+    estimatedDowntime?: number; // minutes
   }>;
   error?: string;
 }
@@ -617,7 +619,7 @@ export interface ElectronAPI {
    * @param companyName Company name
    * @returns Promise resolving to profile data path
    */
-  getProfileDataPath: (companyName: string) => Promise<string>;
+  getProfileDataPath?: (companyName: string) => Promise<string>;
 
   // ========================================
   // Configuration Management
@@ -1781,7 +1783,7 @@ export interface ElectronAPI {
   /**
    * Backup and Restore API for data management
    */
-  backup: {
+  backup?: {
     /**
      * Create a new backup
      * @param config - Backup configuration
@@ -1839,7 +1841,7 @@ export interface ElectronAPI {
   /**
    * Restore API for data recovery
    */
-  restore: {
+  restore?: {
     /**
      * Restore from a backup file
      * @param backupFilePath - Path to backup file
@@ -1880,7 +1882,7 @@ export interface ElectronAPI {
   /**
    * Migration Operations API for advanced migration features
    */
-  migration: {
+  migration?: {
     /**
      * Plan a migration operation
      * @param config - Migration planning configuration
@@ -1955,13 +1957,190 @@ export interface ElectronAPI {
   };
 
   // ========================================
+  // Domain Mapping API (Migration Control Plane)
+  // ========================================
+
+  /**
+   * Create a new domain mapping
+   * @param data - Domain mapping data
+   */
+  createDomainMapping: (data: any) => Promise<any>;
+
+  /**
+   * Get all domain mappings
+   */
+  getDomainMappings: () => Promise<any>;
+
+  /**
+   * Validate domain mappings
+   * @param mappings - Optional array of mappings to validate
+   */
+  validateDomainMappings: (mappings?: any[]) => Promise<any>;
+
+  // User Migration API
+  createUserMigrationPlan: (data: any) => Promise<any>;
+  executeUserMigration: (plan: any) => Promise<any>;
+  getUserMigrationStatus: (planId: string) => Promise<any>;
+
+  // Azure Resource Migration API
+  createAzureResourceMigration: (data: any) => Promise<any>;
+  executeAzureResourceMigration: (migration: any) => Promise<any>;
+  getAzureResourceMigrationStatus: (migrationId: string) => Promise<any>;
+
+  // Migration Logs & Metrics API
+  getMigrationLogs: (filters: any) => Promise<any>;
+  getMigrationMetrics: (timeRange: any) => Promise<any>;
+  retryMigrationTask: (taskId: string) => Promise<any>;
+  rollbackMigration: (migrationId: string) => Promise<any>;
+  analyzeCrossDomainDependencies: () => Promise<any>;
+
+  // Migration Event Listeners
+  onMigrationProgress: (callback: (data: any) => void) => () => void;
+  onMigrationComplete: (callback: (data: any) => void) => () => void;
+  onMigrationError: (callback: (data: any) => void) => () => void;
+
+  // ========================================
+  // Application Fact Sheet API
+  // ========================================
+
+  /**
+   * Application Fact Sheet API for LeanIX-style application inventory
+   */
+  factsheet: {
+    /**
+     * Create a new application fact sheet
+     */
+    create: (params: { sourceProfileId: string; name: string; inventoryEntityId?: string }) => Promise<{
+      success: boolean;
+      data?: any;
+      error?: string;
+    }>;
+
+    /**
+     * Get fact sheet by ID
+     */
+    getById: (id: string) => Promise<{ success: boolean; data?: any; error?: string }>;
+
+    /**
+     * Get fact sheet by inventory entity ID
+     */
+    getByInventoryEntity: (inventoryEntityId: string) => Promise<{ success: boolean; data?: any; error?: string }>;
+
+    /**
+     * Get all fact sheets with optional filters
+     */
+    getAll: (filters?: {
+      sourceProfileId?: string;
+      lifecyclePhase?: string[];
+      criticality?: string[];
+      disposition?: string[];
+      waveId?: string;
+      search?: string;
+      tags?: string[];
+      minReadinessScore?: number;
+      maxRiskScore?: number;
+    }) => Promise<{ success: boolean; data?: any[]; error?: string }>;
+
+    /**
+     * Update a section of a fact sheet
+     */
+    updateSection: (params: {
+      id: string;
+      section: 'baseInfo' | 'lifecycle' | 'business' | 'technical' | 'security' | 'migration';
+      updates: any;
+      updatedBy?: string;
+    }) => Promise<{ success: boolean; data?: any; error?: string }>;
+
+    /**
+     * Delete a fact sheet
+     */
+    delete: (id: string) => Promise<{ success: boolean; error?: string }>;
+
+    /**
+     * Add an observation with provenance
+     */
+    addObservation: (params: {
+      applicationId: string;
+      field: string;
+      value: any;
+      source: string;
+      sourceFile?: string;
+      confidence?: 'high' | 'medium' | 'low';
+    }) => Promise<{ success: boolean; data?: any; error?: string }>;
+
+    /**
+     * Verify an observation
+     */
+    verifyObservation: (params: {
+      applicationId: string;
+      observationId: string;
+      verifiedBy: string;
+    }) => Promise<{ success: boolean; data?: any; error?: string }>;
+
+    /**
+     * Get observation history
+     */
+    getObservations: (params: { applicationId: string; field?: string }) => Promise<{
+      success: boolean;
+      data?: any[];
+      error?: string;
+    }>;
+
+    /**
+     * Add a relation to a fact sheet
+     */
+    addRelation: (params: {
+      sourceId: string;
+      sourceType: string;
+      targetId: string;
+      targetType: string;
+      targetName: string;
+      relationType: string;
+      source: string;
+      description?: string;
+    }) => Promise<{ success: boolean; data?: any; error?: string }>;
+
+    /**
+     * Remove a relation
+     */
+    removeRelation: (params: { applicationId: string; relationId: string }) => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
+
+    /**
+     * Get relations for a fact sheet
+     */
+    getRelations: (applicationId: string) => Promise<{ success: boolean; data?: any[]; error?: string }>;
+
+    /**
+     * Get fact sheet statistics
+     */
+    getStatistics: (sourceProfileId?: string) => Promise<{ success: boolean; data?: any; error?: string }>;
+
+    /**
+     * Import applications from discovery
+     */
+    importFromDiscovery: (params: {
+      sourceProfileId: string;
+      applications: any[];
+      source: string;
+      sourceFile: string;
+    }) => Promise<{
+      success: boolean;
+      data?: { created: number; updated: number; errors: number };
+      error?: string;
+    }>;
+  };
+
+  // ========================================
   // Ticketing API
   // ========================================
 
   /**
    * Ticketing API for managing support tickets with full CRUD operations
    */
-  ticketing: {
+  ticketing?: {
     /**
      * Get tickets with pagination and filtering
      * @param options - Query options
@@ -2071,7 +2250,7 @@ export interface ElectronAPI {
   /**
    * Webhooks API for managing webhook configuration and delivery tracking
    */
-  webhooks: {
+  webhooks?: {
     /**
      * Get webhooks with pagination and filtering
      * @param options - Query options
@@ -2202,7 +2381,7 @@ export interface ElectronAPI {
   /**
    * Workflows API for managing workflow automation with complete lifecycle
    */
-  workflows: {
+  workflows?: {
     /**
      * Get workflows with pagination and filtering
      * @param options - Query options

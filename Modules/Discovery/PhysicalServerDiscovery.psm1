@@ -193,6 +193,48 @@ function Invoke-PhysicalServerDiscovery {
                 $group.Group | Export-Csv -Path $filePath -NoTypeInformation -Force -Encoding UTF8
                 Write-PhysicalServerLog -Level "SUCCESS" -Message "Exported $($group.Count) $dataType records to $fileName" -Context $Context
             }
+
+            # Also create a consolidated PhysicalServerDiscovery.csv with key server info
+            $consolidatedServers = @()
+            $systemInfoData = $allDiscoveredData | Where-Object { $_._DataType -eq 'SystemInfo' -and $_.ComponentType -eq 'ComputerSystem' }
+            foreach ($server in $systemInfoData) {
+                # Get related components for this server
+                $serverName = $server.Name
+                $biosData = $allDiscoveredData | Where-Object { $_._DataType -eq 'BIOS' -and $_.SerialNumber } | Select-Object -First 1
+                $hardwareData = $allDiscoveredData | Where-Object { $_._DataType -eq 'Hardware' -and $_.ComponentType -eq 'CPU' } | Select-Object -First 1
+                $storageData = $allDiscoveredData | Where-Object { $_._DataType -eq 'Storage' -and $_.ComponentType -eq 'PhysicalDisk' }
+                $networkData = $allDiscoveredData | Where-Object { $_._DataType -eq 'NetworkHardware' -and $_.ComponentType -eq 'NetworkAdapter' }
+
+                $consolidatedServer = [PSCustomObject]@{
+                    Name = $serverName
+                    Manufacturer = $server.Manufacturer
+                    Model = $server.Model
+                    TotalPhysicalMemory = $server.TotalPhysicalMemory
+                    NumberOfProcessors = $server.NumberOfProcessors
+                    NumberOfLogicalProcessors = $server.NumberOfLogicalProcessors
+                    OperatingSystem = $server.OperatingSystem
+                    OSVersion = $server.OSVersion
+                    Domain = $server.Domain
+                    LastBootUpTime = $server.LastBootUpTime
+                    SerialNumber = if ($biosData) { $biosData.SerialNumber } else { $null }
+                    BIOSVersion = if ($biosData) { $biosData.Version } else { $null }
+                    ProcessorName = if ($hardwareData) { $hardwareData.Name } else { $null }
+                    ProcessorSpeed = if ($hardwareData) { $hardwareData.MaxClockSpeed } else { $null }
+                    TotalDiskCount = @($storageData).Count
+                    TotalDiskSizeGB = ($storageData | Measure-Object -Property Size -Sum).Sum / 1GB
+                    NetworkAdapterCount = @($networkData).Count
+                    _DiscoveryTimestamp = $timestamp
+                    _DiscoveryModule = "PhysicalServerDiscovery"
+                    _SessionId = $SessionId
+                }
+                $consolidatedServers += $consolidatedServer
+            }
+
+            if (@($consolidatedServers).Count -gt 0) {
+                $consolidatedPath = Join-Path $outputPath "PhysicalServerDiscovery.csv"
+                $consolidatedServers | Export-Csv -Path $consolidatedPath -NoTypeInformation -Force -Encoding UTF8
+                Write-PhysicalServerLog -Level "SUCCESS" -Message "Exported $(@($consolidatedServers).Count) consolidated server records to PhysicalServerDiscovery.csv" -Context $Context
+            }
         } else {
             Write-PhysicalServerLog -Level "WARN" -Message "No physical server data discovered to export" -Context $Context
         }

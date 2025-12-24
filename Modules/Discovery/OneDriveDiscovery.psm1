@@ -389,7 +389,7 @@ if (-not $Configuration.discovery -or
                         $discoveryData.Statistics.TotalDrives++
                         
                         # Get drive usage information
-                        $driveUsage = @{
+                        $driveUsage = [PSCustomObject]@{
                             UserId = $user.Id
                             UserPrincipalName = $user.UserPrincipalName
                             DisplayName = $user.DisplayName
@@ -418,7 +418,7 @@ if (-not $Configuration.discovery -or
                         try {
                             $site = Get-MgSite -SiteId $drive.SharePointIds.SiteId -ErrorAction SilentlyContinue
                             if ($site) {
-                                $siteInfo = @{
+                                $siteInfo = [PSCustomObject]@{
                                     UserId = $user.Id
                                     UserPrincipalName = $user.UserPrincipalName
                                     SiteId = $site.Id
@@ -441,7 +441,7 @@ if (-not $Configuration.discovery -or
                             foreach ($item in $driveItems) {
                                 $discoveryData.Statistics.TotalFiles++
                                 
-                                $itemInfo = @{
+                                $itemInfo = [PSCustomObject]@{
                                     UserId = $user.Id
                                     UserPrincipalName = $user.UserPrincipalName
                                     DriveId = $drive.Id
@@ -466,7 +466,7 @@ if (-not $Configuration.discovery -or
                                     foreach ($permission in $permissions) {
                                         $discoveryData.Statistics.SharedItems++
                                         
-                                        $shareInfo = @{
+                                        $shareInfo = [PSCustomObject]@{
                                             UserId = $user.Id
                                             UserPrincipalName = $user.UserPrincipalName
                                             DriveId = $drive.Id
@@ -543,7 +543,16 @@ if (-not $Configuration.discovery -or
             
             # Save Statistics summary
             $statsPath = Join-Path $outputPath "OneDriveStatistics.csv"
-            @($discoveryData.Statistics) | Export-Csv -Path $statsPath -NoTypeInformation -Encoding UTF8
+            $statsObject = [PSCustomObject]@{
+                TotalUsers = $discoveryData.Statistics.TotalUsers
+                TotalDrives = $discoveryData.Statistics.TotalDrives
+                TotalFiles = $discoveryData.Statistics.TotalFiles
+                TotalSize = $discoveryData.Statistics.TotalSize
+                SharedItems = $discoveryData.Statistics.SharedItems
+                ExternalShares = $discoveryData.Statistics.ExternalShares
+                LastSyncUsers = $discoveryData.Statistics.LastSyncUsers
+            }
+            @($statsObject) | Export-Csv -Path $statsPath -NoTypeInformation -Encoding UTF8
             Write-OneDriveLog -Level "SUCCESS" -Message "Saved OneDrive statistics to $statsPath" -Context $Context
             
         } catch {
