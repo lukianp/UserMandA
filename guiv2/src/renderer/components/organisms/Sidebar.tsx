@@ -170,6 +170,17 @@ export const Sidebar: React.FC = () => {
       children: discoveredItems,
     },
     {
+      path: '/inventory',
+      label: 'Consolidated',
+      icon: <Database size={20} />,
+      children: [
+        { path: '/inventory/users', label: 'Users', icon: <Users size={16} /> },
+        { path: '/inventory/groups', label: 'Groups', icon: <UserCheck size={16} /> },
+        { path: '/inventory/applications', label: 'Applications', icon: <Box size={16} /> },
+        { path: '/inventory/infrastructure', label: 'Infrastructure', icon: <Server size={16} /> },
+      ],
+    },
+    {
       path: '/users',
       label: 'Users',
       icon: <Users size={20} />,

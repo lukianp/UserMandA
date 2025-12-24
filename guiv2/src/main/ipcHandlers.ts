@@ -3033,6 +3033,18 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   registerMigrationHandlers(psService);
 
   // ========================================
+  // Consolidated Inventory
+  // ========================================
+  const { registerInventoryHandlers } = await import('./ipcHandlers.inventory');
+  registerInventoryHandlers();
+
+  // ========================================
+  // Migration Wave Management
+  // ========================================
+  const { registerMigrationWaveHandlers } = await import('./ipcHandlers.waves');
+  registerMigrationWaveHandlers();
+
+  // ========================================
   // Azure App Registration (Task 3)
   // ========================================
   const { registerAppRegistrationHandlers } = await import('./ipc/appRegistrationHandlers');

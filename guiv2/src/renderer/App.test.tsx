@@ -8,8 +8,8 @@ describe('App', () => {
   it('renders the application with sidebar', () => {
     render(<App />);
     // Verify main title is present
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent("Enterprise Discovery & Migration Suite v2");
-    
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent("Enterprise Discovery & Migration Suite");
+
     // Verify app renders without crashing (no error boundary)
     expect(screen.queryByText(/Something Went Wrong/i)).not.toBeInTheDocument();
   });

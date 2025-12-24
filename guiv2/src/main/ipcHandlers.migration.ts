@@ -28,89 +28,9 @@ export function registerMigrationHandlers(powerShellService?: PowerShellExecutio
   // MIGRATION PLAN HANDLERS
   // ========================================
 
-  /**
-   * Get migration plans by profile
-   */
-  ipcMain.handle('migration-plan:get-by-profile', async (event, profileName: string) => {
-    try {
-      const plans = await service.getPlansByProfile(profileName);
-      return { success: true, plans };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  /**
-   * Create a new migration plan
-   */
-  ipcMain.handle('migration-plan:create', async (event, planData: any) => {
-    try {
-      const plan = await service.createPlan(planData);
-      return { success: true, plan };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  /**
-   * Add a wave to a migration plan
-   */
-  ipcMain.handle('migration-plan:add-wave', async (event, data: any) => {
-    try {
-      const wave = await service.addWave(data.planId, data.waveData);
-      return { success: true, wave };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  /**
-   * Assign users to a wave
-   */
-  ipcMain.handle('migration-plan:assign-users', async (event, data: any) => {
-    try {
-      await service.assignUsersToWave(data.planId, data.waveId, data.userIds);
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  /**
-   * Update wave status
-   */
-  ipcMain.handle('migration-plan:update-wave-status', async (event, data: any) => {
-    try {
-      await service.updateWaveStatus(data.planId, data.waveId, data.status);
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  /**
-   * Delete migration plan
-   */
-  ipcMain.handle('migration-plan:delete', async (event, planId: string) => {
-    try {
-      await service.deletePlan(planId);
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  /**
-   * Get migration plan by ID
-   */
-  ipcMain.handle('migration-plan:get-by-id', async (event, planId: string) => {
-    try {
-      const plan = await service.getPlan(planId);
-      return { success: true, plan };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
+  // NOTE: Migration plan handlers (migration-plan:*) have been moved to ipc/migrationPlanningHandlers.ts
+  // to avoid duplicate handler registration. See lines in ipcHandlers.ts where
+  // registerMigrationPlanningHandlers() is called.
 
   // ========================================
   // CONSOLIDATED INVENTORY HANDLERS
@@ -142,32 +62,7 @@ export function registerMigrationHandlers(powerShellService?: PowerShellExecutio
     }
   });
 
-  /**
-   * Rebuild consolidated inventory from discovery files
-   */
-  ipcMain.handle('inventory:rebuild', async (event, sourceProfileId: string) => {
-    try {
-      // This would trigger the consolidation pipeline
-      // The actual consolidation happens in the renderer's InventoryService
-      console.log(`[IPC] Rebuild inventory requested for profile: ${sourceProfileId}`);
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  /**
-   * Get inventory statistics
-   */
-  ipcMain.handle('inventory:get-stats', async (event, sourceProfileId?: string) => {
-    try {
-      // Stats are calculated client-side by InventoryService
-      // This is a placeholder for future server-side stats if needed
-      return { success: true, stats: null };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
+  // NOTE: inventory:rebuild and inventory:get-stats handlers have been moved to ipcHandlers.inventory.ts
 
   // ========================================
   // MIGRATION WAVE HANDLERS (Enhanced)

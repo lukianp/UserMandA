@@ -149,7 +149,12 @@
       "Bash(timeout /t 10 /nobreak)",
       "Bash(cmd /c \"dir /b C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\main\\\\services\\\\*Shell*\")",
       "Bash(cmd /c \"dir /s /b C:\\\\enterprisediscovery\\\\guiv2\\\\.webpack\\\\*.js | findstr /i index\")",
-      "Bash(Remove-Item -Path \"D:\\\\Scripts\\\\UserMandA-1\\\\claude.local.md\" -Force)"
+      "Bash(Remove-Item -Path \"D:\\\\Scripts\\\\UserMandA-1\\\\claude.local.md\" -Force)",
+      "Bash(git log:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git diff-tree:*)",
+      "Bash(git stash:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
