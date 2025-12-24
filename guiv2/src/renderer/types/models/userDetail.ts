@@ -29,6 +29,7 @@ export interface DeviceData {
   serialNumber: string | null;
   domain: string | null;
   isEnabled: boolean;
+  source?: 'Intune' | 'AD' | 'ConfigMgr';  // Origin of this device record
 }
 
 /**
@@ -156,6 +157,32 @@ export interface MigrationHint {
 }
 
 /**
+ * Teams Membership
+ * Microsoft Teams the user belongs to
+ */
+export interface TeamMembership {
+  teamName: string;
+  teamId: string;
+  userRole: 'Owner' | 'Member';     // User's role in the team
+  channelCount: number;             // Number of channels in the team
+  channels?: string[];              // Specific channels (especially private channels)
+  source: 'Teams' | 'TeamsGraph';   // Data source
+}
+
+/**
+ * SharePoint Site Access
+ * SharePoint sites the user has access to
+ */
+export interface SharePointSiteAccess {
+  siteName: string;
+  siteUrl: string;
+  accessLevel: string;              // e.g., "Owner", "Member", "Visitor"
+  isOneDrive: boolean;              // Is this the user's OneDrive?
+  source: 'SharePointOnline' | 'SharePointOnPrem';
+  lastAccessed?: Date | string;
+}
+
+/**
  * User Detail Projection
  *
  * Complete user data with all correlated entities.
@@ -180,6 +207,8 @@ export interface UserDetailProjection {
   sqlDatabases: SqlDatabaseData[];  // SQL database access
   risks: RiskItem[];                // Detected risks
   migrationHints: MigrationHint[];  // Migration recommendations
+  teams: TeamMembership[];          // Microsoft Teams memberships
+  sharepointSites: SharePointSiteAccess[]; // SharePoint site access
 
   // Computed Properties (mirror C# computed properties)
   memberOfGroups: string[];         // Groups.Select(g => g.name)

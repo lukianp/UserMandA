@@ -22,6 +22,8 @@ export interface ApplicationData {
   installCount?: number;
   status?: string | null;
   category?: string | null;
+  assignmentType?: 'InstalledSoftware' | 'EnterpriseApp' | 'LicenseService';  // App access type
+  source?: 'Intune' | 'ConfigMgr' | 'AzureAD' | 'License';  // Origin of this app record
 }
 
 /**

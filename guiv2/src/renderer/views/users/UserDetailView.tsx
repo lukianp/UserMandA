@@ -35,6 +35,8 @@ import type {
   AzureRoleAssignment,
   SqlDatabaseData,
   RiskItem,
+  TeamMembership,
+  SharePointSiteAccess,
 } from '../../types/models/userDetail';
 import type { GroupData } from '../../types/models/group';
 import type { ApplicationData } from '../../types/models/application';
@@ -85,6 +87,10 @@ export const UserDetailView: React.FC<UserDetailViewProps> = ({ userId }) => {
           case '9':
             e.preventDefault();
             setSelectedTab(parseInt(e.key) - 1);
+            break;
+          case '0':
+            e.preventDefault();
+            setSelectedTab(9); // 10th tab (Collaboration)
             break;
         }
       }
@@ -297,6 +303,7 @@ const TAB_CONFIG = [
   { label: 'Mailbox', icon: '📧' },
   { label: 'Azure Roles', icon: '☁️' },
   { label: 'SQL & Risks', icon: '⚠️' },
+  { label: 'Collaboration', icon: '🤝' },
 ];
 
 /**
@@ -322,6 +329,8 @@ function renderTabContent(tabIndex: number, userDetail: UserDetailProjection): R
       return <AzureRolesTab azureRoles={userDetail.azureRoles} />;
     case 8:
       return <SqlRisksTab sqlDatabases={userDetail.sqlDatabases} risks={userDetail.risks} />;
+    case 9:
+      return <CollaborationTab teams={userDetail.teams || []} sites={userDetail.sharepointSites || []} />;
     default:
       return null;
   }
@@ -418,6 +427,7 @@ const DevicesTab: React.FC<{ devices: DeviceData[] }> = React.memo(({ devices })
         sortable: true,
         valueFormatter: (params) => (params.value ? formatDate(params.value) : 'N/A'),
       },
+      { field: 'source', headerName: 'Source', width: 100, sortable: true, filter: true },
     ],
     []
   );
@@ -453,6 +463,22 @@ const AppsTab: React.FC<{ apps: ApplicationData[] }> = React.memo(({ apps }) => 
       { field: 'version', headerName: 'Version', width: 120, sortable: true, filter: true },
       { field: 'publisher', headerName: 'Publisher', width: 200, sortable: true, filter: true },
       { field: 'category', headerName: 'Category', width: 150, sortable: true, filter: true },
+      {
+        field: 'assignmentType',
+        headerName: 'Type',
+        width: 140,
+        sortable: true,
+        filter: true,
+        valueFormatter: (params) => {
+          switch (params.value) {
+            case 'InstalledSoftware': return 'Installed';
+            case 'EnterpriseApp': return 'Enterprise App';
+            case 'LicenseService': return 'License';
+            default: return params.value || 'N/A';
+          }
+        },
+      },
+      { field: 'source', headerName: 'Source', width: 100, sortable: true, filter: true },
     ],
     []
   );
@@ -488,6 +514,7 @@ const GroupsTab: React.FC<{ groups: GroupData[] }> = React.memo(({ groups }) => 
         sortable: true,
         type: 'numericColumn',
       },
+      { field: 'source', headerName: 'Source', width: 110, sortable: true, filter: true },
     ],
     []
   );
@@ -792,6 +819,91 @@ const SqlRisksTab: React.FC<{ sqlDatabases: SqlDatabaseData[]; risks: RiskItem[]
 );
 
 SqlRisksTab.displayName = 'SqlRisksTab';
+
+/**
+ * Tab 10: Collaboration (Teams & SharePoint)
+ */
+const CollaborationTab: React.FC<{ teams: TeamMembership[]; sites: SharePointSiteAccess[] }> = React.memo(
+  ({ teams, sites }) => {
+    const teamsColumnDefs = useMemo<ColDef[]>(
+      () => [
+        { field: 'teamName', headerName: 'Team Name', flex: 1, sortable: true, filter: true },
+        { field: 'userRole', headerName: 'Role', width: 100, sortable: true, filter: true },
+        {
+          field: 'channelCount',
+          headerName: 'Channels',
+          width: 100,
+          sortable: true,
+          type: 'numericColumn',
+        },
+      ],
+      []
+    );
+
+    const sitesColumnDefs = useMemo<ColDef[]>(
+      () => [
+        { field: 'siteName', headerName: 'Site Name', flex: 1, sortable: true, filter: true },
+        { field: 'accessLevel', headerName: 'Access Level', width: 120, sortable: true, filter: true },
+        {
+          field: 'isOneDrive',
+          headerName: 'OneDrive',
+          width: 100,
+          cellRenderer: (params: ICellRendererParams) => (params.value ? 'Yes' : ''),
+        },
+        { field: 'source', headerName: 'Source', width: 130, sortable: true, filter: true },
+      ],
+      []
+    );
+
+    return (
+      <div className="h-full overflow-auto flex flex-col gap-6 p-4">
+        {/* Teams Section */}
+        <div>
+          <h3 className="text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100">
+            Microsoft Teams Memberships
+          </h3>
+          {teams.length === 0 ? (
+            <div className="flex items-center justify-center h-24">
+              <p className="text-gray-600 dark:text-gray-400">No Microsoft Teams membership found.</p>
+            </div>
+          ) : (
+            <VirtualizedDataGrid
+              data={teams}
+              columns={teamsColumnDefs}
+              loading={false}
+              height="300px"
+              data-cy="teams-grid"
+              data-testid="teams-grid"
+            />
+          )}
+        </div>
+
+        {/* SharePoint Section */}
+        <div>
+          <h3 className="text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100">
+            SharePoint Sites & OneDrive
+          </h3>
+          {sites.length === 0 ? (
+            <div className="flex items-center justify-center h-24">
+              <p className="text-gray-600 dark:text-gray-400">No SharePoint site access found.</p>
+            </div>
+          ) : (
+            <VirtualizedDataGrid
+              data={sites}
+              columns={sitesColumnDefs}
+              loading={false}
+              height="300px"
+              data-cy="sharepoint-grid"
+              data-testid="sharepoint-grid"
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+
+CollaborationTab.displayName = 'CollaborationTab';
 
 // ========================================
 // Helper Components & Functions
