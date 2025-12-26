@@ -23,6 +23,8 @@ import { LogicEngineService } from './services/logicEngineService';
 import { ProjectService } from './services/projectService';
 import { DashboardService } from './services/dashboardService';
 import { ProfileService } from './services/profileService';
+import { DecisionTraceService } from './services/decisionTraceService';
+import type { DecisionTrace } from '../renderer/types/models/canonical';
 
 
 // Service instances
@@ -34,6 +36,7 @@ let logicEngineService: LogicEngineService;
 let projectService: ProjectService;
 let dashboardService: DashboardService;
 let profileService: ProfileService;
+let decisionTraceService: DecisionTraceService;
 
 // Secure window management with proper lifecycle handling
 class WindowManager {
@@ -3614,6 +3617,90 @@ ipcMain.handle('read-discovery-file', async (_, filePath: string) => {
   }
 });
 
+// ============================================================================
+// Decision Trace IPC Handlers
+// ============================================================================
+
+/**
+ * Initialize Decision Trace service
+ */
+ipcMain.handle('decision-trace:initialize', async () => {
+  try {
+    if (!decisionTraceService) {
+      decisionTraceService = DecisionTraceService.getInstance();
+    }
+    decisionTraceService.initialize();
+    console.log('[IPC] Decision Trace service initialized');
+    return { success: true };
+  } catch (error) {
+    console.error('[IPC] decision-trace:initialize error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to initialize Decision Trace service',
+    };
+  }
+});
+
+/**
+ * Append a decision trace
+ */
+ipcMain.handle('decision-trace:append', async (_, trace: DecisionTrace) => {
+  try {
+    if (!decisionTraceService) {
+      throw new Error('Decision Trace service not initialized');
+    }
+    await decisionTraceService.appendTrace(trace);
+    console.log('[IPC] Decision trace appended:', trace.id, trace.kind);
+    return { success: true, traceId: trace.id };
+  } catch (error) {
+    console.error('[IPC] decision-trace:append error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to append trace',
+    };
+  }
+});
+
+/**
+ * Query decision traces
+ */
+ipcMain.handle('decision-trace:query', async (_, options: any) => {
+  try {
+    if (!decisionTraceService) {
+      throw new Error('Decision Trace service not initialized');
+    }
+    const traces = await decisionTraceService.queryTraces(options);
+    console.log('[IPC] Queried decision traces:', traces.length, 'results');
+    return { success: true, data: traces };
+  } catch (error) {
+    console.error('[IPC] decision-trace:query error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to query traces',
+    };
+  }
+});
+
+/**
+ * Get decision trace statistics
+ */
+ipcMain.handle('decision-trace:statistics', async (_, profileId?: string) => {
+  try {
+    if (!decisionTraceService) {
+      throw new Error('Decision Trace service not initialized');
+    }
+    const stats = await decisionTraceService.getStatistics(profileId);
+    console.log('[IPC] Retrieved decision trace statistics:', stats.totalTraces, 'total traces');
+    return { success: true, data: stats };
+  } catch (error) {
+    console.error('[IPC] decision-trace:statistics error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get statistics',
+    };
+  }
+});
+
 /**
  * Cleanup function to shutdown services
  */
@@ -3622,6 +3709,11 @@ export async function shutdownIpcHandlers(): Promise<void> {
 
   if (psService) {
     await psService.shutdown();
+  }
+
+  // Close Decision Trace service database connection
+  if (decisionTraceService) {
+    decisionTraceService.close();
   }
 
   // Save configuration one last time
