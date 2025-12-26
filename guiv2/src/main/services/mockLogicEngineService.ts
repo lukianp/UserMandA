@@ -19,6 +19,8 @@ import type {
   RiskItem,
   MigrationHint,
   UserDetailStats,
+  TeamMembership,
+  SharePointSiteAccess,
 } from '../../renderer/types/models/userDetail';
 import type { UserData } from '../../renderer/types/models/user';
 import type { GroupData } from '../../renderer/types/models/group';
@@ -102,6 +104,8 @@ export class MockLogicEngineService {
     const sqlDatabases = this.generateMockSqlDatabases(2);
     const risks = this.generateMockRisks(4);
     const migrationHints = this.generateMockMigrationHints(5);
+    const teams = this.generateMockTeams(4);
+    const sharepointSites = this.generateMockSharePointSites(6);
 
     // Computed properties
     const memberOfGroups = groups.map(g => g.name);
@@ -137,6 +141,8 @@ export class MockLogicEngineService {
       sqlDatabases,
       risks,
       migrationHints,
+      teams,
+      sharepointSites,
       memberOfGroups,
       managedGroups,
       managerUpn,
@@ -224,6 +230,7 @@ export class MockLogicEngineService {
   private generateMockDevices(count: number): DeviceData[] {
     const osList = ['Windows 11 Pro', 'Windows 10 Enterprise', 'Windows Server 2022'];
     const manufacturers = ['Dell', 'HP', 'Lenovo'];
+    const sources: Array<'Intune' | 'AD' | 'ConfigMgr'> = ['Intune', 'AD', 'ConfigMgr'];
 
     return Array.from({ length: count }, (_, i) => ({
       id: `device-${i}`,
@@ -239,6 +246,7 @@ export class MockLogicEngineService {
       serialNumber: `SN${10000 + i}`,
       domain: 'contoso.com',
       isEnabled: true,
+      source: sources[i % sources.length],
     }));
   }
 
@@ -258,6 +266,18 @@ export class MockLogicEngineService {
       { name: 'Docker Desktop', publisher: 'Docker Inc.', version: '4.25.2' },
     ];
 
+    const assignmentTypes: Array<'InstalledSoftware' | 'EnterpriseApp' | 'LicenseService'> = [
+      'InstalledSoftware',
+      'EnterpriseApp',
+      'LicenseService',
+    ];
+    const sources: Array<'Intune' | 'ConfigMgr' | 'AzureAD' | 'License'> = [
+      'Intune',
+      'ConfigMgr',
+      'AzureAD',
+      'License',
+    ];
+
     return apps.slice(0, count).map((app, i) => ({
       name: app.name,
       version: app.version,
@@ -272,6 +292,8 @@ export class MockLogicEngineService {
       installCount: Math.floor(Math.random() * 20) + 5,
       status: 'Installed',
       category: i % 3 === 0 ? 'Productivity' : i % 3 === 1 ? 'Development' : 'Communication',
+      assignmentType: assignmentTypes[i % assignmentTypes.length],
+      source: sources[i % sources.length],
     }));
   }
 
@@ -485,6 +507,46 @@ export class MockLogicEngineService {
     ];
 
     return hints.slice(0, count);
+  }
+
+  private generateMockTeams(count: number): TeamMembership[] {
+    const teamNames = [
+      'Engineering Team',
+      'Marketing Department',
+      'Sales Operations',
+      'IT Support',
+      'Project Alpha',
+      'Customer Success',
+    ];
+
+    return Array.from({ length: Math.min(count, teamNames.length) }, (_, i) => ({
+      teamName: teamNames[i],
+      teamId: `team-${i}-${Date.now()}`,
+      userRole: i === 0 ? 'Owner' : 'Member',
+      channelCount: Math.floor(Math.random() * 10) + 3,
+      channels: i === 0 ? ['General', 'Announcements', 'Private-Leadership'] : undefined,
+      source: 'Teams' as const,
+    }));
+  }
+
+  private generateMockSharePointSites(count: number): SharePointSiteAccess[] {
+    const sites = [
+      { name: 'Company Intranet', url: 'https://contoso.sharepoint.com/sites/intranet', isOneDrive: false, access: 'Member' },
+      { name: 'Engineering Hub', url: 'https://contoso.sharepoint.com/sites/engineering', isOneDrive: false, access: 'Owner' },
+      { name: 'Project Documentation', url: 'https://contoso.sharepoint.com/sites/projects', isOneDrive: false, access: 'Member' },
+      { name: 'HR Portal', url: 'https://contoso.sharepoint.com/sites/hr', isOneDrive: false, access: 'Visitor' },
+      { name: 'Sales Resources', url: 'https://contoso.sharepoint.com/sites/sales', isOneDrive: false, access: 'Member' },
+      { name: 'OneDrive - John Doe', url: 'https://contoso-my.sharepoint.com/personal/jdoe', isOneDrive: true, access: 'Owner' },
+    ];
+
+    return sites.slice(0, count).map((site, i) => ({
+      siteName: site.name,
+      siteUrl: site.url,
+      accessLevel: site.access,
+      isOneDrive: site.isOneDrive,
+      source: 'SharePointOnline' as const,
+      lastAccessed: new Date(2024, 11, 20 - i),
+    }));
   }
 }
 

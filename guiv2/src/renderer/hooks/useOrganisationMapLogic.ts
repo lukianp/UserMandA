@@ -730,15 +730,15 @@ const typeMapping: Record<string, {
     category: 'Directory Role'
   },
   'azurediscovery_serviceprincipals': {
-    type: 'platform',
+    type: 'application',
     getName: (r) => r.DisplayName || r.AppId || r.Name,
-    priority: 3,
+    priority: 2,
     category: 'Service Principal'
   },
   'entraidserviceprincipals': {
-    type: 'platform',
+    type: 'application',
     getName: (r) => r.DisplayName || r.AppId || r.Name,
-    priority: 3,
+    priority: 2,
     category: 'Service Principal'
   },
 
