@@ -25,6 +25,8 @@ import { DashboardService } from './services/dashboardService';
 import { ProfileService } from './services/profileService';
 import { DecisionTraceService } from './services/decisionTraceService';
 import type { DecisionTrace } from '../renderer/types/models/canonical';
+import { ConsolidationEngine } from './services/consolidationEngine';
+import type { ConsolidationResult } from './services/consolidationEngine';
 
 
 // Service instances
@@ -37,6 +39,7 @@ let projectService: ProjectService;
 let dashboardService: DashboardService;
 let profileService: ProfileService;
 let decisionTraceService: DecisionTraceService;
+let consolidationEngine: ConsolidationEngine;
 
 // Secure window management with proper lifecycle handling
 class WindowManager {
@@ -3697,6 +3700,45 @@ ipcMain.handle('decision-trace:statistics', async (_, profileId?: string) => {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get statistics',
+    };
+  }
+});
+
+// ============================================================================
+// Consolidation Engine IPC Handlers
+// ============================================================================
+
+/**
+ * Run consolidation on discovery data
+ */
+ipcMain.handle('consolidation:run', async (_, args: { profileId: string; discoveryDataPath: string }) => {
+  try {
+    const { profileId, discoveryDataPath } = args;
+
+    if (!consolidationEngine) {
+      consolidationEngine = ConsolidationEngine.getInstance();
+    }
+
+    consolidationEngine.setProfileId(profileId);
+
+    console.log('[IPC] Running consolidation:', { profileId, discoveryDataPath });
+    const result = await consolidationEngine.consolidate(discoveryDataPath);
+
+    console.log('[IPC] Consolidation complete:', {
+      entities: result.entities.length,
+      relationships: result.relationships.length,
+      timeMs: result.statistics.processingTimeMs,
+    });
+
+    return {
+      success: true,
+      data: result,
+    };
+  } catch (error) {
+    console.error('[IPC] consolidation:run error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to run consolidation',
     };
   }
 });
