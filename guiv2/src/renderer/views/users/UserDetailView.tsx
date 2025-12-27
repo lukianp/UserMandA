@@ -26,6 +26,8 @@ import { Button } from '../../components/atoms/Button';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { ModernCard } from '../../components/atoms/ModernCard';
+import DecisionWhyPanel from '../../components/molecules/DecisionWhyPanel';
+import { useProfileStore } from '../../store/useProfileStore';
 import type {
   UserDetailProjection,
   DeviceData,
@@ -59,6 +61,10 @@ export const UserDetailView: React.FC<UserDetailViewProps> = ({ userId }) => {
     closeView,
   } = useUserDetailLogic(userId);
 
+  // Get current profile ID for Decision Trace queries
+  const selectedProfile = useProfileStore((state) => state.selectedSourceProfile);
+  const profileId = selectedProfile?.id || '';
+
   // Keyboard shortcuts (Ctrl+R, Ctrl+E, Ctrl+W, Ctrl+1-9)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -90,7 +96,7 @@ export const UserDetailView: React.FC<UserDetailViewProps> = ({ userId }) => {
             break;
           case '0':
             e.preventDefault();
-            setSelectedTab(9); // 10th tab (Collaboration)
+            setSelectedTab(10); // 11th tab (Why? - Decision Timeline)
             break;
         }
       }
@@ -275,7 +281,7 @@ export const UserDetailView: React.FC<UserDetailViewProps> = ({ userId }) => {
             id={`tab-panel-${selectedTab}`}
             aria-labelledby={`tab-${selectedTab}`}
           >
-            {renderTabContent(selectedTab, userDetail)}
+            {renderTabContent(selectedTab, userDetail, userId, profileId)}
           </div>
         </div>
       )}
@@ -304,12 +310,13 @@ const TAB_CONFIG = [
   { label: 'Azure Roles', icon: '☁️' },
   { label: 'SQL & Risks', icon: '⚠️' },
   { label: 'Collaboration', icon: '🤝' },
+  { label: 'Why?', icon: '🔍' },
 ];
 
 /**
  * Render tab content based on selected tab index
  */
-function renderTabContent(tabIndex: number, userDetail: UserDetailProjection): React.ReactNode {
+function renderTabContent(tabIndex: number, userDetail: UserDetailProjection, userId: string, profileId: string): React.ReactNode {
   switch (tabIndex) {
     case 0:
       return <OverviewTab userDetail={userDetail} />;
@@ -331,6 +338,8 @@ function renderTabContent(tabIndex: number, userDetail: UserDetailProjection): R
       return <SqlRisksTab sqlDatabases={userDetail.sqlDatabases} risks={userDetail.risks} />;
     case 9:
       return <CollaborationTab teams={userDetail.teams || []} sites={userDetail.sharepointSites || []} />;
+    case 10:
+      return <DecisionTraceTab userId={userId} profileId={profileId} />;
     default:
       return null;
   }
@@ -904,6 +913,37 @@ const CollaborationTab: React.FC<{ teams: TeamMembership[]; sites: SharePointSit
 );
 
 CollaborationTab.displayName = 'CollaborationTab';
+
+/**
+ * Tab 11: Decision Timeline (Why?)
+ * Shows decision traces for this user entity
+ */
+const DecisionTraceTab: React.FC<{ userId: string; profileId: string }> = React.memo(({ userId, profileId }) => {
+  if (!profileId) {
+    return (
+      <div className="flex items-center justify-center h-full p-6">
+        <ModernCard className="p-8 max-w-md text-center">
+          <div className="text-4xl mb-4">ℹ️</div>
+          <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">
+            No Profile Selected
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            Decision traces are only available when a source profile is selected. Please select a profile from the
+            sidebar to view decision history for this user.
+          </p>
+        </ModernCard>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-auto">
+      <DecisionWhyPanel entityId={userId} profileId={profileId} />
+    </div>
+  );
+});
+
+DecisionTraceTab.displayName = 'DecisionTraceTab';
 
 // ========================================
 // Helper Components & Functions
