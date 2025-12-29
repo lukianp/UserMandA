@@ -1734,6 +1734,8 @@ function Invoke-InfrastructureDiscovery {
         Warnings = @()
         Metadata = @{}
         Data = @()
+        StartTime = Get-Date
+        EndTime = $null
     }
     
     $result.PSObject.Methods.Add([PSScriptMethod]::new('AddError', {

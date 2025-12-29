@@ -12,7 +12,10 @@ export const discoveredNavItems = [
   // =========================================================================
   // AZURE / MICROSOFT 365 CLOUD (alphabetical)
   // =========================================================================
+  { path: '/discovered/azureacr', label: 'Azure Container Registries', icon: <Package size={16} /> },
+  { path: '/discovered/azurefunctions', label: 'Azure Function Apps', icon: <Cpu size={16} /> },
   { path: '/discovered/azureresource', label: 'Azure Infrastructure', icon: <Layers size={16} /> },
+  { path: '/discovered/azurevmss', label: 'Azure VM Scale Sets', icon: <Layers size={16} /> },
   { path: '/discovered/conditionalaccess', label: 'Conditional Access', icon: <Lock size={16} /> },
   { path: '/discovered/azure', label: 'Entra ID & M365', icon: <Cloud size={16} /> },
   { path: '/discovered/entraidapp', label: 'Entra ID Applications', icon: <AppWindow size={16} /> },

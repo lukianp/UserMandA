@@ -66,6 +66,14 @@ const HypervDiscoveredView = lazy(() => import('./HyperVDiscoveredView'));
 const DomainDiscoveredView = lazy(() => import('./DomainDiscoveredView'));
 const GoogleworkspaceDiscoveredView = lazy(() => import('./GoogleworkspaceDiscoveredView'));
 const Office365DiscoveredView = lazy(() => import('./Office365DiscoveredView'));
+const AzureVMSSDiscoveredView = lazy(() => import('./AzureVMSSDiscoveredView'));
+const AzureFunctionsDiscoveredView = lazy(() => import('./AzureFunctionsDiscoveredView'));
+const AzureACRDiscoveredView = lazy(() => import('./AzureACRDiscoveredView'));
+const AzureAutomationDiscoveredView = lazy(() => import('./AzureAutomationDiscoveredView'));
+const AzureLogicAppsDiscoveredView = lazy(() => import('./AzureLogicAppsDiscoveredView'));
+const AzureManagementGroupsDiscoveredView = lazy(() => import('./AzureManagementGroupsDiscoveredView'));
+const AzurePIMDiscoveredView = lazy(() => import('./AzurePIMDiscoveredView'));
+const AzureSubscriptionOwnersDiscoveredView = lazy(() => import('./AzureSubscriptionOwnersDiscoveredView'));
 
 export const discoveredRoutes = [
   {
@@ -255,5 +263,37 @@ export const discoveredRoutes = [
   {
     path: '/discovered/hyperv',
     element: withSuspense(HypervDiscoveredView)
+  },
+  {
+    path: '/discovered/azurevmss',
+    element: withSuspense(AzureVMSSDiscoveredView)
+  },
+  {
+    path: '/discovered/azurefunctions',
+    element: withSuspense(AzureFunctionsDiscoveredView)
+  },
+  {
+    path: '/discovered/azureacr',
+    element: withSuspense(AzureACRDiscoveredView)
+  },
+  {
+    path: '/discovered/azureautomation',
+    element: withSuspense(AzureAutomationDiscoveredView)
+  },
+  {
+    path: '/discovered/azurelogicapps',
+    element: withSuspense(AzureLogicAppsDiscoveredView)
+  },
+  {
+    path: '/discovered/azuremgmtgroups',
+    element: withSuspense(AzureManagementGroupsDiscoveredView)
+  },
+  {
+    path: '/discovered/azurepim',
+    element: withSuspense(AzurePIMDiscoveredView)
+  },
+  {
+    path: '/discovered/azuresubowners',
+    element: withSuspense(AzureSubscriptionOwnersDiscoveredView)
   },
 ];

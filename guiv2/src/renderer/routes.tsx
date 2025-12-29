@@ -349,6 +349,38 @@ export const routes: RouteObject[] = [
     path: '/discovery/azure-resource',
     element: lazyLoad(() => import('./views/discovery/AzureResourceDiscoveryView')),
   },
+  {
+    path: '/discovery/azure-vmss',
+    element: lazyLoad(() => import('./views/discovery/AzureVMSSDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-functions',
+    element: lazyLoad(() => import('./views/discovery/AzureFunctionsDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-acr',
+    element: lazyLoad(() => import('./views/discovery/AzureACRDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-automation',
+    element: lazyLoad(() => import('./views/discovery/AzureAutomationDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-logicapps',
+    element: lazyLoad(() => import('./views/discovery/AzureLogicAppsDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-mgmt-groups',
+    element: lazyLoad(() => import('./views/discovery/AzureManagementGroupsDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-pim',
+    element: lazyLoad(() => import('./views/discovery/AzurePIMDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-sub-owners',
+    element: lazyLoad(() => import('./views/discovery/AzureSubscriptionOwnersDiscoveryView')),
+  },
 
   // Auto-generated discovered data routes (CSV display views)
   ...discoveredRoutes,

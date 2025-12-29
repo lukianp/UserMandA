@@ -370,6 +370,259 @@ function Invoke-AzureSecurityDiscovery {
         }
         #endregion
 
+        #region Management Groups Discovery (AzureHound-inspired Phase 3)
+        Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Discovering Azure Management Groups..." -Level "INFO"
+
+        try {
+            $managementGroups = @()
+            $mgUri = "https://management.azure.com/providers/Microsoft.Management/managementGroups?api-version=2021-04-01"
+
+            try {
+                $mgResponse = Invoke-MgGraphRequest -Uri $mgUri -Method GET
+                $managementGroups = $mgResponse.value
+            } catch {
+                Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Could not enumerate Management Groups - may require elevated permissions" -Level "WARNING"
+                $managementGroups = @()
+            }
+
+            foreach ($mg in $managementGroups) {
+                # Get management group details
+                $mgDetails = $null
+                try {
+                    $mgDetailUri = "https://management.azure.com/providers/Microsoft.Management/managementGroups/$($mg.name)?api-version=2021-04-01&`$expand=children,ancestors"
+                    $mgDetails = Invoke-MgGraphRequest -Uri $mgDetailUri -Method GET
+                } catch {
+                    $mgDetails = $mg
+                }
+
+                $properties = $mgDetails.properties
+                $childCount = if ($properties.children) { @($properties.children).Count } else { 0 }
+                $ancestorCount = if ($properties.path) { @($properties.path).Count } else { 0 }
+
+                # Calculate hierarchy level
+                $level = 0
+                if ($properties.path) {
+                    $level = @($properties.path).Count
+                }
+
+                # Get child subscriptions and management groups
+                $childSubscriptions = @()
+                $childMGs = @()
+                if ($properties.children) {
+                    $childSubscriptions = @($properties.children | Where-Object { $_.type -eq '/subscriptions' })
+                    $childMGs = @($properties.children | Where-Object { $_.type -eq 'Microsoft.Management/managementGroups' })
+                }
+
+                $mgData = [PSCustomObject]@{
+                    ObjectType = "ManagementGroup"
+                    Id = $mg.id
+                    Name = $mg.name
+                    DisplayName = $properties.displayName
+                    TenantId = $properties.tenantId
+                    Type = $mg.type
+
+                    # Hierarchy
+                    Level = $level
+                    ParentId = if ($properties.details.parent) { $properties.details.parent.id } else { $null }
+                    ParentName = if ($properties.details.parent) { $properties.details.parent.displayName } else { $null }
+
+                    # Children
+                    ChildCount = $childCount
+                    ChildSubscriptionCount = $childSubscriptions.Count
+                    ChildMGCount = $childMGs.Count
+                    ChildSubscriptions = ($childSubscriptions | ForEach-Object { $_.displayName }) -join '; '
+                    ChildManagementGroups = ($childMGs | ForEach-Object { $_.displayName }) -join '; '
+
+                    # Ancestors path
+                    AncestorPath = if ($properties.path) { ($properties.path | ForEach-Object { $_.displayName }) -join ' > ' } else { $null }
+
+                    _DataType = 'ManagementGroups'
+                    SessionId = $SessionId
+                }
+                $null = $allDiscoveredData.Add($mgData)
+            }
+
+            $Result.Metadata["ManagementGroupCount"] = $managementGroups.Count
+            Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Management Group Discovery - Found $($managementGroups.Count) management groups" -Level "SUCCESS"
+
+        } catch {
+            $Result.AddError("Failed to discover Management Groups: $($_.Exception.Message)", $_.Exception, @{Section="ManagementGroups"})
+        }
+        #endregion
+
+        #region PIM Eligible Roles Discovery (AzureHound-inspired Phase 3)
+        Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Discovering PIM Eligible Role Assignments..." -Level "INFO"
+
+        try {
+            $pimAssignments = @()
+            $pimUri = "https://graph.microsoft.com/v1.0/roleManagement/directory/roleEligibilityScheduleInstances"
+
+            try {
+                do {
+                    $response = Invoke-MgGraphRequest -Uri $pimUri -Method GET
+                    $pimAssignments += $response.value
+                    $pimUri = $response.'@odata.nextLink'
+                } while ($pimUri)
+            } catch {
+                Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Could not enumerate PIM Eligible Roles - may require PIM license or elevated permissions" -Level "WARNING"
+                $pimAssignments = @()
+            }
+
+            foreach ($assignment in $pimAssignments) {
+                # Get role definition name
+                $roleName = "Unknown"
+                try {
+                    $roleUri = "https://graph.microsoft.com/v1.0/directoryRoles?`$filter=roleTemplateId eq '$($assignment.roleDefinitionId)'"
+                    $roleResponse = Invoke-MgGraphRequest -Uri $roleUri -Method GET
+                    if ($roleResponse.value -and $roleResponse.value.Count -gt 0) {
+                        $roleName = $roleResponse.value[0].displayName
+                    } else {
+                        # Try roleDefinitions
+                        $roleDefUri = "https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions/$($assignment.roleDefinitionId)"
+                        $roleDefResponse = Invoke-MgGraphRequest -Uri $roleDefUri -Method GET
+                        $roleName = $roleDefResponse.displayName
+                    }
+                } catch {
+                    $roleName = $assignment.roleDefinitionId
+                }
+
+                # Get principal details
+                $principalName = "Unknown"
+                $principalType = "Unknown"
+                try {
+                    $principalUri = "https://graph.microsoft.com/v1.0/directoryObjects/$($assignment.principalId)"
+                    $principalResponse = Invoke-MgGraphRequest -Uri $principalUri -Method GET
+                    $principalName = $principalResponse.displayName
+                    $principalType = switch ($principalResponse.'@odata.type') {
+                        '#microsoft.graph.user' { 'User' }
+                        '#microsoft.graph.group' { 'Group' }
+                        '#microsoft.graph.servicePrincipal' { 'ServicePrincipal' }
+                        default { $principalResponse.'@odata.type' }
+                    }
+                } catch { }
+
+                # Security assessment
+                $isHighPrivilege = $false
+                $highPrivilegeRoles = @('Global Administrator', 'Privileged Role Administrator', 'Security Administrator', 'User Administrator', 'Exchange Administrator', 'SharePoint Administrator')
+                if ($roleName -in $highPrivilegeRoles) {
+                    $isHighPrivilege = $true
+                }
+
+                $pimData = [PSCustomObject]@{
+                    ObjectType = "PIMEligibleRole"
+                    Id = $assignment.id
+                    PrincipalId = $assignment.principalId
+                    PrincipalName = $principalName
+                    PrincipalType = $principalType
+                    RoleDefinitionId = $assignment.roleDefinitionId
+                    RoleName = $roleName
+                    DirectoryScopeId = $assignment.directoryScopeId
+                    AppScopeId = $assignment.appScopeId
+                    StartDateTime = $assignment.startDateTime
+                    EndDateTime = $assignment.endDateTime
+                    MemberType = $assignment.memberType
+                    AssignmentType = $assignment.assignmentType
+
+                    # Security Assessment
+                    IsHighPrivilege = $isHighPrivilege
+
+                    _DataType = 'PIMEligibleRoles'
+                    SessionId = $SessionId
+                }
+                $null = $allDiscoveredData.Add($pimData)
+            }
+
+            $Result.Metadata["PIMEligibleRoleCount"] = $pimAssignments.Count
+            $highPrivCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'PIMEligibleRoles' -and $_.IsHighPrivilege }).Count
+            $Result.Metadata["HighPrivilegePIMCount"] = $highPrivCount
+            Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "PIM Discovery - Found $($pimAssignments.Count) eligible role assignments ($highPrivCount high privilege)" -Level "SUCCESS"
+
+        } catch {
+            $Result.AddError("Failed to discover PIM Eligible Roles: $($_.Exception.Message)", $_.Exception, @{Section="PIM"})
+        }
+        #endregion
+
+        #region Subscription Owners Discovery (AzureHound-inspired Phase 3)
+        Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Discovering Subscription Owners..." -Level "INFO"
+
+        try {
+            $subscriptionOwners = @()
+
+            # Use subscriptions already discovered in RBAC section
+            if (-not $subscriptions) {
+                try {
+                    $subsUri = "https://management.azure.com/subscriptions?api-version=2020-01-01"
+                    $subsResponse = Invoke-MgGraphRequest -Uri $subsUri -Method GET
+                    $subscriptions = $subsResponse.value
+                } catch {
+                    $subscriptions = @()
+                }
+            }
+
+            foreach ($subscription in $subscriptions) {
+                $subId = $subscription.subscriptionId
+                $subName = $subscription.displayName
+
+                # Get Owner role assignments for this subscription
+                try {
+                    $ownerRoleId = "8e3af657-a8ff-443c-a75c-2fe8c4bcb635" # Built-in Owner role GUID
+                    $ownerUri = "https://management.azure.com/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01&`$filter=roleDefinitionId eq '/subscriptions/$subId/providers/Microsoft.Authorization/roleDefinitions/$ownerRoleId'"
+
+                    $ownerResponse = Invoke-MgGraphRequest -Uri $ownerUri -Method GET
+                    $owners = $ownerResponse.value
+
+                    foreach ($owner in $owners) {
+                        $properties = $owner.properties
+
+                        # Get principal details
+                        $principalName = "Unknown"
+                        $principalType = $properties.principalType
+                        $principalEmail = $null
+                        try {
+                            $principalUri = "https://graph.microsoft.com/v1.0/directoryObjects/$($properties.principalId)"
+                            $principalResponse = Invoke-MgGraphRequest -Uri $principalUri -Method GET
+                            $principalName = $principalResponse.displayName
+                            if ($principalResponse.mail) {
+                                $principalEmail = $principalResponse.mail
+                            } elseif ($principalResponse.userPrincipalName) {
+                                $principalEmail = $principalResponse.userPrincipalName
+                            }
+                        } catch { }
+
+                        $ownerData = [PSCustomObject]@{
+                            ObjectType = "SubscriptionOwner"
+                            Id = $owner.id
+                            AssignmentName = $owner.name
+                            SubscriptionId = $subId
+                            SubscriptionName = $subName
+                            PrincipalId = $properties.principalId
+                            PrincipalName = $principalName
+                            PrincipalType = $principalType
+                            PrincipalEmail = $principalEmail
+                            Scope = $properties.scope
+                            CreatedOn = $properties.createdOn
+                            CreatedBy = $properties.createdBy
+                            UpdatedOn = $properties.updatedOn
+
+                            _DataType = 'SubscriptionOwners'
+                            SessionId = $SessionId
+                        }
+                        $null = $allDiscoveredData.Add($ownerData)
+                    }
+                } catch {
+                    Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Could not get owners for subscription $subName" -Level "WARNING"
+                }
+            }
+
+            $ownerCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'SubscriptionOwners' }).Count
+            $Result.Metadata["SubscriptionOwnerCount"] = $ownerCount
+            Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Subscription Owner Discovery - Found $ownerCount owner assignments across $($subscriptions.Count) subscriptions" -Level "SUCCESS"
+
+        } catch {
+            $Result.AddError("Failed to discover Subscription Owners: $($_.Exception.Message)", $_.Exception, @{Section="SubscriptionOwners"})
+        }
+        #endregion
+
         $Result.RecordCount = $allDiscoveredData.Count
         Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Security Discovery Complete - Total Records: $($allDiscoveredData.Count)" -Level "SUCCESS"
 

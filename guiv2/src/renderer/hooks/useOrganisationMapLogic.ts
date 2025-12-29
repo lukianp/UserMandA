@@ -279,6 +279,52 @@ const typeMapping: Record<string, {
     category: 'Azure Resource'
   },
 
+  // AzureHound-inspired Azure Resources (Phase 1)
+  'azurevmssdiscovery': {
+    type: 'it-component',
+    getName: (r) => r.Name || r.ScaleSetName || r.DisplayName,
+    priority: 2,
+    category: 'Azure VM Scale Set'
+  },
+  'azurefunctionsdiscovery': {
+    type: 'application',
+    getName: (r) => r.Name || r.FunctionAppName || r.DisplayName,
+    priority: 2,
+    category: 'Azure Function App'
+  },
+  'azureacrdiscovery': {
+    type: 'it-component',
+    getName: (r) => r.Name || r.RegistryName || r.LoginServer,
+    priority: 2,
+    category: 'Azure Container Registry'
+  },
+
+  // AzureHound-inspired Azure Resources (Phase 2)
+  'azureautomationdiscovery': {
+    type: 'application',
+    getName: (r) => r.Name || r.AutomationAccountName || r.DisplayName,
+    priority: 2,
+    category: 'Azure Automation'
+  },
+  'azureresourcediscovery_automationaccounts': {
+    type: 'application',
+    getName: (r) => r.Name || r.AutomationAccountName,
+    priority: 2,
+    category: 'Azure Automation'
+  },
+  'azurelogicappsdiscovery': {
+    type: 'application',
+    getName: (r) => r.Name || r.LogicAppName || r.DisplayName,
+    priority: 2,
+    category: 'Azure Logic App'
+  },
+  'azureresourcediscovery_logicapps': {
+    type: 'application',
+    getName: (r) => r.Name || r.LogicAppName,
+    priority: 2,
+    category: 'Azure Logic App'
+  },
+
   // Certificates
   'ca_certificates': {
     type: 'it-component',

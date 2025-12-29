@@ -821,8 +821,15 @@ npm run build:main
 npx webpack --config webpack.preload.config.js --mode=production
 npm run build:renderer
 
-# 3. Launch
+# 3. Launch Application
+# ⚠️ IMPORTANT: Use Bash run_in_background for reliable launch
+# ❌ WRONG: powershell.exe -Command "Start-Process npm -ArgumentList 'start'" (doesn't work!)
+# ✅ CORRECT: Use Bash tool with run_in_background=true:
+#    Bash(command="powershell.exe -Command 'cd C:\enterprisediscovery\guiv2; npm start'", run_in_background=true)
 npm start
+
+# Wait for Electron to start (6-8 seconds), then verify:
+# powershell -Command "Get-Process -Name electron -ErrorAction SilentlyContinue | Select-Object ProcessName, Id, StartTime"
 
 # 4. Copy back to workspace for version control
 Copy-Item -Path "C:\enterprisediscovery\guiv2\src\*" -Destination "D:\Scripts\UserMandA\guiv2\src\" -Recurse -Force
