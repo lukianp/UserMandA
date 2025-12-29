@@ -91,11 +91,27 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
     status: 'idle',
   },
   {
+    id: 'azure-keyvault-access',
+    name: 'Key Vault Access',
+    icon: 'Key',
+    description: 'Discover Azure Key Vault access policies and permissions',
+    route: '/discovery/azure-keyvault-access',
+    status: 'idle',
+  },
+  {
     id: 'azure-logicapps',
     name: 'Azure Logic Apps',
     icon: 'Workflow',
     description: 'Discover Azure Logic Apps, triggers, workflow runs, and integrations',
     route: '/discovery/azure-logicapps',
+    status: 'idle',
+  },
+  {
+    id: 'azure-managed-identities',
+    name: 'Managed Identities',
+    icon: 'Fingerprint',
+    description: 'Discover Azure Managed Identities and their role assignments',
+    route: '/discovery/azure-managed-identities',
     status: 'idle',
   },
   {

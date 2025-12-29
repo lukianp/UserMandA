@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import { InfrastructureDiscoveryResult, NetworkDiagnosticResults } from '../types/models/discovery';
 
 interface InfrastructureDiscoveryConfig {
   includeServers: boolean;
@@ -16,6 +17,8 @@ interface InfrastructureDiscoveryConfig {
   maxResults: number;
   timeout: number;
   showWindow: boolean;
+  enableDiagnostics: boolean;
+  manualSubnets: string[];
 }
 
 interface InfrastructureDiscoveryResult {
@@ -55,6 +58,10 @@ interface InfrastructureDiscoveryState {
     total: number;
     message: string;
     percentage: number;
+    currentSubnet?: string;
+    totalSubnets?: number;
+    completedSubnets?: number;
+    currentPhase?: string;
   };
   error: string | null;
   logs: LogEntry[];
@@ -76,6 +83,8 @@ export const useInfrastructureDiscoveryLogic = () => {
       maxResults: 1000,
       timeout: 1200,
       showWindow: false,
+      enableDiagnostics: true,
+      manualSubnets: [],
     },
     result: null,
     isDiscovering: false,
@@ -85,6 +94,10 @@ export const useInfrastructureDiscoveryLogic = () => {
       total: 100,
       message: '',
       percentage: 0,
+      currentSubnet: undefined,
+      totalSubnets: undefined,
+      completedSubnets: 0,
+      currentPhase: 'Ready',
     },
     error: null,
     logs: [],
@@ -135,6 +148,61 @@ export const useInfrastructureDiscoveryLogic = () => {
         } else if (message.toLowerCase().includes('success') || message.toLowerCase().includes('complete') || message.toLowerCase().includes('found')) {
           level = 'success';
         }
+
+        // Parse progress information from PowerShell output
+        let progressUpdate: Partial<InfrastructureDiscoveryState['progress']> = {};
+
+        // Extract subnet scanning progress
+        if (message.includes('Adaptive scan:')) {
+          const subnetMatch = message.match(/Adaptive scan:\s*([0-9.\/]+)/);
+          if (subnetMatch) {
+            progressUpdate.currentSubnet = subnetMatch[1];
+            progressUpdate.currentPhase = 'Scanning subnet';
+          }
+        }
+
+        // Extract total subnet count
+        if (message.includes('Scanning ') && message.includes(' classified network segments')) {
+          const countMatch = message.match(/Scanning\s+(\d+)\s+classified network segments/);
+          if (countMatch) {
+            progressUpdate.totalSubnets = parseInt(countMatch[1]);
+            progressUpdate.completedSubnets = 0;
+            progressUpdate.currentPhase = 'Initializing scan';
+          }
+        }
+
+        // Track subnet completion
+        if (message.includes('No live hosts found') || message.includes('Found ') && message.includes(' live hosts')) {
+          progressUpdate.completedSubnets = (progressUpdate.completedSubnets || 0) + 1;
+          if (progressUpdate.totalSubnets && progressUpdate.completedSubnets) {
+            progressUpdate.percentage = Math.round((progressUpdate.completedSubnets / progressUpdate.totalSubnets) * 100);
+          }
+        }
+
+        // Extract phase information
+        if (message.includes('Starting Infrastructure discovery')) {
+          progressUpdate.currentPhase = 'Starting discovery';
+          progressUpdate.percentage = 5;
+        } else if (message.includes('Preparing infrastructure discovery tools')) {
+          progressUpdate.currentPhase = 'Preparing tools';
+          progressUpdate.percentage = 10;
+        } else if (message.includes('Intelligent nmap Management System')) {
+          progressUpdate.currentPhase = 'Setting up nmap';
+          progressUpdate.percentage = 15;
+        } else if (message.includes('Searching for system nmap')) {
+          progressUpdate.currentPhase = 'Checking nmap installation';
+          progressUpdate.percentage = 20;
+        } else if (message.includes('Discovering network topology')) {
+          progressUpdate.currentPhase = 'Discovering network topology';
+          progressUpdate.percentage = 30;
+        } else if (message.includes('Applying intelligent subnet classification')) {
+          progressUpdate.currentPhase = 'Classifying subnets';
+          progressUpdate.percentage = 50;
+        } else if (message.includes('Intelligent Adaptive Scanning Engine')) {
+          progressUpdate.currentPhase = 'Starting adaptive scanning';
+          progressUpdate.percentage = 60;
+        }
+
         // Add log entry
         setState((prev) => ({
           ...prev,
@@ -142,6 +210,7 @@ export const useInfrastructureDiscoveryLogic = () => {
           progress: {
             ...prev.progress,
             message,
+            ...progressUpdate,
           },
         }));
       }
@@ -273,7 +342,7 @@ export const useInfrastructureDiscoveryLogic = () => {
 
     try {
       const result = await window.electron.executeDiscovery({
-        moduleName: 'Infrastructure',
+        moduleName: 'InfrastructureDiscovery',
         parameters: {
           IncludeServers: state.config.includeServers,
           IncludeNetworkDevices: state.config.includeNetworkDevices,
@@ -281,6 +350,8 @@ export const useInfrastructureDiscoveryLogic = () => {
           IncludeSecurityDevices: state.config.includeSecurityDevices,
           IncludeVirtualization: state.config.includeVirtualization,
           MaxResults: state.config.maxResults,
+          EnableDiagnostics: state.config.enableDiagnostics,
+          ManualSubnets: state.config.manualSubnets,
         },
         executionOptions: {
           timeout: state.config.timeout * 1000,
@@ -361,6 +432,38 @@ export const useInfrastructureDiscoveryLogic = () => {
     }));
   }, []);
 
+  const addManualSubnet = useCallback((subnet: string) => {
+    if (subnet && !state.config.manualSubnets.includes(subnet)) {
+      setState((prev) => ({
+        ...prev,
+        config: {
+          ...prev.config,
+          manualSubnets: [...prev.config.manualSubnets, subnet],
+        },
+      }));
+    }
+  }, [state.config.manualSubnets]);
+
+  const removeManualSubnet = useCallback((subnet: string) => {
+    setState((prev) => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        manualSubnets: prev.config.manualSubnets.filter(s => s !== subnet),
+      },
+    }));
+  }, []);
+
+  const clearManualSubnets = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        manualSubnets: [],
+      },
+    }));
+  }, []);
+
   const clearError = useCallback(() => {
     setState((prev) => ({ ...prev, error: null }));
   }, []);
@@ -388,5 +491,8 @@ export const useInfrastructureDiscoveryLogic = () => {
     clearError,
     clearLogs,
     setShowExecutionDialog,
+    addManualSubnet,
+    removeManualSubnet,
+    clearManualSubnets,
   };
 };

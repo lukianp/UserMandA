@@ -381,6 +381,14 @@ export const routes: RouteObject[] = [
     path: '/discovery/azure-sub-owners',
     element: lazyLoad(() => import('./views/discovery/AzureSubscriptionOwnersDiscoveryView')),
   },
+  {
+    path: '/discovery/azure-keyvault-access',
+    element: lazyLoad(() => import('./views/discovery/AzureKeyVaultAccessDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-managed-identities',
+    element: lazyLoad(() => import('./views/discovery/AzureManagedIdentitiesDiscoveryView')),
+  },
 
   // Auto-generated discovered data routes (CSV display views)
   ...discoveredRoutes,

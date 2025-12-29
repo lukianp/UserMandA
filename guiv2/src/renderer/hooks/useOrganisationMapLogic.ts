@@ -325,6 +325,70 @@ const typeMapping: Record<string, {
     category: 'Azure Logic App'
   },
 
+  // AzureHound-inspired Azure Security (Phase 3)
+  'azuremanagementgroupsdiscovery': {
+    type: 'platform',
+    getName: (r) => r.DisplayName || r.Name || r.ManagementGroupName,
+    priority: 3,
+    category: 'Azure Management Group'
+  },
+  'azuresecuritydiscovery_managementgroups': {
+    type: 'platform',
+    getName: (r) => r.DisplayName || r.Name || r.ManagementGroupName,
+    priority: 3,
+    category: 'Azure Management Group'
+  },
+  'azurepimdiscovery': {
+    type: 'platform',
+    getName: (r) => r.PrincipalDisplayName || r.RoleDisplayName || r.DisplayName || r.Name,
+    priority: 3,
+    category: 'Azure PIM Role'
+  },
+  'azuresecuritydiscovery_pimeligibleroles': {
+    type: 'platform',
+    getName: (r) => r.PrincipalDisplayName || r.RoleDisplayName || r.DisplayName || r.Name,
+    priority: 3,
+    category: 'Azure PIM Role'
+  },
+  'azuresubscriptionownersdiscovery': {
+    type: 'platform',
+    getName: (r) => r.PrincipalDisplayName || r.DisplayName || r.Name,
+    priority: 3,
+    category: 'Azure Subscription Owner'
+  },
+  'azuresecuritydiscovery_subscriptionowners': {
+    type: 'platform',
+    getName: (r) => r.PrincipalDisplayName || r.DisplayName || r.Name,
+    priority: 3,
+    category: 'Azure Subscription Owner'
+  },
+
+  // AzureHound-inspired Azure Security (Phase 4)
+  'azurekeyvaultaccessdiscovery': {
+    type: 'platform',
+    getName: (r) => r.KeyVaultName || r.PrincipalName || r.DisplayName,
+    priority: 3,
+    category: 'Azure Key Vault Access'
+  },
+  'azuresecuritydiscovery_keyvaultaccesspolicies': {
+    type: 'platform',
+    getName: (r) => r.KeyVaultName || r.PrincipalName || r.DisplayName,
+    priority: 3,
+    category: 'Azure Key Vault Access'
+  },
+  'azuremanagedidentitiesdiscovery': {
+    type: 'platform',
+    getName: (r) => r.Name || r.DisplayName || r.PrincipalId,
+    priority: 3,
+    category: 'Azure Managed Identity'
+  },
+  'azuresecuritydiscovery_managedidentities': {
+    type: 'platform',
+    getName: (r) => r.Name || r.DisplayName || r.PrincipalId,
+    priority: 3,
+    category: 'Azure Managed Identity'
+  },
+
   // Certificates
   'ca_certificates': {
     type: 'it-component',
