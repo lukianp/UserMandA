@@ -7,7 +7,7 @@
  * Phase 7: Complete Dashboard Implementation
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, Users, Layers, Monitor, Server, AlertCircle } from 'lucide-react';
 
@@ -19,6 +19,7 @@ import { RecentActivityFeed } from '../../components/molecules/RecentActivityFee
 import { QuickActionsPanel } from '../../components/molecules/QuickActionsPanel';
 import { Button } from '../../components/atoms/Button';
 import { Spinner } from '../../components/atoms/Spinner';
+import { useProfileStore } from '../../store/useProfileStore';
 
 /**
  * OverviewView Component
@@ -34,6 +35,7 @@ import { Spinner } from '../../components/atoms/Spinner';
 const OverviewView: React.FC = () => {
   const { stats, project, health, activity, isLoading, error, reload } = useDashboardLogic();
   const navigate = useNavigate();
+  const { selectedSourceProfile } = useProfileStore();
 
   // Loading state
   if (isLoading && !stats) {
@@ -89,17 +91,24 @@ const OverviewView: React.FC = () => {
           <h1 className="text-3xl font-bold text-[var(--text-primary)]">Dashboard</h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
             M&A Intelligence & Integration Platform
+            {selectedSourceProfile && (
+              <span className="ml-2 text-xs">
+                • {selectedSourceProfile.companyName}
+              </span>
+            )}
           </p>
         </div>
-        <Button
-          onClick={reload}
-          variant="secondary"
-          size="sm"
-          disabled={isLoading}
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+        <div className="flex gap-2">
+          <Button
+            onClick={reload}
+            variant="secondary"
+            size="sm"
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
+        </div>
       </div>
 
       {/* Project Timeline - Full Width */}

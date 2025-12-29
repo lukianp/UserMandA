@@ -52,6 +52,7 @@ import { ProgressBar } from '../../components/molecules/ProgressBar';
 import LoadingSpinner from '../../components/atoms/LoadingSpinner';
 import { useAppRegistration, REGISTRATION_STEPS, type RegistrationStepId } from '../../hooks/useAppRegistration';
 import { useProfileStore } from '../../store/useProfileStore';
+import DomainCredentialsDialog from '../../components/dialogs/DomainCredentialsDialog';
 
 // ============================================================================
 // Types
@@ -759,6 +760,16 @@ const SetupCompanyView: React.FC = () => {
   // Existing credentials check
   const [hasExistingCredentials, setHasExistingCredentials] = useState(false);
 
+  // Domain credentials state
+  const [showDomainCredDialog, setShowDomainCredDialog] = useState(false);
+  const [domainCredStatus, setDomainCredStatus] = useState<{
+    hasCredentials: boolean;
+    username?: string;
+    validationStatus?: 'valid' | 'invalid' | 'unknown';
+    lastValidated?: string;
+    validationError?: string;
+  } | null>(null);
+
   // Progress steps - driven by appRegState.currentStep from the PowerShell script's status file
   const progressSteps: ProgressStep[] = useMemo(() => {
     // Find the current step index in REGISTRATION_STEPS
@@ -1006,11 +1017,50 @@ const SetupCompanyView: React.FC = () => {
     resetAppRegistration();
   }, [resetAppRegistration]);
 
+  // Domain credential handlers
+  const handleSaveDomainCredentials = useCallback(async (credentials: { username: string; password: string }) => {
+    if (!selectedSourceProfile) return;
+    await window.electronAPI.profile.saveDomainCredentials(
+      selectedSourceProfile.id,
+      credentials.username,
+      credentials.password
+    );
+    // Reload status after save
+    const status = await window.electronAPI.profile.getDomainCredentialStatus(selectedSourceProfile.id);
+    setDomainCredStatus(status);
+  }, [selectedSourceProfile]);
+
+  const handleClearDomainCredentials = useCallback(async () => {
+    if (!selectedSourceProfile) return;
+    await window.electronAPI.profile.clearDomainCredentials(selectedSourceProfile.id);
+    // Reload status after clear
+    const status = await window.electronAPI.profile.getDomainCredentialStatus(selectedSourceProfile.id);
+    setDomainCredStatus(status);
+  }, [selectedSourceProfile]);
+
+  const handleTestDomainCredentials = useCallback(async (credentials: { username: string; password: string }) => {
+    if (!selectedSourceProfile) {
+      return { valid: false, error: 'No profile selected' };
+    }
+    // Test the credentials with provided values (without saving first)
+    const result = await window.electronAPI.profile.testDomainCredentialsWithValues(credentials.username, credentials.password);
+    return result;
+  }, [selectedSourceProfile]);
+
   // Update company name when selected profile changes
   useEffect(() => {
     if (selectedSourceProfile?.companyName) {
       console.log('[SetupCompanyView] Updating company name from profile:', selectedSourceProfile.companyName);
       setCompanyName(selectedSourceProfile.companyName);
+    }
+  }, [selectedSourceProfile]);
+
+  // Load domain credential status when profile changes
+  useEffect(() => {
+    if (selectedSourceProfile) {
+      window.electronAPI.profile.getDomainCredentialStatus(selectedSourceProfile.id)
+        .then(setDomainCredStatus)
+        .catch(err => console.error('[SetupCompanyView] Failed to load domain credential status:', err));
     }
   }, [selectedSourceProfile]);
 
@@ -1192,6 +1242,46 @@ const SetupCompanyView: React.FC = () => {
                     </p>
                   </div>
                 </div>
+              </div>
+
+              {/* Domain Credentials Section */}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Domain Authentication
+                </h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Configure credentials for Active Directory and on-premises discovery modules.
+                </p>
+
+                {domainCredStatus?.hasCredentials && (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                        Domain credentials configured
+                      </span>
+                    </div>
+                    <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                      Username: {domainCredStatus.username}
+                      {domainCredStatus.validationStatus === 'valid' && (
+                        <span className="ml-2 text-green-600">✓ Validated</span>
+                      )}
+                      {domainCredStatus.validationStatus === 'invalid' && (
+                        <span className="ml-2 text-red-600">✗ Invalid</span>
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowDomainCredDialog(true)}
+                  icon={<Shield className="w-4 h-4" />}
+                  data-cy="configure-domain-credentials-button"
+                >
+                  {domainCredStatus?.hasCredentials ? 'Update' : 'Configure'} Domain Credentials
+                </Button>
               </div>
             </div>
           </div>
@@ -1396,6 +1486,21 @@ const SetupCompanyView: React.FC = () => {
         autoInstallModules={autoInstallModules}
         skipAzureRoles={skipAzureRoles}
         secretValidityYears={secretValidityYears}
+      />
+
+      {/* Domain Credentials Dialog */}
+      <DomainCredentialsDialog
+        isOpen={showDomainCredDialog}
+        onClose={() => setShowDomainCredDialog(false)}
+        onSave={handleSaveDomainCredentials}
+        onClear={handleClearDomainCredentials}
+        onTest={handleTestDomainCredentials}
+        profile={selectedSourceProfile ? {
+          id: selectedSourceProfile.id,
+          companyName: selectedSourceProfile.companyName
+        } : null}
+        credentialStatus={domainCredStatus || undefined}
+        data-cy="domain-credentials-dialog"
       />
 
       {/* Header */}

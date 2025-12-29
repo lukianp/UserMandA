@@ -24,6 +24,26 @@
 Import-Module (Join-Path $PSScriptRoot "DiscoveryBase.psm1") -Force
 Import-Module (Join-Path (Split-Path $PSScriptRoot -Parent) "Utilities\UnifiedErrorHandling.psm1") -Force
 
+# Helper function to create DirectoryEntry with credentials
+function New-DirectoryEntryWithCredentials {
+    param(
+        [string]$Path,
+        [hashtable]$Configuration
+    )
+
+    if ($Configuration.domainCredentials -and
+        $Configuration.domainCredentials.username -and
+        $Configuration.domainCredentials.password) {
+        # Use explicit credentials
+        Write-ModuleLog -ModuleName "DNSDHCP" -Message "Creating DirectoryEntry with explicit credentials for: $($Configuration.domainCredentials.username -replace '\\.*$','\\***')" -Level "DEBUG"
+        return New-Object System.DirectoryServices.DirectoryEntry($Path, $Configuration.domainCredentials.username, $Configuration.domainCredentials.password)
+    } else {
+        # Use integrated authentication
+        Write-ModuleLog -ModuleName "DNSDHCP" -Message "Creating DirectoryEntry with integrated authentication" -Level "DEBUG"
+        return New-Object System.DirectoryServices.DirectoryEntry($Path)
+    }
+}
+
 function Invoke-DNSDHCPDiscovery {
     [CmdletBinding()]
     param(
@@ -95,35 +115,64 @@ function Invoke-DNSDHCPDiscovery {
             
             # Method 2: Get DNS servers from domain controllers
             try {
-                $domain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
-                $domainControllers = $domain.DomainControllers
-                
-                foreach ($dc in $domainControllers) {
-                    $dnsServers += @{
-                        IPAddress = $dc.IPAddress
-                        Source = "DomainController"
-                        Name = $dc.Name
-                        Forest = $dc.Forest
-                        Domain = $dc.Domain
+                # Use DirectoryEntry with credentials if provided
+                $rootDSE = New-DirectoryEntryWithCredentials -Path "LDAP://RootDSE" -Configuration $Configuration
+                $defaultNamingContext = $rootDSE.Properties["defaultNamingContext"].Value
+
+                if ($defaultNamingContext) {
+                    # Search for domain controllers using DirectorySearcher with credentials
+                    $searchRoot = New-DirectoryEntryWithCredentials -Path "LDAP://$defaultNamingContext" -Configuration $Configuration
+                    $searcher = New-Object System.DirectoryServices.DirectorySearcher($searchRoot)
+                    $searcher.Filter = "(&(objectClass=computer)(userAccountControl:1.2.840.113556.1.4.803:=8192))"
+                    $searcher.PropertiesToLoad.AddRange(@("dNSHostName", "name"))
+
+                    $dcResults = $searcher.FindAll()
+                    foreach ($dc in $dcResults) {
+                        $dnsHostName = if ($dc.Properties["dNSHostName"]) { $dc.Properties["dNSHostName"][0] } else { $dc.Properties["name"][0] }
+                        if ($dnsHostName) {
+                            # Resolve IP address
+                            try {
+                                $ipAddress = [System.Net.Dns]::GetHostAddresses($dnsHostName) | Select-Object -First 1 -ExpandProperty IPAddressToString
+                            } catch {
+                                $ipAddress = $null
+                            }
+
+                            $dnsServers += @{
+                                IPAddress = $ipAddress
+                                Source = "DomainController"
+                                Name = $dnsHostName
+                                Domain = $defaultNamingContext
+                            }
+                        }
                     }
                 }
             } catch {
                 Write-ModuleLog -ModuleName "DNSDHCP" -Message "Failed to get DNS servers from domain controllers: $($_.Exception.Message)" -Level "DEBUG"
             }
             
-            # Method 3: Active Directory discovery
+            # Method 3: Active Directory discovery (DNS servers via SPN)
             try {
-                $adSearcher = [adsisearcher]"(&(objectClass=computer)(servicePrincipalName=*DNS*))"
-                $adResults = $adSearcher.FindAll()
-                
-                foreach ($result in $adResults) {
-                    $computerName = $result.Properties["name"][0]
-                    $dnsHostName = $result.Properties["dnshostname"][0]
-                    
-                    $dnsServers += @{
-                        Name = $dnsHostName
-                        ComputerName = $computerName
-                        Source = "ActiveDirectory"
+                $rootDSE = New-DirectoryEntryWithCredentials -Path "LDAP://RootDSE" -Configuration $Configuration
+                $defaultNamingContext = $rootDSE.Properties["defaultNamingContext"].Value
+
+                if ($defaultNamingContext) {
+                    $searchRoot = New-DirectoryEntryWithCredentials -Path "LDAP://$defaultNamingContext" -Configuration $Configuration
+                    $searcher = New-Object System.DirectoryServices.DirectorySearcher($searchRoot)
+                    $searcher.Filter = "(&(objectClass=computer)(servicePrincipalName=*DNS*))"
+                    $searcher.PropertiesToLoad.AddRange(@("name", "dNSHostName"))
+                    $adResults = $searcher.FindAll()
+
+                    foreach ($result in $adResults) {
+                        $computerName = if ($result.Properties["name"]) { $result.Properties["name"][0] } else { $null }
+                        $dnsHostName = if ($result.Properties["dNSHostName"]) { $result.Properties["dNSHostName"][0] } else { $computerName }
+
+                        if ($dnsHostName) {
+                            $dnsServers += @{
+                                Name = $dnsHostName
+                                ComputerName = $computerName
+                                Source = "ActiveDirectory"
+                            }
+                        }
                     }
                 }
             } catch {
@@ -242,24 +291,31 @@ function Invoke-DNSDHCPDiscovery {
             # Discover DHCP servers
             $dhcpServers = @()
             
-            # Method 1: Active Directory discovery
+            # Method 1: Active Directory discovery (DHCP servers via SPN)
             try {
-                $adSearcher = [adsisearcher]"(&(objectClass=computer)(servicePrincipalName=*DHCP*))"
-                $adResults = $adSearcher.FindAll()
-                
-                foreach ($result in $adResults) {
-                    if ($result -and $result.Properties -and $result.Properties["name"]) {
-                        $computerName = $result.Properties["name"][0]
-                        $dnsHostName = if ($result.Properties["dnshostname"]) { $result.Properties["dnshostname"][0] } else { $computerName }
-                    } else {
-                        Write-ModuleLog -ModuleName "DNSDHCP" -Message "AD result missing required properties, skipping" -Level "DEBUG"
-                        continue
-                    }
-                    
-                    $dhcpServers += @{
-                        Name = $dnsHostName
-                        ComputerName = $computerName
-                        Source = "ActiveDirectory"
+                $rootDSE = New-DirectoryEntryWithCredentials -Path "LDAP://RootDSE" -Configuration $Configuration
+                $defaultNamingContext = $rootDSE.Properties["defaultNamingContext"].Value
+
+                if ($defaultNamingContext) {
+                    $searchRoot = New-DirectoryEntryWithCredentials -Path "LDAP://$defaultNamingContext" -Configuration $Configuration
+                    $searcher = New-Object System.DirectoryServices.DirectorySearcher($searchRoot)
+                    $searcher.Filter = "(&(objectClass=computer)(servicePrincipalName=*DHCP*))"
+                    $searcher.PropertiesToLoad.AddRange(@("name", "dNSHostName"))
+                    $adResults = $searcher.FindAll()
+
+                    foreach ($result in $adResults) {
+                        if ($result -and $result.Properties -and $result.Properties["name"]) {
+                            $computerName = $result.Properties["name"][0]
+                            $dnsHostName = if ($result.Properties["dNSHostName"]) { $result.Properties["dNSHostName"][0] } else { $computerName }
+
+                            $dhcpServers += @{
+                                Name = $dnsHostName
+                                ComputerName = $computerName
+                                Source = "ActiveDirectory"
+                            }
+                        } else {
+                            Write-ModuleLog -ModuleName "DNSDHCP" -Message "AD result missing required properties, skipping" -Level "DEBUG"
+                        }
                     }
                 }
             } catch {
@@ -280,19 +336,23 @@ function Invoke-DNSDHCPDiscovery {
                 Write-ModuleLog -ModuleName "DNSDHCP" -Message "Registry-based DHCP discovery failed: $($_.Exception.Message)" -Level "DEBUG"
             }
             
-            # Method 3: Network scan for DHCP servers
-            try {
-                # Get authorized DHCP servers from AD
-                $dhcpInAD = Get-DhcpServerInDC -ErrorAction SilentlyContinue
-                foreach ($dhcpServer in $dhcpInAD) {
-                    $dhcpServers += @{
-                        Name = $dhcpServer.DnsName
-                        IPAddress = $dhcpServer.IPAddress
-                        Source = "AuthorizedInAD"
+            # Method 3: Get authorized DHCP servers from AD (requires DHCP module)
+            if ($dhcpModuleAvailable) {
+                try {
+                    $dhcpInAD = Get-DhcpServerInDC -ErrorAction SilentlyContinue
+                    foreach ($dhcpServer in $dhcpInAD) {
+                        $dhcpServers += @{
+                            Name = $dhcpServer.DnsName
+                            IPAddress = $dhcpServer.IPAddress
+                            Source = "AuthorizedInAD"
+                        }
                     }
+                    Write-ModuleLog -ModuleName "DNSDHCP" -Message "Found $($dhcpInAD.Count) authorized DHCP servers in AD" -Level "DEBUG"
+                } catch {
+                    Write-ModuleLog -ModuleName "DNSDHCP" -Message "Authorized DHCP server discovery failed: $($_.Exception.Message)" -Level "DEBUG"
                 }
-            } catch {
-                Write-ModuleLog -ModuleName "DNSDHCP" -Message "Authorized DHCP server discovery failed: $($_.Exception.Message)" -Level "DEBUG"
+            } else {
+                Write-ModuleLog -ModuleName "DNSDHCP" -Message "DHCP module not available - skipping authorized DHCP server discovery" -Level "WARN"
             }
             
             # Remove duplicates and create DHCP server objects

@@ -6,7 +6,8 @@ import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 import { glob } from 'glob';
 
-import { CompanyProfile, ProfileDatabase, ProfileStatistics, ProfileValidationResult, ConnectionConfig } from '@shared/types/profile';
+import { CompanyProfile, ProfileDatabase, ProfileStatistics, ProfileValidationResult, ConnectionConfig, DomainCredentialValidationStatus } from '@shared/types/profile';
+import { safeStorage } from 'electron';
 
 export class ProfileService {
   private db!: Low<ProfileDatabase>;
@@ -55,6 +56,26 @@ export class ProfileService {
     ipcMain.handle('profile:validate', (_, profile: CompanyProfile) => this.validateProfile(profile));
     ipcMain.handle('profile:getConnectionConfig', (_, profileId: string) => this.getConnectionConfig(profileId));
     ipcMain.handle('profile:setConnectionConfig', (_, profileId: string, config: ConnectionConfig) => this.setConnectionConfig(profileId, config));
+
+    // Domain credential handlers
+    ipcMain.handle('profile:saveDomainCredentials', (_, profileId: string, username: string, password: string) =>
+      this.saveDomainCredentials(profileId, username, password));
+    ipcMain.handle('profile:clearDomainCredentials', (_, profileId: string) =>
+      this.clearDomainCredentials(profileId));
+    ipcMain.handle('profile:testDomainCredentials', (_, profileId: string) =>
+      this.testDomainCredentials(profileId));
+    ipcMain.handle('profile:testDomainCredentialsWithValues', (_, username: string, password: string) =>
+      this.testDomainCredentialsWithValues(username, password));
+    ipcMain.handle('profile:getDomainCredentialStatus', (_, profileId: string) =>
+      this.getDomainCredentialStatus(profileId));
+
+    // Discovery data handlers
+    ipcMain.handle('profile:getADDomainFromDiscovery', (_, profileId: string) =>
+      this.getADDomainFromDiscovery(profileId));
+    ipcMain.handle('profile:getAzureTenantDomain', (_, profileId: string) =>
+      this.getAzureTenantDomain(profileId));
+    ipcMain.handle('profile:getAzureDataFromDiscovery', (_, profileId: string) =>
+      this.getAzureDataFromDiscovery(profileId));
   }
   private ensureData(): void {
     // Ensure data is initialized (file might not exist or be corrupted)
@@ -353,6 +374,610 @@ export class ProfileService {
 
   async getSourceProfiles(): Promise<CompanyProfile[]> {
     return this.getProfiles();
+  }
+
+  // ========================================
+  // Domain Credentials Management
+  // ========================================
+
+  /**
+   * Save domain credentials for a profile (encrypted)
+   * @param profileId - Profile ID
+   * @param username - Domain username (DOMAIN\user format)
+   * @param passwordPlain - Plaintext password (will be encrypted)
+   */
+  async saveDomainCredentials(profileId: string, username: string, passwordPlain: string): Promise<void> {
+    // Validate encryption availability
+    if (!safeStorage.isEncryptionAvailable()) {
+      throw new Error(
+        'Secure credential encryption is not available on this system. ' +
+        'Please ensure your system keystore is properly configured.'
+      );
+    }
+
+    // Validate username format
+    const domainUserRegex = /^([^\\]+)\\([^\\]+)$/;
+    if (!domainUserRegex.test(username)) {
+      throw new Error('Username must be in DOMAIN\\username format (e.g., CONTOSO\\jdoe)');
+    }
+
+    // Validate password
+    if (!passwordPlain || passwordPlain.length < 8) {
+      throw new Error('Password must be at least 8 characters');
+    }
+
+    await this.db.read();
+    this.ensureData();
+
+    const profile = this.db.data.profiles.find(p => p.id === profileId);
+    if (!profile) {
+      throw new Error(`Profile with ID "${profileId}" not found`);
+    }
+
+    // Encrypt password
+    const encrypted = safeStorage.encryptString(passwordPlain);
+    const encryptedBase64 = encrypted.toString('base64');
+
+    // Initialize configuration if needed
+    if (!profile.configuration) {
+      profile.configuration = {};
+    }
+
+    // Store encrypted credentials
+    profile.configuration.domainCredentials = {
+      username,
+      password: encryptedBase64,
+      encrypted: true,
+      validationStatus: 'unknown',
+      lastValidated: new Date().toISOString()
+    };
+
+    profile.lastModified = new Date().toISOString();
+    await this.db.write();
+
+    console.log(`[ProfileService] Domain credentials saved for profile: ${profileId}, user: ${this.maskUsername(username)}`);
+  }
+
+  /**
+   * Clear domain credentials for a profile
+   * @param profileId - Profile ID
+   */
+  async clearDomainCredentials(profileId: string): Promise<void> {
+    await this.db.read();
+    this.ensureData();
+
+    const profile = this.db.data.profiles.find(p => p.id === profileId);
+    if (!profile) {
+      throw new Error(`Profile with ID "${profileId}" not found`);
+    }
+
+    if (profile.configuration?.domainCredentials) {
+      delete profile.configuration.domainCredentials;
+      profile.lastModified = new Date().toISOString();
+      await this.db.write();
+      console.log(`[ProfileService] Domain credentials cleared for profile: ${profileId}`);
+    }
+  }
+
+  /**
+   * Get decrypted domain credentials (MAIN PROCESS ONLY - never send to renderer)
+   * @param profileId - Profile ID
+   * @returns Decrypted credentials or null
+   */
+  async getDomainCredentialsDecrypted(profileId: string): Promise<{ username: string; password: string } | null> {
+    await this.db.read();
+    this.ensureData();
+
+    const profile = this.db.data.profiles.find(p => p.id === profileId);
+    if (!profile) {
+      return null;
+    }
+
+    const stored = profile.configuration?.domainCredentials;
+    if (!stored?.password || !stored?.username) {
+      return null;
+    }
+
+    if (!safeStorage.isEncryptionAvailable()) {
+      throw new Error('Encryption not available - cannot decrypt credentials');
+    }
+
+    try {
+      const encryptedBuffer = Buffer.from(stored.password, 'base64');
+      const decryptedPassword = safeStorage.decryptString(encryptedBuffer);
+
+      return {
+        username: stored.username,
+        password: decryptedPassword
+      };
+    } catch (error) {
+      console.error('[ProfileService] Failed to decrypt domain credentials:', error);
+      throw new Error('Failed to decrypt credentials - they may be corrupted');
+    }
+  }
+
+  /**
+   * Set domain credential validation status
+   * @param profileId - Profile ID
+   * @param status - Validation status
+   * @param validationError - Optional error message
+   */
+  async setDomainCredentialValidation(
+    profileId: string,
+    status: DomainCredentialValidationStatus,
+    validationError?: string
+  ): Promise<void> {
+    await this.db.read();
+    this.ensureData();
+
+    const profile = this.db.data.profiles.find(p => p.id === profileId);
+    if (!profile) {
+      throw new Error(`Profile with ID "${profileId}" not found`);
+    }
+
+    const stored = profile.configuration?.domainCredentials;
+    if (!stored) {
+      throw new Error('No domain credentials found for this profile');
+    }
+
+    stored.validationStatus = status;
+    stored.validationError = validationError?.slice(0, 500); // Limit error message length
+    stored.lastValidated = new Date().toISOString();
+
+    profile.lastModified = new Date().toISOString();
+    await this.db.write();
+
+    console.log(`[ProfileService] Domain credential validation updated: ${profileId} -> ${status}`);
+  }
+
+  /**
+   * Get domain credential status (safe for renderer - no passwords)
+   * @param profileId - Profile ID
+   * @returns Status information
+   */
+  async getDomainCredentialStatus(profileId: string): Promise<{
+    hasCredentials: boolean;
+    username?: string;
+    validationStatus?: DomainCredentialValidationStatus;
+    lastValidated?: string;
+    validationError?: string;
+  }> {
+    await this.db.read();
+    this.ensureData();
+
+    const profile = this.db.data.profiles.find(p => p.id === profileId);
+    if (!profile) {
+      return { hasCredentials: false };
+    }
+
+    const stored = profile.configuration?.domainCredentials;
+    if (!stored) {
+      return { hasCredentials: false };
+    }
+
+    return {
+      hasCredentials: true,
+      username: stored.username,
+      validationStatus: stored.validationStatus || 'unknown',
+      lastValidated: stored.lastValidated,
+      validationError: stored.validationError
+    };
+  }
+
+  /**
+   * Test domain credentials by attempting AD authentication
+   * @param profileId - Profile ID
+   * @returns Test result
+   */
+  async testDomainCredentials(profileId: string): Promise<{
+    valid: boolean;
+    domain?: string;
+    error?: string;
+  }> {
+    const creds = await this.getDomainCredentialsDecrypted(profileId);
+
+    if (!creds) {
+      return { valid: false, error: 'No credentials found' };
+    }
+
+    try {
+      const result = await this.executePowerShellCredentialTest(creds.username, creds.password);
+
+      // Update validation status
+      if (result.valid) {
+        await this.setDomainCredentialValidation(profileId, 'valid');
+      } else {
+        await this.setDomainCredentialValidation(profileId, 'invalid', result.error);
+      }
+
+      return result;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      await this.setDomainCredentialValidation(profileId, 'invalid', errorMsg);
+      return { valid: false, error: errorMsg };
+    }
+  }
+
+  /**
+   * Test domain credentials with provided values (without saving first)
+   * @param username - Domain username
+   * @param password - Plaintext password
+   * @returns Test result
+   */
+  async testDomainCredentialsWithValues(username: string, password: string): Promise<{
+    valid: boolean;
+    domain?: string;
+    error?: string;
+  }> {
+    console.log('='.repeat(80));
+    console.log('[ProfileService] ⚡ testDomainCredentialsWithValues CALLED');
+    console.log(`[ProfileService] Testing domain credentials for ${this.maskUsername(username)}`);
+    console.log(`[ProfileService] Username length: ${username.length}, Password length: ${password.length}`);
+    console.log('='.repeat(80));
+
+    if (!username || !password) {
+      console.error('[ProfileService] ❌ Username or password missing');
+      return { valid: false, error: 'Username and password are required' };
+    }
+
+    // Validate username format
+    const domainUserRegex = /^([^\\]+)\\([^\\]+)$/;
+    if (!domainUserRegex.test(username)) {
+      return { valid: false, error: 'Username must be in DOMAIN\\username format' };
+    }
+
+    try {
+      const result = await this.executePowerShellCredentialTest(username, password);
+      console.log(`[ProfileService] Credential test result: ${result.valid ? 'valid' : 'invalid'}`);
+      return result;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`[ProfileService] Credential test failed:`, errorMsg);
+      return { valid: false, error: errorMsg };
+    }
+  }
+
+  /**
+   * Execute PowerShell script to test domain credentials
+   * @param username - Domain username
+   * @param password - Plaintext password (never logged)
+   * @returns Test result
+   */
+  private async executePowerShellCredentialTest(
+    username: string,
+    password: string,
+    server?: string
+  ): Promise<{ valid: boolean; domain?: string; error?: string }> {
+    const { spawn } = await import('child_process');
+
+    // Escape single quotes in username/password/server for PowerShell
+    const escapedUsername = username.replace(/'/g, "''");
+    const escapedPassword = password.replace(/'/g, "''");
+    const escapedServer = server?.replace(/'/g, "''") || '';
+
+    // PowerShell script to test credentials (username/password embedded directly)
+    const script = `
+$ErrorActionPreference = "Stop"
+try {
+  $Username = '${escapedUsername}'
+  $Password = '${escapedPassword}'
+
+  $sec = ConvertTo-SecureString $Password -AsPlainText -Force
+  $cred = New-Object System.Management.Automation.PSCredential($Username, $sec)
+
+  # Auto-detect domain from domain-joined machine
+  $computerSystem = Get-WmiObject Win32_ComputerSystem
+  $domainName = $computerSystem.Domain
+
+  # Try AD module first
+  if (Get-Module -ListAvailable -Name ActiveDirectory) {
+    Import-Module ActiveDirectory -ErrorAction Stop
+    # Only pass -Server if we have a valid domain name
+    if ($domainName -and $domainName -ne 'WORKGROUP') {
+      $d = Get-ADDomain -Credential $cred -Server $domainName -ErrorAction Stop
+      $result = @{ valid = $true; domain = $d.DNSRoot }
+    } else {
+      # No domain detected, try without server parameter
+      $d = Get-ADDomain -Credential $cred -ErrorAction Stop
+      $result = @{ valid = $true; domain = $d.DNSRoot }
+    }
+  }
+  else {
+    # LDAP bind fallback
+    $ldapPath = if ($domainName -and $domainName -ne 'WORKGROUP') { "LDAP://$domainName/RootDSE" } else { "LDAP://RootDSE" }
+    $root = New-Object System.DirectoryServices.DirectoryEntry($ldapPath, $Username, $Password)
+    $null = $root.Properties["defaultNamingContext"].Value
+    $result = @{ valid = $true; domain = $domainName }
+  }
+
+  $result | ConvertTo-Json -Depth 6 -Compress
+} catch {
+  @{ valid = $false; error = $_.Exception.Message } | ConvertTo-Json -Depth 6 -Compress
+}
+`;
+
+    return new Promise((resolve) => {
+      const child = spawn('powershell.exe', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        script
+      ]);
+
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout?.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      child.stderr?.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      child.on('close', (code) => {
+        console.log(`[ProfileService] PowerShell test completed with exit code: ${code}`);
+        console.log(`[ProfileService] stdout length: ${stdout.length}`);
+        console.log(`[ProfileService] stderr length: ${stderr.length}`);
+
+        if (code !== 0) {
+          console.error(`[ProfileService] Credential test failed with exit code: ${code}`);
+          console.error(`[ProfileService] stdout: ${stdout}`);
+          console.error(`[ProfileService] stderr: ${stderr}`);
+          resolve({ valid: false, error: stderr || 'PowerShell execution failed' });
+          return;
+        }
+
+        console.log(`[ProfileService] Raw PowerShell stdout: ${stdout}`);
+
+        try {
+          // Extract JSON from output (may have warnings before it)
+          // Look for the last occurrence of {..."} pattern in the output
+          const jsonMatch = stdout.match(/\{[^}]*"valid"\s*:\s*(true|false)[^}]*\}/);
+
+          if (!jsonMatch) {
+            throw new Error('No JSON result found in output');
+          }
+
+          const jsonStr = jsonMatch[0];
+          console.log(`[ProfileService] Extracted JSON: ${jsonStr}`);
+          const result = JSON.parse(jsonStr);
+          console.log(`[ProfileService] Parsed result:`, result);
+          resolve(result);
+        } catch (error) {
+          console.error('[ProfileService] Failed to parse PowerShell output:', error);
+          console.error('[ProfileService] Raw stdout was:', stdout);
+          console.error('[ProfileService] Raw stderr was:', stderr);
+          resolve({ valid: false, error: `Failed to parse test result. Output: ${stdout.substring(0, 200)}` });
+        }
+      });
+
+      child.on('error', (error) => {
+        console.error('[ProfileService] PowerShell process error:', error);
+        resolve({ valid: false, error: error.message });
+      });
+    });
+  }
+
+  /**
+   * Mask username for safe logging
+   * @param username - Domain username to mask
+   * @returns Masked username
+   */
+  private maskUsername(username: string): string {
+    if (!username) return '***';
+    const parts = username.split('\\');
+    if (parts.length === 2) {
+      return `${parts[0]}\\***`;
+    }
+    return '***';
+  }
+
+  /**
+   * Get AD domain from discovery data
+   * @param profileId - Profile ID
+   * @returns AD domain if AD discovery has been run, null otherwise
+   */
+  async getADDomainFromDiscovery(profileId: string): Promise<{ domain: string | null }> {
+    try {
+      const profile = await this.getProfileById(profileId);
+      if (!profile) {
+        return { domain: null };
+      }
+
+      const companyName = profile.companyName;
+      const companyPath = this.getCompanyDataPath(companyName);
+      const rawPath = path.join(companyPath, 'Raw');
+
+      // Check if AD discovery CSV files exist
+      const adFiles = await glob(path.join(rawPath, '*{ActiveDirectory,AD}*.csv'));
+
+      if (adFiles.length === 0) {
+        return { domain: null };
+      }
+
+      // Try to extract domain from AD User or AD Domain CSV
+      const domainFile = adFiles.find(f => f.includes('User') || f.includes('Domain')) || adFiles[0];
+
+      if (domainFile) {
+        try {
+          const csvContent = await fs.readFile(domainFile, 'utf-8');
+          const lines = csvContent.split('\n').filter(l => l.trim());
+
+          if (lines.length > 1) {
+            // Parse header to find domain-related column
+            const header = lines[0].toLowerCase();
+            const dataRow = lines[1];
+            const values = dataRow.split(',');
+
+            // Look for domain in various columns
+            const domainIndex = header.split(',').findIndex(h =>
+              h.includes('domain') || h.includes('dns')
+            );
+
+            if (domainIndex >= 0 && values[domainIndex]) {
+              return { domain: values[domainIndex].trim().replace(/"/g, '') };
+            }
+
+            // Fallback: extract domain from UserPrincipalName or DN
+            const upnIndex = header.split(',').findIndex(h => h.includes('userprincipalname'));
+            if (upnIndex >= 0 && values[upnIndex]) {
+              const upn = values[upnIndex].trim().replace(/"/g, '');
+              const match = upn.match(/@(.+)$/);
+              if (match) {
+                return { domain: match[1] };
+              }
+            }
+          }
+        } catch (error) {
+          console.error('[ProfileService] Failed to parse AD domain file:', error);
+        }
+      }
+
+      return { domain: null };
+    } catch (error) {
+      console.error('[ProfileService] getADDomainFromDiscovery error:', error);
+      return { domain: null };
+    }
+  }
+
+  /**
+   * Get Azure tenant domain from discovery data
+   * @param profileId - Profile ID
+   * @returns Tenant domain if Azure discovery has been run, null otherwise
+   */
+  async getAzureTenantDomain(profileId: string): Promise<{ domain: string | null }> {
+    try {
+      const profile = await this.getProfileById(profileId);
+      if (!profile) {
+        return { domain: null };
+      }
+
+      const companyName = profile.companyName;
+      const companyPath = this.getCompanyDataPath(companyName);
+      const rawPath = path.join(companyPath, 'Raw');
+
+      // Check if Azure/Entra discovery CSV files exist
+      const azureFiles = await glob(path.join(rawPath, '*{EntraID,Azure,AzureAD}*.csv'));
+
+      if (azureFiles.length === 0) {
+        return { domain: null };
+      }
+
+      // Try to extract tenant domain from EntraID domain CSV
+      const domainFile = azureFiles.find(f => f.includes('EntraIDDomain') || f.includes('Domain'));
+
+      if (domainFile) {
+        try {
+          const csvContent = await fs.readFile(domainFile, 'utf-8');
+          const lines = csvContent.split('\n').filter(l => l.trim());
+
+          if (lines.length > 1) {
+            // Parse first data row (skip header)
+            const dataRow = lines[1];
+            const values = dataRow.split(',');
+
+            // Look for domain name (usually first column or contains .onmicrosoft.com)
+            const domain = values.find(v => v.includes('.') && !v.includes('@')) || values[0];
+
+            if (domain) {
+              return { domain: domain.trim().replace(/"/g, '') };
+            }
+          }
+        } catch (error) {
+          console.error('[ProfileService] Failed to parse domain file:', error);
+        }
+      }
+
+      return { domain: null };
+    } catch (error) {
+      console.error('[ProfileService] getAzureTenantDomain error:', error);
+      return { domain: null };
+    }
+  }
+
+  /**
+   * Get Azure data (domain and tenant ID) from discovery data
+   * @param profileId - Profile ID
+   * @returns Azure domain and tenant ID if Azure discovery has been run, null otherwise
+   */
+  async getAzureDataFromDiscovery(profileId: string): Promise<{ domain: string | null; tenantId: string | null }> {
+    try {
+      const profile = await this.getProfileById(profileId);
+      if (!profile) {
+        return { domain: null, tenantId: null };
+      }
+
+      const companyName = profile.companyName;
+      const companyPath = this.getCompanyDataPath(companyName);
+      const rawPath = path.join(companyPath, 'Raw');
+
+      // Check if Azure/Entra discovery CSV files exist
+      const azureFiles = await glob(path.join(rawPath, '*{EntraID,Azure,AzureAD}*.csv'));
+
+      if (azureFiles.length === 0) {
+        return { domain: null, tenantId: null };
+      }
+
+      let domain: string | null = null;
+      let tenantId: string | null = null;
+
+      // Try to extract tenant domain from EntraID domain CSV
+      const domainFile = azureFiles.find(f => f.includes('EntraIDDomain') || f.includes('Domain'));
+
+      if (domainFile) {
+        try {
+          const csvContent = await fs.readFile(domainFile, 'utf-8');
+          const lines = csvContent.split('\n').filter(l => l.trim());
+
+          if (lines.length > 1) {
+            // Parse first data row (skip header)
+            const dataRow = lines[1];
+            const values = dataRow.split(',');
+
+            // Look for domain name (usually first column or contains .onmicrosoft.com)
+            const domainValue = values.find(v => v.includes('.') && !v.includes('@')) || values[0];
+
+            if (domainValue) {
+              domain = domainValue.trim().replace(/"/g, '');
+            }
+          }
+        } catch (error) {
+          console.error('[ProfileService] Failed to parse domain file:', error);
+        }
+      }
+
+      // Try to extract tenant ID from any Azure CSV file
+      const anyAzureFile = azureFiles[0];
+      try {
+        const csvContent = await fs.readFile(anyAzureFile, 'utf-8');
+        const lines = csvContent.split('\n').filter(l => l.trim());
+
+        if (lines.length > 1) {
+          // Parse header to find TenantId column
+          const header = lines[0].toLowerCase();
+          const dataRow = lines[1];
+          const values = dataRow.split(',');
+
+          const tenantIdIndex = header.split(',').findIndex(h =>
+            h.includes('tenantid') || h.includes('tenant_id')
+          );
+
+          if (tenantIdIndex >= 0 && values[tenantIdIndex]) {
+            tenantId = values[tenantIdIndex].trim().replace(/"/g, '');
+          }
+        }
+      } catch (error) {
+        console.error('[ProfileService] Failed to parse Azure file for tenant ID:', error);
+      }
+
+      return { domain, tenantId };
+    } catch (error) {
+      console.error('[ProfileService] getAzureDataFromDiscovery error:', error);
+      return { domain: null, tenantId: null };
+    }
   }
 
   private async autoDiscoverProfiles(): Promise<void> {

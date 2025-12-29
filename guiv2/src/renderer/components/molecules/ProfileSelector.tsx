@@ -59,6 +59,9 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
   } = useProfileStore();
 
   const [isTesting, setIsTesting] = useState(false);
+  const [discoveredDomain, setDiscoveredDomain] = useState<string | null>(null);
+  const [azureTenantDomain, setAzureTenantDomain] = useState<string | null>(null);
+  const [discoveredTenantId, setDiscoveredTenantId] = useState<string | null>(null);
 
   const profiles = type === 'source' ? sourceProfiles : targetProfiles;
   const selectedProfile = type === 'source' ? selectedSourceProfile : selectedTargetProfile;
@@ -69,6 +72,39 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
       loadSourceProfiles();
     }
   }, [type]); // Only run when type changes or on mount
+
+  // Fetch discovered domain and Azure tenant domain from discovery data ONLY
+  useEffect(() => {
+    const fetchDiscoveredData = async () => {
+      if (!selectedProfile || type !== 'source') return;
+
+      // Reset to null first
+      setDiscoveredDomain(null);
+      setAzureTenantDomain(null);
+      setDiscoveredTenantId(null);
+
+      try {
+        // Get AD domain from AD discovery data (not from machine)
+        const adDomainResult = await window.electronAPI.profile.getADDomainFromDiscovery(selectedProfile.id);
+        if (adDomainResult?.domain) {
+          setDiscoveredDomain(adDomainResult.domain);
+        }
+
+        // Get Azure tenant domain and ID from Azure/Entra discovery data
+        const azureDataResult = await window.electronAPI.profile.getAzureDataFromDiscovery(selectedProfile.id);
+        if (azureDataResult?.domain) {
+          setAzureTenantDomain(azureDataResult.domain);
+        }
+        if (azureDataResult?.tenantId) {
+          setDiscoveredTenantId(azureDataResult.tenantId);
+        }
+      } catch (error) {
+        console.error('[ProfileSelector] Failed to fetch discovered data:', error);
+      }
+    };
+
+    fetchDiscoveredData();
+  }, [selectedProfile, type]);
 
   const handleProfileChange = async (profileId: string) => {
     if (!profileId) return;
@@ -326,16 +362,22 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
                 <span className="text-gray-300">{selectedProfile.environment}</span>
               </div>
             )}
-            {'domainController' in selectedProfile && selectedProfile.domainController && (
+            {discoveredDomain && (
               <div className="flex justify-between">
-                <span className="font-medium text-gray-400">Domain:</span>
-                <span className="text-gray-300">{selectedProfile.domainController}</span>
+                <span className="font-medium text-gray-400">AD Domain:</span>
+                <span className="text-gray-300">{discoveredDomain}</span>
               </div>
             )}
-            {selectedProfile.tenantId && (
+            {azureTenantDomain && (
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-400">Azure Domain:</span>
+                <span className="text-gray-300">{azureTenantDomain}</span>
+              </div>
+            )}
+            {discoveredTenantId && (
               <div className="col-span-2">
-                <span className="font-medium text-gray-400">Tenant:</span>
-                <div className="mt-1 text-gray-300 font-mono text-xs break-all">{selectedProfile.tenantId}</div>
+                <span className="font-medium text-gray-400">Tenant ID:</span>
+                <div className="mt-1 text-gray-300 font-mono text-xs break-all">{discoveredTenantId}</div>
               </div>
             )}
           </div>

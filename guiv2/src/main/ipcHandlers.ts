@@ -2576,11 +2576,36 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       const profilePath = profileService.getCompanyDataPath(companyName);
       console.log(`[IPC:discovery:execute] Resolved profile path: ${profilePath}`);
 
+      // Inject domain credentials for AD-related modules
+      const adRelatedModules = ['ActiveDirectory', 'DNSDHCP'];
+      let domainCreds: { username: string; password: string } | null = null;
+
+      if (adRelatedModules.includes(moduleName)) {
+        try {
+          domainCreds = await profileService.getDomainCredentialsDecrypted(activeProfile.id);
+          if (domainCreds) {
+            console.log(`[IPC:discovery:execute] ✅ Domain credentials loaded for ${moduleName} module`);
+            console.log(`[IPC:discovery:execute] Username: ${domainCreds.username.replace(/\\.*$/, '\\***')}`);
+          } else {
+            console.log(`[IPC:discovery:execute] ℹ️ No domain credentials configured for profile - using integrated auth`);
+          }
+        } catch (error) {
+          console.error(`[IPC:discovery:execute] ⚠️ Failed to load domain credentials: ${error instanceof Error ? error.message : String(error)}`);
+          console.error('[IPC:discovery:execute] Proceeding with integrated authentication');
+        }
+      }
+
+      // Merge credentials into parameters (will be passed to PowerShell Configuration)
+      const enhancedParameters = {
+        ...parameters,
+        ...(domainCreds ? { domainCredentials: domainCreds } : {})
+      };
+
       // Execute discovery module with credentials from profile
       const result = await psService.executeDiscoveryModule(
         moduleName,
         companyName,
-        parameters,
+        enhancedParameters,
         {
           cancellationToken: execId,
           streamOutput: true,

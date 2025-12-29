@@ -147,12 +147,35 @@ If RSAT is not available in this Windows build, consider using a domain-joined m
             return $result
         }
 
+        # Prepare credentials if provided
+        $credential = $null
+        $domainServer = $null
+
+        if ($Configuration.domainCredentials -and
+            $Configuration.domainCredentials.username -and
+            $Configuration.domainCredentials.password) {
+
+            Write-MultiDomainLog -Level "INFO" -Message "Using provided domain credentials: $($Configuration.domainCredentials.username -replace '\\.*','\\***')" -Context $Context
+
+            # Create PSCredential object
+            $securePassword = ConvertTo-SecureString $Configuration.domainCredentials.password -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($Configuration.domainCredentials.username, $securePassword)
+
+            # Extract domain from username (DOMAIN\username format)
+            if ($Configuration.domainCredentials.username -match '^([^\\]+)\\') {
+                $domainServer = $matches[1]
+                Write-MultiDomainLog -Level "INFO" -Message "Auto-detected domain from credentials: $domainServer" -Context $Context
+            }
+        } else {
+            Write-MultiDomainLog -Level "INFO" -Message "Using integrated Windows authentication" -Context $Context
+        }
+
         $allDiscoveredData = [System.Collections.ArrayList]::new()
         
         # Discover Current Forest
         try {
             Write-MultiDomainLog -Level "INFO" -Message "Discovering current forest topology..." -Context $Context
-            $forestData = Get-ForestTopology -Configuration $Configuration -SessionId $SessionId
+            $forestData = Get-ForestTopology -Configuration $Configuration -SessionId $SessionId -Credential $credential -DomainServer $domainServer
             if ($forestData.Count -gt 0) {
                 $forestData | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Forest' -Force }
                 $null = $allDiscoveredData.AddRange($forestData)
@@ -163,11 +186,11 @@ If RSAT is not available in this Windows build, consider using a domain-joined m
         } catch {
             $result.AddWarning("Failed to discover forest topology: $($_.Exception.Message)", @{Section="Forest"})
         }
-        
+
         # Discover All Domains in Forest
         try {
             Write-MultiDomainLog -Level "INFO" -Message "Discovering domains in forest..." -Context $Context
-            $domainData = Get-MultiDomainTopology -Configuration $Configuration -SessionId $SessionId
+            $domainData = Get-MultiDomainTopology -Configuration $Configuration -SessionId $SessionId -Credential $credential -DomainServer $domainServer
             if ($domainData.Count -gt 0) {
                 $domainData | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Domain' -Force }
                 $null = $allDiscoveredData.AddRange($domainData)
@@ -179,11 +202,11 @@ If RSAT is not available in this Windows build, consider using a domain-joined m
         } catch {
             $result.AddWarning("Failed to discover domain topology: $($_.Exception.Message)", @{Section="Domains"})
         }
-        
+
         # Discover Trust Relationships
         try {
             Write-MultiDomainLog -Level "INFO" -Message "Discovering trust relationships..." -Context $Context
-            $trustData = Get-TrustRelationships -Configuration $Configuration -SessionId $SessionId
+            $trustData = Get-TrustRelationships -Configuration $Configuration -SessionId $SessionId -Credential $credential -DomainServer $domainServer
             if ($trustData.Count -gt 0) {
                 $trustData | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Trust' -Force }
                 $null = $allDiscoveredData.AddRange($trustData)
@@ -197,7 +220,7 @@ If RSAT is not available in this Windows build, consider using a domain-joined m
         # Discover Global Catalogs
         try {
             Write-MultiDomainLog -Level "INFO" -Message "Discovering global catalogs..." -Context $Context
-            $gcData = Get-GlobalCatalogServers -Configuration $Configuration -SessionId $SessionId
+            $gcData = Get-GlobalCatalogServers -Configuration $Configuration -SessionId $SessionId -Credential $credential -DomainServer $domainServer
             if ($gcData.Count -gt 0) {
                 $gcData | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'GlobalCatalog' -Force }
                 $null = $allDiscoveredData.AddRange($gcData)
@@ -207,11 +230,11 @@ If RSAT is not available in this Windows build, consider using a domain-joined m
         } catch {
             $result.AddWarning("Failed to discover global catalogs: $($_.Exception.Message)", @{Section="GlobalCatalogs"})
         }
-        
+
         # Discover Sites and Replication
         try {
             Write-MultiDomainLog -Level "INFO" -Message "Discovering sites and replication topology..." -Context $Context
-            $siteData = Get-SiteReplicationTopology -Configuration $Configuration -SessionId $SessionId
+            $siteData = Get-SiteReplicationTopology -Configuration $Configuration -SessionId $SessionId -Credential $credential -DomainServer $domainServer
             if ($siteData.Count -gt 0) {
                 $siteData | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Site' -Force }
                 $null = $allDiscoveredData.AddRange($siteData)
@@ -222,12 +245,12 @@ If RSAT is not available in this Windows build, consider using a domain-joined m
         } catch {
             $result.AddWarning("Failed to discover sites and replication: $($_.Exception.Message)", @{Section="Sites"})
         }
-        
+
         # Discover Cross-Domain Objects (if specified)
         if ($Configuration.multiDomain -and $Configuration.multiDomain.discoverCrossDomainObjects -eq $true) {
             try {
                 Write-MultiDomainLog -Level "INFO" -Message "Discovering cross-domain objects..." -Context $Context
-                $crossDomainData = Get-CrossDomainObjects -Configuration $Configuration -SessionId $SessionId
+                $crossDomainData = Get-CrossDomainObjects -Configuration $Configuration -SessionId $SessionId -Credential $credential -DomainServer $domainServer
                 if ($crossDomainData.Count -gt 0) {
                     $crossDomainData | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'CrossDomain' -Force }
                     $null = $allDiscoveredData.AddRange($crossDomainData)
@@ -242,7 +265,7 @@ If RSAT is not available in this Windows build, consider using a domain-joined m
         # Generate Multi-Domain Assessment
         try {
             Write-MultiDomainLog -Level "INFO" -Message "Generating multi-domain assessment..." -Context $Context
-            $assessment = Get-MultiDomainAssessment -DiscoveredData $allDiscoveredData -SessionId $SessionId
+            $assessment = Get-MultiDomainAssessment -DiscoveredData $allDiscoveredData -SessionId $SessionId -Credential $credential -DomainServer $domainServer
             if ($assessment.Count -gt 0) {
                 $assessment | ForEach-Object { $_ | Add-Member -NotePropertyName '_DataType' -NotePropertyValue 'Assessment' -Force }
                 $null = $allDiscoveredData.AddRange($assessment)
@@ -305,14 +328,20 @@ function Get-ForestTopology {
     [CmdletBinding()]
     param(
         [hashtable]$Configuration,
-        [string]$SessionId
+        [string]$SessionId,
+        [System.Management.Automation.PSCredential]$Credential,
+        [string]$DomainServer
     )
-    
+
     $forestData = @()
-    
+
     try {
-        # Get current forest
-        $currentForest = Get-ADForest -ErrorAction Stop
+        # Get current forest (with credentials if provided)
+        $getForestParams = @{ ErrorAction = 'Stop' }
+        if ($Credential) { $getForestParams['Credential'] = $Credential }
+        if ($DomainServer) { $getForestParams['Server'] = $DomainServer }
+
+        $currentForest = Get-ADForest @getForestParams
         
         # Forest-level information
         $forestData += [PSCustomObject]@{
@@ -341,9 +370,12 @@ function Get-ForestTopology {
             foreach ($forestName in $Configuration.multiDomain.additionalForests) {
                 try {
                     Write-MultiDomainLog -Level "INFO" -Message "Discovering external forest: $forestName"
-                    
-                    # Try to connect to the external forest
-                    $externalForest = Get-ADForest -Identity $forestName -ErrorAction Stop
+
+                    # Try to connect to the external forest (with credentials if provided)
+                    $getExtForestParams = @{ Identity = $forestName; ErrorAction = 'Stop' }
+                    if ($Credential) { $getExtForestParams['Credential'] = $Credential }
+
+                    $externalForest = Get-ADForest @getExtForestParams
                     
                     $forestData += [PSCustomObject]@{
                         ObjectType = "ExternalForest"
@@ -396,21 +428,36 @@ function Get-MultiDomainTopology {
     [CmdletBinding()]
     param(
         [hashtable]$Configuration,
-        [string]$SessionId
+        [string]$SessionId,
+        [System.Management.Automation.PSCredential]$Credential,
+        [string]$DomainServer
     )
-    
+
     $domainData = @()
-    
+
     try {
-        # Get all domains in current forest
-        $currentForest = Get-ADForest -ErrorAction Stop
+        # Get all domains in current forest (with credentials if provided)
+        $getForestParams = @{ ErrorAction = 'Stop' }
+        if ($Credential) { $getForestParams['Credential'] = $Credential }
+        if ($DomainServer) { $getForestParams['Server'] = $DomainServer }
+
+        $currentForest = Get-ADForest @getForestParams
         
         foreach ($domainName in $currentForest.Domains) {
             try {
                 Write-MultiDomainLog -Level "DEBUG" -Message "Discovering domain: $domainName"
-                
-                $domain = Get-ADDomain -Identity $domainName -ErrorAction Stop
-                $domainControllers = Get-ADDomainController -Domain $domainName -Filter * -ErrorAction SilentlyContinue
+
+                # Get domain with credentials
+                $getDomainParams = @{ Identity = $domainName; ErrorAction = 'Stop' }
+                if ($Credential) { $getDomainParams['Credential'] = $Credential }
+
+                $domain = Get-ADDomain @getDomainParams
+
+                # Get domain controllers with credentials
+                $getDCParams = @{ Domain = $domainName; Filter = '*'; ErrorAction = 'SilentlyContinue' }
+                if ($Credential) { $getDCParams['Credential'] = $Credential }
+
+                $domainControllers = Get-ADDomainController @getDCParams
                 
                 $domainData += [PSCustomObject]@{
                     ObjectType = "Domain"
@@ -539,22 +586,31 @@ function Get-TrustRelationships {
     [CmdletBinding()]
     param(
         [hashtable]$Configuration,
-        [string]$SessionId
+        [string]$SessionId,
+        [System.Management.Automation.PSCredential]$Credential,
+        [string]$DomainServer
     )
-    
+
     $trustData = @()
-    
+
     try {
-        # Get all domains in current forest
-        $currentForest = Get-ADForest -ErrorAction SilentlyContinue
+        # Get all domains in current forest (with credentials)
+        $getForestParams = @{ ErrorAction = 'SilentlyContinue' }
+        if ($Credential) { $getForestParams['Credential'] = $Credential }
+        if ($DomainServer) { $getForestParams['Server'] = $DomainServer }
+
+        $currentForest = Get-ADForest @getForestParams
         
         if ($currentForest) {
             foreach ($domainName in $currentForest.Domains) {
                 try {
                     Write-MultiDomainLog -Level "DEBUG" -Message "Discovering trusts for domain: $domainName"
-                    
-                    # Get domain trusts
-                    $trusts = Get-ADTrust -Filter * -Server $domainName -ErrorAction SilentlyContinue
+
+                    # Get domain trusts (with credentials)
+                    $getTrustParams = @{ Filter = '*'; Server = $domainName; ErrorAction = 'SilentlyContinue' }
+                    if ($Credential) { $getTrustParams['Credential'] = $Credential }
+
+                    $trusts = Get-ADTrust @getTrustParams
                     
                     foreach ($trust in $trusts) {
                         $trustData += [PSCustomObject]@{
@@ -651,19 +707,28 @@ function Get-GlobalCatalogServers {
     [CmdletBinding()]
     param(
         [hashtable]$Configuration,
-        [string]$SessionId
+        [string]$SessionId,
+        [System.Management.Automation.PSCredential]$Credential,
+        [string]$DomainServer
     )
-    
+
     $gcData = @()
-    
+
     try {
-        # Get current forest GCs
-        $currentForest = Get-ADForest -ErrorAction SilentlyContinue
+        # Get current forest GCs (with credentials if provided)
+        $getForestParams = @{ ErrorAction = 'SilentlyContinue' }
+        if ($Credential) { $getForestParams['Credential'] = $Credential }
+        if ($DomainServer) { $getForestParams['Server'] = $DomainServer }
+
+        $currentForest = Get-ADForest @getForestParams
         
         if ($currentForest) {
             foreach ($gcName in $currentForest.GlobalCatalogs) {
                 try {
-                    $gc = Get-ADDomainController -Identity $gcName -ErrorAction SilentlyContinue
+                    $getDCParams = @{ Identity = $gcName; ErrorAction = 'SilentlyContinue' }
+                    if ($Credential) { $getDCParams['Credential'] = $Credential }
+
+                    $gc = Get-ADDomainController @getDCParams
                     
                     if ($gc) {
                         $gcData += [PSCustomObject]@{

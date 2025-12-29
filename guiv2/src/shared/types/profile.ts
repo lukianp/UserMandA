@@ -1,3 +1,19 @@
+export type DomainCredentialValidationStatus = 'valid' | 'invalid' | 'unknown';
+
+export interface DomainCredentialsStored {
+  username: string;             // DOMAIN\username
+  password: string;             // base64 encrypted blob
+  encrypted: true;
+  lastValidated?: string;       // ISO datetime
+  validationStatus?: DomainCredentialValidationStatus;
+  validationError?: string;     // last failure reason (no secrets)
+}
+
+export interface CompanyProfileConfiguration {
+  domainCredentials?: DomainCredentialsStored;
+  [key: string]: any;
+}
+
 export interface CompanyProfile {
   id: string;
   companyName: string;
@@ -7,7 +23,7 @@ export interface CompanyProfile {
   isActive: boolean;
   created: string;
   lastModified: string;
-  configuration: Record<string, any>;
+  configuration: CompanyProfileConfiguration;
 }
 
 export interface ProfileDatabase {

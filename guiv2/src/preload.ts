@@ -218,6 +218,27 @@ const electronAPI: ElectronAPI = {
     validate: (profile: any) => ipcRenderer.invoke('profile:validate', profile),
     getConnectionConfig: (profileId: string) => ipcRenderer.invoke('profile:getConnectionConfig', profileId),
     setConnectionConfig: (profileId: string, config: any) => ipcRenderer.invoke('profile:setConnectionConfig', profileId, config),
+
+    // Domain Credentials
+    saveDomainCredentials: (profileId: string, username: string, password: string) =>
+      ipcRenderer.invoke('profile:saveDomainCredentials', profileId, username, password),
+    clearDomainCredentials: (profileId: string) =>
+      ipcRenderer.invoke('profile:clearDomainCredentials', profileId),
+    testDomainCredentials: (profileId: string) =>
+      ipcRenderer.invoke('profile:testDomainCredentials', profileId),
+    testDomainCredentialsWithValues: (username: string, password: string) =>
+      ipcRenderer.invoke('profile:testDomainCredentialsWithValues', username, password),
+    getDomainCredentialStatus: (profileId: string) =>
+      ipcRenderer.invoke('profile:getDomainCredentialStatus', profileId),
+
+    // Discovery Data
+    getADDomainFromDiscovery: (profileId: string) =>
+      ipcRenderer.invoke('profile:getADDomainFromDiscovery', profileId),
+    getAzureTenantDomain: (profileId: string) =>
+      ipcRenderer.invoke('profile:getAzureTenantDomain', profileId),
+    getAzureDataFromDiscovery: (profileId: string) =>
+      ipcRenderer.invoke('profile:getAzureDataFromDiscovery', profileId),
+
     /**
      * Test connection for a profile
      * Validates Azure credentials and connectivity

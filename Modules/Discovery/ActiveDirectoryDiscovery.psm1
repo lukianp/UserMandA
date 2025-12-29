@@ -230,10 +230,23 @@ function Invoke-ActiveDirectoryDiscovery {
         Confirm-Path -Path $outputPath
 
         # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
-        # AD needs domain controller or global catalog
-        if (-not $Configuration.environment.domainController -and -not $Configuration.environment.globalCatalog) {
-            $result.AddError("No domain controller or global catalog configured", $null, $null)
+        # AD needs domain controller or global catalog (or can auto-detect from machine)
+        # Skip this validation if domain credentials are provided (we'll auto-detect the domain)
+        $hasDomainCredentials = $Configuration.domainCredentials -and
+                                $Configuration.domainCredentials.username -and
+                                $Configuration.domainCredentials.password
+
+        if (-not $Configuration.environment.domainController -and
+            -not $Configuration.environment.globalCatalog -and
+            -not $env:USERDNSDOMAIN -and
+            -not $hasDomainCredentials) {
+            $result.AddError("No domain controller or global catalog configured, and machine is not domain-joined", $null, $null)
             return $result
+        }
+
+        # If domain credentials are provided, log them
+        if ($hasDomainCredentials) {
+            Write-ActiveDirectoryLog -Level "INFO" -Message "Domain credentials provided: $($Configuration.domainCredentials.username -replace '\\.*$','\\***')" -Context $Context
         }
 
         # 4. AUTHENTICATE & CONNECT
@@ -563,15 +576,47 @@ function Confirm-Path {
 
 function Get-ServerParameters {
     param([hashtable]$Configuration)
-    
+
     $params = @{}
-    
+
+    # Add server parameter
     if ($Configuration.environment.globalCatalog) {
         $params.Server = $Configuration.environment.globalCatalog
     } elseif ($Configuration.environment.domainController) {
         $params.Server = $Configuration.environment.domainController
+    } elseif ($env:USERDNSDOMAIN) {
+        $params.Server = $env:USERDNSDOMAIN
+    } else {
+        # Try to extract domain from domain credentials (DOMAIN\username format)
+        if ($Configuration.domainCredentials -and $Configuration.domainCredentials.username) {
+            if ($Configuration.domainCredentials.username -match '^([^\\]+)\\') {
+                $domainName = $matches[1]
+                $params.Server = $domainName
+                Write-ActiveDirectoryLog -Level "INFO" -Message "Auto-detected domain from credentials: $domainName"
+            }
+        }
     }
-    
+
+    # Add credential parameter if domain credentials are provided
+    if ($Configuration.domainCredentials -and
+        $Configuration.domainCredentials.username -and
+        $Configuration.domainCredentials.password) {
+        try {
+            $securePassword = ConvertTo-SecureString $Configuration.domainCredentials.password -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential(
+                $Configuration.domainCredentials.username,
+                $securePassword
+            )
+            $params.Credential = $credential
+
+            Write-ActiveDirectoryLog -Level "INFO" -Message "Using domain credentials for authentication: $($Configuration.domainCredentials.username -replace '\\.*$','\\***')"
+        } catch {
+            Write-ActiveDirectoryLog -Level "WARN" -Message "Failed to create PSCredential from domain credentials: $($_.Exception.Message)"
+        }
+    } else {
+        Write-ActiveDirectoryLog -Level "INFO" -Message "Using integrated Windows authentication (no domain credentials provided)"
+    }
+
     return $params
 }
 

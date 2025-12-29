@@ -155,7 +155,12 @@
       "Bash(git diff-tree:*)",
       "Bash(git stash:*)",
       "Bash(git checkout:*)",
-      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*.csv 2>nul\")"
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*.csv 2>nul\")",
+      "Bash(git pull:*)",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*Intune*.csv 2>nul\")",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*App*.csv 2>nul\")",
+      "Bash(Format-Table ProcessName, Id, StartTime -AutoSize)",
+      "Bash(timeout /t 6 /nobreak)"
     ],
     "deny": [],
     "ask": []

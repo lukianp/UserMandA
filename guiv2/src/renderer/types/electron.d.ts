@@ -762,6 +762,71 @@ export interface ElectronAPI {
     clearCredentials: (profileId: string) => Promise<{ success: boolean; error?: string }>;
 
     /**
+     * Save domain credentials for a profile (encrypted with safeStorage)
+     * @param profileId Profile ID
+     * @param username Domain username in DOMAIN\user format
+     * @param password Plaintext password (will be encrypted)
+     * @returns Promise resolving when credentials are saved
+     */
+    saveDomainCredentials: (profileId: string, username: string, password: string) => Promise<void>;
+
+    /**
+     * Clear domain credentials for a profile
+     * @param profileId Profile ID
+     * @returns Promise resolving when credentials are cleared
+     */
+    clearDomainCredentials: (profileId: string) => Promise<void>;
+
+    /**
+     * Test domain credentials by authenticating with AD
+     * @param profileId Profile ID
+     * @returns Promise with test result including validity and domain
+     */
+    testDomainCredentials: (profileId: string) => Promise<{ valid: boolean; domain?: string; error?: string }>;
+
+    /**
+     * Test domain credentials with provided values (without saving first)
+     * @param username - Domain username (DOMAIN\username)
+     * @param password - Plaintext password
+     * @returns Promise with test result including validity and domain
+     */
+    testDomainCredentialsWithValues: (username: string, password: string) => Promise<{ valid: boolean; domain?: string; error?: string }>;
+
+    /**
+     * Get domain credential status (no passwords)
+     * @param profileId Profile ID
+     * @returns Promise with credential status information
+     */
+    getDomainCredentialStatus: (profileId: string) => Promise<{
+      hasCredentials: boolean;
+      username?: string;
+      validationStatus?: import('../../../shared/types/profile').DomainCredentialValidationStatus;
+      lastValidated?: string;
+      validationError?: string;
+    }>;
+
+    /**
+     * Get AD domain from discovery data
+     * @param profileId Profile ID
+     * @returns Promise resolving to AD domain if AD discovery has run
+     */
+    getADDomainFromDiscovery: (profileId: string) => Promise<{ domain: string | null }>;
+
+    /**
+     * Get Azure tenant domain from discovery data
+     * @param profileId Profile ID
+     * @returns Promise resolving to tenant domain if Azure discovery has run
+     */
+    getAzureTenantDomain: (profileId: string) => Promise<{ domain: string | null }>;
+
+    /**
+     * Get Azure data (domain and tenant ID) from discovery data
+     * @param profileId Profile ID
+     * @returns Promise resolving to Azure domain and tenant ID if Azure discovery has run
+     */
+    getAzureDataFromDiscovery: (profileId: string) => Promise<{ domain: string | null; tenantId: string | null }>;
+
+    /**
      * Register a listener for profile change events
      * @param callback Function to call when profile changes
      * @returns Cleanup function to remove listener

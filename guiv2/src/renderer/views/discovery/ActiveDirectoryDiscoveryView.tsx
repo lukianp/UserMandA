@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Download, Play, Square, Save, FolderOpen, Settings, RefreshCw, Database, Users, Server, FolderTree, Shield, Network } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import { useActiveDirectoryDiscoveryLogic } from '../../hooks/useActiveDirectoryDiscoveryLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
@@ -19,6 +20,7 @@ import PowerShellExecutionDialog from '../../components/molecules/PowerShellExec
  * Active Directory Discovery View Component
  */
 const ActiveDirectoryDiscoveryView: React.FC = () => {
+  const navigate = useNavigate();
   const {
     config,
     templates,
@@ -65,45 +67,6 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Template Selector */}
-            <select
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-              onChange={(value) => {
-                const template = templates.find(t => t.id === value);
-                if (template) loadTemplate(template);
-              }}
-              disabled={isDiscovering}
-              aria-label="Select discovery template"
-              title="Select Template"
-            >
-              <option value="">Select Template...</option>
-              {templates.map(template => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))}
-            </select>
-
-            <Button
-              variant="secondary"
-              icon={<Settings />}
-              onClick={() => {/* TODO: Open config dialog */}}
-              disabled={isDiscovering}
-              data-cy="config-btn" data-testid="config-btn"
-            >
-              Configure
-            </Button>
-
-            <Button
-              variant="secondary"
-              icon={<Save />}
-              onClick={() => {/* TODO: Open save template dialog */}}
-              disabled={isDiscovering}
-              data-cy="save-template-btn" data-testid="save-template-btn"
-            >
-              Save Template
-            </Button>
-
             {!isDiscovering ? (
               <Button
                 variant="primary"
@@ -141,7 +104,9 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
               <ProgressBar value={progress.progress || 0} max={100} />
               {progress.estimatedTimeRemaining !== null && progress.estimatedTimeRemaining !== undefined && typeof progress.estimatedTimeRemaining === 'number' && (
                 <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                  Estimated time remaining: {Math.ceil(progress.estimatedTimeRemaining / 60)} minutes
+                  Estimated time remaining: {progress.estimatedTimeRemaining >= 60
+                    ? `${Math.ceil(progress.estimatedTimeRemaining / 60)} minutes`
+                    : `${Math.ceil(progress.estimatedTimeRemaining)} seconds`}
                 </div>
               )}
             </div>
@@ -168,7 +133,7 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Summary Stats */}
           <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               <StatCard
                 icon={<Users className="w-5 h-5" />}
                 label="Users"
@@ -180,7 +145,7 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
                 icon={<Shield className="w-5 h-5" />}
                 label="Groups"
                 value={currentResult.stats?.totalGroups ?? 0}
-                subValue={`${currentResult.stats?.securityGroups ?? 0} security`}
+                subValue={`${currentResult.metadata?.GroupMembershipCount ?? 0} members`}
                 color="green"
               />
               <StatCard
@@ -197,16 +162,40 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
                 color="orange"
               />
               <StatCard
+                icon={<Network className="w-5 h-5" />}
+                label="Trusts"
+                value={currentResult.metadata?.TrustCount ?? 0}
+                color="indigo"
+              />
+              <StatCard
+                icon={<Database className="w-5 h-5" />}
+                label="FSMO Roles"
+                value={currentResult.metadata?.FSMORoleCount ?? 0}
+                color="pink"
+              />
+              <StatCard
+                icon={<Shield className="w-5 h-5" />}
+                label="Service Accounts"
+                value={currentResult.metadata?.ServiceAccountCount ?? 0}
+                color="yellow"
+              />
+              <StatCard
                 icon={<Settings className="w-5 h-5" />}
-                label="GPOs"
-                value={currentResult.stats?.totalGPOs ?? 0}
+                label="Password Policies"
+                value={currentResult.metadata?.PasswordPolicyCount ?? 0}
                 color="red"
+              />
+              <StatCard
+                icon={<Network className="w-5 h-5" />}
+                label="Total Records"
+                value={currentResult.metadata?.TotalRecords ?? 0}
+                color="teal"
               />
               <StatCard
                 icon={<Network className="w-5 h-5" />}
                 label="Duration"
                 value={`${Math.round((currentResult.duration ?? 0) / 1000)}s`}
-                subValue={`${(currentResult.objectsPerSecond ?? 0).toFixed(1)} obj/s`}
+                subValue={`${(currentResult.stats?.objectsPerSecond ?? 0).toFixed(1)} obj/s`}
                 color="gray"
               />
             </div>
@@ -224,48 +213,40 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
               <TabButton
                 active={selectedTab === 'users'}
                 onClick={() => setSelectedTab('users')}
-                label={`Users (${currentResult.users.length})`}
+                label={`Users (${currentResult.stats?.totalUsers || 0})`}
                 icon={<Users className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'groups'}
                 onClick={() => setSelectedTab('groups')}
-                label={`Groups (${currentResult.groups.length})`}
+                label={`Groups (${currentResult.stats?.totalGroups || 0})`}
                 icon={<Shield className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'computers'}
                 onClick={() => setSelectedTab('computers')}
-                label={`Computers (${currentResult.computers.length})`}
+                label={`Computers (${currentResult.stats?.totalComputers || 0})`}
                 icon={<Server className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'ous'}
                 onClick={() => setSelectedTab('ous')}
-                label={`OUs (${currentResult.ous.length})`}
+                label={`OUs (${currentResult.stats?.totalOUs || 0})`}
                 icon={<FolderTree className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'gpos'}
                 onClick={() => setSelectedTab('gpos')}
-                label={`GPOs (${currentResult.gpos.length})`}
+                label={`GPOs (${currentResult.stats?.totalGPOs || 0})`}
                 icon={<Settings className="w-4 h-4" />}
               />
             </div>
           </div>
 
-          {/* Search and Actions */}
-          {selectedTab !== 'overview' && (
+          {/* Search and Actions - Only shown on overview tab */}
+          {selectedTab === 'overview' && (
             <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 max-w-md">
-                  <SearchBar
-                    value={searchText}
-                    onChange={setSearchText}
-                    placeholder={`Search ${selectedTab}...`}
-                    data-cy="ad-search" data-testid="ad-search"
-                  />
-                </div>
+              <div className="flex items-center justify-end">
                 <div className="flex items-center gap-2">
                   <Button
                     variant="secondary"
@@ -293,14 +274,29 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
             {selectedTab === 'overview' ? (
               <OverviewTab result={currentResult} />
             ) : (
-              <div className="h-full p-4">
-                <VirtualizedDataGrid
-                  data={filteredData}
-                  columns={columnDefs}
-                  loading={false}
-                  enableColumnReorder
-                  data-cy={`ad-${selectedTab}-grid`}
-                />
+              <div className="h-full flex items-center justify-center p-4">
+                <div className="text-center max-w-lg">
+                  <Database className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Data Exported to CSV Files
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Discovery data has been exported to CSV files for optimal performance.
+                    Navigate to <span className="font-semibold">Discovered Hub → Active Directory</span> to view and analyze the detailed data.
+                  </p>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-blue-800 dark:text-blue-300">
+                      <strong>Discovered {currentResult.stats?.totalUsers || 0} users</strong>, {currentResult.stats?.totalGroups || 0} groups, {currentResult.stats?.totalComputers || 0} computers, and {currentResult.stats?.totalOUs || 0} organizational units
+                    </p>
+                  </div>
+                  <Button
+                    variant="primary"
+                    icon={<FolderOpen />}
+                    onClick={() => navigate('/discovered/activedirectory')}
+                  >
+                    View in Discovered Hub
+                  </Button>
+                </div>
               </div>
             )}
           </div>
@@ -325,13 +321,6 @@ const ActiveDirectoryDiscoveryView: React.FC = () => {
                 onClick={startDiscovery}
               >
                 Start Discovery
-              </Button>
-              <Button
-                variant="secondary"
-                icon={<FolderOpen />}
-                onClick={() => {/* TODO: Load from file */}}
-              >
-                Load Results
               </Button>
             </div>
           </div>
@@ -367,7 +356,7 @@ interface StatCardProps {
   label: string;
   value: number | string;
   subValue?: string;
-  color: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'gray';
+  color: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'gray' | 'indigo' | 'pink' | 'yellow' | 'teal';
 }
 
 const StatCard: React.FC<StatCardProps> = ({ icon, label, value, subValue, color }) => {
@@ -378,6 +367,10 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, value, subValue, color
     orange: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400',
     red: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
     gray: 'bg-gray-50 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400',
+    indigo: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400',
+    pink: 'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400',
+    yellow: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
+    teal: 'bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400',
   };
 
   return (
@@ -440,17 +433,47 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ result }) => (
       </div>
     </div>
 
-    {result.forest && (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Forest Information</h3>
-        <div className="space-y-3">
-          <SummaryRow label="Forest Name" value={result?.forest?.name ?? 'N/A'} />
-          <SummaryRow label="Forest Mode" value={result?.forest?.forestMode ?? 'N/A'} />
-          <SummaryRow label="Domains" value={(result?.forest?.domains ?? []).length} />
-          <SummaryRow label="Sites" value={(result?.forest?.sites ?? []).length} />
-          <SummaryRow label="Global Catalogs" value={(result?.forest?.globalCatalogs ?? []).length} />
+    {result.metadata && (
+      <>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Domain Information</h3>
+          <div className="space-y-3">
+            <SummaryRow label="Domain DNS Name" value={result.metadata.DomainDNSRoot ?? 'N/A'} />
+            <SummaryRow label="Domain NetBIOS Name" value={result.metadata.DomainNetBIOSName ?? 'N/A'} />
+            <SummaryRow label="Authentication Method" value={result.metadata.AuthenticationMethod ?? 'N/A'} />
+            {result.metadata.TenantId && (
+              <SummaryRow label="Tenant ID" value={result.metadata.TenantId} />
+            )}
+          </div>
         </div>
-      </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Infrastructure Summary</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <SummaryRow label="Total Users" value={result.metadata.UserCount ?? 0} />
+              <SummaryRow label="Total Groups" value={result.metadata.GroupCount ?? 0} />
+              <SummaryRow label="Group Memberships" value={result.metadata.GroupMembershipCount ?? 0} />
+              <SummaryRow label="Service Accounts" value={result.metadata.ServiceAccountCount ?? 0} />
+            </div>
+            <div className="space-y-3">
+              <SummaryRow label="Computers" value={result.metadata.ComputerCount ?? 0} />
+              <SummaryRow label="Organizational Units" value={result.metadata.OUCount ?? 0} />
+              <SummaryRow label="Domain Trusts" value={result.metadata.TrustCount ?? 0} />
+              <SummaryRow label="FSMO Roles" value={result.metadata.FSMORoleCount ?? 0} />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Security Policies</h3>
+          <div className="space-y-3">
+            <SummaryRow label="Password Policies" value={result.metadata.PasswordPolicyCount ?? 0} />
+            <SummaryRow label="Total Records Collected" value={result.metadata.TotalRecords ?? 0} />
+            <SummaryRow label="Elapsed Time" value={`${(result.metadata.ElapsedTimeSeconds ?? 0).toFixed(2)} seconds`} />
+          </div>
+        </div>
+      </>
     )}
   </div>
 );
