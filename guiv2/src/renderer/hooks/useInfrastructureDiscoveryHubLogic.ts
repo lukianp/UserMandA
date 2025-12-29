@@ -120,15 +120,15 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   // =========================================================================
   {
     id: 'azure-infrastructure',
-    name: 'Azure',
+    name: 'Entra ID & M365',
     icon: 'Cloud',
-    description: 'Discover Azure resources, subscriptions, resource groups, and configurations',
+    description: 'Discover Entra ID users, groups, security policies, and Microsoft 365 services',
     route: '/discovery/azure',
     status: 'idle',
   },
   {
     id: 'azure-resource',
-    name: 'Azure Resource',
+    name: 'Azure Infrastructure',
     icon: 'Server',
     description: 'Detailed discovery of Azure resources, VMs, storage, and networking',
     route: '/discovery/azure-resource',
@@ -256,7 +256,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'network',
-    name: 'Network',
+    name: 'Network Infrastructure',
     icon: 'Network',
     description: 'Discover network topology, subnets, and IP address management',
     route: '/discovery/network',
@@ -320,7 +320,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'web-server',
-    name: 'Web Server',
+    name: 'Web Server Config',
     icon: 'Network',
     description: 'Discover IIS sites, application pools, and web configurations',
     route: '/discovery/web-server',
@@ -380,7 +380,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   // =========================================================================
   {
     id: 'security',
-    name: 'Security',
+    name: 'Security Infrastructure',
     icon: 'Shield',
     description: 'Discover security policies, compliance status, and vulnerabilities',
     route: '/discovery/security',

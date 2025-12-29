@@ -22,7 +22,7 @@ const withSuspense = (Component: React.LazyExoticComponent<React.ComponentType<a
 const ActivedirectoryDiscoveredView = lazy(() => import('./ActivedirectoryDiscoveredView'));
 const ApplicationsDiscoveredView = lazy(() => import('./ApplicationsDiscoveredView'));
 const AwsDiscoveredView = lazy(() => import('./AWSDiscoveredView'));
-const AzureDiscoveredView = lazy(() => import('./AzureDiscoveredView'));
+const EntraIDM365DiscoveredView = lazy(() => import('./EntraIDM365DiscoveredView'));
 const AzureresourceDiscoveredView = lazy(() => import('./AzureresourceDiscoveredView'));
 const BackuprecoveryDiscoveredView = lazy(() => import('./BackuprecoveryDiscoveredView'));
 const CertificateauthorityDiscoveredView = lazy(() => import('./CertificateauthorityDiscoveredView'));
@@ -63,6 +63,9 @@ const VirtualizationDiscoveredView = lazy(() => import('./VirtualizationDiscover
 const VmwareDiscoveredView = lazy(() => import('./VMwareDiscoveredView'));
 const WebserverconfigDiscoveredView = lazy(() => import('./WebserverconfigDiscoveredView'));
 const HypervDiscoveredView = lazy(() => import('./HyperVDiscoveredView'));
+const DomainDiscoveredView = lazy(() => import('./DomainDiscoveredView'));
+const GoogleworkspaceDiscoveredView = lazy(() => import('./GoogleworkspaceDiscoveredView'));
+const Office365DiscoveredView = lazy(() => import('./Office365DiscoveredView'));
 
 export const discoveredRoutes = [
   {
@@ -79,7 +82,7 @@ export const discoveredRoutes = [
   },
   {
     path: '/discovered/azure',
-    element: withSuspense(AzureDiscoveredView)
+    element: withSuspense(EntraIDM365DiscoveredView)
   },
   {
     path: '/discovered/azureresource',
@@ -236,6 +239,18 @@ export const discoveredRoutes = [
   {
     path: '/discovered/webserverconfig',
     element: withSuspense(WebserverconfigDiscoveredView)
+  },
+  {
+    path: '/discovered/domain',
+    element: withSuspense(DomainDiscoveredView)
+  },
+  {
+    path: '/discovered/googleworkspace',
+    element: withSuspense(GoogleworkspaceDiscoveredView)
+  },
+  {
+    path: '/discovered/office365',
+    element: withSuspense(Office365DiscoveredView)
   },
   {
     path: '/discovered/hyperv',

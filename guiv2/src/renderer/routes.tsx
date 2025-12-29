@@ -53,7 +53,7 @@ const ActiveDirectoryDiscoveryView = lazy(() => import('./views/discovery/Active
 
 // Organisation Map
 const OrganisationMapView = lazy(() => import('./views/organisation/OrganisationMapView'));
-const AzureDiscoveryView = lazy(() => import('./views/discovery/AzureDiscoveryView'));
+const EntraIDM365DiscoveryView = lazy(() => import('./views/discovery/EntraIDM365DiscoveryView'));
 const AWSCloudInfrastructureDiscoveryView = lazy(() => import('./views/discovery/AWSCloudInfrastructureDiscoveryView'));
 const ExchangeDiscoveryView = lazy(() => import('./views/discovery/ExchangeDiscoveryView'));
 const SharePointDiscoveryView = lazy(() => import('./views/discovery/SharePointDiscoveryView'));
@@ -166,7 +166,7 @@ export const routes: RouteObject[] = [
   },
   {
     path: '/discovery/azure',
-    element: lazyLoad(() => import('./views/discovery/AzureDiscoveryView')),
+    element: lazyLoad(() => import('./views/discovery/EntraIDM365DiscoveryView')),
   },
   {
     path: '/discovery/aws',
