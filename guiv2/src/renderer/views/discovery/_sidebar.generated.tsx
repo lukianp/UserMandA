@@ -7,7 +7,7 @@ import {
   Tag, Network, AppWindow, Radar, Mail, Users, Server, FileText,
   Cpu, GitBranch, Folders, BarChart3, Workflow, Printer, Calendar,
   MessageSquare, Globe, Smartphone, Folder, Search, FileSearch, Zap,
-  Settings, FolderTree, UserCog, Fingerprint
+  Settings, FolderTree, UserCog, Fingerprint, KeyRound
 } from 'lucide-react';
 
 export const discoveryNavItems = [
@@ -25,6 +25,8 @@ export const discoveryNavItems = [
   { path: '/discovery/azure-logicapps', label: 'Azure Logic Apps', icon: <Workflow size={16} /> },
   { path: '/discovery/azure-managed-identities', label: 'Azure Managed Identities', icon: <Fingerprint size={16} /> },
   { path: '/discovery/azure-mgmt-groups', label: 'Azure Management Groups', icon: <FolderTree size={16} /> },
+  { path: '/discovery/azure-sp-credentials', label: 'Azure SP Credentials', icon: <KeyRound size={16} /> },
+  { path: '/discovery/azure-storage-access', label: 'Azure Storage Access', icon: <Database size={16} /> },
   { path: '/discovery/azure-pim', label: 'Azure PIM Roles', icon: <Shield size={16} /> },
   { path: '/discovery/azure-sub-owners', label: 'Azure Subscription Owners', icon: <UserCog size={16} /> },
   { path: '/discovery/azure-vmss', label: 'Azure VM Scale Sets', icon: <Layers size={16} /> },

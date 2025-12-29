@@ -76,6 +76,8 @@ const AzurePIMDiscoveredView = lazy(() => import('./AzurePIMDiscoveredView'));
 const AzureSubscriptionOwnersDiscoveredView = lazy(() => import('./AzureSubscriptionOwnersDiscoveredView'));
 const AzureKeyVaultAccessDiscoveredView = lazy(() => import('./AzureKeyVaultAccessDiscoveredView'));
 const AzureManagedIdentitiesDiscoveredView = lazy(() => import('./AzureManagedIdentitiesDiscoveredView'));
+const AzureServicePrincipalCredentialsDiscoveredView = lazy(() => import('./AzureServicePrincipalCredentialsDiscoveredView'));
+const AzureStorageAccountAccessDiscoveredView = lazy(() => import('./AzureStorageAccountAccessDiscoveredView'));
 
 export const discoveredRoutes = [
   {
@@ -305,5 +307,13 @@ export const discoveredRoutes = [
   {
     path: '/discovered/azuremanagedidentities',
     element: withSuspense(AzureManagedIdentitiesDiscoveredView)
+  },
+  {
+    path: '/discovered/azurespcredentials',
+    element: withSuspense(AzureServicePrincipalCredentialsDiscoveredView)
+  },
+  {
+    path: '/discovered/azurestorageaccess',
+    element: withSuspense(AzureStorageAccountAccessDiscoveredView)
   },
 ];

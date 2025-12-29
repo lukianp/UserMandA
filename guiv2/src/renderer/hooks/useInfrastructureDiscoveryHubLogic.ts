@@ -115,6 +115,22 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
     status: 'idle',
   },
   {
+    id: 'azure-sp-credentials',
+    name: 'SP Credentials',
+    icon: 'KeyRound',
+    description: 'Discover Azure Service Principal credentials including secrets and certificates with expiry tracking',
+    route: '/discovery/azure-sp-credentials',
+    status: 'idle',
+  },
+  {
+    id: 'azure-storage-access',
+    name: 'Storage Account Access',
+    icon: 'Database',
+    description: 'Discover Azure Storage Account security settings, network rules, and public access configuration',
+    route: '/discovery/azure-storage-access',
+    status: 'idle',
+  },
+  {
     id: 'azure-vmss',
     name: 'Azure VM Scale Sets',
     icon: 'Layers',

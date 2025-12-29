@@ -389,6 +389,14 @@ export const routes: RouteObject[] = [
     path: '/discovery/azure-managed-identities',
     element: lazyLoad(() => import('./views/discovery/AzureManagedIdentitiesDiscoveryView')),
   },
+  {
+    path: '/discovery/azure-sp-credentials',
+    element: lazyLoad(() => import('./views/discovery/AzureServicePrincipalCredentialsDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-storage-access',
+    element: lazyLoad(() => import('./views/discovery/AzureStorageAccountAccessDiscoveryView')),
+  },
 
   // Auto-generated discovered data routes (CSV display views)
   ...discoveredRoutes,

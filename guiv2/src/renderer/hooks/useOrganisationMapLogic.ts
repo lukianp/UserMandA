@@ -388,6 +388,18 @@ const typeMapping: Record<string, {
     priority: 3,
     category: 'Azure Managed Identity'
   },
+  'azuresecuritydiscovery_serviceprincipalcredentials': {
+    type: 'platform',
+    getName: (r) => r.AppName || r.DisplayName || r.AppId,
+    priority: 3,
+    category: 'Azure Service Principal'
+  },
+  'azuresecuritydiscovery_storageaccountaccess': {
+    type: 'it-component',
+    getName: (r) => r.Name || r.StorageAccountName,
+    priority: 2,
+    category: 'Azure Storage'
+  },
 
   // Certificates
   'ca_certificates': {

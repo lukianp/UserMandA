@@ -449,6 +449,7 @@ export interface InfrastructureDiscoveryResult {
   servers?: any[];
   networkDevices?: any[];
   storageDevices?: any[];
+  securityDevices?: any[];
   virtualization?: any[];
   statistics?: {
     physicalServers?: number;

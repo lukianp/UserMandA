@@ -29,6 +29,7 @@ import {
   Layers,
   UserCog,
   Key,
+  KeyRound,
   Fingerprint,
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -63,6 +64,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Layers,
   UserCog,
   Key,
+  KeyRound,
   Fingerprint,
 };
 

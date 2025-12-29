@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
-import { InfrastructureDiscoveryResult, NetworkDiagnosticResults } from '../types/models/discovery';
+import { NetworkDiagnosticResults, InfrastructureDiscoveryResult } from '../types/models/discovery';
 
 interface InfrastructureDiscoveryConfig {
   includeServers: boolean;
@@ -19,27 +19,6 @@ interface InfrastructureDiscoveryConfig {
   showWindow: boolean;
   enableDiagnostics: boolean;
   manualSubnets: string[];
-}
-
-interface InfrastructureDiscoveryResult {
-  totalServers?: number;
-  totalNetworkDevices?: number;
-  totalStorageDevices?: number;
-  totalSecurityDevices?: number;
-  totalVirtualization?: number;
-  totalItems?: number;
-  outputPath?: string;
-  servers?: any[];
-  networkDevices?: any[];
-  storageDevices?: any[];
-  securityDevices?: any[];
-  virtualization?: any[];
-  statistics?: {
-    physicalServers?: number;
-    virtualServers?: number;
-    totalStorage?: number;
-    networkSegments?: number;
-  };
 }
 
 export interface LogEntry {

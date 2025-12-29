@@ -243,7 +243,7 @@ const InfrastructureDiscoveryView: React.FC = () => {
                   // Show diagnostic information from the last discovery run
                   if (result?.diagnostics) {
                     setDiagnosticResults({
-                      internetConnectivity: result.diagnostics.ConnectivityTests?.some(test => test.Result === 'PASS') || false,
+                      internetConnectivity: result.diagnostics.ConnectivityTests?.some((test: { Name: string; Result: string }) => test.Result === 'PASS') || false,
                       nmapAvailable: result.diagnostics.AlternativeScans?.length > 0 || false,
                       timestamp: new Date().toISOString(),
                       recommendations: result.diagnostics.Recommendations || [],

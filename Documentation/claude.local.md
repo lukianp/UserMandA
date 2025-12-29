@@ -546,11 +546,12 @@ All fixed to use empty array `[]`:
 - useConditionalAccessDiscoveryLogic.ts
 - useAzureResourceDiscoveryLogic.ts
 
-## ✅ All Existing Hooks (Complete List)
+## ✅ All Existing Hooks (Complete List - Updated 2025-12-29)
 useAWSCloudInfrastructureDiscoveryLogic, useAWSDiscoveryLogic, useActiveDirectoryDiscoveryLogic,
 useApplicationDependencyMappingDiscoveryLogic, useApplicationDiscoveryLogic, useAzureDeviceDiscoveryLogic,
 useAzureDiscoveryLogic, useAzureInfraDiscoveryLogic, useAzureM365DiscoveryLogic, useAzureResourceDiscoveryLogic,
-useAzureSecurityDiscoveryLogic, useBackupRecoveryDiscoveryLogic, useCertificateAuthorityDiscoveryLogic,
+useAzureSecurityDiscoveryLogic, useAzureServicePrincipalCredentialsDiscoveryLogic, useAzureStorageAccountAccessDiscoveryLogic,
+useBackupRecoveryDiscoveryLogic, useCertificateAuthorityDiscoveryLogic,
 useCertificateDiscoveryLogic, useConditionalAccessDiscoveryLogic, useDNSDHCPDiscoveryLogic,
 useDataClassificationDiscoveryLogic, useDataLossPreventionDiscoveryLogic, useDatabaseSchemaDiscoveryLogic,
 useDomainDiscoveryLogic, useEDiscoveryLogic, useEntraIDAppDiscoveryLogic, useEnvironmentDetectionLogic,
@@ -564,6 +565,20 @@ usePowerBIDiscoveryLogic, usePowerPlatformDiscoveryLogic, usePrinterDiscoveryLog
 useScheduledTaskDiscoveryLogic, useSecurityInfrastructureDiscoveryLogic, useSharePointDiscoveryLogic,
 useStorageArrayDiscoveryLogic, useTeamsDiscoveryLogic, useVMwareDiscoveryLogic, useVirtualizationDiscoveryLogic,
 useWebServerConfigDiscoveryLogic, useWebServerDiscoveryLogic, useEnvironmentDetectionDiscovery
+
+## ✅ AzureHound Enhancement Hooks (Phase 1-5)
+- useAzureVMSSDiscoveryLogic (Phase 1)
+- useAzureFunctionsDiscoveryLogic (Phase 1)
+- useAzureACRDiscoveryLogic (Phase 1)
+- useAzureAutomationDiscoveryLogic (Phase 2)
+- useAzureLogicAppsDiscoveryLogic (Phase 2)
+- useAzureManagementGroupsDiscoveryLogic (Phase 3)
+- useAzurePIMDiscoveryLogic (Phase 3)
+- useAzureSubscriptionOwnersDiscoveryLogic (Phase 3)
+- useAzureKeyVaultAccessDiscoveryLogic (Phase 4)
+- useAzureManagedIdentitiesDiscoveryLogic (Phase 4)
+- **useAzureServicePrincipalCredentialsDiscoveryLogic (Phase 5)** - NEW
+- **useAzureStorageAccountAccessDiscoveryLogic (Phase 5)** - NEW
 
 ---
 
