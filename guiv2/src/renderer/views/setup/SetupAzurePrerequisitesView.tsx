@@ -69,6 +69,7 @@ interface PowerShellModule {
   icon: React.ReactNode;
   errorMessage?: string;
   conflictsWith?: string;
+  rsatFeature?: string; // Windows RSAT capability name (e.g., 'Rsat.GroupPolicy.Management.Tools~~~~0.0.1.0')
 }
 
 interface InstallationLog {
@@ -203,6 +204,30 @@ const POWERSHELL_MODULES: Omit<PowerShellModule, 'status' | 'installedVersion' |
     dependencies: [],
     size: '~5 MB',
     icon: <Activity className="w-5 h-5" />,
+  },
+  {
+    name: 'GroupPolicy',
+    displayName: 'Group Policy Management',
+    description: 'RSAT Group Policy cmdlets for GPO discovery (requires Windows RSAT feature)',
+    category: 'core',
+    version: 'Windows',
+    required: true,
+    dependencies: [],
+    size: '~2 MB',
+    icon: <Settings className="w-5 h-5" />,
+    rsatFeature: 'Rsat.GroupPolicy.Management.Tools~~~~0.0.1.0',
+  },
+  {
+    name: 'ActiveDirectory',
+    displayName: 'Active Directory',
+    description: 'RSAT Active Directory cmdlets (requires Windows RSAT feature)',
+    category: 'core',
+    version: 'Windows',
+    required: true,
+    dependencies: [],
+    size: '~3 MB',
+    icon: <Layers className="w-5 h-5" />,
+    rsatFeature: 'Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0',
   },
 ];
 
@@ -836,8 +861,9 @@ const SetupAzurePrerequisitesView: React.FC = () => {
 
   // Install single module
   const installModule = useCallback(async (moduleName: string) => {
+    const moduleDefinition = POWERSHELL_MODULES.find((m) => m.name === moduleName);
     const module = modules.find((m) => m.name === moduleName);
-    if (!module) return;
+    if (!module || !moduleDefinition) return;
 
     setModules((prev) => prev.map((m) => (m.name === moduleName ? { ...m, status: 'installing', errorMessage: undefined } : m)));
     addLog(moduleName, 'Install', 'info', 'Starting installation...');
@@ -846,15 +872,49 @@ const SetupAzurePrerequisitesView: React.FC = () => {
 
     try {
       if (window.electronAPI?.executeScript) {
-        const result = await window.electronAPI.executeScript({
-          script: `
+        // Check if this is a Windows RSAT feature
+        const isRSATFeature = !!moduleDefinition.rsatFeature;
+
+        let script: string;
+        if (isRSATFeature) {
+          // Use Add-WindowsCapability for RSAT features
+          addLog(moduleName, 'Install', 'info', 'Installing Windows RSAT feature (requires admin rights)...');
+          script = `
+            try {
+              # Check if running as administrator
+              $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+              $isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+              if (-not $isAdmin) {
+                throw "Administrator privileges required to install RSAT features. Please run the application as Administrator."
+              }
+
+              # Install the RSAT feature
+              $result = Add-WindowsCapability -Online -Name '${moduleDefinition.rsatFeature}' -ErrorAction Stop
+
+              if ($result.State -eq 'Installed' -or $result.RestartNeeded -eq $false) {
+                @{ Success = $true; RestartNeeded = $result.RestartNeeded } | ConvertTo-Json
+              } else {
+                @{ Success = $false; Error = "Installation state: $($result.State)" } | ConvertTo-Json
+              }
+            } catch {
+              @{ Success = $false; Error = $_.Exception.Message } | ConvertTo-Json
+            }
+          `;
+        } else {
+          // Use Install-Module for PowerShell Gallery modules
+          script = `
             try {
               Install-Module -Name '${moduleName}' -Force -AllowClobber -Scope CurrentUser -ErrorAction Stop
               @{ Success = $true } | ConvertTo-Json
             } catch {
               @{ Success = $false; Error = $_.Exception.Message } | ConvertTo-Json
             }
-          `,
+          `;
+        }
+
+        const result = await window.electronAPI.executeScript({
+          script: script,
           timeout: 300000,
         });
 
@@ -864,7 +924,10 @@ const SetupAzurePrerequisitesView: React.FC = () => {
           const parsed = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
           if (parsed.Success) {
             setModules((prev) => prev.map((m) => (m.name === moduleName ? { ...m, status: 'installed', installedVersion: m.version } : m)));
-            addLog(moduleName, 'Install', 'success', 'Installed successfully', duration);
+            const message = parsed.RestartNeeded
+              ? 'Installed successfully (restart may be required)'
+              : 'Installed successfully';
+            addLog(moduleName, 'Install', 'success', message, duration);
           } else {
             setModules((prev) => prev.map((m) => (m.name === moduleName ? { ...m, status: 'error', errorMessage: parsed.Error } : m)));
             addLog(moduleName, 'Install', 'error', parsed.Error || 'Installation failed', duration);

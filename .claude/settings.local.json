@@ -160,7 +160,8 @@
       "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*Intune*.csv 2>nul\")",
       "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*App*.csv 2>nul\")",
       "Bash(Format-Table ProcessName, Id, StartTime -AutoSize)",
-      "Bash(timeout /t 6 /nobreak)"
+      "Bash(timeout /t 6 /nobreak)",
+      "Bash(timeout /t 3 /nobreak)"
     ],
     "deny": [],
     "ask": []

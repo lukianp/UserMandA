@@ -237,7 +237,7 @@ function Invoke-GPODiscovery {
                     $data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
                     Write-ModuleLog -ModuleName "GPO" -Message "Exported $($data.Count) $($group.Name) records to $fileName" -Level "SUCCESS"
                 } catch {
-                    Write-ModuleLog -ModuleName "GPO" -Message "Failed to export $fileName: $($_.Exception.Message)" -Level "ERROR"
+                    Write-ModuleLog -ModuleName "GPO" -Message "Failed to export ${fileName}: $($_.Exception.Message)" -Level "ERROR"
                 }
             }
         } else {
@@ -259,7 +259,13 @@ function Invoke-GPODiscovery {
         }
     }
 
-    return Invoke-DiscoveryBase -ModuleName "GPO" -Configuration $Configuration -Context $Context -SessionId $SessionId -DiscoveryScript $discoveryScript
+    return Start-DiscoveryModule `
+        -ModuleName "GPO" `
+        -Configuration $Configuration `
+        -Context $Context `
+        -SessionId $SessionId `
+        -RequiredServices @() `
+        -DiscoveryScript $discoveryScript
 }
 
 Export-ModuleMember -Function Invoke-GPODiscovery
