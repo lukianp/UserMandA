@@ -139,13 +139,8 @@ export const Sidebar: React.FC = () => {
       icon: <Building2 size={16} />,
     },
     {
-      path: '/setup/azure-prerequisites',
-      label: 'Azure Prerequisites',
-      icon: <Cloud size={16} />,
-    },
-    {
       path: '/setup/installers',
-      label: 'Installers',
+      label: 'Installers & Dependencies',
       icon: <Download size={16} />,
     },
   ];

@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Shield,
   ChevronUp,
@@ -13,7 +14,9 @@ import {
   FileText,
   Link,
   Filter,
-  Settings
+  Settings,
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 
 import { useGPODiscoveryLogic } from '../../hooks/useGPODiscoveryLogic';
@@ -25,6 +28,7 @@ import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const GPODiscoveryView: React.FC = () => {
+  const navigate = useNavigate();
   const {
     config,
     result,
@@ -119,11 +123,95 @@ const GPODiscoveryView: React.FC = () => {
         </div>
       </div>
 
-      {/* Error Display */}
+      {/* Enhanced Error Display with Prerequisites Navigation */}
       {error && (
-        <div className="mx-6 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
-          <span className="text-red-800 dark:text-red-200">{error}</span>
-          <Button onClick={clearError} variant="ghost" size="sm">Dismiss</Button>
+        <div className="mx-6 mt-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-600 rounded-lg shadow-lg">
+          <div className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
+                  GPO Discovery Failed
+                </h3>
+                <p className="text-sm text-red-700 dark:text-red-300 mb-3 font-mono bg-red-100 dark:bg-red-900/30 p-2 rounded">
+                  {error}
+                </p>
+
+                {/* Detect specific error types and provide targeted guidance */}
+                {(error.includes('Access is denied') || error.includes('PSRemoting') || error.includes('WinRM')) && (
+                  <div className="space-y-2 text-sm text-red-700 dark:text-red-300">
+                    <p className="font-semibold">Common causes:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li>PowerShell Remoting is not enabled or not configured properly</li>
+                      <li>Domain credentials may be incorrect or insufficient</li>
+                      <li>GroupPolicy PowerShell module is not installed (RSAT)</li>
+                      <li>Insufficient permissions to access Group Policy Objects</li>
+                    </ul>
+
+                    <div className="mt-4 pt-3 border-t border-red-300 dark:border-red-700">
+                      <p className="font-semibold mb-2">Recommended actions:</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          onClick={() => navigate('/setup/installers')}
+                          variant="primary"
+                          size="sm"
+                          icon={<ExternalLink className="w-4 h-4" />}
+                          className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          Check Prerequisites & Install RSAT
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            // Log the error for debugging
+                            console.log('[GPODiscoveryView] User viewing error details:', error);
+                          }}
+                          variant="secondary"
+                          size="sm"
+                          className="text-red-700 dark:text-red-300 border-red-300 dark:border-red-700"
+                        >
+                          View Installation Guide
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Generic error without specific PSRemoting/Access issues */}
+                {!(error.includes('Access is denied') || error.includes('PSRemoting') || error.includes('WinRM')) && (
+                  <div className="space-y-2 text-sm text-red-700 dark:text-red-300">
+                    <p>Please check the following:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li>Verify you have saved domain credentials in the profile</li>
+                      <li>Ensure the GroupPolicy PowerShell module is installed</li>
+                      <li>Check that you have sufficient permissions</li>
+                      <li>Review the full error message above</li>
+                    </ul>
+
+                    <div className="mt-3 pt-3 border-t border-red-300 dark:border-red-700">
+                      <Button
+                        onClick={() => navigate('/setup/installers')}
+                        variant="secondary"
+                        size="sm"
+                        icon={<ExternalLink className="w-4 h-4" />}
+                        className="text-red-700 dark:text-red-300 border-red-300 dark:border-red-700"
+                      >
+                        Go to Installers & Dependencies
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                onClick={clearError}
+                variant="ghost"
+                size="sm"
+                className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"
+              >
+                Dismiss
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

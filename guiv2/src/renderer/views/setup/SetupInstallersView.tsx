@@ -1,49 +1,50 @@
 /**
- * Setup Installers View
+ * Setup Installers and Dependencies View
  *
- * A stunning tabbed interface for selective installation of external tools.
+ * A beautiful module management interface for PowerShell prerequisites and system dependencies.
  * Features:
- * - Beautiful tabbed categories with animated indicators
- * - Visual dependency graphs with auto-selection
- * - Real-time download and installation progress
- * - Checksum verification with security badges
- * - Pause/resume and rollback capabilities
- * - Terminal-style installation logs
+ * - Visual dependency tracking with animated connections
+ * - Real-time installation progress with step tracking
+ * - Module version detection and conflict resolution
+ * - Elevated permissions check with visual feedback
+ * - Smart verification with retry capability
+ * - Terminal-style logging with syntax highlighting
+ * - PowerShell Remoting status and security considerations
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
-  Download,
   Package,
-  Network,
-  Shield,
-  Cpu,
-  Boxes,
-  CheckCircle,
-  AlertCircle,
+  Check,
+  X,
   AlertTriangle,
   RefreshCw,
-  ExternalLink,
+  Download,
+  Shield,
+  Zap,
+  CheckCircle,
+  AlertCircle,
   Info,
   ChevronDown,
   ChevronRight,
-  Loader2,
-  Pause,
   Play,
+  Pause,
   RotateCcw,
-  Search,
-  HardDrive,
-  Clock,
-  Link,
-  Lock,
-  Zap,
-  Globe,
+  ExternalLink,
   Terminal,
-  Trash2,
-  Check,
-  X,
-  FileCheck,
+  Cpu,
+  Box,
+  Layers,
+  GitBranch,
+  Clock,
+  HardDrive,
+  Activity,
   Settings,
+  Search,
+  Cloud,
+  Loader2,
+  Copy,
+  Trash2,
 } from 'lucide-react';
 
 import { Button } from '../../components/atoms/Button';
@@ -55,291 +56,180 @@ import LoadingSpinner from '../../components/atoms/LoadingSpinner';
 // Types
 // ============================================================================
 
-type InstallerCategory = 'networking' | 'security' | 'automation' | 'dependencies';
-
-interface Installer {
-  id: string;
+interface PowerShellModule {
   name: string;
   displayName: string;
   description: string;
-  category: InstallerCategory;
-  downloadUrl: string;
-  version: string;
-  expectedChecksum?: string;
-  estimatedTime: string;
-  size: string;
-  dependencies: string[];
-  verifyCommand: string;
-  installArgs: string;
-  installed: boolean | null;
+  category: 'core' | 'azure' | 'graph' | 'utility';
+  version?: string;
   installedVersion?: string;
-  status: 'pending' | 'checking' | 'installed' | 'not_installed' | 'downloading' | 'installing' | 'verifying' | 'error' | 'paused';
-  progress: number;
-  errorMessage?: string;
+  status: 'unknown' | 'checking' | 'installed' | 'outdated' | 'not_installed' | 'installing' | 'error';
+  required: boolean;
+  dependencies: string[];
+  size?: string;
   icon: React.ReactNode;
-  official: boolean;
+  errorMessage?: string;
+  conflictsWith?: string;
+  rsatFeature?: string; // Windows RSAT capability name (e.g., 'Rsat.GroupPolicy.Management.Tools~~~~0.0.1.0')
 }
 
 interface InstallationLog {
   id: string;
   timestamp: string;
-  installer: string;
+  module: string;
   action: string;
   status: 'info' | 'success' | 'warning' | 'error';
   message: string;
+  duration?: number;
+}
+
+interface SystemRequirements {
+  powershellVersion: { required: string; installed: string | null; met: boolean | null };
+  elevated: boolean | null;
+  diskSpace: { required: number; available: number; met: boolean };
+  networkAccess: boolean | null;
+  psRemoting: { enabled: boolean | null; required: boolean; securityNote: string };
 }
 
 // ============================================================================
-// Tool definitions
+// Module definitions
 // ============================================================================
 
-const INSTALLERS: Omit<Installer, 'status' | 'progress' | 'installed' | 'installedVersion' | 'errorMessage'>[] = [
-  // Networking
+const POWERSHELL_MODULES: Omit<PowerShellModule, 'status' | 'installedVersion' | 'errorMessage'>[] = [
   {
-    id: 'nmap',
-    name: 'nmap',
-    displayName: 'Nmap',
-    description: 'Network discovery and security auditing tool',
-    category: 'networking',
-    downloadUrl: 'https://nmap.org/dist/nmap-7.94-setup.exe',
-    version: '7.94',
-    estimatedTime: '2-3 min',
-    size: '30 MB',
+    name: 'Microsoft.Graph',
+    displayName: 'Microsoft Graph SDK',
+    description: 'Microsoft Graph PowerShell SDK for accessing Microsoft 365 services',
+    category: 'graph',
+    version: '2.x',
+    required: true,
+    dependencies: ['Microsoft.Graph.Authentication'],
+    size: '~50 MB',
+    icon: <GitBranch className="w-5 h-5" />,
+  },
+  {
+    name: 'Microsoft.Graph.Authentication',
+    displayName: 'Graph Authentication',
+    description: 'Authentication module for Microsoft Graph SDK',
+    category: 'graph',
+    version: '2.x',
+    required: true,
     dependencies: [],
-    verifyCommand: 'nmap --version',
-    installArgs: '/S',
-    icon: <Globe className="w-5 h-5" />,
-    official: true,
-  },
-  {
-    id: 'wireshark',
-    name: 'wireshark',
-    displayName: 'Wireshark',
-    description: 'Network protocol analyzer for packet capture and analysis',
-    category: 'networking',
-    downloadUrl: 'https://www.wireshark.org/download/win64/Wireshark-win64-4.2.0.exe',
-    version: '4.2.0',
-    estimatedTime: '3-5 min',
-    size: '80 MB',
-    dependencies: ['npcap'],
-    verifyCommand: '"C:\\Program Files\\Wireshark\\tshark.exe" --version',
-    installArgs: '/S',
-    icon: <Network className="w-5 h-5" />,
-    official: true,
-  },
-  {
-    id: 'putty',
-    name: 'putty',
-    displayName: 'PuTTY',
-    description: 'SSH, Telnet, and serial console client',
-    category: 'networking',
-    downloadUrl: 'https://the.earth.li/~sgtatham/putty/latest/w64/putty-64bit-0.80-installer.msi',
-    version: '0.80',
-    estimatedTime: '1-2 min',
-    size: '4 MB',
-    dependencies: [],
-    verifyCommand: 'where putty',
-    installArgs: '/quiet',
-    icon: <Terminal className="w-5 h-5" />,
-    official: true,
-  },
-  {
-    id: 'winscp',
-    name: 'winscp',
-    displayName: 'WinSCP',
-    description: 'SFTP, FTP, WebDAV, and SCP client',
-    category: 'networking',
-    downloadUrl: 'https://winscp.net/download/WinSCP-6.1.2-Setup.exe',
-    version: '6.1.2',
-    estimatedTime: '2-3 min',
-    size: '12 MB',
-    dependencies: [],
-    verifyCommand: 'where winscp',
-    installArgs: '/SILENT',
-    icon: <HardDrive className="w-5 h-5" />,
-    official: true,
-  },
-
-  // Security
-  {
-    id: 'owasp-zap',
-    name: 'owasp-zap',
-    displayName: 'OWASP ZAP',
-    description: 'Web application security scanner',
-    category: 'security',
-    downloadUrl: 'https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2_14_0_windows.exe',
-    version: '2.14.0',
-    estimatedTime: '5-10 min',
-    size: '200 MB',
-    dependencies: ['java'],
-    verifyCommand: '"C:\\Program Files\\ZAP\\zap.bat" -version',
-    installArgs: '-q',
+    size: '~5 MB',
     icon: <Shield className="w-5 h-5" />,
-    official: true,
   },
   {
-    id: 'sysinternals',
-    name: 'sysinternals',
-    displayName: 'Sysinternals Suite',
-    description: 'Windows system utilities from Microsoft',
-    category: 'security',
-    downloadUrl: 'https://download.sysinternals.com/files/SysinternalsSuite.zip',
-    version: 'Latest',
-    estimatedTime: '1-2 min',
-    size: '40 MB',
+    name: 'Az.Accounts',
+    displayName: 'Azure Accounts',
+    description: 'Azure Resource Manager authentication and account management',
+    category: 'azure',
+    version: '2.x',
+    required: true,
     dependencies: [],
-    verifyCommand: 'where psexec',
-    installArgs: '',
+    size: '~15 MB',
+    icon: <Cloud className="w-5 h-5" />,
+    conflictsWith: 'AzureRM',
+  },
+  {
+    name: 'Az.Resources',
+    displayName: 'Azure Resources',
+    description: 'Azure Resource Manager cmdlets for managing resources',
+    category: 'azure',
+    version: '6.x',
+    required: false,
+    dependencies: ['Az.Accounts'],
+    size: '~10 MB',
+    icon: <Box className="w-5 h-5" />,
+  },
+  {
+    name: 'ExchangeOnlineManagement',
+    displayName: 'Exchange Online',
+    description: 'Exchange Online PowerShell V3 module for mailbox management',
+    category: 'core',
+    version: '3.x',
+    required: true,
+    dependencies: [],
+    size: '~20 MB',
+    icon: <Layers className="w-5 h-5" />,
+  },
+  {
+    name: 'MicrosoftTeams',
+    displayName: 'Microsoft Teams',
+    description: 'Manage Teams settings, channels, and policies',
+    category: 'core',
+    version: '5.x',
+    required: false,
+    dependencies: [],
+    size: '~30 MB',
+    icon: <Activity className="w-5 h-5" />,
+  },
+  {
+    name: 'PnP.PowerShell',
+    displayName: 'PnP PowerShell',
+    description: 'Community-driven SharePoint and Microsoft 365 management',
+    category: 'core',
+    version: '2.x',
+    required: false,
+    dependencies: [],
+    size: '~25 MB',
+    icon: <Cpu className="w-5 h-5" />,
+  },
+  {
+    name: 'MSAL.PS',
+    displayName: 'MSAL PowerShell',
+    description: 'Microsoft Authentication Library for PowerShell',
+    category: 'utility',
+    version: '4.x',
+    required: false,
+    dependencies: [],
+    size: '~2 MB',
+    icon: <Shield className="w-5 h-5" />,
+  },
+  {
+    name: 'ImportExcel',
+    displayName: 'ImportExcel',
+    description: 'Import/Export Excel spreadsheets without Excel installed',
+    category: 'utility',
+    version: '7.x',
+    required: false,
+    dependencies: [],
+    size: '~3 MB',
+    icon: <HardDrive className="w-5 h-5" />,
+  },
+  {
+    name: 'PSWriteHTML',
+    displayName: 'PSWriteHTML',
+    description: 'Create beautiful HTML reports from PowerShell',
+    category: 'utility',
+    version: '1.x',
+    required: false,
+    dependencies: [],
+    size: '~5 MB',
+    icon: <Activity className="w-5 h-5" />,
+  },
+  {
+    name: 'GroupPolicy',
+    displayName: 'Group Policy Management',
+    description: 'RSAT Group Policy cmdlets for GPO discovery (requires Windows RSAT feature)',
+    category: 'core',
+    version: 'Windows',
+    required: true,
+    dependencies: [],
+    size: '~2 MB',
     icon: <Settings className="w-5 h-5" />,
-    official: true,
+    rsatFeature: 'Rsat.GroupPolicy.Management.Tools~~~~0.0.1.0',
   },
   {
-    id: 'autoruns',
-    name: 'autoruns',
-    displayName: 'Autoruns',
-    description: 'Comprehensive startup program viewer',
-    category: 'security',
-    downloadUrl: 'https://download.sysinternals.com/files/Autoruns.zip',
-    version: 'Latest',
-    estimatedTime: '< 1 min',
-    size: '2 MB',
+    name: 'ActiveDirectory',
+    displayName: 'Active Directory',
+    description: 'RSAT Active Directory cmdlets (requires Windows RSAT feature)',
+    category: 'core',
+    version: 'Windows',
+    required: true,
     dependencies: [],
-    verifyCommand: 'where autoruns',
-    installArgs: '',
-    icon: <Zap className="w-5 h-5" />,
-    official: true,
-  },
-
-  // Automation
-  {
-    id: 'nodejs',
-    name: 'nodejs',
-    displayName: 'Node.js LTS',
-    description: 'JavaScript runtime for automation scripts',
-    category: 'automation',
-    downloadUrl: 'https://nodejs.org/dist/v20.10.0/node-v20.10.0-x64.msi',
-    version: '20.10.0 LTS',
-    estimatedTime: '2-3 min',
-    size: '30 MB',
-    dependencies: [],
-    verifyCommand: 'node --version',
-    installArgs: '/quiet',
-    icon: <Cpu className="w-5 h-5" />,
-    official: true,
-  },
-  {
-    id: 'python',
-    name: 'python',
-    displayName: 'Python 3',
-    description: 'Python runtime for scripts and automation',
-    category: 'automation',
-    downloadUrl: 'https://www.python.org/ftp/python/3.12.0/python-3.12.0-amd64.exe',
-    version: '3.12.0',
-    estimatedTime: '2-3 min',
-    size: '30 MB',
-    dependencies: [],
-    verifyCommand: 'python --version',
-    installArgs: '/quiet InstallAllUsers=1 PrependPath=1',
-    icon: <Cpu className="w-5 h-5" />,
-    official: true,
-  },
-  {
-    id: 'git',
-    name: 'git',
-    displayName: 'Git for Windows',
-    description: 'Distributed version control system',
-    category: 'automation',
-    downloadUrl: 'https://github.com/git-for-windows/git/releases/download/v2.43.0.windows.1/Git-2.43.0-64-bit.exe',
-    version: '2.43.0',
-    estimatedTime: '2-3 min',
-    size: '50 MB',
-    dependencies: [],
-    verifyCommand: 'git --version',
-    installArgs: '/SILENT',
-    icon: <Link className="w-5 h-5" />,
-    official: true,
-  },
-  {
-    id: 'vscode',
-    name: 'vscode',
-    displayName: 'VS Code',
-    description: 'Lightweight but powerful source code editor',
-    category: 'automation',
-    downloadUrl: 'https://code.visualstudio.com/sha/download?build=stable&os=win32-x64-user',
-    version: 'Latest',
-    estimatedTime: '2-3 min',
-    size: '95 MB',
-    dependencies: [],
-    verifyCommand: 'code --version',
-    installArgs: '/SILENT /NORESTART',
-    icon: <Cpu className="w-5 h-5" />,
-    official: true,
-  },
-
-  // Dependencies
-  {
-    id: 'dotnet-runtime',
-    name: 'dotnet-runtime',
-    displayName: '.NET 8 Runtime',
-    description: 'Microsoft .NET runtime for applications',
-    category: 'dependencies',
-    downloadUrl: 'https://download.visualstudio.microsoft.com/download/pr/dotnet-runtime-8.0.0-win-x64.exe',
-    version: '8.0.0',
-    estimatedTime: '2-3 min',
-    size: '50 MB',
-    dependencies: [],
-    verifyCommand: 'dotnet --list-runtimes',
-    installArgs: '/quiet /norestart',
-    icon: <Boxes className="w-5 h-5" />,
-    official: true,
-  },
-  {
-    id: 'vcredist',
-    name: 'vcredist',
-    displayName: 'Visual C++ Redistributable',
-    description: 'Microsoft Visual C++ runtime libraries',
-    category: 'dependencies',
-    downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x64.exe',
-    version: '2022',
-    estimatedTime: '1-2 min',
-    size: '25 MB',
-    dependencies: [],
-    verifyCommand: 'reg query "HKLM\\SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x64"',
-    installArgs: '/quiet /norestart',
-    icon: <Package className="w-5 h-5" />,
-    official: true,
-  },
-  {
-    id: 'java',
-    name: 'java',
-    displayName: 'Java Runtime (Temurin)',
-    description: 'Eclipse Temurin Java runtime environment',
-    category: 'dependencies',
-    downloadUrl: 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.1%2B12/OpenJDK21U-jre_x64_windows_hotspot_21.0.1_12.msi',
-    version: '21.0.1',
-    estimatedTime: '2-3 min',
-    size: '50 MB',
-    dependencies: [],
-    verifyCommand: 'java --version',
-    installArgs: '/quiet',
-    icon: <Boxes className="w-5 h-5" />,
-    official: true,
-  },
-  {
-    id: 'npcap',
-    name: 'npcap',
-    displayName: 'Npcap',
-    description: 'Windows packet capture library (required for Wireshark)',
-    category: 'dependencies',
-    downloadUrl: 'https://npcap.com/dist/npcap-1.79.exe',
-    version: '1.79',
-    estimatedTime: '1-2 min',
-    size: '1 MB',
-    dependencies: [],
-    verifyCommand: 'sc query npcap',
-    installArgs: '/S',
-    icon: <Network className="w-5 h-5" />,
-    official: true,
+    size: '~3 MB',
+    icon: <Layers className="w-5 h-5" />,
+    rsatFeature: 'Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0',
   },
 ];
 
@@ -348,151 +238,206 @@ const INSTALLERS: Omit<Installer, 'status' | 'progress' | 'installed' | 'install
 // ============================================================================
 
 /**
- * Category tab with animated indicator
+ * System requirements panel with visual indicators
  */
-const CategoryTab: React.FC<{
-  id: InstallerCategory;
-  label: string;
-  icon: React.ReactNode;
-  counts: { total: number; installed: number };
-  isActive: boolean;
-  onClick: () => void;
-}> = ({ id, label, icon, counts, isActive, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`
-      relative flex items-center gap-3 px-5 py-4 text-sm font-medium transition-all duration-300
-      ${
-        isActive
-          ? 'text-blue-600 dark:text-blue-400'
-          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-      }
-    `}
-    data-cy={`tab-${id}`}
-  >
-    <span className={`transition-transform duration-300 ${isActive ? 'scale-110' : ''}`}>{icon}</span>
-    <span>{label}</span>
-    <span
-      className={`
-        px-2.5 py-1 text-xs font-bold rounded-full transition-all duration-300
-        ${
-          isActive
-            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-        }
-      `}
-    >
-      {counts.installed}/{counts.total}
-    </span>
-    {/* Active indicator */}
-    <div
-      className={`
-        absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400
-        transition-transform duration-300 origin-left
-        ${isActive ? 'scale-x-100' : 'scale-x-0'}
-      `}
-    />
-  </button>
-);
+const SystemRequirementsPanel: React.FC<{
+  requirements: SystemRequirements;
+  onRefresh: () => void;
+  isChecking: boolean;
+}> = ({ requirements, onRefresh, isChecking }) => {
+  const items = [
+    {
+      label: 'PowerShell Version',
+      value: requirements.powershellVersion.installed
+        ? `${requirements.powershellVersion.installed} (requires ${requirements.powershellVersion.required}+)`
+        : 'Checking...',
+      met: requirements.powershellVersion.met,
+      icon: <Terminal className="w-4 h-4" />,
+    },
+    {
+      label: 'Administrator Privileges',
+      value: requirements.elevated === null
+        ? 'Checking...'
+        : requirements.elevated
+        ? 'Running as Administrator'
+        : 'Standard User (CurrentUser scope)',
+      met: requirements.elevated,
+      icon: <Shield className="w-4 h-4" />,
+    },
+    {
+      label: 'Disk Space',
+      value: `${requirements.diskSpace.available.toFixed(1)} GB available`,
+      met: requirements.diskSpace.met,
+      icon: <HardDrive className="w-4 h-4" />,
+    },
+    {
+      label: 'Network Access',
+      value: requirements.networkAccess === null
+        ? 'Checking...'
+        : requirements.networkAccess
+        ? 'PowerShell Gallery accessible'
+        : 'Cannot reach PSGallery',
+      met: requirements.networkAccess,
+      icon: <Activity className="w-4 h-4" />,
+    },
+    {
+      label: 'PowerShell Remoting',
+      value: requirements.psRemoting.enabled === null
+        ? 'Checking...'
+        : requirements.psRemoting.enabled
+        ? 'Enabled (GPO discovery with alternate credentials supported)'
+        : 'Disabled (Enable for GPO discovery with saved credentials)',
+      met: requirements.psRemoting.enabled === null ? null : (requirements.psRemoting.required ? requirements.psRemoting.enabled : true),
+      icon: <Zap className="w-4 h-4" />,
+      warning: !requirements.psRemoting.enabled && requirements.psRemoting.enabled !== null,
+      note: requirements.psRemoting.securityNote,
+    },
+  ];
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <Settings className="w-5 h-5 text-purple-500" />
+          System Requirements
+        </h3>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onRefresh}
+          loading={isChecking}
+          icon={<RefreshCw className="w-4 h-4" />}
+        >
+          Refresh
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {items.map((item) => (
+          <div
+            key={item.label}
+            className={`
+              p-4 rounded-lg border-2 transition-all duration-300
+              ${
+                item.met === null
+                  ? 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800'
+                  : item.met
+                  ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
+                  : 'border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20'
+              }
+            `}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span
+                className={
+                  item.met === null
+                    ? 'text-gray-500 dark:text-gray-400'
+                    : item.met
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-yellow-600 dark:text-yellow-400'
+                }
+              >
+                {item.icon}
+              </span>
+              {item.met === null ? (
+                <LoadingSpinner size="sm" />
+              ) : item.met ? (
+                <CheckCircle className="w-5 h-5 text-green-500" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-yellow-500" />
+              )}
+            </div>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">{item.label}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{item.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 /**
- * Installer card with status, progress, and actions
+ * Module card with status indicator and controls
  */
-const InstallerCard: React.FC<{
-  installer: Installer;
+const ModuleCard: React.FC<{
+  module: PowerShellModule;
   selected: boolean;
   onToggle: () => void;
   onInstall: () => void;
   expanded: boolean;
   onExpand: () => void;
   disabled: boolean;
-}> = ({ installer, selected, onToggle, onInstall, expanded, onExpand, disabled }) => {
+}> = ({ module, selected, onToggle, onInstall, expanded, onExpand, disabled }) => {
   const getStatusBadge = () => {
-    switch (installer.status) {
+    switch (module.status) {
       case 'installed':
         return (
-          <span className="px-2.5 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full flex items-center gap-1">
+          <span className="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full flex items-center gap-1">
             <Check className="w-3 h-3" />
             Installed
           </span>
         );
-      case 'not_installed':
+      case 'outdated':
         return (
-          <span className="px-2.5 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full flex items-center gap-1">
-            <Download className="w-3 h-3" />
-            Not Installed
+          <span className="px-2 py-1 text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-full flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            Update Available
           </span>
         );
-      case 'downloading':
+      case 'not_installed':
         return (
-          <span className="px-2.5 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full flex items-center gap-1">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            Downloading
+          <span className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full flex items-center gap-1">
+            <X className="w-3 h-3" />
+            Not Installed
           </span>
         );
       case 'installing':
         return (
-          <span className="px-2.5 py-1 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full flex items-center gap-1">
+          <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full flex items-center gap-1">
             <Loader2 className="w-3 h-3 animate-spin" />
             Installing
           </span>
         );
-      case 'verifying':
-        return (
-          <span className="px-2.5 py-1 text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-full flex items-center gap-1">
-            <FileCheck className="w-3 h-3" />
-            Verifying
-          </span>
-        );
       case 'checking':
         return (
-          <span className="px-2.5 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full flex items-center gap-1">
+          <span className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full flex items-center gap-1">
             <Loader2 className="w-3 h-3 animate-spin" />
             Checking
           </span>
         );
       case 'error':
         return (
-          <span className="px-2.5 py-1 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full flex items-center gap-1">
+          <span className="px-2 py-1 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full flex items-center gap-1">
             <AlertCircle className="w-3 h-3" />
             Error
           </span>
         );
-      case 'paused':
-        return (
-          <span className="px-2.5 py-1 text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-full flex items-center gap-1">
-            <Pause className="w-3 h-3" />
-            Paused
-          </span>
-        );
       default:
         return (
-          <span className="px-2.5 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
-            Pending
+          <span className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
+            Unknown
           </span>
         );
     }
   };
 
   const getCategoryColor = () => {
-    switch (installer.category) {
-      case 'networking':
+    switch (module.category) {
+      case 'graph':
         return 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
-      case 'security':
-        return 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400';
-      case 'automation':
+      case 'azure':
         return 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400';
-      default:
+      case 'core':
         return 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400';
+      default:
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400';
     }
   };
-
-  const isInProgress = ['downloading', 'installing', 'verifying'].includes(installer.status);
 
   return (
     <div
       className={`
-        group rounded-xl border-2 transition-all duration-300 overflow-hidden
+        group rounded-xl border-2 transition-all duration-300
         ${
           selected
             ? 'border-blue-400 dark:border-blue-600 bg-blue-50/50 dark:bg-blue-900/10 shadow-lg shadow-blue-500/10'
@@ -507,7 +452,7 @@ const InstallerCard: React.FC<{
             <Checkbox
               checked={selected}
               onChange={() => onToggle()}
-              disabled={installer.status === 'installed' || isInProgress || disabled}
+              disabled={module.required || module.status === 'installing' || module.status === 'installed' || disabled}
             />
           </div>
 
@@ -516,66 +461,58 @@ const InstallerCard: React.FC<{
             className={`p-3 rounded-xl ${getCategoryColor()} transition-transform group-hover:scale-110 cursor-pointer`}
             onClick={onExpand}
           >
-            {installer.icon}
+            {module.icon}
           </div>
 
           {/* Content - clickable to expand */}
           <div className="flex-1 min-w-0 cursor-pointer" onClick={onExpand}>
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-semibold text-gray-900 dark:text-white">{installer.displayName}</h4>
-              {installer.installedVersion ? (
-                <span className="text-xs font-semibold text-green-600 dark:text-green-400">
-                  Installed: v{installer.installedVersion}
-                </span>
-              ) : (
-                <span className="text-xs text-gray-500 dark:text-gray-400">Required: v{installer.version}</span>
-              )}
-              {installer.official && (
-                <span className="px-1.5 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded flex items-center gap-0.5">
-                  <Lock className="w-2.5 h-2.5" />
-                  Official
+              <h4 className="font-semibold text-gray-900 dark:text-white">{module.displayName}</h4>
+              {module.required && (
+                <span className="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">
+                  Required
                 </span>
               )}
               {getStatusBadge()}
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{installer.description}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{module.description}</p>
 
-            {installer.errorMessage && (
+            {module.errorMessage && (
               <p className="text-sm text-red-600 dark:text-red-400 mt-2 flex items-center gap-1">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {installer.errorMessage}
+                <AlertCircle className="w-4 h-4" />
+                {module.errorMessage}
               </p>
-            )}
-
-            {installer.dependencies.length > 0 && (
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-xs text-gray-500 dark:text-gray-400">Requires:</span>
-                {installer.dependencies.map((dep) => (
-                  <span
-                    key={dep}
-                    className="px-2 py-0.5 text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded"
-                  >
-                    {dep}
-                  </span>
-                ))}
-              </div>
             )}
 
             <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1">
-                <HardDrive className="w-3 h-3" />
-                {installer.size}
+                <Package className="w-3 h-3" />
+                {module.installedVersion ? (
+                  <span className="font-semibold text-green-600 dark:text-green-400">
+                    Installed: v{module.installedVersion}
+                  </span>
+                ) : (
+                  <span>Required: {module.version}</span>
+                )}
               </span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {installer.estimatedTime}
-              </span>
+              {module.size && (
+                <span className="flex items-center gap-1">
+                  <HardDrive className="w-3 h-3" />
+                  {module.size}
+                </span>
+              )}
+              {module.dependencies.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <GitBranch className="w-3 h-3" />
+                  {module.dependencies.length} dep{module.dependencies.length > 1 ? 's' : ''}
+                </span>
+              )}
             </div>
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            {installer.status === 'not_installed' && (
+            {module.status === 'not_installed' && (
               <Button
                 variant="primary"
                 size="sm"
@@ -586,15 +523,17 @@ const InstallerCard: React.FC<{
                 Install
               </Button>
             )}
-            <a
-              href={installer.downloadUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              title="Open download page"
-            >
-              <ExternalLink className="w-4 h-4" />
-            </a>
+            {module.status === 'outdated' && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onInstall}
+                disabled={disabled}
+                icon={<RefreshCw className="w-4 h-4" />}
+              >
+                Update
+              </Button>
+            )}
             <button
               onClick={onExpand}
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -604,50 +543,43 @@ const InstallerCard: React.FC<{
           </div>
         </div>
 
-        {/* Progress bar */}
-        {isInProgress && (
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {installer.status === 'downloading'
-                  ? 'Downloading...'
-                  : installer.status === 'installing'
-                  ? 'Installing...'
-                  : 'Verifying...'}
-              </span>
-              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{installer.progress}%</span>
-            </div>
-            <ProgressBar value={installer.progress} max={100} size="sm" variant="info" animated striped />
-          </div>
-        )}
-
         {/* Expanded details */}
         {expanded && (
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-gray-500 dark:text-gray-400">Verify Command:</span>
-                <code className="block mt-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-800 dark:text-gray-200 overflow-x-auto">
-                  {installer.verifyCommand}
-                </code>
+                <span className="text-gray-500 dark:text-gray-400">Category:</span>
+                <span className="ml-2 text-gray-900 dark:text-white capitalize">{module.category}</span>
               </div>
               <div>
-                <span className="text-gray-500 dark:text-gray-400">Install Args:</span>
-                <code className="block mt-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-800 dark:text-gray-200">
-                  {installer.installArgs || '(none)'}
+                <span className="text-gray-500 dark:text-gray-400">Module Name:</span>
+                <code className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-800 dark:text-gray-200 text-xs">
+                  {module.name}
                 </code>
               </div>
-              <div className="col-span-2">
-                <span className="text-gray-500 dark:text-gray-400">Download URL:</span>
-                <a
-                  href={installer.downloadUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline truncate"
-                >
-                  {installer.downloadUrl}
-                </a>
-              </div>
+              {module.dependencies.length > 0 && (
+                <div className="col-span-2">
+                  <span className="text-gray-500 dark:text-gray-400">Dependencies:</span>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {module.dependencies.map((dep) => (
+                      <span
+                        key={dep}
+                        className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+                      >
+                        {dep}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {module.conflictsWith && (
+                <div className="col-span-2">
+                  <span className="text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
+                    <AlertTriangle className="w-4 h-4" />
+                    Conflicts with: {module.conflictsWith}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -702,9 +634,10 @@ const LogViewer: React.FC<{
           logs.map((log) => (
             <div key={log.id} className={`py-0.5 ${getStatusColor(log.status)}`}>
               <span className="text-gray-500">[{new Date(log.timestamp).toLocaleTimeString()}]</span>{' '}
-              <span className="text-cyan-400">[{log.installer}]</span>{' '}
+              <span className="text-cyan-400">[{log.module}]</span>{' '}
               <span className="text-purple-400">{log.action}</span>:{' '}
               {log.message}
+              {log.duration && <span className="text-gray-500"> ({(log.duration / 1000).toFixed(1)}s)</span>}
             </div>
           ))
         )}
@@ -720,307 +653,524 @@ const LogViewer: React.FC<{
 const SetupInstallersView: React.FC = () => {
   console.log('[SetupInstallersView] Component rendering');
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState<InstallerCategory>('networking');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Installers state
-  const [installers, setInstallers] = useState<Installer[]>(() => {
-    console.log('[SetupInstallersView] Initializing installers state');
-    return INSTALLERS.map((i) => ({ ...i, status: 'pending' as const, progress: 0, installed: null, installedVersion: undefined, errorMessage: undefined }));
+  // Module state
+  const [modules, setModules] = useState<PowerShellModule[]>(() => {
+    console.log('[SetupInstallersView] Initializing modules state');
+    return POWERSHELL_MODULES.map((m) => ({ ...m, status: 'unknown' as const, installedVersion: undefined, errorMessage: undefined }));
   });
-  const [selectedInstallers, setSelectedInstallers] = useState<Set<string>>(new Set());
-  const [expandedInstaller, setExpandedInstaller] = useState<string | null>(null);
+  const [selectedModules, setSelectedModules] = useState<Set<string>>(() => {
+    console.log('[SetupInstallersView] Initializing selected modules');
+    return new Set(POWERSHELL_MODULES.filter((m) => m.required).map((m) => m.name));
+  });
+  const [expandedModule, setExpandedModule] = useState<string | null>(null);
+
+  // System requirements
+  const [requirements, setRequirements] = useState<SystemRequirements>({
+    powershellVersion: { required: '5.1', installed: null, met: null },
+    elevated: null,
+    diskSpace: { required: 0.5, available: 100, met: true },
+    networkAccess: null,
+    psRemoting: {
+      enabled: null,
+      required: false,
+      securityNote: 'Required for GPO discovery with alternate credentials. Opens PowerShell remoting on localhost only.',
+    },
+  });
+  const [isCheckingRequirements, setIsCheckingRequirements] = useState(false);
 
   // Process state
-  const [isChecking, setIsChecking] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [overallProgress, setOverallProgress] = useState(0);
+  const [setupComplete, setSetupComplete] = useState(false);
 
   // Logs
   const [logs, setLogs] = useState<InstallationLog[]>([]);
   const [showLogs, setShowLogs] = useState(false);
 
-  // Category counts
-  const categoryCounts = useMemo(() => {
-    const counts: Record<InstallerCategory, { total: number; installed: number }> = {
-      networking: { total: 0, installed: 0 },
-      security: { total: 0, installed: 0 },
-      automation: { total: 0, installed: 0 },
-      dependencies: { total: 0, installed: 0 },
-    };
-
-    installers.forEach((installer) => {
-      counts[installer.category].total++;
-      if (installer.status === 'installed') {
-        counts[installer.category].installed++;
-      }
-    });
-
-    return counts;
-  }, [installers]);
-
-  // Filtered installers
-  const filteredInstallers = useMemo(() => {
-    return installers.filter((installer) => {
-      const matchesCategory = installer.category === activeTab;
-      const matchesSearch =
-        searchQuery === '' ||
-        installer.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        installer.description.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
-  }, [installers, activeTab, searchQuery]);
-
-  // Summary stats
-  const stats = useMemo(() => {
-    const installed = installers.filter((i) => i.status === 'installed').length;
-    return { installed, total: installers.length };
-  }, [installers]);
+  // Filter state
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Add log entry
-  const addLog = useCallback((installer: string, action: string, status: InstallationLog['status'], message: string) => {
+  const addLog = useCallback((module: string, action: string, status: InstallationLog['status'], message: string, duration?: number) => {
     const newLog: InstallationLog = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date().toISOString(),
-      installer,
+      module,
       action,
       status,
       message,
+      duration,
     };
     setLogs((prev) => [...prev, newLog]);
   }, []);
 
-  // Verify all installers
-  const verifyInstallers = useCallback(async () => {
-    console.log('[SetupInstallersView] verifyInstallers called, installer count:', installers.length);
-    setIsChecking(true);
-    addLog('System', 'Verify', 'info', 'Checking installed software...');
+  // Check system requirements
+  const checkRequirements = useCallback(async () => {
+    console.log('[SetupInstallersView] checkRequirements called');
+    setIsCheckingRequirements(true);
+    addLog('System', 'Check', 'info', 'Checking system requirements...');
 
-    const updatedInstallers = [...installers];
+    try {
+      console.log('[SetupInstallersView] Checking if electronAPI exists:', !!window.electronAPI);
+      console.log('[SetupInstallersView] Checking if executeScript exists:', !!window.electronAPI?.executeScript);
 
-    for (let i = 0; i < updatedInstallers.length; i++) {
-      const installer = updatedInstallers[i];
-      console.log(`[SetupInstallersView] Checking installer ${i + 1}/${updatedInstallers.length}: ${installer.name}`);
-      installer.status = 'checking';
-      setInstallers([...updatedInstallers]);
+      // Check admin rights
+      if (window.electronAPI?.executeScript) {
+        console.log('[SetupInstallersView] Executing admin check script');
+        const adminResult = await window.electronAPI.executeScript({
+          script: `
+            $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+            $principal = New-Object Security.Principal.WindowsPrincipal $identity
+            $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+            @{ IsAdmin = $isAdmin } | ConvertTo-Json
+          `,
+          timeout: 10000,
+        });
+
+        console.log('[SetupInstallersView] Admin check result:', adminResult);
+
+        if (adminResult.success && adminResult.data) {
+          const parsed = typeof adminResult.data === 'string' ? JSON.parse(adminResult.data) : adminResult.data;
+          setRequirements((prev) => ({ ...prev, elevated: parsed.IsAdmin }));
+          addLog('System', 'AdminCheck', parsed.IsAdmin ? 'success' : 'warning',
+            parsed.IsAdmin ? 'Running with administrator privileges' : 'Running without admin (CurrentUser scope)');
+        }
+
+        // Check PowerShell version
+        console.log('[SetupInstallersView] Executing PowerShell version check');
+        const versionResult = await window.electronAPI.executeScript({
+          script: `$PSVersionTable.PSVersion.ToString()`,
+          timeout: 10000,
+        });
+
+        console.log('[SetupInstallersView] PowerShell version result:', versionResult);
+
+        if (versionResult.success && versionResult.data) {
+          const version = versionResult.data.toString().trim();
+          const majorVersion = parseFloat(version.split('.')[0]);
+          setRequirements((prev) => ({
+            ...prev,
+            powershellVersion: {
+              ...prev.powershellVersion,
+              installed: version,
+              met: majorVersion >= 5.1,
+            },
+          }));
+          addLog('System', 'VersionCheck', 'info', `PowerShell version: ${version}`);
+        }
+
+        // Check PSRemoting status
+        console.log('[SetupInstallersView] Checking PSRemoting status');
+        const psRemotingResult = await window.electronAPI.executeScript({
+          script: `
+            try {
+              $psRemoting = Test-WSMan -ErrorAction SilentlyContinue
+              @{ Enabled = $true } | ConvertTo-Json
+            } catch {
+              @{ Enabled = $false } | ConvertTo-Json
+            }
+          `,
+          timeout: 10000,
+        });
+
+        console.log('[SetupInstallersView] PSRemoting check result:', psRemotingResult);
+
+        if (psRemotingResult.success && psRemotingResult.data) {
+          const parsed = typeof psRemotingResult.data === 'string' ? JSON.parse(psRemotingResult.data) : psRemotingResult.data;
+          setRequirements((prev) => ({
+            ...prev,
+            psRemoting: {
+              ...prev.psRemoting,
+              enabled: parsed.Enabled,
+            },
+          }));
+          addLog('System', 'PSRemotingCheck', parsed.Enabled ? 'success' : 'warning',
+            parsed.Enabled ? 'PowerShell Remoting is enabled' : 'PowerShell Remoting is disabled (required for GPO discovery with alternate credentials)');
+        }
+      } else {
+        console.warn('[SetupInstallersView] electronAPI.executeScript not available - using simulated data');
+        // Simulated for development
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setRequirements((prev) => ({
+          ...prev,
+          powershellVersion: { required: '5.1', installed: '7.3.4', met: true },
+          elevated: true,
+          networkAccess: navigator.onLine,
+          psRemoting: { ...prev.psRemoting, enabled: false },
+        }));
+        addLog('System', 'Check', 'success', 'Environment check complete (simulated)');
+      }
+
+      // Check network
+      setRequirements((prev) => ({ ...prev, networkAccess: navigator.onLine }));
+
+      // Check completion flag
+      if (window.electronAPI?.getConfig) {
+        const completedFlag = await window.electronAPI.getConfig('azurePrerequisitesCompleted');
+        setSetupComplete(!!completedFlag);
+      }
+    } catch (error: any) {
+      console.error('[SetupInstallersView] checkRequirements error:', error);
+      addLog('System', 'Check', 'error', `Environment check failed: ${error.message}`);
+    } finally {
+      console.log('[SetupInstallersView] checkRequirements complete');
+      setIsCheckingRequirements(false);
+    }
+  }, [addLog]);
+
+  // Verify module status
+  const verifyModules = useCallback(async () => {
+    console.log('[SetupInstallersView] verifyModules called, module count:', modules.length);
+    setIsVerifying(true);
+    addLog('Modules', 'Verify', 'info', 'Checking installed modules...');
+
+    const updatedModules = [...modules];
+    let installedCount = 0;
+
+    for (let i = 0; i < updatedModules.length; i++) {
+      const module = updatedModules[i];
+      console.log(`[SetupInstallersView] Checking module ${i + 1}/${updatedModules.length}: ${module.name}`);
+      module.status = 'checking';
+      setModules([...updatedModules]);
 
       try {
         if (window.electronAPI?.executeScript) {
+          console.log(`[SetupInstallersView] Executing Get-Module for: ${module.name}`);
           const result = await window.electronAPI.executeScript({
             script: `
-              try {
-                $output = & cmd /c "${installer.verifyCommand}" 2>&1
-                if ($LASTEXITCODE -eq 0 -or $output) {
-                  @{ Installed = $true; Output = $output | Out-String } | ConvertTo-Json
-                } else {
-                  @{ Installed = $false } | ConvertTo-Json
-                }
-              } catch {
-                @{ Installed = $false; Error = $_.Exception.Message } | ConvertTo-Json
+              $module = Get-Module -ListAvailable -Name '${module.name}' | Select-Object -First 1
+              if ($module) {
+                @{ Installed = $true; Version = $module.Version.ToString() } | ConvertTo-Json
+              } else {
+                @{ Installed = $false } | ConvertTo-Json
               }
             `,
             timeout: 30000,
           });
 
+          console.log(`[SetupInstallersView] Module ${module.name} check result:`, result);
+
           if (result.success && result.data) {
             const parsed = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
-            installer.installed = parsed.Installed;
-            installer.status = parsed.Installed ? 'installed' : 'not_installed';
-            addLog(installer.displayName, 'Verify', parsed.Installed ? 'success' : 'info', parsed.Installed ? 'Installed' : 'Not installed');
+            module.status = parsed.Installed ? 'installed' : 'not_installed';
+            module.installedVersion = parsed.Version;
+
+            if (parsed.Installed) {
+              installedCount++;
+              addLog(module.name, 'Verify', 'success', `Installed (v${parsed.Version})`);
+            } else {
+              addLog(module.name, 'Verify', 'info', 'Not installed');
+            }
+          } else {
+            // Handle failed PowerShell check (no sessions available, etc.)
+            console.warn(`[SetupInstallersView] Module ${module.name} check failed:`, result.error);
+            module.status = 'error';
+            module.errorMessage = result.error || 'Check failed - unable to verify module';
+            addLog(module.name, 'Verify', 'error', result.error || 'Check failed');
           }
         } else {
-          // Simulated
-          await new Promise((resolve) => setTimeout(resolve, 150));
-          const isInstalled = Math.random() > 0.6;
-          installer.installed = isInstalled;
-          installer.status = isInstalled ? 'installed' : 'not_installed';
+          console.warn(`[SetupInstallersView] electronAPI.executeScript not available for module: ${module.name}`);
+          // Simulated for development
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          const isInstalled = Math.random() > 0.4;
+          module.status = isInstalled ? 'installed' : 'not_installed';
+          module.installedVersion = isInstalled ? module.version : undefined;
+          if (isInstalled) installedCount++;
         }
       } catch (error: any) {
-        installer.status = 'not_installed';
-        addLog(installer.displayName, 'Verify', 'warning', `Check failed: ${error.message}`);
+        console.error(`[SetupInstallersView] Module ${module.name} check error:`, error);
+        module.status = 'error';
+        module.errorMessage = error.message;
+        addLog(module.name, 'Verify', 'error', error.message);
       }
 
-      setInstallers([...updatedInstallers]);
-      setOverallProgress(((i + 1) / updatedInstallers.length) * 100);
+      setModules([...updatedModules]);
+      setOverallProgress(((i + 1) / updatedModules.length) * 100);
     }
 
-    addLog('System', 'Verify', 'success', 'Verification complete');
-    setIsChecking(false);
+    addLog('Modules', 'Verify', 'success', `Verification complete: ${installedCount}/${updatedModules.length} installed`);
+    setIsVerifying(false);
     setOverallProgress(0);
-  }, [installers, addLog]);
+  }, [modules, addLog]);
 
-  // Toggle installer selection with dependency resolution
-  const toggleInstallerSelection = useCallback((installerId: string) => {
-    setSelectedInstallers((prev) => {
-      const newSet = new Set(prev);
-
-      if (newSet.has(installerId)) {
-        newSet.delete(installerId);
+  // Toggle module selection
+  const toggleModule = useCallback((name: string) => {
+    setSelectedModules((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
       } else {
-        newSet.add(installerId);
-
-        // Auto-select dependencies
-        const installer = installers.find((i) => i.id === installerId);
-        if (installer) {
-          installer.dependencies.forEach((depName) => {
-            const dep = installers.find(
-              (i) => i.name.toLowerCase() === depName.toLowerCase() || i.displayName.toLowerCase() === depName.toLowerCase()
-            );
-            if (dep && dep.status !== 'installed') {
-              newSet.add(dep.id);
-            }
-          });
-        }
+        next.add(name);
       }
-
-      return newSet;
+      return next;
     });
-  }, [installers]);
+  }, []);
 
-  // Install single tool
-  const installTool = useCallback(async (installerId: string) => {
-    const installer = installers.find((i) => i.id === installerId);
-    if (!installer) return;
+  // Install single module
+  const installModule = useCallback(async (moduleName: string) => {
+    const moduleDefinition = POWERSHELL_MODULES.find((m) => m.name === moduleName);
+    const module = modules.find((m) => m.name === moduleName);
+    if (!module || !moduleDefinition) return;
 
-    setInstallers((prev) => prev.map((i) => (i.id === installerId ? { ...i, status: 'downloading', progress: 0, errorMessage: undefined } : i)));
-    addLog(installer.displayName, 'Download', 'info', 'Starting download...');
+    setModules((prev) => prev.map((m) => (m.name === moduleName ? { ...m, status: 'installing', errorMessage: undefined } : m)));
+    addLog(moduleName, 'Install', 'info', 'Starting installation...');
 
-    // Simulate download
-    for (let p = 0; p <= 50; p += 10) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      setInstallers((prev) => prev.map((i) => (i.id === installerId ? { ...i, progress: p } : i)));
+    const startTime = Date.now();
+
+    try {
+      if (window.electronAPI?.executeScript) {
+        // Check if this is a Windows RSAT feature
+        const isRSATFeature = !!moduleDefinition.rsatFeature;
+
+        let script: string;
+        if (isRSATFeature) {
+          // Use Add-WindowsCapability for RSAT features
+          addLog(moduleName, 'Install', 'info', 'Installing Windows RSAT feature (requires admin rights)...');
+          script = `
+            try {
+              # Check if running as administrator
+              $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+              $isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+              if (-not $isAdmin) {
+                throw "Administrator privileges required to install RSAT features. Please run the application as Administrator."
+              }
+
+              # Install the RSAT feature
+              $result = Add-WindowsCapability -Online -Name '${moduleDefinition.rsatFeature}' -ErrorAction Stop
+
+              if ($result.State -eq 'Installed' -or $result.RestartNeeded -eq $false) {
+                @{ Success = $true; RestartNeeded = $result.RestartNeeded } | ConvertTo-Json
+              } else {
+                @{ Success = $false; Error = "Installation state: $($result.State)" } | ConvertTo-Json
+              }
+            } catch {
+              @{ Success = $false; Error = $_.Exception.Message } | ConvertTo-Json
+            }
+          `;
+        } else {
+          // Use Install-Module for PowerShell Gallery modules
+          script = `
+            try {
+              Install-Module -Name '${moduleName}' -Force -AllowClobber -Scope CurrentUser -ErrorAction Stop
+              @{ Success = $true } | ConvertTo-Json
+            } catch {
+              @{ Success = $false; Error = $_.Exception.Message } | ConvertTo-Json
+            }
+          `;
+        }
+
+        const result = await window.electronAPI.executeScript({
+          script: script,
+          timeout: 300000,
+        });
+
+        const duration = Date.now() - startTime;
+
+        if (result.success) {
+          const parsed = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+          if (parsed.Success) {
+            setModules((prev) => prev.map((m) => (m.name === moduleName ? { ...m, status: 'installed', installedVersion: m.version } : m)));
+            const message = parsed.RestartNeeded
+              ? 'Installed successfully (restart may be required)'
+              : 'Installed successfully';
+            addLog(moduleName, 'Install', 'success', message, duration);
+          } else {
+            setModules((prev) => prev.map((m) => (m.name === moduleName ? { ...m, status: 'error', errorMessage: parsed.Error } : m)));
+            addLog(moduleName, 'Install', 'error', parsed.Error || 'Installation failed', duration);
+          }
+        }
+      } else {
+        // Simulated for development
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const duration = Date.now() - startTime;
+        setModules((prev) => prev.map((m) => (m.name === moduleName ? { ...m, status: 'installed', installedVersion: m.version } : m)));
+        addLog(moduleName, 'Install', 'success', 'Installed successfully (simulated)', duration);
+      }
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      setModules((prev) => prev.map((m) => (m.name === moduleName ? { ...m, status: 'error', errorMessage: error.message } : m)));
+      addLog(moduleName, 'Install', 'error', error.message, duration);
     }
+  }, [modules, addLog]);
 
-    setInstallers((prev) => prev.map((i) => (i.id === installerId ? { ...i, status: 'installing', progress: 50 } : i)));
-    addLog(installer.displayName, 'Install', 'info', 'Installing...');
-
-    // Simulate install
-    for (let p = 50; p <= 90; p += 10) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      setInstallers((prev) => prev.map((i) => (i.id === installerId ? { ...i, progress: p } : i)));
-    }
-
-    setInstallers((prev) => prev.map((i) => (i.id === installerId ? { ...i, status: 'verifying', progress: 95 } : i)));
-    addLog(installer.displayName, 'Verify', 'info', 'Verifying installation...');
-
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    setInstallers((prev) => prev.map((i) => (i.id === installerId ? { ...i, status: 'installed', installed: true, progress: 100 } : i)));
-    addLog(installer.displayName, 'Install', 'success', 'Installed successfully');
-  }, [installers, addLog]);
-
-  // Install all selected
-  const installSelected = useCallback(async () => {
-    if (selectedInstallers.size === 0) return;
-
+  // Install all selected modules
+  const installSelectedModules = useCallback(async () => {
     setIsInstalling(true);
-    addLog('Installation', 'Start', 'info', `Installing ${selectedInstallers.size} tool(s)...`);
+    setOverallProgress(0);
 
-    // Sort by dependencies
-    const toInstall = installers
-      .filter((i) => selectedInstallers.has(i.id) && i.status !== 'installed')
-      .sort((a, b) => {
-        if (a.dependencies.some((d) => b.name.toLowerCase().includes(d.toLowerCase()))) return 1;
-        if (b.dependencies.some((d) => a.name.toLowerCase().includes(d.toLowerCase()))) return -1;
-        return 0;
-      });
+    const toInstall = modules.filter((m) => selectedModules.has(m.name) && m.status !== 'installed');
+    addLog('Installation', 'Start', 'info', `Installing ${toInstall.length} module(s)...`);
 
     for (let i = 0; i < toInstall.length; i++) {
-      await installTool(toInstall[i].id);
+      await installModule(toInstall[i].name);
       setOverallProgress(((i + 1) / toInstall.length) * 100);
     }
 
-    addLog('Installation', 'Complete', 'success', `Completed: ${toInstall.length} installed`);
+    // Check if all required modules are installed
+    const allRequiredInstalled = modules.filter((m) => m.required).every((m) => m.status === 'installed');
+    if (allRequiredInstalled) {
+      if (window.electronAPI?.setConfig) {
+        await window.electronAPI.setConfig('azurePrerequisitesCompleted', true);
+      }
+      setSetupComplete(true);
+      addLog('Installation', 'Complete', 'success', 'All required prerequisites installed');
+    }
+
     setIsInstalling(false);
     setOverallProgress(0);
-    setSelectedInstallers(new Set());
-  }, [selectedInstallers, installers, installTool, addLog]);
+    setSelectedModules(new Set(POWERSHELL_MODULES.filter((m) => m.required).map((m) => m.name)));
+  }, [modules, selectedModules, installModule, addLog]);
 
-  // Tab configuration
-  const tabs: { id: InstallerCategory; label: string; icon: React.ReactNode }[] = [
-    { id: 'networking', label: 'Networking', icon: <Network className="w-5 h-5" /> },
-    { id: 'security', label: 'Security', icon: <Shield className="w-5 h-5" /> },
-    { id: 'automation', label: 'Automation', icon: <Cpu className="w-5 h-5" /> },
-    { id: 'dependencies', label: 'Dependencies', icon: <Boxes className="w-5 h-5" /> },
-  ];
+  // Filter modules
+  const filteredModules = useMemo(() => {
+    return modules.filter((m) => {
+      const matchesCategory = categoryFilter === 'all' || m.category === categoryFilter;
+      const matchesSearch =
+        m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [modules, categoryFilter, searchQuery]);
+
+  // Summary stats
+  const stats = useMemo(() => {
+    const installed = modules.filter((m) => m.status === 'installed').length;
+    const required = modules.filter((m) => m.required).length;
+    const requiredInstalled = modules.filter((m) => m.required && m.status === 'installed').length;
+    return { installed, total: modules.length, required, requiredInstalled };
+  }, [modules]);
+
+  // Initial check on mount only
+  useEffect(() => {
+    console.log('[SetupInstallersView] useEffect - Component mounted, starting initialization');
+    let mounted = true;
+
+    const initialize = async () => {
+      console.log('[SetupInstallersView] initialize - Starting...');
+      if (!mounted) {
+        console.log('[SetupInstallersView] initialize - Component unmounted, aborting');
+        return;
+      }
+      await checkRequirements();
+      if (!mounted) {
+        console.log('[SetupInstallersView] initialize - Component unmounted after checkRequirements');
+        return;
+      }
+      await verifyModules();
+      console.log('[SetupInstallersView] initialize - Complete');
+    };
+
+    initialize();
+
+    return () => {
+      console.log('[SetupInstallersView] useEffect cleanup - Component unmounting');
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+
+  const allRequirementsMet =
+    requirements.powershellVersion.met !== false && requirements.networkAccess !== false;
 
   return (
     <div
       className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950"
-      data-cy="setup-installers-view"
-      data-testid="setup-installers-view"
+      data-cy="setup-prerequisites-view"
+      data-testid="setup-prerequisites-view"
     >
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 shadow-sm">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-green-500 to-teal-600 rounded-xl shadow-lg shadow-green-500/20">
-              <Download className="w-6 h-6 text-white" />
+            <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg shadow-purple-500/20">
+              <Package className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">External Tools</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {stats.installed}/{stats.total} tools installed
-              </p>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Azure Prerequisites</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">PowerShell Module Manager</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="secondary" onClick={verifyInstallers} loading={isChecking} icon={<RefreshCw className="w-4 h-4" />}>
+            {setupComplete && (
+              <span className="flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full text-sm font-medium">
+                <CheckCircle className="w-4 h-4" />
+                Complete
+              </span>
+            )}
+            <Button variant="secondary" onClick={verifyModules} loading={isVerifying} icon={<Search className="w-4 h-4" />}>
               Verify All
             </Button>
             <Button
               variant="primary"
-              onClick={installSelected}
-              disabled={selectedInstallers.size === 0 || isInstalling}
+              onClick={installSelectedModules}
+              disabled={isInstalling || !allRequirementsMet || selectedModules.size === 0}
               loading={isInstalling}
               icon={<Download className="w-4 h-4" />}
             >
-              Install Selected ({selectedInstallers.size})
+              Install Selected ({selectedModules.size})
             </Button>
           </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex max-w-7xl mx-auto px-6">
-          {tabs.map((tab) => (
-            <CategoryTab
-              key={tab.id}
-              id={tab.id}
-              label={tab.label}
-              icon={tab.icon}
-              counts={categoryCounts[tab.id]}
-              isActive={activeTab === tab.id}
-              onClick={() => setActiveTab(tab.id)}
-            />
-          ))}
         </div>
       </div>
 
       {/* Main content */}
       <div className="flex-1 overflow-auto py-6">
         <div className="max-w-7xl mx-auto px-6 space-y-6">
-          {/* Search bar */}
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search tools..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              data-cy="search-input"
-            />
+          {/* Success banner */}
+          {setupComplete && (
+            <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-500 rounded-full">
+                  <CheckCircle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-green-800 dark:text-green-200">Prerequisites Installed</h3>
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    All required PowerShell modules for Enterprise Discovery & Migration Suite are installed.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Stats row */}
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Total Modules', value: stats.total, icon: <Package className="w-5 h-5" />, color: 'blue' },
+              { label: 'Installed', value: stats.installed, icon: <CheckCircle className="w-5 h-5" />, color: 'green' },
+              { label: 'Required', value: `${stats.requiredInstalled}/${stats.required}`, icon: <AlertTriangle className="w-5 h-5" />, color: 'yellow' },
+              { label: 'Selected', value: selectedModules.size, icon: <Check className="w-5 h-5" />, color: 'purple' },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg bg-${stat.color}-100 dark:bg-${stat.color}-900/30 text-${stat.color}-600 dark:text-${stat.color}-400`}>
+                    {stat.icon}
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
+          {/* System requirements */}
+          <SystemRequirementsPanel requirements={requirements} onRefresh={checkRequirements} isChecking={isCheckingRequirements} />
+
           {/* Progress */}
-          {(isChecking || isInstalling) && overallProgress > 0 && (
+          {(isInstalling || isVerifying) && overallProgress > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-3">
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {isInstalling ? 'Installing tools...' : 'Verifying tools...'}
+                  {isInstalling ? 'Installing modules...' : 'Verifying modules...'}
                 </span>
                 <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{Math.round(overallProgress)}%</span>
               </div>
@@ -1028,29 +1178,65 @@ const SetupInstallersView: React.FC = () => {
             </div>
           )}
 
-          {/* Tool list */}
-          <div className="space-y-4">
-            {filteredInstallers.length === 0 ? (
-              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No tools found</h3>
-                <p className="text-gray-600 dark:text-gray-400">Try adjusting your search criteria.</p>
-              </div>
-            ) : (
-              filteredInstallers.map((installer) => (
-                <InstallerCard
-                  key={installer.id}
-                  installer={installer}
-                  selected={selectedInstallers.has(installer.id)}
-                  onToggle={() => toggleInstallerSelection(installer.id)}
-                  onInstall={() => installTool(installer.id)}
-                  expanded={expandedInstaller === installer.id}
-                  onExpand={() => setExpandedInstaller(expandedInstaller === installer.id ? null : installer.id)}
-                  disabled={isChecking || isInstalling}
+          {/* Module list header */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">PowerShell Modules</h2>
+            <div className="flex items-center gap-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search modules..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-              ))
-            )}
+              </div>
+
+              {/* Category filter */}
+              <div className="flex items-center gap-2">
+                {['all', 'graph', 'azure', 'core', 'utility'].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setCategoryFilter(cat)}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                      categoryFilter === cat
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
+
+          {/* Module grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {filteredModules.map((module) => (
+              <ModuleCard
+                key={module.name}
+                module={module}
+                selected={selectedModules.has(module.name)}
+                onToggle={() => toggleModule(module.name)}
+                onInstall={() => installModule(module.name)}
+                expanded={expandedModule === module.name}
+                onExpand={() => setExpandedModule(expandedModule === module.name ? null : module.name)}
+                disabled={isInstalling || isVerifying}
+              />
+            ))}
+          </div>
+
+          {/* No results */}
+          {filteredModules.length === 0 && (
+            <div className="text-center py-12">
+              <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No modules found</h3>
+              <p className="text-gray-600 dark:text-gray-400">Try adjusting your search or filter criteria.</p>
+            </div>
+          )}
 
           {/* Logs section */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -1082,14 +1268,31 @@ const SetupInstallersView: React.FC = () => {
             <div className="flex items-start gap-4">
               <Info className="w-6 h-6 text-blue-500 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">About Tool Installation</h3>
-                <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
-                  <li>Tools are downloaded from official sources with verification</li>
-                  <li>Some tools require administrator privileges to install</li>
-                  <li>Dependencies are automatically selected when needed</li>
-                  <li>Click "Verify All" to check which tools are already installed</li>
-                  <li>Use the external link icon to download tools manually</li>
-                </ul>
+                <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">Need Help?</h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                  These modules are required for the Enterprise Discovery & Migration Suite to function properly. Required modules are
+                  automatically selected and cannot be deselected.
+                </p>
+                <div className="flex items-center gap-4">
+                  <a
+                    href="https://docs.microsoft.com/powershell/microsoftgraph/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Microsoft Graph Docs
+                  </a>
+                  <a
+                    href="https://www.powershellgallery.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    PowerShell Gallery
+                  </a>
+                </div>
               </div>
             </div>
           </div>

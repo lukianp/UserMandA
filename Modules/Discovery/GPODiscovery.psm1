@@ -88,19 +88,64 @@ function Invoke-GPODiscovery {
         try {
             Write-ModuleLog -ModuleName "GPO" -Message "Discovering Group Policy Objects..." -Level "INFO"
 
-            $getGPOParams = @{ All = $true; ErrorAction = 'Stop' }
-            if ($credential) { $getGPOParams['Credential'] = $credential }
-            if ($domainServer) { $getGPOParams['Domain'] = $domainServer }
+            # NOTE: GroupPolicy cmdlets don't support -Credential parameter (Microsoft limitation)
+            # Strategy: Try integrated auth first, fallback to Invoke-Command if it fails
 
-            $gpos = Get-GPO @getGPOParams
+            $gpos = $null
+            $usedRemoting = $false
+
+            # OPTION 1: Try using integrated Windows authentication with -Domain
+            if ($domainServer) {
+                Write-ModuleLog -ModuleName "GPO" -Message "Attempting integrated authentication to domain: $domainServer" -Level "INFO"
+            }
+
+            try {
+                $getGPOParams = @{ All = $true; ErrorAction = 'Stop' }
+                if ($domainServer) { $getGPOParams['Domain'] = $domainServer }
+                $gpos = Get-GPO @getGPOParams
+                Write-ModuleLog -ModuleName "GPO" -Message "Successfully retrieved GPOs using integrated authentication" -Level "SUCCESS"
+            }
+            catch {
+                $integratedAuthError = $_.Exception.Message
+
+                # OPTION 2: Fallback to Invoke-Command with alternate credentials
+                if ($credential -and $domainServer) {
+                    Write-ModuleLog -ModuleName "GPO" -Message "Integrated auth failed: $integratedAuthError" -Level "WARN"
+                    Write-ModuleLog -ModuleName "GPO" -Message "Attempting PSRemoting with alternate credentials..." -Level "INFO"
+
+                    try {
+                        $gpos = Invoke-Command -ComputerName $env:COMPUTERNAME -Credential $credential -ErrorAction Stop -ScriptBlock {
+                            param($domain)
+                            Import-Module GroupPolicy -ErrorAction Stop
+                            Get-GPO -All -Domain $domain -ErrorAction Stop
+                        } -ArgumentList $domainServer
+
+                        $usedRemoting = $true
+                        Write-ModuleLog -ModuleName "GPO" -Message "Successfully retrieved GPOs using PSRemoting with alternate credentials" -Level "SUCCESS"
+                    }
+                    catch {
+                        Write-ModuleLog -ModuleName "GPO" -Message "PSRemoting failed: $($_.Exception.Message)" -Level "ERROR"
+                        Write-ModuleLog -ModuleName "GPO" -Message "HINT: Enable PSRemoting with 'Enable-PSRemoting -Force' in elevated PowerShell" -Level "INFO"
+                        throw
+                    }
+                } else {
+                    # No credentials available for fallback
+                    Write-ModuleLog -ModuleName "GPO" -Message "Integrated authentication failed and no domain credentials available" -Level "ERROR"
+                    throw
+                }
+            }
+
+            if (-not $gpos) {
+                throw "Failed to retrieve GPOs using either integrated auth or PSRemoting"
+            }
 
             Write-ModuleLog -ModuleName "GPO" -Message "Found $($gpos.Count) GPOs" -Level "SUCCESS"
 
             foreach ($gpo in $gpos) {
                 try {
                     # Get GPO report for detailed settings
+                    # NOTE: Get-GPOReport doesn't support -Credential
                     $reportParams = @{ Guid = $gpo.Id; ReportType = 'Xml'; ErrorAction = 'SilentlyContinue' }
-                    if ($credential) { $reportParams['Credential'] = $credential }
                     if ($domainServer) { $reportParams['Domain'] = $domainServer }
 
                     $gpoReport = Get-GPOReport @reportParams
@@ -121,8 +166,8 @@ function Invoke-GPODiscovery {
                     # Get GPO permissions
                     $permissions = $null
                     try {
+                        # NOTE: Get-GPPermission doesn't support -Credential
                         $permParams = @{ Guid = $gpo.Id; ErrorAction = 'SilentlyContinue' }
-                        if ($credential) { $permParams['Credential'] = $credential }
                         if ($domainServer) { $permParams['Domain'] = $domainServer }
 
                         $permissions = Get-GPPermission @permParams -All
@@ -253,7 +298,16 @@ function Invoke-GPODiscovery {
         $Result.Metadata["GPOLinkCount"] = $linkCount
         $Result.Metadata["TotalRecords"] = $Result.RecordCount
         $Result.Metadata["SessionId"] = $SessionId
-        $Result.Metadata["AuthenticationMethod"] = if ($credential) { "DomainCredentials" } else { "IntegratedAuth" }
+
+        # Authentication method used
+        if ($usedRemoting) {
+            $Result.Metadata["AuthenticationMethod"] = "PSRemoting with DomainCredentials"
+        } elseif ($credential) {
+            $Result.Metadata["AuthenticationMethod"] = "IntegratedAuth (credentials provided but not needed)"
+        } else {
+            $Result.Metadata["AuthenticationMethod"] = "IntegratedAuth"
+        }
+
         if ($domainServer) {
             $Result.Metadata["DomainName"] = $domainServer
         }

@@ -5,5 +5,4 @@
  */
 
 export { default as SetupCompanyView } from './SetupCompanyView';
-export { default as SetupAzurePrerequisitesView } from './SetupAzurePrerequisitesView';
 export { default as SetupInstallersView } from './SetupInstallersView';

@@ -45,7 +45,6 @@ const SettingsView = lazy(() => import('./views/settings/SettingsView'));
 
 // Setup views
 const SetupCompanyView = lazy(() => import('./views/setup/SetupCompanyView'));
-const SetupAzurePrerequisitesView = lazy(() => import('./views/setup/SetupAzurePrerequisitesView'));
 const SetupInstallersView = lazy(() => import('./views/setup/SetupInstallersView'));
 
 // Discovery views
@@ -133,10 +132,6 @@ export const routes: RouteObject[] = [
   {
     path: '/setup/company',
     element: lazyLoad(() => import('./views/setup/SetupCompanyView')),
-  },
-  {
-    path: '/setup/azure-prerequisites',
-    element: lazyLoad(() => import('./views/setup/SetupAzurePrerequisitesView')),
   },
   {
     path: '/setup/installers',
