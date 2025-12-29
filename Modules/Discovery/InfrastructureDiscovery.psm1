@@ -1495,5 +1495,283 @@ function Invoke-ProductionSafePowerShellScan {
     return $results
 }
 
+#region Main Entry Point - Invoke-InfrastructureDiscovery
+
+<#
+.SYNOPSIS
+    Main entry point for infrastructure discovery module
+.DESCRIPTION
+    Orchestrates comprehensive infrastructure discovery including servers, network devices,
+    storage devices, security devices, and virtualization infrastructure using nmap and PowerShell scanning.
+.PARAMETER Configuration
+    Hashtable containing discovery configuration settings
+.PARAMETER Context
+    Hashtable containing context information including paths and authentication
+.PARAMETER SessionId
+    Session identifier for tracking and authentication
+#>
+function Invoke-InfrastructureDiscovery {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Configuration,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Context,
+
+        [Parameter(Mandatory=$true)]
+        [string]$SessionId
+    )
+
+    Write-InfrastructureLog -Level "HEADER" -Message "Starting Infrastructure Discovery (v2.0)" -Context $Context
+    Write-InfrastructureLog -Level "INFO" -Message "Session ID: $SessionId" -Context $Context
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+    # Initialize result object
+    try {
+        if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
+            Import-Module -Name "$PSScriptRoot\..\Core\ClassDefinitions.psm1" -Force -ErrorAction Stop
+        }
+        $result = [DiscoveryResult]::new('Infrastructure')
+    } catch {
+        Write-InfrastructureLog -Level "ERROR" -Message "Failed to load DiscoveryResult class: $($_.Exception.Message)" -Context $Context
+        throw "Critical error: Cannot load required DiscoveryResult class. Discovery cannot proceed."
+    }
+
+    try {
+        # Validate context
+        if (-not $Context.Paths.RawDataOutput) {
+            $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
+            return $result
+        }
+        $outputPath = $Context.Paths.RawDataOutput
+
+        # Get configuration settings with defaults
+        $includeServers = if ($Configuration.IncludeServers -ne $null) { $Configuration.IncludeServers } else { $true }
+        $includeNetworkDevices = if ($Configuration.IncludeNetworkDevices -ne $null) { $Configuration.IncludeNetworkDevices } else { $true }
+        $includeStorageDevices = if ($Configuration.IncludeStorageDevices -ne $null) { $Configuration.IncludeStorageDevices } else { $true }
+        $includeSecurityDevices = if ($Configuration.IncludeSecurityDevices -ne $null) { $Configuration.IncludeSecurityDevices } else { $true }
+        $includeVirtualization = if ($Configuration.IncludeVirtualization -ne $null) { $Configuration.IncludeVirtualization } else { $true }
+        $enableDiagnostics = if ($Configuration.EnableDiagnostics -ne $null) { $Configuration.EnableDiagnostics } else { $false }
+        $manualSubnets = if ($Configuration.ManualSubnets) { $Configuration.ManualSubnets } else { @() }
+        $maxResults = if ($Configuration.MaxResults) { $Configuration.MaxResults } else { 1000 }
+
+        Write-InfrastructureLog -Level "INFO" -Message "Configuration: Servers=$includeServers, Network=$includeNetworkDevices, Storage=$includeStorageDevices, Security=$includeSecurityDevices, Virtualization=$includeVirtualization" -Context $Context
+
+        # Collect all discovered infrastructure
+        $allDiscovered = [System.Collections.ArrayList]::new()
+        $statistics = @{
+            totalServers = 0
+            totalNetworkDevices = 0
+            totalStorageDevices = 0
+            totalSecurityDevices = 0
+            totalVirtualization = 0
+        }
+
+        # Run diagnostics if enabled
+        $diagnostics = $null
+        if ($enableDiagnostics) {
+            Write-InfrastructureLog -Level "INFO" -Message "Running network diagnostics..." -Context $Context
+            try {
+                $diagnostics = Invoke-DiagnosticNetworkScan -Context $Context
+                Write-InfrastructureLog -Level "SUCCESS" -Message "Diagnostics completed" -Context $Context
+            } catch {
+                Write-InfrastructureLog -Level "WARN" -Message "Diagnostics failed: $($_.Exception.Message)" -Context $Context
+            }
+        }
+
+        # Discover subnets
+        Write-InfrastructureLog -Level "INFO" -Message "Discovering network subnets..." -Context $Context
+        $subnets = @()
+
+        # Add manual subnets first
+        if ($manualSubnets -and $manualSubnets.Count -gt 0) {
+            Write-InfrastructureLog -Level "INFO" -Message "Adding $($manualSubnets.Count) manual subnets" -Context $Context
+            $subnets += $manualSubnets
+        }
+
+        # Try to discover subnets from AD
+        try {
+            $adSubnets = Get-ADSitesAndSubnets -Context $Context
+            if ($adSubnets -and $adSubnets.Count -gt 0) {
+                Write-InfrastructureLog -Level "SUCCESS" -Message "Found $($adSubnets.Count) subnets from AD Sites" -Context $Context
+                $subnets += ($adSubnets | ForEach-Object { $_.Subnet })
+            }
+        } catch {
+            Write-InfrastructureLog -Level "WARN" -Message "Could not discover AD subnets: $($_.Exception.Message)" -Context $Context
+        }
+
+        # Try DNS zones as fallback
+        if ($subnets.Count -eq 0) {
+            try {
+                $dnsSubnets = Get-SubnetsFromDNSZones -Context $Context
+                if ($dnsSubnets -and $dnsSubnets.Count -gt 0) {
+                    Write-InfrastructureLog -Level "SUCCESS" -Message "Found $($dnsSubnets.Count) subnets from DNS zones" -Context $Context
+                    $subnets += $dnsSubnets
+                }
+            } catch {
+                Write-InfrastructureLog -Level "WARN" -Message "Could not discover DNS subnets: $($_.Exception.Message)" -Context $Context
+            }
+        }
+
+        # Remove duplicates
+        $subnets = $subnets | Select-Object -Unique
+
+        if ($subnets.Count -eq 0) {
+            Write-InfrastructureLog -Level "WARN" -Message "No subnets discovered. Infrastructure discovery limited." -Context $Context
+            $result.AddWarning("No subnets discovered. Add manual subnets or ensure AD/DNS access.", "SubnetDiscovery", $null)
+        } else {
+            Write-InfrastructureLog -Level "INFO" -Message "Will scan $($subnets.Count) subnets" -Context $Context
+        }
+
+        # Classify subnets for prioritized scanning
+        $classifiedSubnets = Classify-NetworkSegments -Subnets $subnets -Context $Context
+
+        # Scan each subnet
+        $discoveredHosts = [System.Collections.ArrayList]::new()
+
+        foreach ($subnet in $classifiedSubnets | Sort-Object { $_.BusinessPriority } -Descending | Select-Object -First 10) {
+            Write-InfrastructureLog -Level "INFO" -Message "Scanning subnet: $($subnet.Subnet) (Priority: $($subnet.BusinessPriority))" -Context $Context
+
+            # Try nmap first, fallback to PowerShell
+            $hosts = @()
+            $nmapPath = Find-SystemNmap
+
+            if ($nmapPath) {
+                try {
+                    $hosts = Invoke-ProductionSafeNmapScan -Target $subnet.Subnet -Context $Context -SubnetInfo $subnet
+                } catch {
+                    Write-InfrastructureLog -Level "WARN" -Message "Nmap scan failed, trying PowerShell: $($_.Exception.Message)" -Context $Context
+                    $hosts = Invoke-ProductionSafePowerShellScan -Target $subnet.Subnet -Context $Context -SubnetInfo $subnet
+                }
+            } else {
+                $hosts = Invoke-ProductionSafePowerShellScan -Target $subnet.Subnet -Context $Context -SubnetInfo $subnet
+            }
+
+            if ($hosts -and $hosts.Count -gt 0) {
+                Write-InfrastructureLog -Level "SUCCESS" -Message "Found $($hosts.Count) hosts in $($subnet.Subnet)" -Context $Context
+                $null = $discoveredHosts.AddRange($hosts)
+            }
+
+            # Check max results limit
+            if ($discoveredHosts.Count -ge $maxResults) {
+                Write-InfrastructureLog -Level "WARN" -Message "Reached max results limit ($maxResults)" -Context $Context
+                break
+            }
+        }
+
+        # Categorize discovered hosts
+        foreach ($host in $discoveredHosts) {
+            $deviceType = if ($host.DeviceType) { $host.DeviceType } else { "Unknown" }
+
+            switch -Wildcard ($deviceType) {
+                "*Server*" {
+                    if ($includeServers) {
+                        $host | Add-Member -NotePropertyName "_DataType" -NotePropertyValue "Server" -Force
+                        $null = $allDiscovered.Add($host)
+                        $statistics.totalServers++
+                    }
+                }
+                "*Router*" {
+                    if ($includeNetworkDevices) {
+                        $host | Add-Member -NotePropertyName "_DataType" -NotePropertyValue "NetworkDevice" -Force
+                        $null = $allDiscovered.Add($host)
+                        $statistics.totalNetworkDevices++
+                    }
+                }
+                "*Switch*" {
+                    if ($includeNetworkDevices) {
+                        $host | Add-Member -NotePropertyName "_DataType" -NotePropertyValue "NetworkDevice" -Force
+                        $null = $allDiscovered.Add($host)
+                        $statistics.totalNetworkDevices++
+                    }
+                }
+                "*Firewall*" {
+                    if ($includeSecurityDevices) {
+                        $host | Add-Member -NotePropertyName "_DataType" -NotePropertyValue "SecurityDevice" -Force
+                        $null = $allDiscovered.Add($host)
+                        $statistics.totalSecurityDevices++
+                    }
+                }
+                "*Storage*" {
+                    if ($includeStorageDevices) {
+                        $host | Add-Member -NotePropertyName "_DataType" -NotePropertyValue "StorageDevice" -Force
+                        $null = $allDiscovered.Add($host)
+                        $statistics.totalStorageDevices++
+                    }
+                }
+                "*NAS*" {
+                    if ($includeStorageDevices) {
+                        $host | Add-Member -NotePropertyName "_DataType" -NotePropertyValue "StorageDevice" -Force
+                        $null = $allDiscovered.Add($host)
+                        $statistics.totalStorageDevices++
+                    }
+                }
+                "*VMware*" {
+                    if ($includeVirtualization) {
+                        $host | Add-Member -NotePropertyName "_DataType" -NotePropertyValue "Virtualization" -Force
+                        $null = $allDiscovered.Add($host)
+                        $statistics.totalVirtualization++
+                    }
+                }
+                "*Hyper-V*" {
+                    if ($includeVirtualization) {
+                        $host | Add-Member -NotePropertyName "_DataType" -NotePropertyValue "Virtualization" -Force
+                        $null = $allDiscovered.Add($host)
+                        $statistics.totalVirtualization++
+                    }
+                }
+                default {
+                    if ($includeServers) {
+                        $host | Add-Member -NotePropertyName "_DataType" -NotePropertyValue "Server" -Force
+                        $null = $allDiscovered.Add($host)
+                        $statistics.totalServers++
+                    }
+                }
+            }
+        }
+
+        # Export to CSV
+        $csvPath = Join-Path $outputPath "InfrastructureDiscovery.csv"
+        if ($allDiscovered.Count -gt 0) {
+            $allDiscovered | Export-Csv -Path $csvPath -NoTypeInformation -Force
+            Write-InfrastructureLog -Level "SUCCESS" -Message "Exported $($allDiscovered.Count) items to $csvPath" -Context $Context
+        } else {
+            Write-InfrastructureLog -Level "WARN" -Message "No infrastructure items discovered" -Context $Context
+        }
+
+        $stopwatch.Stop()
+
+        # Build final result
+        $result.RecordCount = $allDiscovered.Count
+        $result.OutputPath = $csvPath
+        $result.Duration = $stopwatch.Elapsed.TotalSeconds
+        $result.Data = @{
+            totalItems = $allDiscovered.Count
+            totalServers = $statistics.totalServers
+            totalNetworkDevices = $statistics.totalNetworkDevices
+            totalStorageDevices = $statistics.totalStorageDevices
+            totalSecurityDevices = $statistics.totalSecurityDevices
+            totalVirtualization = $statistics.totalVirtualization
+            outputPath = $csvPath
+            diagnostics = $diagnostics
+            subnetsScanned = $subnets.Count
+            statistics = $statistics
+        }
+
+        Write-InfrastructureLog -Level "HEADER" -Message "Infrastructure Discovery Complete" -Context $Context
+        Write-InfrastructureLog -Level "SUCCESS" -Message "Total: $($allDiscovered.Count) items (Servers: $($statistics.totalServers), Network: $($statistics.totalNetworkDevices), Storage: $($statistics.totalStorageDevices), Security: $($statistics.totalSecurityDevices), Virtualization: $($statistics.totalVirtualization))" -Context $Context
+        Write-InfrastructureLog -Level "INFO" -Message "Duration: $([math]::Round($stopwatch.Elapsed.TotalSeconds, 2)) seconds" -Context $Context
+
+    } catch {
+        $result.AddError("Infrastructure discovery failed: $($_.Exception.Message)", $_.Exception, $null)
+        Write-InfrastructureLog -Level "ERROR" -Message "Infrastructure discovery failed: $($_.Exception.Message)" -Context $Context
+    }
+
+    return $result
+}
+
+#endregion Main Entry Point
+
 # Export all functions
 Export-ModuleMember -Function Invoke-InfrastructureDiscovery, Get-ProductionSafeNmapConfig, Test-ProductionEnvironment, Find-SystemNmap, Test-NmapCapabilities, Install-NmapSilent, Install-NmapIfNeeded, Get-ADSitesAndSubnets, Get-SubnetsFromDNSZones, Classify-NetworkSegments, Get-AdaptiveScanParameters, Invoke-ProductionSafeNmapScan, Invoke-ProductionSafePowerShellScan, Get-ComprehensiveHostInformation, Import-ExistingAssetData, Merge-DiscoveredWithExistingAssets, Get-ServiceInformation, Get-DeviceTypeFromPorts, Invoke-DiagnosticNetworkScan
