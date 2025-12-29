@@ -29,6 +29,7 @@ import SearchBar from '../../components/molecules/SearchBar';
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';
 import ProgressBar from '../../components/molecules/ProgressBar';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 /**
  * SharePoint Discovery View Component
@@ -63,6 +64,11 @@ const SharePointDiscoveryView: React.FC = () => {
     selectedTab,
     setSelectedTab,
     statistics,
+    isCancelling,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
+    clearLogs,
   } = useSharePointDiscoveryLogic();
 
   return (
@@ -389,6 +395,25 @@ const SharePointDiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="SharePoint Discovery"
+        scriptDescription="Discovering SharePoint sites, lists, libraries, and permissions"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? {
+          percentage: progress.percentComplete || 0,
+          message: progress.phaseLabel || ''
+        } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

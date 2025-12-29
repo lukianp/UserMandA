@@ -339,6 +339,14 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
     status: 'idle',
   },
   {
+    id: 'infrastructure',
+    name: 'Infrastructure',
+    icon: 'Server',
+    description: 'Network scanning with nmap - discover all hosts, ports, services, and OS across subnets',
+    route: '/discovery/infrastructure',
+    status: 'idle',
+  },
+  {
     id: 'network',
     name: 'Network Infrastructure',
     icon: 'Network',
@@ -482,8 +490,8 @@ export const useInfrastructureDiscoveryHubLogic = () => {
           // Check if file exists and get its stats
           const stats = await window.electronAPI.fs.stat(fullPath);
 
-          if (stats && stats.modified) {
-            const modifiedDate = new Date(stats.modified);
+          if (stats && stats.mtime) {
+            const modifiedDate = new Date(stats.mtime);
 
             if (!latestDate || modifiedDate > latestDate) {
               latestDate = modifiedDate;

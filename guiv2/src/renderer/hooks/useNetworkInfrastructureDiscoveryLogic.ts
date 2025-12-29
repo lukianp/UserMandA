@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import { LogEntry } from './common/discoveryHookTypes';
 
 interface NetworkInfrastructureDiscoveryConfig {
   includeRouters: boolean;
@@ -46,6 +47,7 @@ interface NetworkInfrastructureDiscoveryState {
   config: NetworkInfrastructureDiscoveryConfig;
   result: NetworkInfrastructureDiscoveryResult | null;
   isDiscovering: boolean;
+  isCancelling: boolean;
   progress: {
     current: number;
     total: number;
@@ -53,6 +55,8 @@ interface NetworkInfrastructureDiscoveryState {
     percentage: number;
   };
   error: string | null;
+  logs: LogEntry[];
+  showExecutionDialog: boolean;
 }
 
 export const useNetworkInfrastructureDiscoveryLogic = () => {
@@ -74,6 +78,7 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
     },
     result: null,
     isDiscovering: false,
+    isCancelling: false,
     progress: {
       current: 0,
       total: 100,
@@ -81,6 +86,8 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
       percentage: 0,
     },
     error: null,
+    logs: [],
+    showExecutionDialog: false,
   });
 
   // Load previous results on mount
@@ -104,12 +111,18 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[NetworkInfrastructureDiscoveryHook] Discovery output:', data.message);
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
         setState((prev) => ({
           ...prev,
           progress: {
             ...prev.progress,
             message: data.message || '',
           },
+          logs: [...prev.logs, {
+            timestamp: new Date().toLocaleTimeString(),
+            message: data.message || '',
+            level: logLevel as 'info' | 'success' | 'warning' | 'error'
+          }]
         }));
       }
     });
@@ -139,12 +152,18 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
           ...prev,
           result: data.result as NetworkInfrastructureDiscoveryResult,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 100,
             total: 100,
             message: 'Completed',
             percentage: 100,
           },
+          logs: [...prev.logs, {
+            timestamp: new Date().toLocaleTimeString(),
+            message: `Discovery completed! Found ${discoveryResult.itemCount} items.`,
+            level: 'success' as const
+          }]
         }));
 
         addResult(discoveryResult);
@@ -158,6 +177,7 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           error: data.error,
           progress: {
             current: 0,
@@ -165,6 +185,11 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
             message: '',
             percentage: 0,
           },
+          logs: [...prev.logs, {
+            timestamp: new Date().toLocaleTimeString(),
+            message: `Discovery failed: ${data.error}`,
+            level: 'error' as const
+          }]
         }));
       }
     });
@@ -175,12 +200,18 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 0,
             total: 100,
             message: 'Discovery cancelled',
             percentage: 0,
           },
+          logs: [...prev.logs, {
+            timestamp: new Date().toLocaleTimeString(),
+            message: 'Discovery cancelled by user',
+            level: 'warning' as const
+          }]
         }));
       }
     });
@@ -191,7 +222,7 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, []); // ✅ CRITICAL: Empty dependency array for event listeners
+  }, []);
 
   const startDiscovery = useCallback(async () => {
     if (!selectedSourceProfile) {
@@ -208,6 +239,7 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
     setState((prev) => ({
       ...prev,
       isDiscovering: true,
+      isCancelling: false,
       error: null,
       progress: {
         current: 0,
@@ -215,6 +247,12 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
         message: 'Starting Network Infrastructure discovery...',
         percentage: 0,
       },
+      logs: [{
+        timestamp: new Date().toLocaleTimeString(),
+        message: `Starting Network Infrastructure discovery for ${selectedSourceProfile.companyName}...`,
+        level: 'info' as const
+      }],
+      showExecutionDialog: true,
     }));
 
     currentTokenRef.current = token;
@@ -273,6 +311,16 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
 
     console.warn('[NetworkInfrastructureDiscoveryHook] Cancelling discovery...');
 
+    setState((prev) => ({
+      ...prev,
+      isCancelling: true,
+      logs: [...prev.logs, {
+        timestamp: new Date().toLocaleTimeString(),
+        message: 'Cancelling discovery...',
+        level: 'warning' as const
+      }]
+    }));
+
     try {
       await window.electron.cancelDiscovery(currentTokenRef.current);
       console.log('[NetworkInfrastructureDiscoveryHook] Discovery cancellation requested successfully');
@@ -281,6 +329,7 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 0,
             total: 100,
@@ -296,6 +345,7 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
       setState((prev) => ({
         ...prev,
         isDiscovering: false,
+        isCancelling: false,
         progress: {
           current: 0,
           total: 100,
@@ -318,15 +368,30 @@ export const useNetworkInfrastructureDiscoveryLogic = () => {
     setState((prev) => ({ ...prev, error: null }));
   }, []);
 
+  // Clear logs
+  const clearLogs = useCallback(() => {
+    setState((prev) => ({ ...prev, logs: [] }));
+  }, []);
+
+  // Set show execution dialog
+  const setShowExecutionDialog = useCallback((show: boolean) => {
+    setState((prev) => ({ ...prev, showExecutionDialog: show }));
+  }, []);
+
   return {
     config: state.config,
     result: state.result,
     isDiscovering: state.isDiscovering,
+    isCancelling: state.isCancelling,
     progress: state.progress,
     error: state.error,
+    logs: state.logs,
+    showExecutionDialog: state.showExecutionDialog,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
     clearError,
+    clearLogs,
+    setShowExecutionDialog,
   };
 };

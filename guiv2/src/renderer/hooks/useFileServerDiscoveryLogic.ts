@@ -7,6 +7,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
+/**
+ * Log entry interface
+ */
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+}
+
 interface FileServerDiscoveryConfig {
   includeShares: boolean;
   includePermissions: boolean;
@@ -41,6 +50,9 @@ interface FileServerDiscoveryState {
   config: FileServerDiscoveryConfig;
   result: FileServerDiscoveryResult | null;
   isDiscovering: boolean;
+  isCancelling: boolean;
+  logs: LogEntry[];
+  showExecutionDialog: boolean;
   progress: {
     current: number;
     total: number;
@@ -68,6 +80,9 @@ export const useFileServerDiscoveryLogic = () => {
     },
     result: null,
     isDiscovering: false,
+    isCancelling: false,
+    logs: [],
+    showExecutionDialog: false,
     progress: {
       current: 0,
       total: 100,
@@ -98,12 +113,22 @@ export const useFileServerDiscoveryLogic = () => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[FileServerDiscoveryHook] Discovery output:', data.message);
+        const message = data.message || '';
+        let level: 'info' | 'success' | 'warning' | 'error' = 'info';
+        if (message.toLowerCase().includes('error') || message.toLowerCase().includes('failed')) {
+          level = 'error';
+        } else if (message.toLowerCase().includes('warning') || message.toLowerCase().includes('warn')) {
+          level = 'warning';
+        } else if (message.toLowerCase().includes('success') || message.toLowerCase().includes('completed') || message.toLowerCase().includes('found')) {
+          level = 'success';
+        }
         setState((prev) => ({
           ...prev,
           progress: {
             ...prev.progress,
-            message: data.message || '',
+            message: message,
           },
+          logs: [...prev.logs, { timestamp: new Date().toISOString(), message, level }],
         }));
       }
     });
@@ -133,12 +158,14 @@ export const useFileServerDiscoveryLogic = () => {
           ...prev,
           result: data.result as FileServerDiscoveryResult,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 100,
             total: 100,
             message: 'Completed',
             percentage: 100,
           },
+          logs: [...prev.logs, { timestamp: new Date().toISOString(), message: `Discovery completed! Found ${discoveryResult.itemCount} items.`, level: 'success' as const }],
         }));
 
         addResult(discoveryResult);
@@ -152,6 +179,7 @@ export const useFileServerDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           error: data.error,
           progress: {
             current: 0,
@@ -159,6 +187,7 @@ export const useFileServerDiscoveryLogic = () => {
             message: '',
             percentage: 0,
           },
+          logs: [...prev.logs, { timestamp: new Date().toISOString(), message: `Discovery failed: ${data.error}`, level: 'error' as const }],
         }));
       }
     });
@@ -169,12 +198,14 @@ export const useFileServerDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 0,
             total: 100,
             message: 'Discovery cancelled',
             percentage: 0,
           },
+          logs: [...prev.logs, { timestamp: new Date().toISOString(), message: 'Discovery cancelled by user', level: 'warning' as const }],
         }));
       }
     });
@@ -203,6 +234,8 @@ export const useFileServerDiscoveryLogic = () => {
       ...prev,
       isDiscovering: true,
       error: null,
+      logs: [{ timestamp: new Date().toISOString(), message: 'Starting discovery...', level: 'info' as const }],
+      showExecutionDialog: true,
       progress: {
         current: 0,
         total: 100,
@@ -265,6 +298,12 @@ export const useFileServerDiscoveryLogic = () => {
 
     console.warn('[FileServerDiscoveryHook] Cancelling discovery...');
 
+    setState((prev) => ({
+      ...prev,
+      isCancelling: true,
+      logs: [...prev.logs, { timestamp: new Date().toISOString(), message: 'Cancelling discovery...', level: 'warning' as const }],
+    }));
+
     try {
       await window.electron.cancelDiscovery(currentTokenRef.current);
       console.log('[FileServerDiscoveryHook] Discovery cancellation requested successfully');
@@ -273,6 +312,7 @@ export const useFileServerDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 0,
             total: 100,
@@ -288,6 +328,7 @@ export const useFileServerDiscoveryLogic = () => {
       setState((prev) => ({
         ...prev,
         isDiscovering: false,
+        isCancelling: false,
         progress: {
           current: 0,
           total: 100,
@@ -310,15 +351,28 @@ export const useFileServerDiscoveryLogic = () => {
     setState((prev) => ({ ...prev, error: null }));
   }, []);
 
+  const clearLogs = useCallback(() => {
+    setState((prev) => ({ ...prev, logs: [] }));
+  }, []);
+
+  const setShowExecutionDialog = useCallback((show: boolean) => {
+    setState((prev) => ({ ...prev, showExecutionDialog: show }));
+  }, []);
+
   return {
     config: state.config,
     result: state.result,
     isDiscovering: state.isDiscovering,
+    isCancelling: state.isCancelling,
+    logs: state.logs,
+    showExecutionDialog: state.showExecutionDialog,
     progress: state.progress,
     error: state.error,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
     clearError,
+    clearLogs,
+    setShowExecutionDialog,
   };
 };

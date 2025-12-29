@@ -39,10 +39,17 @@ interface InfrastructureDiscoveryResult {
   };
 }
 
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+}
+
 interface InfrastructureDiscoveryState {
   config: InfrastructureDiscoveryConfig;
   result: InfrastructureDiscoveryResult | null;
   isDiscovering: boolean;
+  isCancelling: boolean;
   progress: {
     current: number;
     total: number;
@@ -50,6 +57,8 @@ interface InfrastructureDiscoveryState {
     percentage: number;
   };
   error: string | null;
+  logs: LogEntry[];
+  showExecutionDialog: boolean;
 }
 
 export const useInfrastructureDiscoveryLogic = () => {
@@ -70,6 +79,7 @@ export const useInfrastructureDiscoveryLogic = () => {
     },
     result: null,
     isDiscovering: false,
+    isCancelling: false,
     progress: {
       current: 0,
       total: 100,
@@ -77,7 +87,22 @@ export const useInfrastructureDiscoveryLogic = () => {
       percentage: 0,
     },
     error: null,
+    logs: [],
+    showExecutionDialog: false,
   });
+
+  // Helper to add log entry
+  const addLog = useCallback((message: string, level: LogEntry['level'] = 'info') => {
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      message,
+      level,
+    };
+    setState((prev) => ({
+      ...prev,
+      logs: [...prev.logs, entry],
+    }));
+  }, []);
 
   // Load previous results on mount
   useEffect(() => {
@@ -100,11 +125,23 @@ export const useInfrastructureDiscoveryLogic = () => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[InfrastructureDiscoveryHook] Discovery output:', data.message);
+        const message = data.message || '';
+        // Determine log level based on message content
+        let level: LogEntry['level'] = 'info';
+        if (message.toLowerCase().includes('error') || message.toLowerCase().includes('failed')) {
+          level = 'error';
+        } else if (message.toLowerCase().includes('warning') || message.toLowerCase().includes('warn')) {
+          level = 'warning';
+        } else if (message.toLowerCase().includes('success') || message.toLowerCase().includes('complete') || message.toLowerCase().includes('found')) {
+          level = 'success';
+        }
+        // Add log entry
         setState((prev) => ({
           ...prev,
+          logs: [...prev.logs, { timestamp: new Date().toISOString(), message, level }],
           progress: {
             ...prev.progress,
-            message: data.message || '',
+            message,
           },
         }));
       }
@@ -135,6 +172,8 @@ export const useInfrastructureDiscoveryLogic = () => {
           ...prev,
           result: data.result as InfrastructureDiscoveryResult,
           isDiscovering: false,
+          isCancelling: false,
+          logs: [...prev.logs, { timestamp: new Date().toISOString(), message: `Discovery completed! Found ${discoveryResult.itemCount} items.`, level: 'success' as const }],
           progress: {
             current: 100,
             total: 100,
@@ -154,7 +193,9 @@ export const useInfrastructureDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           error: data.error,
+          logs: [...prev.logs, { timestamp: new Date().toISOString(), message: `Error: ${data.error}`, level: 'error' as const }],
           progress: {
             current: 0,
             total: 100,
@@ -171,6 +212,8 @@ export const useInfrastructureDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
+          logs: [...prev.logs, { timestamp: new Date().toISOString(), message: 'Discovery cancelled by user', level: 'warning' as const }],
           progress: {
             current: 0,
             total: 100,
@@ -204,7 +247,10 @@ export const useInfrastructureDiscoveryLogic = () => {
     setState((prev) => ({
       ...prev,
       isDiscovering: true,
+      isCancelling: false,
       error: null,
+      logs: [{ timestamp: new Date().toISOString(), message: 'Starting Infrastructure discovery...', level: 'info' as const }],
+      showExecutionDialog: true,
       progress: {
         current: 0,
         total: 100,
@@ -266,6 +312,11 @@ export const useInfrastructureDiscoveryLogic = () => {
     if (!state.isDiscovering || !currentTokenRef.current) return;
 
     console.warn('[InfrastructureDiscoveryHook] Cancelling discovery...');
+    setState((prev) => ({
+      ...prev,
+      isCancelling: true,
+      logs: [...prev.logs, { timestamp: new Date().toISOString(), message: 'Cancelling discovery...', level: 'warning' as const }],
+    }));
 
     try {
       await window.electron.cancelDiscovery(currentTokenRef.current);
@@ -275,6 +326,7 @@ export const useInfrastructureDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 0,
             total: 100,
@@ -290,6 +342,7 @@ export const useInfrastructureDiscoveryLogic = () => {
       setState((prev) => ({
         ...prev,
         isDiscovering: false,
+        isCancelling: false,
         progress: {
           current: 0,
           total: 100,
@@ -312,15 +365,28 @@ export const useInfrastructureDiscoveryLogic = () => {
     setState((prev) => ({ ...prev, error: null }));
   }, []);
 
+  const clearLogs = useCallback(() => {
+    setState((prev) => ({ ...prev, logs: [] }));
+  }, []);
+
+  const setShowExecutionDialog = useCallback((show: boolean) => {
+    setState((prev) => ({ ...prev, showExecutionDialog: show }));
+  }, []);
+
   return {
     config: state.config,
     result: state.result,
     isDiscovering: state.isDiscovering,
+    isCancelling: state.isCancelling,
     progress: state.progress,
     error: state.error,
+    logs: state.logs,
+    showExecutionDialog: state.showExecutionDialog,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
     clearError,
+    clearLogs,
+    setShowExecutionDialog,
   };
 };

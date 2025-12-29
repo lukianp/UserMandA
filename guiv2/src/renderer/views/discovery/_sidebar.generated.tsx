@@ -58,6 +58,7 @@ export const discoveryNavItems = [
   { path: '/discovery/gcp', label: 'GCP', icon: <Cloud size={16} /> },
   { path: '/discovery/google-workspace', label: 'Google Workspace', icon: <Cloud size={16} /> },
   { path: '/discovery/hyper-v', label: 'Hyper-V', icon: <Cpu size={16} /> },
+  { path: '/discovery/infrastructure', label: 'Infrastructure', icon: <Server size={16} /> },
   { path: '/discovery/network', label: 'Network Infrastructure', icon: <Network size={16} /> },
   { path: '/discovery/palo-alto', label: 'Palo Alto', icon: <Shield size={16} /> },
   { path: '/discovery/panorama-interrogation', label: 'Panorama', icon: <Shield size={16} /> },

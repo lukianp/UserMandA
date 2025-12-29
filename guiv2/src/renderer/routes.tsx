@@ -217,6 +217,10 @@ export const routes: RouteObject[] = [
     element: lazyLoad(() => import('./views/discovery/HyperVDiscoveryView')),
   },
   {
+    path: '/discovery/infrastructure',
+    element: lazyLoad(() => import('./views/discovery/InfrastructureDiscoveryView')),
+  },
+  {
     path: '/discovery/office365',
     element: lazyLoad(() => import('./views/discovery/Office365DiscoveryView')),
   },

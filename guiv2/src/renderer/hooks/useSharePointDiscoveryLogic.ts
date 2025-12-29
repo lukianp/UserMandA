@@ -25,6 +25,15 @@ import type { ProgressData } from '../../shared/types';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
+/**
+ * Log entry interface for PowerShell execution dialog
+ */
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+}
+
 export function useSharePointDiscoveryLogic() {
   // ============================================================================
   // State Management
@@ -42,6 +51,11 @@ export function useSharePointDiscoveryLogic() {
 
   const [currentToken, setCurrentToken] = useState<string | null>(null);
   const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
+
+  // PowerShell Execution Dialog state
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
 
   // Templates
   const [templates, setTemplates] = useState<SharePointDiscoveryTemplate[]>([]);
@@ -66,6 +80,22 @@ export function useSharePointDiscoveryLogic() {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[SharePointDiscoveryHook] Received output:', data.message);
+        // Detect log level from message content
+        let level: LogEntry['level'] = 'info';
+        const msgLower = (data.message || '').toLowerCase();
+        if (msgLower.includes('error') || msgLower.includes('failed')) {
+          level = 'error';
+        } else if (msgLower.includes('warning') || msgLower.includes('warn')) {
+          level = 'warning';
+        } else if (msgLower.includes('success') || msgLower.includes('complete')) {
+          level = 'success';
+        }
+        const entry: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level,
+          message: data.message || '',
+        };
+        setLogs(prev => [...prev, entry]);
         // Update progress with message
         setProgress(prev => prev ? { ...prev, phaseLabel: data.message } : null);
       }
@@ -78,7 +108,15 @@ export function useSharePointDiscoveryLogic() {
         console.log('[SharePointDiscoveryHook] data.result.Data:', data.result?.Data ? `Array of ${data.result.Data.length} items` : 'undefined');
 
         setIsDiscovering(false);
+        setIsCancelling(false);
         setCurrentToken(null);
+
+        const successLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level: 'success',
+          message: `Discovery completed! Found ${data?.result?.totalItems || data?.result?.RecordCount || 0} SharePoint items.`,
+        };
+        setLogs(prev => [...prev, successLog]);
 
         const discoveryResult = {
           id: `sharepoint-discovery-${Date.now()}`,
@@ -159,7 +197,14 @@ export function useSharePointDiscoveryLogic() {
     const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.error('[SharePointDiscoveryHook] Discovery error:', data.error);
+        const errorLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level: 'error',
+          message: `Discovery failed: ${data.error}`,
+        };
+        setLogs(prev => [...prev, errorLog]);
         setIsDiscovering(false);
+        setIsCancelling(false);
         setError(data.error);
         setProgress(null);
       }
@@ -168,7 +213,14 @@ export function useSharePointDiscoveryLogic() {
     const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[SharePointDiscoveryHook] Discovery cancelled');
+        const cancelLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level: 'warning',
+          message: 'Discovery cancelled by user',
+        };
+        setLogs(prev => [...prev, cancelLog]);
         setIsDiscovering(false);
+        setIsCancelling(false);
         setCurrentToken(null);
         setProgress(null);
       }
@@ -218,8 +270,16 @@ export function useSharePointDiscoveryLogic() {
       return;
     }
 
+    const initialLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level: 'info',
+      message: `Starting SharePoint discovery for ${selectedSourceProfile.companyName}...`,
+    };
+
     setIsDiscovering(true);
     setError(null);
+    setLogs([initialLog]);
+    setShowExecutionDialog(true);
     setProgress({
       phase: 'initializing',
       phaseLabel: 'Initializing SharePoint discovery...',
@@ -277,6 +337,14 @@ export function useSharePointDiscoveryLogic() {
 
     console.log('[SharePointDiscoveryHook] Cancelling discovery...');
 
+    const cancelLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level: 'warning',
+      message: 'Cancelling discovery...',
+    };
+    setLogs(prev => [...prev, cancelLog]);
+    setIsCancelling(true);
+
     try {
       await window.electron.cancelDiscovery(currentToken);
       console.log('[SharePointDiscoveryHook] Discovery cancellation requested successfully');
@@ -284,6 +352,7 @@ export function useSharePointDiscoveryLogic() {
       // Set timeout as fallback in case cancelled event doesn't fire
       setTimeout(() => {
         setIsDiscovering(false);
+        setIsCancelling(false);
         setCurrentToken(null);
         setProgress(null);
       }, 2000);
@@ -292,6 +361,7 @@ export function useSharePointDiscoveryLogic() {
       console.error('[SharePointDiscoveryHook]', errorMessage);
       // Reset state even on error
       setIsDiscovering(false);
+      setIsCancelling(false);
       setCurrentToken(null);
       setProgress(null);
     }
@@ -666,6 +736,14 @@ export function useSharePointDiscoveryLogic() {
   );
 
   // ============================================================================
+  // Logs Management
+  // ============================================================================
+
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
+
+  // ============================================================================
   // Export Functionality
   // ============================================================================
 
@@ -700,6 +778,13 @@ export function useSharePointDiscoveryLogic() {
     progress,
     isDiscovering,
     error,
+
+    // PowerShell Execution Dialog
+    isCancelling,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
+    clearLogs,
 
     // Templates
     templates,
@@ -738,6 +823,6 @@ export function useSharePointDiscoveryLogic() {
 
     // Statistics
     statistics: result?.statistics,
-  
+
   };
 }

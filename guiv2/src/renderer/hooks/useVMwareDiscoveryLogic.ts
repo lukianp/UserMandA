@@ -13,15 +13,27 @@ import { VMWARE_TEMPLATES } from '../types/models/vmware';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { useProfileStore } from '../store/useProfileStore';
 
+/**
+ * Log Entry Interface for PowerShellExecutionDialog
+ */
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+}
+
 export interface VMwareDiscoveryLogicState {
   config: VMwareDiscoveryConfig;
   result: VMwareDiscoveryResult | null;
   isLoading: boolean;
+  isCancelling: boolean;
   progress: number;
   error: string | null;
   searchText: string;
   activeTab: 'overview' | 'hosts' | 'vms' | 'clusters';
   templates: VMwareDiscoveryTemplate[];
+  logs: LogEntry[];
+  showExecutionDialog: boolean;
 }
 
 const formatBytes = (bytes: number): string => {
@@ -54,11 +66,14 @@ export const useVMwareDiscoveryLogic = () => {
 
   const [result, setResult] = useState<VMwareDiscoveryResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'hosts' | 'vms' | 'clusters'>('overview');
   const [cancellationToken, setCancellationToken] = useState<string | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
 
   const currentTokenRef = useRef<string | null>(null);
 
@@ -70,6 +85,13 @@ export const useVMwareDiscoveryLogic = () => {
       if (data.executionId === currentTokenRef.current) {
         const message = data.message || '';
         console.log('[VMwareDiscoveryHook] Progress:', message);
+        const logLevel: LogEntry['level'] = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
+        const logEntry: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: message,
+          level: logLevel,
+        };
+        setLogs(prev => [...prev, logEntry]);
       }
     });
 
@@ -92,8 +114,15 @@ export const useVMwareDiscoveryLogic = () => {
           createdAt: new Date().toISOString(),
         };
 
+        const successLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: `Discovery completed! Found ${discoveryResult.itemCount} VMs.`,
+          level: 'success',
+        };
+        setLogs(prev => [...prev, successLog]);
         setResult(data.result as VMwareDiscoveryResult);
         setIsLoading(false);
+        setIsCancelling(false);
         setProgress(100);
         setCancellationToken(null);
 
@@ -104,8 +133,15 @@ export const useVMwareDiscoveryLogic = () => {
 
     const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
       if (data.executionId === currentTokenRef.current) {
+        const errorLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: `Discovery failed: ${data.error}`,
+          level: 'error',
+        };
+        setLogs(prev => [...prev, errorLog]);
         setError(data.error);
         setIsLoading(false);
+        setIsCancelling(false);
         setCancellationToken(null);
         console.error(`[VMwareDiscoveryHook] Discovery failed: ${data.error}`);
       }
@@ -113,7 +149,14 @@ export const useVMwareDiscoveryLogic = () => {
 
     const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
       if (data.executionId === currentTokenRef.current) {
+        const cancelLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: 'Discovery cancelled by user',
+          level: 'warning',
+        };
+        setLogs(prev => [...prev, cancelLog]);
         setIsLoading(false);
+        setIsCancelling(false);
         setProgress(0);
         setCancellationToken(null);
         console.warn('[VMwareDiscoveryHook] Discovery cancelled by user');
@@ -157,14 +200,20 @@ export const useVMwareDiscoveryLogic = () => {
     if (isLoading) return;
 
     const token = `vmware-discovery-${Date.now()}`;
+    currentTokenRef.current = token;
 
+    const initialLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      message: `Starting VMware discovery for ${selectedSourceProfile.companyName}...`,
+      level: 'info',
+    };
+    setLogs([initialLog]);
+    setShowExecutionDialog(true);
     setIsLoading(true);
     setProgress(0);
     setError(null);
     setResult(null);
     setCancellationToken(token);
-
-    currentTokenRef.current = token;
 
     console.log(`[VMwareDiscoveryHook] Starting discovery for company: ${selectedSourceProfile.companyName}`);
     console.log(`[VMwareDiscoveryHook] Parameters:`, {
@@ -207,6 +256,14 @@ export const useVMwareDiscoveryLogic = () => {
   const cancelDiscovery = useCallback(async () => {
     if (!isLoading || !cancellationToken) return;
 
+    const cancelLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      message: 'Cancelling discovery...',
+      level: 'warning',
+    };
+    setLogs(prev => [...prev, cancelLog]);
+    setIsCancelling(true);
+
     console.warn('[VMwareDiscoveryHook] Cancelling discovery...');
 
     try {
@@ -215,6 +272,7 @@ export const useVMwareDiscoveryLogic = () => {
 
       setTimeout(() => {
         setIsLoading(false);
+        setIsCancelling(false);
         setProgress(0);
         setCancellationToken(null);
         currentTokenRef.current = null;
@@ -224,10 +282,18 @@ export const useVMwareDiscoveryLogic = () => {
       const errorMessage = error.message || 'Error cancelling discovery';
       console.error('[VMwareDiscoveryHook]', errorMessage);
       setIsLoading(false);
+      setIsCancelling(false);
       setCancellationToken(null);
       currentTokenRef.current = null;
     }
   }, [isLoading, cancellationToken]);
+
+  /**
+   * Clear all logs
+   */
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
 
   const handleApplyTemplate = (template: VMwareDiscoveryTemplate) => {
     setConfig((prev) => ({
@@ -395,6 +461,7 @@ export const useVMwareDiscoveryLogic = () => {
     setConfig,
     result,
     isLoading,
+    isCancelling,
     progress,
     error,
     searchText,
@@ -413,5 +480,10 @@ export const useVMwareDiscoveryLogic = () => {
     vmColumns,
     clusterColumns,
     stats,
+    // PowerShellExecutionDialog state
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
+    clearLogs,
   };
 };

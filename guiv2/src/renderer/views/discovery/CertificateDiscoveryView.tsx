@@ -18,12 +18,18 @@ import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const CertificateDiscoveryView: React.FC = () => {
   const {
     config,
     result,
     isDiscovering,
+    isCancelling,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
+    clearLogs,
     progress,
     error,
     startDiscovery,
@@ -333,6 +339,25 @@ const CertificateDiscoveryView: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="Certificate Discovery"
+        scriptDescription="Discovering SSL/TLS certificates and tracking expiration dates"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? {
+          percentage: progress.percentage || 0,
+          message: progress.message || ''
+        } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

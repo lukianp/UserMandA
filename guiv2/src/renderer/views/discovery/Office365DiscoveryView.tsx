@@ -30,6 +30,7 @@ import SearchBar from '../../components/molecules/SearchBar';
 import { Button } from '../../components/atoms/Button';
 import Badge from '../../components/atoms/Badge';
 import ProgressBar from '../../components/molecules/ProgressBar';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 /**
  * Office 365 Discovery View Component
@@ -40,18 +41,23 @@ const Office365DiscoveryView: React.FC = () => {
     templates = [],
     currentResult,
     isDiscovering = false,
+    isCancelling = false,
     progress,
     selectedTab = 'overview',
     searchText = '',
     filteredData = [],
     columnDefs = [],
     errors = [],
+    logs = [],
+    showExecutionDialog = false,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
     loadTemplate,
     saveAsTemplate,
     exportResults,
+    clearLogs,
+    setShowExecutionDialog,
     setSelectedTab,
     setSearchText,
   } = useOffice365DiscoveryLogic();
@@ -412,6 +418,22 @@ const Office365DiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="Office 365 Discovery"
+        scriptDescription="Discovering Office 365/Microsoft 365 users, licenses, services, and security configuration"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? { percentage: progress.progress || 0, message: progress.currentOperation || 'Processing...' } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

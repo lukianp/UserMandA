@@ -15,7 +15,7 @@ import {
   EntitlementPackage,
   PIMRole,
   IGFilterState,
-} from '../../types/models/identityGovernance';
+} from '../../types/models/identitygovernance';
 
 export interface IdentityGovernanceMetrics {
   totalUsers: number;

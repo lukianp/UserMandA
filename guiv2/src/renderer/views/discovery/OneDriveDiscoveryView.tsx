@@ -30,6 +30,7 @@ import SearchBar from '../../components/molecules/SearchBar';
 import { Button } from '../../components/atoms/Button';
 import Badge from '../../components/atoms/Badge';
 import ProgressBar from '../../components/molecules/ProgressBar';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 /**
  * OneDrive Discovery View Component
@@ -40,12 +41,15 @@ const OneDriveDiscoveryView: React.FC = () => {
     templates = [],
     currentResult,
     isDiscovering = false,
+    isCancelling = false,
     progress,
     selectedTab = 'overview',
     searchText = '',
     filteredData = [],
     columnDefs = [],
     errors = [],
+    logs = [],
+    showExecutionDialog = false,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
@@ -54,6 +58,8 @@ const OneDriveDiscoveryView: React.FC = () => {
     exportResults,
     setSelectedTab,
     setSearchText,
+    clearLogs,
+    setShowExecutionDialog,
   } = useOneDriveDiscoveryLogic();
 
   return (
@@ -552,6 +558,22 @@ const OneDriveDiscoveryView: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="OneDrive Discovery"
+        scriptDescription="Discovering OneDrive accounts, files, and sharing permissions"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? { percentage: progress.overallProgress || 0, message: progress.currentOperation || 'Processing...' } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

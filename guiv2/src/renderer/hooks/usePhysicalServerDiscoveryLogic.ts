@@ -7,6 +7,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
+/**
+ * Log entry interface for PowerShell execution dialog
+ */
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+}
+
 interface PhysicalServerDiscoveryConfig {
   includeHardwareInfo: boolean;
   includeCPU: boolean;
@@ -49,6 +58,9 @@ interface PhysicalServerDiscoveryState {
     percentage: number;
   };
   error: string | null;
+  isCancelling: boolean;
+  logs: LogEntry[];
+  showExecutionDialog: boolean;
 }
 
 export const usePhysicalServerDiscoveryLogic = () => {
@@ -77,6 +89,9 @@ export const usePhysicalServerDiscoveryLogic = () => {
       percentage: 0,
     },
     error: null,
+    isCancelling: false,
+    logs: [],
+    showExecutionDialog: false,
   });
 
   // Load previous results on mount
@@ -100,12 +115,28 @@ export const usePhysicalServerDiscoveryLogic = () => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[PhysicalServerDiscoveryHook] Discovery output:', data.message);
+        // Detect log level from message content
+        let level: LogEntry['level'] = 'info';
+        const msgLower = (data.message || '').toLowerCase();
+        if (msgLower.includes('error') || msgLower.includes('failed')) {
+          level = 'error';
+        } else if (msgLower.includes('warning') || msgLower.includes('warn')) {
+          level = 'warning';
+        } else if (msgLower.includes('success') || msgLower.includes('complete')) {
+          level = 'success';
+        }
+        const entry: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level,
+          message: data.message || '',
+        };
         setState((prev) => ({
           ...prev,
           progress: {
             ...prev.progress,
             message: data.message || '',
           },
+          logs: [...prev.logs, entry],
         }));
       }
     });
@@ -131,16 +162,24 @@ export const usePhysicalServerDiscoveryLogic = () => {
           createdAt: new Date().toISOString(),
         };
 
+        const successLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level: 'success',
+          message: `Discovery completed! Found ${discoveryResult.itemCount} physical servers.`,
+        };
+
         setState((prev) => ({
           ...prev,
           result: data.result as PhysicalServerDiscoveryResult,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 100,
             total: 100,
             message: 'Completed',
             percentage: 100,
           },
+          logs: [...prev.logs, successLog],
         }));
 
         addResult(discoveryResult);
@@ -151,9 +190,15 @@ export const usePhysicalServerDiscoveryLogic = () => {
     const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.error('[PhysicalServerDiscoveryHook] Discovery error:', data.error);
+        const errorLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level: 'error',
+          message: `Discovery failed: ${data.error}`,
+        };
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           error: data.error,
           progress: {
             current: 0,
@@ -161,6 +206,7 @@ export const usePhysicalServerDiscoveryLogic = () => {
             message: '',
             percentage: 0,
           },
+          logs: [...prev.logs, errorLog],
         }));
       }
     });
@@ -168,15 +214,22 @@ export const usePhysicalServerDiscoveryLogic = () => {
     const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.warn('[PhysicalServerDiscoveryHook] Discovery cancelled');
+        const cancelLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level: 'warning',
+          message: 'Discovery cancelled by user',
+        };
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 0,
             total: 100,
             message: 'Discovery cancelled',
             percentage: 0,
           },
+          logs: [...prev.logs, cancelLog],
         }));
       }
     });
@@ -201,6 +254,12 @@ export const usePhysicalServerDiscoveryLogic = () => {
 
     const token = `physicalserver-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    const initialLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level: 'info',
+      message: `Starting Physical Server discovery for ${selectedSourceProfile.companyName}...`,
+    };
+
     setState((prev) => ({
       ...prev,
       isDiscovering: true,
@@ -211,6 +270,8 @@ export const usePhysicalServerDiscoveryLogic = () => {
         message: 'Starting Physical Server discovery...',
         percentage: 0,
       },
+      logs: [initialLog],
+      showExecutionDialog: true,
     }));
 
     currentTokenRef.current = token;
@@ -273,6 +334,18 @@ export const usePhysicalServerDiscoveryLogic = () => {
 
     console.warn('[PhysicalServerDiscoveryHook] Cancelling discovery...');
 
+    const cancelLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level: 'warning',
+      message: 'Cancelling discovery...',
+    };
+
+    setState((prev) => ({
+      ...prev,
+      isCancelling: true,
+      logs: [...prev.logs, cancelLog],
+    }));
+
     try {
       await window.electron.cancelDiscovery(currentTokenRef.current);
       console.log('[PhysicalServerDiscoveryHook] Discovery cancellation requested successfully');
@@ -281,6 +354,7 @@ export const usePhysicalServerDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 0,
             total: 100,
@@ -296,6 +370,7 @@ export const usePhysicalServerDiscoveryLogic = () => {
       setState((prev) => ({
         ...prev,
         isDiscovering: false,
+        isCancelling: false,
         progress: {
           current: 0,
           total: 100,
@@ -318,15 +393,28 @@ export const usePhysicalServerDiscoveryLogic = () => {
     setState((prev) => ({ ...prev, error: null }));
   }, []);
 
+  const clearLogs = useCallback(() => {
+    setState((prev) => ({ ...prev, logs: [] }));
+  }, []);
+
+  const setShowExecutionDialog = useCallback((show: boolean) => {
+    setState((prev) => ({ ...prev, showExecutionDialog: show }));
+  }, []);
+
   return {
     config: state.config,
     result: state.result,
     isDiscovering: state.isDiscovering,
     progress: state.progress,
     error: state.error,
+    isCancelling: state.isCancelling,
+    logs: state.logs,
+    showExecutionDialog: state.showExecutionDialog,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
     clearError,
+    clearLogs,
+    setShowExecutionDialog,
   };
 };

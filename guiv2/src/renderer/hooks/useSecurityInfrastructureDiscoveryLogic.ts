@@ -25,6 +25,15 @@ import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { useProfileStore } from '../store/useProfileStore';
 
 /**
+ * Log entry interface for PowerShell execution dialog
+ */
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+}
+
+/**
  * Security Discovery View State
  */
 interface SecurityDiscoveryState {
@@ -48,6 +57,11 @@ interface SecurityDiscoveryState {
 
   // Errors
   errors: string[];
+
+  // PowerShell Execution Dialog
+  isCancelling: boolean;
+  logs: LogEntry[];
+  showExecutionDialog: boolean;
 }
 
 /**
@@ -71,6 +85,9 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
     selectedTab: 'overview',
     selectedObjects: [],
     errors: [],
+    isCancelling: false,
+    logs: [],
+    showExecutionDialog: false,
   });
 
   const debouncedSearch = useDebounce(state.searchText, 300);
@@ -98,12 +115,28 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[SecurityInfrastructureDiscoveryHook] Discovery output:', data.message);
+        // Detect log level from message content
+        let level: LogEntry['level'] = 'info';
+        const msgLower = (data.message || '').toLowerCase();
+        if (msgLower.includes('error') || msgLower.includes('failed')) {
+          level = 'error';
+        } else if (msgLower.includes('warning') || msgLower.includes('warn')) {
+          level = 'warning';
+        } else if (msgLower.includes('success') || msgLower.includes('complete')) {
+          level = 'success';
+        }
+        const entry: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level,
+          message: data.message || '',
+        };
         setState(prev => ({
           ...prev,
           progress: prev.progress ? {
             ...prev.progress,
             currentOperation: data.message,
-          } : null
+          } : null,
+          logs: [...prev.logs, entry],
         }));
       }
     });
@@ -129,11 +162,19 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
           createdAt: new Date().toISOString(),
         };
 
+        const successLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level: 'success',
+          message: `Discovery completed! Found ${data?.result?.totalItems || 0} security items.`,
+        };
+
         setState(prev => ({
           ...prev,
           currentResult: data.result as SecurityDiscoveryResult,
           isDiscovering: false,
+          isCancelling: false,
           progress: null,
+          logs: [...prev.logs, successLog],
         }));
 
         addResult(result);
@@ -144,11 +185,18 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
     const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.error('[SecurityInfrastructureDiscoveryHook] Discovery error:', data.error);
+        const errorLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level: 'error',
+          message: `Discovery failed: ${data.error}`,
+        };
         setState(prev => ({
           ...prev,
           errors: [data.error],
           isDiscovering: false,
+          isCancelling: false,
           progress: null,
+          logs: [...prev.logs, errorLog],
         }));
       }
     });
@@ -156,10 +204,17 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
     const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[SecurityInfrastructureDiscoveryHook] Discovery cancelled');
+        const cancelLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level: 'warning',
+          message: 'Discovery cancelled by user',
+        };
         setState(prev => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: null,
+          logs: [...prev.logs, cancelLog],
         }));
       }
     });
@@ -225,11 +280,19 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
     const token = `security-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     currentTokenRef.current = token;
 
+    const initialLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level: 'info',
+      message: `Starting Security Infrastructure discovery for ${selectedSourceProfile.companyName}...`,
+    };
+
     setState(prev => ({
       ...prev,
       isDiscovering: true,
       progress: null,
       errors: [],
+      logs: [initialLog],
+      showExecutionDialog: true,
     }));
 
     try {
@@ -269,6 +332,18 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
   const cancelDiscovery = async () => {
     if (!currentTokenRef.current) return;
 
+    const cancelLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level: 'warning',
+      message: 'Cancelling discovery...',
+    };
+
+    setState(prev => ({
+      ...prev,
+      isCancelling: true,
+      logs: [...prev.logs, cancelLog],
+    }));
+
     try {
       console.log('[SecurityInfrastructureDiscoveryHook] Cancelling discovery:', currentTokenRef.current);
       await window.electron.cancelDiscovery(currentTokenRef.current);
@@ -277,6 +352,7 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
         setState(prev => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: null,
         }));
         currentTokenRef.current = null;
@@ -286,6 +362,7 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
       setState(prev => ({
         ...prev,
         isDiscovering: false,
+        isCancelling: false,
         progress: null,
       }));
       currentTokenRef.current = null;
@@ -387,6 +464,20 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
    */
   const setSearchText = useCallback((text: string) => {
     setState(prev => ({ ...prev, searchText: text }));
+  }, []);
+
+  /**
+   * Clear all logs
+   */
+  const clearLogs = useCallback(() => {
+    setState(prev => ({ ...prev, logs: [] }));
+  }, []);
+
+  /**
+   * Set show execution dialog
+   */
+  const setShowExecutionDialog = useCallback((show: boolean) => {
+    setState(prev => ({ ...prev, showExecutionDialog: show }));
   }, []);
 
   /**
@@ -593,6 +684,9 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
     selectedTab: state.selectedTab,
     selectedObjects: state.selectedObjects,
     errors: state.errors,
+    isCancelling: state.isCancelling,
+    logs: state.logs,
+    showExecutionDialog: state.showExecutionDialog,
 
     // Data
     filteredData,
@@ -608,5 +702,7 @@ export const useSecurityInfrastructureDiscoveryLogic = () => {
     updateFilter,
     setSelectedTab,
     setSearchText,
+    clearLogs,
+    setShowExecutionDialog,
   };
 };

@@ -13,16 +13,20 @@ import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const GoogleWorkspaceDiscoveryView: React.FC = () => {
   const {
     config,
     result,
     isDiscovering,
+    isCancelling,
     progress,
     activeTab,
     filter,
     error,
+    logs,
+    showExecutionDialog,
     columns,
     filteredData,
     stats,
@@ -32,7 +36,9 @@ const GoogleWorkspaceDiscoveryView: React.FC = () => {
     startDiscovery,
     cancelDiscovery,
     exportToCSV,
-    exportToExcel
+    exportToExcel,
+    clearLogs,
+    setShowExecutionDialog
   } = useGoogleWorkspaceDiscoveryLogic();
 
   const [showConfig, setShowConfig] = useState(true);
@@ -309,6 +315,21 @@ const GoogleWorkspaceDiscoveryView: React.FC = () => {
           </div>
         )}
       </div>
+
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="Google Workspace Discovery"
+        scriptDescription="Discovering Google Workspace users, groups, Gmail, Drive, and Calendar data"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? { percentage: progress.percentage || 0, message: progress.message || 'Processing...' } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

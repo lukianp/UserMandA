@@ -1,18 +1,24 @@
 /**
- * Domain Discovery View
- * UI for Active Directory domain discovery
+ * Entra ID & Microsoft 365 Discovery View
+ *
+ * Discovers identity, security, and collaboration services from Microsoft cloud:
+ * - Entra ID (Azure AD): Users, Groups, Administrative Units, Guest Accounts
+ * - Security: Conditional Access Policies, Directory Roles, App Registrations
+ * - Microsoft 365: Exchange Online, SharePoint Online, Microsoft Teams
+ * - Devices: Entra ID Joined, Hybrid Joined, Intune Managed
  */
 
 import React from 'react';
-import { Play, Square, RefreshCw, Download, Trash2, Server } from 'lucide-react';
+import { Play, Square, RefreshCw, Download, Trash2, Cloud, CheckCircle } from 'lucide-react';
 
-import { useDomainDiscoveryLogic } from '../../hooks/useDomainDiscoveryLogic';
+import { useAzureDiscoveryLogic } from '../../hooks/useAzureDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
+import StatusIndicator from '../../components/atoms/StatusIndicator';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
-const DomainDiscoveryView: React.FC = () => {
+const AzureDiscoveryView: React.FC = () => {
   const {
     formData,
     updateFormField,
@@ -24,38 +30,51 @@ const DomainDiscoveryView: React.FC = () => {
     results,
     error,
     logs,
-    showExecutionDialog,
-    setShowExecutionDialog,
+    connectionStatus,
+    testConnection,
     startDiscovery,
     cancelDiscovery,
     exportResults,
     clearLogs,
     selectedProfile,
-  } = useDomainDiscoveryLogic();
+    showExecutionDialog,
+    setShowExecutionDialog,
+  } = useAzureDiscoveryLogic();
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="domain-discovery-view" data-testid="domain-discovery-view">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="azure-discovery-view" data-testid="azure-discovery-view">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
-              <Server size={28} />
+            <div className="p-3 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 text-white shadow-lg">
+              <Cloud size={28} />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Domain Discovery
+                Entra ID & Microsoft 365 Discovery
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Discover directory structure to identify organizational hierarchy and access permission consolidation needs
+                Discover users, groups, security policies, and M365 services (Exchange, SharePoint, Teams) for identity consolidation and tenant migration planning
               </p>
             </div>
           </div>
-          {selectedProfile && (
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Profile: <span className="font-semibold">{selectedProfile.name}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            {selectedProfile && (
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Profile: <span className="font-semibold">{selectedProfile.name}</span>
+              </div>
+            )}
+            <StatusIndicator
+              status={connectionStatus === 'connected' ? 'success' : connectionStatus === 'error' ? 'error' : 'warning'}
+              text={
+                connectionStatus === 'connected' ? 'Connected' :
+                connectionStatus === 'connecting' ? 'Connecting...' :
+                connectionStatus === 'error' ? 'Connection Error' :
+                'Not Connected'
+              }
+            />
+          </div>
         </div>
       </div>
 
@@ -68,70 +87,47 @@ const DomainDiscoveryView: React.FC = () => {
                 Configuration
               </h2>
 
-              <div className="space-y-4">
-                {/* Domain Controller */}
-                <Input
-                  label="Domain Controller"
-                  placeholder="dc.contoso.com"
-                  value={formData.domainController}
-                  onChange={(e) => updateFormField('domainController', e.target.value)}
-                  disabled={isRunning}
-                  required
-                  data-cy="domain-controller-input" data-testid="domain-controller-input"
-                />
-
-                {/* Search Base */}
-                <Input
-                  label="Search Base (Optional)"
-                  placeholder="OU=Users,DC=contoso,DC=com"
-                  value={formData.searchBase}
-                  onChange={(e) => updateFormField('searchBase', e.target.value)}
-                  disabled={isRunning}
-                  helperText="Leave empty to search from root"
-                  data-cy="search-base-input" data-testid="search-base-input"
-                />
-
-                {/* Object Types */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Object Types
-                  </label>
-                  <Checkbox
-                    label="Users"
-                    checked={formData.includeUsers}
-                    onChange={(checked) => updateFormField('includeUsers', checked)}
-                    disabled={isRunning}
-                    data-cy="include-users-checkbox" data-testid="include-users-checkbox"
-                  />
-                  <Checkbox
-                    label="Groups"
-                    checked={formData.includeGroups}
-                    onChange={(checked) => updateFormField('includeGroups', checked)}
-                    disabled={isRunning}
-                    data-cy="include-groups-checkbox" data-testid="include-groups-checkbox"
-                  />
-                  <Checkbox
-                    label="Computers"
-                    checked={formData.includeComputers}
-                    onChange={(checked) => updateFormField('includeComputers', checked)}
-                    disabled={isRunning}
-                    data-cy="include-computers-checkbox" data-testid="include-computers-checkbox"
-                  />
-                  <Checkbox
-                    label="Organizational Units"
-                    checked={formData.includeOUs}
-                    onChange={(checked) => updateFormField('includeOUs', checked)}
-                    disabled={isRunning}
-                    data-cy="include-ous-checkbox" data-testid="include-ous-checkbox"
-                  />
+              {/* Show profile info */}
+              {selectedProfile && (
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold">Profile:</span> {selectedProfile.name}
+                  </p>
+                  {selectedProfile.tenantId && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      <span className="font-semibold">Tenant:</span> {selectedProfile.tenantId}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                    Using credentials from company profile
+                  </p>
                 </div>
+              )}
+
+              <div className="space-y-4">
 
                 {/* Advanced Settings */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Execution Options
+                  </label>
+                  <Checkbox
+                    label="Use External Terminal (Advanced)"
+                    checked={formData.showWindow}
+                    onChange={(checked) => updateFormField('showWindow', checked)}
+                    disabled={isRunning}
+                    data-cy="show-window-checkbox" data-testid="show-window-checkbox"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 ml-6">
+                    Unchecked (default): Modern integrated dialog with controls. Checked: External DOS terminal window.
+                  </p>
+                </div>
+
                 <Input
                   label="Max Results"
                   type="number"
-                  value={formData?.maxResults?.toString() || '10000'}
-                  onChange={(e) => updateFormField('maxResults', parseInt(e.target.value) || 10000)}
+                  value={formData.maxResults?.toString() ?? ''}
+                  onChange={(e) => updateFormField('maxResults', parseInt(e.target.value) || 50000)}
                   disabled={isRunning}
                   min={1}
                   max={100000}
@@ -141,11 +137,12 @@ const DomainDiscoveryView: React.FC = () => {
                 <Input
                   label="Timeout (seconds)"
                   type="number"
-                  value={formData?.timeout?.toString() || '300'}
-                  onChange={(e) => updateFormField('timeout', parseInt(e.target.value) || 300)}
+                  value={formData.timeout?.toString() ?? ''}
+                  onChange={(e) => updateFormField('timeout', parseInt(e.target.value) || 600)}
                   disabled={isRunning}
-                  min={10}
+                  min={60}
                   max={3600}
+                  helperText="Recommended: 600s (10 min) for large tenants"
                   data-cy="timeout-input" data-testid="timeout-input"
                 />
               </div>
@@ -209,27 +206,27 @@ const DomainDiscoveryView: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">
-                      {progress?.currentOperation || 'Processing'}
+                      {progress.currentOperation}
                     </span>
                     <span className="font-semibold text-gray-900 dark:text-white">
-                      {progress?.overallProgress || 0}%
+                      {progress.overallProgress}%
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div
                       className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${progress?.overallProgress || 0}%` }}
+                      style={{ width: `${progress.overallProgress}%` }}
                     />
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {progress?.currentOperation || 'Processing...'}
+                    {progress.message}
                   </p>
                 </div>
               </div>
             )}
 
             {/* Results Summary */}
-            {results && (Array.isArray(results) ? results.length : 0) > 0 && (
+            {(Array.isArray(results) ? results.length : 0) > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -245,22 +242,24 @@ const DomainDiscoveryView: React.FC = () => {
                     Export
                   </Button>
                 </div>
-                {(results ?? []).map((result, index) => (
-                  <div key={index} className="space-y-2">
+                {(results ?? []).map((result) => (
+                  <div key={result.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Total Items Discovered
                       </span>
                       <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        {(result.users || 0) + (result.groups || 0) + (result.computers || 0) + (result.ous || 0)}
+                        {result.itemCount}
                       </span>
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                      <p>Discovery completed at {result.timestamp}</p>
-                      <p>
-                        Users: {result.users || 0}, Groups: {result.groups || 0},
-                        Computers: {result.computers || 0}, OUs: {result.ous || 0}
-                      </p>
+                      <p>{result.summary}</p>
+                      <p>Duration: {(result.duration / 1000).toFixed(2)}s</p>
+                      {result.filePath && (
+                        <p className="mt-2 font-mono text-xs break-all">
+                          Output: {result.filePath}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -296,16 +295,16 @@ const DomainDiscoveryView: React.FC = () => {
                     <div
                       key={index}
                       className={`mb-1 ${
-                        log?.level === 'error'
+                        log.level === 'error'
                           ? 'text-red-400'
-                          : log?.level === 'success'
+                          : log.level === 'success'
                           ? 'text-green-400'
-                          : log?.level === 'warning'
+                          : log.level === 'warning'
                           ? 'text-yellow-400'
                           : 'text-gray-300'
                       }`}
                     >
-                      {typeof log === 'string' ? log : log?.message}
+                      <span className="text-gray-500">[{log.timestamp}]</span> {log.message}
                     </div>
                   ))
                 )}
@@ -319,14 +318,14 @@ const DomainDiscoveryView: React.FC = () => {
       <PowerShellExecutionDialog
         isOpen={showExecutionDialog}
         onClose={() => !isRunning && setShowExecutionDialog(false)}
-        scriptName="Domain Discovery"
-        scriptDescription="Discovering Active Directory domain objects and structure"
+        scriptName="Azure Discovery"
+        scriptDescription="Discovering users, groups, Teams, SharePoint, OneDrive, and Exchange Online"
         logs={logs}
         isRunning={isRunning}
         isCancelling={isCancelling}
         progress={progress ? {
-          percentage: progress.overallProgress || 0,
-          message: progress.currentOperation || ''
+          percentage: progress.overallProgress,
+          message: progress.message
         } : undefined}
         onStart={startDiscovery}
         onStop={cancelDiscovery}
@@ -337,4 +336,4 @@ const DomainDiscoveryView: React.FC = () => {
   );
 };
 
-export default DomainDiscoveryView;
+export default AzureDiscoveryView;
