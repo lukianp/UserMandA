@@ -250,13 +250,13 @@ const VMwareDiscoveryView: React.FC = () => {
                   Overview
                 </TabButton>
                 <TabButton active={activeTab === 'hosts'} onClick={() => setActiveTab('hosts')}>
-                  Hosts ({filteredHosts.length})
+                  Hosts ({filteredHosts?.length || 0})
                 </TabButton>
                 <TabButton active={activeTab === 'vms'} onClick={() => setActiveTab('vms')}>
-                  Virtual Machines ({filteredVMs.length})
+                  Virtual Machines ({filteredVMs?.length || 0})
                 </TabButton>
                 <TabButton active={activeTab === 'clusters'} onClick={() => setActiveTab('clusters')}>
-                  Clusters ({filteredClusters.length})
+                  Clusters ({filteredClusters?.length || 0})
                 </TabButton>
               </div>
 

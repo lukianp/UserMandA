@@ -278,19 +278,19 @@ const SharePointDiscoveryView: React.FC = () => {
               <TabButton
                 active={selectedTab === 'sites'}
                 onClick={() => setSelectedTab('sites')}
-                label={`Sites (${sites.length})`}
+                label={`Sites (${sites?.length || 0})`}
                 icon={<FolderOpen className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'lists'}
                 onClick={() => setSelectedTab('lists')}
-                label={`Lists (${lists.length})`}
+                label={`Lists (${lists?.length || 0})`}
                 icon={<FileText className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'permissions'}
                 onClick={() => setSelectedTab('permissions')}
-                label={`Permissions (${permissions.length})`}
+                label={`Permissions (${permissions?.length || 0})`}
                 icon={<Shield className="w-4 h-4" />}
               />
             </div>

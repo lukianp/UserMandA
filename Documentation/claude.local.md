@@ -262,6 +262,27 @@ if ($response.value -and $response.value.Count -gt 0) {
 
 ## Critical Errors & Fixes
 
+**Error 0: PowerShell PascalCase vs TypeScript camelCase Property Names**
+```typescript
+// PowerShell modules return data with PascalCase property names:
+// { Subscriptions: [...], VirtualMachines: [...], StorageAccounts: [...] }
+
+// But TypeScript interfaces define camelCase:
+// interface AzureResourceDiscoveryResult { virtualMachines?: any[]; storageAccounts?: any[]; }
+
+// ❌ WRONG: TypeScript complains "Property 'Subscriptions' does not exist"
+const data = results.data;
+if (data.Subscriptions) { ... }  // ERROR!
+
+// ✅ CORRECT: Cast to 'any' when accessing PowerShell PascalCase properties
+const data = results.data as any;
+if (data.Subscriptions) { ... }  // OK
+if (data.VirtualMachines) { ... }  // OK
+
+// Always handle both casings for backwards compatibility:
+const vmCount = data.VirtualMachines?.length || data.virtualMachines?.length || 0;
+```
+
 **Error 1: `.Count` not found**
 ```powershell
 # ❌ WRONG

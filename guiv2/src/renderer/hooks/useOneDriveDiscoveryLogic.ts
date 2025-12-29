@@ -438,7 +438,7 @@ export const useOneDriveDiscoveryLogic = () => {
       );
     }
 
-    return data;
+    return data || [];
   }, [state.currentResult, state.selectedTab, debouncedSearch, state.filter]);
 
   /**

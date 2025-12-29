@@ -220,32 +220,8 @@ export const useIntuneDiscoveryLogic = () => {
       return;
     }
 
-    // Check for required Intune credentials
-    const profile = selectedSourceProfile;
-    const hasTenantId = profile.tenantId;
-    const hasClientId = profile.clientId || profile.configuration?.clientId || profile.configuration?.applicationId;
-    const hasClientSecret = profile.clientSecret || profile.configuration?.clientSecret || profile.configuration?.secretValue;
-
-    if (!hasTenantId || !hasClientId || !hasClientSecret) {
-      const missing = [];
-      if (!hasTenantId) missing.push('Tenant ID');
-      if (!hasClientId) missing.push('Client ID');
-      if (!hasClientSecret) missing.push('Client Secret');
-
-      const errorMessage = `Intune discovery requires Azure AD application credentials. Missing: ${missing.join(', ')}.
-
-To configure Intune credentials:
-1. Go to Azure Portal → Azure Active Directory → App registrations
-2. Create a new app registration or use an existing one
-3. Note the Application (client) ID and Tenant ID
-4. Create a client secret under Certificates & secrets
-5. Update your profile settings with these values
-
-Required permissions: Microsoft Graph → DeviceManagementManagedDevices.Read.All, DeviceManagementApps.Read.All`;
-      setState(prev => ({ ...prev, error: errorMessage }));
-      console.error('[IntuneDiscoveryHook]', errorMessage);
-      return;
-    }
+    // ✅ FIXED: Removed frontend credential validation - backend handles credentials from profile
+    // Credentials are stored in the profile and passed by the main process to PowerShell
 
     if (state.isDiscovering) return;
 

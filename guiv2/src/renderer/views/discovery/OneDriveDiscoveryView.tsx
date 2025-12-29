@@ -37,15 +37,15 @@ import ProgressBar from '../../components/molecules/ProgressBar';
 const OneDriveDiscoveryView: React.FC = () => {
   const {
     config,
-    templates,
+    templates = [],
     currentResult,
-    isDiscovering,
+    isDiscovering = false,
     progress,
-    selectedTab,
-    searchText,
-    filteredData,
-    columnDefs,
-    errors,
+    selectedTab = 'overview',
+    searchText = '',
+    filteredData = [],
+    columnDefs = [],
+    errors = [],
     startDiscovery,
     cancelDiscovery,
     updateConfig,
@@ -206,7 +206,7 @@ const OneDriveDiscoveryView: React.FC = () => {
       )}
 
       {/* Error Display */}
-      {errors.length > 0 && (
+      {(errors && Array.isArray(errors) && errors.length > 0) && (
         <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 p-4" data-cy="error-section" data-testid="error-section">
           <div className="flex items-start gap-2">
             <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
@@ -350,7 +350,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                   Accounts
                   {currentResult && (
                     <Badge variant="default" className="text-xs">
-                      {currentResult.accounts.length}
+                      {currentResult.accounts?.length || 0}
                     </Badge>
                   )}
                 </div>
@@ -372,7 +372,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                   Files
                   {currentResult && (
                     <Badge variant="default" className="text-xs">
-                      {currentResult.files.length}
+                      {currentResult.files?.length || 0}
                     </Badge>
                   )}
                 </div>
@@ -394,7 +394,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                   Sharing Links
                   {currentResult && (
                     <Badge variant="default" className="text-xs">
-                      {currentResult.sharing.length}
+                      {currentResult.sharing?.length || 0}
                     </Badge>
                   )}
                 </div>

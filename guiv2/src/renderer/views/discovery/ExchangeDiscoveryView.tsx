@@ -274,19 +274,19 @@ const ExchangeDiscoveryView: React.FC = () => {
               <TabButton
                 active={selectedTab === 'mailboxes'}
                 onClick={() => setSelectedTab('mailboxes')}
-                label={`Mailboxes (${mailboxes.length})`}
+                label={`Mailboxes (${mailboxes?.length || 0})`}
                 icon={<Inbox className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'groups'}
                 onClick={() => setSelectedTab('groups')}
-                label={`Groups (${groups.length})`}
+                label={`Groups (${groups?.length || 0})`}
                 icon={<Users className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'rules'}
                 onClick={() => setSelectedTab('rules')}
-                label={`Transport Rules (${rules.length})`}
+                label={`Transport Rules (${rules?.length || 0})`}
                 icon={<Shield className="w-4 h-4" />}
               />
             </div>

@@ -127,9 +127,133 @@ export const useOffice365DiscoveryLogic = () => {
           createdAt: new Date().toISOString(),
         };
 
+        // Transform the raw PowerShell result to the expected structure
+        let transformedResult: Office365DiscoveryResult;
+        const rawResult = data.result;
+
+        if (rawResult && rawResult.Data && Array.isArray(rawResult.Data)) {
+          // Group data by _DataType
+          const groupedData = rawResult.Data.reduce((acc: any, item: any) => {
+            const type = item._DataType;
+            if (!acc[type]) acc[type] = [];
+            acc[type].push(item);
+            return acc;
+          }, {});
+
+          transformedResult = {
+            id: `office365-discovery-${Date.now()}`,
+            configId: state.config.id,
+            configName: state.config.name,
+            startTime: new Date().toISOString(),
+            endTime: new Date().toISOString(),
+            status: 'completed',
+            progress: 100,
+            tenant: null,
+            users: groupedData.User || [],
+            guestUsers: groupedData.GuestUser || [],
+            licenses: groupedData.License || [],
+            services: groupedData.Service || [],
+            securityConfig: {
+              conditionalAccessPolicies: groupedData.ConditionalAccessPolicy || [],
+              mfaEnforced: false,
+              mfaRegisteredUsers: 0,
+              mfaEnabledUsers: 0,
+              mfaCoverage: 0,
+              securityDefaultsEnabled: false,
+              passwordPolicies: [],
+              dlpPolicies: groupedData.DLPPolicy || [],
+              threatProtectionEnabled: false,
+              advancedThreatProtectionEnabled: false,
+              retentionPolicies: groupedData.RetentionPolicy || [],
+              sensitivityLabels: [],
+              auditLogEnabled: false,
+              unifiedAuditLogEnabled: false,
+            },
+            stats: {
+              totalUsers: (groupedData.User?.length || 0) + (groupedData.GuestUser?.length || 0),
+              enabledUsers: 0,
+              disabledUsers: 0,
+              guestUsers: groupedData.GuestUser?.length || 0,
+              adminUsers: 0,
+              mfaEnabledUsers: 0,
+              mfaRegisteredUsers: 0,
+              totalLicenses: groupedData.License?.length || 0,
+              assignedLicenses: 0,
+              availableLicenses: 0,
+              totalServices: groupedData.Service?.length || 0,
+              healthyServices: 0,
+              degradedServices: 0,
+              unavailableServices: 0,
+              conditionalAccessPolicies: groupedData.ConditionalAccessPolicy?.length || 0,
+              dlpPolicies: groupedData.DLPPolicy?.length || 0,
+              retentionPolicies: groupedData.RetentionPolicy?.length || 0,
+            },
+            errors: rawResult.Errors || [],
+            warnings: rawResult.Warnings || [],
+            duration: data.duration,
+            objectsPerSecond: 0,
+          };
+        } else {
+          // Fallback to default structure if transformation fails
+          console.log('[Office365DiscoveryHook] Data transformation failed, using default structure');
+          transformedResult = {
+            id: `office365-discovery-${Date.now()}`,
+            configId: state.config.id,
+            configName: state.config.name,
+            startTime: new Date().toISOString(),
+            endTime: new Date().toISOString(),
+            status: 'completed',
+            progress: 100,
+            tenant: null,
+            users: [],
+            guestUsers: [],
+            licenses: [],
+            services: [],
+            securityConfig: {
+              conditionalAccessPolicies: [],
+              mfaEnforced: false,
+              mfaRegisteredUsers: 0,
+              mfaEnabledUsers: 0,
+              mfaCoverage: 0,
+              securityDefaultsEnabled: false,
+              passwordPolicies: [],
+              dlpPolicies: [],
+              threatProtectionEnabled: false,
+              advancedThreatProtectionEnabled: false,
+              retentionPolicies: [],
+              sensitivityLabels: [],
+              auditLogEnabled: false,
+              unifiedAuditLogEnabled: false,
+            },
+            stats: {
+              totalUsers: 0,
+              enabledUsers: 0,
+              disabledUsers: 0,
+              guestUsers: 0,
+              adminUsers: 0,
+              mfaEnabledUsers: 0,
+              mfaRegisteredUsers: 0,
+              totalLicenses: 0,
+              assignedLicenses: 0,
+              availableLicenses: 0,
+              totalServices: 0,
+              healthyServices: 0,
+              degradedServices: 0,
+              unavailableServices: 0,
+              conditionalAccessPolicies: 0,
+              dlpPolicies: 0,
+              retentionPolicies: 0,
+            },
+            errors: rawResult?.Errors || [],
+            warnings: rawResult?.Warnings || [],
+            duration: data.duration,
+            objectsPerSecond: 0,
+          };
+        }
+
         setState(prev => ({
           ...prev,
-          currentResult: data.result as Office365DiscoveryResult,
+          currentResult: transformedResult,
           isDiscovering: false,
           progress: null,
         }));
@@ -363,13 +487,15 @@ export const useOffice365DiscoveryLogic = () => {
 
     switch (state.selectedTab) {
       case 'users':
-        data = [...state.currentResult.users, ...(state.currentResult.guestUsers || [])];
+        const users = state.currentResult.users || [];
+        const guestUsers = state.currentResult.guestUsers || [];
+        data = [...users, ...guestUsers];
         break;
       case 'licenses':
-        data = state.currentResult.licenses;
+        data = state.currentResult.licenses || [];
         break;
       case 'services':
-        data = state.currentResult.services;
+        data = state.currentResult.services || [];
         break;
       case 'security':
         data = state.currentResult.securityConfig?.conditionalAccessPolicies || [];
@@ -428,7 +554,7 @@ export const useOffice365DiscoveryLogic = () => {
       data = (data ?? []).filter((item: any) => item.isAdmin === isAdmin);
     }
 
-    return data;
+    return data || [];
   }, [state.selectedTab, state.currentResult, state.filter, debouncedSearch]);
 
   /**

@@ -363,7 +363,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                   Devices
                   {currentResult && (
                     <Badge variant="default" className="text-xs">
-                      {currentResult.devices.length}
+                      {currentResult.devices?.length || 0}
                     </Badge>
                   )}
                 </div>
@@ -385,7 +385,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                   Policies
                   {currentResult && (
                     <Badge variant="default" className="text-xs">
-                      {currentResult.policies.length}
+                      {currentResult.policies?.length || 0}
                     </Badge>
                   )}
                 </div>
@@ -407,7 +407,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                   Incidents
                   {currentResult && (
                     <Badge variant="default" className="text-xs">
-                      {currentResult.incidents.length}
+                      {currentResult.incidents?.length || 0}
                     </Badge>
                   )}
                 </div>
@@ -429,7 +429,7 @@ const SecurityInfrastructureDiscoveryView: React.FC = () => {
                   Vulnerabilities
                   {currentResult && (
                     <Badge variant="default" className="text-xs">
-                      {currentResult.vulnerabilities.length}
+                      {currentResult.vulnerabilities?.length || 0}
                     </Badge>
                   )}
                 </div>

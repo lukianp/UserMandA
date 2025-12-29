@@ -59,6 +59,9 @@ function Write-OneDriveLog {
     Write-MandALog -Message $Message -Level $Level -Component "OneDriveDiscovery" -Context $Context
 }
 
+# Import required modules
+Import-Module (Join-Path $PSScriptRoot "..\Authentication\AuthenticationService.psm1") -Force
+
 # Import required Microsoft Graph modules
 $graphModules = @(
     'Microsoft.Graph.Authentication',
