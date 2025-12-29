@@ -2577,7 +2577,7 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       console.log(`[IPC:discovery:execute] Resolved profile path: ${profilePath}`);
 
       // Inject domain credentials for AD-related modules
-      const adRelatedModules = ['ActiveDirectory', 'DNSDHCP', 'GPO'];
+      const adRelatedModules = ['ActiveDirectory', 'DNSDHCP', 'GPO', 'Infrastructure'];
       let domainCreds: { username: string; password: string } | null = null;
 
       if (adRelatedModules.includes(moduleName)) {

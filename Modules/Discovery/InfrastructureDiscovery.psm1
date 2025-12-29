@@ -165,7 +165,7 @@ function Test-ProductionEnvironment {
 function Invoke-DiagnosticNetworkScan {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$false)]
         [string]$Target,
         [string]$NmapPath,
         [hashtable]$Context = @{}
@@ -249,8 +249,8 @@ function Invoke-DiagnosticNetworkScan {
         }
     }
 
-    # Test 4: Alternative scanning techniques if nmap available
-    if ($NmapPath -and (Test-Path $NmapPath)) {
+    # Test 4: Alternative scanning techniques if nmap available and target specified
+    if ($Target -and $NmapPath -and (Test-Path $NmapPath)) {
         Write-InfrastructureLog -Level "INFO" -Message "?? Running alternative nmap scans..." -Context $Context
 
         # ARP scan (layer 2 discovery)
@@ -673,11 +673,40 @@ function Get-ADSitesAndSubnets {
     try {
         Write-InfrastructureLog -Level "INFO" -Message "?? Discovering AD Sites and Services subnets..." -Context $Context
 
+        # Check for domain credentials
+        $credential = $null
+        $domainServer = $null
+
+        if ($Configuration.domainCredentials -and
+            $Configuration.domainCredentials.username -and
+            $Configuration.domainCredentials.password) {
+
+            Write-InfrastructureLog -Message "Using provided domain credentials: $($Configuration.domainCredentials.username -replace '\\.*','\\***')" -Level "INFO" -Context $Context
+
+            # Create PSCredential object
+            $securePassword = ConvertTo-SecureString $Configuration.domainCredentials.password -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential(
+                $Configuration.domainCredentials.username,
+                $securePassword
+            )
+
+            # Extract domain from username (DOMAIN\username format)
+            if ($Configuration.domainCredentials.username -match '^([^\\]+)\\') {
+                $domainServer = $matches[1]
+                Write-InfrastructureLog -Message "Auto-detected domain from credentials: $domainServer" -Level "INFO" -Context $Context
+            }
+        } else {
+            Write-InfrastructureLog -Message "Using integrated Windows authentication" -Level "INFO" -Context $Context
+        }
+
         # Check if we're in a domain environment
         $computerInfo = Get-ComputerInfo -Property CsDomain, CsDomainRole -ErrorAction SilentlyContinue
         if (-not $computerInfo -or $computerInfo.CsDomain -eq "WORKGROUP") {
-            Write-InfrastructureLog -Level "INFO" -Message "?? Not in domain environment - skipping AD Sites discovery" -Context $Context
-            return $adSubnets
+            # If we have credentials, we can still try to query the domain
+            if (-not $credential) {
+                Write-InfrastructureLog -Level "INFO" -Message "?? Not in domain environment - skipping AD Sites discovery" -Context $Context
+                return $adSubnets
+            }
         }
 
         # Import Active Directory module if available
@@ -687,12 +716,35 @@ function Get-ADSitesAndSubnets {
             if (Get-Command Get-ADReplicationSubnet -ErrorAction SilentlyContinue) {
                 Write-InfrastructureLog -Level "INFO" -Message "?? Querying AD replication subnets..." -Context $Context
 
-                $replicationSubnets = Get-ADReplicationSubnet -Filter * -Properties Name, Site, Location, Description -ErrorAction SilentlyContinue
+                # Build parameters with optional credentials
+                $adParams = @{
+                    Filter = '*'
+                    Properties = 'Name', 'Site', 'Location', 'Description'
+                    ErrorAction = 'Stop'
+                }
+                if ($credential) { $adParams['Credential'] = $credential }
+                if ($domainServer) { $adParams['Server'] = $domainServer }
+
+                $replicationSubnets = Get-ADReplicationSubnet @adParams
 
                 foreach ($subnet in $replicationSubnets) {
+                    # Get site name with credentials if available
+                    $siteName = "Unknown"
+                    if ($subnet.Site) {
+                        try {
+                            $siteParams = @{ Identity = $subnet.Site; ErrorAction = 'SilentlyContinue' }
+                            if ($credential) { $siteParams['Credential'] = $credential }
+                            if ($domainServer) { $siteParams['Server'] = $domainServer }
+                            $siteObj = Get-ADObject @siteParams
+                            if ($siteObj) { $siteName = $siteObj.Name }
+                        } catch {
+                            # Ignore errors, keep "Unknown"
+                        }
+                    }
+
                     $adSubnetInfo = [PSCustomObject]@{
                         SubnetName = $subnet.Name
-                        SiteName = if ($subnet.Site) { (Get-ADObject $subnet.Site).Name } else { "Unknown" }
+                        SiteName = $siteName
                         Location = $subnet.Location
                         Description = $subnet.Description
                         Source = "AD Sites and Services"
@@ -869,7 +921,24 @@ function Classify-NetworkSegments {
         Write-InfrastructureLog -Level "INFO" -Message "??? Classifying network segments with business context..." -Context $Context
 
         foreach ($subnet in $AllSubnets) {
-            $segment = $subnet.PSObject.Copy()
+            # Defensive: handle both PSCustomObjects and strings
+            if ($subnet -is [string]) {
+                # Convert string to minimal PSCustomObject
+                Write-InfrastructureLog -Level "WARN" -Message "Converting string subnet to object: $subnet" -Context $Context
+                $segment = [PSCustomObject]@{
+                    SubnetName = $subnet
+                    SiteName = "Unknown"
+                    Location = ""
+                    Description = ""
+                    Source = "String Conversion"
+                    Priority = 50
+                    SubnetType = "Unknown"
+                    BusinessContext = "General"
+                }
+            } else {
+                # Proper PSCustomObject - make a copy
+                $segment = $subnet.PSObject.Copy()
+            }
 
             # Initialize classification properties
             $segment | Add-Member -NotePropertyName 'SegmentType' -NotePropertyValue "Unknown" -Force
@@ -878,7 +947,8 @@ function Classify-NetworkSegments {
             $segment | Add-Member -NotePropertyName 'ScanTiming' -NotePropertyValue "T2" -Force
             $segment | Add-Member -NotePropertyName 'BusinessContext' -NotePropertyValue "General" -Force
 
-            $subnetAddr = if ($segment.SubnetName) { $segment.SubnetName } else { if ($segment.NetworkSubnet) { $segment.NetworkSubnet } else { "" } }
+            # Standardized: Use only SubnetName property
+            $subnetAddr = $segment.SubnetName
 
             # Classification logic based on multiple factors
             if ($segment.Source -eq "AD Sites and Services" -or $segment.Source -eq "AD Sites (LDAP)") {
@@ -1021,7 +1091,7 @@ function Get-NetworkSubnets {
                     PrefixLength = $ip.PrefixLength
                     SubnetMask = ([System.Net.IPAddress]::new($maskBytes)).ToString()
                     NetworkAddress = $networkAddr
-                    NetworkSubnet = $networkSubnet
+                    SubnetName = $networkSubnet
                     DHCP = (Get-NetIPInterface -InterfaceIndex $adapter.InterfaceIndex -AddressFamily IPv4).Dhcp
                 }
             }
@@ -1038,7 +1108,7 @@ function Get-NetworkSubnets {
                 InterfaceDescription = $adSubnet.Description
                 IPAddress = ($adSubnet.SubnetName -split '/')[0] + ".1"  # Assume .1 as example IP
                 PrefixLength = ($adSubnet.SubnetName -split '/')[1]
-                NetworkSubnet = $adSubnet.SubnetName
+                SubnetName = $adSubnet.SubnetName
                 NetworkAddress = ($adSubnet.SubnetName -split '/')[0]
                 DHCP = "Unknown"
                 SiteName = $adSubnet.SiteName
@@ -1054,13 +1124,13 @@ function Get-NetworkSubnets {
         $dnsSubnets = Get-SubnetsFromDNSZones -Configuration $Configuration -Context $Context
         foreach ($dnsSubnet in $dnsSubnets) {
             # Only add if not already discovered
-            if (-not ($subnets | Where-Object { $_.NetworkSubnet -eq $dnsSubnet.SubnetName })) {
+            if (-not ($subnets | Where-Object { $_.SubnetName -eq $dnsSubnet.SubnetName })) {
                 $subnets += [PSCustomObject]@{
                     Interface = "DNS Discovery"
                     InterfaceDescription = "DNS-inferred subnet"
                     IPAddress = ($dnsSubnet.SubnetName -split '/')[0] + ".1"
                     PrefixLength = ($dnsSubnet.SubnetName -split '/')[1]
-                    NetworkSubnet = $dnsSubnet.SubnetName
+                    SubnetName = $dnsSubnet.SubnetName
                     NetworkAddress = ($dnsSubnet.SubnetName -split '/')[0]
                     DHCP = "Unknown"
                     DNSServer = if ($dnsSubnet.DNSServer) { $dnsSubnet.DNSServer } else { "" }
@@ -1080,7 +1150,7 @@ function Get-NetworkSubnets {
         )
 
         foreach ($commonSubnet in $commonSubnets) {
-            if (-not ($subnets | Where-Object { $_.NetworkSubnet -eq $commonSubnet.Subnet })) {
+            if (-not ($subnets | Where-Object { $_.SubnetName -eq $commonSubnet.Subnet })) {
                 # Quick connectivity test
                 try {
                     $connectionTest = Test-NetConnection -ComputerName $commonSubnet.TestIP -Port 80 -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
@@ -1090,7 +1160,7 @@ function Get-NetworkSubnets {
                             InterfaceDescription = "Common Private Range - $($commonSubnet.Context)"
                             IPAddress = $commonSubnet.TestIP
                             PrefixLength = $commonSubnet.Subnet.Split('/')[1]
-                            NetworkSubnet = $commonSubnet.Subnet
+                            SubnetName = $commonSubnet.Subnet
                             NetworkAddress = $commonSubnet.Subnet.Split('/')[0]
                             DHCP = "Unknown"
                             Source = "Route Testing"
@@ -1284,6 +1354,22 @@ function Invoke-ProductionSafeNmapScan {
                     $Target
                 )
             }
+            "comprehensive" {
+                Write-InfrastructureLog -Level "INFO" -Message "?? Running comprehensive nmap discovery on $Target..." -Context $Context
+                $safePortList = $config.PortRange -join ","
+                $nmapArgs = @(
+                    "-sV",                    # Version detection
+                    "-O",                     # OS detection
+                    "--osscan-limit",         # Only OS detect if at least one open port
+                    "--version-intensity", "2", # Moderate probing
+                    "-T$($config.TimingTemplate)",
+                    "--max-rate", $config.MaxRate,
+                    "--max-retries", $config.Retries,
+                    "--host-timeout", $config.Timeout,
+                    "-p", $safePortList,
+                    $Target
+                )
+            }
         }
 
         # Add XML output
@@ -1340,29 +1426,75 @@ function Parse-NmapXmlOutput {
                 Hostname = if ($xmlHost.hostnames.hostname) { $xmlHost.hostnames.hostname.name } else { "Unknown" }
                 Status = $xmlHost.status.state
                 OS = ""
+                OSAccuracy = 0
+                OSFamily = ""
                 OpenPorts = @()
                 Services = @()
+                ServiceVersions = @()
                 MACAddress = ($xmlHost.address | Where-Object { $_.addrtype -eq "mac" } | Select-Object -ExpandProperty addr) -join ""
-                LastSeen = Get-Date
+                MACVendor = ($xmlHost.address | Where-Object { $_.addrtype -eq "mac" } | Select-Object -ExpandProperty vendor) -join ""
+                LastSeen = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
                 ScanMethod = "nmap"
+                DeviceType = "Unknown"
+                RiskLevel = "Low"
+                Vulnerabilities = @()
             }
 
-            # Parse OS information
+            # Parse OS information with accuracy
             if ($xmlHost.os.osmatch) {
-                $hostInfo.OS = $xmlHost.os.osmatch[0].name
+                $bestMatch = $xmlHost.os.osmatch | Sort-Object -Property accuracy -Descending | Select-Object -First 1
+                $hostInfo.OS = $bestMatch.name
+                $hostInfo.OSAccuracy = $bestMatch.accuracy
+                if ($bestMatch.osclass) {
+                    $hostInfo.OSFamily = $bestMatch.osclass.osfamily
+                }
             }
 
-            # Parse ports
+            # Parse ports with version info and risk assessment
             if ($xmlHost.ports.port) {
                 foreach ($port in $xmlHost.ports.port) {
                     if ($port.state.state -eq "open") {
                         $hostInfo.OpenPorts += [int]$port.portid
 
                         $serviceName = if ($port.service.name) { $port.service.name } else { "unknown" }
+                        $serviceProduct = if ($port.service.product) { $port.service.product } else { "" }
                         $serviceVersion = if ($port.service.version) { $port.service.version } else { "" }
-                        $hostInfo.Services += "$serviceName ($($port.portid))" + $(if ($serviceVersion) { " - $serviceVersion" } else { "" })
+
+                        $serviceStr = "$serviceName ($($port.portid))"
+                        if ($serviceProduct) { $serviceStr += " - $serviceProduct" }
+                        if ($serviceVersion) { $serviceStr += " $serviceVersion" }
+
+                        $hostInfo.Services += $serviceStr
+
+                        # Track versions separately for vulnerability analysis
+                        if ($serviceProduct -and $serviceVersion) {
+                            $hostInfo.ServiceVersions += "$serviceProduct $serviceVersion"
+                        }
+
+                        # Risk assessment based on service
+                        $serviceInfo = Get-ServiceInformation -Port ([int]$port.portid)
+                        if ($serviceInfo.RiskLevel -eq "High") {
+                            $hostInfo.RiskLevel = "High"
+                            $hostInfo.Vulnerabilities += "High-risk service: $serviceName on port $($port.portid)"
+                        }
                     }
                 }
+            }
+
+            # Convert arrays to CSV-friendly strings
+            $hostInfo.OpenPorts = $hostInfo.OpenPorts -join ","
+            $hostInfo.Services = $hostInfo.Services -join "; "
+            $hostInfo.ServiceVersions = $hostInfo.ServiceVersions -join "; "
+            $hostInfo.Vulnerabilities = $hostInfo.Vulnerabilities -join "; "
+
+            # Infer device type from ports and OS
+            if ($hostInfo.OS -match "Windows" -and $hostInfo.OpenPorts -match "3389") {
+                $hostInfo.DeviceType = "Windows Server/Workstation"
+            } elseif ($hostInfo.OS -match "Linux") {
+                $hostInfo.DeviceType = "Linux Server"
+            } elseif ($hostInfo.OpenPorts) {
+                $portArray = $hostInfo.OpenPorts -split "," | ForEach-Object { [int]$_ }
+                $hostInfo.DeviceType = Get-DeviceTypeFromPorts -OpenPorts $portArray
             }
 
             if ($hostInfo.IPAddress) {
@@ -1375,6 +1507,324 @@ function Parse-NmapXmlOutput {
     }
 
     return $results
+}
+
+function Get-IPRange {
+    <#
+    .SYNOPSIS
+    Calculate all IP addresses in a CIDR range
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Network,
+        [Parameter(Mandatory=$true)]
+        [int]$PrefixLength
+    )
+
+    try {
+        $ipBytes = ([System.Net.IPAddress]::Parse($Network)).GetAddressBytes()
+        $hostBits = 32 - $PrefixLength
+        $numHosts = [math]::Pow(2, $hostBits)
+
+        $ipRange = @()
+        for ($i = 1; $i -lt $numHosts - 1; $i++) {
+            $newBytes = $ipBytes.Clone()
+            $hostPortion = $i
+
+            for ($j = 3; $j -ge 0; $j--) {
+                $newBytes[$j] = ($ipBytes[$j] -band (255 -shl ([math]::Max(0, $PrefixLength - (3-$j)*8)))) + ($hostPortion -band 255)
+                $hostPortion = $hostPortion -shr 8
+            }
+
+            $ip = ($newBytes -join '.')
+            $ipRange += $ip
+
+            if ($ipRange.Count -gt 1000) { break } # Limit scan size for safety
+        }
+
+        return $ipRange
+    } catch {
+        Write-InfrastructureLog -Level "ERROR" -Message "Failed to calculate IP range: $($_.Exception.Message)" -Context @{}
+        return @()
+    }
+}
+
+function Get-ServiceInformation {
+    <#
+    .SYNOPSIS
+    Map port numbers to service metadata with risk assessment
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [int]$Port
+    )
+
+    $serviceMap = @{
+        21   = @{ Name = "FTP"; RiskLevel = "Medium"; Description = "File Transfer Protocol" }
+        22   = @{ Name = "SSH"; RiskLevel = "Low"; Description = "Secure Shell" }
+        23   = @{ Name = "Telnet"; RiskLevel = "High"; Description = "Unencrypted remote access" }
+        25   = @{ Name = "SMTP"; RiskLevel = "Low"; Description = "Simple Mail Transfer Protocol" }
+        53   = @{ Name = "DNS"; RiskLevel = "Low"; Description = "Domain Name System" }
+        80   = @{ Name = "HTTP"; RiskLevel = "Low"; Description = "Hypertext Transfer Protocol" }
+        110  = @{ Name = "POP3"; RiskLevel = "Medium"; Description = "Post Office Protocol v3" }
+        135  = @{ Name = "RPC"; RiskLevel = "High"; Description = "Microsoft RPC Endpoint Mapper" }
+        139  = @{ Name = "NetBIOS"; RiskLevel = "High"; Description = "NetBIOS Session Service" }
+        143  = @{ Name = "IMAP"; RiskLevel = "Low"; Description = "Internet Message Access Protocol" }
+        443  = @{ Name = "HTTPS"; RiskLevel = "Low"; Description = "HTTP Secure" }
+        445  = @{ Name = "SMB"; RiskLevel = "High"; Description = "Server Message Block" }
+        993  = @{ Name = "IMAPS"; RiskLevel = "Low"; Description = "IMAP over SSL" }
+        995  = @{ Name = "POP3S"; RiskLevel = "Low"; Description = "POP3 over SSL" }
+        1433 = @{ Name = "SQL Server"; RiskLevel = "High"; Description = "Microsoft SQL Server" }
+        3306 = @{ Name = "MySQL"; RiskLevel = "High"; Description = "MySQL Database" }
+        3389 = @{ Name = "RDP"; RiskLevel = "Medium"; Description = "Remote Desktop Protocol" }
+        5432 = @{ Name = "PostgreSQL"; RiskLevel = "High"; Description = "PostgreSQL Database" }
+        5985 = @{ Name = "WinRM HTTP"; RiskLevel = "Medium"; Description = "Windows Remote Management HTTP" }
+        5986 = @{ Name = "WinRM HTTPS"; RiskLevel = "Low"; Description = "Windows Remote Management HTTPS" }
+        8080 = @{ Name = "HTTP Alt"; RiskLevel = "Low"; Description = "Alternative HTTP port" }
+    }
+
+    if ($serviceMap[$Port]) {
+        return $serviceMap[$Port]
+    } else {
+        return @{ Name = "Unknown"; RiskLevel = "Low"; Description = "Unknown service on port $Port" }
+    }
+}
+
+function Get-DeviceTypeFromPorts {
+    <#
+    .SYNOPSIS
+    Infer device type from open port combinations
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [int[]]$OpenPorts
+    )
+
+    # Device type detection based on port combinations
+    if ($OpenPorts -contains 3389) { return "Windows Server/Workstation" }
+    if ($OpenPorts -contains 22 -and $OpenPorts -notcontains 135) { return "Linux/Unix Server" }
+    if ($OpenPorts -contains 80 -and $OpenPorts -contains 443) { return "Web Server" }
+    if ($OpenPorts -contains 25 -and $OpenPorts -contains 110) { return "Mail Server" }
+    if ($OpenPorts -contains 53) { return "DNS Server" }
+    if ($OpenPorts -contains 135 -and $OpenPorts -contains 445) { return "Windows Server" }
+    if ($OpenPorts -contains 21) { return "FTP Server" }
+    if ($OpenPorts -contains 1433) { return "SQL Server" }
+    if ($OpenPorts -contains 3306 -or $OpenPorts -contains 5432) { return "Database Server" }
+    if ($OpenPorts.Count -eq 0) { return "Firewall/Router" }
+
+    return "Generic Network Device"
+}
+
+function Get-ComprehensiveHostInformation {
+    <#
+    .SYNOPSIS
+    Deep host scanning with WMI queries and comprehensive port testing
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$IPAddress,
+        [hashtable]$Context = @{}
+    )
+
+    try {
+        $config = Get-ProductionSafeNmapConfig -Context $Context
+        $envTest = Test-ProductionEnvironment -Context $Context
+
+        $hostInfo = [PSCustomObject]@{
+            IPAddress = $IPAddress
+            Hostname = ""
+            OS = ""
+            Domain = ""
+            Manufacturer = ""
+            Model = ""
+            SerialNumber = ""
+            Architecture = ""
+            OpenPorts = @()
+            Services = @()
+            Shares = @()
+            LastSeen = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            ResponseTime = 0
+            MACAddress = ""
+            Status = "Unknown"
+            RiskLevel = "Low"
+            DeviceType = "Unknown"
+            Vulnerabilities = @()
+        }
+
+        # Try to resolve hostname with timeout
+        try {
+            $dnsTask = [System.Net.Dns]::GetHostEntryAsync($IPAddress)
+            if ($dnsTask.Wait(5000)) {
+                $hostInfo.Hostname = $dnsTask.Result.HostName
+            } else {
+                $hostInfo.Hostname = "Unknown (DNS timeout)"
+            }
+        } catch {
+            $hostInfo.Hostname = "Unknown"
+        }
+
+        # Use safe port range in production environments
+        $portRange = if ($envTest.IsProduction) {
+            $config.SafePortRange
+        } else {
+            @(21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 993, 995, 1433, 3306, 3389, 5432, 5985, 5986)
+        }
+
+        $openPorts = @()
+
+        Write-InfrastructureLog -Level "DEBUG" -Message "Testing $($portRange.Count) ports on $IPAddress..." -Context $Context
+
+        foreach ($port in $portRange) {
+            # Skip blacklisted ports in production
+            if ($envTest.IsProduction -and $port -in $config.BlacklistPorts) {
+                continue
+            }
+
+            try {
+                $result = Test-NetConnection -ComputerName $IPAddress -Port $port -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+                if ($result) {
+                    $openPorts += $port
+
+                    # Identify services and assess risk
+                    $serviceInfo = Get-ServiceInformation -Port $port
+                    $hostInfo.Services += "$($serviceInfo.Name) ($port)" + $(if ($serviceInfo.Description) { " - $($serviceInfo.Description)" } else { "" })
+
+                    # Risk assessment
+                    if ($serviceInfo.RiskLevel -eq "High") {
+                        $hostInfo.RiskLevel = "High"
+                        $hostInfo.Vulnerabilities += "High-risk service: $($serviceInfo.Name) on port $port"
+                    } elseif ($serviceInfo.RiskLevel -eq "Medium" -and $hostInfo.RiskLevel -eq "Low") {
+                        $hostInfo.RiskLevel = "Medium"
+                    }
+                }
+            } catch {
+                # Port test failed, continue
+            }
+
+            # Rate limiting between port tests in production
+            if ($envTest.IsProduction) {
+                Start-Sleep -Milliseconds 100
+            }
+        }
+
+        $hostInfo.OpenPorts = $openPorts -join ","
+
+        # Device type detection
+        $hostInfo.DeviceType = Get-DeviceTypeFromPorts -OpenPorts $openPorts
+
+        # Try to get additional Windows-specific information if SMB is available
+        if (445 -in $openPorts -and -not ($envTest.IsProduction -and 445 -in $config.BlacklistPorts)) {
+            try {
+                Write-InfrastructureLog -Level "DEBUG" -Message "Attempting WMI query to $IPAddress..." -Context $Context
+
+                # Use timeout for WMI queries
+                $wmiTimeout = if ($envTest.IsProduction) { 10 } else { 30 }
+
+                $wmiResult = Get-WmiObject -Class Win32_ComputerSystem -ComputerName $IPAddress -ErrorAction SilentlyContinue -AsJob
+                if (Wait-Job $wmiResult -Timeout $wmiTimeout) {
+                    $computerInfo = Receive-Job $wmiResult
+                    if ($computerInfo) {
+                        $hostInfo.Manufacturer = $computerInfo.Manufacturer
+                        $hostInfo.Model = $computerInfo.Model
+                        $hostInfo.Domain = $computerInfo.Domain
+                    }
+                }
+                Remove-Job $wmiResult -Force -ErrorAction SilentlyContinue
+
+                $osResult = Get-WmiObject -Class Win32_OperatingSystem -ComputerName $IPAddress -ErrorAction SilentlyContinue -AsJob
+                if (Wait-Job $osResult -Timeout $wmiTimeout) {
+                    $osInfo = Receive-Job $osResult
+                    if ($osInfo) {
+                        $hostInfo.OS = "$($osInfo.Caption) $($osInfo.Version)"
+                        $hostInfo.Architecture = $osInfo.OSArchitecture
+
+                        # Check for vulnerable Windows versions
+                        if ($osInfo.Version -match "^6\.[01]" -or $osInfo.Caption -match "Windows (XP|Vista|7|2003|2008)") {
+                            $hostInfo.RiskLevel = "High"
+                            $hostInfo.Vulnerabilities += "Legacy Windows version detected: $($osInfo.Caption)"
+                        }
+                    }
+                }
+                Remove-Job $osResult -Force -ErrorAction SilentlyContinue
+
+                $biosResult = Get-WmiObject -Class Win32_BIOS -ComputerName $IPAddress -ErrorAction SilentlyContinue -AsJob
+                if (Wait-Job $biosResult -Timeout $wmiTimeout) {
+                    $biosInfo = Receive-Job $biosResult
+                    if ($biosInfo) {
+                        $hostInfo.SerialNumber = $biosInfo.SerialNumber
+                    }
+                }
+                Remove-Job $biosResult -Force -ErrorAction SilentlyContinue
+
+            } catch {
+                Write-InfrastructureLog -Level "DEBUG" -Message "WMI query failed for ${IPAddress}: $($_.Exception.Message)" -Context $Context
+            }
+        }
+
+        # Convert arrays to strings for CSV export
+        $hostInfo.Services = $hostInfo.Services -join "; "
+        $hostInfo.Vulnerabilities = $hostInfo.Vulnerabilities -join "; "
+
+        $hostInfo.Status = "Live"
+        return $hostInfo
+
+    } catch {
+        Write-InfrastructureLog -Level "DEBUG" -Message "Failed to get comprehensive host info for ${IPAddress}: $($_.Exception.Message)" -Context $Context
+        return $null
+    }
+}
+
+function Test-SubnetObjectIntegrity {
+    <#
+    .SYNOPSIS
+    Validate subnet objects have correct structure and properties
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [array]$Subnets,
+        [hashtable]$Context = @{}
+    )
+
+    $errors = @()
+
+    for ($i = 0; $i -lt $Subnets.Count; $i++) {
+        $subnet = $Subnets[$i]
+
+        # Check if it's a string (should be object)
+        if ($subnet -is [string]) {
+            $errors += "Subnet at index $i is a string: '$subnet' (should be PSCustomObject)"
+            continue
+        }
+
+        # Check required properties
+        $requiredProps = @('SubnetName', 'Source', 'Priority')
+        foreach ($prop in $requiredProps) {
+            if (-not ($subnet.PSObject.Properties.Name -contains $prop)) {
+                $errors += "Subnet at index $i missing required property: $prop"
+            }
+        }
+
+        # Check SubnetName format (should be CIDR)
+        if ($subnet.SubnetName -and $subnet.SubnetName -notmatch '^\d+\.\d+\.\d+\.\d+/\d+$') {
+            $errors += "Subnet at index $i has invalid CIDR format: $($subnet.SubnetName)"
+        }
+    }
+
+    if ($errors.Count -gt 0) {
+        Write-InfrastructureLog -Level "ERROR" -Message "Subnet object integrity check FAILED:" -Context $Context
+        foreach ($error in $errors) {
+            Write-InfrastructureLog -Level "ERROR" -Message "  - $error" -Context $Context
+        }
+        return $false
+    } else {
+        Write-InfrastructureLog -Level "SUCCESS" -Message "Subnet object integrity check PASSED ($($Subnets.Count) subnets validated)" -Context $Context
+        return $true
+    }
 }
 
 function Invoke-ProductionSafePowerShellScan {
@@ -1584,18 +2034,35 @@ function Invoke-InfrastructureDiscovery {
         Write-InfrastructureLog -Level "INFO" -Message "Discovering network subnets..." -Context $Context
         $subnets = @()
 
-        # Add manual subnets first
+        # Add manual subnets first (convert strings to PSCustomObjects)
         if ($manualSubnets -and $manualSubnets.Count -gt 0) {
             Write-InfrastructureLog -Level "INFO" -Message "Adding $($manualSubnets.Count) manual subnets" -Context $Context
-            $subnets += $manualSubnets
+            foreach ($manualSubnet in $manualSubnets) {
+                $subnets += [PSCustomObject]@{
+                    SubnetName = $manualSubnet
+                    SiteName = "Manual Entry"
+                    Location = ""
+                    Description = "Manually specified subnet"
+                    Source = "Manual Configuration"
+                    Priority = 70
+                    SubnetType = "Manual Entry"
+                    BusinessContext = "User Specified"
+                }
+            }
         }
 
         # Try to discover subnets from AD
         try {
-            $adSubnets = Get-ADSitesAndSubnets -Context $Context
+            $adSubnets = Get-ADSitesAndSubnets -Configuration $Configuration -Context $Context
             if ($adSubnets -and $adSubnets.Count -gt 0) {
                 Write-InfrastructureLog -Level "SUCCESS" -Message "Found $($adSubnets.Count) subnets from AD Sites" -Context $Context
-                $subnets += ($adSubnets | ForEach-Object { $_.Subnet })
+
+                # Log sample of discovered subnets with metadata
+                $sampleSubnet = $adSubnets[0]
+                Write-InfrastructureLog -Level "DEBUG" -Message "Sample AD subnet: $($sampleSubnet.SubnetName) | Site: $($sampleSubnet.SiteName) | Location: $($sampleSubnet.Location) | Priority: $($sampleSubnet.Priority)" -Context $Context
+
+                # CRITICAL: Preserve PSCustomObjects to retain metadata
+                $subnets += $adSubnets
             }
         } catch {
             Write-InfrastructureLog -Level "WARN" -Message "Could not discover AD subnets: $($_.Exception.Message)" -Context $Context
@@ -1614,24 +2081,33 @@ function Invoke-InfrastructureDiscovery {
             }
         }
 
-        # Remove duplicates
-        $subnets = $subnets | Select-Object -Unique
+        # Remove duplicates based on SubnetName property
+        $subnets = $subnets | Sort-Object -Property SubnetName -Unique
 
         if ($subnets.Count -eq 0) {
             Write-InfrastructureLog -Level "WARN" -Message "No subnets discovered. Infrastructure discovery limited." -Context $Context
-            $result.AddWarning("No subnets discovered. Add manual subnets or ensure AD/DNS access.", "SubnetDiscovery", $null)
+            $result.AddWarning("No subnets discovered. Add manual subnets or ensure AD/DNS access.", @{Section="SubnetDiscovery"})
         } else {
             Write-InfrastructureLog -Level "INFO" -Message "Will scan $($subnets.Count) subnets" -Context $Context
         }
 
+        # Validate subnet objects before classification
+        if ($subnets.Count -gt 0) {
+            $validationPassed = Test-SubnetObjectIntegrity -Subnets $subnets -Context $Context
+            if (-not $validationPassed) {
+                $result.AddError("Subnet data model validation failed. Check logs for details.", $null, @{Section="SubnetValidation"})
+                # Continue anyway with defensive handling in Classify-NetworkSegments
+            }
+        }
+
         # Classify subnets for prioritized scanning
-        $classifiedSubnets = Classify-NetworkSegments -Subnets $subnets -Context $Context
+        $classifiedSubnets = Classify-NetworkSegments -AllSubnets $subnets -Configuration $Configuration -Context $Context
 
         # Scan each subnet
         $discoveredHosts = [System.Collections.ArrayList]::new()
 
         foreach ($subnet in $classifiedSubnets | Sort-Object { $_.BusinessPriority } -Descending | Select-Object -First 10) {
-            Write-InfrastructureLog -Level "INFO" -Message "Scanning subnet: $($subnet.Subnet) (Priority: $($subnet.BusinessPriority))" -Context $Context
+            Write-InfrastructureLog -Level "INFO" -Message "Scanning subnet: $($subnet.SubnetName) (Priority: $($subnet.BusinessPriority), Type: $($subnet.SegmentType))" -Context $Context
 
             # Try nmap first, fallback to PowerShell
             $hosts = @()
@@ -1639,17 +2115,17 @@ function Invoke-InfrastructureDiscovery {
 
             if ($nmapPath) {
                 try {
-                    $hosts = Invoke-ProductionSafeNmapScan -Target $subnet.Subnet -Context $Context -SubnetInfo $subnet
+                    $hosts = Invoke-ProductionSafeNmapScan -Target $subnet.SubnetName -NmapPath $nmapPath.Path -ScanType "comprehensive" -Context $Context -SubnetInfo $subnet
                 } catch {
                     Write-InfrastructureLog -Level "WARN" -Message "Nmap scan failed, trying PowerShell: $($_.Exception.Message)" -Context $Context
-                    $hosts = Invoke-ProductionSafePowerShellScan -Target $subnet.Subnet -Context $Context -SubnetInfo $subnet
+                    $hosts = Invoke-ProductionSafePowerShellScan -Target $subnet.SubnetName -Context $Context -SubnetInfo $subnet
                 }
             } else {
-                $hosts = Invoke-ProductionSafePowerShellScan -Target $subnet.Subnet -Context $Context -SubnetInfo $subnet
+                $hosts = Invoke-ProductionSafePowerShellScan -Target $subnet.SubnetName -Context $Context -SubnetInfo $subnet
             }
 
             if ($hosts -and $hosts.Count -gt 0) {
-                Write-InfrastructureLog -Level "SUCCESS" -Message "Found $($hosts.Count) hosts in $($subnet.Subnet)" -Context $Context
+                Write-InfrastructureLog -Level "SUCCESS" -Message "Found $($hosts.Count) hosts in $($subnet.SubnetName)" -Context $Context
                 $null = $discoveredHosts.AddRange($hosts)
             }
 
@@ -1744,8 +2220,6 @@ function Invoke-InfrastructureDiscovery {
 
         # Build final result
         $result.RecordCount = $allDiscovered.Count
-        $result.OutputPath = $csvPath
-        $result.Duration = $stopwatch.Elapsed.TotalSeconds
         $result.Data = @{
             totalItems = $allDiscovered.Count
             totalServers = $statistics.totalServers
@@ -1757,6 +2231,7 @@ function Invoke-InfrastructureDiscovery {
             diagnostics = $diagnostics
             subnetsScanned = $subnets.Count
             statistics = $statistics
+            duration = $stopwatch.Elapsed.TotalSeconds
         }
 
         Write-InfrastructureLog -Level "HEADER" -Message "Infrastructure Discovery Complete" -Context $Context
