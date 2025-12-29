@@ -111,27 +111,59 @@ export const useGPODiscoveryLogic = () => {
     const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[GPODiscoveryHook] Discovery completed:', data);
+        console.log('[GPODiscoveryHook] data.result:', data.result);
+        console.log('[GPODiscoveryHook] data.result keys:', Object.keys(data.result || {}));
+
+        // Extract the actual data from PowerShell result
+        // The PowerShell JSON result has structure: { success, data: { ...actual data... }, duration, ... }
+        const psResult = data.result || {};
+        const actualData = psResult.data || psResult;
+        const metadata = actualData.Metadata || {};
+        const recordCount = actualData.RecordCount || metadata.TotalRecords || 0;
+
+        console.log('[GPODiscoveryHook] actualData:', actualData);
+        console.log('[GPODiscoveryHook] Extracted metadata:', metadata);
+        console.log('[GPODiscoveryHook] recordCount:', recordCount);
+
+        // Extract counts from metadata
+        const gpoCount = metadata.GPOCount || 0;
+        const linkCount = metadata.GPOLinkCount || 0;
+
+        const gpoResult: GPODiscoveryResult = {
+          totalGPOs: gpoCount,
+          totalGPOLinks: linkCount,
+          totalItems: recordCount,
+          outputPath: metadata.OutputPath || '',
+          gpos: [],
+          gpoLinks: [],
+          statistics: {
+            totalPolicies: gpoCount,
+            enabledGPOs: gpoCount, // Could be refined with CSV data
+            disabledGPOs: 0,
+            linkedGPOs: linkCount,
+          },
+        };
 
         const discoveryResult = {
           id: `gpo-discovery-${Date.now()}`,
           name: 'GPO Discovery',
           moduleName: 'GPODiscovery',
           displayName: 'Group Policy Discovery',
-          itemCount: data?.result?.totalItems || data?.result?.totalGPOs || 0,
+          itemCount: recordCount,
           discoveryTime: new Date().toISOString(),
           duration: data.duration || 0,
           status: 'Completed',
-          filePath: data?.result?.outputPath || '',
+          filePath: metadata.OutputPath || '',
           success: true,
-          summary: `Discovered ${data?.result?.totalGPOs || 0} GPOs, ${data?.result?.totalGPOLinks || 0} links, ${data?.result?.totalWMIFilters || 0} WMI filters`,
+          summary: `Discovered ${gpoCount} GPOs and ${linkCount} GPO links (${recordCount} total records)`,
           errorMessage: '',
-          additionalData: data.result,
+          additionalData: gpoResult,
           createdAt: new Date().toISOString(),
         };
 
         setState((prev) => ({
           ...prev,
-          result: data.result as GPODiscoveryResult,
+          result: gpoResult,
           isDiscovering: false,
           progress: {
             current: 100,
@@ -142,7 +174,7 @@ export const useGPODiscoveryLogic = () => {
         }));
 
         addResult(discoveryResult);
-        console.log(`[GPODiscoveryHook] Discovery completed! Found ${discoveryResult.itemCount} items.`);
+        console.log(`[GPODiscoveryHook] Discovery completed! Found ${recordCount} items.`);
       }
     });
 

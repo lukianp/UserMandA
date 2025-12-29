@@ -839,14 +839,20 @@ function Get-SiteReplicationTopology {
     [CmdletBinding()]
     param(
         [hashtable]$Configuration,
-        [string]$SessionId
+        [string]$SessionId,
+        [System.Management.Automation.PSCredential]$Credential,
+        [string]$DomainServer
     )
-    
+
     $siteData = @()
-    
+
     try {
-        # Get all sites
-        $sites = Get-ADReplicationSite -Filter * -ErrorAction SilentlyContinue
+        # Get all sites (with credentials if provided)
+        $getSiteParams = @{ Filter = '*'; ErrorAction = 'SilentlyContinue' }
+        if ($Credential) { $getSiteParams['Credential'] = $Credential }
+        if ($DomainServer) { $getSiteParams['Server'] = $DomainServer }
+
+        $sites = Get-ADReplicationSite @getSiteParams
         
         foreach ($site in $sites) {
             $siteData += [PSCustomObject]@{
@@ -864,7 +870,11 @@ function Get-SiteReplicationTopology {
             
             # Get subnets for this site
             try {
-                $subnets = Get-ADReplicationSubnet -Filter "Site -eq '$($site.DistinguishedName)'" -ErrorAction SilentlyContinue
+                $getSubnetParams = @{ Filter = "Site -eq '$($site.DistinguishedName)'"; ErrorAction = 'SilentlyContinue' }
+                if ($Credential) { $getSubnetParams['Credential'] = $Credential }
+                if ($DomainServer) { $getSubnetParams['Server'] = $DomainServer }
+
+                $subnets = Get-ADReplicationSubnet @getSubnetParams
                 
                 foreach ($subnet in $subnets) {
                     $siteData += [PSCustomObject]@{
@@ -887,7 +897,11 @@ function Get-SiteReplicationTopology {
         
         # Get site links
         try {
-            $siteLinks = Get-ADReplicationSiteLink -Filter * -ErrorAction SilentlyContinue
+            $getSiteLinkParams = @{ Filter = '*'; ErrorAction = 'SilentlyContinue' }
+            if ($Credential) { $getSiteLinkParams['Credential'] = $Credential }
+            if ($DomainServer) { $getSiteLinkParams['Server'] = $DomainServer }
+
+            $siteLinks = Get-ADReplicationSiteLink @getSiteLinkParams
             
             foreach ($siteLink in $siteLinks) {
                 $siteData += [PSCustomObject]@{
@@ -951,24 +965,36 @@ function Get-CrossDomainObjects {
     [CmdletBinding()]
     param(
         [hashtable]$Configuration,
-        [string]$SessionId
+        [string]$SessionId,
+        [System.Management.Automation.PSCredential]$Credential,
+        [string]$DomainServer
     )
-    
+
     $crossDomainData = @()
-    
+
     try {
-        # Get universal groups from GC
-        $currentForest = Get-ADForest -ErrorAction SilentlyContinue
+        # Get universal groups from GC (with credentials if provided)
+        $getForestParams = @{ ErrorAction = 'SilentlyContinue' }
+        if ($Credential) { $getForestParams['Credential'] = $Credential }
+        if ($DomainServer) { $getForestParams['Server'] = $DomainServer }
+
+        $currentForest = Get-ADForest @getForestParams
         
         if ($currentForest -and $currentForest.GlobalCatalogs.Count -gt 0) {
             $gcServer = $currentForest.GlobalCatalogs[0]
             
             try {
                 # Get universal groups
-                $universalGroups = Get-ADGroup -Filter "GroupScope -eq 'Universal'" -Server "$gcServer`:3268" -ErrorAction SilentlyContinue
-                
+                $getGroupParams = @{ Filter = "GroupScope -eq 'Universal'"; Server = "$gcServer`:3268"; ErrorAction = 'SilentlyContinue' }
+                if ($Credential) { $getGroupParams['Credential'] = $Credential }
+
+                $universalGroups = Get-ADGroup @getGroupParams
+
                 foreach ($group in $universalGroups) {
-                    $members = Get-ADGroupMember -Identity $group -Server "$gcServer`:3268" -ErrorAction SilentlyContinue
+                    $getMemberParams = @{ Identity = $group; Server = "$gcServer`:3268"; ErrorAction = 'SilentlyContinue' }
+                    if ($Credential) { $getMemberParams['Credential'] = $Credential }
+
+                    $members = Get-ADGroupMember @getMemberParams
                     
                     # Analyze cross-domain membership
                     $memberDomains = @()

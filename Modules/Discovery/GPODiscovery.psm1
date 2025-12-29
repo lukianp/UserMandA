@@ -2,58 +2,26 @@
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
-# Version: 1.0.0
+# Version: 2.0.0
 # Created: 2025-01-18
-# Last Modified: 2025-01-18
+# Last Modified: 2025-12-29
 
 <#
 .SYNOPSIS
     Group Policy Object Discovery Module for M&A Discovery Suite
 .DESCRIPTION
-    Discovers Group Policy Objects, settings, and configurations from Active Directory environments. This module provides 
-    comprehensive GPO discovery including policy settings, security configurations, and organizational unit linkages 
+    Discovers Group Policy Objects, settings, and configurations from Active Directory environments. This module provides
+    comprehensive GPO discovery including policy settings, security configurations, and organizational unit linkages
     essential for M&A Active Directory policy assessment and migration planning.
 .NOTES
-    Version: 1.0.0
+    Version: 2.0.0
     Author: Lukian Poleschtschuk
     Created: 2025-01-18
     Requires: PowerShell 5.1+, ActiveDirectory module, GroupPolicy module
 #>
 
-
-# Fallback logging function if Write-MandALog is not available
-if (-not (Get-Command Write-MandALog -ErrorAction SilentlyContinue)) {
-    function Write-MandALog {
-        param(
-            [string]$Message,
-            [string]$Level = "INFO",
-            [string]$Component = "Discovery",
-            [hashtable]$Context = @{}
-        )
-        $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-        Write-Host "[$timestamp] [$Level] [$Component] $Message" -ForegroundColor $(
-            switch ($Level) {
-                'ERROR' { 'Red' }
-                'WARN' { 'Yellow' }
-                'SUCCESS' { 'Green' }
-                'HEADER' { 'Cyan' }
-                'DEBUG' { 'Gray' }
-                default { 'White' }
-            }
-        )
-    }
-}
-
-function Write-GPOLog {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$Message,
-        [string]$Level = "INFO",
-        [hashtable]$Context
-    )
-    Write-MandALog -Message "[GPO] $Message" -Level $Level -Component "GPODiscovery" -Context $Context
-}
+# Import base module
+Import-Module (Join-Path $PSScriptRoot "DiscoveryBase.psm1") -Force
 
 function Invoke-GPODiscovery {
     [CmdletBinding()]
@@ -68,64 +36,192 @@ function Invoke-GPODiscovery {
         [string]$SessionId
     )
 
-    Write-GPOLog -Level "HEADER" -Message "Starting Discovery (v4.0 - Clean Session Auth)" -Context $Context
-    Write-GPOLog -Level "INFO" -Message "Using authentication session: $SessionId" -Context $Context
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $discoveryScript = {
+        param($Configuration, $Context, $SessionId, $Connections, $Result)
 
-    # Initialize result object
-    # Ensure ClassDefinitions module is loaded
-    try {
-        if (-not ([System.Management.Automation.PSTypeName]'DiscoveryResult').Type) {
-            Import-Module -Name "$PSScriptRoot\..\Core\ClassDefinitions.psm1" -Force -ErrorAction Stop
+        Write-ModuleLog -ModuleName "GPO" -Message "Starting Group Policy Object Discovery" -Level "HEADER"
+        Write-ModuleLog -ModuleName "GPO" -Message "Session ID: $SessionId" -Level "INFO"
+
+        $allDiscoveredData = [System.Collections.ArrayList]::new()
+
+        # Check and import required modules
+        try {
+            if (-not (Get-Module -Name ActiveDirectory -ErrorAction SilentlyContinue)) {
+                Import-Module ActiveDirectory -ErrorAction Stop
+                Write-ModuleLog -ModuleName "GPO" -Message "ActiveDirectory module imported successfully" -Level "SUCCESS"
+            }
+
+            if (-not (Get-Module -Name GroupPolicy -ErrorAction SilentlyContinue)) {
+                Import-Module GroupPolicy -ErrorAction Stop
+                Write-ModuleLog -ModuleName "GPO" -Message "GroupPolicy module imported successfully" -Level "SUCCESS"
+            }
+        } catch {
+            Write-ModuleLog -ModuleName "GPO" -Message "Failed to import required modules: $($_.Exception.Message)" -Level "ERROR"
+            $Result.AddError("Required PowerShell modules not available", $_.Exception, $null)
+            return
         }
-        $result = [DiscoveryResult]::new('GPO')
-    } catch {
-        Write-GPOLog -Level "ERROR" -Message "Failed to load DiscoveryResult class: $($_.Exception.Message)" -Context $Context
-        throw "Critical error: Cannot load required DiscoveryResult class. Discovery cannot proceed."
-    }
 
-    try {
-        # Validate context
-        if (-not $Context.Paths.RawDataOutput) {
-            $result.AddError("Context is missing required 'Paths.RawDataOutput' property.", $null, $null)
-            return $result
-        }
-        $outputPath = $Context.Paths.RawDataOutput
-        Ensure-Path -Path $outputPath
+        # Prepare credentials if provided
+        $credential = $null
+        $domainServer = $null
 
-        # Authenticate using session (if needed for this service type)
-        if ("ActiveDirectory" -eq "Graph") {
-            Write-GPOLog -Level "INFO" -Message "Getting authentication for Graph service..." -Context $Context
-            try {
-                $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
-                Write-GPOLog -Level "SUCCESS" -Message "Connected to Microsoft Graph via session authentication" -Context $Context
-            } catch {
-                $result.AddError("Failed to authenticate with Graph service: $($_.Exception.Message)", $_.Exception, $null)
-                return $result
+        if ($Configuration.domainCredentials -and
+            $Configuration.domainCredentials.username -and
+            $Configuration.domainCredentials.password) {
+
+            Write-ModuleLog -ModuleName "GPO" -Message "Using provided domain credentials: $($Configuration.domainCredentials.username -replace '\\.*','\\***')" -Level "INFO"
+
+            # Create PSCredential object
+            $securePassword = ConvertTo-SecureString $Configuration.domainCredentials.password -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($Configuration.domainCredentials.username, $securePassword)
+
+            # Extract domain from username (DOMAIN\username format)
+            if ($Configuration.domainCredentials.username -match '^([^\\]+)\\') {
+                $domainServer = $matches[1]
+                Write-ModuleLog -ModuleName "GPO" -Message "Auto-detected domain from credentials: $domainServer" -Level "INFO"
             }
         } else {
-            Write-GPOLog -Level "INFO" -Message "Using session-based authentication for ActiveDirectory service" -Context $Context
+            Write-ModuleLog -ModuleName "GPO" -Message "Using integrated Windows authentication" -Level "INFO"
         }
 
-        # Perform discovery (placeholder - implement specific discovery logic)
-        $allDiscoveredData = [System.Collections.ArrayList]::new()
-        
-        Write-GPOLog -Level "INFO" -Message "Discovery logic not yet implemented for this module" -Context $Context
-        
-        # Example discovery result
-        $exampleData = [PSCustomObject]@{
-            ModuleName = 'GPO'
-            Status = 'NotImplemented'
-            SessionId = $SessionId
-            _DataType = 'PlaceholderData'
+        # Discover GPOs
+        try {
+            Write-ModuleLog -ModuleName "GPO" -Message "Discovering Group Policy Objects..." -Level "INFO"
+
+            $getGPOParams = @{ All = $true; ErrorAction = 'Stop' }
+            if ($credential) { $getGPOParams['Credential'] = $credential }
+            if ($domainServer) { $getGPOParams['Domain'] = $domainServer }
+
+            $gpos = Get-GPO @getGPOParams
+
+            Write-ModuleLog -ModuleName "GPO" -Message "Found $($gpos.Count) GPOs" -Level "SUCCESS"
+
+            foreach ($gpo in $gpos) {
+                try {
+                    # Get GPO report for detailed settings
+                    $reportParams = @{ Guid = $gpo.Id; ReportType = 'Xml'; ErrorAction = 'SilentlyContinue' }
+                    if ($credential) { $reportParams['Credential'] = $credential }
+                    if ($domainServer) { $reportParams['Domain'] = $domainServer }
+
+                    $gpoReport = Get-GPOReport @reportParams
+
+                    # Parse XML for additional details
+                    $settingsCount = 0
+                    if ($gpoReport) {
+                        try {
+                            $xmlReport = [xml]$gpoReport
+                            $computerSettings = $xmlReport.GPO.Computer.ExtensionData.Extension
+                            $userSettings = $xmlReport.GPO.User.ExtensionData.Extension
+                            $settingsCount = ($computerSettings | Measure-Object).Count + ($userSettings | Measure-Object).Count
+                        } catch {
+                            Write-ModuleLog -ModuleName "GPO" -Message "Could not parse GPO report for $($gpo.DisplayName)" -Level "DEBUG"
+                        }
+                    }
+
+                    # Get GPO permissions
+                    $permissions = $null
+                    try {
+                        $permParams = @{ Guid = $gpo.Id; ErrorAction = 'SilentlyContinue' }
+                        if ($credential) { $permParams['Credential'] = $credential }
+                        if ($domainServer) { $permParams['Domain'] = $domainServer }
+
+                        $permissions = Get-GPPermission @permParams -All
+                    } catch {
+                        Write-ModuleLog -ModuleName "GPO" -Message "Could not get permissions for GPO $($gpo.DisplayName)" -Level "DEBUG"
+                    }
+
+                    $gpoData = [PSCustomObject]@{
+                        GPOName = $gpo.DisplayName
+                        GPOID = $gpo.Id
+                        GPOStatus = $gpo.GpoStatus
+                        CreationTime = $gpo.CreationTime
+                        ModificationTime = $gpo.ModificationTime
+                        Owner = $gpo.Owner
+                        DomainName = $gpo.DomainName
+                        Description = $gpo.Description
+                        UserVersionDS = $gpo.User.DSVersion
+                        UserVersionSysvol = $gpo.User.SysvolVersion
+                        ComputerVersionDS = $gpo.Computer.DSVersion
+                        ComputerVersionSysvol = $gpo.Computer.SysvolVersion
+                        WmiFilterName = if ($gpo.WmiFilter) { $gpo.WmiFilter.Name } else { $null }
+                        WmiFilterDescription = if ($gpo.WmiFilter) { $gpo.WmiFilter.Description } else { $null }
+                        SettingsCount = $settingsCount
+                        PermissionCount = if ($permissions) { ($permissions | Measure-Object).Count } else { 0 }
+                        Path = $gpo.Path
+                        SessionId = $SessionId
+                        _DataType = 'GPO'
+                    }
+
+                    $null = $allDiscoveredData.Add($gpoData)
+
+                    # Get GPO links
+                    try {
+                        # Query AD for OUs/domains that link to this GPO
+                        $getDomainParams = @{ ErrorAction = 'SilentlyContinue' }
+                        if ($credential) { $getDomainParams['Credential'] = $credential }
+                        if ($domainServer) { $getDomainParams['Server'] = $domainServer }
+
+                        $domain = Get-ADDomain @getDomainParams
+
+                        if ($domain) {
+                            # Search for GPO links in domain and OUs
+                            $searchParams = @{
+                                Filter = { gpLink -like "*$($gpo.Id)*" }
+                                Properties = @('gpLink', 'gpOptions', 'distinguishedName', 'name')
+                                ErrorAction = 'SilentlyContinue'
+                            }
+                            if ($credential) { $searchParams['Credential'] = $credential }
+                            if ($domainServer) { $searchParams['Server'] = $domainServer }
+
+                            $linkedObjects = Get-ADObject @searchParams
+
+                            foreach ($linkedObj in $linkedObjects) {
+                                # Parse gpLink attribute
+                                $gpLinkAttr = $linkedObj.gpLink
+                                if ($gpLinkAttr -match "\[LDAP://.*?CN=$($gpo.Id).*?\;(\d+)\]") {
+                                    $linkOrder = $matches[1]
+                                    $linkEnabled = ($linkOrder -band 1) -eq 0
+                                    $enforced = ($linkOrder -band 2) -ne 0
+
+                                    $linkData = [PSCustomObject]@{
+                                        GPOName = $gpo.DisplayName
+                                        GPOID = $gpo.Id
+                                        LinkedTo = $linkedObj.distinguishedName
+                                        LinkedToName = $linkedObj.name
+                                        LinkEnabled = $linkEnabled
+                                        Enforced = $enforced
+                                        LinkOrder = $linkOrder
+                                        SessionId = $SessionId
+                                        _DataType = 'GPOLink'
+                                    }
+
+                                    $null = $allDiscoveredData.Add($linkData)
+                                }
+                            }
+                        }
+                    } catch {
+                        Write-ModuleLog -ModuleName "GPO" -Message "Could not get links for GPO $($gpo.DisplayName): $($_.Exception.Message)" -Level "DEBUG"
+                    }
+
+                } catch {
+                    Write-ModuleLog -ModuleName "GPO" -Message "Error processing GPO $($gpo.DisplayName): $($_.Exception.Message)" -Level "WARN"
+                }
+            }
+
+            Write-ModuleLog -ModuleName "GPO" -Message "Discovered $($allDiscoveredData.Count) total records (GPOs + Links)" -Level "SUCCESS"
+
+        } catch {
+            Write-ModuleLog -ModuleName "GPO" -Message "Failed to discover GPOs: $($_.Exception.Message)" -Level "ERROR"
+            $Result.AddError("GPO discovery failed", $_.Exception, $null)
+            return
         }
-        $null = $allDiscoveredData.Add($exampleData)
 
         # Export data
         if ($allDiscoveredData.Count -gt 0) {
+            $outputPath = $Context.Paths.RawDataOutput
             $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
             $dataGroups = $allDiscoveredData | Group-Object -Property _DataType
-            
+
             foreach ($group in $dataGroups) {
                 $data = $group.Group
                 $data | ForEach-Object {
@@ -133,43 +229,37 @@ function Invoke-GPODiscovery {
                     $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "GPO" -Force
                     $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
                 }
-                
+
                 $fileName = "GPO_$($group.Name).csv"
                 $filePath = Join-Path $outputPath $fileName
-                $data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
-                Write-GPOLog -Level "SUCCESS" -Message "Exported $($data.Count) $($group.Name) records to $fileName" -Context $Context
+
+                try {
+                    $data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+                    Write-ModuleLog -ModuleName "GPO" -Message "Exported $($data.Count) $($group.Name) records to $fileName" -Level "SUCCESS"
+                } catch {
+                    Write-ModuleLog -ModuleName "GPO" -Message "Failed to export $fileName: $($_.Exception.Message)" -Level "ERROR"
+                }
             }
+        } else {
+            Write-ModuleLog -ModuleName "GPO" -Message "No GPO data discovered to export" -Level "WARN"
         }
 
-        $result.RecordCount = $allDiscoveredData.Count
-        $result.Metadata["TotalRecords"] = $result.RecordCount
-        $result.Metadata["SessionId"] = $SessionId
+        # Set metadata
+        $gpoCount = ($allDiscoveredData | Where-Object { $_._DataType -eq 'GPO' }).Count
+        $linkCount = ($allDiscoveredData | Where-Object { $_._DataType -eq 'GPOLink' }).Count
 
-    } catch {
-        Write-GPOLog -Level "ERROR" -Message "Critical error: $($_.Exception.Message)" -Context $Context
-        $result.AddError("A critical error occurred during discovery: $($_.Exception.Message)", $_.Exception, $null)
-    } finally {
-        if ("ActiveDirectory" -eq "Graph") {
-            Disconnect-MgGraph -ErrorAction SilentlyContinue
-        }
-        $stopwatch.Stop()
-        $result.EndTime = Get-Date
-        Write-GPOLog -Level "HEADER" -Message "Discovery finished in $($stopwatch.Elapsed.ToString('hh\:mm\:ss')). Records: $($result.RecordCount)." -Context $Context
-    }
-
-    return $result
-}
-
-function Ensure-Path {
-    param($Path)
-    if (-not (Test-Path -Path $Path -PathType Container)) {
-        try {
-            New-Item -Path $Path -ItemType Directory -Force -ErrorAction Stop | Out-Null
-        } catch {
-            throw "Failed to create output directory: $Path. Error: $($_.Exception.Message)"
+        $Result.RecordCount = $allDiscoveredData.Count
+        $Result.Metadata["GPOCount"] = $gpoCount
+        $Result.Metadata["GPOLinkCount"] = $linkCount
+        $Result.Metadata["TotalRecords"] = $Result.RecordCount
+        $Result.Metadata["SessionId"] = $SessionId
+        $Result.Metadata["AuthenticationMethod"] = if ($credential) { "DomainCredentials" } else { "IntegratedAuth" }
+        if ($domainServer) {
+            $Result.Metadata["DomainName"] = $domainServer
         }
     }
+
+    return Invoke-DiscoveryBase -ModuleName "GPO" -Configuration $Configuration -Context $Context -SessionId $SessionId -DiscoveryScript $discoveryScript
 }
 
 Export-ModuleMember -Function Invoke-GPODiscovery
-
