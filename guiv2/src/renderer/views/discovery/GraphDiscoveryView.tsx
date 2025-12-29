@@ -7,11 +7,7 @@ import {
   FileSpreadsheet,
   Activity,
   Shield,
-  Lock,
   Users,
-  Mail,
-  FileText,
-  TrendingUp,
   BarChart3
 } from 'lucide-react';
 
@@ -40,6 +36,7 @@ const GraphDiscoveryView: React.FC = () => {
     columns,
     filteredData,
     stats,
+    resourcesByType: hookResourcesByType,  // ✅ FIXED: Get from hook directly
     startDiscovery,
     cancelDiscovery,
     updateConfig,
@@ -59,26 +56,8 @@ const GraphDiscoveryView: React.FC = () => {
     showHighUsageOnly: !!filter?.showHighUsageOnly,
   };
 
-  const resourcesByType = stats?.resourcesByType && typeof stats.resourcesByType === 'object' ? stats.resourcesByType : {};
-  const apiUsageByEndpoint = stats?.apiUsageByEndpoint && typeof stats.apiUsageByEndpoint === 'object' ? stats.apiUsageByEndpoint : {};
-  const topPermissions = Array.isArray(stats?.topPermissions) ? stats.topPermissions : [];
-
-  const exportPayload = Array.isArray((result as any)?.data) ? (result as any).data : Array.isArray(result) ? result : [];
-
-  const resourceTypes = ['Users', 'Groups', 'Applications', 'Devices', 'Mail', 'Calendar', 'Teams', 'OneDrive'];
-  const permissions = ['User.Read', 'Mail.Read', 'Files.ReadWrite', 'Group.ReadWrite.All', 'Directory.ReadWrite.All'];
-
-  const toggleResourceType = (type: string) => {
-    const current = normalizedFilter.selectedResourceTypes;
-    const updated = current.includes(type) ? current.filter(t => t !== type) : [...current, type];
-    updateFilter({ selectedResourceTypes: updated });
-  };
-
-  const togglePermission = (permission: string) => {
-    const current = normalizedFilter.selectedPermissions;
-    const updated = current.includes(permission) ? current.filter(p => p !== permission) : [...current, permission];
-    updateFilter({ selectedPermissions: updated });
-  };
+  const resourcesByType = hookResourcesByType || {};
+  const exportPayload = Array.isArray(filteredData) ? filteredData : [];
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="graph-discovery-view" data-testid="graph-discovery-view">
@@ -205,77 +184,37 @@ const GraphDiscoveryView: React.FC = () => {
               <Network className="w-8 h-8 opacity-80" />
               <div className="text-right">
                 <div className="text-3xl font-bold">{(stats?.totalResources ?? 0).toLocaleString()}</div>
-                <div className="text-sm opacity-90">Total Resources</div>
+                <div className="text-sm opacity-90">Total Objects</div>
               </div>
             </div>
           </div>
 
           <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow text-white">
             <div className="flex items-center justify-between">
-              <Activity className="w-8 h-8 opacity-80" />
+              <Users className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.apiCalls ?? 0).toLocaleString()}</div>
-                <div className="text-sm opacity-90">API Calls/Day</div>
+                <div className="text-3xl font-bold">{(stats?.users ?? 0).toLocaleString()}</div>
+                <div className="text-sm opacity-90">Users</div>
               </div>
             </div>
           </div>
 
           <div className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow text-white">
             <div className="flex items-center justify-between">
-              <Lock className="w-8 h-8 opacity-80" />
+              <Shield className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.totalPermissions ?? 0).toLocaleString()}</div>
-                <div className="text-sm opacity-90">Permissions</div>
+                <div className="text-3xl font-bold">{(stats?.groups ?? 0).toLocaleString()}</div>
+                <div className="text-sm opacity-90">Groups</div>
               </div>
             </div>
           </div>
 
           <div className="p-4 bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow text-white">
             <div className="flex items-center justify-between">
-              <Users className="w-8 h-8 opacity-80" />
+              <Activity className="w-8 h-8 opacity-80" />
               <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.applications ?? 0).toLocaleString()}</div>
-                <div className="text-sm opacity-90">Applications</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg shadow text-white">
-            <div className="flex items-center justify-between">
-              <Mail className="w-8 h-8 opacity-80" />
-              <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.mailboxes ?? 0).toLocaleString()}</div>
-                <div className="text-sm opacity-90">Mailboxes</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow text-white">
-            <div className="flex items-center justify-between">
-              <FileText className="w-8 h-8 opacity-80" />
-              <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.driveItems ?? 0).toLocaleString()}</div>
-                <div className="text-sm opacity-90">Drive Items</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg shadow text-white">
-            <div className="flex items-center justify-between">
-              <TrendingUp className="w-8 h-8 opacity-80" />
-              <div className="text-right">
-                <div className="text-3xl font-bold">{(stats?.throttledRequests ?? 0).toLocaleString()}</div>
-                <div className="text-sm opacity-90">Throttled Requests</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow text-white">
-            <div className="flex items-center justify-between">
-              <BarChart3 className="w-8 h-8 opacity-80" />
-              <div className="text-right">
-                <div className="text-3xl font-bold">{(typeof stats?.healthScore === 'number' ? stats.healthScore : 0).toFixed(0)}%</div>
-                <div className="text-sm opacity-90">Health Score</div>
+                <div className="text-3xl font-bold">{Object.keys(stats?.resourcesByType ?? {}).length}</div>
+                <div className="text-sm opacity-90">Object Types</div>
               </div>
             </div>
           </div>
@@ -285,46 +224,25 @@ const GraphDiscoveryView: React.FC = () => {
       <div className="px-6">
         <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
           <button
-            onClick={() => setActiveTab('overview')}
-            className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
-              activeTab === 'overview' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
-            data-cy="tab-overview"
-          >
-            <Network className="w-4 h-4" />
-            Overview
-          </button>
-          <button
             onClick={() => setActiveTab('resources')}
             className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
               activeTab === 'resources' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
             data-cy="tab-resources"
           >
-            <FileText className="w-4 h-4" />
-            Resources
+            <Users className="w-4 h-4" />
+            All Objects
             {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalResources ?? 0}</span>}
           </button>
           <button
-            onClick={() => setActiveTab('api-usage')}
+            onClick={() => setActiveTab('overview')}
             className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
-              activeTab === 'api-usage' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              activeTab === 'overview' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            data-cy="tab-api-usage"
+            data-cy="tab-overview"
           >
-            <Activity className="w-4 h-4" />
-            API Usage
-          </button>
-          <button
-            onClick={() => setActiveTab('permissions')}
-            className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
-              activeTab === 'permissions' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
-            data-cy="tab-permissions"
-          >
-            <Lock className="w-4 h-4" />
-            Permissions
-            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats?.totalPermissions ?? 0}</span>}
+            <BarChart3 className="w-4 h-4" />
+            Summary
           </button>
         </div>
       </div>
@@ -343,10 +261,10 @@ const GraphDiscoveryView: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'overview' && stats && (stats?.totalResources ?? 0) > 0 && (
+        {activeTab === 'overview' && stats && (Number(stats?.totalResources) || 0) > 0 && (
           <div className="space-y-6 overflow-auto">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Resources by Type</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Objects by Type</h3>
               <div className="space-y-3">
                 {Object.entries(resourcesByType).map(([type, count]) => {
                   const countNum = typeof count === 'number' ? count : 0;
@@ -370,77 +288,33 @@ const GraphDiscoveryView: React.FC = () => {
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">API Usage by Endpoint</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Discovery Summary</h3>
               <div className="grid grid-cols-2 gap-4">
-                {Object.entries(apiUsageByEndpoint).map(([endpoint, calls]) => {
-                  const callsNum = typeof calls === 'number' ? calls : 0;
-                  return (
-                  <div key={endpoint} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{endpoint}</span>
-                    <span className="text-lg font-bold text-teal-600">{callsNum.toLocaleString()}</span>
-                  </div>
-                )})}
-              </div>
-            </div>
-
-            {topPermissions.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Most Used Permissions</h3>
-                <div className="space-y-2">
-                  {topPermissions.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{index + 1}</span>
-                        </div>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">{item.permission}</span>
-                      </div>
-                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">{item.count} apps</span>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Users Discovered</span>
+                  <span className="text-lg font-bold text-blue-600">{(stats?.users ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Groups Discovered</span>
+                  <span className="text-lg font-bold text-purple-600">{(stats?.groups ?? 0).toLocaleString()}</span>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         )}
 
         {activeTab !== 'overview' && (
           <>
-            <div className="mb-4 space-y-4">
+            <div className="mb-4">
               <Input
                 value={normalizedFilter.searchText}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   const value = e.target.value;
                   setTimeout(() => updateFilter({ searchText: value }), 150);
                 }}
-                placeholder="Search..."
+                placeholder="Search by name, email, or type..."
                 data-cy="search-input"
               />
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Resource Type</label>
-                  <div className="flex flex-wrap gap-2">
-                    {resourceTypes.map(type => (
-                      <button
-                        key={type}
-                        onClick={() => toggleResourceType(type)}
-                        className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                          normalizedFilter.selectedResourceTypes.includes(type) ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                        }`}
-                        data-cy={`filter-type-${type.toLowerCase()}`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <Checkbox
-                  label="Show High Usage Resources Only"
-                  checked={normalizedFilter.showHighUsageOnly}
-                  onChange={(checked) => updateFilter({ showHighUsageOnly: checked })}
-                  data-cy="show-high-usage-checkbox"
-                />
-              </div>
             </div>
 
             <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">

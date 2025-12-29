@@ -13,16 +13,20 @@ import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const IdentityGovernanceDiscoveryView: React.FC = () => {
   const {
     config,
     result,
     isDiscovering,
+    isCancelling,
     progress,
     activeTab,
     filter,
     error,
+    logs,
+    showExecutionDialog,
     columns,
     filteredData,
     stats,
@@ -32,7 +36,9 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
     startDiscovery,
     cancelDiscovery,
     exportToCSV,
-    exportToExcel
+    exportToExcel,
+    clearLogs,
+    setShowExecutionDialog
   } = useIdentityGovernanceDiscoveryLogic();
 
   const [showConfig, setShowConfig] = useState(true);
@@ -310,11 +316,26 @@ const IdentityGovernanceDiscoveryView: React.FC = () => {
               loading={isDiscovering}
               enableColumnReorder
               enableColumnResize
-             
+
             />
           </div>
         )}
       </div>
+
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="Identity Governance Discovery"
+        scriptDescription="Discovering access reviews, entitlements, and PIM roles"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? { percentage: progress.percentage || 0, message: progress.message || 'Processing...' } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

@@ -255,13 +255,13 @@ const NetworkDiscoveryView: React.FC = () => {
                   Overview
                 </TabButton>
                 <TabButton active={activeTab === 'devices'} onClick={() => setActiveTab('devices')}>
-                  Devices ({filteredDevices.length})
+                  Devices ({filteredDevices?.length || 0})
                 </TabButton>
                 <TabButton active={activeTab === 'subnets'} onClick={() => setActiveTab('subnets')}>
-                  Subnets ({filteredSubnets.length})
+                  Subnets ({filteredSubnets?.length || 0})
                 </TabButton>
                 <TabButton active={activeTab === 'ports'} onClick={() => setActiveTab('ports')}>
-                  Ports ({filteredPorts.length})
+                  Ports ({filteredPorts?.length || 0})
                 </TabButton>
               </div>
 

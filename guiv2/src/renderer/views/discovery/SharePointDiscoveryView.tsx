@@ -29,6 +29,7 @@ import SearchBar from '../../components/molecules/SearchBar';
 import { Button } from '../../components/atoms/Button';
 import { Badge } from '../../components/atoms/Badge';
 import ProgressBar from '../../components/molecules/ProgressBar';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 /**
  * SharePoint Discovery View Component
@@ -63,6 +64,11 @@ const SharePointDiscoveryView: React.FC = () => {
     selectedTab,
     setSelectedTab,
     statistics,
+    isCancelling,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
+    clearLogs,
   } = useSharePointDiscoveryLogic();
 
   return (
@@ -278,19 +284,19 @@ const SharePointDiscoveryView: React.FC = () => {
               <TabButton
                 active={selectedTab === 'sites'}
                 onClick={() => setSelectedTab('sites')}
-                label={`Sites (${sites.length})`}
+                label={`Sites (${sites?.length || 0})`}
                 icon={<FolderOpen className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'lists'}
                 onClick={() => setSelectedTab('lists')}
-                label={`Lists (${lists.length})`}
+                label={`Lists (${lists?.length || 0})`}
                 icon={<FileText className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'permissions'}
                 onClick={() => setSelectedTab('permissions')}
-                label={`Permissions (${permissions.length})`}
+                label={`Permissions (${permissions?.length || 0})`}
                 icon={<Shield className="w-4 h-4" />}
               />
             </div>
@@ -389,6 +395,25 @@ const SharePointDiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="SharePoint Discovery"
+        scriptDescription="Discovering SharePoint sites, lists, libraries, and permissions"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? {
+          percentage: progress.percentComplete || 0,
+          message: progress.phaseLabel || ''
+        } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

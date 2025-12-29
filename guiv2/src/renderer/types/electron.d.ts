@@ -366,6 +366,16 @@ export interface ScriptExecutionParams {
 }
 
 /**
+ * Inline script execution parameters
+ */
+export interface InlineScriptParams {
+  /** Inline PowerShell script to execute */
+  script: string;
+  /** Execution timeout in milliseconds */
+  timeout?: number;
+}
+
+/**
  * Module execution parameters
  */
 export interface ModuleExecutionParams {
@@ -419,11 +429,11 @@ export interface ElectronAPI {
   // ========================================
 
   /**
-   * Execute a PowerShell script file
-   * @param params Script execution parameters
+   * Execute a PowerShell script file or inline script
+   * @param params Script execution parameters (file-based or inline)
    * @returns Promise resolving to execution result
    */
-  executeScript: <T = any>(params: ScriptExecutionParams) => Promise<ExecutionResult<T>>;
+  executeScript: <T = any>(params: ScriptExecutionParams | InlineScriptParams) => Promise<ExecutionResult<T>>;
 
   /**
    * Execute a PowerShell module function

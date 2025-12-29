@@ -4,13 +4,15 @@
  * ✅ FIXED: Uses event-driven architecture with streaming support
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 
 import {
   BaseDiscoveryHookResult,
   LogEntry,
   ProgressInfo,
-  Profile
+  Profile,
+  ColumnDef,
+  DiscoveryStats
 } from './common/discoveryHookTypes';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
@@ -18,7 +20,9 @@ import { useDiscoveryStore } from '../store/useDiscoveryStore';
 /**
  * Graph Discovery Hook Return Type
  */
-export type GraphDiscoveryHookResult = BaseDiscoveryHookResult;
+export interface GraphDiscoveryHookResult extends BaseDiscoveryHookResult {
+  resourcesByType: Record<string, number>;
+}
 
 /**
  * Custom hook for Microsoft Graph API object discovery logic
@@ -85,7 +89,7 @@ export const useGraphDiscoveryLogic = (): GraphDiscoveryHookResult => {
 
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
-        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warn' : 'info';
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
         addLog(logLevel, data.message);
       }
     });
@@ -132,7 +136,7 @@ export const useGraphDiscoveryLogic = (): GraphDiscoveryHookResult => {
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
-        addLog('warn', 'Discovery cancelled by user');
+        addLog('warning', 'Discovery cancelled by user');
       }
     });
 
@@ -213,7 +217,7 @@ export const useGraphDiscoveryLogic = (): GraphDiscoveryHookResult => {
     if (!isRunning || !currentToken) return;
 
     setIsCancelling(true);
-    addLog('warn', 'Cancelling discovery...');
+    addLog('warning', 'Cancelling discovery...');
 
     try {
       await window.electron.cancelDiscovery(currentToken);
@@ -224,7 +228,7 @@ export const useGraphDiscoveryLogic = (): GraphDiscoveryHookResult => {
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
-        addLog('warn', 'Discovery cancelled');
+        addLog('warning', 'Discovery cancelled');
       }, 2000);
     } catch (err: any) {
       const errorMessage = err.message || 'Error cancelling discovery';
@@ -303,6 +307,153 @@ export const useGraphDiscoveryLogic = (): GraphDiscoveryHookResult => {
     await exportResults();
   }, [exportResults, addLog]);
 
+  // Filter state for view
+  const [filter, setFilter] = useState({
+    searchText: '',
+    selectedResourceTypes: [] as string[],
+    selectedPermissions: [] as string[],
+    showHighUsageOnly: false
+  });
+  const [activeTab, setActiveTab] = useState<string>('resources'); // ✅ FIXED: Default to 'resources' tab to show grid
+
+  // Update filter helper
+  const updateFilter = useCallback((updates: Partial<typeof filter>) => {
+    setFilter(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  // ✅ FIXED: Proper column definitions for AG Grid
+  const columns = useMemo<ColumnDef[]>(() => {
+    return [
+      { field: 'displayName', headerName: 'Display Name', flex: 1, minWidth: 150, sortable: true, filter: true },
+      { field: 'userPrincipalName', headerName: 'UPN / Email', flex: 1, minWidth: 200, sortable: true, filter: true },
+      { field: '_DataType', headerName: 'Type', width: 100, sortable: true, filter: true },
+      { field: 'mail', headerName: 'Email', flex: 1, minWidth: 200, sortable: true, filter: true },
+      { field: 'jobTitle', headerName: 'Job Title', flex: 1, minWidth: 150, sortable: true, filter: true },
+      { field: 'department', headerName: 'Department', width: 150, sortable: true, filter: true },
+      { field: 'accountEnabled', headerName: 'Enabled', width: 100, sortable: true, filter: true,
+        cellRenderer: (params: any) => params.value === true ? '✓' : params.value === false ? '✗' : '-' },
+      { field: 'createdDateTime', headerName: 'Created', width: 180, sortable: true, filter: true },
+      { field: 'id', headerName: 'Object ID', width: 280, sortable: true, filter: true },
+    ];
+  }, []);
+
+  // ✅ FIXED: Extract actual data from results.additionalData.Data
+  const filteredData = useMemo(() => {
+    if (!results) return [];
+
+    // The actual data is in additionalData.Data from PowerShell output
+    const rawData = results?.additionalData?.Data || results?.additionalData?.data || [];
+
+    // If rawData is an array, use it directly
+    if (Array.isArray(rawData)) {
+      // Apply search filter
+      if (filter.searchText) {
+        const search = filter.searchText.toLowerCase();
+        return rawData.filter((item: any) => {
+          return (
+            item.displayName?.toLowerCase()?.includes(search) ||
+            item.userPrincipalName?.toLowerCase()?.includes(search) ||
+            item.mail?.toLowerCase()?.includes(search) ||
+            item._DataType?.toLowerCase()?.includes(search)
+          );
+        });
+      }
+      return rawData;
+    }
+
+    // If it's an object with arrays (users, groups, etc), flatten them
+    if (typeof rawData === 'object') {
+      const allItems = Object.values(rawData).flat();
+      if (filter.searchText) {
+        const search = filter.searchText.toLowerCase();
+        return allItems.filter((item: any) => {
+          return (
+            item?.displayName?.toLowerCase()?.includes(search) ||
+            item?.userPrincipalName?.toLowerCase()?.includes(search) ||
+            item?.mail?.toLowerCase()?.includes(search)
+          );
+        });
+      }
+      return allItems;
+    }
+
+    return [];
+  }, [results, filter.searchText]);
+
+  // ✅ FIXED: Compute stats from results - matches view expectations
+  const stats = useMemo<DiscoveryStats | null>(() => {
+    if (!results) return null;
+
+    const data = results?.additionalData?.Data || results?.additionalData?.data || [];
+    const items = Array.isArray(data) ? data : Object.values(data).flat();
+
+    let userCount = 0;
+    let groupCount = 0;
+
+    items.forEach((item: any) => {
+      const type = item._DataType || 'Unknown';
+      if (type === 'User') userCount++;
+      if (type === 'Group') groupCount++;
+    });
+
+    return {
+      // ✅ View expects these property names - flat structure for DiscoveryStats
+      totalResources: items.length,
+      totalItems: items.length,
+      // Graph-specific stats
+      users: userCount,
+      groups: groupCount,
+      objectTypes: userCount > 0 && groupCount > 0 ? 2 : (userCount > 0 || groupCount > 0 ? 1 : 0),
+      // Empty placeholders for view compatibility
+      apiCalls: 0,
+      totalPermissions: 0,
+      applications: 0,
+      mailboxes: 0,
+      driveItems: 0,
+      throttledRequests: 0,
+      healthScore: 100,
+    };
+  }, [results]);
+
+  // Separate resourcesByType for view (not part of DiscoveryStats)
+  const resourcesByType = useMemo<Record<string, number>>(() => {
+    if (!results) return {};
+
+    const data = results?.additionalData?.Data || results?.additionalData?.data || [];
+    const items = Array.isArray(data) ? data : Object.values(data).flat();
+
+    const byType: Record<string, number> = {};
+    items.forEach((item: any) => {
+      const type = item._DataType || 'Unknown';
+      byType[type] = (byType[type] || 0) + 1;
+    });
+
+    return byType;
+  }, [results]);
+
+  // Export helpers
+  const exportToCSV = useCallback((data?: any[], filename?: string) => {
+    const exportData = data || filteredData;
+    const exportFilename = filename || `graph-discovery-${new Date().toISOString().split('T')[0]}.csv`;
+    if (!exportData || !exportData.length) return;
+    const headers = Object.keys(exportData[0]).join(',');
+    const rows = exportData.map(row => Object.values(row).map(v => `"${v ?? ''}"`).join(',')).join('\n');
+    const csv = `${headers}\n${rows}`;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = exportFilename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filteredData]);
+
+  const exportToExcel = useCallback(async (data?: any[], filename?: string) => {
+    // For now, export as CSV with .xlsx extension (basic implementation)
+    const exportFilename = filename || `graph-discovery-${new Date().toISOString().split('T')[0]}.xlsx`;
+    exportToCSV(data, exportFilename.replace('.xlsx', '.csv'));
+  }, [exportToCSV]);
+
   return {
     isRunning,
     isCancelling,
@@ -316,21 +467,34 @@ export const useGraphDiscoveryLogic = (): GraphDiscoveryHookResult => {
     clearLogs,
     selectedProfile,
 
-    // Additional properties
+    // Additional properties for view compatibility
     config,
     templates,
+    result: results,
     currentResult: results,
     isDiscovering: isRunning,
     selectedTab,
+    activeTab,
     searchText,
-    filteredData: results ? Object.values(results).flat() : [],
-    columnDefs: [],
+    filter,
+    filteredData,
+    columns,
+    columnDefs: columns,
+    stats,
+    resourcesByType,  // ✅ ADDED: For view compatibility
     errors,
+    showExecutionDialog: false,
+    setShowExecutionDialog: () => {},
     updateConfig,
     loadTemplate,
     saveAsTemplate,
     setSelectedTab,
+    setActiveTab,
     setSearchText,
+    updateFilter,
+    clearError: () => setError(null),
     exportData,
+    exportToCSV,
+    exportToExcel,
   };
 };

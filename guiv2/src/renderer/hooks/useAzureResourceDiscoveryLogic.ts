@@ -12,7 +12,8 @@
  * - Results stored via addResult()
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import type { ColDef } from 'ag-grid-community';
 import type { PowerShellLog } from '../components/molecules/PowerShellExecutionDialog';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
@@ -100,21 +101,37 @@ export const useAzureResourceDiscoveryLogic = () => {
       if (data.executionId === currentTokenRef.current) {
         setIsRunning(false);
 
+        // ✅ DEBUG: Log the exact structure received from PowerShell
+        console.log('[AzureResourceDiscoveryHook] onDiscoveryComplete - raw data:', data);
+        console.log('[AzureResourceDiscoveryHook] data.result:', data.result);
+        console.log('[AzureResourceDiscoveryHook] data.result keys:', data.result ? Object.keys(data.result) : 'null');
+
         const discoveryResult: AzureResourceDiscoveryResult = {
           success: true, // Assume success if complete event fired
           error: undefined,
           data: data.result,
         };
 
+        console.log('[AzureResourceDiscoveryHook] Setting results.data to:', discoveryResult.data);
         setResults(discoveryResult);
 
         if (discoveryResult.success) {
           // ✅ CRITICAL: Store result in discovery store
           addResult({
             id: `azure-resource-${Date.now()}`,
+            name: 'Azure Resource Discovery',
             moduleName: 'AzureResource',
+            displayName: 'Azure Resource Discovery',
+            itemCount: discoveryResult.data?.summary?.totalResources || 0,
+            discoveryTime: new Date(),
+            duration: data.duration || 0,
+            status: 'completed',
+            filePath: '',
+            createdAt: new Date(),
             success: true,
-            data: discoveryResult.data ? [discoveryResult.data] : [],
+            summary: `Discovered ${discoveryResult.data?.summary?.totalResources || 0} Azure resources across ${discoveryResult.data?.summary?.resourceTypes || 0} types`,
+            errorMessage: '',
+            additionalData: discoveryResult.data || {},
           });
 
           addLog('success', 'Azure Resource discovery completed successfully');
@@ -258,7 +275,163 @@ export const useAzureResourceDiscoveryLogic = () => {
     setLogs([]);
   }, []);
 
+  // ✅ ADDED: Filter and tab state for view compatibility
+  const [filter, setFilter] = useState({
+    searchText: '',
+    selectedResourceTypes: [] as string[],
+  });
+  const [activeTab, setActiveTab] = useState<string>('all');
+
+  const updateFilter = useCallback((updates: Partial<typeof filter>) => {
+    setFilter(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const updateConfig = useCallback((updates: Partial<AzureResourceDiscoveryConfig>) => {
+    // Config is read-only in this hook but we provide the function for compatibility
+    console.log('[AzureResourceDiscoveryHook] Config update requested:', updates);
+  }, []);
+
+  // ✅ ADDED: Column definitions for AG Grid
+  const columns = useMemo<ColDef[]>(() => [
+    { field: 'name', headerName: 'Name', flex: 1, minWidth: 150, sortable: true, filter: true },
+    { field: 'resourceType', headerName: 'Type', width: 180, sortable: true, filter: true },
+    { field: 'resourceGroup', headerName: 'Resource Group', width: 180, sortable: true, filter: true },
+    { field: 'location', headerName: 'Location', width: 120, sortable: true, filter: true },
+    { field: 'subscriptionId', headerName: 'Subscription', width: 280, sortable: true, filter: true },
+    { field: 'status', headerName: 'Status', width: 100, sortable: true, filter: true },
+    { field: 'sku', headerName: 'SKU', width: 120, sortable: true, filter: true },
+    { field: 'tags', headerName: 'Tags', width: 200, sortable: true, filter: true },
+    { field: 'id', headerName: 'Resource ID', width: 400, sortable: true, filter: true },
+  ], []);
+
+  // ✅ FIXED: Extract and filter data from results - handles all Azure resource types
+  const filteredData = useMemo(() => {
+    console.log('[AzureResourceDiscoveryHook] filteredData useMemo - results:', results);
+    console.log('[AzureResourceDiscoveryHook] filteredData useMemo - results?.data:', results?.data);
+
+    if (!results?.data) {
+      console.log('[AzureResourceDiscoveryHook] filteredData - No results.data, returning []');
+      return [];
+    }
+
+    // Flatten all resource arrays into one - PowerShell returns these categories
+    const allResources: any[] = [];
+    // Cast to any to handle PowerShell PascalCase property names
+    const data = results.data as any;
+    console.log('[AzureResourceDiscoveryHook] filteredData - data keys:', Object.keys(data));
+
+    // Map PowerShell output fields to resource types (PascalCase from PowerShell)
+    if (data.Subscriptions) allResources.push(...data.Subscriptions.map((r: any) => ({ ...r, resourceType: 'Subscription' })));
+    if (data.ResourceGroups) allResources.push(...data.ResourceGroups.map((r: any) => ({ ...r, resourceType: 'ResourceGroup', name: r.ResourceGroupName || r.Name })));
+    if (data.VirtualMachines) allResources.push(...data.VirtualMachines.map((r: any) => ({ ...r, resourceType: 'VirtualMachine' })));
+    if (data.StorageAccounts) allResources.push(...data.StorageAccounts.map((r: any) => ({ ...r, resourceType: 'StorageAccount', name: r.StorageAccountName || r.Name })));
+    if (data.KeyVaults) allResources.push(...data.KeyVaults.map((r: any) => ({ ...r, resourceType: 'KeyVault', name: r.VaultName || r.Name })));
+    if (data.NetworkSecurityGroups) allResources.push(...data.NetworkSecurityGroups.map((r: any) => ({ ...r, resourceType: 'NetworkSecurityGroup' })));
+    if (data.VirtualNetworks) allResources.push(...data.VirtualNetworks.map((r: any) => ({ ...r, resourceType: 'VirtualNetwork' })));
+    if (data.WebApps) allResources.push(...data.WebApps.map((r: any) => ({ ...r, resourceType: 'WebApp' })));
+    if (data.SqlServers) allResources.push(...data.SqlServers.map((r: any) => ({ ...r, resourceType: 'SqlServer' })));
+
+    // Also handle lower-case variants (backwards compatibility)
+    if (data.virtualMachines) allResources.push(...data.virtualMachines.map((r: any) => ({ ...r, resourceType: 'VirtualMachine' })));
+    if (data.storageAccounts) allResources.push(...data.storageAccounts.map((r: any) => ({ ...r, resourceType: 'StorageAccount' })));
+    if (data.networkResources) allResources.push(...data.networkResources.map((r: any) => ({ ...r, resourceType: 'Network' })));
+    if (data.databases) allResources.push(...data.databases.map((r: any) => ({ ...r, resourceType: 'Database' })));
+    if (data.webApps) allResources.push(...data.webApps.map((r: any) => ({ ...r, resourceType: 'WebApp' })));
+
+    console.log('[AzureResourceDiscoveryHook] filteredData - allResources count:', allResources.length);
+    if (allResources.length > 0) {
+      console.log('[AzureResourceDiscoveryHook] filteredData - first resource:', allResources[0]);
+    }
+
+    // Apply search filter
+    if (filter.searchText) {
+      const search = filter.searchText.toLowerCase();
+      return allResources.filter((item: any) => {
+        return (
+          item.name?.toLowerCase()?.includes(search) ||
+          item.Name?.toLowerCase()?.includes(search) ||
+          item.resourceType?.toLowerCase()?.includes(search) ||
+          item.resourceGroup?.toLowerCase()?.includes(search) ||
+          item.ResourceGroupName?.toLowerCase()?.includes(search) ||
+          item.location?.toLowerCase()?.includes(search) ||
+          item.Location?.toLowerCase()?.includes(search)
+        );
+      });
+    }
+
+    return allResources;
+  }, [results, filter.searchText]);
+
+  // ✅ FIXED: Compute stats from results - handles all Azure resource types
+  const stats = useMemo(() => {
+    if (!results?.data) return null;
+
+    // Cast to any to handle PowerShell PascalCase property names
+    const data = results.data as any;
+    const resourcesByType: Record<string, number> = {};
+
+    // Count from PowerShell output (PascalCase) with camelCase fallback
+    const subscriptionCount = data.Subscriptions?.length || 0;
+    const resourceGroupCount = data.ResourceGroups?.length || 0;
+    const vmCount = data.VirtualMachines?.length || data.virtualMachines?.length || 0;
+    const storageCount = data.StorageAccounts?.length || data.storageAccounts?.length || 0;
+    const keyVaultCount = data.KeyVaults?.length || 0;
+    const nsgCount = data.NetworkSecurityGroups?.length || 0;
+    const vnetCount = data.VirtualNetworks?.length || 0;
+    const webAppCount = data.WebApps?.length || data.webApps?.length || 0;
+    const sqlCount = data.SqlServers?.length || data.databases?.length || 0;
+    const networkCount = nsgCount + vnetCount + (data.networkResources?.length || 0);
+
+    // Build resourcesByType for charts
+    if (subscriptionCount > 0) resourcesByType['Subscriptions'] = subscriptionCount;
+    if (resourceGroupCount > 0) resourcesByType['Resource Groups'] = resourceGroupCount;
+    if (vmCount > 0) resourcesByType['Virtual Machines'] = vmCount;
+    if (storageCount > 0) resourcesByType['Storage Accounts'] = storageCount;
+    if (keyVaultCount > 0) resourcesByType['Key Vaults'] = keyVaultCount;
+    if (nsgCount > 0) resourcesByType['Network Security Groups'] = nsgCount;
+    if (vnetCount > 0) resourcesByType['Virtual Networks'] = vnetCount;
+    if (webAppCount > 0) resourcesByType['Web Apps'] = webAppCount;
+    if (sqlCount > 0) resourcesByType['SQL Servers'] = sqlCount;
+
+    const totalResources = data.summary?.totalResources ||
+      subscriptionCount + resourceGroupCount + vmCount + storageCount + keyVaultCount + nsgCount + vnetCount + webAppCount + sqlCount;
+
+    return {
+      totalResources,
+      resourceTypes: data.summary?.resourceTypes || Object.keys(resourcesByType).length,
+      subscriptions: data.summary?.subscriptions || data.Subscriptions || [],
+      resourcesByType,
+      // Individual counts for stat cards
+      virtualMachines: vmCount,
+      storageAccounts: storageCount,
+      keyVaults: keyVaultCount,
+      networkResources: networkCount,
+      webApps: webAppCount,
+      resourceGroups: resourceGroupCount,
+    };
+  }, [results]);
+
+  // Export helpers
+  const exportToCSV = useCallback((data: any[], filename: string) => {
+    if (!data || !data.length) return;
+    const headers = Object.keys(data[0]).join(',');
+    const rows = data.map(row => Object.values(row).map(v => `"${v ?? ''}"`).join(',')).join('\n');
+    const csv = `${headers}\n${rows}`;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const exportToExcel = useCallback((data: any[], filename: string) => {
+    exportToCSV(data, filename.replace('.xlsx', '.csv'));
+  }, [exportToCSV]);
+
   return {
+    // Core state
     isRunning,
     isCancelling,
     error,
@@ -268,8 +441,25 @@ export const useAzureResourceDiscoveryLogic = () => {
     showExecutionDialog,
     setShowExecutionDialog,
     config,
+
+    // Actions
     startDiscovery,
     cancelDiscovery,
     clearLogs,
+    updateConfig,
+    updateFilter,
+
+    // ✅ ADDED: View compatibility properties
+    result: results,
+    isDiscovering: isRunning,
+    filter,
+    activeTab,
+    setActiveTab,
+    columns,
+    filteredData,
+    stats,
+    clearError: () => setError(null),
+    exportToCSV,
+    exportToExcel,
   };
 }

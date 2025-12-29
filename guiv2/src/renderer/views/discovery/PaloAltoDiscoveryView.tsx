@@ -16,6 +16,7 @@ import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataG
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const PaloAltoDiscoveryView: React.FC = () => {
   const {
@@ -25,7 +26,12 @@ const PaloAltoDiscoveryView: React.FC = () => {
     progress,
     error,
     startDiscovery,
-    cancelDiscovery
+    cancelDiscovery,
+    isCancelling,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
+    clearLogs,
   } = usePaloAltoDiscoveryLogic();
 
   const [configExpanded, setConfigExpanded] = useState(false);
@@ -304,6 +310,25 @@ const PaloAltoDiscoveryView: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="Palo Alto Discovery"
+        scriptDescription="Discovering Palo Alto firewall policies, security rules, and threat configurations"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? {
+          percentage: progress.percentage || 0,
+          message: progress.message || ''
+        } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

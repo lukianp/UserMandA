@@ -91,6 +91,25 @@ interface SystemRequirements {
   psRemoting: { enabled: boolean | null; required: boolean; securityNote: string };
 }
 
+interface ExternalTool {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  category: 'network' | 'security' | 'development' | 'runtime';
+  version?: string;
+  installedVersion?: string;
+  status: 'unknown' | 'checking' | 'installed' | 'not_installed' | 'installing' | 'error';
+  required: boolean;
+  downloadUrl: string;
+  checkCommand: string; // PowerShell command to check if installed
+  installCommand?: string; // PowerShell command to install (if silent install available)
+  size?: string;
+  icon: React.ReactNode;
+  errorMessage?: string;
+  notes?: string;
+}
+
 // ============================================================================
 // Module definitions
 // ============================================================================
@@ -230,6 +249,261 @@ const POWERSHELL_MODULES: Omit<PowerShellModule, 'status' | 'installedVersion' |
     size: '~3 MB',
     icon: <Layers className="w-5 h-5" />,
     rsatFeature: 'Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0',
+  },
+];
+
+// ============================================================================
+// External Tools definitions
+// ============================================================================
+
+const EXTERNAL_TOOLS: Omit<ExternalTool, 'status' | 'installedVersion' | 'errorMessage'>[] = [
+  {
+    id: 'nmap',
+    name: 'nmap',
+    displayName: 'Nmap',
+    description: 'Network mapper for network discovery and security auditing. Required for network infrastructure discovery.',
+    category: 'network',
+    version: '7.98',
+    required: true,
+    downloadUrl: 'https://nmap.org/dist/nmap-7.98-setup.exe',
+    checkCommand: `
+      $nmapPath = @(
+        'C:\\Program Files (x86)\\Nmap\\nmap.exe',
+        'C:\\Program Files\\Nmap\\nmap.exe',
+        (Get-Command nmap -ErrorAction SilentlyContinue).Source
+      ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+      if ($nmapPath) {
+        $version = & $nmapPath --version 2>&1 | Select-String -Pattern 'Nmap version ([\\d.]+)' | ForEach-Object { $_.Matches[0].Groups[1].Value }
+        @{ Installed = $true; Version = $version; Path = $nmapPath } | ConvertTo-Json
+      } else {
+        @{ Installed = $false } | ConvertTo-Json
+      }
+    `,
+    installCommand: `
+      $url = 'https://nmap.org/dist/nmap-7.98-setup.exe'
+      $installer = "$env:TEMP\\nmap-setup.exe"
+      Write-Host "Downloading Nmap installer..."
+      [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+      Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+      Write-Host "Installing Nmap silently (includes Npcap)..."
+      Start-Process -FilePath $installer -ArgumentList '/S' -Wait
+      Remove-Item $installer -Force -ErrorAction SilentlyContinue
+      @{ Success = $true } | ConvertTo-Json
+    `,
+    size: '~30 MB',
+    icon: <Activity className="w-5 h-5" />,
+    notes: 'Includes Npcap for packet capture.',
+  },
+  {
+    id: 'npcap',
+    name: 'npcap',
+    displayName: 'Npcap',
+    description: 'Packet capture library for Windows. Required by Nmap and Wireshark for raw packet capture.',
+    category: 'network',
+    version: '1.79',
+    required: false,
+    downloadUrl: 'https://npcap.com/dist/npcap-1.79.exe',
+    checkCommand: `
+      $npcapService = Get-Service -Name npcap -ErrorAction SilentlyContinue
+      $npcapPath = 'C:\\Program Files\\Npcap\\NPFInstall.exe'
+      if ($npcapService -or (Test-Path $npcapPath)) {
+        @{ Installed = $true; Version = 'Installed' } | ConvertTo-Json
+      } else {
+        @{ Installed = $false } | ConvertTo-Json
+      }
+    `,
+    installCommand: `
+      $url = 'https://npcap.com/dist/npcap-1.79.exe'
+      $installer = "$env:TEMP\\npcap-installer.exe"
+      Write-Host "Downloading Npcap installer..."
+      Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+      Write-Host "Installing Npcap silently..."
+      Start-Process -FilePath $installer -ArgumentList '/S', '/winpcap_mode=no' -Wait
+      Remove-Item $installer -Force -ErrorAction SilentlyContinue
+      @{ Success = $true } | ConvertTo-Json
+    `,
+    size: '~1 MB',
+    icon: <Zap className="w-5 h-5" />,
+    notes: 'Usually installed with Nmap. Standalone install if needed.',
+  },
+  {
+    id: 'wireshark',
+    name: 'wireshark',
+    displayName: 'Wireshark',
+    description: 'Network protocol analyzer for deep packet inspection and network troubleshooting.',
+    category: 'network',
+    version: '4.4.2',
+    required: false,
+    downloadUrl: 'https://2.na.dl.wireshark.org/win64/Wireshark-4.4.2-x64.exe',
+    checkCommand: `
+      $wiresharkPath = @(
+        'C:\\Program Files\\Wireshark\\Wireshark.exe',
+        (Get-Command wireshark -ErrorAction SilentlyContinue).Source
+      ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+      if ($wiresharkPath) {
+        @{ Installed = $true; Path = $wiresharkPath } | ConvertTo-Json
+      } else {
+        @{ Installed = $false } | ConvertTo-Json
+      }
+    `,
+    installCommand: `
+      $url = 'https://2.na.dl.wireshark.org/win64/Wireshark-4.4.2-x64.exe'
+      $installer = "$env:TEMP\\wireshark-installer.exe"
+      Write-Host "Downloading Wireshark installer..."
+      Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+      Write-Host "Installing Wireshark silently..."
+      Start-Process -FilePath $installer -ArgumentList '/S', '/desktopicon=no', '/quicklaunchicon=no' -Wait
+      Remove-Item $installer -Force -ErrorAction SilentlyContinue
+      @{ Success = $true } | ConvertTo-Json
+    `,
+    size: '~80 MB',
+    icon: <Search className="w-5 h-5" />,
+    notes: 'Optional. Useful for advanced network analysis.',
+  },
+  {
+    id: 'git',
+    name: 'git',
+    displayName: 'Git',
+    description: 'Distributed version control system. Required for source code management and updates.',
+    category: 'development',
+    version: '2.47.1',
+    required: false,
+    downloadUrl: 'https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.1/Git-2.47.1-64-bit.exe',
+    checkCommand: `
+      try {
+        $gitVersion = git --version 2>&1
+        if ($gitVersion -match 'git version ([\\d.]+)') {
+          @{ Installed = $true; Version = $Matches[1] } | ConvertTo-Json
+        } else {
+          @{ Installed = $false } | ConvertTo-Json
+        }
+      } catch {
+        @{ Installed = $false } | ConvertTo-Json
+      }
+    `,
+    installCommand: `
+      $url = 'https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.1/Git-2.47.1-64-bit.exe'
+      $installer = "$env:TEMP\\git-installer.exe"
+      Write-Host "Downloading Git installer..."
+      Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+      Write-Host "Installing Git silently..."
+      Start-Process -FilePath $installer -ArgumentList '/VERYSILENT', '/NORESTART', '/NOCANCEL', '/SP-', '/CLOSEAPPLICATIONS', '/RESTARTAPPLICATIONS' -Wait
+      Remove-Item $installer -Force -ErrorAction SilentlyContinue
+      @{ Success = $true } | ConvertTo-Json
+    `,
+    size: '~60 MB',
+    icon: <GitBranch className="w-5 h-5" />,
+    notes: 'Recommended for keeping discovery suite updated.',
+  },
+  {
+    id: 'vcredist',
+    name: 'vcredist',
+    displayName: 'Visual C++ Redistributable',
+    description: 'Microsoft Visual C++ runtime libraries. Required for native Node.js modules.',
+    category: 'runtime',
+    version: '2022',
+    required: true,
+    downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x64.exe',
+    checkCommand: `
+      $vcKeys = @(
+        'HKLM:\\SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x64',
+        'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x64'
+      )
+      $installed = $false
+      $version = $null
+      foreach ($key in $vcKeys) {
+        if (Test-Path $key) {
+          $installed = $true
+          $version = (Get-ItemProperty $key -ErrorAction SilentlyContinue).Version
+          break
+        }
+      }
+      @{ Installed = $installed; Version = $version } | ConvertTo-Json
+    `,
+    installCommand: `
+      $url = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
+      $installer = "$env:TEMP\\vc_redist.x64.exe"
+      Write-Host "Downloading VC++ Redistributable..."
+      Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+      Write-Host "Installing VC++ Redistributable silently..."
+      Start-Process -FilePath $installer -ArgumentList '/install', '/quiet', '/norestart' -Wait
+      Remove-Item $installer -Force -ErrorAction SilentlyContinue
+      @{ Success = $true } | ConvertTo-Json
+    `,
+    size: '~25 MB',
+    icon: <Cpu className="w-5 h-5" />,
+    notes: 'Required for better-sqlite3 and other native modules.',
+  },
+  {
+    id: 'dotnet',
+    name: 'dotnet',
+    displayName: '.NET Runtime 8.0',
+    description: '.NET Runtime for PowerShell 7 and modern Windows applications.',
+    category: 'runtime',
+    version: '8.0',
+    required: false,
+    downloadUrl: 'https://download.visualstudio.microsoft.com/download/pr/f18288f6-1732-415b-b577-7fb46510479a/a98239f751a7aed31bc4aa12f348a9bf/windowsdesktop-runtime-8.0.11-win-x64.exe',
+    checkCommand: `
+      try {
+        $dotnetVersion = dotnet --version 2>&1
+        if ($dotnetVersion -match '^[\\d.]+') {
+          @{ Installed = $true; Version = $dotnetVersion.Trim() } | ConvertTo-Json
+        } else {
+          @{ Installed = $false } | ConvertTo-Json
+        }
+      } catch {
+        @{ Installed = $false } | ConvertTo-Json
+      }
+    `,
+    installCommand: `
+      $url = 'https://download.visualstudio.microsoft.com/download/pr/f18288f6-1732-415b-b577-7fb46510479a/a98239f751a7aed31bc4aa12f348a9bf/windowsdesktop-runtime-8.0.11-win-x64.exe'
+      $installer = "$env:TEMP\\dotnet-runtime.exe"
+      Write-Host "Downloading .NET Runtime..."
+      Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+      Write-Host "Installing .NET Runtime silently..."
+      Start-Process -FilePath $installer -ArgumentList '/install', '/quiet', '/norestart' -Wait
+      Remove-Item $installer -Force -ErrorAction SilentlyContinue
+      @{ Success = $true } | ConvertTo-Json
+    `,
+    size: '~60 MB',
+    icon: <Box className="w-5 h-5" />,
+    notes: 'Recommended for PowerShell 7 compatibility.',
+  },
+  {
+    id: 'pwsh7',
+    name: 'pwsh',
+    displayName: 'PowerShell 7',
+    description: 'Cross-platform PowerShell with improved performance and modern features.',
+    category: 'runtime',
+    version: '7.4.6',
+    required: false,
+    downloadUrl: 'https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/PowerShell-7.4.6-win-x64.msi',
+    checkCommand: `
+      try {
+        $pwshPath = Get-Command pwsh -ErrorAction SilentlyContinue
+        if ($pwshPath) {
+          $version = pwsh -Command '$PSVersionTable.PSVersion.ToString()' 2>&1
+          @{ Installed = $true; Version = $version.Trim() } | ConvertTo-Json
+        } else {
+          @{ Installed = $false } | ConvertTo-Json
+        }
+      } catch {
+        @{ Installed = $false } | ConvertTo-Json
+      }
+    `,
+    installCommand: `
+      $url = 'https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/PowerShell-7.4.6-win-x64.msi'
+      $installer = "$env:TEMP\\powershell7.msi"
+      Write-Host "Downloading PowerShell 7..."
+      Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+      Write-Host "Installing PowerShell 7 silently..."
+      Start-Process -FilePath 'msiexec.exe' -ArgumentList '/i', $installer, '/quiet', '/norestart', 'ADD_EXPLORER_CONTEXT_MENU_OPENPOWERSHELL=1', 'ADD_FILE_CONTEXT_MENU_RUNPOWERSHELL=1', 'ENABLE_PSREMOTING=0', 'REGISTER_MANIFEST=1' -Wait
+      Remove-Item $installer -Force -ErrorAction SilentlyContinue
+      @{ Success = $true } | ConvertTo-Json
+    `,
+    size: '~100 MB',
+    icon: <Terminal className="w-5 h-5" />,
+    notes: 'Recommended for improved Graph module performance.',
   },
 ];
 
@@ -664,6 +938,14 @@ const SetupInstallersView: React.FC = () => {
   });
   const [expandedModule, setExpandedModule] = useState<string | null>(null);
 
+  // External tools state
+  const [externalTools, setExternalTools] = useState<ExternalTool[]>(() => {
+    console.log('[SetupInstallersView] Initializing external tools state');
+    return EXTERNAL_TOOLS.map((t) => ({ ...t, status: 'unknown' as const, installedVersion: undefined, errorMessage: undefined }));
+  });
+  const [expandedTool, setExpandedTool] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'modules' | 'tools'>('modules');
+
   // System requirements
   const [requirements, setRequirements] = useState<SystemRequirements>({
     powershellVersion: { required: '5.1', installed: null, met: null },
@@ -1024,6 +1306,160 @@ const SetupInstallersView: React.FC = () => {
     setSelectedModules(new Set(POWERSHELL_MODULES.filter((m) => m.required).map((m) => m.name)));
   }, [modules, selectedModules, installModule, addLog]);
 
+  // Verify external tools status
+  const verifyExternalTools = useCallback(async () => {
+    console.log('[SetupInstallersView] verifyExternalTools called');
+    setIsVerifying(true);
+    addLog('Tools', 'Verify', 'info', 'Checking installed external tools...');
+
+    const updatedTools = [...externalTools];
+    let installedCount = 0;
+
+    for (let i = 0; i < updatedTools.length; i++) {
+      const tool = updatedTools[i];
+      const toolDef = EXTERNAL_TOOLS.find((t) => t.id === tool.id);
+      if (!toolDef) continue;
+
+      console.log(`[SetupInstallersView] Checking tool ${i + 1}/${updatedTools.length}: ${tool.name}`);
+      tool.status = 'checking';
+      setExternalTools([...updatedTools]);
+
+      try {
+        if (window.electronAPI?.executeScript) {
+          const result = await window.electronAPI.executeScript({
+            script: toolDef.checkCommand,
+            timeout: 30000,
+          });
+
+          console.log(`[SetupInstallersView] Tool ${tool.name} check result:`, result);
+
+          if (result.success && result.data) {
+            const parsed = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+            tool.status = parsed.Installed ? 'installed' : 'not_installed';
+            tool.installedVersion = parsed.Version;
+
+            if (parsed.Installed) {
+              installedCount++;
+              addLog(tool.displayName, 'Verify', 'success', `Installed${parsed.Version ? ` (v${parsed.Version})` : ''}`);
+            } else {
+              addLog(tool.displayName, 'Verify', 'info', 'Not installed');
+            }
+          } else {
+            tool.status = 'error';
+            tool.errorMessage = result.error || 'Check failed';
+            addLog(tool.displayName, 'Verify', 'error', result.error || 'Check failed');
+          }
+        } else {
+          // Simulated for development
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          const isInstalled = Math.random() > 0.5;
+          tool.status = isInstalled ? 'installed' : 'not_installed';
+          if (isInstalled) installedCount++;
+        }
+      } catch (error: any) {
+        console.error(`[SetupInstallersView] Tool ${tool.name} check error:`, error);
+        tool.status = 'error';
+        tool.errorMessage = error.message;
+        addLog(tool.displayName, 'Verify', 'error', error.message);
+      }
+
+      setExternalTools([...updatedTools]);
+      setOverallProgress(((i + 1) / updatedTools.length) * 100);
+    }
+
+    addLog('Tools', 'Verify', 'success', `Verification complete: ${installedCount}/${updatedTools.length} installed`);
+    setIsVerifying(false);
+    setOverallProgress(0);
+  }, [externalTools, addLog]);
+
+  // Install external tool (download and silent install)
+  const installTool = useCallback(async (toolId: string) => {
+    const toolDef = EXTERNAL_TOOLS.find((t) => t.id === toolId);
+    if (!toolDef || !toolDef.installCommand) {
+      addLog(toolDef?.displayName || toolId, 'Install', 'error', 'No install command available for this tool');
+      return;
+    }
+
+    // Update tool status to installing
+    setExternalTools((prev) =>
+      prev.map((t) => (t.id === toolId ? { ...t, status: 'installing' as const, errorMessage: undefined } : t))
+    );
+    addLog(toolDef.displayName, 'Install', 'info', 'Starting download and installation...');
+
+    const startTime = Date.now();
+
+    try {
+      if (window.electronAPI?.executeScript) {
+        const result = await window.electronAPI.executeScript({
+          script: toolDef.installCommand,
+          timeout: 600000, // 10 minutes for large downloads
+        });
+
+        const duration = Date.now() - startTime;
+
+        if (result.success) {
+          addLog(toolDef.displayName, 'Install', 'success', `Installation completed in ${(duration / 1000).toFixed(1)}s`);
+          // Re-verify the tool to get the installed version
+          const verifyResult = await window.electronAPI.executeScript({
+            script: toolDef.checkCommand,
+            timeout: 30000,
+          });
+          if (verifyResult.success && verifyResult.data) {
+            const parsed = typeof verifyResult.data === 'string' ? JSON.parse(verifyResult.data) : verifyResult.data;
+            setExternalTools((prev) =>
+              prev.map((t) =>
+                t.id === toolId
+                  ? { ...t, status: parsed.Installed ? 'installed' : 'not_installed', installedVersion: parsed.Version }
+                  : t
+              )
+            );
+          } else {
+            setExternalTools((prev) =>
+              prev.map((t) => (t.id === toolId ? { ...t, status: 'installed' as const } : t))
+            );
+          }
+        } else {
+          addLog(toolDef.displayName, 'Install', 'error', result.error || 'Installation failed');
+          setExternalTools((prev) =>
+            prev.map((t) => (t.id === toolId ? { ...t, status: 'error' as const, errorMessage: result.error } : t))
+          );
+        }
+      } else {
+        // Fallback: open download URL in browser
+        addLog(toolDef.displayName, 'Install', 'warning', 'Silent install not available, opening download page...');
+        window.open(toolDef.downloadUrl, '_blank');
+        setExternalTools((prev) =>
+          prev.map((t) => (t.id === toolId ? { ...t, status: 'not_installed' as const } : t))
+        );
+      }
+    } catch (error: any) {
+      console.error(`[SetupInstallersView] Tool ${toolId} install error:`, error);
+      addLog(toolDef.displayName, 'Install', 'error', error.message);
+      setExternalTools((prev) =>
+        prev.map((t) => (t.id === toolId ? { ...t, status: 'error' as const, errorMessage: error.message } : t))
+      );
+    }
+  }, [addLog]);
+
+  // Filter external tools
+  const filteredTools = useMemo(() => {
+    return externalTools.filter((t) => {
+      const matchesSearch =
+        t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesSearch;
+    });
+  }, [externalTools, searchQuery]);
+
+  // External tools stats
+  const toolStats = useMemo(() => {
+    const installed = externalTools.filter((t) => t.status === 'installed').length;
+    const required = externalTools.filter((t) => t.required).length;
+    const requiredInstalled = externalTools.filter((t) => t.required && t.status === 'installed').length;
+    return { installed, total: externalTools.length, required, requiredInstalled };
+  }, [externalTools]);
+
   // Filter modules
   const filteredModules = useMemo(() => {
     return modules.filter((m) => {
@@ -1061,6 +1497,8 @@ const SetupInstallersView: React.FC = () => {
         return;
       }
       await verifyModules();
+      if (!mounted) return;
+      await verifyExternalTools();
       console.log('[SetupInstallersView] initialize - Complete');
     };
 
@@ -1090,8 +1528,8 @@ const SetupInstallersView: React.FC = () => {
               <Package className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Azure Prerequisites</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">PowerShell Module Manager</p>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Prerequisites & Tools</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">PowerShell Modules & External Tools</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -1101,19 +1539,58 @@ const SetupInstallersView: React.FC = () => {
                 Complete
               </span>
             )}
-            <Button variant="secondary" onClick={verifyModules} loading={isVerifying} icon={<Search className="w-4 h-4" />}>
+            <Button
+              variant="secondary"
+              onClick={activeTab === 'modules' ? verifyModules : verifyExternalTools}
+              loading={isVerifying}
+              icon={<Search className="w-4 h-4" />}
+            >
               Verify All
             </Button>
-            <Button
-              variant="primary"
-              onClick={installSelectedModules}
-              disabled={isInstalling || !allRequirementsMet || selectedModules.size === 0}
-              loading={isInstalling}
-              icon={<Download className="w-4 h-4" />}
-            >
-              Install Selected ({selectedModules.size})
-            </Button>
+            {activeTab === 'modules' && (
+              <Button
+                variant="primary"
+                onClick={installSelectedModules}
+                disabled={isInstalling || !allRequirementsMet || selectedModules.size === 0}
+                loading={isInstalling}
+                icon={<Download className="w-4 h-4" />}
+              >
+                Install Selected ({selectedModules.size})
+              </Button>
+            )}
           </div>
+        </div>
+
+        {/* Tab Selector */}
+        <div className="flex items-center gap-2 mt-4 max-w-7xl mx-auto">
+          <button
+            onClick={() => setActiveTab('modules')}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+              activeTab === 'modules'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            <Package className="w-4 h-4" />
+            PowerShell Modules
+            <span className={`px-1.5 py-0.5 text-xs rounded ${activeTab === 'modules' ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-600'}`}>
+              {stats.installed}/{stats.total}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('tools')}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+              activeTab === 'tools'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            <Terminal className="w-4 h-4" />
+            External Tools
+            <span className={`px-1.5 py-0.5 text-xs rounded ${activeTab === 'tools' ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-600'}`}>
+              {toolStats.installed}/{toolStats.total}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -1137,14 +1614,17 @@ const SetupInstallersView: React.FC = () => {
             </div>
           )}
 
-          {/* Stats row */}
-          <div className="grid grid-cols-4 gap-4">
-            {[
-              { label: 'Total Modules', value: stats.total, icon: <Package className="w-5 h-5" />, color: 'blue' },
-              { label: 'Installed', value: stats.installed, icon: <CheckCircle className="w-5 h-5" />, color: 'green' },
-              { label: 'Required', value: `${stats.requiredInstalled}/${stats.required}`, icon: <AlertTriangle className="w-5 h-5" />, color: 'yellow' },
-              { label: 'Selected', value: selectedModules.size, icon: <Check className="w-5 h-5" />, color: 'purple' },
-            ].map((stat) => (
+          {/* Modules Tab Content */}
+          {activeTab === 'modules' && (
+            <>
+              {/* Stats row */}
+              <div className="grid grid-cols-4 gap-4">
+                {[
+                  { label: 'Total Modules', value: stats.total, icon: <Package className="w-5 h-5" />, color: 'blue' },
+                  { label: 'Installed', value: stats.installed, icon: <CheckCircle className="w-5 h-5" />, color: 'green' },
+                  { label: 'Required', value: `${stats.requiredInstalled}/${stats.required}`, icon: <AlertTriangle className="w-5 h-5" />, color: 'yellow' },
+                  { label: 'Selected', value: selectedModules.size, icon: <Check className="w-5 h-5" />, color: 'purple' },
+                ].map((stat) => (
               <div
                 key={stat.label}
                 className="p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300"
@@ -1229,13 +1709,244 @@ const SetupInstallersView: React.FC = () => {
             ))}
           </div>
 
-          {/* No results */}
-          {filteredModules.length === 0 && (
-            <div className="text-center py-12">
-              <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No modules found</h3>
-              <p className="text-gray-600 dark:text-gray-400">Try adjusting your search or filter criteria.</p>
-            </div>
+              {/* No results */}
+              {filteredModules.length === 0 && (
+                <div className="text-center py-12">
+                  <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No modules found</h3>
+                  <p className="text-gray-600 dark:text-gray-400">Try adjusting your search or filter criteria.</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* External Tools Tab Content */}
+          {activeTab === 'tools' && (
+            <>
+              {/* Tools Stats row */}
+              <div className="grid grid-cols-4 gap-4">
+                {[
+                  { label: 'Total Tools', value: toolStats.total, icon: <Terminal className="w-5 h-5" />, color: 'blue' },
+                  { label: 'Installed', value: toolStats.installed, icon: <CheckCircle className="w-5 h-5" />, color: 'green' },
+                  { label: 'Required', value: `${toolStats.requiredInstalled}/${toolStats.required}`, icon: <AlertTriangle className="w-5 h-5" />, color: 'yellow' },
+                  { label: 'Not Installed', value: toolStats.total - toolStats.installed, icon: <X className="w-5 h-5" />, color: 'red' },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg bg-${stat.color}-100 dark:bg-${stat.color}-900/30 text-${stat.color}-600 dark:text-${stat.color}-400`}>
+                        {stat.icon}
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Progress */}
+              {isVerifying && overallProgress > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-medium text-gray-900 dark:text-white">Verifying tools...</span>
+                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{Math.round(overallProgress)}%</span>
+                  </div>
+                  <ProgressBar value={overallProgress} max={100} variant="info" size="lg" animated striped />
+                </div>
+              )}
+
+              {/* Tools list header */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">External Tools</h2>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search tools..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Tools grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {filteredTools.map((tool) => (
+                  <div
+                    key={tool.id}
+                    className={`
+                      group rounded-xl border-2 transition-all duration-300
+                      ${
+                        tool.status === 'installed'
+                          ? 'border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10'
+                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+                      }
+                    `}
+                  >
+                    <div className="p-4">
+                      <div className="flex items-start gap-4">
+                        {/* Icon */}
+                        <div
+                          className={`p-3 rounded-xl transition-transform group-hover:scale-110 ${
+                            tool.category === 'network'
+                              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                              : tool.category === 'runtime'
+                              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+                              : tool.category === 'development'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                          }`}
+                        >
+                          {tool.icon}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-semibold text-gray-900 dark:text-white">{tool.displayName}</h4>
+                            {tool.required && (
+                              <span className="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">
+                                Required
+                              </span>
+                            )}
+                            {/* Status badge */}
+                            {tool.status === 'installed' ? (
+                              <span className="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full flex items-center gap-1">
+                                <Check className="w-3 h-3" />
+                                Installed
+                              </span>
+                            ) : tool.status === 'checking' ? (
+                              <span className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full flex items-center gap-1">
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Checking
+                              </span>
+                            ) : tool.status === 'installing' ? (
+                              <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full flex items-center gap-1">
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Installing...
+                              </span>
+                            ) : tool.status === 'not_installed' ? (
+                              <span className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full flex items-center gap-1">
+                                <X className="w-3 h-3" />
+                                Not Installed
+                              </span>
+                            ) : tool.status === 'error' ? (
+                              <span className="px-2 py-1 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                Error
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{tool.description}</p>
+
+                          {tool.errorMessage && (
+                            <p className="text-sm text-red-600 dark:text-red-400 mt-2 flex items-center gap-1">
+                              <AlertCircle className="w-4 h-4" />
+                              {tool.errorMessage}
+                            </p>
+                          )}
+
+                          <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center gap-1">
+                              <Package className="w-3 h-3" />
+                              {tool.installedVersion ? (
+                                <span className="font-semibold text-green-600 dark:text-green-400">v{tool.installedVersion}</span>
+                              ) : (
+                                <span>v{tool.version}</span>
+                              )}
+                            </span>
+                            {tool.size && (
+                              <span className="flex items-center gap-1">
+                                <HardDrive className="w-3 h-3" />
+                                {tool.size}
+                              </span>
+                            )}
+                            <span className="capitalize px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-400">
+                              {tool.category}
+                            </span>
+                          </div>
+
+                          {tool.notes && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 italic">
+                              <Info className="w-3 h-3 inline mr-1" />
+                              {tool.notes}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2">
+                          {tool.status !== 'installed' && tool.status !== 'checking' && tool.status !== 'installing' && (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => installTool(tool.id)}
+                              disabled={isVerifying || isInstalling}
+                              icon={<Download className="w-4 h-4" />}
+                            >
+                              Install
+                            </Button>
+                          )}
+                          {tool.status === 'installing' && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled
+                              icon={<Loader2 className="w-4 h-4 animate-spin" />}
+                            >
+                              Installing...
+                            </Button>
+                          )}
+                          <button
+                            onClick={() => setExpandedTool(expandedTool === tool.id ? null : tool.id)}
+                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            {expandedTool === tool.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Expanded details */}
+                      {expandedTool === tool.id && (
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-500 dark:text-gray-400">Category:</span>
+                              <span className="ml-2 text-gray-900 dark:text-white capitalize">{tool.category}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500 dark:text-gray-400">Download:</span>
+                              <a
+                                href={tool.downloadUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="ml-2 text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 inline-flex"
+                              >
+                                Official Site <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* No results */}
+              {filteredTools.length === 0 && (
+                <div className="text-center py-12">
+                  <Terminal className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No tools found</h3>
+                  <p className="text-gray-600 dark:text-gray-400">Try adjusting your search criteria.</p>
+                </div>
+              )}
+            </>
           )}
 
           {/* Logs section */}

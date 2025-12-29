@@ -111,13 +111,22 @@ function Connect-MgGraphWithMultipleStrategies {
     if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.ClientSecret) {
         try {
             Write-ConditionalAccessLog -Level "INFO" -Message "Strategy 1: Attempting Client Secret authentication..." -Context $Context
+
+            # ✅ FIXED: Use proper client credential flow with SecureString
             $secureSecret = ConvertTo-SecureString $Configuration.ClientSecret -AsPlainText -Force
-            $credential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
-            Connect-MgGraph -ClientSecretCredential $credential -TenantId $Configuration.TenantId -NoWelcome -ErrorAction Stop
-            $context = Get-MgContext
-            if ($context -and $context.TenantId) {
+            $clientSecretCredential = New-Object System.Management.Automation.PSCredential($Configuration.ClientId, $secureSecret)
+
+            # Disconnect any existing session first to avoid conflicts
+            try { Disconnect-MgGraph -ErrorAction SilentlyContinue } catch {}
+
+            # Connect using ClientSecretCredential
+            $null = Connect-MgGraph -ClientSecretCredential $clientSecretCredential -TenantId $Configuration.TenantId -NoWelcome -ErrorAction Stop
+
+            # Get context AFTER successful connection
+            $mgContext = Get-MgContext
+            if ($mgContext -and $mgContext.TenantId) {
                 Write-ConditionalAccessLog -Level "SUCCESS" -Message "Strategy 1: Client Secret authentication successful" -Context $Context
-                return $context
+                return $mgContext
             }
         } catch {
             Write-ConditionalAccessLog -Level "WARN" -Message "Strategy 1: Client Secret auth failed: $($_.Exception.Message)" -Context $Context
@@ -128,48 +137,24 @@ function Connect-MgGraphWithMultipleStrategies {
     if ($Configuration.TenantId -and $Configuration.ClientId -and $Configuration.CertificateThumbprint) {
         try {
             Write-ConditionalAccessLog -Level "INFO" -Message "Strategy 2: Attempting Certificate authentication..." -Context $Context
-            Connect-MgGraph -ClientId $Configuration.ClientId -TenantId $Configuration.TenantId -CertificateThumbprint $Configuration.CertificateThumbprint -NoWelcome -ErrorAction Stop
-            $context = Get-MgContext
-            if ($context -and $context.TenantId) {
+            try { Disconnect-MgGraph -ErrorAction SilentlyContinue } catch {}
+            $null = Connect-MgGraph -ClientId $Configuration.ClientId -TenantId $Configuration.TenantId -CertificateThumbprint $Configuration.CertificateThumbprint -NoWelcome -ErrorAction Stop
+            $mgContext = Get-MgContext
+            if ($mgContext -and $mgContext.TenantId) {
                 Write-ConditionalAccessLog -Level "SUCCESS" -Message "Strategy 2: Certificate authentication successful" -Context $Context
-                return $context
+                return $mgContext
             }
         } catch {
             Write-ConditionalAccessLog -Level "WARN" -Message "Strategy 2: Certificate auth failed: $($_.Exception.Message)" -Context $Context
         }
     }
 
-    # Strategy 3: Device Code Flow (headless-friendly interactive)
-    if ($Configuration.TenantId) {
-        try {
-            Write-ConditionalAccessLog -Level "INFO" -Message "Strategy 3: Attempting Device Code authentication..." -Context $Context
-            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $caScopes -UseDeviceCode -NoWelcome -ErrorAction Stop
-            $context = Get-MgContext
-            if ($context -and $context.TenantId) {
-                Write-ConditionalAccessLog -Level "SUCCESS" -Message "Strategy 3: Device Code authentication successful" -Context $Context
-                return $context
-            }
-        } catch {
-            Write-ConditionalAccessLog -Level "WARN" -Message "Strategy 3: Device Code auth failed: $($_.Exception.Message)" -Context $Context
-        }
-    }
+    # Strategy 3: Device Code Flow (headless-friendly interactive) - SKIPPED for automation
+    # Device code requires user interaction, skip in automated scenarios
+    Write-ConditionalAccessLog -Level "INFO" -Message "Skipping Strategy 3 (Device Code) - requires user interaction" -Context $Context
 
-    # Strategy 4: Interactive Browser Authentication (GUI required - last resort)
-    try {
-        Write-ConditionalAccessLog -Level "INFO" -Message "Strategy 4: Attempting Interactive authentication..." -Context $Context
-        if ($Configuration.TenantId) {
-            Connect-MgGraph -TenantId $Configuration.TenantId -Scopes $caScopes -NoWelcome -ErrorAction Stop
-        } else {
-            Connect-MgGraph -Scopes $caScopes -NoWelcome -ErrorAction Stop
-        }
-        $context = Get-MgContext
-        if ($context -and $context.TenantId) {
-            Write-ConditionalAccessLog -Level "SUCCESS" -Message "Strategy 4: Interactive authentication successful" -Context $Context
-            return $context
-        }
-    } catch {
-        Write-ConditionalAccessLog -Level "ERROR" -Message "Strategy 4: Interactive auth failed: $($_.Exception.Message)" -Context $Context
-    }
+    # Strategy 4: Interactive Browser Authentication (GUI required - last resort) - SKIPPED for automation
+    Write-ConditionalAccessLog -Level "INFO" -Message "Skipping Strategy 4 (Interactive) - requires user interaction" -Context $Context
 
     Write-ConditionalAccessLog -Level "ERROR" -Message "All Microsoft Graph authentication strategies exhausted" -Context $Context
     return $null

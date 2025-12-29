@@ -22,7 +22,7 @@ const withSuspense = (Component: React.LazyExoticComponent<React.ComponentType<a
 const ActivedirectoryDiscoveredView = lazy(() => import('./ActivedirectoryDiscoveredView'));
 const ApplicationsDiscoveredView = lazy(() => import('./ApplicationsDiscoveredView'));
 const AwsDiscoveredView = lazy(() => import('./AWSDiscoveredView'));
-const AzureDiscoveredView = lazy(() => import('./AzureDiscoveredView'));
+const EntraIDM365DiscoveredView = lazy(() => import('./EntraIDM365DiscoveredView'));
 const AzureresourceDiscoveredView = lazy(() => import('./AzureresourceDiscoveredView'));
 const BackuprecoveryDiscoveredView = lazy(() => import('./BackuprecoveryDiscoveredView'));
 const CertificateauthorityDiscoveredView = lazy(() => import('./CertificateauthorityDiscoveredView'));
@@ -63,6 +63,21 @@ const VirtualizationDiscoveredView = lazy(() => import('./VirtualizationDiscover
 const VmwareDiscoveredView = lazy(() => import('./VMwareDiscoveredView'));
 const WebserverconfigDiscoveredView = lazy(() => import('./WebserverconfigDiscoveredView'));
 const HypervDiscoveredView = lazy(() => import('./HyperVDiscoveredView'));
+const DomainDiscoveredView = lazy(() => import('./DomainDiscoveredView'));
+const GoogleworkspaceDiscoveredView = lazy(() => import('./GoogleworkspaceDiscoveredView'));
+const Office365DiscoveredView = lazy(() => import('./Office365DiscoveredView'));
+const AzureVMSSDiscoveredView = lazy(() => import('./AzureVMSSDiscoveredView'));
+const AzureFunctionsDiscoveredView = lazy(() => import('./AzureFunctionsDiscoveredView'));
+const AzureACRDiscoveredView = lazy(() => import('./AzureACRDiscoveredView'));
+const AzureAutomationDiscoveredView = lazy(() => import('./AzureAutomationDiscoveredView'));
+const AzureLogicAppsDiscoveredView = lazy(() => import('./AzureLogicAppsDiscoveredView'));
+const AzureManagementGroupsDiscoveredView = lazy(() => import('./AzureManagementGroupsDiscoveredView'));
+const AzurePIMDiscoveredView = lazy(() => import('./AzurePIMDiscoveredView'));
+const AzureSubscriptionOwnersDiscoveredView = lazy(() => import('./AzureSubscriptionOwnersDiscoveredView'));
+const AzureKeyVaultAccessDiscoveredView = lazy(() => import('./AzureKeyVaultAccessDiscoveredView'));
+const AzureManagedIdentitiesDiscoveredView = lazy(() => import('./AzureManagedIdentitiesDiscoveredView'));
+const AzureServicePrincipalCredentialsDiscoveredView = lazy(() => import('./AzureServicePrincipalCredentialsDiscoveredView'));
+const AzureStorageAccountAccessDiscoveredView = lazy(() => import('./AzureStorageAccountAccessDiscoveredView'));
 
 export const discoveredRoutes = [
   {
@@ -79,7 +94,7 @@ export const discoveredRoutes = [
   },
   {
     path: '/discovered/azure',
-    element: withSuspense(AzureDiscoveredView)
+    element: withSuspense(EntraIDM365DiscoveredView)
   },
   {
     path: '/discovered/azureresource',
@@ -238,7 +253,67 @@ export const discoveredRoutes = [
     element: withSuspense(WebserverconfigDiscoveredView)
   },
   {
+    path: '/discovered/domain',
+    element: withSuspense(DomainDiscoveredView)
+  },
+  {
+    path: '/discovered/googleworkspace',
+    element: withSuspense(GoogleworkspaceDiscoveredView)
+  },
+  {
+    path: '/discovered/office365',
+    element: withSuspense(Office365DiscoveredView)
+  },
+  {
     path: '/discovered/hyperv',
     element: withSuspense(HypervDiscoveredView)
+  },
+  {
+    path: '/discovered/azurevmss',
+    element: withSuspense(AzureVMSSDiscoveredView)
+  },
+  {
+    path: '/discovered/azurefunctions',
+    element: withSuspense(AzureFunctionsDiscoveredView)
+  },
+  {
+    path: '/discovered/azureacr',
+    element: withSuspense(AzureACRDiscoveredView)
+  },
+  {
+    path: '/discovered/azureautomation',
+    element: withSuspense(AzureAutomationDiscoveredView)
+  },
+  {
+    path: '/discovered/azurelogicapps',
+    element: withSuspense(AzureLogicAppsDiscoveredView)
+  },
+  {
+    path: '/discovered/azuremgmtgroups',
+    element: withSuspense(AzureManagementGroupsDiscoveredView)
+  },
+  {
+    path: '/discovered/azurepim',
+    element: withSuspense(AzurePIMDiscoveredView)
+  },
+  {
+    path: '/discovered/azuresubowners',
+    element: withSuspense(AzureSubscriptionOwnersDiscoveredView)
+  },
+  {
+    path: '/discovered/azurekeyvaultaccess',
+    element: withSuspense(AzureKeyVaultAccessDiscoveredView)
+  },
+  {
+    path: '/discovered/azuremanagedidentities',
+    element: withSuspense(AzureManagedIdentitiesDiscoveredView)
+  },
+  {
+    path: '/discovered/azurespcredentials',
+    element: withSuspense(AzureServicePrincipalCredentialsDiscoveredView)
+  },
+  {
+    path: '/discovered/azurestorageaccess',
+    element: withSuspense(AzureStorageAccountAccessDiscoveredView)
   },
 ];

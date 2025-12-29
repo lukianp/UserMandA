@@ -49,7 +49,9 @@ function Test-AzureModules {
         'Az.Storage',     # Get-AzStorageAccount, Get-AzStorageAccountKey, Get-AzStorageContainer
         'Az.KeyVault',    # Get-AzKeyVault, Get-AzKeyVaultSecret, Get-AzKeyVaultKey, Get-AzKeyVaultCertificate
         'Az.Websites',    # Get-AzWebApp, Get-AzAppServicePlan
-        'Az.Sql'          # Get-AzSqlServer, Get-AzSqlDatabase
+        'Az.Sql',         # Get-AzSqlServer, Get-AzSqlDatabase
+        'Az.Automation',  # Get-AzAutomationAccount, Get-AzAutomationRunbook
+        'Az.LogicApp'     # Get-AzLogicApp
     )
 
     $missingModules = @()
@@ -805,7 +807,284 @@ function Invoke-AzureResourceDiscovery {
                         $Result.AddWarning("Failed to discover SQL servers in subscription $($subscription.Name): $($_.Exception.Message)", @{Subscription=$subscription.Name})
                     }
                     #endregion
-                    
+
+                    #region VM Scale Sets Discovery (AzureHound-inspired)
+                    try {
+                        $vmScaleSets = Get-AzVmss -ErrorAction Stop
+
+                        foreach ($vmss in $vmScaleSets) {
+                            # Get instance count
+                            $instanceCount = 0
+                            try {
+                                $instances = Get-AzVmssVM -ResourceGroupName $vmss.ResourceGroupName -VMScaleSetName $vmss.Name -ErrorAction SilentlyContinue
+                                $instanceCount = @($instances).Count
+                            } catch {}
+
+                            # Extract VNet/Subnet info from network profile
+                            $vnetName = ""
+                            $subnetName = ""
+                            try {
+                                $nicConfig = $vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations | Select-Object -First 1
+                                if ($nicConfig -and $nicConfig.IpConfigurations) {
+                                    $subnetId = $nicConfig.IpConfigurations[0].Subnet.Id
+                                    if ($subnetId) {
+                                        $subnetParts = $subnetId -split '/'
+                                        $vnetName = $subnetParts[-3]
+                                        $subnetName = $subnetParts[-1]
+                                    }
+                                }
+                            } catch {}
+
+                            $vmssData = [PSCustomObject]@{
+                                ObjectType = "VMScaleSet"
+                                Name = $vmss.Name
+                                SubscriptionId = $subscription.Id
+                                ResourceGroupName = $vmss.ResourceGroupName
+                                Location = $vmss.Location
+                                Sku = $vmss.Sku.Name
+                                Tier = $vmss.Sku.Tier
+                                Capacity = $vmss.Sku.Capacity
+                                InstanceCount = $instanceCount
+                                UpgradePolicy = $vmss.UpgradePolicy.Mode
+                                VirtualNetworkName = $vnetName
+                                SubnetName = $subnetName
+                                ProvisioningState = $vmss.ProvisioningState
+                                UniqueId = $vmss.UniqueId
+                                Tags = ($vmss.Tags | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
+                                _DataType = 'VMScaleSets'
+                                SessionId = $SessionId
+                            }
+                            $null = $allDiscoveredData.Add($vmssData)
+                        }
+
+                        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Discovered $(@($vmScaleSets).Count) VM Scale Sets in subscription $($subscription.Name)" -Level "SUCCESS"
+
+                    } catch {
+                        $Result.AddWarning("Failed to discover VM Scale Sets in subscription $($subscription.Name): $($_.Exception.Message)", @{Subscription=$subscription.Name})
+                    }
+                    #endregion
+
+                    #region Function Apps Discovery (AzureHound-inspired)
+                    try {
+                        $functionApps = Get-AzFunctionApp -ErrorAction Stop
+
+                        foreach ($func in $functionApps) {
+                            $funcData = [PSCustomObject]@{
+                                ObjectType = "FunctionApp"
+                                Name = $func.Name
+                                SubscriptionId = $subscription.Id
+                                ResourceGroupName = $func.ResourceGroup
+                                Location = $func.Location
+                                Runtime = $func.Runtime
+                                RuntimeVersion = $func.RuntimeVersion
+                                State = $func.State
+                                Kind = $func.Kind
+                                HostNames = ($func.HostNames -join '; ')
+                                HttpsOnly = $func.HttpsOnly
+                                AppServicePlan = $func.AppServicePlan
+                                DefaultHostName = $func.DefaultHostName
+                                OSType = $func.OSType
+                                ContainerSize = $func.ContainerSize
+                                DailyMemoryTimeQuota = $func.DailyMemoryTimeQuota
+                                Enabled = $func.Enabled
+                                Tags = ($func.Tags | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
+                                _DataType = 'FunctionApps'
+                                SessionId = $SessionId
+                            }
+                            $null = $allDiscoveredData.Add($funcData)
+                        }
+
+                        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Discovered $(@($functionApps).Count) Function Apps in subscription $($subscription.Name)" -Level "SUCCESS"
+
+                    } catch {
+                        if ($_.Exception.Message -notlike "*'Az.Functions' is not installed*" -and $_.Exception.Message -notlike "*CommandNotFoundException*") {
+                            $Result.AddWarning("Failed to discover Function Apps in subscription $($subscription.Name): $($_.Exception.Message)", @{Subscription=$subscription.Name})
+                        } else {
+                            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Az.Functions module not installed, skipping Function Apps discovery" -Level "WARNING"
+                        }
+                    }
+                    #endregion
+
+                    #region Container Registries Discovery (AzureHound-inspired)
+                    try {
+                        $registries = Get-AzContainerRegistry -ErrorAction Stop
+
+                        foreach ($acr in $registries) {
+                            $acrData = [PSCustomObject]@{
+                                ObjectType = "ContainerRegistry"
+                                Name = $acr.Name
+                                SubscriptionId = $subscription.Id
+                                ResourceGroupName = $acr.ResourceGroupName
+                                Location = $acr.Location
+                                Sku = $acr.SkuName
+                                LoginServer = $acr.LoginServer
+                                AdminUserEnabled = $acr.AdminUserEnabled
+                                CreationDate = $acr.CreationDate
+                                ProvisioningState = $acr.ProvisioningState
+                                PublicNetworkAccess = $acr.PublicNetworkAccess
+                                NetworkRuleBypassOptions = $acr.NetworkRuleBypassOptions
+                                ZoneRedundancy = $acr.ZoneRedundancy
+                                Tags = ($acr.Tags | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
+                                _DataType = 'ContainerRegistries'
+                                SessionId = $SessionId
+                            }
+                            $null = $allDiscoveredData.Add($acrData)
+                        }
+
+                        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Discovered $(@($registries).Count) Container Registries in subscription $($subscription.Name)" -Level "SUCCESS"
+
+                    } catch {
+                        if ($_.Exception.Message -notlike "*'Az.ContainerRegistry' is not installed*" -and $_.Exception.Message -notlike "*CommandNotFoundException*") {
+                            $Result.AddWarning("Failed to discover Container Registries in subscription $($subscription.Name): $($_.Exception.Message)", @{Subscription=$subscription.Name})
+                        } else {
+                            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Az.ContainerRegistry module not installed, skipping Container Registry discovery" -Level "WARNING"
+                        }
+                    }
+                    #endregion
+
+                    #region Automation Accounts Discovery (AzureHound-inspired Phase 2)
+                    try {
+                        $automationAccounts = Get-AzAutomationAccount -ErrorAction Stop
+
+                        foreach ($aa in $automationAccounts) {
+                            # Get runbook count
+                            $runbookCount = 0
+                            $runbooks = @()
+                            try {
+                                $runbookList = Get-AzAutomationRunbook -ResourceGroupName $aa.ResourceGroupName -AutomationAccountName $aa.AutomationAccountName -ErrorAction SilentlyContinue
+                                $runbookCount = @($runbookList).Count
+                                $runbooks = $runbookList | Select-Object -First 10 | ForEach-Object {
+                                    @{
+                                        Name = $_.Name
+                                        RunbookType = $_.RunbookType
+                                        State = $_.State
+                                        LastModifiedTime = $_.LastModifiedTime
+                                    }
+                                }
+                            } catch {}
+
+                            # Get variable count
+                            $variableCount = 0
+                            try {
+                                $variables = Get-AzAutomationVariable -ResourceGroupName $aa.ResourceGroupName -AutomationAccountName $aa.AutomationAccountName -ErrorAction SilentlyContinue
+                                $variableCount = @($variables).Count
+                            } catch {}
+
+                            # Get schedule count
+                            $scheduleCount = 0
+                            try {
+                                $schedules = Get-AzAutomationSchedule -ResourceGroupName $aa.ResourceGroupName -AutomationAccountName $aa.AutomationAccountName -ErrorAction SilentlyContinue
+                                $scheduleCount = @($schedules).Count
+                            } catch {}
+
+                            # Get credential count
+                            $credentialCount = 0
+                            try {
+                                $credentials = Get-AzAutomationCredential -ResourceGroupName $aa.ResourceGroupName -AutomationAccountName $aa.AutomationAccountName -ErrorAction SilentlyContinue
+                                $credentialCount = @($credentials).Count
+                            } catch {}
+
+                            $aaData = [PSCustomObject]@{
+                                ObjectType = "AutomationAccount"
+                                Name = $aa.AutomationAccountName
+                                SubscriptionId = $subscription.Id
+                                ResourceGroupName = $aa.ResourceGroupName
+                                Location = $aa.Location
+                                State = $aa.State
+                                CreationTime = $aa.CreationTime
+                                LastModifiedTime = $aa.LastModifiedTime
+                                RunbookCount = $runbookCount
+                                VariableCount = $variableCount
+                                ScheduleCount = $scheduleCount
+                                CredentialCount = $credentialCount
+                                Runbooks = ($runbooks | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
+                                Tags = ($aa.Tags | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
+                                _DataType = 'AutomationAccounts'
+                                SessionId = $SessionId
+                            }
+                            $null = $allDiscoveredData.Add($aaData)
+                        }
+
+                        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Discovered $(@($automationAccounts).Count) Automation Accounts in subscription $($subscription.Name)" -Level "SUCCESS"
+
+                    } catch {
+                        if ($_.Exception.Message -notlike "*'Az.Automation' is not installed*" -and $_.Exception.Message -notlike "*CommandNotFoundException*") {
+                            $Result.AddWarning("Failed to discover Automation Accounts in subscription $($subscription.Name): $($_.Exception.Message)", @{Subscription=$subscription.Name})
+                        } else {
+                            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Az.Automation module not installed, skipping Automation Account discovery" -Level "WARNING"
+                        }
+                    }
+                    #endregion
+
+                    #region Logic Apps Discovery (AzureHound-inspired Phase 2)
+                    try {
+                        $logicApps = Get-AzLogicApp -ErrorAction Stop
+
+                        foreach ($la in $logicApps) {
+                            # Get workflow runs count (last 30 days)
+                            $runCount = 0
+                            $lastRunTime = $null
+                            $lastRunStatus = $null
+                            try {
+                                $runs = Get-AzLogicAppRunHistory -ResourceGroupName $la.ResourceGroupName -Name $la.Name -ErrorAction SilentlyContinue | Select-Object -First 100
+                                $runCount = @($runs).Count
+                                if ($runs) {
+                                    $lastRun = $runs | Select-Object -First 1
+                                    $lastRunTime = $lastRun.StartTime
+                                    $lastRunStatus = $lastRun.Status
+                                }
+                            } catch {}
+
+                            # Get trigger info
+                            $triggerCount = 0
+                            $triggers = @()
+                            try {
+                                $triggerList = Get-AzLogicAppTrigger -ResourceGroupName $la.ResourceGroupName -Name $la.Name -ErrorAction SilentlyContinue
+                                $triggerCount = @($triggerList).Count
+                                $triggers = $triggerList | ForEach-Object {
+                                    @{
+                                        Name = $_.Name
+                                        State = $_.State
+                                        Type = $_.TypeName
+                                    }
+                                }
+                            } catch {}
+
+                            $laData = [PSCustomObject]@{
+                                ObjectType = "LogicApp"
+                                Name = $la.Name
+                                SubscriptionId = $subscription.Id
+                                ResourceGroupName = $la.ResourceGroupName
+                                Location = $la.Location
+                                State = $la.State
+                                Sku = $la.Sku.Name
+                                Version = $la.Version
+                                CreatedTime = $la.CreatedTime
+                                ChangedTime = $la.ChangedTime
+                                AccessEndpoint = $la.AccessEndpoint
+                                TriggerCount = $triggerCount
+                                Triggers = ($triggers | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
+                                RecentRunCount = $runCount
+                                LastRunTime = $lastRunTime
+                                LastRunStatus = $lastRunStatus
+                                Tags = ($la.Tags | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
+                                _DataType = 'LogicApps'
+                                SessionId = $SessionId
+                            }
+                            $null = $allDiscoveredData.Add($laData)
+                        }
+
+                        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Discovered $(@($logicApps).Count) Logic Apps in subscription $($subscription.Name)" -Level "SUCCESS"
+
+                    } catch {
+                        if ($_.Exception.Message -notlike "*'Az.LogicApp' is not installed*" -and $_.Exception.Message -notlike "*CommandNotFoundException*") {
+                            $Result.AddWarning("Failed to discover Logic Apps in subscription $($subscription.Name): $($_.Exception.Message)", @{Subscription=$subscription.Name})
+                        } else {
+                            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Az.LogicApp module not installed, skipping Logic App discovery" -Level "WARNING"
+                        }
+                    }
+                    #endregion
+
                 } catch {
                     $Result.AddWarning("Failed to process subscription $($subscription.Name): $($_.Exception.Message)", @{Subscription=$subscription.Name})
                     continue

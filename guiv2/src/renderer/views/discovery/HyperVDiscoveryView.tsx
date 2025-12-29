@@ -13,16 +13,20 @@ import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const HyperVDiscoveryView: React.FC = () => {
   const {
     config,
     result,
     isDiscovering,
+    isCancelling,
     progress,
     activeTab,
     filter,
     error,
+    logs,
+    showExecutionDialog,
     columns,
     filteredData,
     stats,
@@ -32,7 +36,9 @@ const HyperVDiscoveryView: React.FC = () => {
     startDiscovery,
     cancelDiscovery,
     exportToCSV,
-    exportToExcel
+    exportToExcel,
+    clearLogs,
+    setShowExecutionDialog
   } = useHyperVDiscoveryLogic();
 
   const [showConfig, setShowConfig] = useState(true);
@@ -303,6 +309,21 @@ const HyperVDiscoveryView: React.FC = () => {
           </div>
         )}
       </div>
+
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="Hyper-V Discovery"
+        scriptDescription="Discovering Hyper-V hosts, virtual machines, switches, and checkpoints"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? { percentage: progress.percentage || 0, message: progress.message || 'Processing...' } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

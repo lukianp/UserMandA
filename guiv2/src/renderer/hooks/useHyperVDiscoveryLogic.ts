@@ -9,6 +9,7 @@ import type { ColDef } from 'ag-grid-community';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { useProfileStore } from '../store/useProfileStore';
 import { getElectronAPI } from '../lib/electron-api-fallback';
+import { LogEntry } from './common/discoveryHookTypes';
 
 import {
   HyperVDiscoveryConfig,
@@ -34,11 +35,14 @@ interface HyperVDiscoveryState {
   config: Partial<HyperVDiscoveryConfig>;
   result: HyperVDiscoveryResult | null;
   isDiscovering: boolean;
+  isCancelling: boolean;
   progress: DiscoveryProgress;
   activeTab: TabType;
   filter: HyperVFilterState;
   cancellationToken: string | null;
   error: string | null;
+  logs: LogEntry[];
+  showExecutionDialog: boolean;
 }
 
 export const useHyperVDiscoveryLogic = () => {
@@ -59,6 +63,7 @@ export const useHyperVDiscoveryLogic = () => {
     },
     result: null,
     isDiscovering: false,
+    isCancelling: false,
     progress: { current: 0, total: 100, message: '', percentage: 0 },
     activeTab: 'overview',
     filter: {
@@ -68,7 +73,9 @@ export const useHyperVDiscoveryLogic = () => {
       showOnlyRunning: false
     },
     cancellationToken: null,
-    error: null
+    error: null,
+    logs: [],
+    showExecutionDialog: false
   });
 
   // Load previous discovery results from store on mount
@@ -97,24 +104,25 @@ export const useHyperVDiscoveryLogic = () => {
       }
     });
 
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data: any) => {
+      if (data.executionId === currentTokenRef.current) {
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : data.level === 'success' ? 'success' : 'info';
+        setState(prev => ({
+          ...prev,
+          logs: [...prev.logs, {
+            timestamp: new Date().toLocaleTimeString(),
+            message: data.message || '',
+            level: logLevel as 'info' | 'success' | 'warning' | 'error'
+          }]
+        }));
+      }
+    });
+
     const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data: any) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[HyperVDiscoveryHook] Discovery completed, raw data:', JSON.stringify(data).slice(0, 500));
 
         const result = data.result || data.data;
-
-        setState(prev => ({
-          ...prev,
-          result: result,
-          isDiscovering: false,
-          cancellationToken: null,
-          progress: {
-            current: 100,
-            total: 100,
-            message: 'Discovery completed',
-            percentage: 100
-          }
-        }));
 
         // Store result in discovery store
         const discoveryResult = {
@@ -134,6 +142,25 @@ export const useHyperVDiscoveryLogic = () => {
           createdAt: new Date().toISOString(),
         };
 
+        setState(prev => ({
+          ...prev,
+          result: result,
+          isDiscovering: false,
+          isCancelling: false,
+          cancellationToken: null,
+          progress: {
+            current: 100,
+            total: 100,
+            message: 'Discovery completed',
+            percentage: 100
+          },
+          logs: [...prev.logs, {
+            timestamp: new Date().toLocaleTimeString(),
+            message: `Discovery completed! Found ${result?.RecordCount || 0} Hyper-V items.`,
+            level: 'success' as const
+          }]
+        }));
+
         addDiscoveryResult(discoveryResult);
       }
     });
@@ -144,30 +171,64 @@ export const useHyperVDiscoveryLogic = () => {
         setState(prev => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           error: data.error || 'Discovery failed',
-          cancellationToken: null
+          cancellationToken: null,
+          logs: [...prev.logs, {
+            timestamp: new Date().toLocaleTimeString(),
+            message: `Discovery failed: ${data.error}`,
+            level: 'error' as const
+          }]
+        }));
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data: any) => {
+      if (data.executionId === currentTokenRef.current) {
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          isCancelling: false,
+          cancellationToken: null,
+          progress: { current: 0, total: 100, message: 'Cancelled', percentage: 0 },
+          logs: [...prev.logs, {
+            timestamp: new Date().toLocaleTimeString(),
+            message: 'Discovery cancelled by user',
+            level: 'warning' as const
+          }]
         }));
       }
     });
 
     return () => {
       if (unsubscribeProgress) unsubscribeProgress();
+      if (unsubscribeOutput) unsubscribeOutput();
       if (unsubscribeComplete) unsubscribeComplete();
       if (unsubscribeError) unsubscribeError();
+      if (unsubscribeCancelled) unsubscribeCancelled();
     };
-  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
+  }, []);
 
   // Start discovery
   const startDiscovery = useCallback(async () => {
     const token = `hyperv-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     currentTokenRef.current = token;
 
+    const companyName = state.config.companyName || selectedSourceProfile?.companyName || 'default';
+
     setState(prev => ({
       ...prev,
       isDiscovering: true,
+      isCancelling: false,
       cancellationToken: token,
       error: null,
-      progress: { current: 0, total: 100, message: 'Initializing Hyper-V discovery...', percentage: 0 }
+      progress: { current: 0, total: 100, message: 'Initializing Hyper-V discovery...', percentage: 0 },
+      logs: [{
+        timestamp: new Date().toLocaleTimeString(),
+        message: `Starting Hyper-V discovery for ${companyName}...`,
+        level: 'info' as const
+      }],
+      showExecutionDialog: true
     }));
 
     try {
@@ -221,6 +282,15 @@ export const useHyperVDiscoveryLogic = () => {
   // Cancel discovery
   const cancelDiscovery = useCallback(async () => {
     if (state.cancellationToken) {
+      setState(prev => ({
+        ...prev,
+        isCancelling: true,
+        logs: [...prev.logs, {
+          timestamp: new Date().toLocaleTimeString(),
+          message: 'Cancelling discovery...',
+          level: 'warning' as const
+        }]
+      }));
       try {
         await window.electron.cancelDiscovery(state.cancellationToken);
         console.log('[HyperVDiscoveryHook] Discovery cancelled:', state.cancellationToken);
@@ -232,6 +302,7 @@ export const useHyperVDiscoveryLogic = () => {
     setState(prev => ({
       ...prev,
       isDiscovering: false,
+      isCancelling: false,
       cancellationToken: null,
       progress: { current: 0, total: 100, message: 'Cancelled', percentage: 0 }
     }));
@@ -480,15 +551,28 @@ export const useHyperVDiscoveryLogic = () => {
     setState(prev => ({ ...prev, activeTab: tab }));
   }, []);
 
+  // Clear logs
+  const clearLogs = useCallback(() => {
+    setState(prev => ({ ...prev, logs: [] }));
+  }, []);
+
+  // Set show execution dialog
+  const setShowExecutionDialog = useCallback((show: boolean) => {
+    setState(prev => ({ ...prev, showExecutionDialog: show }));
+  }, []);
+
   return {
     // State
     config: state.config,
     result: state.result,
     isDiscovering: state.isDiscovering,
+    isCancelling: state.isCancelling,
     progress: state.progress,
     activeTab: state.activeTab,
     filter: state.filter,
     error: state.error,
+    logs: state.logs,
+    showExecutionDialog: state.showExecutionDialog,
 
     // Data
     columns,
@@ -502,7 +586,9 @@ export const useHyperVDiscoveryLogic = () => {
     startDiscovery,
     cancelDiscovery,
     exportToCSV,
-    exportToExcel
+    exportToExcel,
+    clearLogs,
+    setShowExecutionDialog
   };
 };
 

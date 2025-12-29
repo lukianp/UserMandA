@@ -53,7 +53,7 @@ const ActiveDirectoryDiscoveryView = lazy(() => import('./views/discovery/Active
 
 // Organisation Map
 const OrganisationMapView = lazy(() => import('./views/organisation/OrganisationMapView'));
-const AzureDiscoveryView = lazy(() => import('./views/discovery/AzureDiscoveryView'));
+const EntraIDM365DiscoveryView = lazy(() => import('./views/discovery/EntraIDM365DiscoveryView'));
 const AWSCloudInfrastructureDiscoveryView = lazy(() => import('./views/discovery/AWSCloudInfrastructureDiscoveryView'));
 const ExchangeDiscoveryView = lazy(() => import('./views/discovery/ExchangeDiscoveryView'));
 const SharePointDiscoveryView = lazy(() => import('./views/discovery/SharePointDiscoveryView'));
@@ -166,7 +166,7 @@ export const routes: RouteObject[] = [
   },
   {
     path: '/discovery/azure',
-    element: lazyLoad(() => import('./views/discovery/AzureDiscoveryView')),
+    element: lazyLoad(() => import('./views/discovery/EntraIDM365DiscoveryView')),
   },
   {
     path: '/discovery/aws',
@@ -215,6 +215,10 @@ export const routes: RouteObject[] = [
   {
     path: '/discovery/hyper-v',
     element: lazyLoad(() => import('./views/discovery/HyperVDiscoveryView')),
+  },
+  {
+    path: '/discovery/infrastructure',
+    element: lazyLoad(() => import('./views/discovery/InfrastructureDiscoveryView')),
   },
   {
     path: '/discovery/office365',
@@ -344,6 +348,54 @@ export const routes: RouteObject[] = [
   {
     path: '/discovery/azure-resource',
     element: lazyLoad(() => import('./views/discovery/AzureResourceDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-vmss',
+    element: lazyLoad(() => import('./views/discovery/AzureVMSSDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-functions',
+    element: lazyLoad(() => import('./views/discovery/AzureFunctionsDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-acr',
+    element: lazyLoad(() => import('./views/discovery/AzureACRDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-automation',
+    element: lazyLoad(() => import('./views/discovery/AzureAutomationDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-logicapps',
+    element: lazyLoad(() => import('./views/discovery/AzureLogicAppsDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-mgmt-groups',
+    element: lazyLoad(() => import('./views/discovery/AzureManagementGroupsDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-pim',
+    element: lazyLoad(() => import('./views/discovery/AzurePIMDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-sub-owners',
+    element: lazyLoad(() => import('./views/discovery/AzureSubscriptionOwnersDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-keyvault-access',
+    element: lazyLoad(() => import('./views/discovery/AzureKeyVaultAccessDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-managed-identities',
+    element: lazyLoad(() => import('./views/discovery/AzureManagedIdentitiesDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-sp-credentials',
+    element: lazyLoad(() => import('./views/discovery/AzureServicePrincipalCredentialsDiscoveryView')),
+  },
+  {
+    path: '/discovery/azure-storage-access',
+    element: lazyLoad(() => import('./views/discovery/AzureStorageAccountAccessDiscoveryView')),
   },
 
   // Auto-generated discovered data routes (CSV display views)

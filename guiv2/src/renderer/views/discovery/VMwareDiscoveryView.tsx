@@ -6,6 +6,7 @@ import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataG
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { Select } from '../../components/atoms/Select';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 import type { VMwareDiscoveryResult } from '../../types/models/vmware';
 
 const formatBytes = (bytes: number): string => {
@@ -106,6 +107,7 @@ const VMwareDiscoveryView: React.FC = () => {
     setConfig,
     result,
     isLoading,
+    isCancelling,
     progress,
     error,
     searchText,
@@ -114,6 +116,7 @@ const VMwareDiscoveryView: React.FC = () => {
     setActiveTab,
     templates,
     handleStartDiscovery,
+    cancelDiscovery,
     handleApplyTemplate,
     handleExport,
     filteredHosts,
@@ -123,6 +126,10 @@ const VMwareDiscoveryView: React.FC = () => {
     vmColumns,
     clusterColumns,
     stats,
+    logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
+    clearLogs,
   } = useVMwareDiscoveryLogic();
 
   return (
@@ -250,13 +257,13 @@ const VMwareDiscoveryView: React.FC = () => {
                   Overview
                 </TabButton>
                 <TabButton active={activeTab === 'hosts'} onClick={() => setActiveTab('hosts')}>
-                  Hosts ({filteredHosts.length})
+                  Hosts ({filteredHosts?.length || 0})
                 </TabButton>
                 <TabButton active={activeTab === 'vms'} onClick={() => setActiveTab('vms')}>
-                  Virtual Machines ({filteredVMs.length})
+                  Virtual Machines ({filteredVMs?.length || 0})
                 </TabButton>
                 <TabButton active={activeTab === 'clusters'} onClick={() => setActiveTab('clusters')}>
-                  Clusters ({filteredClusters.length})
+                  Clusters ({filteredClusters?.length || 0})
                 </TabButton>
               </div>
 
@@ -329,6 +336,22 @@ const VMwareDiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isLoading && setShowExecutionDialog(false)}
+        scriptName="VMware Discovery"
+        scriptDescription="Discovering VMware vSphere infrastructure including hosts, VMs, clusters, and datastores"
+        logs={logs}
+        isRunning={isLoading}
+        isCancelling={isCancelling}
+        progress={progress ? { percentage: progress, message: 'Discovery in progress...' } : undefined}
+        onStart={handleStartDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

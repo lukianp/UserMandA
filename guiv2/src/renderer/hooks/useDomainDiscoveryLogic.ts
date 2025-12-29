@@ -37,6 +37,15 @@ export interface DomainDiscoveryLog {
   message: string;
 }
 
+/**
+ * Log entry interface for PowerShellExecutionDialog
+ */
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+}
+
 export interface SelectedProfile {
   id: string;
   name: string;
@@ -49,7 +58,8 @@ export interface DomainDiscoveryHookReturn {
   isComplete: boolean;
   progress: DomainDiscoveryProgress | null;
   results: DomainDiscoveryResult[] | null;
-  logs: string[];
+  logs: LogEntry[];
+  showExecutionDialog: boolean;
   error: string | null;
   formData: DomainDiscoveryFormData;
   selectedProfile: SelectedProfile | null;
@@ -62,6 +72,7 @@ export interface DomainDiscoveryHookReturn {
   stopDiscovery: () => void;
   resetDiscovery: () => void;
   clearLogs: () => void;
+  setShowExecutionDialog: (show: boolean) => void;
   updateFormData: (data: Partial<DomainDiscoveryFormData>) => void;
   updateFormField: (field: keyof DomainDiscoveryFormData, value: any) => void;
   resetForm: () => void;
@@ -83,7 +94,8 @@ export function useDomainDiscoveryLogic(): DomainDiscoveryHookReturn {
   const [isComplete, setIsComplete] = useState(false);
   const [progress, setProgress] = useState<DomainDiscoveryProgress | null>(null);
   const [results, setResults] = useState<DomainDiscoveryResult[] | null>(null);
-  const [logs, setLogs] = useState<string[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [showExecutionDialog, setShowExecutionDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<DomainDiscoveryFormData>({
@@ -113,8 +125,13 @@ export function useDomainDiscoveryLogic(): DomainDiscoveryHookReturn {
   /**
    * Add a log entry
    */
-  const addLog = useCallback((message: string) => {
-    setLogs(prev => [...prev, message]);
+  const addLog = useCallback((message: string, level: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      message,
+      level,
+    };
+    setLogs(prev => [...prev, entry]);
   }, []);
 
   // ✅ ADDED: Event listeners for PowerShell streaming - Set up ONCE on mount
@@ -123,7 +140,16 @@ export function useDomainDiscoveryLogic(): DomainDiscoveryHookReturn {
 
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
-        addLog(data.message);
+        const message = data.message || '';
+        let level: 'info' | 'success' | 'warning' | 'error' = 'info';
+        if (message.toLowerCase().includes('error') || message.toLowerCase().includes('failed')) {
+          level = 'error';
+        } else if (message.toLowerCase().includes('warning') || message.toLowerCase().includes('warn')) {
+          level = 'warning';
+        } else if (message.toLowerCase().includes('success') || message.toLowerCase().includes('completed') || message.toLowerCase().includes('found')) {
+          level = 'success';
+        }
+        addLog(message, level);
       }
     });
 
@@ -157,15 +183,16 @@ export function useDomainDiscoveryLogic(): DomainDiscoveryHookReturn {
         }
 
         addResult(result); // ✅ ADDED: Store in discovery store
-        addLog(`Discovery completed! Found ${result.itemCount} items.`);
+        addLog(`Discovery completed! Found ${result.itemCount} items.`, 'success');
       }
     });
 
     const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         setIsRunning(false);
+        setIsCancelling(false);
         setError(data.error);
-        addLog(`Discovery failed: ${data.error}`);
+        addLog(`Discovery failed: ${data.error}`, 'error');
       }
     });
 
@@ -174,7 +201,7 @@ export function useDomainDiscoveryLogic(): DomainDiscoveryHookReturn {
         setIsRunning(false);
         setIsCancelling(false);
         setCurrentToken(null);
-        addLog('Discovery cancelled by user');
+        addLog('Discovery cancelled by user', 'warning');
       }
     });
 
@@ -209,7 +236,8 @@ export function useDomainDiscoveryLogic(): DomainDiscoveryHookReturn {
       currentOperation: 'Connecting to domain controller...',
       overallProgress: 0,
     });
-    setLogs([]);
+    setLogs([{ timestamp: new Date().toISOString(), message: 'Starting discovery...', level: 'info' as const }]);
+    setShowExecutionDialog(true);
 
     const token = `domain-discovery-${Date.now()}`;
     setCurrentToken(token);
@@ -259,23 +287,23 @@ export function useDomainDiscoveryLogic(): DomainDiscoveryHookReturn {
     if (!isRunning || !currentToken) return;
 
     setIsCancelling(true);
-    addLog('Cancelling discovery...');
+    addLog('Cancelling discovery...', 'warning');
 
     window.electron.cancelDiscovery(currentToken)
       .then(() => {
-        addLog('Discovery cancellation requested successfully');
+        addLog('Discovery cancellation requested successfully', 'info');
 
         // Set timeout as fallback in case cancelled event doesn't fire
         setTimeout(() => {
           setIsRunning(false);
           setIsCancelling(false);
           setCurrentToken(null);
-          addLog('Discovery cancelled');
+          addLog('Discovery cancelled', 'warning');
         }, 2000);
       })
       .catch((err: any) => {
         const errorMessage = err.message || 'Error cancelling discovery';
-        addLog(errorMessage);
+        addLog(errorMessage, 'error');
         // Reset state even on error
         setIsRunning(false);
         setIsCancelling(false);
@@ -337,6 +365,7 @@ export function useDomainDiscoveryLogic(): DomainDiscoveryHookReturn {
     progress,
     results,
     logs,
+    showExecutionDialog,
     error,
     formData,
     selectedProfile,
@@ -349,6 +378,7 @@ export function useDomainDiscoveryLogic(): DomainDiscoveryHookReturn {
     stopDiscovery,
     resetDiscovery,
     clearLogs,
+    setShowExecutionDialog,
     updateFormData,
     updateFormField,
     resetForm,

@@ -23,6 +23,14 @@ import {
   Shield,
   Server,
   PlayCircle,
+  Settings,
+  Zap,
+  Workflow,
+  Layers,
+  UserCog,
+  Key,
+  KeyRound,
+  Fingerprint,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -50,6 +58,14 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Network,
   Shield,
   Server,
+  Settings,
+  Zap,
+  Workflow,
+  Layers,
+  UserCog,
+  Key,
+  KeyRound,
+  Fingerprint,
 };
 
 /**

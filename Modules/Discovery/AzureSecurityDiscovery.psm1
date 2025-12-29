@@ -370,6 +370,783 @@ function Invoke-AzureSecurityDiscovery {
         }
         #endregion
 
+        #region Management Groups Discovery (AzureHound-inspired Phase 3)
+        Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Discovering Azure Management Groups..." -Level "INFO"
+
+        try {
+            $managementGroups = @()
+            $mgUri = "https://management.azure.com/providers/Microsoft.Management/managementGroups?api-version=2021-04-01"
+
+            try {
+                $mgResponse = Invoke-MgGraphRequest -Uri $mgUri -Method GET
+                $managementGroups = $mgResponse.value
+            } catch {
+                Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Could not enumerate Management Groups - may require elevated permissions" -Level "WARNING"
+                $managementGroups = @()
+            }
+
+            foreach ($mg in $managementGroups) {
+                # Get management group details
+                $mgDetails = $null
+                try {
+                    $mgDetailUri = "https://management.azure.com/providers/Microsoft.Management/managementGroups/$($mg.name)?api-version=2021-04-01&`$expand=children,ancestors"
+                    $mgDetails = Invoke-MgGraphRequest -Uri $mgDetailUri -Method GET
+                } catch {
+                    $mgDetails = $mg
+                }
+
+                $properties = $mgDetails.properties
+                $childCount = if ($properties.children) { @($properties.children).Count } else { 0 }
+                $ancestorCount = if ($properties.path) { @($properties.path).Count } else { 0 }
+
+                # Calculate hierarchy level
+                $level = 0
+                if ($properties.path) {
+                    $level = @($properties.path).Count
+                }
+
+                # Get child subscriptions and management groups
+                $childSubscriptions = @()
+                $childMGs = @()
+                if ($properties.children) {
+                    $childSubscriptions = @($properties.children | Where-Object { $_.type -eq '/subscriptions' })
+                    $childMGs = @($properties.children | Where-Object { $_.type -eq 'Microsoft.Management/managementGroups' })
+                }
+
+                $mgData = [PSCustomObject]@{
+                    ObjectType = "ManagementGroup"
+                    Id = $mg.id
+                    Name = $mg.name
+                    DisplayName = $properties.displayName
+                    TenantId = $properties.tenantId
+                    Type = $mg.type
+
+                    # Hierarchy
+                    Level = $level
+                    ParentId = if ($properties.details.parent) { $properties.details.parent.id } else { $null }
+                    ParentName = if ($properties.details.parent) { $properties.details.parent.displayName } else { $null }
+
+                    # Children
+                    ChildCount = $childCount
+                    ChildSubscriptionCount = $childSubscriptions.Count
+                    ChildMGCount = $childMGs.Count
+                    ChildSubscriptions = ($childSubscriptions | ForEach-Object { $_.displayName }) -join '; '
+                    ChildManagementGroups = ($childMGs | ForEach-Object { $_.displayName }) -join '; '
+
+                    # Ancestors path
+                    AncestorPath = if ($properties.path) { ($properties.path | ForEach-Object { $_.displayName }) -join ' > ' } else { $null }
+
+                    _DataType = 'ManagementGroups'
+                    SessionId = $SessionId
+                }
+                $null = $allDiscoveredData.Add($mgData)
+            }
+
+            $Result.Metadata["ManagementGroupCount"] = $managementGroups.Count
+            Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Management Group Discovery - Found $($managementGroups.Count) management groups" -Level "SUCCESS"
+
+        } catch {
+            $Result.AddError("Failed to discover Management Groups: $($_.Exception.Message)", $_.Exception, @{Section="ManagementGroups"})
+        }
+        #endregion
+
+        #region PIM Eligible Roles Discovery (AzureHound-inspired Phase 3)
+        Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Discovering PIM Eligible Role Assignments..." -Level "INFO"
+
+        try {
+            $pimAssignments = @()
+            $pimUri = "https://graph.microsoft.com/v1.0/roleManagement/directory/roleEligibilityScheduleInstances"
+
+            try {
+                do {
+                    $response = Invoke-MgGraphRequest -Uri $pimUri -Method GET
+                    $pimAssignments += $response.value
+                    $pimUri = $response.'@odata.nextLink'
+                } while ($pimUri)
+            } catch {
+                Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Could not enumerate PIM Eligible Roles - may require PIM license or elevated permissions" -Level "WARNING"
+                $pimAssignments = @()
+            }
+
+            foreach ($assignment in $pimAssignments) {
+                # Get role definition name
+                $roleName = "Unknown"
+                try {
+                    $roleUri = "https://graph.microsoft.com/v1.0/directoryRoles?`$filter=roleTemplateId eq '$($assignment.roleDefinitionId)'"
+                    $roleResponse = Invoke-MgGraphRequest -Uri $roleUri -Method GET
+                    if ($roleResponse.value -and $roleResponse.value.Count -gt 0) {
+                        $roleName = $roleResponse.value[0].displayName
+                    } else {
+                        # Try roleDefinitions
+                        $roleDefUri = "https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions/$($assignment.roleDefinitionId)"
+                        $roleDefResponse = Invoke-MgGraphRequest -Uri $roleDefUri -Method GET
+                        $roleName = $roleDefResponse.displayName
+                    }
+                } catch {
+                    $roleName = $assignment.roleDefinitionId
+                }
+
+                # Get principal details
+                $principalName = "Unknown"
+                $principalType = "Unknown"
+                try {
+                    $principalUri = "https://graph.microsoft.com/v1.0/directoryObjects/$($assignment.principalId)"
+                    $principalResponse = Invoke-MgGraphRequest -Uri $principalUri -Method GET
+                    $principalName = $principalResponse.displayName
+                    $principalType = switch ($principalResponse.'@odata.type') {
+                        '#microsoft.graph.user' { 'User' }
+                        '#microsoft.graph.group' { 'Group' }
+                        '#microsoft.graph.servicePrincipal' { 'ServicePrincipal' }
+                        default { $principalResponse.'@odata.type' }
+                    }
+                } catch { }
+
+                # Security assessment
+                $isHighPrivilege = $false
+                $highPrivilegeRoles = @('Global Administrator', 'Privileged Role Administrator', 'Security Administrator', 'User Administrator', 'Exchange Administrator', 'SharePoint Administrator')
+                if ($roleName -in $highPrivilegeRoles) {
+                    $isHighPrivilege = $true
+                }
+
+                $pimData = [PSCustomObject]@{
+                    ObjectType = "PIMEligibleRole"
+                    Id = $assignment.id
+                    PrincipalId = $assignment.principalId
+                    PrincipalName = $principalName
+                    PrincipalType = $principalType
+                    RoleDefinitionId = $assignment.roleDefinitionId
+                    RoleName = $roleName
+                    DirectoryScopeId = $assignment.directoryScopeId
+                    AppScopeId = $assignment.appScopeId
+                    StartDateTime = $assignment.startDateTime
+                    EndDateTime = $assignment.endDateTime
+                    MemberType = $assignment.memberType
+                    AssignmentType = $assignment.assignmentType
+
+                    # Security Assessment
+                    IsHighPrivilege = $isHighPrivilege
+
+                    _DataType = 'PIMEligibleRoles'
+                    SessionId = $SessionId
+                }
+                $null = $allDiscoveredData.Add($pimData)
+            }
+
+            $Result.Metadata["PIMEligibleRoleCount"] = $pimAssignments.Count
+            $highPrivCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'PIMEligibleRoles' -and $_.IsHighPrivilege }).Count
+            $Result.Metadata["HighPrivilegePIMCount"] = $highPrivCount
+            Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "PIM Discovery - Found $($pimAssignments.Count) eligible role assignments ($highPrivCount high privilege)" -Level "SUCCESS"
+
+        } catch {
+            $Result.AddError("Failed to discover PIM Eligible Roles: $($_.Exception.Message)", $_.Exception, @{Section="PIM"})
+        }
+        #endregion
+
+        #region Subscription Owners Discovery (AzureHound-inspired Phase 3)
+        Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Discovering Subscription Owners..." -Level "INFO"
+
+        try {
+            $subscriptionOwners = @()
+
+            # Use subscriptions already discovered in RBAC section
+            if (-not $subscriptions) {
+                try {
+                    $subsUri = "https://management.azure.com/subscriptions?api-version=2020-01-01"
+                    $subsResponse = Invoke-MgGraphRequest -Uri $subsUri -Method GET
+                    $subscriptions = $subsResponse.value
+                } catch {
+                    $subscriptions = @()
+                }
+            }
+
+            foreach ($subscription in $subscriptions) {
+                $subId = $subscription.subscriptionId
+                $subName = $subscription.displayName
+
+                # Get Owner role assignments for this subscription
+                try {
+                    $ownerRoleId = "8e3af657-a8ff-443c-a75c-2fe8c4bcb635" # Built-in Owner role GUID
+                    $ownerUri = "https://management.azure.com/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01&`$filter=roleDefinitionId eq '/subscriptions/$subId/providers/Microsoft.Authorization/roleDefinitions/$ownerRoleId'"
+
+                    $ownerResponse = Invoke-MgGraphRequest -Uri $ownerUri -Method GET
+                    $owners = $ownerResponse.value
+
+                    foreach ($owner in $owners) {
+                        $properties = $owner.properties
+
+                        # Get principal details
+                        $principalName = "Unknown"
+                        $principalType = $properties.principalType
+                        $principalEmail = $null
+                        try {
+                            $principalUri = "https://graph.microsoft.com/v1.0/directoryObjects/$($properties.principalId)"
+                            $principalResponse = Invoke-MgGraphRequest -Uri $principalUri -Method GET
+                            $principalName = $principalResponse.displayName
+                            if ($principalResponse.mail) {
+                                $principalEmail = $principalResponse.mail
+                            } elseif ($principalResponse.userPrincipalName) {
+                                $principalEmail = $principalResponse.userPrincipalName
+                            }
+                        } catch { }
+
+                        $ownerData = [PSCustomObject]@{
+                            ObjectType = "SubscriptionOwner"
+                            Id = $owner.id
+                            AssignmentName = $owner.name
+                            SubscriptionId = $subId
+                            SubscriptionName = $subName
+                            PrincipalId = $properties.principalId
+                            PrincipalName = $principalName
+                            PrincipalType = $principalType
+                            PrincipalEmail = $principalEmail
+                            Scope = $properties.scope
+                            CreatedOn = $properties.createdOn
+                            CreatedBy = $properties.createdBy
+                            UpdatedOn = $properties.updatedOn
+
+                            _DataType = 'SubscriptionOwners'
+                            SessionId = $SessionId
+                        }
+                        $null = $allDiscoveredData.Add($ownerData)
+                    }
+                } catch {
+                    Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Could not get owners for subscription $subName" -Level "WARNING"
+                }
+            }
+
+            $ownerCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'SubscriptionOwners' }).Count
+            $Result.Metadata["SubscriptionOwnerCount"] = $ownerCount
+            Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Subscription Owner Discovery - Found $ownerCount owner assignments across $($subscriptions.Count) subscriptions" -Level "SUCCESS"
+
+        } catch {
+            $Result.AddError("Failed to discover Subscription Owners: $($_.Exception.Message)", $_.Exception, @{Section="SubscriptionOwners"})
+        }
+        #endregion
+
+        #region Key Vault Access Policies Discovery (AzureHound-inspired Phase 4)
+        Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Discovering Key Vault Access Policies..." -Level "INFO"
+
+        try {
+            $keyVaultAccessPolicies = @()
+
+            # Use subscriptions already discovered
+            if (-not $subscriptions) {
+                try {
+                    $subsUri = "https://management.azure.com/subscriptions?api-version=2020-01-01"
+                    $subsResponse = Invoke-MgGraphRequest -Uri $subsUri -Method GET
+                    $subscriptions = $subsResponse.value
+                } catch {
+                    $subscriptions = @()
+                }
+            }
+
+            foreach ($subscription in $subscriptions) {
+                $subId = $subscription.subscriptionId
+                $subName = $subscription.displayName
+
+                # Get all Key Vaults in this subscription
+                try {
+                    $kvUri = "https://management.azure.com/subscriptions/$subId/providers/Microsoft.KeyVault/vaults?api-version=2022-07-01"
+                    $kvResponse = Invoke-MgGraphRequest -Uri $kvUri -Method GET
+                    $keyVaults = $kvResponse.value
+
+                    foreach ($kv in $keyVaults) {
+                        $kvName = $kv.name
+                        $kvId = $kv.id
+                        $kvLocation = $kv.location
+                        $resourceGroup = ($kvId -split '/resourceGroups/')[1] -split '/' | Select-Object -First 1
+
+                        # Get Key Vault properties with access policies
+                        try {
+                            $kvDetailUri = "https://management.azure.com$kvId`?api-version=2022-07-01"
+                            $kvDetails = Invoke-MgGraphRequest -Uri $kvDetailUri -Method GET
+                            $properties = $kvDetails.properties
+                            $accessPolicies = $properties.accessPolicies
+
+                            foreach ($policy in $accessPolicies) {
+                                # Get principal details
+                                $principalName = "Unknown"
+                                $principalType = "Unknown"
+                                try {
+                                    $principalUri = "https://graph.microsoft.com/v1.0/directoryObjects/$($policy.objectId)"
+                                    $principalResponse = Invoke-MgGraphRequest -Uri $principalUri -Method GET
+                                    $principalName = $principalResponse.displayName
+                                    $principalType = switch ($principalResponse.'@odata.type') {
+                                        '#microsoft.graph.user' { 'User' }
+                                        '#microsoft.graph.group' { 'Group' }
+                                        '#microsoft.graph.servicePrincipal' { 'ServicePrincipal' }
+                                        default { $principalResponse.'@odata.type' }
+                                    }
+                                } catch { }
+
+                                # Security assessment
+                                $hasSecretsAccess = $false
+                                $hasKeysAccess = $false
+                                $hasCertificatesAccess = $false
+                                $hasFullAccess = $false
+
+                                $secretPerms = @($policy.permissions.secrets) -join '; '
+                                $keyPerms = @($policy.permissions.keys) -join '; '
+                                $certPerms = @($policy.permissions.certificates) -join '; '
+                                $storagePerms = @($policy.permissions.storage) -join '; '
+
+                                if ($policy.permissions.secrets -and $policy.permissions.secrets.Count -gt 0) { $hasSecretsAccess = $true }
+                                if ($policy.permissions.keys -and $policy.permissions.keys.Count -gt 0) { $hasKeysAccess = $true }
+                                if ($policy.permissions.certificates -and $policy.permissions.certificates.Count -gt 0) { $hasCertificatesAccess = $true }
+                                if ($secretPerms -match 'all' -or $keyPerms -match 'all' -or $certPerms -match 'all') { $hasFullAccess = $true }
+
+                                $kvAccessData = [PSCustomObject]@{
+                                    ObjectType = "KeyVaultAccessPolicy"
+                                    KeyVaultName = $kvName
+                                    KeyVaultId = $kvId
+                                    KeyVaultLocation = $kvLocation
+                                    ResourceGroup = $resourceGroup
+                                    SubscriptionId = $subId
+                                    SubscriptionName = $subName
+                                    TenantId = $policy.tenantId
+                                    ObjectId = $policy.objectId
+                                    PrincipalName = $principalName
+                                    PrincipalType = $principalType
+                                    ApplicationId = $policy.applicationId
+                                    SecretsPermissions = $secretPerms
+                                    KeysPermissions = $keyPerms
+                                    CertificatesPermissions = $certPerms
+                                    StoragePermissions = $storagePerms
+
+                                    # Security flags
+                                    HasSecretsAccess = $hasSecretsAccess
+                                    HasKeysAccess = $hasKeysAccess
+                                    HasCertificatesAccess = $hasCertificatesAccess
+                                    HasFullAccess = $hasFullAccess
+
+                                    # Key Vault settings
+                                    EnableRbacAuthorization = $properties.enableRbacAuthorization
+                                    EnableSoftDelete = $properties.enableSoftDelete
+                                    EnablePurgeProtection = $properties.enablePurgeProtection
+                                    SoftDeleteRetentionDays = $properties.softDeleteRetentionInDays
+
+                                    _DataType = 'KeyVaultAccessPolicies'
+                                    SessionId = $SessionId
+                                }
+                                $null = $allDiscoveredData.Add($kvAccessData)
+                            }
+                        } catch {
+                            Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Could not get access policies for Key Vault $kvName" -Level "WARNING"
+                        }
+                    }
+                } catch {
+                    Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Could not enumerate Key Vaults in subscription $subName" -Level "WARNING"
+                }
+            }
+
+            $kvAccessCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'KeyVaultAccessPolicies' }).Count
+            $fullAccessCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'KeyVaultAccessPolicies' -and $_.HasFullAccess }).Count
+            $Result.Metadata["KeyVaultAccessPolicyCount"] = $kvAccessCount
+            $Result.Metadata["KeyVaultFullAccessCount"] = $fullAccessCount
+            Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Key Vault Access Discovery - Found $kvAccessCount access policies ($fullAccessCount with full access)" -Level "SUCCESS"
+
+        } catch {
+            $Result.AddError("Failed to discover Key Vault Access Policies: $($_.Exception.Message)", $_.Exception, @{Section="KeyVaultAccess"})
+        }
+        #endregion
+
+        #region Managed Identities Discovery (AzureHound-inspired Phase 4)
+        Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Discovering Managed Identities..." -Level "INFO"
+
+        try {
+            $managedIdentities = @()
+
+            # Use subscriptions already discovered
+            if (-not $subscriptions) {
+                try {
+                    $subsUri = "https://management.azure.com/subscriptions?api-version=2020-01-01"
+                    $subsResponse = Invoke-MgGraphRequest -Uri $subsUri -Method GET
+                    $subscriptions = $subsResponse.value
+                } catch {
+                    $subscriptions = @()
+                }
+            }
+
+            foreach ($subscription in $subscriptions) {
+                $subId = $subscription.subscriptionId
+                $subName = $subscription.displayName
+
+                # Get User-Assigned Managed Identities
+                try {
+                    $uamiUri = "https://management.azure.com/subscriptions/$subId/providers/Microsoft.ManagedIdentity/userAssignedIdentities?api-version=2023-01-31"
+                    $uamiResponse = Invoke-MgGraphRequest -Uri $uamiUri -Method GET
+                    $userAssignedIdentities = $uamiResponse.value
+
+                    foreach ($uami in $userAssignedIdentities) {
+                        $resourceGroup = ($uami.id -split '/resourceGroups/')[1] -split '/' | Select-Object -First 1
+
+                        # Get role assignments for this managed identity
+                        $roleAssignmentCount = 0
+                        $roleAssignments = @()
+                        try {
+                            $raUri = "https://management.azure.com/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01&`$filter=principalId eq '$($uami.properties.principalId)'"
+                            $raResponse = Invoke-MgGraphRequest -Uri $raUri -Method GET
+                            $roleAssignments = $raResponse.value
+                            $roleAssignmentCount = @($roleAssignments).Count
+                        } catch { }
+
+                        $miData = [PSCustomObject]@{
+                            ObjectType = "ManagedIdentity"
+                            Id = $uami.id
+                            Name = $uami.name
+                            Type = "UserAssigned"
+                            Location = $uami.location
+                            ResourceGroup = $resourceGroup
+                            SubscriptionId = $subId
+                            SubscriptionName = $subName
+                            PrincipalId = $uami.properties.principalId
+                            ClientId = $uami.properties.clientId
+                            TenantId = $uami.properties.tenantId
+                            Tags = ($uami.tags | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
+                            RoleAssignmentCount = $roleAssignmentCount
+
+                            _DataType = 'ManagedIdentities'
+                            SessionId = $SessionId
+                        }
+                        $null = $allDiscoveredData.Add($miData)
+                    }
+                } catch {
+                    Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Could not enumerate User-Assigned Managed Identities in subscription $subName" -Level "WARNING"
+                }
+
+                # Get resources with System-Assigned Managed Identities
+                # Check VMs, App Services, Function Apps, etc.
+                try {
+                    # Virtual Machines with System-Assigned Identity
+                    $vmUri = "https://management.azure.com/subscriptions/$subId/providers/Microsoft.Compute/virtualMachines?api-version=2023-03-01"
+                    $vmResponse = Invoke-MgGraphRequest -Uri $vmUri -Method GET
+                    $vms = $vmResponse.value
+
+                    foreach ($vm in $vms) {
+                        if ($vm.identity -and $vm.identity.type -match 'SystemAssigned') {
+                            $resourceGroup = ($vm.id -split '/resourceGroups/')[1] -split '/' | Select-Object -First 1
+                            $principalId = $vm.identity.principalId
+
+                            # Get role assignments
+                            $roleAssignmentCount = 0
+                            try {
+                                if ($principalId) {
+                                    $raUri = "https://management.azure.com/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01&`$filter=principalId eq '$principalId'"
+                                    $raResponse = Invoke-MgGraphRequest -Uri $raUri -Method GET
+                                    $roleAssignmentCount = @($raResponse.value).Count
+                                }
+                            } catch { }
+
+                            $miData = [PSCustomObject]@{
+                                ObjectType = "ManagedIdentity"
+                                Id = $vm.id
+                                Name = $vm.name
+                                Type = "SystemAssigned"
+                                ResourceType = "VirtualMachine"
+                                Location = $vm.location
+                                ResourceGroup = $resourceGroup
+                                SubscriptionId = $subId
+                                SubscriptionName = $subName
+                                PrincipalId = $principalId
+                                ClientId = $vm.identity.clientId
+                                TenantId = $vm.identity.tenantId
+                                Tags = ($vm.tags | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
+                                RoleAssignmentCount = $roleAssignmentCount
+
+                                _DataType = 'ManagedIdentities'
+                                SessionId = $SessionId
+                            }
+                            $null = $allDiscoveredData.Add($miData)
+                        }
+                    }
+
+                    # Web Apps with System-Assigned Identity
+                    $webAppUri = "https://management.azure.com/subscriptions/$subId/providers/Microsoft.Web/sites?api-version=2022-03-01"
+                    $webAppResponse = Invoke-MgGraphRequest -Uri $webAppUri -Method GET
+                    $webApps = $webAppResponse.value
+
+                    foreach ($webApp in $webApps) {
+                        if ($webApp.identity -and $webApp.identity.type -match 'SystemAssigned') {
+                            $resourceGroup = ($webApp.id -split '/resourceGroups/')[1] -split '/' | Select-Object -First 1
+                            $principalId = $webApp.identity.principalId
+
+                            # Get role assignments
+                            $roleAssignmentCount = 0
+                            try {
+                                if ($principalId) {
+                                    $raUri = "https://management.azure.com/subscriptions/$subId/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01&`$filter=principalId eq '$principalId'"
+                                    $raResponse = Invoke-MgGraphRequest -Uri $raUri -Method GET
+                                    $roleAssignmentCount = @($raResponse.value).Count
+                                }
+                            } catch { }
+
+                            $miData = [PSCustomObject]@{
+                                ObjectType = "ManagedIdentity"
+                                Id = $webApp.id
+                                Name = $webApp.name
+                                Type = "SystemAssigned"
+                                ResourceType = "WebApp"
+                                Location = $webApp.location
+                                ResourceGroup = $resourceGroup
+                                SubscriptionId = $subId
+                                SubscriptionName = $subName
+                                PrincipalId = $principalId
+                                ClientId = $webApp.identity.clientId
+                                TenantId = $webApp.identity.tenantId
+                                Tags = ($webApp.tags | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
+                                RoleAssignmentCount = $roleAssignmentCount
+
+                                _DataType = 'ManagedIdentities'
+                                SessionId = $SessionId
+                            }
+                            $null = $allDiscoveredData.Add($miData)
+                        }
+                    }
+                } catch {
+                    Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Could not enumerate System-Assigned Managed Identities in subscription $subName" -Level "WARNING"
+                }
+            }
+
+            $miCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'ManagedIdentities' }).Count
+            $userAssignedCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'ManagedIdentities' -and $_.Type -eq 'UserAssigned' }).Count
+            $systemAssignedCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'ManagedIdentities' -and $_.Type -eq 'SystemAssigned' }).Count
+            $Result.Metadata["ManagedIdentityCount"] = $miCount
+            $Result.Metadata["UserAssignedMICount"] = $userAssignedCount
+            $Result.Metadata["SystemAssignedMICount"] = $systemAssignedCount
+            Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Managed Identity Discovery - Found $miCount identities ($userAssignedCount user-assigned, $systemAssignedCount system-assigned)" -Level "SUCCESS"
+
+        } catch {
+            $Result.AddError("Failed to discover Managed Identities: $($_.Exception.Message)", $_.Exception, @{Section="ManagedIdentities"})
+        }
+        #endregion
+
+        #region Service Principal Credentials Discovery (AzureHound-inspired Phase 5)
+        Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Discovering Service Principal Credentials..." -Level "INFO"
+
+        try {
+            $appRegistrations = @()
+            $appsUri = "https://graph.microsoft.com/v1.0/applications?`$select=id,appId,displayName,passwordCredentials,keyCredentials,createdDateTime,signInAudience"
+
+            try {
+                do {
+                    $response = Invoke-MgGraphRequest -Uri $appsUri -Method GET
+                    $appRegistrations += $response.value
+                    $appsUri = $response.'@odata.nextLink'
+                } while ($appsUri)
+            } catch {
+                Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Could not enumerate App Registrations - may require Application.Read.All permission" -Level "WARNING"
+                $appRegistrations = @()
+            }
+
+            foreach ($app in $appRegistrations) {
+                # Process password credentials (secrets)
+                foreach ($secret in $app.passwordCredentials) {
+                    $expiryDate = if ($secret.endDateTime) { [DateTime]$secret.endDateTime } else { $null }
+                    $startDate = if ($secret.startDateTime) { [DateTime]$secret.startDateTime } else { $null }
+                    $isExpired = if ($expiryDate) { $expiryDate -lt (Get-Date) } else { $false }
+                    $daysUntilExpiry = if ($expiryDate -and -not $isExpired) { ($expiryDate - (Get-Date)).Days } else { 0 }
+                    $isExpiringSoon = $daysUntilExpiry -gt 0 -and $daysUntilExpiry -le 30
+
+                    # Calculate credential age
+                    $credentialAge = if ($startDate) { ((Get-Date) - $startDate).Days } else { $null }
+                    $isLongLived = $credentialAge -and $credentialAge -gt 365
+
+                    $credData = [PSCustomObject]@{
+                        ObjectType = "ServicePrincipalCredential"
+                        ApplicationId = $app.id
+                        AppId = $app.appId
+                        ApplicationName = $app.displayName
+                        CredentialType = "Secret"
+                        CredentialId = $secret.keyId
+                        DisplayName = $secret.displayName
+                        Hint = $secret.hint
+                        StartDateTime = $startDate
+                        EndDateTime = $expiryDate
+                        IsExpired = $isExpired
+                        IsExpiringSoon = $isExpiringSoon
+                        DaysUntilExpiry = $daysUntilExpiry
+                        CredentialAgeDays = $credentialAge
+                        IsLongLived = $isLongLived
+                        SignInAudience = $app.signInAudience
+                        ApplicationCreatedDateTime = $app.createdDateTime
+
+                        _DataType = 'ServicePrincipalCredentials'
+                        SessionId = $SessionId
+                    }
+                    $null = $allDiscoveredData.Add($credData)
+                }
+
+                # Process key credentials (certificates)
+                foreach ($cert in $app.keyCredentials) {
+                    $expiryDate = if ($cert.endDateTime) { [DateTime]$cert.endDateTime } else { $null }
+                    $startDate = if ($cert.startDateTime) { [DateTime]$cert.startDateTime } else { $null }
+                    $isExpired = if ($expiryDate) { $expiryDate -lt (Get-Date) } else { $false }
+                    $daysUntilExpiry = if ($expiryDate -and -not $isExpired) { ($expiryDate - (Get-Date)).Days } else { 0 }
+                    $isExpiringSoon = $daysUntilExpiry -gt 0 -and $daysUntilExpiry -le 30
+
+                    $credentialAge = if ($startDate) { ((Get-Date) - $startDate).Days } else { $null }
+                    $isLongLived = $credentialAge -and $credentialAge -gt 365
+
+                    $credData = [PSCustomObject]@{
+                        ObjectType = "ServicePrincipalCredential"
+                        ApplicationId = $app.id
+                        AppId = $app.appId
+                        ApplicationName = $app.displayName
+                        CredentialType = "Certificate"
+                        CredentialId = $cert.keyId
+                        DisplayName = $cert.displayName
+                        CertificateType = $cert.type
+                        CertificateUsage = $cert.usage
+                        StartDateTime = $startDate
+                        EndDateTime = $expiryDate
+                        IsExpired = $isExpired
+                        IsExpiringSoon = $isExpiringSoon
+                        DaysUntilExpiry = $daysUntilExpiry
+                        CredentialAgeDays = $credentialAge
+                        IsLongLived = $isLongLived
+                        SignInAudience = $app.signInAudience
+                        ApplicationCreatedDateTime = $app.createdDateTime
+
+                        _DataType = 'ServicePrincipalCredentials'
+                        SessionId = $SessionId
+                    }
+                    $null = $allDiscoveredData.Add($credData)
+                }
+            }
+
+            $spCredCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'ServicePrincipalCredentials' }).Count
+            $expiredCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'ServicePrincipalCredentials' -and $_.IsExpired }).Count
+            $expiringSoonCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'ServicePrincipalCredentials' -and $_.IsExpiringSoon }).Count
+            $Result.Metadata["ServicePrincipalCredentialCount"] = $spCredCount
+            $Result.Metadata["ExpiredCredentialCount"] = $expiredCount
+            $Result.Metadata["ExpiringSoonCredentialCount"] = $expiringSoonCount
+            Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "SP Credential Discovery - Found $spCredCount credentials ($expiredCount expired, $expiringSoonCount expiring soon)" -Level "SUCCESS"
+
+        } catch {
+            $Result.AddError("Failed to discover Service Principal Credentials: $($_.Exception.Message)", $_.Exception, @{Section="ServicePrincipalCredentials"})
+        }
+        #endregion
+
+        #region Storage Account Access Discovery (AzureHound-inspired Phase 5)
+        Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Discovering Storage Account Access..." -Level "INFO"
+
+        try {
+            # Use subscriptions already discovered
+            if (-not $subscriptions) {
+                try {
+                    $subsUri = "https://management.azure.com/subscriptions?api-version=2020-01-01"
+                    $subsResponse = Invoke-MgGraphRequest -Uri $subsUri -Method GET
+                    $subscriptions = $subsResponse.value
+                } catch {
+                    $subscriptions = @()
+                }
+            }
+
+            foreach ($subscription in $subscriptions) {
+                $subId = $subscription.subscriptionId
+                $subName = $subscription.displayName
+
+                # Get all Storage Accounts in this subscription
+                try {
+                    $storageUri = "https://management.azure.com/subscriptions/$subId/providers/Microsoft.Storage/storageAccounts?api-version=2023-01-01"
+                    $storageResponse = Invoke-MgGraphRequest -Uri $storageUri -Method GET
+                    $storageAccounts = $storageResponse.value
+
+                    foreach ($storage in $storageAccounts) {
+                        $resourceGroup = ($storage.id -split '/resourceGroups/')[1] -split '/' | Select-Object -First 1
+                        $properties = $storage.properties
+
+                        # Security assessment flags
+                        $allowBlobPublicAccess = $properties.allowBlobPublicAccess -eq $true
+                        $allowSharedKeyAccess = $properties.allowSharedKeyAccess -ne $false # Default is true
+                        $httpsOnly = $properties.supportsHttpsTrafficOnly -eq $true
+                        $minimumTlsVersion = $properties.minimumTlsVersion
+                        $isTls12 = $minimumTlsVersion -eq 'TLS1_2'
+
+                        # Network rules
+                        $networkRules = $properties.networkAcls
+                        $defaultAction = if ($networkRules) { $networkRules.defaultAction } else { 'Allow' }
+                        $isPubliclyAccessible = $defaultAction -eq 'Allow'
+                        $virtualNetworkRules = if ($networkRules.virtualNetworkRules) { @($networkRules.virtualNetworkRules).Count } else { 0 }
+                        $ipRules = if ($networkRules.ipRules) { @($networkRules.ipRules).Count } else { 0 }
+                        $bypass = if ($networkRules.bypass) { $networkRules.bypass } else { 'None' }
+
+                        # Encryption
+                        $encryption = $properties.encryption
+                        $keySource = if ($encryption) { $encryption.keySource } else { 'Microsoft.Storage' }
+                        $isCustomerManagedKey = $keySource -ne 'Microsoft.Storage'
+
+                        # Infrastructure encryption
+                        $requireInfraEncryption = $encryption.requireInfrastructureEncryption -eq $true
+
+                        $storageData = [PSCustomObject]@{
+                            ObjectType = "StorageAccountAccess"
+                            Id = $storage.id
+                            Name = $storage.name
+                            Location = $storage.location
+                            ResourceGroup = $resourceGroup
+                            SubscriptionId = $subId
+                            SubscriptionName = $subName
+                            Kind = $storage.kind
+                            SkuName = $storage.sku.name
+                            SkuTier = $storage.sku.tier
+                            CreationTime = $properties.creationTime
+                            PrimaryLocation = $properties.primaryLocation
+                            StatusOfPrimary = $properties.statusOfPrimary
+
+                            # Access Settings
+                            AllowBlobPublicAccess = $allowBlobPublicAccess
+                            AllowSharedKeyAccess = $allowSharedKeyAccess
+                            HttpsOnly = $httpsOnly
+                            MinimumTlsVersion = $minimumTlsVersion
+                            IsTls12 = $isTls12
+
+                            # Network Security
+                            NetworkDefaultAction = $defaultAction
+                            IsPubliclyAccessible = $isPubliclyAccessible
+                            VirtualNetworkRuleCount = $virtualNetworkRules
+                            IpRuleCount = $ipRules
+                            NetworkBypass = $bypass
+
+                            # Encryption
+                            KeySource = $keySource
+                            IsCustomerManagedKey = $isCustomerManagedKey
+                            RequireInfrastructureEncryption = $requireInfraEncryption
+
+                            # Endpoints
+                            BlobEndpoint = $properties.primaryEndpoints.blob
+                            FileEndpoint = $properties.primaryEndpoints.file
+                            TableEndpoint = $properties.primaryEndpoints.table
+                            QueueEndpoint = $properties.primaryEndpoints.queue
+
+                            # Security Risk Flags
+                            HasPublicBlobAccess = $allowBlobPublicAccess
+                            HasWeakTls = -not $isTls12
+                            HasPublicNetworkAccess = $isPubliclyAccessible
+
+                            _DataType = 'StorageAccountAccess'
+                            SessionId = $SessionId
+                        }
+                        $null = $allDiscoveredData.Add($storageData)
+                    }
+                } catch {
+                    Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Could not enumerate Storage Accounts in subscription $subName" -Level "WARNING"
+                }
+            }
+
+            $storageCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'StorageAccountAccess' }).Count
+            $publicBlobCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'StorageAccountAccess' -and $_.HasPublicBlobAccess }).Count
+            $publicNetworkCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'StorageAccountAccess' -and $_.HasPublicNetworkAccess }).Count
+            $Result.Metadata["StorageAccountCount"] = $storageCount
+            $Result.Metadata["PublicBlobAccessCount"] = $publicBlobCount
+            $Result.Metadata["PublicNetworkAccessCount"] = $publicNetworkCount
+            Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Storage Account Discovery - Found $storageCount accounts ($publicBlobCount with public blob access, $publicNetworkCount publicly accessible)" -Level "SUCCESS"
+
+        } catch {
+            $Result.AddError("Failed to discover Storage Account Access: $($_.Exception.Message)", $_.Exception, @{Section="StorageAccountAccess"})
+        }
+        #endregion
+
         $Result.RecordCount = $allDiscoveredData.Count
         Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Security Discovery Complete - Total Records: $($allDiscoveredData.Count)" -Level "SUCCESS"
 

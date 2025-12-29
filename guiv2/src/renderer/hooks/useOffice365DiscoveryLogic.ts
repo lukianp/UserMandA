@@ -23,6 +23,15 @@ import { useDiscoveryStore } from '../store/useDiscoveryStore';
 import { useProfileStore } from '../store/useProfileStore';
 
 /**
+ * Log Entry Interface for PowerShellExecutionDialog
+ */
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+}
+
+/**
  * Office 365 Discovery View State
  */
 interface Office365DiscoveryState {
@@ -40,9 +49,14 @@ interface Office365DiscoveryState {
 
   // UI State
   isDiscovering: boolean;
+  isCancelling: boolean;
   progress: Office365DiscoveryProgress | null;
   selectedTab: 'overview' | 'users' | 'licenses' | 'services' | 'security';
   selectedObjects: any[];
+
+  // PowerShellExecutionDialog state
+  logs: LogEntry[];
+  showExecutionDialog: boolean;
 
   // Errors
   errors: string[];
@@ -65,9 +79,12 @@ export const useOffice365DiscoveryLogic = () => {
     filter: createDefaultFilter(),
     searchText: '',
     isDiscovering: false,
+    isCancelling: false,
     progress: null,
     selectedTab: 'overview',
     selectedObjects: [],
+    logs: [],
+    showExecutionDialog: false,
     errors: [],
   });
 
@@ -96,8 +113,15 @@ export const useOffice365DiscoveryLogic = () => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[Office365DiscoveryHook] Discovery output:', data.message);
+        const logLevel: LogEntry['level'] = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
+        const logEntry: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: data.message,
+          level: logLevel,
+        };
         setState(prev => ({
           ...prev,
+          logs: [...prev.logs, logEntry],
           progress: prev.progress ? {
             ...prev.progress,
             currentOperation: data.message,
@@ -127,11 +151,142 @@ export const useOffice365DiscoveryLogic = () => {
           createdAt: new Date().toISOString(),
         };
 
+        // Transform the raw PowerShell result to the expected structure
+        let transformedResult: Office365DiscoveryResult;
+        const rawResult = data.result;
+
+        if (rawResult && rawResult.Data && Array.isArray(rawResult.Data)) {
+          // Group data by _DataType
+          const groupedData = rawResult.Data.reduce((acc: any, item: any) => {
+            const type = item._DataType;
+            if (!acc[type]) acc[type] = [];
+            acc[type].push(item);
+            return acc;
+          }, {});
+
+          transformedResult = {
+            id: `office365-discovery-${Date.now()}`,
+            configId: state.config.id,
+            configName: state.config.name,
+            startTime: new Date().toISOString(),
+            endTime: new Date().toISOString(),
+            status: 'completed',
+            progress: 100,
+            tenant: null,
+            users: groupedData.User || [],
+            guestUsers: groupedData.GuestUser || [],
+            licenses: groupedData.License || [],
+            services: groupedData.Service || [],
+            securityConfig: {
+              conditionalAccessPolicies: groupedData.ConditionalAccessPolicy || [],
+              mfaEnforced: false,
+              mfaRegisteredUsers: 0,
+              mfaEnabledUsers: 0,
+              mfaCoverage: 0,
+              securityDefaultsEnabled: false,
+              passwordPolicies: [],
+              dlpPolicies: groupedData.DLPPolicy || [],
+              threatProtectionEnabled: false,
+              advancedThreatProtectionEnabled: false,
+              retentionPolicies: groupedData.RetentionPolicy || [],
+              sensitivityLabels: [],
+              auditLogEnabled: false,
+              unifiedAuditLogEnabled: false,
+            },
+            stats: {
+              totalUsers: (groupedData.User?.length || 0) + (groupedData.GuestUser?.length || 0),
+              enabledUsers: 0,
+              disabledUsers: 0,
+              guestUsers: groupedData.GuestUser?.length || 0,
+              adminUsers: 0,
+              mfaEnabledUsers: 0,
+              mfaRegisteredUsers: 0,
+              totalLicenses: groupedData.License?.length || 0,
+              assignedLicenses: 0,
+              availableLicenses: 0,
+              totalServices: groupedData.Service?.length || 0,
+              healthyServices: 0,
+              degradedServices: 0,
+              unavailableServices: 0,
+              conditionalAccessPolicies: groupedData.ConditionalAccessPolicy?.length || 0,
+              dlpPolicies: groupedData.DLPPolicy?.length || 0,
+              retentionPolicies: groupedData.RetentionPolicy?.length || 0,
+            },
+            errors: rawResult.Errors || [],
+            warnings: rawResult.Warnings || [],
+            duration: data.duration,
+            objectsPerSecond: 0,
+          };
+        } else {
+          // Fallback to default structure if transformation fails
+          console.log('[Office365DiscoveryHook] Data transformation failed, using default structure');
+          transformedResult = {
+            id: `office365-discovery-${Date.now()}`,
+            configId: state.config.id,
+            configName: state.config.name,
+            startTime: new Date().toISOString(),
+            endTime: new Date().toISOString(),
+            status: 'completed',
+            progress: 100,
+            tenant: null,
+            users: [],
+            guestUsers: [],
+            licenses: [],
+            services: [],
+            securityConfig: {
+              conditionalAccessPolicies: [],
+              mfaEnforced: false,
+              mfaRegisteredUsers: 0,
+              mfaEnabledUsers: 0,
+              mfaCoverage: 0,
+              securityDefaultsEnabled: false,
+              passwordPolicies: [],
+              dlpPolicies: [],
+              threatProtectionEnabled: false,
+              advancedThreatProtectionEnabled: false,
+              retentionPolicies: [],
+              sensitivityLabels: [],
+              auditLogEnabled: false,
+              unifiedAuditLogEnabled: false,
+            },
+            stats: {
+              totalUsers: 0,
+              enabledUsers: 0,
+              disabledUsers: 0,
+              guestUsers: 0,
+              adminUsers: 0,
+              mfaEnabledUsers: 0,
+              mfaRegisteredUsers: 0,
+              totalLicenses: 0,
+              assignedLicenses: 0,
+              availableLicenses: 0,
+              totalServices: 0,
+              healthyServices: 0,
+              degradedServices: 0,
+              unavailableServices: 0,
+              conditionalAccessPolicies: 0,
+              dlpPolicies: 0,
+              retentionPolicies: 0,
+            },
+            errors: rawResult?.Errors || [],
+            warnings: rawResult?.Warnings || [],
+            duration: data.duration,
+            objectsPerSecond: 0,
+          };
+        }
+
+        const successLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: `Discovery completed! Found ${data?.result?.totalItems || transformedResult.stats?.totalUsers || 0} Office 365 items.`,
+          level: 'success',
+        };
         setState(prev => ({
           ...prev,
-          currentResult: data.result as Office365DiscoveryResult,
+          currentResult: transformedResult,
           isDiscovering: false,
+          isCancelling: false,
           progress: null,
+          logs: [...prev.logs, successLog],
         }));
 
         addResult(result);
@@ -142,11 +297,18 @@ export const useOffice365DiscoveryLogic = () => {
     const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.error('[Office365DiscoveryHook] Discovery error:', data.error);
+        const errorLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: `Discovery failed: ${data.error}`,
+          level: 'error',
+        };
         setState(prev => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           errors: [...prev.errors, data.error],
           progress: null,
+          logs: [...prev.logs, errorLog],
         }));
       }
     });
@@ -154,10 +316,17 @@ export const useOffice365DiscoveryLogic = () => {
     const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[Office365DiscoveryHook] Discovery cancelled');
+        const cancelLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: 'Discovery cancelled by user',
+          level: 'warning',
+        };
         setState(prev => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: null,
+          logs: [...prev.logs, cancelLog],
         }));
       }
     });
@@ -223,7 +392,19 @@ export const useOffice365DiscoveryLogic = () => {
     const token = `office365-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     currentTokenRef.current = token;
 
-    setState(prev => ({ ...prev, isDiscovering: true, errors: [], progress: null }));
+    const initialLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      message: `Starting Office 365 discovery for ${selectedSourceProfile.companyName}...`,
+      level: 'info',
+    };
+    setState(prev => ({
+      ...prev,
+      isDiscovering: true,
+      errors: [],
+      progress: null,
+      logs: [initialLog],
+      showExecutionDialog: true,
+    }));
 
     try {
       console.log('[Office365DiscoveryHook] Starting discovery with token:', token);
@@ -268,17 +449,28 @@ export const useOffice365DiscoveryLogic = () => {
   const cancelDiscovery = useCallback(async () => {
     if (!currentTokenRef.current) return;
 
+    const cancelLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      message: 'Cancelling discovery...',
+      level: 'warning',
+    };
+    setState(prev => ({
+      ...prev,
+      isCancelling: true,
+      logs: [...prev.logs, cancelLog],
+    }));
+
     try {
       console.log('[Office365DiscoveryHook] Cancelling discovery:', currentTokenRef.current);
       await window.electron.cancelDiscovery(currentTokenRef.current);
 
       setTimeout(() => {
-        setState(prev => ({ ...prev, isDiscovering: false, progress: null }));
+        setState(prev => ({ ...prev, isDiscovering: false, isCancelling: false, progress: null }));
         currentTokenRef.current = null;
       }, 2000);
     } catch (error) {
       console.error('[Office365DiscoveryHook] Failed to cancel discovery:', error);
-      setState(prev => ({ ...prev, isDiscovering: false, progress: null }));
+      setState(prev => ({ ...prev, isDiscovering: false, isCancelling: false, progress: null }));
       currentTokenRef.current = null;
     }
   }, []);
@@ -363,13 +555,15 @@ export const useOffice365DiscoveryLogic = () => {
 
     switch (state.selectedTab) {
       case 'users':
-        data = [...state.currentResult.users, ...(state.currentResult.guestUsers || [])];
+        const users = state.currentResult.users || [];
+        const guestUsers = state.currentResult.guestUsers || [];
+        data = [...users, ...guestUsers];
         break;
       case 'licenses':
-        data = state.currentResult.licenses;
+        data = state.currentResult.licenses || [];
         break;
       case 'services':
-        data = state.currentResult.services;
+        data = state.currentResult.services || [];
         break;
       case 'security':
         data = state.currentResult.securityConfig?.conditionalAccessPolicies || [];
@@ -428,7 +622,7 @@ export const useOffice365DiscoveryLogic = () => {
       data = (data ?? []).filter((item: any) => item.isAdmin === isAdmin);
     }
 
-    return data;
+    return data || [];
   }, [state.selectedTab, state.currentResult, state.filter, debouncedSearch]);
 
   /**
@@ -603,6 +797,20 @@ export const useOffice365DiscoveryLogic = () => {
     ],
   }), []);
 
+  /**
+   * Clear all logs
+   */
+  const clearLogs = useCallback(() => {
+    setState(prev => ({ ...prev, logs: [] }));
+  }, []);
+
+  /**
+   * Set show execution dialog
+   */
+  const setShowExecutionDialog = useCallback((show: boolean) => {
+    setState(prev => ({ ...prev, showExecutionDialog: show }));
+  }, []);
+
   return {
     // State
     config: state.config,
@@ -610,11 +818,16 @@ export const useOffice365DiscoveryLogic = () => {
     currentResult: state.currentResult,
     historicalResults: state.historicalResults,
     isDiscovering: state.isDiscovering,
+    isCancelling: state.isCancelling,
     progress: state.progress,
     selectedTab: state.selectedTab,
     selectedObjects: state.selectedObjects,
     errors: state.errors,
     searchText: state.searchText,
+
+    // PowerShellExecutionDialog state
+    logs: state.logs,
+    showExecutionDialog: state.showExecutionDialog,
 
     // Data
     filteredData,
@@ -627,6 +840,8 @@ export const useOffice365DiscoveryLogic = () => {
     loadTemplate,
     saveAsTemplate,
     exportResults,
+    clearLogs,
+    setShowExecutionDialog,
     setSelectedTab: (tab: typeof state.selectedTab) => setState(prev => ({ ...prev, selectedTab: tab })),
     setSearchText: (text: string) => setState(prev => ({ ...prev, searchText: text })),
     setSelectedObjects: (objects: any[]) => setState(prev => ({ ...prev, selectedObjects: objects })),

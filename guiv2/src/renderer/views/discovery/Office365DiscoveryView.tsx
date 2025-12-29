@@ -30,6 +30,7 @@ import SearchBar from '../../components/molecules/SearchBar';
 import { Button } from '../../components/atoms/Button';
 import Badge from '../../components/atoms/Badge';
 import ProgressBar from '../../components/molecules/ProgressBar';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 /**
  * Office 365 Discovery View Component
@@ -37,21 +38,26 @@ import ProgressBar from '../../components/molecules/ProgressBar';
 const Office365DiscoveryView: React.FC = () => {
   const {
     config,
-    templates,
+    templates = [],
     currentResult,
-    isDiscovering,
+    isDiscovering = false,
+    isCancelling = false,
     progress,
-    selectedTab,
-    searchText,
-    filteredData,
-    columnDefs,
-    errors,
+    selectedTab = 'overview',
+    searchText = '',
+    filteredData = [],
+    columnDefs = [],
+    errors = [],
+    logs = [],
+    showExecutionDialog = false,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
     loadTemplate,
     saveAsTemplate,
     exportResults,
+    clearLogs,
+    setShowExecutionDialog,
     setSelectedTab,
     setSearchText,
   } = useOffice365DiscoveryLogic();
@@ -209,7 +215,7 @@ const Office365DiscoveryView: React.FC = () => {
         )}
 
         {/* Error Display */}
-        {errors.length > 0 && (
+        {(errors && errors.length > 0) && (
           <div className="px-4 pb-4">
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
               <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">Errors:</h3>
@@ -286,7 +292,7 @@ const Office365DiscoveryView: React.FC = () => {
                   </p>
                   <div className="flex gap-4 mt-2 text-sm">
                     <span className="text-blue-700 dark:text-blue-300">
-                      {currentResult.tenant.verifiedDomains.length} verified domains
+                      {currentResult.tenant.verifiedDomains?.length || 0} verified domains
                     </span>
                     <span className="text-blue-700 dark:text-blue-300">
                       {currentResult.tenant.totalLicenses} total licenses
@@ -312,19 +318,19 @@ const Office365DiscoveryView: React.FC = () => {
               <TabButton
                 active={selectedTab === 'users'}
                 onClick={() => setSelectedTab('users')}
-                label={`Users (${currentResult.users.length + (currentResult.guestUsers?.length || 0)})`}
+                label={`Users (${(currentResult.users?.length || 0) + (currentResult.guestUsers?.length || 0)})`}
                 icon={<Users className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'licenses'}
                 onClick={() => setSelectedTab('licenses')}
-                label={`Licenses (${currentResult.licenses.length})`}
+                label={`Licenses (${currentResult.licenses?.length || 0})`}
                 icon={<Key className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'services'}
                 onClick={() => setSelectedTab('services')}
-                label={`Services (${currentResult.services.length})`}
+                label={`Services (${currentResult.services?.length || 0})`}
                 icon={<Activity className="w-4 h-4" />}
               />
               <TabButton
@@ -412,6 +418,22 @@ const Office365DiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+        scriptName="Office 365 Discovery"
+        scriptDescription="Discovering Office 365/Microsoft 365 users, licenses, services, and security configuration"
+        logs={logs}
+        isRunning={isDiscovering}
+        isCancelling={isCancelling}
+        progress={progress ? { percentage: progress.progress || 0, message: progress.currentOperation || 'Processing...' } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

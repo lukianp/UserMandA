@@ -10,6 +10,7 @@ import { useDomainDiscoveryLogic } from '../../hooks/useDomainDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 
 const DomainDiscoveryView: React.FC = () => {
   const {
@@ -23,6 +24,8 @@ const DomainDiscoveryView: React.FC = () => {
     results,
     error,
     logs,
+    showExecutionDialog,
+    setShowExecutionDialog,
     startDiscovery,
     cancelDiscovery,
     exportResults,
@@ -293,14 +296,16 @@ const DomainDiscoveryView: React.FC = () => {
                     <div
                       key={index}
                       className={`mb-1 ${
-                        log && typeof log === 'string' && log.includes('ERROR')
+                        log?.level === 'error'
                           ? 'text-red-400'
-                          : log && typeof log === 'string' && (log.includes('SUCCESS') || log.includes('completed'))
+                          : log?.level === 'success'
                           ? 'text-green-400'
+                          : log?.level === 'warning'
+                          ? 'text-yellow-400'
                           : 'text-gray-300'
                       }`}
                     >
-                      {log}
+                      {typeof log === 'string' ? log : log?.message}
                     </div>
                   ))
                 )}
@@ -309,6 +314,25 @@ const DomainDiscoveryView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* PowerShell Execution Dialog */}
+      <PowerShellExecutionDialog
+        isOpen={showExecutionDialog}
+        onClose={() => !isRunning && setShowExecutionDialog(false)}
+        scriptName="Domain Discovery"
+        scriptDescription="Discovering Active Directory domain objects and structure"
+        logs={logs}
+        isRunning={isRunning}
+        isCancelling={isCancelling}
+        progress={progress ? {
+          percentage: progress.overallProgress || 0,
+          message: progress.currentOperation || ''
+        } : undefined}
+        onStart={startDiscovery}
+        onStop={cancelDiscovery}
+        onClear={clearLogs}
+        showStartButton={false}
+      />
     </div>
   );
 };

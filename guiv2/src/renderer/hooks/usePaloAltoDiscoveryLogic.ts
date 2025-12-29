@@ -2,6 +2,15 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
+/**
+ * Log entry interface for PowerShell execution dialog
+ */
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+}
+
 export const usePaloAltoDiscoveryLogic = () => {
   const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
   const { addResult, getResultsByModuleName } = useDiscoveryStore();
@@ -13,12 +22,18 @@ export const usePaloAltoDiscoveryLogic = () => {
     isDiscovering: boolean;
     progress: { current: number; total: number; message: string; percentage: number };
     error: string | null;
+    isCancelling: boolean;
+    logs: LogEntry[];
+    showExecutionDialog: boolean;
   }>({
     config: { timeout: 300000 },
     result: null,
     isDiscovering: false,
     progress: { current: 0, total: 100, message: '', percentage: 0 },
     error: null,
+    isCancelling: false,
+    logs: [],
+    showExecutionDialog: false,
   });
 
   // Load previous results
@@ -29,8 +44,39 @@ export const usePaloAltoDiscoveryLogic = () => {
     }
   }, [getResultsByModuleName]);
 
+  // Helper function to add log entries
+  const addLog = useCallback((level: LogEntry['level'], message: string) => {
+    const entry: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level,
+      message,
+    };
+    setState(prev => ({ ...prev, logs: [...prev.logs, entry] }));
+  }, []);
+
   // Event listeners
   useEffect(() => {
+    const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        // Detect log level from message content
+        let level: LogEntry['level'] = 'info';
+        const msgLower = (data.message || '').toLowerCase();
+        if (msgLower.includes('error') || msgLower.includes('failed')) {
+          level = 'error';
+        } else if (msgLower.includes('warning') || msgLower.includes('warn')) {
+          level = 'warning';
+        } else if (msgLower.includes('success') || msgLower.includes('complete')) {
+          level = 'success';
+        }
+        const entry: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level,
+          message: data.message || '',
+        };
+        setState(prev => ({ ...prev, logs: [...prev.logs, entry] }));
+      }
+    });
+
     const unsubscribeComplete = window.electron?.onDiscoveryComplete?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         const discoveryResult = {
@@ -49,14 +95,52 @@ export const usePaloAltoDiscoveryLogic = () => {
           additionalData: data.result,
           createdAt: new Date().toISOString(),
         };
-        setState(prev => ({ ...prev, result: data.result, isDiscovering: false }));
+        const successLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level: 'success',
+          message: `Discovery completed! Found ${data?.result?.totalItems || 0} items.`,
+        };
+        setState(prev => ({
+          ...prev,
+          result: data.result,
+          isDiscovering: false,
+          isCancelling: false,
+          logs: [...prev.logs, successLog],
+        }));
         addResult(discoveryResult);
       }
     });
 
     const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
       if (data.executionId === currentTokenRef.current) {
-        setState(prev => ({ ...prev, isDiscovering: false, error: data.error }));
+        const errorLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level: 'error',
+          message: `Discovery failed: ${data.error}`,
+        };
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          isCancelling: false,
+          error: data.error,
+          logs: [...prev.logs, errorLog],
+        }));
+      }
+    });
+
+    const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
+      if (data.executionId === currentTokenRef.current) {
+        const cancelLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          level: 'warning',
+          message: 'Discovery cancelled by user',
+        };
+        setState(prev => ({
+          ...prev,
+          isDiscovering: false,
+          isCancelling: false,
+          logs: [...prev.logs, cancelLog],
+        }));
       }
     });
 
@@ -75,8 +159,10 @@ export const usePaloAltoDiscoveryLogic = () => {
     });
 
     return () => {
+      unsubscribeOutput?.();
       unsubscribeComplete?.();
       unsubscribeError?.();
+      unsubscribeCancelled?.();
       unsubscribeProgress?.();
     };
   }, []); // ✅ CRITICAL: Empty dependency array for event listeners
@@ -89,7 +175,21 @@ export const usePaloAltoDiscoveryLogic = () => {
 
     const token = `paloalto-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     currentTokenRef.current = token;
-    setState(prev => ({ ...prev, isDiscovering: true, error: null, result: null }));
+
+    const initialLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      level: 'info',
+      message: `Starting Palo Alto discovery for ${selectedSourceProfile.companyName}...`,
+    };
+
+    setState(prev => ({
+      ...prev,
+      isDiscovering: true,
+      error: null,
+      result: null,
+      logs: [initialLog],
+      showExecutionDialog: true,
+    }));
 
     try {
       await window.electron.executeDiscovery({
@@ -105,11 +205,34 @@ export const usePaloAltoDiscoveryLogic = () => {
 
   const cancelDiscovery = useCallback(async () => {
     if (currentTokenRef.current) {
+      const cancelLog: LogEntry = {
+        timestamp: new Date().toLocaleTimeString(),
+        level: 'warning',
+        message: 'Cancelling discovery...',
+      };
+      setState(prev => ({
+        ...prev,
+        isCancelling: true,
+        logs: [...prev.logs, cancelLog],
+      }));
       await window.electron.cancelDiscovery?.(currentTokenRef.current);
-      setState(prev => ({ ...prev, isDiscovering: false }));
       currentTokenRef.current = null;
     }
   }, []);
 
-  return { ...state, startDiscovery, cancelDiscovery };
+  const clearLogs = useCallback(() => {
+    setState(prev => ({ ...prev, logs: [] }));
+  }, []);
+
+  const setShowExecutionDialog = useCallback((show: boolean) => {
+    setState(prev => ({ ...prev, showExecutionDialog: show }));
+  }, []);
+
+  return {
+    ...state,
+    startDiscovery,
+    cancelDiscovery,
+    clearLogs,
+    setShowExecutionDialog,
+  };
 };

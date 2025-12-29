@@ -7,6 +7,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
+/**
+ * Log Entry Interface for PowerShellExecutionDialog
+ */
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+}
+
 interface VirtualizationDiscoveryConfig {
   includeHosts: boolean;
   includeVMs: boolean;
@@ -48,6 +57,7 @@ interface VirtualizationDiscoveryState {
   config: VirtualizationDiscoveryConfig;
   result: VirtualizationDiscoveryResult | null;
   isDiscovering: boolean;
+  isCancelling: boolean;
   progress: {
     current: number;
     total: number;
@@ -55,6 +65,8 @@ interface VirtualizationDiscoveryState {
     percentage: number;
   };
   error: string | null;
+  logs: LogEntry[];
+  showExecutionDialog: boolean;
 }
 
 export const useVirtualizationDiscoveryLogic = () => {
@@ -76,6 +88,7 @@ export const useVirtualizationDiscoveryLogic = () => {
     },
     result: null,
     isDiscovering: false,
+    isCancelling: false,
     progress: {
       current: 0,
       total: 100,
@@ -83,6 +96,8 @@ export const useVirtualizationDiscoveryLogic = () => {
       percentage: 0,
     },
     error: null,
+    logs: [],
+    showExecutionDialog: false,
   });
 
   // Load previous results on mount
@@ -106,8 +121,15 @@ export const useVirtualizationDiscoveryLogic = () => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[VirtualizationDiscoveryHook] Discovery output:', data.message);
+        const logLevel: LogEntry['level'] = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
+        const logEntry: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: data.message || '',
+          level: logLevel,
+        };
         setState((prev) => ({
           ...prev,
+          logs: [...prev.logs, logEntry],
           progress: {
             ...prev.progress,
             message: data.message || '',
@@ -137,16 +159,23 @@ export const useVirtualizationDiscoveryLogic = () => {
           createdAt: new Date().toISOString(),
         };
 
+        const successLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: `Discovery completed! Found ${discoveryResult.itemCount} items.`,
+          level: 'success',
+        };
         setState((prev) => ({
           ...prev,
           result: data.result as VirtualizationDiscoveryResult,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 100,
             total: 100,
             message: 'Completed',
             percentage: 100,
           },
+          logs: [...prev.logs, successLog],
         }));
 
         addResult(discoveryResult);
@@ -157,9 +186,15 @@ export const useVirtualizationDiscoveryLogic = () => {
     const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.error('[VirtualizationDiscoveryHook] Discovery error:', data.error);
+        const errorLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: `Discovery failed: ${data.error}`,
+          level: 'error',
+        };
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           error: data.error,
           progress: {
             current: 0,
@@ -167,6 +202,7 @@ export const useVirtualizationDiscoveryLogic = () => {
             message: '',
             percentage: 0,
           },
+          logs: [...prev.logs, errorLog],
         }));
       }
     });
@@ -174,15 +210,22 @@ export const useVirtualizationDiscoveryLogic = () => {
     const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.warn('[VirtualizationDiscoveryHook] Discovery cancelled');
+        const cancelLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: 'Discovery cancelled by user',
+          level: 'warning',
+        };
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 0,
             total: 100,
             message: 'Discovery cancelled',
             percentage: 0,
           },
+          logs: [...prev.logs, cancelLog],
         }));
       }
     });
@@ -206,7 +249,13 @@ export const useVirtualizationDiscoveryLogic = () => {
     if (state.isDiscovering) return;
 
     const token = `virtualization-discovery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    currentTokenRef.current = token;
 
+    const initialLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      message: `Starting Virtualization discovery for ${selectedSourceProfile.companyName}...`,
+      level: 'info',
+    };
     setState((prev) => ({
       ...prev,
       isDiscovering: true,
@@ -217,9 +266,9 @@ export const useVirtualizationDiscoveryLogic = () => {
         message: 'Starting Virtualization discovery...',
         percentage: 0,
       },
+      logs: [initialLog],
+      showExecutionDialog: true,
     }));
-
-    currentTokenRef.current = token;
 
     console.log(`[VirtualizationDiscoveryHook] Starting discovery for company: ${selectedSourceProfile.companyName}`);
     console.log('[VirtualizationDiscoveryHook] Parameters:', {
@@ -277,6 +326,17 @@ export const useVirtualizationDiscoveryLogic = () => {
   const cancelDiscovery = useCallback(async () => {
     if (!state.isDiscovering || !currentTokenRef.current) return;
 
+    const cancelLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      message: 'Cancelling discovery...',
+      level: 'warning',
+    };
+    setState((prev) => ({
+      ...prev,
+      isCancelling: true,
+      logs: [...prev.logs, cancelLog],
+    }));
+
     console.warn('[VirtualizationDiscoveryHook] Cancelling discovery...');
 
     try {
@@ -287,6 +347,7 @@ export const useVirtualizationDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 0,
             total: 100,
@@ -302,6 +363,7 @@ export const useVirtualizationDiscoveryLogic = () => {
       setState((prev) => ({
         ...prev,
         isDiscovering: false,
+        isCancelling: false,
         progress: {
           current: 0,
           total: 100,
@@ -324,15 +386,35 @@ export const useVirtualizationDiscoveryLogic = () => {
     setState((prev) => ({ ...prev, error: null }));
   }, []);
 
+  /**
+   * Clear all logs
+   */
+  const clearLogs = useCallback(() => {
+    setState((prev) => ({ ...prev, logs: [] }));
+  }, []);
+
+  /**
+   * Set show execution dialog
+   */
+  const setShowExecutionDialog = useCallback((show: boolean) => {
+    setState((prev) => ({ ...prev, showExecutionDialog: show }));
+  }, []);
+
   return {
     config: state.config,
     result: state.result,
     isDiscovering: state.isDiscovering,
+    isCancelling: state.isCancelling,
     progress: state.progress,
     error: state.error,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
     clearError,
+    // PowerShellExecutionDialog state
+    logs: state.logs,
+    showExecutionDialog: state.showExecutionDialog,
+    setShowExecutionDialog,
+    clearLogs,
   };
 };

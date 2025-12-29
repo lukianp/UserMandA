@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
+import { NetworkDiagnosticResults, InfrastructureDiscoveryResult } from '../types/models/discovery';
 
 interface InfrastructureDiscoveryConfig {
   includeServers: boolean;
@@ -16,40 +17,34 @@ interface InfrastructureDiscoveryConfig {
   maxResults: number;
   timeout: number;
   showWindow: boolean;
+  enableDiagnostics: boolean;
+  manualSubnets: string[];
 }
 
-interface InfrastructureDiscoveryResult {
-  totalServers?: number;
-  totalNetworkDevices?: number;
-  totalStorageDevices?: number;
-  totalSecurityDevices?: number;
-  totalVirtualization?: number;
-  totalItems?: number;
-  outputPath?: string;
-  servers?: any[];
-  networkDevices?: any[];
-  storageDevices?: any[];
-  securityDevices?: any[];
-  virtualization?: any[];
-  statistics?: {
-    physicalServers?: number;
-    virtualServers?: number;
-    totalStorage?: number;
-    networkSegments?: number;
-  };
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'warning' | 'error';
 }
 
 interface InfrastructureDiscoveryState {
   config: InfrastructureDiscoveryConfig;
   result: InfrastructureDiscoveryResult | null;
   isDiscovering: boolean;
+  isCancelling: boolean;
   progress: {
     current: number;
     total: number;
     message: string;
     percentage: number;
+    currentSubnet?: string;
+    totalSubnets?: number;
+    completedSubnets?: number;
+    currentPhase?: string;
   };
   error: string | null;
+  logs: LogEntry[];
+  showExecutionDialog: boolean;
 }
 
 export const useInfrastructureDiscoveryLogic = () => {
@@ -67,17 +62,39 @@ export const useInfrastructureDiscoveryLogic = () => {
       maxResults: 1000,
       timeout: 1200,
       showWindow: false,
+      enableDiagnostics: true,
+      manualSubnets: [],
     },
     result: null,
     isDiscovering: false,
+    isCancelling: false,
     progress: {
       current: 0,
       total: 100,
       message: '',
       percentage: 0,
+      currentSubnet: undefined,
+      totalSubnets: undefined,
+      completedSubnets: 0,
+      currentPhase: 'Ready',
     },
     error: null,
+    logs: [],
+    showExecutionDialog: false,
   });
+
+  // Helper to add log entry
+  const addLog = useCallback((message: string, level: LogEntry['level'] = 'info') => {
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      message,
+      level,
+    };
+    setState((prev) => ({
+      ...prev,
+      logs: [...prev.logs, entry],
+    }));
+  }, []);
 
   // Load previous results on mount
   useEffect(() => {
@@ -100,11 +117,79 @@ export const useInfrastructureDiscoveryLogic = () => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         console.log('[InfrastructureDiscoveryHook] Discovery output:', data.message);
+        const message = data.message || '';
+        // Determine log level based on message content
+        let level: LogEntry['level'] = 'info';
+        if (message.toLowerCase().includes('error') || message.toLowerCase().includes('failed')) {
+          level = 'error';
+        } else if (message.toLowerCase().includes('warning') || message.toLowerCase().includes('warn')) {
+          level = 'warning';
+        } else if (message.toLowerCase().includes('success') || message.toLowerCase().includes('complete') || message.toLowerCase().includes('found')) {
+          level = 'success';
+        }
+
+        // Parse progress information from PowerShell output
+        let progressUpdate: Partial<InfrastructureDiscoveryState['progress']> = {};
+
+        // Extract subnet scanning progress
+        if (message.includes('Adaptive scan:')) {
+          const subnetMatch = message.match(/Adaptive scan:\s*([0-9.\/]+)/);
+          if (subnetMatch) {
+            progressUpdate.currentSubnet = subnetMatch[1];
+            progressUpdate.currentPhase = 'Scanning subnet';
+          }
+        }
+
+        // Extract total subnet count
+        if (message.includes('Scanning ') && message.includes(' classified network segments')) {
+          const countMatch = message.match(/Scanning\s+(\d+)\s+classified network segments/);
+          if (countMatch) {
+            progressUpdate.totalSubnets = parseInt(countMatch[1]);
+            progressUpdate.completedSubnets = 0;
+            progressUpdate.currentPhase = 'Initializing scan';
+          }
+        }
+
+        // Track subnet completion
+        if (message.includes('No live hosts found') || message.includes('Found ') && message.includes(' live hosts')) {
+          progressUpdate.completedSubnets = (progressUpdate.completedSubnets || 0) + 1;
+          if (progressUpdate.totalSubnets && progressUpdate.completedSubnets) {
+            progressUpdate.percentage = Math.round((progressUpdate.completedSubnets / progressUpdate.totalSubnets) * 100);
+          }
+        }
+
+        // Extract phase information
+        if (message.includes('Starting Infrastructure discovery')) {
+          progressUpdate.currentPhase = 'Starting discovery';
+          progressUpdate.percentage = 5;
+        } else if (message.includes('Preparing infrastructure discovery tools')) {
+          progressUpdate.currentPhase = 'Preparing tools';
+          progressUpdate.percentage = 10;
+        } else if (message.includes('Intelligent nmap Management System')) {
+          progressUpdate.currentPhase = 'Setting up nmap';
+          progressUpdate.percentage = 15;
+        } else if (message.includes('Searching for system nmap')) {
+          progressUpdate.currentPhase = 'Checking nmap installation';
+          progressUpdate.percentage = 20;
+        } else if (message.includes('Discovering network topology')) {
+          progressUpdate.currentPhase = 'Discovering network topology';
+          progressUpdate.percentage = 30;
+        } else if (message.includes('Applying intelligent subnet classification')) {
+          progressUpdate.currentPhase = 'Classifying subnets';
+          progressUpdate.percentage = 50;
+        } else if (message.includes('Intelligent Adaptive Scanning Engine')) {
+          progressUpdate.currentPhase = 'Starting adaptive scanning';
+          progressUpdate.percentage = 60;
+        }
+
+        // Add log entry
         setState((prev) => ({
           ...prev,
+          logs: [...prev.logs, { timestamp: new Date().toISOString(), message, level }],
           progress: {
             ...prev.progress,
-            message: data.message || '',
+            message,
+            ...progressUpdate,
           },
         }));
       }
@@ -117,7 +202,7 @@ export const useInfrastructureDiscoveryLogic = () => {
         const discoveryResult = {
           id: `infrastructure-discovery-${Date.now()}`,
           name: 'Infrastructure Discovery',
-          moduleName: 'InfrastructureDiscovery',
+          moduleName: 'Infrastructure',
           displayName: 'Infrastructure Discovery',
           itemCount: data?.result?.totalItems || data?.result?.totalServers || 0,
           discoveryTime: new Date().toISOString(),
@@ -135,6 +220,8 @@ export const useInfrastructureDiscoveryLogic = () => {
           ...prev,
           result: data.result as InfrastructureDiscoveryResult,
           isDiscovering: false,
+          isCancelling: false,
+          logs: [...prev.logs, { timestamp: new Date().toISOString(), message: `Discovery completed! Found ${discoveryResult.itemCount} items.`, level: 'success' as const }],
           progress: {
             current: 100,
             total: 100,
@@ -154,7 +241,9 @@ export const useInfrastructureDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           error: data.error,
+          logs: [...prev.logs, { timestamp: new Date().toISOString(), message: `Error: ${data.error}`, level: 'error' as const }],
           progress: {
             current: 0,
             total: 100,
@@ -171,6 +260,8 @@ export const useInfrastructureDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
+          logs: [...prev.logs, { timestamp: new Date().toISOString(), message: 'Discovery cancelled by user', level: 'warning' as const }],
           progress: {
             current: 0,
             total: 100,
@@ -204,7 +295,10 @@ export const useInfrastructureDiscoveryLogic = () => {
     setState((prev) => ({
       ...prev,
       isDiscovering: true,
+      isCancelling: false,
       error: null,
+      logs: [{ timestamp: new Date().toISOString(), message: 'Starting Infrastructure discovery...', level: 'info' as const }],
+      showExecutionDialog: true,
       progress: {
         current: 0,
         total: 100,
@@ -235,6 +329,8 @@ export const useInfrastructureDiscoveryLogic = () => {
           IncludeSecurityDevices: state.config.includeSecurityDevices,
           IncludeVirtualization: state.config.includeVirtualization,
           MaxResults: state.config.maxResults,
+          EnableDiagnostics: state.config.enableDiagnostics,
+          ManualSubnets: state.config.manualSubnets,
         },
         executionOptions: {
           timeout: state.config.timeout * 1000,
@@ -266,6 +362,11 @@ export const useInfrastructureDiscoveryLogic = () => {
     if (!state.isDiscovering || !currentTokenRef.current) return;
 
     console.warn('[InfrastructureDiscoveryHook] Cancelling discovery...');
+    setState((prev) => ({
+      ...prev,
+      isCancelling: true,
+      logs: [...prev.logs, { timestamp: new Date().toISOString(), message: 'Cancelling discovery...', level: 'warning' as const }],
+    }));
 
     try {
       await window.electron.cancelDiscovery(currentTokenRef.current);
@@ -275,6 +376,7 @@ export const useInfrastructureDiscoveryLogic = () => {
         setState((prev) => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: {
             current: 0,
             total: 100,
@@ -290,6 +392,7 @@ export const useInfrastructureDiscoveryLogic = () => {
       setState((prev) => ({
         ...prev,
         isDiscovering: false,
+        isCancelling: false,
         progress: {
           current: 0,
           total: 100,
@@ -308,19 +411,67 @@ export const useInfrastructureDiscoveryLogic = () => {
     }));
   }, []);
 
+  const addManualSubnet = useCallback((subnet: string) => {
+    if (subnet && !state.config.manualSubnets.includes(subnet)) {
+      setState((prev) => ({
+        ...prev,
+        config: {
+          ...prev.config,
+          manualSubnets: [...prev.config.manualSubnets, subnet],
+        },
+      }));
+    }
+  }, [state.config.manualSubnets]);
+
+  const removeManualSubnet = useCallback((subnet: string) => {
+    setState((prev) => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        manualSubnets: prev.config.manualSubnets.filter(s => s !== subnet),
+      },
+    }));
+  }, []);
+
+  const clearManualSubnets = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        manualSubnets: [],
+      },
+    }));
+  }, []);
+
   const clearError = useCallback(() => {
     setState((prev) => ({ ...prev, error: null }));
+  }, []);
+
+  const clearLogs = useCallback(() => {
+    setState((prev) => ({ ...prev, logs: [] }));
+  }, []);
+
+  const setShowExecutionDialog = useCallback((show: boolean) => {
+    setState((prev) => ({ ...prev, showExecutionDialog: show }));
   }, []);
 
   return {
     config: state.config,
     result: state.result,
     isDiscovering: state.isDiscovering,
+    isCancelling: state.isCancelling,
     progress: state.progress,
     error: state.error,
+    logs: state.logs,
+    showExecutionDialog: state.showExecutionDialog,
     startDiscovery,
     cancelDiscovery,
     updateConfig,
     clearError,
+    clearLogs,
+    setShowExecutionDialog,
+    addManualSubnet,
+    removeManualSubnet,
+    clearManualSubnets,
   };
 };

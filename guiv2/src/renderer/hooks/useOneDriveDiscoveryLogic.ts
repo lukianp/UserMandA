@@ -25,6 +25,15 @@ import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
 /**
+ * Log Entry Interface for PowerShellExecutionDialog
+ */
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+}
+
+/**
  * OneDrive Discovery View State
  */
 interface OneDriveDiscoveryState {
@@ -42,9 +51,14 @@ interface OneDriveDiscoveryState {
 
   // UI State
   isDiscovering: boolean;
+  isCancelling: boolean;
   progress: OneDriveDiscoveryProgress | null;
   selectedTab: 'overview' | 'accounts' | 'files' | 'sharing';
   selectedObjects: any[];
+
+  // PowerShellExecutionDialog state
+  logs: LogEntry[];
+  showExecutionDialog: boolean;
 
   // Errors
   errors: string[];
@@ -67,9 +81,12 @@ export const useOneDriveDiscoveryLogic = () => {
     filter: createDefaultOneDriveFilter(),
     searchText: '',
     isDiscovering: false,
+    isCancelling: false,
     progress: null,
     selectedTab: 'overview',
     selectedObjects: [],
+    logs: [],
+    showExecutionDialog: false,
     errors: [],
   });
 
@@ -90,8 +107,17 @@ export const useOneDriveDiscoveryLogic = () => {
 
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
-        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warn' : 'info';
+        const logLevel: LogEntry['level'] = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
         console.log(`[OneDriveDiscoveryHook] ${logLevel}: ${data.message}`);
+        const logEntry: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: data.message,
+          level: logLevel,
+        };
+        setState(prev => ({
+          ...prev,
+          logs: [...prev.logs, logEntry],
+        }));
       }
     });
 
@@ -114,11 +140,18 @@ export const useOneDriveDiscoveryLogic = () => {
           createdAt: new Date().toISOString(),
         };
 
+        const successLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: `Discovery completed! Found ${data?.result?.totalItems || 0} OneDrive items.`,
+          level: 'success',
+        };
         setState(prev => ({
           ...prev,
           currentResult: data.result,
           isDiscovering: false,
+          isCancelling: false,
           progress: null,
+          logs: [...prev.logs, successLog],
         }));
 
         addResult(result); // ✅ ADDED: Store in discovery store
@@ -129,11 +162,18 @@ export const useOneDriveDiscoveryLogic = () => {
 
     const unsubscribeError = window.electron?.onDiscoveryError?.((data) => {
       if (data.executionId === currentTokenRef.current) {
+        const errorLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: `Discovery failed: ${data.error || 'Unknown error'}`,
+          level: 'error',
+        };
         setState(prev => ({
           ...prev,
           errors: [data.error || 'Discovery failed'],
           isDiscovering: false,
+          isCancelling: false,
           progress: null,
+          logs: [...prev.logs, errorLog],
         }));
         console.error('[OneDriveDiscoveryHook] Discovery failed:', data.error);
       }
@@ -141,10 +181,17 @@ export const useOneDriveDiscoveryLogic = () => {
 
     const unsubscribeCancelled = window.electron?.onDiscoveryCancelled?.((data) => {
       if (data.executionId === currentTokenRef.current) {
+        const cancelLog: LogEntry = {
+          timestamp: new Date().toLocaleTimeString(),
+          message: 'Discovery cancelled by user',
+          level: 'warning',
+        };
         setState(prev => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: null,
+          logs: [...prev.logs, cancelLog],
         }));
         setCurrentToken(null);
         console.log('[OneDriveDiscoveryHook] Discovery cancelled by user');
@@ -210,16 +257,23 @@ export const useOneDriveDiscoveryLogic = () => {
       return;
     }
 
+    const token = `onedrive-discovery-${Date.now()}`;
+    setCurrentToken(token);
+    currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
+
+    const initialLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      message: `Starting OneDrive discovery for ${selectedSourceProfile.companyName}...`,
+      level: 'info',
+    };
     setState(prev => ({
       ...prev,
       isDiscovering: true,
       progress: null,
       errors: [],
+      logs: [initialLog],
+      showExecutionDialog: true,
     }));
-
-    const token = `onedrive-discovery-${Date.now()}`;
-    setCurrentToken(token);
-    currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
 
     console.log(`[OneDriveDiscoveryHook] Starting OneDrive discovery for ${selectedSourceProfile.companyName}...`);
 
@@ -261,6 +315,17 @@ export const useOneDriveDiscoveryLogic = () => {
   const cancelDiscovery = async () => {
     if (!state.isDiscovering || !currentToken) return;
 
+    const cancelLog: LogEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      message: 'Cancelling discovery...',
+      level: 'warning',
+    };
+    setState(prev => ({
+      ...prev,
+      isCancelling: true,
+      logs: [...prev.logs, cancelLog],
+    }));
+
     console.log('[OneDriveDiscoveryHook] Cancelling discovery...');
 
     try {
@@ -272,6 +337,7 @@ export const useOneDriveDiscoveryLogic = () => {
         setState(prev => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           progress: null,
         }));
         setCurrentToken(null);
@@ -284,6 +350,7 @@ export const useOneDriveDiscoveryLogic = () => {
       setState(prev => ({
         ...prev,
         isDiscovering: false,
+        isCancelling: false,
         progress: null,
       }));
       setCurrentToken(null);
@@ -438,7 +505,7 @@ export const useOneDriveDiscoveryLogic = () => {
       );
     }
 
-    return data;
+    return data || [];
   }, [state.currentResult, state.selectedTab, debouncedSearch, state.filter]);
 
   /**
@@ -546,6 +613,20 @@ export const useOneDriveDiscoveryLogic = () => {
     return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
   };
 
+  /**
+   * Clear all logs
+   */
+  const clearLogs = useCallback(() => {
+    setState(prev => ({ ...prev, logs: [] }));
+  }, []);
+
+  /**
+   * Set show execution dialog
+   */
+  const setShowExecutionDialog = useCallback((show: boolean) => {
+    setState(prev => ({ ...prev, showExecutionDialog: show }));
+  }, []);
+
   return {
     // State
     config: state.config,
@@ -555,10 +636,15 @@ export const useOneDriveDiscoveryLogic = () => {
     filter: state.filter,
     searchText: state.searchText,
     isDiscovering: state.isDiscovering,
+    isCancelling: state.isCancelling,
     progress: state.progress,
     selectedTab: state.selectedTab,
     selectedObjects: state.selectedObjects,
     errors: state.errors,
+
+    // PowerShellExecutionDialog state
+    logs: state.logs,
+    showExecutionDialog: state.showExecutionDialog,
 
     // Data
     filteredData,
@@ -574,5 +660,7 @@ export const useOneDriveDiscoveryLogic = () => {
     updateFilter,
     setSelectedTab,
     setSearchText,
+    clearLogs,
+    setShowExecutionDialog,
   };
 };

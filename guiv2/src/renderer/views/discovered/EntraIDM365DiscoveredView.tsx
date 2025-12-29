@@ -19,14 +19,14 @@
  */
 
 import React, { useState } from 'react';
-import { Cloud, Users, Shield, Server, Settings, FolderTree } from 'lucide-react';
+import { Cloud, Users, Shield, Server, Settings, FolderTree, LucideIcon } from 'lucide-react';
 import { DiscoveredViewWrapper } from '../../components/organisms/DiscoveredViewWrapper';
 
 // Tab configuration for Azure data types
 interface AzureDataTab {
   id: string;
   label: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   csvPath: string;
   description: string;
   category: 'identity' | 'security' | 'infrastructure' | 'overview';
@@ -95,7 +95,7 @@ const azureDataTabs: AzureDataTab[] = [
  * Entra ID & Microsoft 365 Discovered View Component
  * Provides tabbed navigation for identity, security, and device data types
  */
-export const AzureDiscoveredView: React.FC = () => {
+export const EntraIDM365DiscoveredView: React.FC = () => {
   const [activeTab, setActiveTab] = useState('users');
   const currentTab = azureDataTabs.find(t => t.id === activeTab) || azureDataTabs[0];
 
@@ -189,4 +189,4 @@ export const AzureDiscoveredView: React.FC = () => {
   );
 };
 
-export default AzureDiscoveredView;
+export default EntraIDM365DiscoveredView;

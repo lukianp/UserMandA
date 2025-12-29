@@ -3,7 +3,7 @@ import ApplicationDiscoveryView from "./views/discovery/ApplicationDiscoveryView
 import ApplicationDependencyMappingDiscoveryView from "./views/discovery/ApplicationDependencyMappingDiscoveryView";
 import ApplicationDiscoveryDiscoveryView from "./views/discovery/ApplicationDiscoveryDiscoveryView";
 import AWSDiscoveryView from "./views/discovery/AWSDiscoveryView";
-import AzureDiscoveryView from "./views/discovery/AzureDiscoveryView";
+import EntraIDM365DiscoveryView from "./views/discovery/EntraIDM365DiscoveryView";
 import AzureResourceDiscoveryView from "./views/discovery/AzureResourceDiscoveryView";
 import BackupRecoveryDiscoveryView from "./views/discovery/BackupRecoveryDiscoveryView";
 import CertificateAuthorityDiscoveryView from "./views/discovery/CertificateAuthorityDiscoveryView";
@@ -74,7 +74,7 @@ export const AUTO_DISCOVERY_ROUTES = [
   { path: "/discovery/applicationdependencymapping", element: <ApplicationDependencyMappingDiscoveryView /> },
   { path: "/discovery/applicationdiscovery", element: <ApplicationDiscoveryDiscoveryView /> },
   { path: "/discovery/aws", element: <AWSDiscoveryView /> },
-  { path: "/discovery/azure", element: <AzureDiscoveryView /> },
+  { path: "/discovery/azure", element: <EntraIDM365DiscoveryView /> },
   { path: "/discovery/azureresource", element: <AzureResourceDiscoveryView /> },
   { path: "/discovery/backuprecovery", element: <BackupRecoveryDiscoveryView /> },
   { path: "/discovery/certificateauthority", element: <CertificateAuthorityDiscoveryView /> },

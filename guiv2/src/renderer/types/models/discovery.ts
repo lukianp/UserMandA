@@ -408,6 +408,63 @@ export interface ConnectionResult {
 }
 
 /**
+ * Network diagnostic test result
+ */
+export interface DiagnosticTestResult {
+  Test: string;
+  Result: 'PASS' | 'FAIL' | 'ERROR';
+  Details: string;
+}
+
+/**
+ * Alternative scan result
+ */
+export interface AlternativeScanResult {
+  Method: string;
+  HostsFound: number;
+  Details: string;
+}
+
+/**
+ * Network diagnostic results
+ */
+export interface NetworkDiagnosticResults {
+  ConnectivityTests: DiagnosticTestResult[];
+  AlternativeScans: AlternativeScanResult[];
+  Recommendations: string[];
+  IssuesDetected: string[];
+}
+
+/**
+ * Infrastructure discovery result with diagnostics
+ */
+export interface InfrastructureDiscoveryResult {
+  totalServers?: number;
+  totalNetworkDevices?: number;
+  totalStorageDevices?: number;
+  totalSecurityDevices?: number;
+  totalVirtualization?: number;
+  totalItems?: number;
+  outputPath?: string;
+  servers?: any[];
+  networkDevices?: any[];
+  storageDevices?: any[];
+  securityDevices?: any[];
+  virtualization?: any[];
+  statistics?: {
+    physicalServers?: number;
+    virtualServers?: number;
+    totalStorage?: number;
+    networkSegments?: number;
+  };
+  diagnostics?: NetworkDiagnosticResults;
+  manualSubnets?: string[];
+  manualSubnetResults?: any[];
+  discoveryTime?: string | Date;
+  duration?: number;
+}
+
+/**
  * History filter for discovery runs
  */
 export interface HistoryFilter {

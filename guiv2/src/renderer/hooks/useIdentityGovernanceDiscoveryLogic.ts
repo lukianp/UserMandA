@@ -8,6 +8,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { ColDef } from 'ag-grid-community';
 
+import { LogEntry } from './common/discoveryHookTypes';
 import {
   IGDiscoveryConfig,
   IGDiscoveryResult,
@@ -16,7 +17,7 @@ import {
   EntitlementPackage,
   PIMRole,
   IGStats
-} from '../types/models/identityGovernance';
+} from '../types/models/identitygovernance';
 import { useProfileStore } from '../store/useProfileStore';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
 
@@ -33,11 +34,14 @@ interface IGDiscoveryState {
   config: Partial<IGDiscoveryConfig>;
   result: IGDiscoveryResult | null;
   isDiscovering: boolean;
+  isCancelling: boolean;
   progress: DiscoveryProgress;
   activeTab: TabType;
   filter: IGFilterState;
   cancellationToken: string | null;
   error: string | null;
+  logs: LogEntry[];
+  showExecutionDialog: boolean;
 }
 
 export const useIdentityGovernanceDiscoveryLogic = () => {
@@ -55,11 +59,14 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
     },
     result: null,
     isDiscovering: false,
+    isCancelling: false,
     progress: { current: 0, total: 100, message: '', percentage: 0 },
     activeTab: 'overview',
     filter: { searchText: '', selectedStatuses: [] },
     cancellationToken: null,
-    error: null
+    error: null,
+    logs: [],
+    showExecutionDialog: false
   });
 
   const currentTokenRef = useRef<string | null>(null); // ✅ ADDED: Ref for event matching
@@ -71,12 +78,18 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
     const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
       if (data.executionId === currentTokenRef.current) {
         const message = data.message || '';
+        const logLevel = data.level === 'error' ? 'error' : data.level === 'warning' ? 'warning' : 'info';
         setState(prev => ({
           ...prev,
           progress: {
             ...prev.progress,
             message: message
-          }
+          },
+          logs: [...prev.logs, {
+            timestamp: new Date().toLocaleTimeString(),
+            message: message,
+            level: logLevel as 'info' | 'success' | 'warning' | 'error'
+          }]
         }));
       }
     });
@@ -104,11 +117,17 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
           ...prev,
           result: data.result || data,
           isDiscovering: false,
+          isCancelling: false,
           cancellationToken: null,
-          progress: { current: 100, total: 100, message: 'Completed', percentage: 100 }
+          progress: { current: 100, total: 100, message: 'Completed', percentage: 100 },
+          logs: [...prev.logs, {
+            timestamp: new Date().toLocaleTimeString(),
+            message: `Discovery completed! Found ${result.itemCount} items.`,
+            level: 'success' as const
+          }]
         }));
 
-        addResult(result); // ✅ ADDED: Store in discovery store
+        addResult(result);
         console.log(`[IGDiscoveryHook] Discovery completed! Found ${result.itemCount} items.`);
       }
     });
@@ -118,8 +137,14 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
         setState(prev => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           cancellationToken: null,
-          error: data.error
+          error: data.error,
+          logs: [...prev.logs, {
+            timestamp: new Date().toLocaleTimeString(),
+            message: `Discovery failed: ${data.error}`,
+            level: 'error' as const
+          }]
         }));
         console.error(`[IGDiscoveryHook] Discovery failed: ${data.error}`);
       }
@@ -130,8 +155,14 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
         setState(prev => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           cancellationToken: null,
-          progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 }
+          progress: { current: 0, total: 100, message: 'Discovery cancelled', percentage: 0 },
+          logs: [...prev.logs, {
+            timestamp: new Date().toLocaleTimeString(),
+            message: 'Discovery cancelled by user',
+            level: 'warning' as const
+          }]
         }));
         console.warn('[IGDiscoveryHook] Discovery cancelled by user');
       }
@@ -143,7 +174,7 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
       unsubscribeError?.();
       unsubscribeCancelled?.();
     };
-  }, []); // ✅ FIXED: Empty dependency array - critical for proper event handling
+  }, []);
 
   // Start discovery - FULLY FUNCTIONAL with error handling
   // ✅ FIXED: Now uses event-driven executeDiscovery API
@@ -159,12 +190,19 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
     setState(prev => ({
       ...prev,
       isDiscovering: true,
+      isCancelling: false,
       cancellationToken: token,
       error: null,
-      progress: { current: 0, total: 100, message: 'Initializing Identity Governance discovery...', percentage: 0 }
+      progress: { current: 0, total: 100, message: 'Initializing Identity Governance discovery...', percentage: 0 },
+      logs: [{
+        timestamp: new Date().toLocaleTimeString(),
+        message: `Starting Identity Governance discovery for ${selectedSourceProfile.companyName}...`,
+        level: 'info' as const
+      }],
+      showExecutionDialog: true
     }));
 
-    currentTokenRef.current = token; // ✅ CRITICAL: Update ref for event matching
+    currentTokenRef.current = token;
 
     console.log(`[IdentityGovernanceDiscovery] Starting discovery for company: ${selectedSourceProfile.companyName}`);
     console.log(`[IdentityGovernanceDiscovery] Parameters:`, {
@@ -211,6 +249,16 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
 
     console.warn('[IGDiscoveryHook] Cancelling discovery...');
 
+    setState(prev => ({
+      ...prev,
+      isCancelling: true,
+      logs: [...prev.logs, {
+        timestamp: new Date().toLocaleTimeString(),
+        message: 'Cancelling discovery...',
+        level: 'warning' as const
+      }]
+    }));
+
     try {
       await window.electron.cancelDiscovery(state.cancellationToken);
       console.log('[IGDiscoveryHook] Discovery cancellation requested successfully');
@@ -220,6 +268,7 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
         setState(prev => ({
           ...prev,
           isDiscovering: false,
+          isCancelling: false,
           cancellationToken: null,
           progress: { current: 0, total: 100, message: 'Cancelled by user', percentage: 0 }
         }));
@@ -232,6 +281,7 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
       setState(prev => ({
         ...prev,
         isDiscovering: false,
+        isCancelling: false,
         cancellationToken: null,
         progress: { current: 0, total: 100, message: '', percentage: 0 }
       }));
@@ -421,15 +471,28 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
     setState(prev => ({ ...prev, activeTab: tab }));
   }, []);
 
+  // Clear logs
+  const clearLogs = useCallback(() => {
+    setState(prev => ({ ...prev, logs: [] }));
+  }, []);
+
+  // Set show execution dialog
+  const setShowExecutionDialog = useCallback((show: boolean) => {
+    setState(prev => ({ ...prev, showExecutionDialog: show }));
+  }, []);
+
   return {
     // State
     config: state.config,
     result: state.result,
     isDiscovering: state.isDiscovering,
+    isCancelling: state.isCancelling,
     progress: state.progress,
     activeTab: state.activeTab,
     filter: state.filter,
     error: state.error,
+    logs: state.logs,
+    showExecutionDialog: state.showExecutionDialog,
 
     // Data
     columns,
@@ -443,7 +506,9 @@ export const useIdentityGovernanceDiscoveryLogic = () => {
     startDiscovery,
     cancelDiscovery,
     exportToCSV,
-    exportToExcel
+    exportToExcel,
+    clearLogs,
+    setShowExecutionDialog
   };
 };
 

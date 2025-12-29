@@ -257,10 +257,10 @@ const SQLServerDiscoveryView: React.FC = () => {
                   Overview
                 </TabButton>
                 <TabButton active={activeTab === 'instances'} onClick={() => setActiveTab('instances')}>
-                  Instances ({filteredInstances.length})
+                  Instances ({filteredInstances?.length || 0})
                 </TabButton>
                 <TabButton active={activeTab === 'databases'} onClick={() => setActiveTab('databases')}>
-                  Databases ({filteredDatabases.length})
+                  Databases ({filteredDatabases?.length || 0})
                 </TabButton>
               </div>
 

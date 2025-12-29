@@ -275,19 +275,19 @@ const TeamsDiscoveryView: React.FC = () => {
               <TabButton
                 active={selectedTab === 'teams'}
                 onClick={() => setSelectedTab('teams')}
-                label={`Teams (${teams.length})`}
+                label={`Teams (${teams?.length || 0})`}
                 icon={<MessageSquare className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'channels'}
                 onClick={() => setSelectedTab('channels')}
-                label={`Channels (${channels.length})`}
+                label={`Channels (${channels?.length || 0})`}
                 icon={<Hash className="w-4 h-4" />}
               />
               <TabButton
                 active={selectedTab === 'members'}
                 onClick={() => setSelectedTab('members')}
-                label={`Members (${members.length})`}
+                label={`Members (${members?.length || 0})`}
                 icon={<Users className="w-4 h-4" />}
               />
             </div>

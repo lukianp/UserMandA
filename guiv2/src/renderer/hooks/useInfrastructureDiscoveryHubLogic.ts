@@ -47,39 +47,167 @@ interface InfrastructureDiscoveryHubState {
   isLoading: boolean;
   filter: string;
   selectedCategory: string | null;
-  sortBy: 'name' | 'lastRun' | 'status' | 'resultCount';
+  sortBy: 'default' | 'name' | 'lastRun' | 'status' | 'resultCount';
 }
 
 /**
  * Default discovery modules registry
- * Contains all 47 discovery modules organized by category
+ * Order: Azure/M365 Cloud first, Active Directory/On-prem second, Rest alphabetically
  */
 const defaultDiscoveryModules: DiscoveryTile[] = [
   // =========================================================================
-  // IDENTITY & ACCESS
+  // AZURE / MICROSOFT 365 CLOUD (alphabetical)
   // =========================================================================
   {
-    id: 'active-directory',
-    name: 'Active Directory',
+    id: 'azure-automation',
+    name: 'Azure Automation',
+    icon: 'Settings',
+    description: 'Discover Azure Automation Accounts, runbooks, schedules, and credentials',
+    route: '/discovery/azure-automation',
+    status: 'idle',
+  },
+  {
+    id: 'azure-acr',
+    name: 'Azure Container Registries',
+    icon: 'Package',
+    description: 'Discover Azure Container Registries with SKU, access settings, and network configuration',
+    route: '/discovery/azure-acr',
+    status: 'idle',
+  },
+  {
+    id: 'azure-functions',
+    name: 'Azure Function Apps',
+    icon: 'Zap',
+    description: 'Discover Azure Function Apps, runtimes, and hosting configurations',
+    route: '/discovery/azure-functions',
+    status: 'idle',
+  },
+  {
+    id: 'azure-resource',
+    name: 'Azure Infrastructure',
+    icon: 'Layers',
+    description: 'Detailed discovery of Azure resources, VMs, storage, and networking',
+    route: '/discovery/azure-resource',
+    status: 'idle',
+  },
+  {
+    id: 'azure-keyvault-access',
+    name: 'Key Vault Access',
+    icon: 'Key',
+    description: 'Discover Azure Key Vault access policies and permissions',
+    route: '/discovery/azure-keyvault-access',
+    status: 'idle',
+  },
+  {
+    id: 'azure-logicapps',
+    name: 'Azure Logic Apps',
+    icon: 'Workflow',
+    description: 'Discover Azure Logic Apps, triggers, workflow runs, and integrations',
+    route: '/discovery/azure-logicapps',
+    status: 'idle',
+  },
+  {
+    id: 'azure-managed-identities',
+    name: 'Managed Identities',
+    icon: 'Fingerprint',
+    description: 'Discover Azure Managed Identities and their role assignments',
+    route: '/discovery/azure-managed-identities',
+    status: 'idle',
+  },
+  {
+    id: 'azure-sp-credentials',
+    name: 'SP Credentials',
+    icon: 'KeyRound',
+    description: 'Discover Azure Service Principal credentials including secrets and certificates with expiry tracking',
+    route: '/discovery/azure-sp-credentials',
+    status: 'idle',
+  },
+  {
+    id: 'azure-storage-access',
+    name: 'Storage Account Access',
     icon: 'Database',
-    description: 'Discover users, groups, computers, OUs, GPOs, and trust relationships from Active Directory',
-    route: '/discovery/active-directory',
+    description: 'Discover Azure Storage Account security settings, network rules, and public access configuration',
+    route: '/discovery/azure-storage-access',
+    status: 'idle',
+  },
+  {
+    id: 'azure-vmss',
+    name: 'Azure VM Scale Sets',
+    icon: 'Layers',
+    description: 'Discover Azure VM Scale Sets with capacity, networking, and scaling configuration',
+    route: '/discovery/azure-vmss',
+    status: 'idle',
+  },
+  {
+    id: 'azure-mgmt-groups',
+    name: 'Management Groups',
+    icon: 'FolderTree',
+    description: 'Discover Azure Management Group hierarchy and governance structure',
+    route: '/discovery/azure-mgmt-groups',
+    status: 'idle',
+  },
+  {
+    id: 'azure-pim',
+    name: 'PIM Eligible Roles',
+    icon: 'Shield',
+    description: 'Discover Privileged Identity Management eligible role assignments',
+    route: '/discovery/azure-pim',
+    status: 'idle',
+  },
+  {
+    id: 'azure-sub-owners',
+    name: 'Subscription Owners',
+    icon: 'UserCog',
+    description: 'Discover Azure subscription owner role assignments',
+    route: '/discovery/azure-sub-owners',
+    status: 'idle',
+  },
+  {
+    id: 'conditional-access',
+    name: 'Conditional Access',
+    icon: 'Lock',
+    description: 'Discover conditional access policies, named locations, and authentication requirements',
+    route: '/discovery/conditional-access',
+    status: 'idle',
+  },
+  {
+    id: 'azure-infrastructure',
+    name: 'Entra ID & M365',
+    icon: 'Cloud',
+    description: 'Discover Entra ID users, groups, security policies, and Microsoft 365 services',
+    route: '/discovery/azure',
     status: 'idle',
   },
   {
     id: 'entra-id-app',
     name: 'Entra ID Apps',
-    icon: 'Package',
+    icon: 'AppWindow',
     description: 'Discover Azure AD/Entra ID app registrations, service principals, and permissions',
     route: '/discovery/entra-id-app',
     status: 'idle',
   },
   {
-    id: 'external-identity',
-    name: 'External Identities',
-    icon: 'Users',
-    description: 'Discover guest users, B2B collaborators, and external identities',
-    route: '/discovery/external-identity',
+    id: 'exchange',
+    name: 'Exchange',
+    icon: 'Mail',
+    description: 'Discover Exchange servers, mailboxes, distribution groups, and transport rules',
+    route: '/discovery/exchange',
+    status: 'idle',
+  },
+  {
+    id: 'intune',
+    name: 'Intune',
+    icon: 'Smartphone',
+    description: 'Discover Intune managed devices, policies, and compliance status',
+    route: '/discovery/intune',
+    status: 'idle',
+  },
+  {
+    id: 'licensing',
+    name: 'Licensing',
+    icon: 'FileText',
+    description: 'Discover software licenses, assignments, and usage',
+    route: '/discovery/licensing',
     status: 'idle',
   },
   {
@@ -91,47 +219,99 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
     status: 'idle',
   },
   {
-    id: 'multi-domain-forest',
-    name: 'Multi-Domain Forest',
-    icon: 'Network',
-    description: 'Discover multi-domain AD forest structures, trusts, and cross-domain relationships',
-    route: '/discovery/multi-domain-forest',
+    id: 'teams',
+    name: 'Microsoft Teams',
+    icon: 'MessageSquare',
+    description: 'Discover Teams, channels, memberships, and collaboration data',
+    route: '/discovery/teams',
     status: 'idle',
   },
   {
-    id: 'conditional-access',
-    name: 'Conditional Access',
-    icon: 'Shield',
-    description: 'Discover conditional access policies, named locations, and authentication requirements',
-    route: '/discovery/conditional-access',
+    id: 'office365',
+    name: 'Office 365',
+    icon: 'Package',
+    description: 'Discover Microsoft 365 users, mailboxes, licenses, and configurations',
+    route: '/discovery/office365',
+    status: 'idle',
+  },
+  {
+    id: 'onedrive',
+    name: 'OneDrive',
+    icon: 'Folders',
+    description: 'Discover OneDrive for Business storage, sharing, and sync settings',
+    route: '/discovery/onedrive',
+    status: 'idle',
+  },
+  {
+    id: 'powerbi',
+    name: 'Power BI',
+    icon: 'BarChart3',
+    description: 'Discover Power BI workspaces, reports, datasets, and sharing settings',
+    route: '/discovery/powerbi',
+    status: 'idle',
+  },
+  {
+    id: 'power-platform',
+    name: 'Power Platform',
+    icon: 'Workflow',
+    description: 'Discover Power Apps, Power Automate flows, and Power BI workspaces',
+    route: '/discovery/power-platform',
+    status: 'idle',
+  },
+  {
+    id: 'sharepoint',
+    name: 'SharePoint',
+    icon: 'Folder',
+    description: 'Discover SharePoint sites, libraries, lists, and permissions',
+    route: '/discovery/sharepoint',
+    status: 'idle',
+  },
+
+  // =========================================================================
+  // ACTIVE DIRECTORY / ON-PREM DOMAIN (alphabetical)
+  // =========================================================================
+  {
+    id: 'active-directory',
+    name: 'Active Directory',
+    icon: 'Database',
+    description: 'Discover users, groups, computers, OUs, GPOs, and trust relationships from Active Directory',
+    route: '/discovery/active-directory',
+    status: 'idle',
+  },
+  {
+    id: 'domain',
+    name: 'Domain',
+    icon: 'Network',
+    description: 'Discover domain controllers, FSMO roles, and domain configuration',
+    route: '/discovery/domain',
     status: 'idle',
   },
   {
     id: 'gpo',
     name: 'Group Policy',
-    icon: 'Folder',
+    icon: 'FileText',
     description: 'Discover Group Policy Objects, settings, and linked OUs',
     route: '/discovery/gpo',
     status: 'idle',
   },
-
-  // =========================================================================
-  // CLOUD PLATFORMS
-  // =========================================================================
   {
-    id: 'azure-infrastructure',
-    name: 'Azure',
-    icon: 'Cloud',
-    description: 'Discover Azure resources, subscriptions, resource groups, and configurations',
-    route: '/discovery/azure',
+    id: 'multi-domain-forest',
+    name: 'Multi-Domain Forest',
+    icon: 'GitBranch',
+    description: 'Discover multi-domain AD forest structures, trusts, and cross-domain relationships',
+    route: '/discovery/multi-domain-forest',
     status: 'idle',
   },
+
+  // =========================================================================
+  // OTHER DISCOVERY MODULES (alphabetical)
+  // =========================================================================
   {
-    id: 'azure-resource',
-    name: 'Azure Resource',
-    icon: 'Server',
-    description: 'Detailed discovery of Azure resources, VMs, storage, and networking',
-    route: '/discovery/azure-resource',
+    id: 'applications',
+    name: 'Applications',
+    icon: 'Package',
+    description: 'Discover installed applications, dependencies, and versions',
+    route: '/discovery/applications',
     status: 'idle',
   },
   {
@@ -140,6 +320,94 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
     icon: 'Cloud',
     description: 'Discover Amazon Web Services resources and infrastructure',
     route: '/discovery/aws',
+    status: 'idle',
+  },
+  {
+    id: 'backup-recovery',
+    name: 'Backup & Recovery',
+    icon: 'HardDrive',
+    description: 'Discover backup jobs, retention policies, and recovery points',
+    route: '/discovery/backup-recovery',
+    status: 'idle',
+  },
+  {
+    id: 'certificate-authority',
+    name: 'Certificate Authority',
+    icon: 'Shield',
+    description: 'Discover PKI infrastructure, CAs, and certificate templates',
+    route: '/discovery/certificate-authority',
+    status: 'idle',
+  },
+  {
+    id: 'certificate',
+    name: 'Certificates',
+    icon: 'Key',
+    description: 'Discover SSL/TLS certificates, expiration dates, and certificate stores',
+    route: '/discovery/certificate',
+    status: 'idle',
+  },
+  {
+    id: 'data-classification',
+    name: 'Data Classification',
+    icon: 'Tag',
+    description: 'Discover data classification labels, sensitivity, and compliance tags',
+    route: '/discovery/data-classification',
+    status: 'idle',
+  },
+  {
+    id: 'database-schema',
+    name: 'Database Schema',
+    icon: 'Database',
+    description: 'Discover database schemas, tables, stored procedures, and relationships',
+    route: '/discovery/database-schema',
+    status: 'idle',
+  },
+  {
+    id: 'dlp',
+    name: 'DLP',
+    icon: 'Shield',
+    description: 'Discover Data Loss Prevention policies and sensitive data locations',
+    route: '/discovery/dlp',
+    status: 'idle',
+  },
+  {
+    id: 'dns-dhcp',
+    name: 'DNS & DHCP',
+    icon: 'Network',
+    description: 'Discover DNS zones, records, DHCP scopes, and reservations',
+    route: '/discovery/dns-dhcp',
+    status: 'idle',
+  },
+  {
+    id: 'environment',
+    name: 'Environment',
+    icon: 'Radar',
+    description: 'Discover environment configuration, variables, and system settings',
+    route: '/discovery/environment',
+    status: 'idle',
+  },
+  {
+    id: 'external-identity',
+    name: 'External Identities',
+    icon: 'Users',
+    description: 'Discover guest users, B2B collaborators, and external identities',
+    route: '/discovery/external-identity',
+    status: 'idle',
+  },
+  {
+    id: 'file-server',
+    name: 'File Server',
+    icon: 'Server',
+    description: 'Discover file server configurations, shares, and DFS namespaces',
+    route: '/discovery/file-server',
+    status: 'idle',
+  },
+  {
+    id: 'file-system',
+    name: 'File System',
+    icon: 'HardDrive',
+    description: 'Discover file shares, NTFS permissions, and storage utilization',
+    route: '/discovery/file-system',
     status: 'idle',
   },
   {
@@ -153,261 +421,33 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   {
     id: 'google-workspace',
     name: 'Google Workspace',
-    icon: 'Mail',
+    icon: 'Cloud',
     description: 'Discover Google Workspace users, groups, and data',
     route: '/discovery/google-workspace',
-    status: 'idle',
-  },
-
-  // =========================================================================
-  // MICROSOFT 365
-  // =========================================================================
-  {
-    id: 'exchange',
-    name: 'Exchange',
-    icon: 'Mail',
-    description: 'Discover Exchange servers, mailboxes, distribution groups, and transport rules',
-    route: '/discovery/exchange',
-    status: 'idle',
-  },
-  {
-    id: 'sharepoint',
-    name: 'SharePoint',
-    icon: 'FolderTree',
-    description: 'Discover SharePoint sites, libraries, lists, and permissions',
-    route: '/discovery/sharepoint',
-    status: 'idle',
-  },
-  {
-    id: 'teams',
-    name: 'Microsoft Teams',
-    icon: 'Users',
-    description: 'Discover Teams, channels, memberships, and collaboration data',
-    route: '/discovery/teams',
-    status: 'idle',
-  },
-  {
-    id: 'onedrive',
-    name: 'OneDrive',
-    icon: 'HardDrive',
-    description: 'Discover OneDrive for Business storage, sharing, and sync settings',
-    route: '/discovery/onedrive',
-    status: 'idle',
-  },
-  {
-    id: 'office365',
-    name: 'Office 365',
-    icon: 'Package',
-    description: 'Discover Microsoft 365 users, mailboxes, licenses, and configurations',
-    route: '/discovery/office365',
-    status: 'idle',
-  },
-  {
-    id: 'intune',
-    name: 'Intune',
-    icon: 'Shield',
-    description: 'Discover Intune managed devices, policies, and compliance status',
-    route: '/discovery/intune',
-    status: 'idle',
-  },
-  {
-    id: 'power-platform',
-    name: 'Power Platform',
-    icon: 'Package',
-    description: 'Discover Power Apps, Power Automate flows, and Power BI workspaces',
-    route: '/discovery/power-platform',
-    status: 'idle',
-  },
-  {
-    id: 'powerbi',
-    name: 'Power BI',
-    icon: 'Database',
-    description: 'Discover Power BI workspaces, reports, datasets, and sharing settings',
-    route: '/discovery/powerbi',
-    status: 'idle',
-  },
-
-  // =========================================================================
-  // INFRASTRUCTURE
-  // =========================================================================
-  {
-    id: 'file-system',
-    name: 'File System',
-    icon: 'Folder',
-    description: 'Discover file shares, NTFS permissions, and storage utilization',
-    route: '/discovery/file-system',
-    status: 'idle',
-  },
-  {
-    id: 'file-server',
-    name: 'File Server',
-    icon: 'Server',
-    description: 'Discover file server configurations, shares, and DFS namespaces',
-    route: '/discovery/file-server',
-    status: 'idle',
-  },
-  {
-    id: 'domain',
-    name: 'Domain',
-    icon: 'Network',
-    description: 'Discover domain controllers, FSMO roles, and domain configuration',
-    route: '/discovery/domain',
-    status: 'idle',
-  },
-  {
-    id: 'network',
-    name: 'Network',
-    icon: 'Network',
-    description: 'Discover network topology, subnets, and IP address management',
-    route: '/discovery/network',
-    status: 'idle',
-  },
-  {
-    id: 'applications',
-    name: 'Applications',
-    icon: 'Package',
-    description: 'Discover installed applications, dependencies, and versions',
-    route: '/discovery/applications',
-    status: 'idle',
-  },
-  {
-    id: 'environment',
-    name: 'Environment',
-    icon: 'Server',
-    description: 'Discover environment configuration, variables, and system settings',
-    route: '/discovery/environment',
-    status: 'idle',
-  },
-  {
-    id: 'physical-server',
-    name: 'Physical Server',
-    icon: 'Server',
-    description: 'Discover physical server hardware, BIOS, and firmware details',
-    route: '/discovery/physical-server',
-    status: 'idle',
-  },
-  {
-    id: 'storage-array',
-    name: 'Storage Array',
-    icon: 'HardDrive',
-    description: 'Discover SAN/NAS storage arrays, volumes, and LUNs',
-    route: '/discovery/storage-array',
-    status: 'idle',
-  },
-  {
-    id: 'printer',
-    name: 'Printers',
-    icon: 'Server',
-    description: 'Discover print servers, printers, and print queues',
-    route: '/discovery/printer',
-    status: 'idle',
-  },
-  {
-    id: 'scheduled-task',
-    name: 'Scheduled Tasks',
-    icon: 'Package',
-    description: 'Discover Windows scheduled tasks, triggers, and actions',
-    route: '/discovery/scheduled-task',
-    status: 'idle',
-  },
-  {
-    id: 'backup-recovery',
-    name: 'Backup & Recovery',
-    icon: 'HardDrive',
-    description: 'Discover backup jobs, retention policies, and recovery points',
-    route: '/discovery/backup-recovery',
-    status: 'idle',
-  },
-  {
-    id: 'web-server',
-    name: 'Web Server',
-    icon: 'Network',
-    description: 'Discover IIS sites, application pools, and web configurations',
-    route: '/discovery/web-server',
-    status: 'idle',
-  },
-
-  // =========================================================================
-  // VIRTUALIZATION
-  // =========================================================================
-  {
-    id: 'vmware',
-    name: 'VMware',
-    icon: 'Server',
-    description: 'Discover VMware vCenter, ESXi hosts, VMs, and datastores',
-    route: '/discovery/vmware',
     status: 'idle',
   },
   {
     id: 'hyper-v',
     name: 'Hyper-V',
-    icon: 'Server',
+    icon: 'Cpu',
     description: 'Discover Hyper-V hosts, virtual machines, and virtual switches',
     route: '/discovery/hyper-v',
     status: 'idle',
   },
   {
-    id: 'virtualization',
-    name: 'Virtualization',
+    id: 'infrastructure',
+    name: 'Infrastructure',
     icon: 'Server',
-    description: 'General virtualization discovery across multiple platforms',
-    route: '/discovery/virtualization',
-    status: 'idle',
-  },
-
-  // =========================================================================
-  // DATABASE
-  // =========================================================================
-  {
-    id: 'sql-server',
-    name: 'SQL Server',
-    icon: 'Database',
-    description: 'Discover SQL Server instances, databases, and configurations',
-    route: '/discovery/sql-server',
+    description: 'Network scanning with nmap - discover all hosts, ports, services, and OS across subnets',
+    route: '/discovery/infrastructure',
     status: 'idle',
   },
   {
-    id: 'database-schema',
-    name: 'Database Schema',
-    icon: 'Database',
-    description: 'Discover database schemas, tables, stored procedures, and relationships',
-    route: '/discovery/database-schema',
-    status: 'idle',
-  },
-
-  // =========================================================================
-  // SECURITY
-  // =========================================================================
-  {
-    id: 'security',
-    name: 'Security',
-    icon: 'Shield',
-    description: 'Discover security policies, compliance status, and vulnerabilities',
-    route: '/discovery/security',
-    status: 'idle',
-  },
-  {
-    id: 'certificate',
-    name: 'Certificates',
-    icon: 'Shield',
-    description: 'Discover SSL/TLS certificates, expiration dates, and certificate stores',
-    route: '/discovery/certificate',
-    status: 'idle',
-  },
-  {
-    id: 'certificate-authority',
-    name: 'Certificate Authority',
-    icon: 'Shield',
-    description: 'Discover PKI infrastructure, CAs, and certificate templates',
-    route: '/discovery/certificate-authority',
-    status: 'idle',
-  },
-  {
-    id: 'dlp',
-    name: 'DLP',
-    icon: 'Shield',
-    description: 'Discover Data Loss Prevention policies and sensitive data locations',
-    route: '/discovery/dlp',
+    id: 'network',
+    name: 'Network Infrastructure',
+    icon: 'Network',
+    description: 'Discover network topology, subnets, and IP address management',
+    route: '/discovery/network',
     status: 'idle',
   },
   {
@@ -426,32 +466,76 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
     route: '/discovery/panorama-interrogation',
     status: 'idle',
   },
-
-  // =========================================================================
-  // DATA & LICENSING
-  // =========================================================================
   {
-    id: 'data-classification',
-    name: 'Data Classification',
-    icon: 'Folder',
-    description: 'Discover data classification labels, sensitivity, and compliance tags',
-    route: '/discovery/data-classification',
+    id: 'physical-server',
+    name: 'Physical Server',
+    icon: 'Server',
+    description: 'Discover physical server hardware, BIOS, and firmware details',
+    route: '/discovery/physical-server',
     status: 'idle',
   },
   {
-    id: 'licensing',
-    name: 'Licensing',
-    icon: 'Package',
-    description: 'Discover software licenses, assignments, and usage',
-    route: '/discovery/licensing',
+    id: 'printer',
+    name: 'Printers',
+    icon: 'Printer',
+    description: 'Discover print servers, printers, and print queues',
+    route: '/discovery/printer',
     status: 'idle',
   },
   {
-    id: 'dns-dhcp',
-    name: 'DNS & DHCP',
-    icon: 'Network',
-    description: 'Discover DNS zones, records, DHCP scopes, and reservations',
-    route: '/discovery/dns-dhcp',
+    id: 'scheduled-task',
+    name: 'Scheduled Tasks',
+    icon: 'Calendar',
+    description: 'Discover Windows scheduled tasks, triggers, and actions',
+    route: '/discovery/scheduled-task',
+    status: 'idle',
+  },
+  {
+    id: 'security',
+    name: 'Security Infrastructure',
+    icon: 'Shield',
+    description: 'Discover security policies, compliance status, and vulnerabilities',
+    route: '/discovery/security',
+    status: 'idle',
+  },
+  {
+    id: 'sql-server',
+    name: 'SQL Server',
+    icon: 'Database',
+    description: 'Discover SQL Server instances, databases, and configurations',
+    route: '/discovery/sql-server',
+    status: 'idle',
+  },
+  {
+    id: 'storage-array',
+    name: 'Storage Array',
+    icon: 'HardDrive',
+    description: 'Discover SAN/NAS storage arrays, volumes, and LUNs',
+    route: '/discovery/storage-array',
+    status: 'idle',
+  },
+  {
+    id: 'virtualization',
+    name: 'Virtualization',
+    icon: 'Cpu',
+    description: 'General virtualization discovery across multiple platforms',
+    route: '/discovery/virtualization',
+    status: 'idle',
+  },
+  {
+    id: 'vmware',
+    name: 'VMware',
+    icon: 'Cpu',
+    description: 'Discover VMware vCenter, ESXi hosts, VMs, and datastores',
+    route: '/discovery/vmware',
+    status: 'idle',
+  },
+  {
+    id: 'web-server',
+    name: 'Web Server Config',
+    icon: 'Globe',
+    description: 'Discover IIS sites, application pools, and web configurations',
+    route: '/discovery/web-server',
     status: 'idle',
   },
 ];
@@ -471,7 +555,7 @@ export const useInfrastructureDiscoveryHubLogic = () => {
     isLoading: true,
     filter: '',
     selectedCategory: null,
-    sortBy: 'name',
+    sortBy: 'default',
   });
 
   /**
@@ -502,8 +586,8 @@ export const useInfrastructureDiscoveryHubLogic = () => {
           // Check if file exists and get its stats
           const stats = await window.electronAPI.fs.stat(fullPath);
 
-          if (stats && stats.modified) {
-            const modifiedDate = new Date(stats.modified);
+          if (stats && stats.mtime) {
+            const modifiedDate = new Date(stats.mtime);
 
             if (!latestDate || modifiedDate > latestDate) {
               latestDate = modifiedDate;
@@ -694,9 +778,14 @@ export const useInfrastructureDiscoveryHubLogic = () => {
     //   filtered = filtered.filter(m => m.category === state.selectedCategory);
     // }
 
-    // Sort
+    // Sort - 'default' preserves the original array order (Azure/M365 first, AD second, rest alphabetical)
     const sorted = [...filtered].sort((a, b) => {
       switch (state.sortBy) {
+        case 'default':
+          // Preserve original array order - find indices in defaultDiscoveryModules
+          const indexA = defaultDiscoveryModules.findIndex(m => m.id === a.id);
+          const indexB = defaultDiscoveryModules.findIndex(m => m.id === b.id);
+          return indexA - indexB;
         case 'name':
           return a.name.localeCompare(b.name);
         case 'lastRun':

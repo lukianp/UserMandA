@@ -279,6 +279,128 @@ const typeMapping: Record<string, {
     category: 'Azure Resource'
   },
 
+  // AzureHound-inspired Azure Resources (Phase 1)
+  'azurevmssdiscovery': {
+    type: 'it-component',
+    getName: (r) => r.Name || r.ScaleSetName || r.DisplayName,
+    priority: 2,
+    category: 'Azure VM Scale Set'
+  },
+  'azurefunctionsdiscovery': {
+    type: 'application',
+    getName: (r) => r.Name || r.FunctionAppName || r.DisplayName,
+    priority: 2,
+    category: 'Azure Function App'
+  },
+  'azureacrdiscovery': {
+    type: 'it-component',
+    getName: (r) => r.Name || r.RegistryName || r.LoginServer,
+    priority: 2,
+    category: 'Azure Container Registry'
+  },
+
+  // AzureHound-inspired Azure Resources (Phase 2)
+  'azureautomationdiscovery': {
+    type: 'application',
+    getName: (r) => r.Name || r.AutomationAccountName || r.DisplayName,
+    priority: 2,
+    category: 'Azure Automation'
+  },
+  'azureresourcediscovery_automationaccounts': {
+    type: 'application',
+    getName: (r) => r.Name || r.AutomationAccountName,
+    priority: 2,
+    category: 'Azure Automation'
+  },
+  'azurelogicappsdiscovery': {
+    type: 'application',
+    getName: (r) => r.Name || r.LogicAppName || r.DisplayName,
+    priority: 2,
+    category: 'Azure Logic App'
+  },
+  'azureresourcediscovery_logicapps': {
+    type: 'application',
+    getName: (r) => r.Name || r.LogicAppName,
+    priority: 2,
+    category: 'Azure Logic App'
+  },
+
+  // AzureHound-inspired Azure Security (Phase 3)
+  'azuremanagementgroupsdiscovery': {
+    type: 'platform',
+    getName: (r) => r.DisplayName || r.Name || r.ManagementGroupName,
+    priority: 3,
+    category: 'Azure Management Group'
+  },
+  'azuresecuritydiscovery_managementgroups': {
+    type: 'platform',
+    getName: (r) => r.DisplayName || r.Name || r.ManagementGroupName,
+    priority: 3,
+    category: 'Azure Management Group'
+  },
+  'azurepimdiscovery': {
+    type: 'platform',
+    getName: (r) => r.PrincipalDisplayName || r.RoleDisplayName || r.DisplayName || r.Name,
+    priority: 3,
+    category: 'Azure PIM Role'
+  },
+  'azuresecuritydiscovery_pimeligibleroles': {
+    type: 'platform',
+    getName: (r) => r.PrincipalDisplayName || r.RoleDisplayName || r.DisplayName || r.Name,
+    priority: 3,
+    category: 'Azure PIM Role'
+  },
+  'azuresubscriptionownersdiscovery': {
+    type: 'platform',
+    getName: (r) => r.PrincipalDisplayName || r.DisplayName || r.Name,
+    priority: 3,
+    category: 'Azure Subscription Owner'
+  },
+  'azuresecuritydiscovery_subscriptionowners': {
+    type: 'platform',
+    getName: (r) => r.PrincipalDisplayName || r.DisplayName || r.Name,
+    priority: 3,
+    category: 'Azure Subscription Owner'
+  },
+
+  // AzureHound-inspired Azure Security (Phase 4)
+  'azurekeyvaultaccessdiscovery': {
+    type: 'platform',
+    getName: (r) => r.KeyVaultName || r.PrincipalName || r.DisplayName,
+    priority: 3,
+    category: 'Azure Key Vault Access'
+  },
+  'azuresecuritydiscovery_keyvaultaccesspolicies': {
+    type: 'platform',
+    getName: (r) => r.KeyVaultName || r.PrincipalName || r.DisplayName,
+    priority: 3,
+    category: 'Azure Key Vault Access'
+  },
+  'azuremanagedidentitiesdiscovery': {
+    type: 'platform',
+    getName: (r) => r.Name || r.DisplayName || r.PrincipalId,
+    priority: 3,
+    category: 'Azure Managed Identity'
+  },
+  'azuresecuritydiscovery_managedidentities': {
+    type: 'platform',
+    getName: (r) => r.Name || r.DisplayName || r.PrincipalId,
+    priority: 3,
+    category: 'Azure Managed Identity'
+  },
+  'azuresecuritydiscovery_serviceprincipalcredentials': {
+    type: 'platform',
+    getName: (r) => r.AppName || r.DisplayName || r.AppId,
+    priority: 3,
+    category: 'Azure Service Principal'
+  },
+  'azuresecuritydiscovery_storageaccountaccess': {
+    type: 'it-component',
+    getName: (r) => r.Name || r.StorageAccountName,
+    priority: 2,
+    category: 'Azure Storage'
+  },
+
   // Certificates
   'ca_certificates': {
     type: 'it-component',

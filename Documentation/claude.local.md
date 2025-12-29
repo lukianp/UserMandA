@@ -262,6 +262,27 @@ if ($response.value -and $response.value.Count -gt 0) {
 
 ## Critical Errors & Fixes
 
+**Error 0: PowerShell PascalCase vs TypeScript camelCase Property Names**
+```typescript
+// PowerShell modules return data with PascalCase property names:
+// { Subscriptions: [...], VirtualMachines: [...], StorageAccounts: [...] }
+
+// But TypeScript interfaces define camelCase:
+// interface AzureResourceDiscoveryResult { virtualMachines?: any[]; storageAccounts?: any[]; }
+
+// ❌ WRONG: TypeScript complains "Property 'Subscriptions' does not exist"
+const data = results.data;
+if (data.Subscriptions) { ... }  // ERROR!
+
+// ✅ CORRECT: Cast to 'any' when accessing PowerShell PascalCase properties
+const data = results.data as any;
+if (data.Subscriptions) { ... }  // OK
+if (data.VirtualMachines) { ... }  // OK
+
+// Always handle both casings for backwards compatibility:
+const vmCount = data.VirtualMachines?.length || data.virtualMachines?.length || 0;
+```
+
 **Error 1: `.Count` not found**
 ```powershell
 # ❌ WRONG
@@ -414,6 +435,73 @@ const cancelDiscovery = useCallback(async () => {
 
 ---
 
+# Adding New Discovery Modules - Complete Checklist
+
+**CRITICAL: 4 files must be updated for a new discovery tile to work**
+
+## 1. Discovery Hub Tile (useInfrastructureDiscoveryHubLogic.ts)
+
+Add tile to `defaultDiscoveryModules` array:
+```typescript
+{
+  id: 'module-name',
+  name: 'Module Display Name',
+  icon: 'IconName',  // Lucide icon name
+  description: 'Description shown on hover',
+  route: '/discovery/module-name',
+  status: 'idle',
+},
+```
+
+**Location:** `guiv2/src/renderer/hooks/useInfrastructureDiscoveryHubLogic.ts`
+**Array order:** Azure/M365 first → AD/on-prem second → rest alphabetical
+
+## 2. Discovery Sidebar (_sidebar.generated.tsx)
+
+Add sidebar entry:
+```typescript
+{ path: '/discovery/module-name', label: 'Module Name', icon: <IconName size={16} /> },
+```
+
+**Location:** `guiv2/src/renderer/views/discovery/_sidebar.generated.tsx`
+**Order:** Must match Discovery Hub order
+
+## 3. Route (routes.tsx)
+
+Add route definition:
+```typescript
+{
+  path: '/discovery/module-name',
+  element: lazyLoad(() => import('./views/discovery/ModuleNameDiscoveryView')),
+},
+```
+
+**Location:** `guiv2/src/renderer/routes.tsx`
+**CRITICAL:** Without this, clicking tile shows 404!
+
+## 4. Discovery View File
+
+Create view file: `guiv2/src/renderer/views/discovery/ModuleNameDiscoveryView.tsx`
+
+## Optional: Discovered View
+
+If the module outputs CSV data, also create:
+- `guiv2/src/renderer/views/discovered/ModuleNameDiscoveredView.tsx`
+- Add to `guiv2/src/renderer/views/discovered/_sidebar.generated.tsx`
+- Add route in `routes.tsx` for `/discovered/modulename`
+
+## Verification Checklist
+
+```bash
+# Verify all 4 locations are updated:
+grep -r "module-name" guiv2/src/renderer/hooks/useInfrastructureDiscoveryHubLogic.ts
+grep -r "/discovery/module-name" guiv2/src/renderer/views/discovery/_sidebar.generated.tsx
+grep -r "/discovery/module-name" guiv2/src/renderer/routes.tsx
+ls guiv2/src/renderer/views/discovery/ModuleNameDiscoveryView.tsx
+```
+
+---
+
 # Discovery Hooks Validation Status (55+ Modules) - Updated 2025-12-22
 
 ## ✅ ALL HOOKS EXIST AND VALIDATED
@@ -458,11 +546,12 @@ All fixed to use empty array `[]`:
 - useConditionalAccessDiscoveryLogic.ts
 - useAzureResourceDiscoveryLogic.ts
 
-## ✅ All Existing Hooks (Complete List)
+## ✅ All Existing Hooks (Complete List - Updated 2025-12-29)
 useAWSCloudInfrastructureDiscoveryLogic, useAWSDiscoveryLogic, useActiveDirectoryDiscoveryLogic,
 useApplicationDependencyMappingDiscoveryLogic, useApplicationDiscoveryLogic, useAzureDeviceDiscoveryLogic,
 useAzureDiscoveryLogic, useAzureInfraDiscoveryLogic, useAzureM365DiscoveryLogic, useAzureResourceDiscoveryLogic,
-useAzureSecurityDiscoveryLogic, useBackupRecoveryDiscoveryLogic, useCertificateAuthorityDiscoveryLogic,
+useAzureSecurityDiscoveryLogic, useAzureServicePrincipalCredentialsDiscoveryLogic, useAzureStorageAccountAccessDiscoveryLogic,
+useBackupRecoveryDiscoveryLogic, useCertificateAuthorityDiscoveryLogic,
 useCertificateDiscoveryLogic, useConditionalAccessDiscoveryLogic, useDNSDHCPDiscoveryLogic,
 useDataClassificationDiscoveryLogic, useDataLossPreventionDiscoveryLogic, useDatabaseSchemaDiscoveryLogic,
 useDomainDiscoveryLogic, useEDiscoveryLogic, useEntraIDAppDiscoveryLogic, useEnvironmentDetectionLogic,
@@ -476,6 +565,242 @@ usePowerBIDiscoveryLogic, usePowerPlatformDiscoveryLogic, usePrinterDiscoveryLog
 useScheduledTaskDiscoveryLogic, useSecurityInfrastructureDiscoveryLogic, useSharePointDiscoveryLogic,
 useStorageArrayDiscoveryLogic, useTeamsDiscoveryLogic, useVMwareDiscoveryLogic, useVirtualizationDiscoveryLogic,
 useWebServerConfigDiscoveryLogic, useWebServerDiscoveryLogic, useEnvironmentDetectionDiscovery
+
+## ✅ AzureHound Enhancement Hooks (Phase 1-5)
+- useAzureVMSSDiscoveryLogic (Phase 1)
+- useAzureFunctionsDiscoveryLogic (Phase 1)
+- useAzureACRDiscoveryLogic (Phase 1)
+- useAzureAutomationDiscoveryLogic (Phase 2)
+- useAzureLogicAppsDiscoveryLogic (Phase 2)
+- useAzureManagementGroupsDiscoveryLogic (Phase 3)
+- useAzurePIMDiscoveryLogic (Phase 3)
+- useAzureSubscriptionOwnersDiscoveryLogic (Phase 3)
+- useAzureKeyVaultAccessDiscoveryLogic (Phase 4)
+- useAzureManagedIdentitiesDiscoveryLogic (Phase 4)
+- **useAzureServicePrincipalCredentialsDiscoveryLogic (Phase 5)** - NEW
+- **useAzureStorageAccountAccessDiscoveryLogic (Phase 5)** - NEW
+
+---
+
+# PowerShellExecutionDialog Integration Pattern
+
+**Purpose:** Shows real-time PowerShell script output in a dialog when discovery runs, allowing users to monitor progress.
+
+## Hook Changes Required
+
+### 1. Add LogEntry Interface and State Fields
+
+```typescript
+export interface LogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+}
+
+interface DiscoveryState {
+  // ... existing fields ...
+  isCancelling: boolean;      // NEW: Track cancel in progress
+  logs: LogEntry[];           // NEW: Log entries array
+  showExecutionDialog: boolean; // NEW: Dialog visibility
+}
+```
+
+### 2. Update Initial State
+
+```typescript
+const [state, setState] = useState<DiscoveryState>({
+  // ... existing fields ...
+  isCancelling: false,
+  logs: [],
+  showExecutionDialog: false,
+});
+```
+
+### 3. Update onDiscoveryOutput Handler (Add Log Entries)
+
+```typescript
+const unsubscribeOutput = window.electron?.onDiscoveryOutput?.((data) => {
+  if (data.executionId === currentTokenRef.current) {
+    const message = data.message || '';
+    // Determine log level from message content
+    let level: LogEntry['level'] = 'info';
+    if (message.toLowerCase().includes('error') || message.toLowerCase().includes('failed')) {
+      level = 'error';
+    } else if (message.toLowerCase().includes('warning') || message.toLowerCase().includes('warn')) {
+      level = 'warning';
+    } else if (message.toLowerCase().includes('success') || message.toLowerCase().includes('complete') || message.toLowerCase().includes('found')) {
+      level = 'success';
+    }
+    setState((prev) => ({
+      ...prev,
+      logs: [...prev.logs, { timestamp: new Date().toISOString(), message, level }],
+      progress: { ...prev.progress, message },
+    }));
+  }
+});
+```
+
+### 4. Update onDiscoveryComplete Handler (Add Success Log)
+
+```typescript
+setState((prev) => ({
+  ...prev,
+  isDiscovering: false,
+  isCancelling: false,
+  logs: [...prev.logs, { timestamp: new Date().toISOString(), message: `Discovery completed! Found ${count} items.`, level: 'success' as const }],
+  progress: { ... },
+}));
+```
+
+### 5. Update onDiscoveryError Handler (Add Error Log)
+
+```typescript
+setState((prev) => ({
+  ...prev,
+  isDiscovering: false,
+  isCancelling: false,
+  error: data.error,
+  logs: [...prev.logs, { timestamp: new Date().toISOString(), message: `Error: ${data.error}`, level: 'error' as const }],
+  progress: { ... },
+}));
+```
+
+### 6. Update onDiscoveryCancelled Handler (Add Warning Log)
+
+```typescript
+setState((prev) => ({
+  ...prev,
+  isDiscovering: false,
+  isCancelling: false,
+  logs: [...prev.logs, { timestamp: new Date().toISOString(), message: 'Discovery cancelled by user', level: 'warning' as const }],
+  progress: { ... },
+}));
+```
+
+### 7. Update startDiscovery (Show Dialog, Clear/Add Initial Log)
+
+```typescript
+const startDiscovery = useCallback(async () => {
+  // ... validation ...
+  setState((prev) => ({
+    ...prev,
+    isDiscovering: true,
+    isCancelling: false,
+    error: null,
+    logs: [{ timestamp: new Date().toISOString(), message: 'Starting discovery...', level: 'info' as const }],
+    showExecutionDialog: true,  // AUTO-OPEN DIALOG
+    progress: { ... },
+  }));
+  // ... rest of function ...
+}, []);
+```
+
+### 8. Update cancelDiscovery (Set isCancelling, Add Log)
+
+```typescript
+const cancelDiscovery = useCallback(async () => {
+  if (!state.isDiscovering || !currentTokenRef.current) return;
+  setState((prev) => ({
+    ...prev,
+    isCancelling: true,
+    logs: [...prev.logs, { timestamp: new Date().toISOString(), message: 'Cancelling discovery...', level: 'warning' as const }],
+  }));
+  // ... rest of function ...
+}, [state.isDiscovering]);
+```
+
+### 9. Add clearLogs and setShowExecutionDialog Functions
+
+```typescript
+const clearLogs = useCallback(() => {
+  setState((prev) => ({ ...prev, logs: [] }));
+}, []);
+
+const setShowExecutionDialog = useCallback((show: boolean) => {
+  setState((prev) => ({ ...prev, showExecutionDialog: show }));
+}, []);
+```
+
+### 10. Update Return Statement
+
+```typescript
+return {
+  // ... existing fields ...
+  isCancelling: state.isCancelling,
+  logs: state.logs,
+  showExecutionDialog: state.showExecutionDialog,
+  clearLogs,
+  setShowExecutionDialog,
+};
+```
+
+## View Changes Required
+
+### 1. Import PowerShellExecutionDialog
+
+```typescript
+import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+```
+
+### 2. Destructure New Fields from Hook
+
+```typescript
+const {
+  // ... existing fields ...
+  isCancelling,
+  logs,
+  showExecutionDialog,
+  setShowExecutionDialog,
+  clearLogs,
+} = useModuleDiscoveryLogic();
+```
+
+### 3. Add PowerShellExecutionDialog Component (at end of JSX)
+
+```typescript
+{/* PowerShell Execution Dialog */}
+<PowerShellExecutionDialog
+  isOpen={showExecutionDialog}
+  onClose={() => !isDiscovering && setShowExecutionDialog(false)}
+  scriptName="Module Discovery"
+  scriptDescription="Description of what this discovery does"
+  logs={logs.map(log => ({
+    timestamp: log.timestamp,
+    message: log.message,
+    level: log.level as 'info' | 'success' | 'warning' | 'error'
+  }))}
+  isRunning={isDiscovering}
+  isCancelling={isCancelling}
+  progress={progress ? {
+    percentage: progress.percentage || 0,
+    message: progress.message || 'Processing...'
+  } : undefined}
+  onStart={startDiscovery}
+  onStop={cancelDiscovery}
+  onClear={clearLogs}
+  showStartButton={false}
+/>
+```
+
+## Quick Checklist
+
+**Hook (useModuleDiscoveryLogic.ts):**
+- [ ] Add `LogEntry` interface export
+- [ ] Add `isCancelling`, `logs`, `showExecutionDialog` to state
+- [ ] Update `onDiscoveryOutput` to add log entries
+- [ ] Update `onDiscoveryComplete` to add success log, reset `isCancelling`
+- [ ] Update `onDiscoveryError` to add error log, reset `isCancelling`
+- [ ] Update `onDiscoveryCancelled` to add warning log, reset `isCancelling`
+- [ ] Update `startDiscovery` to set `showExecutionDialog: true` and initial log
+- [ ] Update `cancelDiscovery` to set `isCancelling: true` and add log
+- [ ] Add `clearLogs` function
+- [ ] Add `setShowExecutionDialog` function
+- [ ] Export all new fields in return statement
+
+**View (ModuleDiscoveryView.tsx):**
+- [ ] Import `PowerShellExecutionDialog`
+- [ ] Destructure `isCancelling`, `logs`, `showExecutionDialog`, `setShowExecutionDialog`, `clearLogs`
+- [ ] Add `<PowerShellExecutionDialog>` component at end of JSX
 
 ---
 
@@ -511,8 +836,15 @@ npm run build:main
 npx webpack --config webpack.preload.config.js --mode=production
 npm run build:renderer
 
-# 3. Launch
+# 3. Launch Application
+# ⚠️ IMPORTANT: Use Bash run_in_background for reliable launch
+# ❌ WRONG: powershell.exe -Command "Start-Process npm -ArgumentList 'start'" (doesn't work!)
+# ✅ CORRECT: Use Bash tool with run_in_background=true:
+#    Bash(command="powershell.exe -Command 'cd C:\enterprisediscovery\guiv2; npm start'", run_in_background=true)
 npm start
+
+# Wait for Electron to start (6-8 seconds), then verify:
+# powershell -Command "Get-Process -Name electron -ErrorAction SilentlyContinue | Select-Object ProcessName, Id, StartTime"
 
 # 4. Copy back to workspace for version control
 Copy-Item -Path "C:\enterprisediscovery\guiv2\src\*" -Destination "D:\Scripts\UserMandA\guiv2\src\" -Recurse -Force
