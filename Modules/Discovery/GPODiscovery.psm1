@@ -64,6 +64,7 @@ function Invoke-GPODiscovery {
         # Prepare credentials if provided
         $credential = $null
         $domainServer = $null
+        $domainController = $null
 
         if ($Configuration.domainCredentials -and
             $Configuration.domainCredentials.username -and
@@ -79,6 +80,101 @@ function Invoke-GPODiscovery {
             if ($Configuration.domainCredentials.username -match '^([^\\]+)\\') {
                 $domainServer = $matches[1]
                 Write-ModuleLog -ModuleName "GPO" -Message "Auto-detected domain from credentials: $domainServer" -Level "INFO"
+            }
+
+            # Auto-discover domain controller for the domain
+            if ($domainServer) {
+                Write-ModuleLog -ModuleName "GPO" -Message "Auto-discovering domain controller for domain: $domainServer" -Level "INFO"
+
+                # Try multiple methods to discover DC (ordered by reliability)
+                try {
+                    # Method 1: DNS SRV record lookup (most universal, works without auth/domain join)
+                    # This is the Microsoft-standard method for DC location
+                    if (-not $domainController) {
+                        try {
+                            Write-ModuleLog -ModuleName "GPO" -Message "Attempting DNS SRV lookup for DC discovery..." -Level "DEBUG"
+
+                            # Query DNS for domain controller SRV records
+                            # _ldap._tcp.dc._msdcs.DOMAIN is the standard DC locator record
+                            $srvRecord = "_ldap._tcp.dc._msdcs.$domainServer"
+
+                            # Use nslookup to query SRV records (works on all Windows versions)
+                            $nslookupOutput = nslookup -type=SRV $srvRecord 2>&1 | Out-String
+
+                            # Parse nslookup output to extract DC hostname
+                            if ($nslookupOutput -match 'svr hostname\s*=\s*(\S+)') {
+                                $dcFqdn = $matches[1].TrimEnd('.')
+                                $domainController = $dcFqdn
+                                Write-ModuleLog -ModuleName "GPO" -Message "Auto-discovered DC via DNS SRV: $domainController" -Level "SUCCESS"
+                            }
+                            # Alternative: Extract from "Server:" line (gets FQDN directly)
+                            elseif ($nslookupOutput -match 'Server:\s+(\S+)') {
+                                $dcFqdn = $matches[1]
+                                # Ensure it contains the domain (not just localhost)
+                                if ($dcFqdn -like "*.$domainServer*" -or $dcFqdn -like "*$domainServer") {
+                                    $domainController = $dcFqdn
+                                    Write-ModuleLog -ModuleName "GPO" -Message "Auto-discovered DC via DNS Server line: $domainController" -Level "SUCCESS"
+                                }
+                            }
+                            # Fallback: Look for any FQDN matching the domain pattern
+                            if (-not $domainController -and $nslookupOutput -match '(\S+\.' + [regex]::Escape($domainServer) + '\S*)') {
+                                $domainController = $matches[1].TrimEnd('.')
+                                Write-ModuleLog -ModuleName "GPO" -Message "Auto-discovered DC via pattern matching: $domainController" -Level "SUCCESS"
+                            }
+                        } catch {
+                            Write-ModuleLog -ModuleName "GPO" -Message "DNS SRV lookup failed: $($_.Exception.Message)" -Level "DEBUG"
+                        }
+                    }
+
+                    # Method 2: Try nltest (built-in tool, works on domain-joined machines)
+                    if (-not $domainController) {
+                        try {
+                            Write-ModuleLog -ModuleName "GPO" -Message "Attempting nltest DC discovery..." -Level "DEBUG"
+                            $nltestOutput = nltest /dsgetdc:$domainServer /force 2>&1 | Out-String
+
+                            # Parse nltest output for DC name
+                            if ($nltestOutput -match 'DC:\s*\\\\(\S+)') {
+                                $domainController = $matches[1]
+                                Write-ModuleLog -ModuleName "GPO" -Message "Auto-discovered DC using nltest: $domainController" -Level "SUCCESS"
+                            }
+                        } catch {
+                            Write-ModuleLog -ModuleName "GPO" -Message "nltest failed: $($_.Exception.Message)" -Level "DEBUG"
+                        }
+                    }
+
+                    # Method 3: Try Get-ADDomainController (requires AD module)
+                    if (-not $domainController) {
+                        try {
+                            Write-ModuleLog -ModuleName "GPO" -Message "Attempting Get-ADDomainController..." -Level "DEBUG"
+                            $dc = Get-ADDomainController -Discover -DomainName $domainServer -ErrorAction Stop | Select-Object -First 1
+                            if ($dc) {
+                                $domainController = $dc.HostName
+                                Write-ModuleLog -ModuleName "GPO" -Message "Auto-discovered DC using Get-ADDomainController: $domainController" -Level "SUCCESS"
+                            }
+                        } catch {
+                            Write-ModuleLog -ModuleName "GPO" -Message "Get-ADDomainController failed: $($_.Exception.Message)" -Level "DEBUG"
+                        }
+                    }
+
+                    # Method 4: .NET System.DirectoryServices (last resort)
+                    if (-not $domainController) {
+                        try {
+                            Write-ModuleLog -ModuleName "GPO" -Message "Attempting .NET DirectoryServices DC discovery..." -Level "DEBUG"
+                            $dcInfo = [System.DirectoryServices.ActiveDirectory.Domain]::GetDomain((New-Object System.DirectoryServices.ActiveDirectory.DirectoryContext('Domain', $domainServer)))
+                            $domainController = $dcInfo.PdcRoleOwner.Name
+                            Write-ModuleLog -ModuleName "GPO" -Message "Auto-discovered DC using .NET DirectoryServices: $domainController" -Level "SUCCESS"
+                        } catch {
+                            Write-ModuleLog -ModuleName "GPO" -Message ".NET DirectoryServices failed: $($_.Exception.Message)" -Level "DEBUG"
+                        }
+                    }
+
+                    if (-not $domainController) {
+                        Write-ModuleLog -ModuleName "GPO" -Message "Failed to auto-discover DC after trying all methods" -Level "ERROR"
+                        Write-ModuleLog -ModuleName "GPO" -Message "Ensure DNS can resolve domain: $domainServer" -Level "INFO"
+                    }
+                } catch {
+                    Write-ModuleLog -ModuleName "GPO" -Message "Error during DC discovery: $($_.Exception.Message)" -Level "WARN"
+                }
             }
         } else {
             Write-ModuleLog -ModuleName "GPO" -Message "Using integrated Windows authentication" -Level "INFO"
@@ -109,9 +205,30 @@ function Invoke-GPODiscovery {
                 $integratedAuthError = $_.Exception.Message
 
                 # OPTION 2: Fallback to Invoke-Command with alternate credentials
-                if ($credential -and $domainServer) {
+                if ($credential -and $domainController) {
                     Write-ModuleLog -ModuleName "GPO" -Message "Integrated auth failed: $integratedAuthError" -Level "WARN"
-                    Write-ModuleLog -ModuleName "GPO" -Message "Attempting PSRemoting with alternate credentials..." -Level "INFO"
+                    Write-ModuleLog -ModuleName "GPO" -Message "Attempting PSRemoting to domain controller: $domainController" -Level "INFO"
+
+                    try {
+                        # Connect to domain controller via PSRemoting with domain credentials
+                        $gpos = Invoke-Command -ComputerName $domainController -Credential $credential -ErrorAction Stop -ScriptBlock {
+                            param($domain)
+                            Import-Module GroupPolicy -ErrorAction Stop
+                            Get-GPO -All -Domain $domain -ErrorAction Stop
+                        } -ArgumentList $domainServer
+
+                        $usedRemoting = $true
+                        Write-ModuleLog -ModuleName "GPO" -Message "Successfully retrieved GPOs via PSRemoting to domain controller" -Level "SUCCESS"
+                    }
+                    catch {
+                        Write-ModuleLog -ModuleName "GPO" -Message "PSRemoting to DC failed: $($_.Exception.Message)" -Level "ERROR"
+                        Write-ModuleLog -ModuleName "GPO" -Message "HINT: Ensure PSRemoting is enabled on the domain controller and credentials are correct" -Level "INFO"
+                        throw
+                    }
+                } elseif ($credential -and $domainServer) {
+                    # Fallback to localhost if no DC available
+                    Write-ModuleLog -ModuleName "GPO" -Message "Integrated auth failed: $integratedAuthError" -Level "WARN"
+                    Write-ModuleLog -ModuleName "GPO" -Message "No domain controller configured, attempting PSRemoting to localhost..." -Level "WARN"
 
                     try {
                         $gpos = Invoke-Command -ComputerName $env:COMPUTERNAME -Credential $credential -ErrorAction Stop -ScriptBlock {
@@ -121,11 +238,11 @@ function Invoke-GPODiscovery {
                         } -ArgumentList $domainServer
 
                         $usedRemoting = $true
-                        Write-ModuleLog -ModuleName "GPO" -Message "Successfully retrieved GPOs using PSRemoting with alternate credentials" -Level "SUCCESS"
+                        Write-ModuleLog -ModuleName "GPO" -Message "Successfully retrieved GPOs using PSRemoting to localhost" -Level "SUCCESS"
                     }
                     catch {
-                        Write-ModuleLog -ModuleName "GPO" -Message "PSRemoting failed: $($_.Exception.Message)" -Level "ERROR"
-                        Write-ModuleLog -ModuleName "GPO" -Message "HINT: Enable PSRemoting with 'Enable-PSRemoting -Force' in elevated PowerShell" -Level "INFO"
+                        Write-ModuleLog -ModuleName "GPO" -Message "PSRemoting to localhost failed: $($_.Exception.Message)" -Level "ERROR"
+                        Write-ModuleLog -ModuleName "GPO" -Message "HINT: Configure DomainController in profile settings for better results" -Level "INFO"
                         throw
                     }
                 } else {
