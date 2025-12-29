@@ -45,7 +45,7 @@ export const useInfrastructureLogic = () => {
         const discoveryResult: DiscoveryResult = {
           id: `infra-${Date.now()}`,
           name: 'Infrastructure Discovery',
-          moduleName: 'InfrastructureDiscovery',
+          moduleName: 'Infrastructure',
           displayName: 'Network Infrastructure Discovery',
           itemCount: result.data.infrastructure?.length || 0,
           discoveryTime: new Date().toISOString(),

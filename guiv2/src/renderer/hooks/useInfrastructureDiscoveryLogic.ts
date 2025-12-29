@@ -202,7 +202,7 @@ export const useInfrastructureDiscoveryLogic = () => {
         const discoveryResult = {
           id: `infrastructure-discovery-${Date.now()}`,
           name: 'Infrastructure Discovery',
-          moduleName: 'InfrastructureDiscovery',
+          moduleName: 'Infrastructure',
           displayName: 'Infrastructure Discovery',
           itemCount: data?.result?.totalItems || data?.result?.totalServers || 0,
           discoveryTime: new Date().toISOString(),
@@ -321,7 +321,7 @@ export const useInfrastructureDiscoveryLogic = () => {
 
     try {
       const result = await window.electron.executeDiscovery({
-        moduleName: 'InfrastructureDiscovery',
+        moduleName: 'Infrastructure',
         parameters: {
           IncludeServers: state.config.includeServers,
           IncludeNetworkDevices: state.config.includeNetworkDevices,

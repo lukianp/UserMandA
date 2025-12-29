@@ -166,7 +166,9 @@
       "WebFetch(domain:nmap.org)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:support.bloodhoundenterprise.io)"
+      "WebFetch(domain:support.bloodhoundenterprise.io)",
+      "Bash(cmd /c \"dir /b C:\\\\enterprisediscovery\\\\Modules\\\\Discovery\\\\*Infrastructure*\")",
+      "Bash(cmd /c \"dir /b D:\\\\Scripts\\\\UserMandA\\\\Modules\\\\Discovery\\\\*Infrastructure*.psm1\")"
     ],
     "deny": [],
     "ask": []
