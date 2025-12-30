@@ -977,6 +977,53 @@ const typeMapping: Record<string, {
     priority: 3,
     category: 'Licensing'
   },
+  // User License Assignments - links users to their assigned licenses
+  'licensingdiscoveryuserassignment': {
+    type: 'platform',
+    getName: (r) => `${r.DisplayName || r.UserPrincipalName} - ${r.SkuPartNumber || r.SkuId}`,
+    priority: 3,
+    category: 'License Assignment'
+  },
+  'userassignment': {
+    type: 'platform',
+    getName: (r) => `${r.DisplayName || r.UserPrincipalName} - ${r.SkuPartNumber || r.SkuId}`,
+    priority: 3,
+    category: 'License Assignment'
+  },
+
+  // Subscription Owners
+  'subscriptionowners': {
+    type: 'platform',
+    getName: (r) => r.PrincipalName || r.PrincipalEmail || 'Unknown Owner',
+    priority: 2,
+    category: 'Subscription Owner'
+  },
+  'azuresubscriptionownersdiscovery_subscriptionowners': {
+    type: 'platform',
+    getName: (r) => r.PrincipalName || r.PrincipalEmail || 'Unknown Owner',
+    priority: 2,
+    category: 'Subscription Owner'
+  },
+
+  // Directory Role Assignments (enhanced)
+  'directoryroles': {
+    type: 'platform',
+    getName: (r) => r.DisplayName || r.Name,
+    priority: 3,
+    category: 'Directory Role'
+  },
+  'azuredirectoryroles': {
+    type: 'platform',
+    getName: (r) => r.DisplayName || r.Name,
+    priority: 3,
+    category: 'Directory Role'
+  },
+  'azuredirectoryroles_directoryroles': {
+    type: 'platform',
+    getName: (r) => r.DisplayName || r.Name,
+    priority: 3,
+    category: 'Directory Role'
+  },
 
   // ===== BUSINESS CAPABILITY LAYER (Priority 4 - Rightmost) =====
   // These are inferred from other data - departments, capabilities
@@ -1885,6 +1932,194 @@ function generateCrossFileLinksOptimized(
     }
   }
 
+  // ===== ENHANCED LINK GENERATION (Phase 10) =====
+
+  // 1. User ↔ License Assignment Links
+  // Link users to their license assignments based on UserPrincipalName matching
+  const licenseAssignments = platforms.filter(n =>
+    n.metadata.source?.includes('userassignment') ||
+    n.metadata.source?.includes('licensingdiscoveryuserassignment') ||
+    n.metadata.category === 'License Assignment'
+  );
+
+  const licenses = platforms.filter(n =>
+    n.metadata.source?.includes('licensingsubscriptions') ||
+    n.metadata.source?.includes('licensingdiscoverylicensingsubscriptions') ||
+    n.metadata.category === 'Licensing'
+  );
+
+  // Create license index by SkuId and SkuPartNumber
+  const licenseIndex = new Map<string, SankeyNode>();
+  licenses.forEach(lic => {
+    const skuId = getRecordProp(lic.metadata.record, 'SkuId');
+    const skuPartNumber = getRecordProp(lic.metadata.record, 'SkuPartNumber');
+    if (skuId) licenseIndex.set(skuId, lic);
+    if (skuPartNumber) licenseIndex.set(skuPartNumber.toLowerCase(), lic);
+  });
+
+  for (const assignment of licenseAssignments) {
+    // Link assignment to user
+    const assignmentUPN = getRecordProp(assignment.metadata.record, 'UserPrincipalName')?.toLowerCase();
+    const assignmentDisplayName = getRecordProp(assignment.metadata.record, 'DisplayName')?.toLowerCase();
+
+    if (assignmentUPN || assignmentDisplayName) {
+      const userNode = (assignmentUPN && userIndex.get(assignmentUPN)) ||
+                       (assignmentDisplayName && userIndex.get(assignmentDisplayName));
+      if (userNode && userNode.id !== assignment.id) {
+        addLink(userNode.id, assignment.id, 'ownership');
+      }
+    }
+
+    // Link assignment to license
+    const skuId = getRecordProp(assignment.metadata.record, 'SkuId');
+    const skuPartNumber = getRecordProp(assignment.metadata.record, 'SkuPartNumber')?.toLowerCase();
+
+    const licenseNode = (skuId && licenseIndex.get(skuId)) ||
+                        (skuPartNumber && licenseIndex.get(skuPartNumber));
+    if (licenseNode && licenseNode.id !== assignment.id) {
+      addLink(assignment.id, licenseNode.id, 'provides');
+    }
+  }
+
+  // 2. Directory Role ↔ User Member Links
+  // Link directory roles to their user members using UserMembers field
+  const directoryRoles = platforms.filter(n =>
+    n.metadata.source?.includes('directoryrole') ||
+    n.metadata.category === 'Directory Role'
+  );
+
+  for (const role of directoryRoles) {
+    const userMembersStr = getRecordProp(role.metadata.record, 'UserMembers');
+    if (userMembersStr) {
+      // UserMembers is a semicolon-separated list of display names
+      const memberNames = userMembersStr.split(';').map((m: string) => m.trim().toLowerCase()).filter(Boolean);
+
+      for (const memberName of memberNames) {
+        const memberNode = userIndex.get(memberName);
+        if (memberNode && memberNode.id !== role.id) {
+          addLink(role.id, memberNode.id, 'ownership');
+        }
+      }
+    }
+
+    // Also link based on GroupMembers for groups that have directory roles
+    const groupMembersStr = getRecordProp(role.metadata.record, 'GroupMembers');
+    if (groupMembersStr) {
+      const groupNames = groupMembersStr.split(';').map((g: string) => g.trim().toLowerCase()).filter(Boolean);
+
+      for (const groupName of groupNames) {
+        const groupNode = groupIndex.get(groupName);
+        if (groupNode && groupNode.id !== role.id) {
+          addLink(role.id, groupNode.id, 'ownership');
+        }
+      }
+    }
+  }
+
+  // 3. Subscription Owner ↔ Subscription Links
+  // Link subscription owners to their subscriptions
+  const subscriptionOwners = platforms.filter(n =>
+    n.metadata.source?.includes('subscriptionowner') ||
+    n.metadata.category === 'Subscription Owner'
+  );
+
+  for (const owner of subscriptionOwners) {
+    // Link owner to subscription
+    const ownerSubId = getRecordProp(owner.metadata.record, 'SubscriptionId');
+    const ownerSubName = getRecordProp(owner.metadata.record, 'SubscriptionName');
+
+    if (ownerSubId || ownerSubName) {
+      const subNode = (ownerSubId && subIndex.get(ownerSubId)) ||
+                      subscriptions.find(s => s.name === ownerSubName);
+      if (subNode && subNode.id !== owner.id) {
+        addLink(owner.id, subNode.id, 'ownership');
+      }
+    }
+
+    // Link owner to user (if owner is a user)
+    const principalEmail = getRecordProp(owner.metadata.record, 'PrincipalEmail')?.toLowerCase();
+    const principalName = getRecordProp(owner.metadata.record, 'PrincipalName')?.toLowerCase();
+    const principalType = getRecordProp(owner.metadata.record, 'PrincipalType');
+
+    if (principalType === 'User' || principalType === 'user') {
+      const userNode = (principalEmail && userIndex.get(principalEmail)) ||
+                       (principalName && userIndex.get(principalName));
+      if (userNode && userNode.id !== owner.id) {
+        addLink(userNode.id, owner.id, 'ownership');
+      }
+    }
+  }
+
+  // 4. Application Ownership Links
+  // Link applications to their owners from EntraID discovery
+  for (const app of applications) {
+    const ownerDisplayName = getRecordProp(app.metadata.record, 'OwnerDisplayName')?.toLowerCase();
+    const owners = getRecordProp(app.metadata.record, 'Owners');
+
+    if (ownerDisplayName) {
+      const ownerNode = userIndex.get(ownerDisplayName);
+      if (ownerNode && ownerNode.id !== app.id) {
+        addLink(ownerNode.id, app.id, 'ownership');
+      }
+    }
+
+    // Handle multiple owners from Owners field (semicolon-separated)
+    if (owners) {
+      const ownerList = owners.split(';').map((o: string) => o.trim().toLowerCase()).filter(Boolean);
+      for (const ownerName of ownerList) {
+        const ownerNode = userIndex.get(ownerName);
+        if (ownerNode && ownerNode.id !== app.id) {
+          addLink(ownerNode.id, app.id, 'ownership');
+        }
+      }
+    }
+  }
+
+  // 5. Infrastructure Relationship Links
+  // Link VMs to their resource groups and virtual networks
+  const vms = (byType.get('it-component') || []).filter(n =>
+    n.metadata.source?.includes('virtualmachine') ||
+    n.metadata.source?.includes('vm')
+  );
+
+  for (const vm of vms) {
+    // Link to resource group
+    const rgName = getRecordProp(vm.metadata.record, 'ResourceGroupName') ||
+                   getRecordProp(vm.metadata.record, 'ResourceGroup');
+    if (rgName) {
+      const rgNode = resourceGroups.find(rg => rg.name === rgName);
+      if (rgNode && rgNode.id !== vm.id) {
+        addLink(rgNode.id, vm.id, 'ownership');
+      }
+    }
+
+    // Link to subscription
+    const vmSubId = getRecordProp(vm.metadata.record, 'SubscriptionId');
+    if (vmSubId) {
+      const vmSubNode = subIndex.get(vmSubId);
+      if (vmSubNode && vmSubNode.id !== vm.id) {
+        addLink(vmSubNode.id, vm.id, 'ownership');
+      }
+    }
+  }
+
+  // Link storage accounts to resource groups
+  const storageAccounts = (byType.get('it-component') || []).filter(n =>
+    n.metadata.source?.includes('storage') &&
+    !n.metadata.source?.includes('local')
+  );
+
+  for (const storage of storageAccounts) {
+    const rgName = getRecordProp(storage.metadata.record, 'ResourceGroupName') ||
+                   getRecordProp(storage.metadata.record, 'ResourceGroup');
+    if (rgName) {
+      const rgNode = resourceGroups.find(rg => rg.name === rgName);
+      if (rgNode && rgNode.id !== storage.id) {
+        addLink(rgNode.id, storage.id, 'ownership');
+      }
+    }
+  }
+
   console.log('[generateCrossFileLinksOptimized] Generated links:', links.length, {
     applications: applications.length,
     databases: databases.length,
@@ -1897,7 +2132,13 @@ function generateCrossFileLinksOptimized(
     spSites: spSites.length,
     spLists: spLists.length,
     users: users.length,
-    mailboxes: mailboxes.length
+    mailboxes: mailboxes.length,
+    licenseAssignments: licenseAssignments.length,
+    licenses: licenses.length,
+    directoryRoles: directoryRoles.length,
+    subscriptionOwners: subscriptionOwners.length,
+    vms: vms.length,
+    storageAccounts: storageAccounts.length
   });
   return links;
 }

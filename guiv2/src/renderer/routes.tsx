@@ -109,7 +109,7 @@ const RiskAssessmentView = lazy(() => import('./views/security/RiskAssessmentVie
 const PolicyManagementView = lazy(() => import('./views/security/PolicyManagementView'));
 
 // Licensing views
-const LicenseManagementView = lazy(() => import('./views/licensing/LicenseManagementView'));
+const LicensingHubView = lazy(() => import('./features/licensingHub/views/LicensingHubView'));
 
 /**
  * Application routes
@@ -616,10 +616,10 @@ export const routes: RouteObject[] = [
     element: lazyLoad(() => import('./views/security/PolicyManagementView')),
   },
 
-  // Licensing
+  // Licensing Hub
   {
     path: '/licensing',
-    element: lazyLoad(() => import('./views/licensing/LicenseManagementView')),
+    element: lazyLoad(() => import('./features/licensingHub/views/LicensingHubView')),
   },
 
   // Reports & Settings

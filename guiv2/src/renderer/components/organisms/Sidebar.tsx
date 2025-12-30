@@ -233,6 +233,11 @@ export const Sidebar: React.FC = () => {
       ],
     },
     {
+      path: '/licensing',
+      label: 'Licensing Hub',
+      icon: <FileText size={20} />,
+    },
+    {
       path: '/reports',
       label: 'Reports',
       icon: <FileText size={20} />,

@@ -1,70 +1,38 @@
 /**
  * Licensing Discovered Logic Hook
  * Contains business logic for viewing discovered licensing data from CSV files
+ * Enhanced version with user assignments, service plans, and cost analysis
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Papa from 'papaparse';
 import { useProfileStore } from '../store/useProfileStore';
+import {
+  LicenseSubscription,
+  UserLicenseAssignment,
+  ServicePlanDetail,
+  LicensingSummary,
+  EnhancedLicenseStats,
+  LicenseStatus,
+} from '../types/models/licensing';
+import { getLicensePrice, calculateLicenseCost, getLicenseDisplayName } from '../data/licensePricing';
 
-type LicenseStatus = 'active' | 'expired' | 'trial' | 'suspended';
-
-interface LicenseData {
-  productName?: string;
-  skuId?: string;
-  status?: LicenseStatus;
-  prepaidUnits?: { enabled?: number; suspended?: number; warning?: number };
-  consumedUnits?: number;
-  expirationDate?: string;
-  cost?: { amount: number; currency: string; billingCycle: 'monthly' | 'annual' };
-  [key: string]: any;
-}
-
-interface AssignmentData {
-  userId?: string;
-  userPrincipalName?: string;
-  displayName?: string;
-  skuId?: string;
-  productName?: string;
-  assignmentSource?: string;
-  assignedDate?: string;
-  [key: string]: any;
-}
-
-interface SubscriptionData {
-  subscriptionId?: string;
-  subscriptionName?: string;
-  status?: string;
-  quantity?: number;
-  [key: string]: any;
-}
-
-interface LicenseStats {
-  totalLicenses: number;
-  totalAssigned: number;
-  totalAvailable: number;
-  utilizationRate: number;
-  costPerMonth: number;
-  expiringCount: number;
-  underlicensedCount: number;
-  overlicensedCount: number;
-  licensesByStatus: Record<LicenseStatus, number>;
-  assignmentsBySource: Record<string, number>;
-  topCostProducts: Array<{ product: string; cost: number; count: number; utilization: number }>;
-}
+type TabType = 'overview' | 'licenses' | 'userAssignments' | 'servicePlans' | 'compliance';
 
 interface LicensingDiscoveredState {
-  licenses: LicenseData[];
-  assignments: AssignmentData[];
-  subscriptions: SubscriptionData[];
+  licenses: LicenseSubscription[];
+  userAssignments: UserLicenseAssignment[];
+  servicePlans: ServicePlanDetail[];
+  summary: LicensingSummary | null;
   isLoading: boolean;
   error: string | null;
-  activeTab: 'overview' | 'licenses' | 'assignments' | 'subscriptions';
+  activeTab: TabType;
   filter: {
     searchText: string;
-    selectedStatuses: LicenseStatus[];
-    showOnlyExpiring: boolean;
-    showOnlyUnassigned: boolean;
+    selectedProducts: string[];
+    selectedStatuses: string[];
+    assignmentSource: 'all' | 'Direct' | 'Group';
+    showOnlyWithDisabledPlans: boolean;
   };
 }
 
@@ -77,7 +45,7 @@ interface ColumnDef {
 }
 
 // Helper function to load and parse CSV file
-async function loadCsvFile(basePath: string, filename: string): Promise<any[]> {
+async function loadCsvFile<T>(basePath: string, filename: string): Promise<T[]> {
   const fullPath = `${basePath}\\Raw\\${filename}`;
 
   try {
@@ -92,12 +60,12 @@ async function loadCsvFile(basePath: string, filename: string): Promise<any[]> {
     }
 
     return new Promise((resolve) => {
-      Papa.parse(csvText, {
+      Papa.parse<T>(csvText, {
         header: true,
         dynamicTyping: true,
         skipEmptyLines: true,
         complete: (results) => {
-          resolve(results.data || []);
+          resolve((results.data as T[]) || []);
         },
         error: () => {
           resolve([]);
@@ -114,16 +82,18 @@ export const useLicensingDiscoveredLogic = () => {
 
   const [state, setState] = useState<LicensingDiscoveredState>({
     licenses: [],
-    assignments: [],
-    subscriptions: [],
+    userAssignments: [],
+    servicePlans: [],
+    summary: null,
     isLoading: true,
     error: null,
     activeTab: 'overview',
     filter: {
       searchText: '',
+      selectedProducts: [],
       selectedStatuses: [],
-      showOnlyExpiring: false,
-      showOnlyUnassigned: false,
+      assignmentSource: 'all',
+      showOnlyWithDisabledPlans: false,
     },
   });
 
@@ -140,29 +110,28 @@ export const useLicensingDiscoveredLogic = () => {
       try {
         const basePath = selectedSourceProfile.dataPath || `C:\\DiscoveryData\\${selectedSourceProfile.companyName}`;
 
-        // Try multiple naming patterns for licenses
-        let licenses = await loadCsvFile(basePath, 'LicensingDiscoveryLicenses.csv');
+        // Load all licensing CSV files
+        const [licenses, userAssignments, servicePlans, summaryData] = await Promise.all([
+          loadCsvFile<LicenseSubscription>(basePath, 'LicensingDiscovery_Licenses.csv'),
+          loadCsvFile<UserLicenseAssignment>(basePath, 'LicensingDiscovery_UserAssignments.csv'),
+          loadCsvFile<ServicePlanDetail>(basePath, 'LicensingDiscovery_ServicePlans.csv'),
+          loadCsvFile<LicensingSummary>(basePath, 'LicensingDiscovery_Summary.csv'),
+        ]);
+
+        // Fallback to old naming if new files don't exist
+        let finalLicenses = licenses;
         if (licenses.length === 0) {
-          licenses = await loadCsvFile(basePath, 'LicensingDiscovery_Licenses.csv');
+          finalLicenses = await loadCsvFile<LicenseSubscription>(basePath, 'LicensingSubscriptions.csv');
         }
 
-        // Try multiple naming patterns for assignments
-        let assignments = await loadCsvFile(basePath, 'LicensingDiscoveryAssignments.csv');
-        if (assignments.length === 0) {
-          assignments = await loadCsvFile(basePath, 'LicensingDiscovery_Assignments.csv');
-        }
-
-        // Try multiple naming patterns for subscriptions
-        let subscriptions = await loadCsvFile(basePath, 'LicensingDiscoverySubscriptions.csv');
-        if (subscriptions.length === 0) {
-          subscriptions = await loadCsvFile(basePath, 'LicensingDiscoveryLicensingSubscriptions.csv');
-        }
+        const summary = summaryData.length > 0 ? summaryData[0] : null;
 
         setState(prev => ({
           ...prev,
-          licenses,
-          assignments,
-          subscriptions,
+          licenses: finalLicenses,
+          userAssignments,
+          servicePlans,
+          summary,
           isLoading: false,
         }));
       } catch (error: any) {
@@ -179,7 +148,7 @@ export const useLicensingDiscoveredLogic = () => {
   }, [selectedSourceProfile?.companyName, selectedSourceProfile?.dataPath]);
 
   // Tab management
-  const setActiveTab = useCallback((tab: LicensingDiscoveredState['activeTab']) => {
+  const setActiveTab = useCallback((tab: TabType) => {
     setState(prev => ({ ...prev, activeTab: tab }));
   }, []);
 
@@ -196,122 +165,203 @@ export const useLicensingDiscoveredLogic = () => {
     setState(prev => ({ ...prev, error: null }));
   }, []);
 
+  // Get unique products for filter dropdown
+  const uniqueProducts = useMemo(() => {
+    const products = new Set<string>();
+    state.licenses.forEach(l => products.add(l.skuPartNumber));
+    state.userAssignments.forEach(a => products.add(a.skuPartNumber));
+    return Array.from(products).sort();
+  }, [state.licenses, state.userAssignments]);
+
   // Filtered licenses
   const filteredLicenses = useMemo(() => {
     let filtered = [...state.licenses];
 
-    // Search filter
     if (state.filter.searchText) {
       const search = state.filter.searchText.toLowerCase();
       filtered = filtered.filter(license =>
-        license.productName?.toLowerCase().includes(search) ||
-        license.skuId?.toLowerCase().includes(search)
+        license.skuPartNumber?.toLowerCase().includes(search) ||
+        getLicenseDisplayName(license.skuPartNumber)?.toLowerCase().includes(search)
       );
     }
 
-    // Status filter
+    if (state.filter.selectedProducts.length > 0) {
+      filtered = filtered.filter(license =>
+        state.filter.selectedProducts.includes(license.skuPartNumber)
+      );
+    }
+
     if (state.filter.selectedStatuses.length > 0) {
       filtered = filtered.filter(license =>
-        state.filter.selectedStatuses.includes(license.status as LicenseStatus)
-      );
-    }
-
-    // Expiring soon filter
-    if (state.filter.showOnlyExpiring) {
-      const thirtyDaysFromNow = new Date();
-      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-      filtered = filtered.filter(license =>
-        license.expirationDate && new Date(license.expirationDate) <= thirtyDaysFromNow
-      );
-    }
-
-    // Unassigned filter
-    if (state.filter.showOnlyUnassigned) {
-      filtered = filtered.filter(license =>
-        (license.prepaidUnits?.enabled || 0) > (license.consumedUnits || 0)
+        state.filter.selectedStatuses.includes(license.status)
       );
     }
 
     return filtered;
   }, [state.licenses, state.filter]);
 
-  // Filtered assignments
-  const filteredAssignments = useMemo(() => {
-    if (!state.filter.searchText) return state.assignments;
+  // Filtered user assignments
+  const filteredUserAssignments = useMemo(() => {
+    let filtered = [...state.userAssignments];
 
-    const search = state.filter.searchText.toLowerCase();
-    return state.assignments.filter(assignment =>
-      assignment.displayName?.toLowerCase().includes(search) ||
-      assignment.userPrincipalName?.toLowerCase().includes(search) ||
-      assignment.productName?.toLowerCase().includes(search)
-    );
-  }, [state.assignments, state.filter.searchText]);
+    if (state.filter.searchText) {
+      const search = state.filter.searchText.toLowerCase();
+      filtered = filtered.filter(assignment =>
+        assignment.displayName?.toLowerCase().includes(search) ||
+        assignment.userPrincipalName?.toLowerCase().includes(search) ||
+        assignment.skuPartNumber?.toLowerCase().includes(search)
+      );
+    }
 
-  // Filtered subscriptions
-  const filteredSubscriptions = useMemo(() => {
-    if (!state.filter.searchText) return state.subscriptions;
+    if (state.filter.selectedProducts.length > 0) {
+      filtered = filtered.filter(assignment =>
+        state.filter.selectedProducts.includes(assignment.skuPartNumber)
+      );
+    }
 
-    const search = state.filter.searchText.toLowerCase();
-    return state.subscriptions.filter(sub =>
-      sub.subscriptionName?.toLowerCase().includes(search) ||
-      sub.subscriptionId?.toLowerCase().includes(search)
-    );
-  }, [state.subscriptions, state.filter.searchText]);
+    if (state.filter.assignmentSource !== 'all') {
+      filtered = filtered.filter(assignment =>
+        assignment.assignmentSource === state.filter.assignmentSource
+      );
+    }
+
+    if (state.filter.showOnlyWithDisabledPlans) {
+      filtered = filtered.filter(assignment =>
+        assignment.disabledPlanCount > 0
+      );
+    }
+
+    return filtered;
+  }, [state.userAssignments, state.filter]);
+
+  // Filtered service plans
+  const filteredServicePlans = useMemo(() => {
+    let filtered = [...state.servicePlans];
+
+    if (state.filter.searchText) {
+      const search = state.filter.searchText.toLowerCase();
+      filtered = filtered.filter(plan =>
+        plan.displayName?.toLowerCase().includes(search) ||
+        plan.userPrincipalName?.toLowerCase().includes(search) ||
+        plan.servicePlanName?.toLowerCase().includes(search) ||
+        plan.skuPartNumber?.toLowerCase().includes(search)
+      );
+    }
+
+    if (state.filter.selectedProducts.length > 0) {
+      filtered = filtered.filter(plan =>
+        state.filter.selectedProducts.includes(plan.skuPartNumber)
+      );
+    }
+
+    return filtered;
+  }, [state.servicePlans, state.filter]);
 
   // Active tab data
   const filteredData = useMemo(() => {
     switch (state.activeTab) {
       case 'licenses':
         return filteredLicenses;
-      case 'assignments':
-        return filteredAssignments;
-      case 'subscriptions':
-        return filteredSubscriptions;
+      case 'userAssignments':
+        return filteredUserAssignments;
+      case 'servicePlans':
+        return filteredServicePlans;
       default:
         return filteredLicenses;
     }
-  }, [state.activeTab, filteredLicenses, filteredAssignments, filteredSubscriptions]);
+  }, [state.activeTab, filteredLicenses, filteredUserAssignments, filteredServicePlans]);
 
   // Columns based on active tab
   const columns = useMemo<ColumnDef[]>(() => {
     switch (state.activeTab) {
       case 'licenses':
         return [
-          { key: 'productName', header: 'Product', width: 250 },
-          { key: 'skuId', header: 'SKU ID', width: 200 },
+          { key: 'skuPartNumber', header: 'Product', width: 250, getValue: (row: any) => getLicenseDisplayName(row.skuPartNumber) || row.skuPartNumber },
           { key: 'status', header: 'Status', width: 100 },
-          { key: 'prepaidUnits.enabled', header: 'Total', width: 80, getValue: (row: any) => row.prepaidUnits?.enabled || row.TotalUnits || 0 },
-          { key: 'consumedUnits', header: 'Assigned', width: 80, getValue: (row: any) => row.consumedUnits || row.AssignedUnits || 0 },
-          { key: 'available', header: 'Available', width: 80, getValue: (row: any) => (row.prepaidUnits?.enabled || row.TotalUnits || 0) - (row.consumedUnits || row.AssignedUnits || 0) },
-          { key: 'expirationDate', header: 'Expires', width: 120 },
+          { key: 'prepaidUnits', header: 'Total', width: 80, getValue: (row: any) => row.prepaidUnits || row.PrepaidUnits || 0 },
+          { key: 'consumedUnits', header: 'Assigned', width: 80, getValue: (row: any) => row.consumedUnits || row.ConsumedUnits || 0 },
+          { key: 'availableUnits', header: 'Available', width: 80, getValue: (row: any) => row.availableUnits || row.AvailableUnits || 0 },
+          { key: 'utilizationPercent', header: 'Utilization', width: 100, getValue: (row: any) => `${row.utilizationPercent || row.UtilizationPercent || 0}%` },
+          { key: 'estimatedCost', header: 'Est. Monthly Cost', width: 120, getValue: (row: any) => {
+            const cost = calculateLicenseCost(row.skuPartNumber || row.SkuPartNumber, row.prepaidUnits || row.PrepaidUnits || 0);
+            return cost > 0 ? `$${cost.toLocaleString()}` : '-';
+          }},
         ];
-      case 'assignments':
+      case 'userAssignments':
         return [
           { key: 'displayName', header: 'User', width: 200, getValue: (row: any) => row.displayName || row.DisplayName },
           { key: 'userPrincipalName', header: 'Email', width: 250, getValue: (row: any) => row.userPrincipalName || row.UserPrincipalName },
-          { key: 'productName', header: 'License', width: 250, getValue: (row: any) => row.productName || row.ProductName || row.SkuPartNumber },
+          { key: 'skuPartNumber', header: 'License', width: 200, getValue: (row: any) => getLicenseDisplayName(row.skuPartNumber || row.SkuPartNumber) },
           { key: 'assignmentSource', header: 'Source', width: 100, getValue: (row: any) => row.assignmentSource || row.AssignmentSource || 'Direct' },
-          { key: 'assignedDate', header: 'Assigned', width: 120, getValue: (row: any) => row.assignedDate || row.AssignedDate },
+          { key: 'disabledPlanCount', header: 'Disabled Plans', width: 120, getValue: (row: any) => row.disabledPlanCount || row.DisabledPlanCount || 0 },
+          { key: 'lastUpdated', header: 'Last Updated', width: 150, getValue: (row: any) => row.lastUpdated || row.LastUpdated || '-' },
         ];
-      case 'subscriptions':
+      case 'servicePlans':
         return [
-          { key: 'subscriptionName', header: 'Name', width: 300, getValue: (row: any) => row.subscriptionName || row.SubscriptionName || row.SkuPartNumber },
-          { key: 'subscriptionId', header: 'ID', width: 200, getValue: (row: any) => row.subscriptionId || row.SubscriptionId || row.SkuId },
-          { key: 'status', header: 'Status', width: 100, getValue: (row: any) => row.status || row.Status || row.CapabilityStatus },
-          { key: 'quantity', header: 'Quantity', width: 100, getValue: (row: any) => row.quantity || row.Quantity || row.PrepaidUnits },
+          { key: 'displayName', header: 'User', width: 180, getValue: (row: any) => row.displayName || row.DisplayName },
+          { key: 'skuPartNumber', header: 'License', width: 180, getValue: (row: any) => getLicenseDisplayName(row.skuPartNumber || row.SkuPartNumber) },
+          { key: 'servicePlanName', header: 'Service Plan', width: 250, getValue: (row: any) => row.servicePlanName || row.ServicePlanName },
+          { key: 'provisioningStatus', header: 'Status', width: 120, getValue: (row: any) => row.provisioningStatus || row.ProvisioningStatus },
         ];
       default:
         return [
-          { key: 'productName', header: 'Product', width: 250 },
+          { key: 'skuPartNumber', header: 'Product', width: 250 },
           { key: 'status', header: 'Status', width: 100 },
         ];
     }
   }, [state.activeTab]);
 
-  // Statistics
-  const stats = useMemo<LicenseStats | null>(() => {
-    if (state.licenses.length === 0 && state.assignments.length === 0) return null;
+  // Enhanced Statistics
+  const stats = useMemo<EnhancedLicenseStats | null>(() => {
+    // Use summary data if available, otherwise calculate
+    const summary = state.summary;
 
+    // Calculate from raw data if no summary or for additional metrics
+    const totalLicenses = summary?.totalLicenses ||
+      state.licenses.reduce((sum, l) => sum + (l.prepaidUnits || 0), 0);
+    const totalAssigned = summary?.totalAssigned ||
+      state.licenses.reduce((sum, l) => sum + (l.consumedUnits || 0), 0);
+    const totalAvailable = totalLicenses - totalAssigned;
+    const utilizationRate = totalLicenses > 0 ? (totalAssigned / totalLicenses) * 100 : 0;
+
+    // User metrics
+    const uniqueUsers = new Set(state.userAssignments.map(a => a.userId));
+    const totalLicensedUsers = summary?.licensedUsers || uniqueUsers.size;
+
+    // Count users with multiple licenses
+    const userLicenseCounts = new Map<string, number>();
+    state.userAssignments.forEach(a => {
+      const count = userLicenseCounts.get(a.userId) || 0;
+      userLicenseCounts.set(a.userId, count + 1);
+    });
+    const usersWithMultipleLicenses = Array.from(userLicenseCounts.values()).filter(c => c > 1).length;
+
+    // Users with disabled plans
+    const usersWithDisabledPlans = new Set(
+      state.userAssignments.filter(a => a.disabledPlanCount > 0).map(a => a.userId)
+    ).size;
+
+    // Assignment source analysis
+    const directAssignments = summary?.directAssignments ||
+      state.userAssignments.filter(a => a.assignmentSource === 'Direct').length;
+    const groupBasedAssignments = summary?.groupBasedAssignments ||
+      state.userAssignments.filter(a => a.assignmentSource === 'Group').length;
+    const totalAssignments = state.userAssignments.length;
+    const directAssignmentPercent = totalAssignments > 0
+      ? (directAssignments / totalAssignments) * 100
+      : 0;
+
+    // Service plan analysis
+    const totalServicePlans = summary?.totalServicePlans || state.servicePlans.length;
+    const enabledServicePlans = summary?.enabledServicePlans ||
+      state.servicePlans.filter(p => p.provisioningStatus === 'Success').length;
+    const disabledServicePlans = summary?.disabledServicePlans ||
+      state.servicePlans.filter(p => p.provisioningStatus === 'Disabled').length;
+
+    // Cost analysis
+    let estimatedMonthlyCost = 0;
+    let wastedLicenseCost = 0;
+    const licensesByProduct: Record<string, number> = {};
     const licensesByStatus: Record<LicenseStatus, number> = {
       active: 0,
       expired: 0,
@@ -319,95 +369,110 @@ export const useLicensingDiscoveredLogic = () => {
       suspended: 0,
     };
 
-    const assignmentsBySource: Record<string, number> = {
-      direct: 0,
-      group: 0,
-      inherited: 0,
-    };
-
-    let totalLicenses = 0;
-    let totalAssigned = 0;
-    let totalCost = 0;
-    const costByProduct: Record<string, { cost: number; count: number; consumed: number; enabled: number }> = {};
-
     state.licenses.forEach(license => {
-      const enabled = license.prepaidUnits?.enabled || parseInt(license.TotalUnits as string) || 0;
-      const consumed = license.consumedUnits || parseInt(license.AssignedUnits as string) || 0;
-      totalLicenses += enabled;
-      totalAssigned += consumed;
-
-      // Status breakdown
-      const status = (license.status || license.Status || 'active').toLowerCase() as LicenseStatus;
-      if (licensesByStatus[status] !== undefined) {
-        licensesByStatus[status]++;
-      }
+      const sku = license.skuPartNumber;
+      const prepaid = license.prepaidUnits || 0;
+      const consumed = license.consumedUnits || 0;
+      const unused = prepaid - consumed;
 
       // Cost calculation
-      const product = license.productName || license.ProductName || license.SkuPartNumber || 'Unknown';
-      if (license.cost?.amount) {
-        const monthlyCost = license.cost.billingCycle === 'annual'
-          ? (license.cost.amount / 12) * enabled
-          : license.cost.amount * enabled;
-        totalCost += monthlyCost;
+      const totalCost = calculateLicenseCost(sku, prepaid);
+      const unusedCost = calculateLicenseCost(sku, Math.max(0, unused));
+      estimatedMonthlyCost += totalCost;
+      wastedLicenseCost += unusedCost;
 
-        if (!costByProduct[product]) {
-          costByProduct[product] = { cost: 0, count: 0, consumed: 0, enabled: 0 };
-        }
-        costByProduct[product].cost += monthlyCost;
-        costByProduct[product].count++;
-        costByProduct[product].consumed += consumed;
-        costByProduct[product].enabled += enabled;
-      } else if (!costByProduct[product]) {
-        costByProduct[product] = { cost: 0, count: 1, consumed, enabled };
-      } else {
-        costByProduct[product].count++;
-        costByProduct[product].consumed += consumed;
-        costByProduct[product].enabled += enabled;
+      // Product breakdown
+      licensesByProduct[sku] = (licensesByProduct[sku] || 0) + prepaid;
+
+      // Status breakdown
+      const status = (license.status || 'Active').toLowerCase() as LicenseStatus;
+      if (status === 'active' || status === 'expired' || status === 'trial' || status === 'suspended') {
+        licensesByStatus[status]++;
       }
     });
 
-    state.assignments.forEach(assignment => {
-      const source = (assignment.assignmentSource || assignment.AssignmentSource || 'direct').toLowerCase();
-      if (assignmentsBySource[source] !== undefined) {
-        assignmentsBySource[source]++;
-      } else {
-        assignmentsBySource.direct++;
-      }
-    });
+    const costPerUser = totalLicensedUsers > 0 ? estimatedMonthlyCost / totalLicensedUsers : 0;
+    const avgLicensesPerUser = totalLicensedUsers > 0 ? totalAssignments / totalLicensedUsers : 0;
 
-    const topCostProducts = Object.entries(costByProduct)
-      .sort((a, b) => b[1].enabled - a[1].enabled) // Sort by license count if no cost data
-      .slice(0, 5)
-      .map(([product, data]) => ({
-        product,
-        cost: data.cost,
-        count: data.count,
-        utilization: data.enabled > 0 ? (data.consumed / data.enabled) * 100 : 0,
-      }));
+    // Top cost products (with utilization)
+    const topCostProducts = Object.entries(licensesByProduct)
+      .map(([product, count]) => {
+        const license = state.licenses.find(l => l.skuPartNumber === product);
+        const utilization = license && license.prepaidUnits > 0
+          ? (license.consumedUnits / license.prepaidUnits) * 100
+          : 0;
+        return {
+          product,
+          cost: calculateLicenseCost(product, count),
+          count,
+          utilization,
+        };
+      })
+      .sort((a, b) => b.cost - a.cost)
+      .slice(0, 5);
 
-    const totalAvailable = totalLicenses - totalAssigned;
-    const utilizationRate = totalLicenses > 0 ? (totalAssigned / totalLicenses) * 100 : 0;
+    // Compliance - find products with low utilization (overlicensed)
+    const overlicensedProducts = state.licenses
+      .filter(l => {
+        const utilization = l.prepaidUnits > 0 ? (l.consumedUnits / l.prepaidUnits) * 100 : 100;
+        return utilization < 50 && l.prepaidUnits > 0;
+      })
+      .map(l => l.skuPartNumber);
 
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-    const expiringCount = state.licenses.filter(l =>
-      l.expirationDate && new Date(l.expirationDate) <= thirtyDaysFromNow
-    ).length;
+    // Underlicensed - consumed > prepaid (shouldn't happen normally)
+    const underlicensedProducts = state.licenses
+      .filter(l => l.consumedUnits > l.prepaidUnits)
+      .map(l => l.skuPartNumber);
+
+    // Assignment source breakdown
+    const assignmentsBySource: Record<string, number> = {
+      Direct: directAssignments,
+      Group: groupBasedAssignments,
+    };
 
     return {
       totalLicenses,
       totalAssigned,
       totalAvailable,
       utilizationRate,
-      costPerMonth: totalCost,
-      expiringCount,
-      underlicensedCount: 0, // Would need compliance data
-      overlicensedCount: totalAvailable > 0 ? topCostProducts.filter(p => p.utilization < 50).length : 0,
+      totalCost: estimatedMonthlyCost,
+      licensesByProduct,
       licensesByStatus,
-      assignmentsBySource,
       topCostProducts,
+      totalLicensedUsers,
+      avgLicensesPerUser,
+      usersWithMultipleLicenses,
+      usersWithDisabledPlans,
+      directAssignments,
+      groupBasedAssignments,
+      directAssignmentPercent,
+      assignmentsBySource,
+      totalServicePlans,
+      enabledServicePlans,
+      disabledServicePlans,
+      estimatedMonthlyCost,
+      costPerMonth: estimatedMonthlyCost,
+      costPerUser,
+      wastedLicenseCost,
+      expiringCount: 0, // Would need expiration date data
+      underlicensedCount: underlicensedProducts.length,
+      overlicensedCount: overlicensedProducts.length,
+      underlicensedProducts,
+      overlicensedProducts,
+      expiringLicenses: [], // Would need expiration date data
     };
-  }, [state.licenses, state.assignments]);
+  }, [state.licenses, state.userAssignments, state.servicePlans, state.summary]);
+
+  // User license lookup map (for cross-referencing in user views)
+  const userLicenseMap = useMemo(() => {
+    const map = new Map<string, UserLicenseAssignment[]>();
+    state.userAssignments.forEach(assignment => {
+      const existing = map.get(assignment.userId) || [];
+      existing.push(assignment);
+      map.set(assignment.userId, existing);
+    });
+    return map;
+  }, [state.userAssignments]);
 
   // Export functions
   const exportToCSV = useCallback((data: any[], filename: string) => {
@@ -416,7 +481,7 @@ export const useLicensingDiscoveredLogic = () => {
       return;
     }
 
-    const headers = Object.keys(data[0]);
+    const headers = Object.keys(data[0]).filter(k => !k.startsWith('_'));
     const csvContent = [
       headers.join(','),
       ...data.map((row: any) =>
@@ -439,7 +504,6 @@ export const useLicensingDiscoveredLogic = () => {
   }, []);
 
   const exportToExcel = useCallback(async (data: any[], filename: string) => {
-    // For now, just export as CSV with .xlsx extension
     exportToCSV(data, filename.replace('.xlsx', '.csv'));
   }, [exportToCSV]);
 
@@ -450,26 +514,26 @@ export const useLicensingDiscoveredLogic = () => {
 
     if (basePath && selectedSourceProfile?.companyName) {
       try {
-        let licenses = await loadCsvFile(basePath, 'LicensingDiscoveryLicenses.csv');
+        const [licenses, userAssignments, servicePlans, summaryData] = await Promise.all([
+          loadCsvFile<LicenseSubscription>(basePath, 'LicensingDiscovery_Licenses.csv'),
+          loadCsvFile<UserLicenseAssignment>(basePath, 'LicensingDiscovery_UserAssignments.csv'),
+          loadCsvFile<ServicePlanDetail>(basePath, 'LicensingDiscovery_ServicePlans.csv'),
+          loadCsvFile<LicensingSummary>(basePath, 'LicensingDiscovery_Summary.csv'),
+        ]);
+
+        let finalLicenses = licenses;
         if (licenses.length === 0) {
-          licenses = await loadCsvFile(basePath, 'LicensingDiscovery_Licenses.csv');
+          finalLicenses = await loadCsvFile<LicenseSubscription>(basePath, 'LicensingSubscriptions.csv');
         }
 
-        let assignments = await loadCsvFile(basePath, 'LicensingDiscoveryAssignments.csv');
-        if (assignments.length === 0) {
-          assignments = await loadCsvFile(basePath, 'LicensingDiscovery_Assignments.csv');
-        }
-
-        let subscriptions = await loadCsvFile(basePath, 'LicensingDiscoverySubscriptions.csv');
-        if (subscriptions.length === 0) {
-          subscriptions = await loadCsvFile(basePath, 'LicensingDiscoveryLicensingSubscriptions.csv');
-        }
+        const summary = summaryData.length > 0 ? summaryData[0] : null;
 
         setState(prev => ({
           ...prev,
-          licenses,
-          assignments,
-          subscriptions,
+          licenses: finalLicenses,
+          userAssignments,
+          servicePlans,
+          summary,
           isLoading: false,
         }));
       } catch (error: any) {
@@ -481,8 +545,9 @@ export const useLicensingDiscoveredLogic = () => {
   return {
     // State
     licenses: state.licenses,
-    assignments: state.assignments,
-    subscriptions: state.subscriptions,
+    userAssignments: state.userAssignments,
+    servicePlans: state.servicePlans,
+    summary: state.summary,
     isLoading: state.isLoading,
     error: state.error,
     activeTab: state.activeTab,
@@ -493,8 +558,10 @@ export const useLicensingDiscoveredLogic = () => {
     columns,
     filteredData,
     filteredLicenses,
-    filteredAssignments,
-    filteredSubscriptions,
+    filteredUserAssignments,
+    filteredServicePlans,
+    uniqueProducts,
+    userLicenseMap,
 
     // Actions
     setActiveTab,

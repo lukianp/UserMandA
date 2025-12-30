@@ -1104,8 +1104,11 @@ const SetupCompanyView: React.FC = () => {
               Welcome to Enterprise Discovery & Migration Suite
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8">
-              This wizard will guide you through creating an Azure App Registration for your M&A transaction.
-              You'll need <strong>Global Administrator</strong> or <strong>Application Administrator</strong> permissions in Azure AD.
+              This wizard will guide you through creating an Azure App Registration for your M&A transaction
+              and configuring the necessary <strong>Active Directory credentials</strong> and
+              <strong>Azure credentials</strong> for comprehensive discovery and migration operations.
+              You'll need <strong>Global Administrator</strong> or <strong>Application Administrator</strong> permissions in Azure AD,
+              and appropriate Active Directory permissions for seamless integration.
             </p>
 
             <div className="grid grid-cols-3 gap-6 max-w-3xl mx-auto mt-8">

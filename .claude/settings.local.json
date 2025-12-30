@@ -164,7 +164,12 @@
       "Bash(timeout /t 3 /nobreak)",
       "Bash(nslookup:*)",
       "Bash(cmd /c \"robocopy D:\\\\Scripts\\\\UserMandA C:\\\\enterprisediscovery /MIR /XD .git node_modules .webpack /XF *.log /NFL /NDL /NJH /NJS\")",
-      "Bash(cmd /c \"dir /b D:\\\\Scripts\\\\UserMandA\\\\Modules\\\\Discovery\\\\*.psm1 | find /c /v \"\"\"\" & dir /b C:\\\\enterprisediscovery\\\\Modules\\\\Discovery\\\\*.psm1 | find /c /v \"\"\"\"\")"
+      "Bash(cmd /c \"dir /b D:\\\\Scripts\\\\UserMandA\\\\Modules\\\\Discovery\\\\*.psm1 | find /c /v \"\"\"\" & dir /b C:\\\\enterprisediscovery\\\\Modules\\\\Discovery\\\\*.psm1 | find /c /v \"\"\"\"\")",
+      "WebSearch",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\LicensingDiscovery*.csv\")",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*Licens*.csv 2>nul\")",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*License*.csv 2>nul & dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*DirectoryRole*.csv 2>nul & dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*SubscriptionOwner*.csv 2>nul\")",
+      "Bash(cmd /c \"cd C:\\\\enterprisediscovery\\\\guiv2 && start npm start\")"
     ],
     "deny": [],
     "ask": []

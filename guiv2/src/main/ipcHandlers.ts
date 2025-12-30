@@ -3138,6 +3138,12 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
   registerApplicationFactSheetHandlers();
 
   // ========================================
+  // Enterprise Systems Integration Handlers
+  // ========================================
+  const { registerEnterpriseSystemsHandlers } = await import('./services/enterpriseSystemsService');
+  registerEnterpriseSystemsHandlers();
+
+  // ========================================
   // Discovery Data Access Handlers
   // ========================================
   ipcMain.handle('discovery:get-applications', async (_, args: { sourceProfileId: string }) => {

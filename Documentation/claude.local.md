@@ -804,6 +804,81 @@ const {
 
 ---
 
+# TypeScript Interface Consistency (View ↔ Hook ↔ Types)
+
+## CRITICAL: TabType and Filter Interface Synchronization
+
+When modifying discovery hooks (adding new tabs, filters), ALL THREE must stay synchronized:
+
+1. **Hook (useModuleLogic.ts)** - Defines `TabType` and state interface
+2. **Types (types/models/module.ts)** - Defines shared interfaces like `EnhancedStats`
+3. **View (ModuleView.tsx)** - Uses TabType values and filter properties
+
+### Common Errors and Fixes
+
+**Error: "Argument of type 'X' is not assignable to parameter of type 'TabType'"**
+```typescript
+// ❌ WRONG: View uses tab name that doesn't exist in hook
+onClick={() => setActiveTab('assignments')}  // ERROR if TabType doesn't include 'assignments'
+
+// ✅ CORRECT: Verify TabType in hook first
+// Hook: type TabType = 'overview' | 'licenses' | 'userAssignments' | 'servicePlans' | 'compliance';
+onClick={() => setActiveTab('userAssignments')}  // Use exact name from TabType
+```
+
+**Error: "Property 'X' does not exist on type 'Stats'"**
+```typescript
+// ❌ WRONG: View uses property not in interface
+<div>{stats.costPerMonth}</div>  // ERROR if EnhancedStats doesn't have costPerMonth
+
+// ✅ CORRECT: Add missing property to interface
+export interface EnhancedLicenseStats extends LicenseStats {
+  costPerMonth: number;  // ADD to types/models/licensing.ts
+  // ...
+}
+```
+
+**Error: "Property 'X' does not exist on filter type"**
+```typescript
+// ❌ WRONG: View uses filter property not in hook state
+checked={filter.showOnlyExpiring}  // ERROR if filter interface doesn't have this
+
+// ✅ CORRECT: Check hook's filter interface and use existing property
+// Hook filter: { assignmentSource: 'all' | 'Direct' | 'Group'; showOnlyWithDisabledPlans: boolean; }
+checked={filter.showOnlyWithDisabledPlans}  // Use property that exists
+```
+
+### Synchronization Checklist
+
+When adding new tabs or filters:
+
+1. **Hook (`useModuleLogic.ts`):**
+   - [ ] Update `TabType` union with new tab names
+   - [ ] Update state filter interface with new filter properties
+   - [ ] Add column definitions for new tabs
+   - [ ] Add filtered data arrays for new tabs
+   - [ ] Update `filteredData` switch statement
+
+2. **Types (`types/models/module.ts`):**
+   - [ ] Add missing properties to stats interfaces
+   - [ ] Add `utilization` to `topCostProducts` array type
+   - [ ] Add `assignmentsBySource`, `expiringCount`, etc. to enhanced stats
+
+3. **View (`ModuleView.tsx`):**
+   - [ ] Use exact tab names from hook's `TabType`
+   - [ ] Use exact filter properties from hook's filter interface
+   - [ ] Update tab buttons with correct `onClick={() => setActiveTab('exactName')}`
+   - [ ] Update content area conditions `{activeTab === 'exactName' && ...}`
+
+### Quick Validation
+
+```bash
+# After modifying a discovery module, check for type errors:
+npx tsc --noEmit --project guiv2/tsconfig.json 2>&1 | grep -i "does not exist"
+```
+
+---
+
 # Console Logging Standard
 
 **Pattern:** `console.log('[ComponentName] action')` at all entry/exit points
@@ -850,3 +925,69 @@ npm start
 Copy-Item -Path "C:\enterprisediscovery\guiv2\src\*" -Destination "D:\Scripts\UserMandA\guiv2\src\" -Recurse -Force
 Copy-Item -Path "C:\enterprisediscovery\Modules\*" -Destination "D:\Scripts\UserMandA\Modules\" -Recurse -Force
 ```
+
+---
+
+# TypeScript Patterns & Common Errors (Updated 2025-12-30)
+
+## Map Data Structure - NEVER Use Bracket Notation
+
+The Zustand `useDiscoveryStore` uses `Map<string, DiscoveryResult[]>` for results storage.
+
+```typescript
+// ❌ WRONG: Map doesn't support bracket notation
+const azureSecurity = results?.['AzureSecurity'];  // ERROR: Element implicitly has 'any' type
+
+// ✅ CORRECT: Use .get() method for Map
+const azureSecurity = results?.get('AzureSecurity');
+
+// ✅ CORRECT: Get first element from array if needed
+const azureSecurityResults = results?.get('AzureSecurity');
+const firstResult = azureSecurityResults?.[0];
+```
+
+## DiscoveryResult Dynamic Properties
+
+The `DiscoveryResult` interface doesn't include all properties that might come from PowerShell modules. Use type assertions for dynamic properties:
+
+```typescript
+// ❌ WRONG: dataType doesn't exist on DiscoveryResult
+const subscriptionData = licensingResults?.filter(
+  (r) => r.dataType === 'Subscriptions'  // ERROR
+);
+
+// ✅ CORRECT: Use type assertion OR fallback to known properties
+const subscriptionData = licensingResults?.filter(
+  (r) => (r as any).dataType === 'Subscriptions' ||
+         r.displayName?.includes('Subscription') ||
+         r.moduleName?.includes('Subscription')
+);
+```
+
+## react-grid-layout Type Imports
+
+The `react-grid-layout` library has complex type exports. Always use separate type import:
+
+```typescript
+// ❌ WRONG: May cause "Module has no exported member" error
+import { Responsive, WidthProvider, Layout } from 'react-grid-layout';
+
+// ✅ CORRECT: Separate type import
+import { Responsive, WidthProvider } from 'react-grid-layout';
+import type { Layout } from 'react-grid-layout';
+
+// Layout conversion with custom TileLayout interface
+const onLayoutChange = useCallback((_currentLayout: Layout[], allLayouts: { [key: string]: Layout[] }) => {
+  // Use double assertion for custom layout types
+  saveLayout(allLayouts as unknown as { [key: string]: TileLayout[] });
+}, [saveLayout]);
+```
+
+## Quick Reference Table
+
+| Error Pattern | Cause | Fix |
+|--------------|-------|-----|
+| `no index signature` on Map | Using `map['key']` | Use `map.get('key')` |
+| `Property 'X' does not exist on DiscoveryResult` | Dynamic PowerShell props | Use `(result as any).X` |
+| `Module has no exported member 'WidthProvider'` | Type export issue | Use `import type { X }` |
+| `Type 'X' not assignable to type 'Y'` | Interface mismatch | Use `as unknown as Y` |

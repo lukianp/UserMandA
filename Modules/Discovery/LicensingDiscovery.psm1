@@ -2,23 +2,27 @@
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
-# Version: 1.0.1
+# Version: 2.0.0
 # Created: 2025-01-18
-# Last Modified: 2025-12-17
+# Last Modified: 2025-12-30
 
 <#
 .SYNOPSIS
     Licensing Discovery Module for M&A Discovery Suite
 .DESCRIPTION
-    Discovers Microsoft 365 licensing information including subscriptions, user licenses, and service plans using 
-    Microsoft Graph API. This module provides comprehensive licensing discovery including subscription details, 
-    user license assignments, service plan utilization, and licensing compliance essential for M&A licensing 
-    assessment and cost optimization planning.
+    Discovers comprehensive Microsoft 365 licensing information including:
+    - Subscription/SKU inventory with utilization metrics
+    - User license assignments with assignment source (Direct/Group)
+    - Service plan status per user per license
+    - Licensing compliance analysis
+
+    Uses Microsoft Graph API to extract all licensing data essential for M&A
+    licensing assessment, cost optimization, and user migration planning.
 .NOTES
-    Version: 1.0.1
+    Version: 2.0.0
     Author: Lukian Poleschtschuk
     Created: 2025-01-18
-    Updated: 2025-12-17 - Migrated to direct credential authentication from Configuration parameter
+    Updated: 2025-12-30 - Major enhancement: Added user license assignments, service plans, compliance analysis
     Requires: PowerShell 5.1+, Microsoft.Graph modules, DiscoveryBase module
 #>
 
@@ -273,70 +277,284 @@ function Invoke-LicensingDiscovery {
 
         # Perform discovery
         $allDiscoveredData = [System.Collections.ArrayList]::new()
-        
-        # Discover subscriptions
+        $userAssignments = [System.Collections.ArrayList]::new()
+        $servicePlanData = [System.Collections.ArrayList]::new()
+
+        # Build SKU lookup table for product names
+        $skuLookup = @{}
+
+        #region Discover Subscriptions (Enhanced)
         try {
             Write-LicensingLog -Level "INFO" -Message "Discovering subscriptions..." -Context $Context
             $subscriptions = Get-MgSubscribedSku -ErrorAction Stop
-            
+
             foreach ($sub in $subscriptions) {
+                # Build SKU lookup for later use
+                $skuLookup[$sub.SkuId] = $sub.SkuPartNumber
+
+                # Calculate utilization
+                $available = $sub.PrepaidUnits.Enabled - $sub.ConsumedUnits
+                $utilizationPercent = if ($sub.PrepaidUnits.Enabled -gt 0) {
+                    [math]::Round(($sub.ConsumedUnits / $sub.PrepaidUnits.Enabled) * 100, 2)
+                } else { 0 }
+
+                # Determine status
+                $status = switch ($sub.CapabilityStatus) {
+                    'Enabled' { 'Active' }
+                    'Warning' { 'Warning' }
+                    'Suspended' { 'Suspended' }
+                    'LockedOut' { 'LockedOut' }
+                    default { $sub.CapabilityStatus }
+                }
+
                 $subObj = [PSCustomObject]@{
                     SkuId = $sub.SkuId
                     SkuPartNumber = $sub.SkuPartNumber
                     ConsumedUnits = $sub.ConsumedUnits
                     PrepaidUnits = $sub.PrepaidUnits.Enabled
+                    AvailableUnits = $available
+                    UtilizationPercent = $utilizationPercent
+                    SuspendedUnits = $sub.PrepaidUnits.Suspended
+                    WarningUnits = $sub.PrepaidUnits.Warning
+                    Status = $status
+                    AppliesTo = $sub.AppliesTo
+                    ServicePlanCount = @($sub.ServicePlans).Count
                     ServicePlans = ($sub.ServicePlans | ForEach-Object { "$($_.ServicePlanName):$($_.ProvisioningStatus)" }) -join ';'
                     _DataType = 'Subscription'
                 }
                 $null = $allDiscoveredData.Add($subObj)
             }
-            
+
             Write-LicensingLog -Level "SUCCESS" -Message "Discovered $($subscriptions.Count) subscriptions" -Context $Context
         } catch {
             $result.AddWarning("Failed to discover subscriptions: $($_.Exception.Message)", @{Section="Subscriptions"})
+            Write-LicensingLog -Level "WARN" -Message "Subscription discovery failed: $($_.Exception.Message)" -Context $Context
         }
+        #endregion
+
+        #region Discover User License Assignments
+        try {
+            Write-LicensingLog -Level "INFO" -Message "Discovering user license assignments..." -Context $Context
+
+            # Get all users with license-related properties
+            $users = Get-MgUser -All -Property "id,displayName,userPrincipalName,assignedLicenses,assignedPlans,licenseAssignmentStates" -ErrorAction Stop
+
+            $licensedUserCount = 0
+            $totalAssignments = 0
+
+            foreach ($user in $users) {
+                if ($null -eq $user.AssignedLicenses -or $user.AssignedLicenses.Count -eq 0) {
+                    continue
+                }
+
+                $licensedUserCount++
+
+                foreach ($license in $user.AssignedLicenses) {
+                    $totalAssignments++
+
+                    # Get product name from lookup
+                    $productName = if ($skuLookup.ContainsKey($license.SkuId)) {
+                        $skuLookup[$license.SkuId]
+                    } else {
+                        $license.SkuId
+                    }
+
+                    # Determine assignment source from licenseAssignmentStates
+                    $assignmentSource = 'Direct'
+                    $assignedByGroup = $null
+                    $lastUpdated = $null
+                    $assignmentState = $null
+                    $error = $null
+
+                    if ($user.LicenseAssignmentStates) {
+                        $licState = $user.LicenseAssignmentStates | Where-Object { $_.SkuId -eq $license.SkuId } | Select-Object -First 1
+                        if ($licState) {
+                            if ($licState.AssignedByGroup) {
+                                $assignmentSource = 'Group'
+                                $assignedByGroup = $licState.AssignedByGroup
+                            }
+                            $lastUpdated = $licState.LastUpdatedDateTime
+                            $assignmentState = $licState.State
+                            $error = $licState.Error
+                        }
+                    }
+
+                    # Get disabled plans for this license
+                    $disabledPlans = if ($license.DisabledPlans) {
+                        ($license.DisabledPlans -join ';')
+                    } else { '' }
+
+                    $assignmentObj = [PSCustomObject]@{
+                        UserId = $user.Id
+                        UserPrincipalName = $user.UserPrincipalName
+                        DisplayName = $user.DisplayName
+                        SkuId = $license.SkuId
+                        SkuPartNumber = $productName
+                        AssignmentSource = $assignmentSource
+                        AssignedByGroup = $assignedByGroup
+                        DisabledPlans = $disabledPlans
+                        DisabledPlanCount = @($license.DisabledPlans).Count
+                        LastUpdated = $lastUpdated
+                        AssignmentState = $assignmentState
+                        AssignmentError = $error
+                        _DataType = 'UserAssignment'
+                    }
+                    $null = $userAssignments.Add($assignmentObj)
+                }
+            }
+
+            Write-LicensingLog -Level "SUCCESS" -Message "Discovered $totalAssignments license assignments across $licensedUserCount users" -Context $Context
+
+        } catch {
+            $result.AddWarning("Failed to discover user license assignments: $($_.Exception.Message)", @{Section="UserAssignments"})
+            Write-LicensingLog -Level "WARN" -Message "User license assignment discovery failed: $($_.Exception.Message)" -Context $Context
+        }
+        #endregion
+
+        #region Discover Detailed Service Plans per User
+        try {
+            Write-LicensingLog -Level "INFO" -Message "Discovering service plan details per user..." -Context $Context
+
+            # Get unique licensed user IDs
+            $licensedUserIds = $userAssignments | Select-Object -ExpandProperty UserId -Unique
+            $servicePlanCount = 0
+            $processedUsers = 0
+            $totalUsers = @($licensedUserIds).Count
+
+            foreach ($userId in $licensedUserIds) {
+                $processedUsers++
+                if ($processedUsers % 50 -eq 0) {
+                    Write-LicensingLog -Level "INFO" -Message "Processing service plans: $processedUsers of $totalUsers users..." -Context $Context
+                }
+
+                try {
+                    $licenseDetails = Get-MgUserLicenseDetail -UserId $userId -ErrorAction Stop
+                    $userName = ($userAssignments | Where-Object { $_.UserId -eq $userId } | Select-Object -First 1).DisplayName
+                    $userUPN = ($userAssignments | Where-Object { $_.UserId -eq $userId } | Select-Object -First 1).UserPrincipalName
+
+                    foreach ($licDetail in $licenseDetails) {
+                        foreach ($plan in $licDetail.ServicePlans) {
+                            $servicePlanCount++
+
+                            $planObj = [PSCustomObject]@{
+                                UserId = $userId
+                                UserPrincipalName = $userUPN
+                                DisplayName = $userName
+                                SkuId = $licDetail.SkuId
+                                SkuPartNumber = $licDetail.SkuPartNumber
+                                ServicePlanId = $plan.ServicePlanId
+                                ServicePlanName = $plan.ServicePlanName
+                                ProvisioningStatus = $plan.ProvisioningStatus
+                                AppliesTo = $plan.AppliesTo
+                                _DataType = 'ServicePlan'
+                            }
+                            $null = $servicePlanData.Add($planObj)
+                        }
+                    }
+                } catch {
+                    # Skip users where we can't get license details (permissions issue or deleted user)
+                    Write-LicensingLog -Level "DEBUG" -Message "Could not get license details for user $userId : $($_.Exception.Message)" -Context $Context
+                }
+            }
+
+            Write-LicensingLog -Level "SUCCESS" -Message "Discovered $servicePlanCount service plan entries for $processedUsers users" -Context $Context
+
+        } catch {
+            $result.AddWarning("Failed to discover service plan details: $($_.Exception.Message)", @{Section="ServicePlans"})
+            Write-LicensingLog -Level "WARN" -Message "Service plan discovery failed: $($_.Exception.Message)" -Context $Context
+        }
+        #endregion
 
         # Stage data for generic export and optionally export directly
-        if ($allDiscoveredData.Count -gt 0) {
-            $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-            $grouped = $allDiscoveredData | Group-Object -Property _DataType
+        $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        $result.Data = @()
+        $disableInternal = ($Context -is [hashtable]) -and $Context.ContainsKey('DisableInternalExport') -and $Context.DisableInternalExport
 
-            # Build standardized Data groups for launcher export
-            $result.Data = @()
-            foreach ($g in $grouped) {
-                $data = $g.Group
-                $data | ForEach-Object {
-                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
-                    $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Licensing" -Force
-                    $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
-                }
+        # Helper function to add metadata and export
+        function Export-DiscoveryData {
+            param($DataArray, $ExportName, $DataType)
 
-                $exportBaseName = switch ($g.Name) {
-                    'Subscription' { 'LicensingSubscriptions' }
-                    default { "Licensing_$($g.Name)" }
-                }
+            if ($DataArray.Count -eq 0) { return }
 
-                # Add to standardized result for the launcher
-                $result.Data += ,([PSCustomObject]@{
-                    Name = $exportBaseName
-                    Group = $data
-                })
+            $DataArray | ForEach-Object {
+                $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryTimestamp" -Value $timestamp -Force
+                $_ | Add-Member -MemberType NoteProperty -Name "_DiscoveryModule" -Value "Licensing" -Force
+                $_ | Add-Member -MemberType NoteProperty -Name "_SessionId" -Value $SessionId -Force
+            }
 
-                # Optional direct export (skip if launcher will handle it)
-                $disableInternal = ($Context -is [hashtable]) -and $Context.ContainsKey('DisableInternalExport') -and $Context.DisableInternalExport
-                if (-not $disableInternal) {
-                    $fileName = "$exportBaseName.csv"
-                    $filePath = Join-Path $outputPath $fileName
-                    $data | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
-                    Write-LicensingLog -Level "SUCCESS" -Message "Exported $($data.Count) $($g.Name) records to $fileName" -Context $Context
-                } else {
-                    Write-LicensingLog -Level "INFO" -Message "Internal export disabled; launcher will export $exportBaseName" -Context $Context
-                }
+            # Add to standardized result for the launcher
+            $result.Data += ,([PSCustomObject]@{
+                Name = $ExportName
+                Group = $DataArray
+            })
+
+            # Optional direct export
+            if (-not $disableInternal) {
+                $fileName = "$ExportName.csv"
+                $filePath = Join-Path $outputPath $fileName
+                $DataArray | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+                Write-LicensingLog -Level "SUCCESS" -Message "Exported $($DataArray.Count) $DataType records to $fileName" -Context $Context
+            } else {
+                Write-LicensingLog -Level "INFO" -Message "Internal export disabled; launcher will export $ExportName" -Context $Context
             }
         }
 
-        $result.RecordCount = $allDiscoveredData.Count
-        $result.Metadata["TotalRecords"] = $result.RecordCount
+        # Export Subscriptions/Licenses
+        Export-DiscoveryData -DataArray $allDiscoveredData -ExportName "LicensingDiscovery_Licenses" -DataType "License/Subscription"
+
+        # Export User Assignments
+        Export-DiscoveryData -DataArray $userAssignments -ExportName "LicensingDiscovery_UserAssignments" -DataType "User Assignment"
+
+        # Export Service Plans
+        Export-DiscoveryData -DataArray $servicePlanData -ExportName "LicensingDiscovery_ServicePlans" -DataType "Service Plan"
+
+        # Calculate and export summary statistics
+        $summaryData = [System.Collections.ArrayList]::new()
+
+        # Aggregate statistics
+        $totalLicenses = ($allDiscoveredData | Measure-Object -Property PrepaidUnits -Sum).Sum
+        $totalAssigned = ($allDiscoveredData | Measure-Object -Property ConsumedUnits -Sum).Sum
+        $totalAvailable = $totalLicenses - $totalAssigned
+        $avgUtilization = if ($totalLicenses -gt 0) { [math]::Round(($totalAssigned / $totalLicenses) * 100, 2) } else { 0 }
+
+        $licensedUsers = ($userAssignments | Select-Object -ExpandProperty UserId -Unique).Count
+        $directAssignments = ($userAssignments | Where-Object { $_.AssignmentSource -eq 'Direct' }).Count
+        $groupAssignments = ($userAssignments | Where-Object { $_.AssignmentSource -eq 'Group' }).Count
+        $avgLicensesPerUser = if ($licensedUsers -gt 0) { [math]::Round($userAssignments.Count / $licensedUsers, 2) } else { 0 }
+
+        $enabledServicePlans = ($servicePlanData | Where-Object { $_.ProvisioningStatus -eq 'Success' }).Count
+        $disabledServicePlans = ($servicePlanData | Where-Object { $_.ProvisioningStatus -eq 'Disabled' }).Count
+
+        $summaryObj = [PSCustomObject]@{
+            TotalLicenses = $totalLicenses
+            TotalAssigned = $totalAssigned
+            TotalAvailable = $totalAvailable
+            UtilizationPercent = $avgUtilization
+            LicensedUsers = $licensedUsers
+            TotalAssignments = $userAssignments.Count
+            DirectAssignments = $directAssignments
+            GroupBasedAssignments = $groupAssignments
+            DirectAssignmentPercent = if ($userAssignments.Count -gt 0) { [math]::Round(($directAssignments / $userAssignments.Count) * 100, 2) } else { 0 }
+            AvgLicensesPerUser = $avgLicensesPerUser
+            TotalServicePlans = $servicePlanData.Count
+            EnabledServicePlans = $enabledServicePlans
+            DisabledServicePlans = $disabledServicePlans
+            UniqueProducts = $allDiscoveredData.Count
+            DiscoveryTimestamp = $timestamp
+            _DataType = 'Summary'
+        }
+        $null = $summaryData.Add($summaryObj)
+
+        Export-DiscoveryData -DataArray $summaryData -ExportName "LicensingDiscovery_Summary" -DataType "Summary"
+
+        # Set result counts
+        $totalRecords = $allDiscoveredData.Count + $userAssignments.Count + $servicePlanData.Count + 1
+        $result.RecordCount = $totalRecords
+        $result.Metadata["TotalRecords"] = $totalRecords
+        $result.Metadata["SubscriptionCount"] = $allDiscoveredData.Count
+        $result.Metadata["UserAssignmentCount"] = $userAssignments.Count
+        $result.Metadata["ServicePlanCount"] = $servicePlanData.Count
+        $result.Metadata["LicensedUserCount"] = $licensedUsers
         $result.Metadata["SessionId"] = $SessionId
 
     } catch {

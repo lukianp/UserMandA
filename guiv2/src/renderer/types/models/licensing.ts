@@ -123,7 +123,128 @@ export interface LicenseStats {
   totalCost: number;
   licensesByProduct: Record<string, number>;
   licensesByStatus: Record<LicenseStatus, number>;
-  topCostProducts: { product: string; cost: number; count: number; }[];
+  topCostProducts: { product: string; cost: number; count: number; utilization: number }[];
+}
+
+/**
+ * Enhanced license statistics with user-centric metrics
+ */
+export interface EnhancedLicenseStats extends LicenseStats {
+  // User-centric metrics
+  totalLicensedUsers: number;
+  avgLicensesPerUser: number;
+  usersWithMultipleLicenses: number;
+  usersWithDisabledPlans: number;
+
+  // Assignment analysis
+  directAssignments: number;
+  groupBasedAssignments: number;
+  directAssignmentPercent: number;
+  assignmentsBySource: Record<string, number>;
+
+  // Service plan analysis
+  totalServicePlans: number;
+  enabledServicePlans: number;
+  disabledServicePlans: number;
+
+  // Cost analysis
+  estimatedMonthlyCost: number;
+  costPerMonth: number;
+  costPerUser: number;
+  wastedLicenseCost: number;
+
+  // Compliance
+  expiringCount: number;
+  underlicensedCount: number;
+  overlicensedCount: number;
+  underlicensedProducts: string[];
+  overlicensedProducts: string[];
+  expiringLicenses: Array<{ skuPartNumber: string; expirationDate: string; daysRemaining: number }>;
+}
+
+/**
+ * User license assignment from CSV data
+ */
+export interface UserLicenseAssignment {
+  userId: string;
+  userPrincipalName: string;
+  displayName: string;
+  skuId: string;
+  skuPartNumber: string;
+  assignmentSource: 'Direct' | 'Group' | 'Inherited';
+  assignedByGroup?: string;
+  disabledPlans: string;
+  disabledPlanCount: number;
+  lastUpdated?: string;
+  assignmentState?: string;
+  assignmentError?: string;
+  _DataType?: string;
+  _DiscoveryTimestamp?: string;
+  _DiscoveryModule?: string;
+  _SessionId?: string;
+}
+
+/**
+ * Service plan detail from CSV data
+ */
+export interface ServicePlanDetail {
+  userId: string;
+  userPrincipalName: string;
+  displayName: string;
+  skuId: string;
+  skuPartNumber: string;
+  servicePlanId: string;
+  servicePlanName: string;
+  provisioningStatus: 'Success' | 'Disabled' | 'PendingInput' | 'Error' | string;
+  appliesTo?: string;
+  _DataType?: string;
+  _DiscoveryTimestamp?: string;
+  _DiscoveryModule?: string;
+  _SessionId?: string;
+}
+
+/**
+ * License/Subscription from enhanced CSV data
+ */
+export interface LicenseSubscription {
+  skuId: string;
+  skuPartNumber: string;
+  consumedUnits: number;
+  prepaidUnits: number;
+  availableUnits: number;
+  utilizationPercent: number;
+  suspendedUnits?: number;
+  warningUnits?: number;
+  status: 'Active' | 'Warning' | 'Suspended' | 'LockedOut' | string;
+  appliesTo?: string;
+  servicePlanCount: number;
+  servicePlans: string;
+  _DataType?: string;
+  _DiscoveryTimestamp?: string;
+  _DiscoveryModule?: string;
+  _SessionId?: string;
+}
+
+/**
+ * Summary statistics from CSV data
+ */
+export interface LicensingSummary {
+  totalLicenses: number;
+  totalAssigned: number;
+  totalAvailable: number;
+  utilizationPercent: number;
+  licensedUsers: number;
+  totalAssignments: number;
+  directAssignments: number;
+  groupBasedAssignments: number;
+  directAssignmentPercent: number;
+  avgLicensesPerUser: number;
+  totalServicePlans: number;
+  enabledServicePlans: number;
+  disabledServicePlans: number;
+  uniqueProducts: number;
+  discoveryTimestamp: string;
+  _DataType?: string;
 }
 
 export interface LicenseFilterState {
@@ -132,4 +253,16 @@ export interface LicenseFilterState {
   selectedStatuses: LicenseStatus[];
   showOnlyExpiring: boolean;
   showOnlyUnassigned: boolean;
+}
+
+/**
+ * Combined licensing data state for views
+ */
+export interface LicensingDataState {
+  licenses: LicenseSubscription[];
+  userAssignments: UserLicenseAssignment[];
+  servicePlans: ServicePlanDetail[];
+  summary: LicensingSummary | null;
+  isLoading: boolean;
+  error: string | null;
 }
