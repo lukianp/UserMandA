@@ -9,6 +9,7 @@ import { SankeyNodeMinimal, SankeyLinkMinimal } from 'd3-sankey';
 
 /**
  * Entity Types in Organisation Hierarchy
+ * Extended with identity/access types for LeanIX-style navigation
  */
 export type EntityType =
   | 'company'
@@ -18,7 +19,15 @@ export type EntityType =
   | 'provider-interface'
   | 'consumer-interface'
   | 'business-capability'
-  | 'it-component';
+  | 'it-component'
+  // Identity & Access types (NEW)
+  | 'user'
+  | 'group'
+  | 'mailbox'
+  | 'license'
+  // Azure hierarchy types (NEW)
+  | 'subscription'
+  | 'resource-group';
 
 /**
  * Entity Status
@@ -41,7 +50,7 @@ export type LifecyclePhase =
   | 'end-of-life';
 
 /**
- * Relation Types (matching LeanIX)
+ * Relation Types (matching LeanIX + Identity/Access semantics)
  */
 export type RelationType =
   | 'ownership'        // Company → Platform → Application
@@ -49,10 +58,48 @@ export type RelationType =
   | 'provides'         // Application → Provider Interface
   | 'consumes'         // Consumer Interface → Application
   | 'dependency'       // Application → Application
-  | 'realizes';        // Application → Business Capability
+  | 'realizes'         // Application → Business Capability
+  // Identity & Access types (NEW)
+  | 'has-mailbox'      // User → Mailbox
+  | 'assigned'         // User → License
+  | 'member-of'        // User → Group
+  | 'manages'          // Manager → Direct Report
+  // Azure hierarchy types (NEW)
+  | 'scoped-to';       // Resource → Resource Group, RG → Subscription
+
+/**
+ * Match Rule for confidence scoring
+ */
+export type MatchRule = 'EXACT' | 'HIGH' | 'MEDIUM' | 'LOW';
+
+/**
+ * Evidence for link provenance
+ */
+export interface LinkEvidence {
+  file: string;
+  fields: string[];
+  sourceValue?: string;
+  targetValue?: string;
+}
+
+/**
+ * Canonical Identifiers for entity matching
+ */
+export interface CanonicalIdentifiers {
+  objectId?: string;         // Azure AD Object ID
+  upn?: string;              // User Principal Name (normalized lowercase)
+  mail?: string;             // Email address (normalized lowercase)
+  appId?: string;            // Application ID
+  subscriptionId?: string;   // Azure Subscription ID
+  resourceGroupName?: string;// Azure Resource Group name
+  skuId?: string;            // License SKU ID
+  skuPartNumber?: string;    // License SKU Part Number
+  samAccountName?: string;   // On-prem SAM Account Name
+}
 
 /**
  * Base Sankey Node (extends d3-sankey)
+ * Enhanced with canonical identifiers for cross-file matching
  */
 export interface SankeyNode extends SankeyNodeMinimal<SankeyNode, SankeyLink> {
   id: string;
@@ -66,16 +113,23 @@ export interface SankeyNode extends SankeyNodeMinimal<SankeyNode, SankeyLink> {
     priority: number; // For LeanIX layer ordering (1=Infrastructure, 4=Business Capabilities)
     category?: string; // LeanIX-style entity category
   };
+  // Canonical identifiers for cross-file matching (NEW)
+  identifiers?: CanonicalIdentifiers;
 }
 
 /**
  * Base Sankey Link (extends d3-sankey)
+ * Enhanced with confidence scoring and evidence tracking
  */
 export interface SankeyLink extends SankeyLinkMinimal<SankeyNode, SankeyLink> {
   source: string | SankeyNode;
   target: string | SankeyNode;
   value: number;
   type: RelationType;
+  // Confidence & Evidence (NEW)
+  confidence?: number;          // 0-100 score
+  matchRule?: MatchRule;        // How the match was determined
+  evidence?: LinkEvidence[];    // Source files and fields used
 }
 
 /**

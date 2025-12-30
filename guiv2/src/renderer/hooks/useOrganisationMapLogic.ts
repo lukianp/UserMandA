@@ -22,7 +22,11 @@ import {
   EntityType,
   FactSheetData,
   OrganisationMapData,
-  FilterState
+  FilterState,
+  CanonicalIdentifiers,
+  MatchRule,
+  LinkEvidence,
+  RelationType
 } from '../types/models/organisation';
 
 // Performance constants - CRITICAL for handling large datasets
@@ -678,21 +682,9 @@ const typeMapping: Record<string, {
     priority: 2,
     category: 'Exchange'
   },
-  'exchangemailboxes': {
-    type: 'application',
-    getName: (r) => r.DisplayName || r.PrimarySmtpAddress || r.UserPrincipalName,
-    priority: 2,
-    category: 'Exchange'
-  },
   'exchangeaccepteddomains': {
     type: 'platform',
     getName: (r) => r.DomainName || r.Name,
-    priority: 3,
-    category: 'Exchange'
-  },
-  'exchangedistributiongroups': {
-    type: 'platform',
-    getName: (r) => r.DisplayName || r.Name || r.PrimarySmtpAddress,
     priority: 3,
     category: 'Exchange'
   },
@@ -783,50 +775,77 @@ const typeMapping: Record<string, {
     category: 'Microsoft Teams'
   },
 
-  // Users (mapped to application for visualization as people/resources)
+  // ===== IDENTITY LAYER (Priority 2 - Users are first-class nodes) =====
+  // Users
   'users': {
-    type: 'application',
+    type: 'user',
     getName: (r) => r.DisplayName || r.UserPrincipalName || r.SamAccountName || r.Name,
     priority: 2,
     category: 'User'
   },
   'azurediscovery_users': {
-    type: 'application',
+    type: 'user',
     getName: (r) => r.DisplayName || r.UserPrincipalName || r.Name,
     priority: 2,
     category: 'User'
   },
   'azureusers': {
-    type: 'application',
+    type: 'user',
     getName: (r) => r.DisplayName || r.UserPrincipalName || r.Name,
     priority: 2,
     category: 'User'
+  },
+  'graphusers': {
+    type: 'user',
+    getName: (r) => r.DisplayName || r.UserPrincipalName || r.displayName || r.userPrincipalName,
+    priority: 2,
+    category: 'User'
+  },
+
+  // Mailboxes
+  'exchangemailboxes': {
+    type: 'mailbox',
+    getName: (r) => r.DisplayName || r.PrimarySmtpAddress || r.UserPrincipalName,
+    priority: 2,
+    category: 'Mailbox'
   },
 
   // ===== PLATFORM LAYER (Priority 3) =====
   // Groups
   'groups': {
-    type: 'platform',
+    type: 'group',
     getName: (r) => r.DisplayName || r.Name || r.GroupName,
     priority: 3,
     category: 'Group'
   },
   'azurediscovery_groups': {
-    type: 'platform',
+    type: 'group',
     getName: (r) => r.DisplayName || r.Name || r.GroupName,
     priority: 3,
     category: 'Group'
   },
   'azuregroups': {
-    type: 'platform',
+    type: 'group',
     getName: (r) => r.DisplayName || r.Name || r.GroupName,
     priority: 3,
     category: 'Group'
   },
+  'graphgroups': {
+    type: 'group',
+    getName: (r) => r.displayName || r.DisplayName || r.Name,
+    priority: 3,
+    category: 'Group'
+  },
+  'exchangedistributiongroups': {
+    type: 'group',
+    getName: (r) => r.DisplayName || r.Name || r.PrimarySmtpAddress,
+    priority: 3,
+    category: 'Distribution Group'
+  },
 
-  // Subscriptions & Tenants
+  // Subscriptions & Tenants (use new 'subscription' and 'resource-group' types)
   'azureresourcediscovery_subscriptions': {
-    type: 'platform',
+    type: 'subscription',
     getName: (r) => r.SubscriptionName || r.Name || r.DisplayName,
     priority: 3,
     category: 'Subscription'
@@ -838,7 +857,7 @@ const typeMapping: Record<string, {
     category: 'Tenant'
   },
   'azureresourcediscovery_resourcegroups': {
-    type: 'platform',
+    type: 'resource-group',
     getName: (r) => r.Name || r.ResourceGroupName,
     priority: 3,
     category: 'Resource Group'
@@ -964,28 +983,40 @@ const typeMapping: Record<string, {
     category: 'Policy'
   },
 
-  // Licensing
+  // Licensing (use new 'license' type)
   'licensingdiscoverylicensingsubscriptions': {
-    type: 'platform',
+    type: 'license',
     getName: (r) => r.SkuPartNumber || r.Name || r.DisplayName,
     priority: 3,
-    category: 'Licensing'
+    category: 'License'
   },
   'licensingsubscriptions': {
-    type: 'platform',
+    type: 'license',
     getName: (r) => r.SkuPartNumber || r.Name || r.DisplayName,
     priority: 3,
-    category: 'Licensing'
+    category: 'License'
   },
-  // User License Assignments - links users to their assigned licenses
+  'licensingdiscovery_licenses': {
+    type: 'license',
+    getName: (r) => r.SkuPartNumber || r.Name || r.DisplayName,
+    priority: 3,
+    category: 'License'
+  },
+  // User License Assignments - these create links, not separate nodes
   'licensingdiscoveryuserassignment': {
-    type: 'platform',
+    type: 'license',
     getName: (r) => `${r.DisplayName || r.UserPrincipalName} - ${r.SkuPartNumber || r.SkuId}`,
     priority: 3,
     category: 'License Assignment'
   },
+  'licensingdiscovery_userassignments': {
+    type: 'license',
+    getName: (r) => r.SkuPartNumber || r.SkuId || 'Unknown License',
+    priority: 3,
+    category: 'License Assignment'
+  },
   'userassignment': {
-    type: 'platform',
+    type: 'license',
     getName: (r) => `${r.DisplayName || r.UserPrincipalName} - ${r.SkuPartNumber || r.SkuId}`,
     priority: 3,
     category: 'License Assignment'
@@ -1052,22 +1083,46 @@ function getFileTypeKey(filename: string): string {
 }
 
 /**
- * Create lookup indices for fast node matching
+ * Extended Node Indices for comprehensive cross-file linking
  */
-function createNodeIndices(nodes: SankeyNode[]): {
+interface NodeIndices {
   byId: Map<string, SankeyNode>;
   byName: Map<string, SankeyNode[]>;
   byType: Map<EntityType, SankeyNode[]>;
   byUPN: Map<string, SankeyNode>;
   byAppId: Map<string, SankeyNode>;
-} {
+  // New indices for identity/access linking
+  byObjectId: Map<string, SankeyNode>;
+  byMail: Map<string, SankeyNode>;
+  bySkuPartNumber: Map<string, SankeyNode>;
+  bySkuId: Map<string, SankeyNode>;
+  bySubscriptionId: Map<string, SankeyNode>;
+  byResourceGroupName: Map<string, SankeyNode[]>;
+  bySamAccountName: Map<string, SankeyNode>;
+}
+
+/**
+ * Create lookup indices for fast node matching
+ * Extended with identity/access indices for LeanIX-style navigation
+ */
+function createNodeIndices(nodes: SankeyNode[]): NodeIndices {
   const byId = new Map<string, SankeyNode>();
   const byName = new Map<string, SankeyNode[]>();
   const byType = new Map<EntityType, SankeyNode[]>();
   const byUPN = new Map<string, SankeyNode>();
   const byAppId = new Map<string, SankeyNode>();
+  // New indices
+  const byObjectId = new Map<string, SankeyNode>();
+  const byMail = new Map<string, SankeyNode>();
+  const bySkuPartNumber = new Map<string, SankeyNode>();
+  const bySkuId = new Map<string, SankeyNode>();
+  const bySubscriptionId = new Map<string, SankeyNode>();
+  const byResourceGroupName = new Map<string, SankeyNode[]>();
+  const bySamAccountName = new Map<string, SankeyNode>();
 
   for (const node of nodes) {
+    const record = node.metadata?.record || {};
+
     // Index by ID
     byId.set(node.id, node);
 
@@ -1084,20 +1139,70 @@ function createNodeIndices(nodes: SankeyNode[]): {
     }
     byType.get(node.type)!.push(node);
 
-    // Index by UserPrincipalName if present
-    const upn = node.metadata?.record?.UserPrincipalName;
+    // Index by UserPrincipalName (normalized lowercase)
+    const upn = record.UserPrincipalName || record.userPrincipalName;
     if (upn) {
       byUPN.set(upn.toLowerCase(), node);
     }
 
-    // Index by AppId if present
-    const appId = node.metadata?.record?.AppId;
+    // Index by AppId
+    const appId = record.AppId || record.appId;
     if (appId) {
       byAppId.set(appId, node);
     }
+
+    // NEW: Index by ObjectId / Id
+    const objectId = record.ObjectId || record.objectId || record.Id || record.id;
+    if (objectId && typeof objectId === 'string' && objectId.length > 10) {
+      byObjectId.set(objectId.toLowerCase(), node);
+    }
+
+    // NEW: Index by Mail / PrimarySmtpAddress
+    const mail = record.Mail || record.mail || record.PrimarySmtpAddress || record.primarySmtpAddress;
+    if (mail) {
+      byMail.set(mail.toLowerCase(), node);
+    }
+
+    // NEW: Index by SkuPartNumber (for licenses)
+    const skuPartNumber = record.SkuPartNumber || record.skuPartNumber;
+    if (skuPartNumber) {
+      bySkuPartNumber.set(skuPartNumber.toLowerCase(), node);
+    }
+
+    // NEW: Index by SkuId (for licenses)
+    const skuId = record.SkuId || record.skuId;
+    if (skuId) {
+      bySkuId.set(skuId.toLowerCase(), node);
+    }
+
+    // NEW: Index by SubscriptionId
+    const subscriptionId = record.SubscriptionId || record.subscriptionId;
+    if (subscriptionId) {
+      bySubscriptionId.set(subscriptionId.toLowerCase(), node);
+    }
+
+    // NEW: Index by ResourceGroupName (allows multiple nodes per RG)
+    const rgName = record.ResourceGroupName || record.resourceGroupName || record.ResourceGroup;
+    if (rgName) {
+      const rgKey = rgName.toLowerCase();
+      if (!byResourceGroupName.has(rgKey)) {
+        byResourceGroupName.set(rgKey, []);
+      }
+      byResourceGroupName.get(rgKey)!.push(node);
+    }
+
+    // NEW: Index by SamAccountName (on-prem)
+    const samAccountName = record.SamAccountName || record.samAccountName;
+    if (samAccountName) {
+      bySamAccountName.set(samAccountName.toLowerCase(), node);
+    }
   }
 
-  return { byId, byName, byType, byUPN, byAppId };
+  return {
+    byId, byName, byType, byUPN, byAppId,
+    byObjectId, byMail, bySkuPartNumber, bySkuId,
+    bySubscriptionId, byResourceGroupName, bySamAccountName
+  };
 }
 
 /**
@@ -1716,20 +1821,38 @@ function generateLinksForFile(
 function generateCrossFileLinksOptimized(
   allNodes: SankeyNode[],
   nodesBySource: Record<string, SankeyNode[]>,
-  indices: ReturnType<typeof createNodeIndices>
+  indices: NodeIndices
 ): SankeyLink[] {
   const links: SankeyLink[] = [];
   const linkSet = new Set<string>(); // Track existing links to avoid duplicates
 
-  const addLink = (source: string, target: string, type: SankeyLink['type']) => {
+  /**
+   * Enhanced addLink with confidence and evidence support
+   */
+  const addLink = (
+    source: string,
+    target: string,
+    type: RelationType,
+    confidence: number = 70,
+    matchRule: MatchRule = 'MEDIUM',
+    evidence: LinkEvidence[] = []
+  ) => {
     const key = `${source}:${target}:${type}`;
     if (!linkSet.has(key) && source !== target) {
       linkSet.add(key);
-      links.push({ source, target, value: 1, type });
+      links.push({
+        source,
+        target,
+        value: 1,
+        type,
+        confidence,
+        matchRule,
+        evidence
+      });
     }
   };
 
-  const { byType, byUPN, byAppId } = indices;
+  const { byType, byUPN, byAppId, byObjectId, byMail, bySkuPartNumber, bySkuId } = indices;
 
   // Applications to Databases (using type index)
   const applications = byType.get('application') || [];
@@ -1813,22 +1936,22 @@ function generateCrossFileLinksOptimized(
 
   // Teams to Groups (name matching)
   const teams = platforms.filter(n => n.metadata.source?.includes('team'));
-  const groups = platforms.filter(n => n.metadata.source?.includes('group'));
+  const legacyGroups = platforms.filter(n => n.metadata.source?.includes('group'));
 
   // Create group index by name and ID
-  const groupIndex = new Map<string, SankeyNode>();
-  groups.forEach(g => {
-    groupIndex.set(g.name.toLowerCase(), g);
+  const legacyGroupIndex = new Map<string, SankeyNode>();
+  legacyGroups.forEach(g => {
+    legacyGroupIndex.set(g.name.toLowerCase(), g);
     const groupId = getRecordProp(g.metadata.record, 'Id');
     if (groupId) {
-      groupIndex.set(groupId, g);
+      legacyGroupIndex.set(groupId, g);
     }
   });
 
   for (const team of teams) {
     const teamId = getRecordProp(team.metadata.record, 'Id');
-    const groupNode = groupIndex.get(team.name.toLowerCase()) ||
-                      (teamId && groupIndex.get(teamId));
+    const groupNode = legacyGroupIndex.get(team.name.toLowerCase()) ||
+                      (teamId && legacyGroupIndex.get(teamId));
     if (groupNode) {
       addLink(groupNode.id, team.id, 'provides');
     }
@@ -1883,13 +2006,14 @@ function generateCrossFileLinksOptimized(
     }
   }
 
-  // SharePoint Sites to Owners (users)
-  const users = byType.get('application')?.filter(n =>
-    n.metadata.source?.includes('user') ||
-    n.metadata.category === 'User'
-  ) || [];
+  // ===== PHASE 1: IDENTITY GRAPH LINKING =====
+  // Users are now first-class 'user' type nodes
+  const users = byType.get('user') || [];
+  const mailboxes = byType.get('mailbox') || [];
+  const identityGroups = byType.get('group') || [];
+  const licenses = byType.get('license') || [];
 
-  // Create user index by display name and UPN
+  // Create comprehensive user index by multiple identifiers
   const userIndex = new Map<string, SankeyNode>();
   users.forEach(user => {
     const displayName = user.name?.toLowerCase();
@@ -1898,8 +2022,121 @@ function generateCrossFileLinksOptimized(
     if (upn) userIndex.set(upn, user);
     const mail = getRecordProp(user.metadata.record, 'Mail')?.toLowerCase();
     if (mail) userIndex.set(mail, user);
+    const objectId = getRecordProp(user.metadata.record, 'ObjectId') || getRecordProp(user.metadata.record, 'Id');
+    if (objectId) userIndex.set(objectId.toLowerCase(), user);
   });
 
+  // Create identity group index by name and ID
+  const identityGroupIndex = new Map<string, SankeyNode>();
+  identityGroups.forEach(group => {
+    const displayName = group.name?.toLowerCase();
+    if (displayName) identityGroupIndex.set(displayName, group);
+    const groupId = getRecordProp(group.metadata.record, 'id') || getRecordProp(group.metadata.record, 'Id');
+    if (groupId) identityGroupIndex.set(groupId.toLowerCase(), group);
+    const mail = getRecordProp(group.metadata.record, 'mail')?.toLowerCase();
+    if (mail) identityGroupIndex.set(mail, group);
+  });
+
+  // === 1.1 User ↔ Mailbox Linking (has-mailbox) ===
+  console.log('[Phase1.1] Linking users to mailboxes...', { users: users.length, mailboxes: mailboxes.length });
+  for (const mailbox of mailboxes) {
+    const upn = getRecordProp(mailbox.metadata.record, 'UserPrincipalName')?.toLowerCase();
+    const email = getRecordProp(mailbox.metadata.record, 'PrimarySmtpAddress')?.toLowerCase();
+    const objectId = getRecordProp(mailbox.metadata.record, 'Id')?.toLowerCase();
+
+    // Try UPN match first (highest confidence)
+    if (upn) {
+      const userNode = userIndex.get(upn);
+      if (userNode && userNode.id !== mailbox.id) {
+        addLink(userNode.id, mailbox.id, 'has-mailbox', 100, 'EXACT', [{
+          file: mailbox.metadata.source,
+          fields: ['UserPrincipalName'],
+          sourceValue: upn,
+          targetValue: upn
+        }]);
+        continue;
+      }
+    }
+
+    // Try ObjectId match (high confidence)
+    if (objectId) {
+      const userNode = userIndex.get(objectId);
+      if (userNode && userNode.id !== mailbox.id) {
+        addLink(userNode.id, mailbox.id, 'has-mailbox', 95, 'EXACT', [{
+          file: mailbox.metadata.source,
+          fields: ['Id'],
+          sourceValue: objectId
+        }]);
+        continue;
+      }
+    }
+
+    // Try email match (high confidence)
+    if (email) {
+      const userNode = userIndex.get(email);
+      if (userNode && userNode.id !== mailbox.id) {
+        addLink(userNode.id, mailbox.id, 'has-mailbox', 90, 'HIGH', [{
+          file: mailbox.metadata.source,
+          fields: ['PrimarySmtpAddress'],
+          sourceValue: email
+        }]);
+      }
+    }
+  }
+
+  // === 1.2 User → Manager Linking (manages) ===
+  console.log('[Phase1.2] Linking users to managers...');
+  for (const user of users) {
+    const managerUPN = getRecordProp(user.metadata.record, 'ManagerUPN')?.toLowerCase();
+    const managerId = getRecordProp(user.metadata.record, 'ManagerId')?.toLowerCase();
+
+    // Try ManagerUPN first
+    if (managerUPN) {
+      const managerNode = userIndex.get(managerUPN);
+      if (managerNode && managerNode.id !== user.id) {
+        addLink(managerNode.id, user.id, 'manages', 100, 'EXACT', [{
+          file: user.metadata.source,
+          fields: ['ManagerUPN'],
+          sourceValue: managerUPN
+        }]);
+        continue;
+      }
+    }
+
+    // Try ManagerId
+    if (managerId) {
+      const managerNode = userIndex.get(managerId);
+      if (managerNode && managerNode.id !== user.id) {
+        addLink(managerNode.id, user.id, 'manages', 95, 'EXACT', [{
+          file: user.metadata.source,
+          fields: ['ManagerId'],
+          sourceValue: managerId
+        }]);
+      }
+    }
+  }
+
+  // === 1.3 User ↔ Group Linking (member-of) ===
+  console.log('[Phase1.3] Linking users to groups via GroupMemberships...');
+  for (const user of users) {
+    const groupMemberships = getRecordProp(user.metadata.record, 'GroupMemberships');
+    if (groupMemberships) {
+      const membershipList = groupMemberships.split(';').map((g: string) => g.trim()).filter(Boolean);
+      for (const groupName of membershipList) {
+        const groupNode = identityGroupIndex.get(groupName.toLowerCase());
+        if (groupNode && groupNode.id !== user.id) {
+          // Name-based match is MEDIUM confidence (names can collide)
+          addLink(user.id, groupNode.id, 'member-of', 75, 'MEDIUM', [{
+            file: user.metadata.source,
+            fields: ['GroupMemberships'],
+            sourceValue: groupName
+          }]);
+        }
+      }
+    }
+  }
+
+  // SharePoint Sites to Owners (users)
   for (const site of spSites) {
     const ownerDisplayName = getRecordProp(site.metadata.record, 'OwnerDisplayName');
     const owner = getRecordProp(site.metadata.record, 'Owner');
@@ -1909,56 +2146,83 @@ function generateCrossFileLinksOptimized(
     const ownerNode = (ownerName && userIndex.get(ownerName)) ||
                       (ownerEmail && userIndex.get(ownerEmail));
     if (ownerNode) {
-      addLink(ownerNode.id, site.id, 'ownership');
+      addLink(ownerNode.id, site.id, 'ownership', 85, 'HIGH', [{
+        file: site.metadata.source,
+        fields: ['OwnerDisplayName', 'OwnerEmail'],
+        sourceValue: ownerName || ownerEmail
+      }]);
     }
   }
 
-  // Mailboxes to Users (cross-file)
-  const mailboxes = byType.get('application')?.filter(n =>
-    n.metadata.source?.includes('mailbox') ||
-    n.metadata.source?.includes('exchange')
-  ) || [];
-
-  for (const mailbox of mailboxes) {
-    const upn = getRecordProp(mailbox.metadata.record, 'UserPrincipalName')?.toLowerCase();
-    const email = getRecordProp(mailbox.metadata.record, 'PrimarySmtpAddress')?.toLowerCase();
-    const displayName = getRecordProp(mailbox.metadata.record, 'DisplayName')?.toLowerCase();
-
-    const ownerNode = (upn && userIndex.get(upn)) ||
-                      (email && userIndex.get(email)) ||
-                      (displayName && userIndex.get(displayName));
-    if (ownerNode && ownerNode.id !== mailbox.id) {
-      addLink(ownerNode.id, mailbox.id, 'ownership');
-    }
-  }
-
-  // ===== ENHANCED LINK GENERATION (Phase 10) =====
-
-  // 1. User ↔ License Assignment Links
-  // Link users to their license assignments based on UserPrincipalName matching
-  const licenseAssignments = platforms.filter(n =>
-    n.metadata.source?.includes('userassignment') ||
-    n.metadata.source?.includes('licensingdiscoveryuserassignment') ||
-    n.metadata.category === 'License Assignment'
-  );
-
-  const licenses = platforms.filter(n =>
-    n.metadata.source?.includes('licensingsubscriptions') ||
-    n.metadata.source?.includes('licensingdiscoverylicensingsubscriptions') ||
-    n.metadata.category === 'Licensing'
-  );
+  // === 1.4 User ↔ License Linking (assigned) ===
+  // Link users directly to their licenses from LicensingDiscovery_UserAssignments
+  console.log('[Phase1.4] Linking users to licenses...', { users: users.length, licenses: licenses.length });
 
   // Create license index by SkuId and SkuPartNumber
   const licenseIndex = new Map<string, SankeyNode>();
   licenses.forEach(lic => {
     const skuId = getRecordProp(lic.metadata.record, 'SkuId');
     const skuPartNumber = getRecordProp(lic.metadata.record, 'SkuPartNumber');
-    if (skuId) licenseIndex.set(skuId, lic);
+    if (skuId) licenseIndex.set(skuId.toLowerCase(), lic);
     if (skuPartNumber) licenseIndex.set(skuPartNumber.toLowerCase(), lic);
   });
 
+  // Also check LicensingDiscovery_UserAssignments for direct user-license links
+  const licenseAssignmentRecords = allNodes.filter(n =>
+    n.metadata.source?.includes('userassignment') ||
+    n.metadata.source?.includes('licensingdiscovery_userassignments')
+  );
+
+  for (const assignment of licenseAssignmentRecords) {
+    const assignmentUPN = getRecordProp(assignment.metadata.record, 'UserPrincipalName')?.toLowerCase();
+    const skuPartNumber = getRecordProp(assignment.metadata.record, 'SkuPartNumber')?.toLowerCase();
+    const skuId = getRecordProp(assignment.metadata.record, 'SkuId')?.toLowerCase();
+
+    // Find user and license nodes
+    const userNode = assignmentUPN && userIndex.get(assignmentUPN);
+    const licenseNode = (skuPartNumber && licenseIndex.get(skuPartNumber)) ||
+                        (skuId && licenseIndex.get(skuId));
+
+    // Create direct user→license link with 'assigned' type
+    if (userNode && licenseNode && userNode.id !== licenseNode.id) {
+      addLink(userNode.id, licenseNode.id, 'assigned', 100, 'EXACT', [{
+        file: assignment.metadata.source,
+        fields: ['UserPrincipalName', 'SkuPartNumber'],
+        sourceValue: assignmentUPN,
+        targetValue: skuPartNumber || skuId
+      }]);
+    }
+  }
+
+  // Also link via AssignedLicenses field (GUID list in user records)
+  for (const user of users) {
+    const assignedLicenses = getRecordProp(user.metadata.record, 'AssignedLicenses');
+    if (assignedLicenses) {
+      const licenseGuids = assignedLicenses.split(';').map((g: string) => g.trim().toLowerCase()).filter(Boolean);
+      for (const guid of licenseGuids) {
+        const licenseNode = licenseIndex.get(guid);
+        if (licenseNode && licenseNode.id !== user.id) {
+          addLink(user.id, licenseNode.id, 'assigned', 90, 'HIGH', [{
+            file: user.metadata.source,
+            fields: ['AssignedLicenses'],
+            sourceValue: guid
+          }]);
+        }
+      }
+    }
+  }
+
+  // ===== ENHANCED LINK GENERATION (Phase 10) =====
+  // Legacy linking for backwards compatibility (uses platforms filter)
+  // Note: 'platforms' already declared above
+  const licenseAssignments = platforms.filter(n =>
+    n.metadata.source?.includes('userassignment') ||
+    n.metadata.source?.includes('licensingdiscoveryuserassignment') ||
+    n.metadata.category === 'License Assignment'
+  );
+
   for (const assignment of licenseAssignments) {
-    // Link assignment to user
+    // Link assignment to user with 'assigned' type
     const assignmentUPN = getRecordProp(assignment.metadata.record, 'UserPrincipalName')?.toLowerCase();
     const assignmentDisplayName = getRecordProp(assignment.metadata.record, 'DisplayName')?.toLowerCase();
 
@@ -1966,7 +2230,11 @@ function generateCrossFileLinksOptimized(
       const userNode = (assignmentUPN && userIndex.get(assignmentUPN)) ||
                        (assignmentDisplayName && userIndex.get(assignmentDisplayName));
       if (userNode && userNode.id !== assignment.id) {
-        addLink(userNode.id, assignment.id, 'ownership');
+        addLink(userNode.id, assignment.id, 'assigned', 85, 'HIGH', [{
+          file: assignment.metadata.source,
+          fields: ['UserPrincipalName', 'DisplayName'],
+          sourceValue: assignmentUPN || assignmentDisplayName
+        }]);
       }
     }
 
@@ -1974,10 +2242,14 @@ function generateCrossFileLinksOptimized(
     const skuId = getRecordProp(assignment.metadata.record, 'SkuId');
     const skuPartNumber = getRecordProp(assignment.metadata.record, 'SkuPartNumber')?.toLowerCase();
 
-    const licenseNode = (skuId && licenseIndex.get(skuId)) ||
+    const licenseNode = (skuId && licenseIndex.get(skuId.toLowerCase())) ||
                         (skuPartNumber && licenseIndex.get(skuPartNumber));
     if (licenseNode && licenseNode.id !== assignment.id) {
-      addLink(assignment.id, licenseNode.id, 'provides');
+      addLink(assignment.id, licenseNode.id, 'consumes', 90, 'HIGH', [{
+        file: assignment.metadata.source,
+        fields: ['SkuId', 'SkuPartNumber'],
+        sourceValue: skuId || skuPartNumber
+      }]);
     }
   }
 
@@ -2008,7 +2280,7 @@ function generateCrossFileLinksOptimized(
       const groupNames = groupMembersStr.split(';').map((g: string) => g.trim().toLowerCase()).filter(Boolean);
 
       for (const groupName of groupNames) {
-        const groupNode = groupIndex.get(groupName);
+        const groupNode = identityGroupIndex.get(groupName);
         if (groupNode && groupNode.id !== role.id) {
           addLink(role.id, groupNode.id, 'ownership');
         }
@@ -2127,7 +2399,8 @@ function generateCrossFileLinksOptimized(
     subscriptions: subscriptions.length,
     resourceGroups: resourceGroups.length,
     teams: teams.length,
-    groups: groups.length,
+    identityGroups: identityGroups.length,
+    legacyGroups: legacyGroups.length,
     servicePrincipals: servicePrincipals.length,
     spSites: spSites.length,
     spLists: spLists.length,
