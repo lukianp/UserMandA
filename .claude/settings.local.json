@@ -169,7 +169,10 @@
       "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\LicensingDiscovery*.csv\")",
       "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*Licens*.csv 2>nul\")",
       "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*License*.csv 2>nul & dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*DirectoryRole*.csv 2>nul & dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*SubscriptionOwner*.csv 2>nul\")",
-      "Bash(cmd /c \"cd C:\\\\enterprisediscovery\\\\guiv2 && start npm start\")"
+      "Bash(cmd /c \"cd C:\\\\enterprisediscovery\\\\guiv2 && start npm start\")",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*.csv 2>nul | head -60\")",
+      "Bash(tasklist:*)",
+      "Bash(git -C D:ScriptsUserMandA status --short)"
     ],
     "deny": [],
     "ask": []
