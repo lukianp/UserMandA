@@ -5,7 +5,7 @@ import {
   Database, Package, Cloud, Layers, HardDrive, Shield, Key, Lock,
   Tag, Network, AppWindow, Radar, Mail, Users, Server, FileText,
   Cpu, GitBranch, Folders, BarChart3, Workflow, Printer, Calendar,
-  MessageSquare, Globe, Smartphone, Folder
+  MessageSquare, Globe, Smartphone, Folder,
 } from 'lucide-react';
 
 export const discoveredNavItems = [
@@ -14,7 +14,9 @@ export const discoveredNavItems = [
   // =========================================================================
   { path: '/discovered/azureacr', label: 'Container Registry', icon: <Package size={16} /> },
   { path: '/discovered/azurefunctions', label: 'Function Apps', icon: <Cpu size={16} /> },
+  { path: '/discovered/azurelogicapps', label: 'Logic Apps', icon: <Workflow size={16} /> },
   { path: '/discovered/azureresource', label: 'Azure Resource', icon: <Layers size={16} /> },
+  { path: '/discovered/azurekeyvault', label: 'Azure Key Vault', icon: <Key size={16} /> },
   { path: '/discovered/azurevmss', label: 'VM Scale Sets', icon: <Layers size={16} /> },
   { path: '/discovered/conditionalaccess', label: 'Conditional Access', icon: <Lock size={16} /> },
   { path: '/discovered/azure', label: 'Entra ID & Microsoft 365', icon: <Cloud size={16} /> },

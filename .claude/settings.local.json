@@ -188,7 +188,11 @@
       "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*.csv 2>nul | findstr /i /v License | findstr /i /v Azure\")",
       "Bash(cmd /c \"dir /b D:\\\\Scripts\\\\UserMandA\\\\.agent 2>nul & dir /b D:\\\\Scripts\\\\UserMandA\\\\.claude 2>nul\")",
       "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*.csv 2>nul | findstr -i Auto\")",
-      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\AzureResource*.csv 2>nul\")"
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\AzureResource*.csv 2>nul\")",
+      "Bash(cmd /c \"dir /b C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\hooks\\\\useAzureKeyVaultDiscoveredLogic.ts 2>nul && echo File exists || echo File NOT found\")",
+      "Bash(cmd /c \"dir /b C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\views\\\\discovered\\\\AzureKeyVaultDiscoveredView.tsx 2>nul && echo File exists || echo File NOT found\")",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\AzureResourceDiscovery_KeyVaults.csv 2>nul && echo CSV exists || echo CSV NOT found\")",
+      "Bash(git -C D:ScriptsUserMandA log --oneline -3)"
     ],
     "deny": [],
     "ask": []
