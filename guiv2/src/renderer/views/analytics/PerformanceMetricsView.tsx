@@ -447,3 +447,5 @@ export const PerformanceMetricsView: React.FC = () => {
 };
 
 export default PerformanceMetricsView;
+
+

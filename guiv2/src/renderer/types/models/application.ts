@@ -362,3 +362,5 @@ export interface ApplicationDiscoveryTemplate {
   modifiedDate: Date | string | null;
   isSystem: boolean;
 }
+
+

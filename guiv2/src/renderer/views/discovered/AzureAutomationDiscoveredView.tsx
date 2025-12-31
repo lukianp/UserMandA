@@ -31,3 +31,5 @@ export const AzureAutomationDiscoveredView: React.FC = () => {
 };
 
 export default AzureAutomationDiscoveredView;
+
+

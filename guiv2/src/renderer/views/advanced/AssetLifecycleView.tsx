@@ -457,3 +457,5 @@ export const AssetLifecycleView: React.FC = () => {
 };
 
 export default AssetLifecycleView;
+
+

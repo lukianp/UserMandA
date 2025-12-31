@@ -200,3 +200,5 @@ export const DiscoveryProgressBar: React.FC<DiscoveryProgressBarProps> = ({
 };
 
 export default DiscoveryProgressBar;
+
+

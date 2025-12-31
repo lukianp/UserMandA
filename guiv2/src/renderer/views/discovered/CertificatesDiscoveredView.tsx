@@ -30,3 +30,5 @@ export const CertificatesDiscoveredView: React.FC = () => {
 };
 
 export default CertificatesDiscoveredView;
+
+

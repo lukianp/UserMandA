@@ -30,3 +30,5 @@ export const MultidomainforestDiscoveredView: React.FC = () => {
 };
 
 export default MultidomainforestDiscoveredView;
+
+

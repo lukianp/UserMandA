@@ -93,3 +93,5 @@ export const QuickActionsPanel: React.FC<QuickActionsPanelProps> = ({ className 
 };
 
 export default QuickActionsPanel;
+
+

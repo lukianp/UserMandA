@@ -31,3 +31,5 @@ export const AzureManagedIdentitiesDiscoveredView: React.FC = () => {
 };
 
 export default AzureManagedIdentitiesDiscoveredView;
+
+

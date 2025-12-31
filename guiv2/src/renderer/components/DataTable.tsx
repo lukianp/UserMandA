@@ -61,3 +61,5 @@ export function DataTable({ rows, loading = false, emptyMessage = 'No data avail
 }
 
 export default DataTable;
+
+

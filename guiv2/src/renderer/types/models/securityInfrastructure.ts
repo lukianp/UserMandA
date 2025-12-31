@@ -529,3 +529,5 @@ export const createDefaultSecurityFilter = (): SecurityDiscoveryFilter => ({
   hasActiveExploits: null,
   searchQuery: null,
 });
+
+

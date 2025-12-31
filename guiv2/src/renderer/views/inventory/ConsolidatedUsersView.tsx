@@ -249,3 +249,5 @@ const getRiskColor = (score: number): string => {
 };
 
 export default ConsolidatedUsersView;
+
+

@@ -338,3 +338,5 @@ export const groupCommandsByCategory = (commands: Command[]): CommandCategory[] 
 };
 
 export default createCommandRegistry;
+
+

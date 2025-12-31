@@ -28,6 +28,7 @@ import {
   LinkEvidence,
   RelationType
 } from '../types/models/organisation';
+import { useProfileStore } from '../store/useProfileStore';
 
 // Performance constants - CRITICAL for handling large datasets
 const BATCH_SIZE = 100; // Process nodes in batches to avoid blocking
@@ -1214,6 +1215,9 @@ export const useOrganisationMapLogic = (): UseOrganisationMapLogicReturn => {
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UseOrganisationMapLogicReturn['stats']>(null);
 
+  // Get the selected profile for company name
+  const selectedSourceProfile = useProfileStore((state) => state.selectedSourceProfile);
+
   // Cache for processed data with version
   const cacheRef = useRef<Map<string, SankeyNode[]>>(new Map());
   const cacheVersionRef = useRef<string>(CACHE_VERSION);
@@ -1291,12 +1295,133 @@ export const useOrganisationMapLogic = (): UseOrganisationMapLogicReturn => {
       // Generate cross-file relationships using optimized indices
       const crossFileLinks = generateCrossFileLinksOptimized(mergedData.nodes, nodesBySource, indices);
 
-      // REMOVED: Auto-generated business capabilities (inferred data, not from discovery)
-      // Only use real nodes from actual CSV discovery files
+      // Create Company node from profile as the root entity
+      // First, check for existing tenant/platform nodes with the same name and promote them
+      const companyLinks: SankeyLink[] = [];
+      if (selectedSourceProfile?.companyName) {
+        const companyName = selectedSourceProfile.companyName;
+        const companyNameLower = companyName.toLowerCase();
+        const companyId = `company_${companyNameLower.replace(/[^a-z0-9]/g, '_')}`;
+
+        // Find existing nodes that represent the same company/tenant
+        // These could be from azurediscovery_tenant, entraid, etc.
+        const existingTenantNode = mergedData.nodes.find(n =>
+          n.name.toLowerCase() === companyNameLower &&
+          (n.type === 'platform' || n.type === 'company') &&
+          (n.metadata.category === 'Tenant' || n.metadata.category === 'Enterprise' || n.metadata.source?.includes('tenant'))
+        );
+
+        let rootCompanyNode: SankeyNode;
+
+        if (existingTenantNode) {
+          // Promote existing tenant node to company type
+          existingTenantNode.type = 'company';
+          existingTenantNode.metadata.priority = 0; // Root level
+          existingTenantNode.metadata.category = 'Enterprise';
+          existingTenantNode.factSheet.baseInfo.type = 'company';
+          existingTenantNode.factSheet.baseInfo.tags = [...(existingTenantNode.factSheet.baseInfo.tags || []), 'tenant', 'root'];
+          rootCompanyNode = existingTenantNode;
+          console.log('[useOrganisationMapLogic] Promoted existing tenant to company:', rootCompanyNode.name, 'id:', rootCompanyNode.id);
+        } else {
+          // Check if company node already exists
+          const existingCompany = mergedData.nodes.find(n => n.type === 'company' && n.name.toLowerCase() === companyNameLower);
+          if (existingCompany) {
+            rootCompanyNode = existingCompany;
+            console.log('[useOrganisationMapLogic] Using existing company node:', rootCompanyNode.name);
+          } else {
+            // Create new company node
+            rootCompanyNode = {
+              id: companyId,
+              name: companyName,
+              type: 'company',
+              factSheet: {
+                baseInfo: {
+                  name: companyName,
+                  type: 'company',
+                  description: `Enterprise tenant: ${companyName}`,
+                  owner: 'Administrator',
+                  status: 'active',
+                  tags: ['tenant', 'root']
+                },
+                relations: { incoming: [], outgoing: [] },
+                itComponents: [],
+                subscriptions: [],
+                comments: [],
+                todos: [],
+                resources: [],
+                metrics: [],
+                surveys: [],
+                lastUpdate: new Date()
+              },
+              metadata: {
+                source: 'profile',
+                sourceFile: 'profile-configuration',
+                record: { profileId: selectedSourceProfile.id, tenantId: selectedSourceProfile.tenantId },
+                priority: 0, // Highest priority - root level
+                category: 'Enterprise'
+              },
+              identifiers: {
+                objectId: selectedSourceProfile.tenantId
+              }
+            };
+            mergedData.nodes.unshift(rootCompanyNode);
+            console.log('[useOrganisationMapLogic] Created new company node:', rootCompanyNode.name);
+          }
+        }
+
+        // Remove duplicate tenant/platform nodes with the same name as the company BEFORE linking
+        const nodesToRemove = new Set<string>();
+        mergedData.nodes.forEach(node => {
+          if (node.id !== rootCompanyNode.id &&
+              node.name.toLowerCase() === companyNameLower &&
+              (node.type === 'platform' || node.metadata.category === 'Tenant')) {
+            nodesToRemove.add(node.id);
+            console.log('[useOrganisationMapLogic] Removing duplicate tenant node:', node.name, 'id:', node.id);
+          }
+        });
+
+        if (nodesToRemove.size > 0) {
+          mergedData.nodes = mergedData.nodes.filter(n => !nodesToRemove.has(n.id));
+          // Also remove links to/from removed nodes
+          mergedData.links = mergedData.links.filter(l => {
+            const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+            const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+            return !nodesToRemove.has(sourceId) && !nodesToRemove.has(targetId);
+          });
+        }
+
+        // Link primary entities to the company with 'ownership' relationship
+        // Link: Users, Groups, Licenses, Applications (but NOT other platforms/tenants)
+        const entityTypesToLink: EntityType[] = ['user', 'group', 'license', 'application', 'subscription'];
+
+        mergedData.nodes.forEach(node => {
+          // Skip linking to itself
+          if (node.id === rootCompanyNode.id) return;
+
+          if (entityTypesToLink.includes(node.type)) {
+            companyLinks.push({
+              source: rootCompanyNode.id,
+              target: node.id,
+              value: 1,
+              type: 'ownership',
+              confidence: 100,
+              matchRule: 'EXACT',
+              evidence: [{
+                file: 'profile-configuration',
+                fields: ['companyName'],
+                sourceValue: companyName,
+                targetValue: node.name
+              }]
+            });
+          }
+        });
+
+        console.log('[useOrganisationMapLogic] Linked entities to company:', companyLinks.length);
+      }
 
       // Apply performance limits to prevent rendering 9000+ objects
       let finalNodes = mergedData.nodes;
-      let finalLinks = [...mergedData.links, ...crossFileLinks];
+      let finalLinks = [...mergedData.links, ...crossFileLinks, ...companyLinks];
 
       // Limit total nodes to MAX_NODES
       if (finalNodes.length > MAX_NODES) {
@@ -1382,7 +1507,7 @@ export const useOrganisationMapLogic = (): UseOrganisationMapLogicReturn => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedSourceProfile]);
 
   useEffect(() => {
     fetchData();
@@ -2673,6 +2798,7 @@ function removeDuplicateLinks(links: SankeyLink[]): SankeyLink[] {
 /**
  * Enforce MAX_LINKS_PER_NODE limit to prevent cluttered visualization
  * Keeps the most important links per node based on relationship type priority
+ * Company nodes (type='company') are exempt from limits as they are root entities
  */
 function enforceLinkLimits(links: SankeyLink[], maxLinksPerNode: number): SankeyLink[] {
   // Count links per node (both incoming and outgoing)
@@ -2708,25 +2834,35 @@ function enforceLinkLimits(links: SankeyLink[], maxLinksPerNode: number): Sankey
   const halfLimit = Math.floor(maxLinksPerNode / 2);
 
   // For each node, keep the most important incoming and outgoing links
+  // Exempt company nodes (root entities) from link limits
   nodeLinkCounts.forEach((linkGroups, nodeId) => {
-    // Sort and limit incoming links
-    const sortedIncoming = linkGroups.incoming
-      .sort((a, b) => (typePriority[a.type] || 99) - (typePriority[b.type] || 99))
-      .slice(0, halfLimit);
+    // Check if this is a company node (exempt from limits)
+    const isCompanyNode = nodeId.startsWith('company_') || nodeId.includes('_tenant_');
 
-    // Sort and limit outgoing links
-    const sortedOutgoing = linkGroups.outgoing
-      .sort((a, b) => (typePriority[a.type] || 99) - (typePriority[b.type] || 99))
-      .slice(0, halfLimit);
+    if (isCompanyNode) {
+      // Keep ALL links for company/root nodes
+      linkGroups.incoming.forEach(link => keptLinks.add(link));
+      linkGroups.outgoing.forEach(link => keptLinks.add(link));
+    } else {
+      // Sort and limit incoming links
+      const sortedIncoming = linkGroups.incoming
+        .sort((a, b) => (typePriority[a.type] || 99) - (typePriority[b.type] || 99))
+        .slice(0, halfLimit);
 
-    sortedIncoming.forEach(link => keptLinks.add(link));
-    sortedOutgoing.forEach(link => keptLinks.add(link));
+      // Sort and limit outgoing links
+      const sortedOutgoing = linkGroups.outgoing
+        .sort((a, b) => (typePriority[a.type] || 99) - (typePriority[b.type] || 99))
+        .slice(0, halfLimit);
+
+      sortedIncoming.forEach(link => keptLinks.add(link));
+      sortedOutgoing.forEach(link => keptLinks.add(link));
+    }
   });
 
   const result = Array.from(keptLinks);
 
   if (result.length < links.length) {
-    console.log(`[enforceLinkLimits] Reduced links from ${links.length} to ${result.length} (max ${maxLinksPerNode} per node)`);
+    console.log(`[enforceLinkLimits] Reduced links from ${links.length} to ${result.length} (max ${maxLinksPerNode} per node, company nodes exempt)`);
   }
 
   return result;
@@ -2753,3 +2889,5 @@ function extractDatabaseName(connectionString: string): string | null {
 }
 
 export default useOrganisationMapLogic;
+
+

@@ -29,3 +29,5 @@ export const ConsolidatedApplicationsView: React.FC = () => {
 };
 
 export default ConsolidatedApplicationsView;
+
+

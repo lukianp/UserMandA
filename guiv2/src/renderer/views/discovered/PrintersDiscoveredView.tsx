@@ -30,3 +30,5 @@ export const PrintersDiscoveredView: React.FC = () => {
 };
 
 export default PrintersDiscoveredView;
+
+

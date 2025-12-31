@@ -754,3 +754,5 @@ export const VirtualizedDataGrid = React.forwardRef(VirtualizedDataGridInner) as
 
 // Set displayName for React DevTools
 (VirtualizedDataGrid as any).displayName = 'VirtualizedDataGrid';
+
+

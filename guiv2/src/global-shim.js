@@ -14,3 +14,5 @@ if (typeof globalThis === 'undefined') {
 }
 
 module.exports = window;
+
+

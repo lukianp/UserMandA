@@ -259,3 +259,5 @@ export const InfrastructureDiscoveredView: React.FC = () => {
 };
 
 export default InfrastructureDiscoveredView;
+
+

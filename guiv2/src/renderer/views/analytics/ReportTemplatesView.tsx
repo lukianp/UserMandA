@@ -495,3 +495,5 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave, onCan
 };
 
 export default ReportTemplatesView;
+
+

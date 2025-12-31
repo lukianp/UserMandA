@@ -197,3 +197,5 @@ export async function initializeLogging(): Promise<void> {
   await loggingService.initialize();
   console.log('Logging service initialized');
 }
+
+

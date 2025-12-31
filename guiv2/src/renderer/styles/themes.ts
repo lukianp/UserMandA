@@ -523,3 +523,4 @@ export const applyTheme = (theme: Theme): void => {
     root.classList.remove('dark');
   }
 };
+

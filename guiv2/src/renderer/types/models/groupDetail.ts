@@ -261,3 +261,5 @@ export interface GroupDetailExportOptions {
   includeCharts?: boolean; // For PDF/Excel exports
   includeSummary?: boolean;
 }
+
+

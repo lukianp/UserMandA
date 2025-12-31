@@ -470,3 +470,5 @@ const SummaryRow: React.FC<{ label: string; value: number | string; icon?: React
 );
 
 export default EnvironmentDetectionView;
+
+

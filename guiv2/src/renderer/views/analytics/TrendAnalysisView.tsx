@@ -420,3 +420,5 @@ export const TrendAnalysisView: React.FC = () => {
 };
 
 export default TrendAnalysisView;
+
+

@@ -180,3 +180,4 @@ export const EntraidappDiscoveredView: React.FC = () => {
 };
 
 export default EntraidappDiscoveredView;
+

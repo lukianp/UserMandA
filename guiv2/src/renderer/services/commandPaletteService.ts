@@ -553,3 +553,5 @@ export const commandPaletteService = new CommandPaletteService();
 
 // Export class for testing
 export default CommandPaletteService;
+
+

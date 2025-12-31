@@ -139,3 +139,5 @@ export const ModernCard: React.FC<ModernCardProps> = React.memo(({
 ModernCard.displayName = 'ModernCard';
 
 export default ModernCard;
+
+

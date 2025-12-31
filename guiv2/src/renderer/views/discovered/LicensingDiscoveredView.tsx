@@ -592,3 +592,5 @@ const LicensingDiscoveredView: React.FC = () => {
 };
 
 export default LicensingDiscoveredView;
+
+

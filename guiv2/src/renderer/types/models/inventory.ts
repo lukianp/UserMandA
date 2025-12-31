@@ -229,3 +229,5 @@ export interface InventoryStats {
   entitiesWithRelations: number;
   entitiesAssignedToWaves: number;
 }
+
+

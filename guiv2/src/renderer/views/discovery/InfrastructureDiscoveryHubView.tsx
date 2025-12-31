@@ -309,3 +309,5 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
 };
 
 export default InfrastructureDiscoveryHubView;
+
+

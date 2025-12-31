@@ -557,3 +557,5 @@ class RealTimeUpdateService extends EventEmitter {
 }
 
 export default new RealTimeUpdateService();
+
+

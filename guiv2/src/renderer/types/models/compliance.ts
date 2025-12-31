@@ -135,3 +135,5 @@ export interface ComplianceDashboardData {
   recentAssessments: ComplianceAssessmentResult[];
   upcomingDeadlines: ComplianceItem[];
 }
+
+

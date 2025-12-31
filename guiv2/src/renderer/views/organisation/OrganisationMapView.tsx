@@ -109,9 +109,26 @@ export const OrganisationMapView: React.FC = () => {
       });
 
       // Find entity with most relationships, preferring certain types
-      const preferredTypes: EntityType[] = ['company', 'datacenter', 'platform', 'application'];
+      // Priority order: high-value enterprise entities first, then identity, then infrastructure
+      const preferredTypes: EntityType[] = [
+        'company',           // Top priority - company/tenant level
+        'platform',          // Enterprise platforms (M365, Azure)
+        'application',       // Applications
+        'datacenter',        // Data centers
+        'user',              // Users (important for identity graph)
+        'license',           // Licenses (shows user assignments)
+        'group',             // Groups
+        'subscription',      // Azure subscriptions
+        'resource-group',    // Azure resource groups
+      ];
+
+      // Types to deprioritize (environment detection workstations, etc.)
+      const deprioritizedTypes: EntityType[] = ['it-component'];
+      const deprioritizedSources = ['environmentdetection'];
+
       let rootEntity = filteredData.nodes[0];
       let maxRelations = 0;
+      let foundPreferred = false;
 
       // First try to find a preferred type with relationships
       for (const type of preferredTypes) {
@@ -121,20 +138,37 @@ export const OrganisationMapView: React.FC = () => {
           if (count > maxRelations) {
             maxRelations = count;
             rootEntity = candidate;
+            foundPreferred = true;
           }
         }
-        if (maxRelations > 0) break; // Found one with relationships
+        if (foundPreferred && maxRelations > 0) break; // Found one with relationships
       }
 
       // If no preferred type has relationships, find any entity with most relationships
-      if (maxRelations === 0) {
+      // BUT exclude deprioritized types (like environment detection workstations)
+      if (!foundPreferred || maxRelations === 0) {
         filteredData.nodes.forEach(node => {
           const count = relationCounts.get(node.id) || 0;
-          if (count > maxRelations) {
+          // Skip deprioritized types unless we have nothing else
+          const isDeprioritized = deprioritizedTypes.includes(node.type) ||
+            deprioritizedSources.some(src => node.metadata?.source?.toLowerCase().includes(src));
+
+          if (count > maxRelations && !isDeprioritized) {
             maxRelations = count;
             rootEntity = node;
           }
         });
+
+        // Last resort: if still nothing, accept deprioritized types
+        if (maxRelations === 0) {
+          filteredData.nodes.forEach(node => {
+            const count = relationCounts.get(node.id) || 0;
+            if (count > maxRelations) {
+              maxRelations = count;
+              rootEntity = node;
+            }
+          });
+        }
       }
 
       console.log('[OrganisationMapView] Auto-initializing with root entity:', rootEntity.name, 'Type:', rootEntity.type, 'Relations:', maxRelations);
@@ -389,3 +423,5 @@ export const OrganisationMapView: React.FC = () => {
 };
 
 export default OrganisationMapView;
+
+

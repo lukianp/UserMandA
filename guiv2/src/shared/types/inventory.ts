@@ -156,3 +156,5 @@ export interface InventoryMatch {
   mergeKey?: MergeKey; // Which key was used for the match
   createdAt: Date;
 }
+
+

@@ -610,3 +610,5 @@ export const logMemoryUsage = (): void => {
     console.groupEnd();
   }
 };
+
+

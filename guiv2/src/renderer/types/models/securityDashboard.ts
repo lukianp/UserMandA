@@ -20,3 +20,5 @@ export interface SecurityDashboardMetrics {
   threatStatus: string;
   securityPosture: string;
 }
+
+

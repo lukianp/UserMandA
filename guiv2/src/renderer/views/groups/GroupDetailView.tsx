@@ -578,3 +578,5 @@ function formatDate(date: Date | string | null | undefined): string {
 }
 
 export default GroupDetailView;
+
+

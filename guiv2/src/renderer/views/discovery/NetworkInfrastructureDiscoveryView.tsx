@@ -267,3 +267,5 @@ const SummaryRow: React.FC<{ label: string; value: number | string }> = ({ label
     <span className="text-sm font-medium">{typeof value === 'number' ? value.toLocaleString() : value}</span>
   </div>
 );
+
+

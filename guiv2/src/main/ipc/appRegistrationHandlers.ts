@@ -92,3 +92,5 @@ export function registerAppRegistrationHandlers(): void {
 }
 
 export default registerAppRegistrationHandlers;
+
+

@@ -470,3 +470,5 @@ export const DiscoveryLogViewer: React.FC<DiscoveryLogViewerProps> = ({
 };
 
 export default DiscoveryLogViewer;
+
+

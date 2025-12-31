@@ -283,3 +283,5 @@ export interface UserDetailExportOptions {
   includeCharts?: boolean;          // For PDF/Excel exports
   includeSummary?: boolean;
 }
+
+

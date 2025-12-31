@@ -296,3 +296,5 @@ export const createMockAnalyticsHook = (overrides = {}) => ({
   refreshData: jest.fn(),
   ...overrides,
 });
+
+

@@ -455,3 +455,5 @@ function parseFileSize(size: string): number {
 }
 
 export default SortingService.getInstance();
+
+

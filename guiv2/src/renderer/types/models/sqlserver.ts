@@ -471,3 +471,5 @@ export const SQL_TEMPLATES: Omit<SQLDiscoveryTemplate, 'id' | 'createdDate' | 'm
     },
   },
 ];
+
+

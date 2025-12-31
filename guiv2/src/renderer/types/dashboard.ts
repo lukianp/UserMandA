@@ -162,3 +162,5 @@ export interface DashboardData {
   quickActions: QuickAction[];
   lastUpdated: string; // ISO 8601
 }
+
+

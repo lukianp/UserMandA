@@ -76,3 +76,5 @@ export interface ProjectSettings {
   retentionDays: number;
   logLevel: 'debug' | 'info' | 'warning' | 'error';
 }
+
+

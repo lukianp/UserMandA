@@ -129,3 +129,5 @@ export const AssetInventoryView: React.FC = () => {
 };
 
 export default AssetInventoryView;
+
+

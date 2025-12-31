@@ -526,3 +526,5 @@ export const VMWARE_TEMPLATES: Omit<VMwareDiscoveryTemplate, 'id' | 'createdDate
     },
   },
 ];
+
+

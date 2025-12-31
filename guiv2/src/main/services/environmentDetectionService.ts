@@ -827,3 +827,5 @@ export default class EnvironmentDetectionService extends EventEmitter {
     });
   }
 }
+
+

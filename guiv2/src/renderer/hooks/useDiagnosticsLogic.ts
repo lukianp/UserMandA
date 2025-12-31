@@ -129,3 +129,5 @@ export const useDiagnosticsLogic = (): UseDiagnosticsLogicReturn => {
 };
 
 export default useDiagnosticsLogic;
+
+

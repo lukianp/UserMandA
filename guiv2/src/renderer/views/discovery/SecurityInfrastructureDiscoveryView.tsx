@@ -635,3 +635,5 @@ const formatDuration = (ms: number): string => {
 };
 
 export default SecurityInfrastructureDiscoveryView;
+
+

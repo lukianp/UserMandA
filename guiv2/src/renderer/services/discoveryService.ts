@@ -1079,3 +1079,5 @@ class DiscoveryService {
 
 // Export singleton instance
 export default new DiscoveryService();
+
+

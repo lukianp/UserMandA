@@ -571,3 +571,5 @@ export class PerformanceMonitoringService {
  * Export singleton instance
  */
 export const performanceMonitoringService = PerformanceMonitoringService.getInstance();
+
+

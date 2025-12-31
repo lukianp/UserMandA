@@ -70,7 +70,7 @@ export class LicenseService extends EventEmitter {
     if (this.initialized) return;
 
     // Get or generate machine ID (persistent UUID)
-    this.machineId = await this.configService.get<string>('license.machineId');
+    this.machineId = await this.configService.get<string>('license.machineId') ?? null;
     if (!this.machineId) {
       this.machineId = this.generateMachineId();
       await this.configService.set('license.machineId', this.machineId);
@@ -327,3 +327,5 @@ export class LicenseService extends EventEmitter {
 }
 
 export default LicenseService;
+
+

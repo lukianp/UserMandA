@@ -34,3 +34,5 @@ export interface NetworkDeviceData {
   isWarrantyExpired: boolean;
   warrantyStatus: string;
 }
+
+

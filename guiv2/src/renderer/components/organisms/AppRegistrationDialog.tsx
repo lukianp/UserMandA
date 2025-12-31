@@ -368,3 +368,5 @@ export const AppRegistrationDialog: React.FC<AppRegistrationDialogProps> = ({
     </Modal>
   );
 };
+
+

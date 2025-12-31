@@ -369,3 +369,5 @@ export const FILESYSTEM_TEMPLATES: Omit<FileSystemDiscoveryTemplate, 'id' | 'cre
     },
   },
 ];
+
+

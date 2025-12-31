@@ -209,3 +209,5 @@ export const useAzureServicePrincipalCredentialsDiscoveryLogic = () => {
     clearLogs,
   };
 };
+
+

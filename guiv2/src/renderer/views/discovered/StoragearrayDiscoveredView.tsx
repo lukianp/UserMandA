@@ -30,3 +30,5 @@ export const StoragearrayDiscoveredView: React.FC = () => {
 };
 
 export default StoragearrayDiscoveredView;
+
+

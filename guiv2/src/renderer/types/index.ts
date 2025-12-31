@@ -49,3 +49,4 @@ export type * from './uiux';
 
 // Profile types (from shared)
 export type * from '../../shared/types/profile';
+

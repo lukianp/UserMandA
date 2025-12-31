@@ -82,6 +82,12 @@ const ENTITY_TYPE_COLORS: Record<EntityType, string> = {
   'consumer-interface': '#ec4899',
   'business-capability': '#6366f1',
   'it-component': '#84cc16',
+  'user': '#0ea5e9',
+  'group': '#a855f7',
+  'mailbox': '#f97316',
+  'license': '#22c55e',
+  'subscription': '#eab308',
+  'resource-group': '#14b8a6'
 };
 
 /**
@@ -689,3 +695,5 @@ export const FactSheetModal: React.FC<FactSheetModalProps> = ({
 };
 
 export default FactSheetModal;
+
+

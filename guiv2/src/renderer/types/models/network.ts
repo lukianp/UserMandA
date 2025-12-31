@@ -402,3 +402,5 @@ export const COMMON_PORTS = [
   { port: 5432, protocol: 'TCP' as Protocol, service: 'PostgreSQL' },
   { port: 8080, protocol: 'TCP' as Protocol, service: 'HTTP-Alt' },
 ];
+
+

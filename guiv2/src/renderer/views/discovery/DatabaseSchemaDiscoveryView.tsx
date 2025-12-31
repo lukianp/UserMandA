@@ -439,3 +439,5 @@ const DatabaseSchemaDiscoveryView: React.FC = () => {
 };
 
 export default DatabaseSchemaDiscoveryView;
+
+

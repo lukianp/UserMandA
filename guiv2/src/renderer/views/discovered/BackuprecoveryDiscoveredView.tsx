@@ -30,3 +30,5 @@ export const BackuprecoveryDiscoveredView: React.FC = () => {
 };
 
 export default BackuprecoveryDiscoveredView;
+
+

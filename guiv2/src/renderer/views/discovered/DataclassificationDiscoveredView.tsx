@@ -30,3 +30,5 @@ export const DataclassificationDiscoveredView: React.FC = () => {
 };
 
 export default DataclassificationDiscoveredView;
+
+

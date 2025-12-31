@@ -120,3 +120,5 @@ export const DiscoveredViewWrapper: React.FC<DiscoveredViewWrapperProps> = ({
 };
 
 export default DiscoveredViewWrapper;
+
+

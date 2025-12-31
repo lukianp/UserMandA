@@ -13,13 +13,18 @@ import {
   ExternalLink,
   Tag,
   User,
+  Users,
   Calendar,
   Server,
   Globe,
   Building2,
   Layers,
   Database,
-  Shield
+  Shield,
+  Mail,
+  CreditCard,
+  Wallet,
+  FolderKanban
 } from 'lucide-react';
 import { SankeyNode, EntityType } from '../../types/models/organisation';
 import { Button } from '../atoms/Button';
@@ -44,7 +49,13 @@ function getEntityIcon(type: EntityType) {
     'provider-interface': <ExternalLink size={24} />,
     'consumer-interface': <ArrowRight size={24} />,
     'business-capability': <Shield size={24} />,
-    'it-component': <Database size={24} />
+    'it-component': <Database size={24} />,
+    'user': <User size={24} />,
+    'group': <Users size={24} />,
+    'mailbox': <Mail size={24} />,
+    'license': <CreditCard size={24} />,
+    'subscription': <Wallet size={24} />,
+    'resource-group': <FolderKanban size={24} />
   };
   return iconMap[type] || <Info size={24} />;
 }
@@ -61,7 +72,13 @@ function getEntityColor(type: EntityType): string {
     'provider-interface': '#06b6d4',
     'consumer-interface': '#ec4899',
     'business-capability': '#6366f1',
-    'it-component': '#84cc16'
+    'it-component': '#84cc16',
+    'user': '#0ea5e9',
+    'group': '#a855f7',
+    'mailbox': '#f97316',
+    'license': '#22c55e',
+    'subscription': '#eab308',
+    'resource-group': '#14b8a6'
   };
   return colorMap[type] || '#6b7280';
 }
@@ -248,3 +265,5 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 };
 
 export default DetailPanel;
+
+

@@ -223,3 +223,5 @@ export function registerMigrationWaveHandlers(): void {
 
   console.log('[WaveHandlers] Migration wave IPC handlers registered');
 }
+
+

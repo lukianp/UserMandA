@@ -313,3 +313,5 @@ export const mockDiscoveryCreators = {
   intune: createMockIntuneDiscoveryResult,
   sqlServer: createMockSQLServerDiscoveryResult,
 };
+
+

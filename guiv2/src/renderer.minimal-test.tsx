@@ -45,3 +45,5 @@ try {
 }
 
 console.log('✅ Renderer setup complete');
+
+

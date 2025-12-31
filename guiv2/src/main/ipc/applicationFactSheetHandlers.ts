@@ -367,3 +367,5 @@ export function registerApplicationFactSheetHandlers(): void {
 
   console.log('[ApplicationFactSheetHandlers] Registered 14 IPC handlers');
 }
+
+

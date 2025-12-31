@@ -30,3 +30,5 @@ export const NetworkinfrastructureDiscoveredView: React.FC = () => {
 };
 
 export default NetworkinfrastructureDiscoveredView;
+
+

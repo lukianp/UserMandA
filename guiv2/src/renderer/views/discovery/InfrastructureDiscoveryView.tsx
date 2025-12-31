@@ -850,3 +850,5 @@ const InfrastructureDiscoveryView: React.FC = () => {
 };
 
 export default InfrastructureDiscoveryView;
+
+

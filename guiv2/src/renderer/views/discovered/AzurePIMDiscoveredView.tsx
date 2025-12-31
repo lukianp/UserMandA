@@ -31,3 +31,5 @@ export const AzurePIMDiscoveredView: React.FC = () => {
 };
 
 export default AzurePIMDiscoveredView;
+
+

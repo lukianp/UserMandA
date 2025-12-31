@@ -364,3 +364,5 @@ export const DiscoveredViewTemplate = React.memo<DiscoveredViewTemplateProps>(
     );
   }
 );
+
+

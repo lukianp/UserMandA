@@ -560,3 +560,5 @@ export const GoNoGoCheckpointView: React.FC = () => {
 };
 
 export default GoNoGoCheckpointView;
+
+

@@ -32,3 +32,5 @@ export const DomainDiscoveredView: React.FC = () => {
 };
 
 export default DomainDiscoveredView;
+
+

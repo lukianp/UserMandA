@@ -26,3 +26,5 @@ export interface SecurityRiskData {
   isOverdue: boolean;
   timeToResolution: string;
 }
+
+

@@ -64,3 +64,5 @@ export function registerInventoryHandlers(): void {
 
   console.log('[InventoryHandlers] Inventory IPC handlers registered');
 }
+
+

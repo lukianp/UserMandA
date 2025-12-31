@@ -30,3 +30,5 @@ export const SecurityinfrastructureDiscoveredView: React.FC = () => {
 };
 
 export default SecurityinfrastructureDiscoveredView;
+
+

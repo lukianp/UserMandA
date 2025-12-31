@@ -30,3 +30,5 @@ export const GroupDetailViewWrapper: React.FC = () => {
 };
 
 export default GroupDetailViewWrapper;
+
+

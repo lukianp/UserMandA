@@ -268,3 +268,5 @@ export interface ComputerDetailExportOptions {
   includeCharts?: boolean; // For PDF/Excel exports
   includeSummary?: boolean;
 }
+
+

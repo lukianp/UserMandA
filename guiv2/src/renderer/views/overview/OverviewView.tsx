@@ -11,7 +11,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import GridLayout, { Responsive } from 'react-grid-layout';
 import type { Layout } from 'react-grid-layout';
-import { RefreshCw, Users, Layers, Monitor, Server, AlertCircle, Plus, X, GripVertical, Grid3X3, Save, RotateCcw } from 'lucide-react';
+import { RefreshCw, Users, Layers, Monitor, Server, AlertCircle, Plus, X, GripVertical, Grid3X3, Save, RotateCcw, Key, Download, ChevronDown, Check, Loader2, LayoutGrid } from 'lucide-react';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
@@ -26,6 +26,8 @@ import { Spinner } from '../../components/atoms/Spinner';
 import { useProfileStore } from '../../store/useProfileStore';
 import { DiscoveryProgressTile } from '../../components/molecules/DiscoveryProgressTile';
 import { SecurityAlertsTile } from '../../components/molecules/SecurityAlertsTile';
+import { useLicense } from '../../hooks/useLicense';
+import { useUpdates } from '../../hooks/useUpdates';
 
 // WidthProvider HOC - use type assertion since library types may not match exports
 const WidthProvider = (GridLayout as any).WidthProvider as
@@ -113,6 +115,11 @@ const OverviewView: React.FC = () => {
   const navigate = useNavigate();
   const { selectedSourceProfile } = useProfileStore();
 
+  // License and Update hooks
+  const { licenseInfo, isValid: licenseIsValid, isExpiringSoon } = useLicense();
+  const { updateInfo, isChecking: isCheckingUpdates, checkForUpdates, hasUpdateAvailable } = useUpdates();
+  const [showLicenseMenu, setShowLicenseMenu] = useState(false);
+
   // Enhanced state management with full persistence
   const [dashboardState, setDashboardState] = useState<DashboardState>({
     layouts: DEFAULT_LAYOUTS,
@@ -124,6 +131,8 @@ const OverviewView: React.FC = () => {
   const [showAddTile, setShowAddTile] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitializedRef = useRef(false);
+  const mountedRef = useRef(false);
 
   // Load dashboard state from localStorage on mount
   useEffect(() => {
@@ -176,6 +185,20 @@ const OverviewView: React.FC = () => {
     };
 
     loadDashboardState();
+
+    // Mark as initialized after a short delay to allow layouts to apply
+    const initTimer = setTimeout(() => {
+      isInitializedRef.current = true;
+      mountedRef.current = true;
+      console.log('[OverviewView] Dashboard initialized, layout changes will now be saved');
+    }, 500);
+
+    return () => {
+      clearTimeout(initTimer);
+      // Reset refs on unmount so next mount loads fresh from localStorage
+      isInitializedRef.current = false;
+      mountedRef.current = false;
+    };
   }, []);
 
   // Grid snapping function - ensures tiles align to grid
@@ -259,6 +282,12 @@ const OverviewView: React.FC = () => {
   // Handle layout change with snapping and collision resolution
   // Note: react-grid-layout types may vary, using type assertions for compatibility
   const onLayoutChange = useCallback((_currentLayout: unknown, allLayouts: unknown) => {
+    // Skip layout changes during initialization to preserve loaded state
+    if (!isInitializedRef.current) {
+      console.log('[OverviewView] Skipping layout change during initialization');
+      return;
+    }
+
     // Convert and enhance layouts
     const enhancedLayouts: { [key: string]: TileLayout[] } = {};
     const layoutsObj = allLayouts as { [key: string]: TileLayout[] };
@@ -350,6 +379,66 @@ const OverviewView: React.FC = () => {
     localStorage.setItem(DASHBOARD_STATE_KEY, JSON.stringify(resetState));
     console.log('[OverviewView] Dashboard reset to defaults');
   }, [dashboardState.showGrid, dashboardState.autoSave]);
+
+  // Auto-arrange tiles - organizes all active tiles into a clean grid
+  const autoArrangeTiles = useCallback(() => {
+    const cols = 12; // lg breakpoint columns
+    const activeTiles = dashboardState.activeTiles;
+    const newLayout: TileLayout[] = [];
+
+    let currentX = 0;
+    let currentY = 0;
+    let rowHeight = 0;
+
+    // Sort tiles by their default size (larger tiles first for better packing)
+    const sortedTiles = [...activeTiles].sort((a, b) => {
+      const tileA = AVAILABLE_TILES.find(t => t.id === a);
+      const tileB = AVAILABLE_TILES.find(t => t.id === b);
+      const sizeA = (tileA?.defaultSize.w || 3) * (tileA?.defaultSize.h || 2);
+      const sizeB = (tileB?.defaultSize.w || 3) * (tileB?.defaultSize.h || 2);
+      return sizeB - sizeA; // Larger tiles first
+    });
+
+    // Place each tile
+    sortedTiles.forEach((tileId) => {
+      const tileConfig = AVAILABLE_TILES.find(t => t.id === tileId);
+      if (!tileConfig) return;
+
+      const w = tileConfig.defaultSize.w;
+      const h = tileConfig.defaultSize.h;
+      const minW = tileConfig.minSize?.w || 2;
+      const minH = tileConfig.minSize?.h || 2;
+
+      // Check if tile fits in current row
+      if (currentX + w > cols) {
+        // Move to next row
+        currentX = 0;
+        currentY += rowHeight;
+        rowHeight = 0;
+      }
+
+      newLayout.push({
+        i: tileId,
+        x: currentX,
+        y: currentY,
+        w,
+        h,
+        minW,
+        minH,
+      });
+
+      currentX += w;
+      rowHeight = Math.max(rowHeight, h);
+    });
+
+    const newLayouts = {
+      ...dashboardState.layouts,
+      lg: newLayout,
+    };
+
+    saveDashboardState({ layouts: newLayouts });
+    console.log('[OverviewView] Tiles auto-arranged');
+  }, [dashboardState.activeTiles, dashboardState.layouts, saveDashboardState]);
 
   // Toggle grid visibility
   const toggleGrid = useCallback(() => {
@@ -474,6 +563,88 @@ const OverviewView: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          {/* License & Update Dropdown */}
+          <div className="relative">
+            <Button
+              onClick={() => setShowLicenseMenu(!showLicenseMenu)}
+              variant="secondary"
+              size="sm"
+              className={`${hasUpdateAvailable ? 'ring-2 ring-blue-500' : ''} ${isExpiringSoon(30) ? 'ring-2 ring-orange-500' : ''}`}
+            >
+              <Key className="w-4 h-4 mr-2" />
+              License & Update
+              {(hasUpdateAvailable || isExpiringSoon(30)) && (
+                <span className={`ml-2 w-2 h-2 rounded-full ${hasUpdateAvailable ? 'bg-blue-500' : 'bg-orange-500'} animate-pulse`} />
+              )}
+              <ChevronDown className="w-4 h-4 ml-1" />
+            </Button>
+            {showLicenseMenu && (
+              <div className="absolute right-0 mt-2 w-64 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg shadow-lg z-50">
+                {/* License Status */}
+                <div className="px-4 py-3 border-b border-[var(--border)]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-[var(--text-primary)]">License Status</span>
+                    <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                      licenseIsValid ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                    }`}>
+                      {licenseIsValid ? <Check className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                      {licenseInfo?.status || 'Not Activated'}
+                    </span>
+                  </div>
+                  {licenseInfo?.type && (
+                    <div className="text-xs text-[var(--text-secondary)] mt-1">
+                      {licenseInfo.type.charAt(0).toUpperCase() + licenseInfo.type.slice(1)} License
+                      {licenseInfo.daysRemaining !== undefined && ` • ${licenseInfo.daysRemaining} days remaining`}
+                    </div>
+                  )}
+                </div>
+
+                {/* Menu Items */}
+                <button
+                  onClick={() => {
+                    navigate('/admin/license');
+                    setShowLicenseMenu(false);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] flex items-center gap-2"
+                >
+                  <Key className="w-4 h-4" />
+                  License Activation
+                </button>
+
+                <button
+                  onClick={async () => {
+                    await checkForUpdates();
+                    setShowLicenseMenu(false);
+                  }}
+                  disabled={isCheckingUpdates}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isCheckingUpdates ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  {isCheckingUpdates ? 'Checking...' : 'Check for Updates'}
+                  {hasUpdateAvailable && (
+                    <span className="ml-auto text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">
+                      v{updateInfo?.latestVersion}
+                    </span>
+                  )}
+                </button>
+
+                {/* Update Available Notice */}
+                {hasUpdateAvailable && (
+                  <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-t border-[var(--border)]">
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      Update available: v{updateInfo?.currentVersion} → v{updateInfo?.latestVersion}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Grid Toggle */}
           <Button
             onClick={toggleGrid}
@@ -519,6 +690,12 @@ const OverviewView: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Auto-Arrange Tiles */}
+          <Button onClick={autoArrangeTiles} variant="secondary" size="sm">
+            <LayoutGrid className="w-4 h-4 mr-2" />
+            Auto-Arrange
+          </Button>
 
           {/* Reset Layout */}
           <Button onClick={resetLayout} variant="secondary" size="sm">
@@ -643,3 +820,5 @@ const OverviewView: React.FC = () => {
 };
 
 export default OverviewView;
+
+

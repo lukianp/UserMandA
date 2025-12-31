@@ -140,3 +140,5 @@ export function getGroupKeyForNode(type: EntityType, category?: string): string 
   // Fall back to entity type mapping
   return ENTITY_TYPE_TO_GROUP[type] || 'default';
 }
+
+

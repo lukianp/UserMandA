@@ -49,3 +49,5 @@ export interface IncidentResponseData {
   metrics: IncidentMetrics;
   incidents: SecurityIncident[];
 }
+
+

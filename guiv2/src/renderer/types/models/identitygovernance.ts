@@ -140,3 +140,5 @@ export interface IGFilterState {
   searchText: string;
   selectedStatuses: string[];
 }
+
+

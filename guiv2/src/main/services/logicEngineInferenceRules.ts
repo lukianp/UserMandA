@@ -731,3 +731,4 @@ export class InferenceRulesMixin {
     return maxLen === 0 ? 1.0 : 1.0 - (distance / maxLen);
   }
 }
+

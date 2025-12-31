@@ -247,3 +247,5 @@ function downloadCSV(content: string, filename: string) {
 }
 
 export default DeviceManagementView;
+
+

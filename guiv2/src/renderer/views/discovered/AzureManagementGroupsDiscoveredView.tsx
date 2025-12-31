@@ -31,3 +31,5 @@ export const AzureManagementGroupsDiscoveredView: React.FC = () => {
 };
 
 export default AzureManagementGroupsDiscoveredView;
+
+

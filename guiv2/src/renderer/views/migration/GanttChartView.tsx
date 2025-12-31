@@ -641,3 +641,5 @@ export const GanttChartView: React.FC = () => {
 };
 
 export default GanttChartView;
+
+

@@ -29,3 +29,5 @@ export const ConsolidatedInfrastructureView: React.FC = () => {
 };
 
 export default ConsolidatedInfrastructureView;
+
+

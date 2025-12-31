@@ -462,3 +462,5 @@ export const IdentityGovernanceView: React.FC = () => {
 };
 
 export default IdentityGovernanceView;
+
+

@@ -300,3 +300,5 @@ const DataClassificationDiscoveryView: React.FC = () => {
 };
 
 export default DataClassificationDiscoveryView;
+
+

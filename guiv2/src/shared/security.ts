@@ -156,3 +156,5 @@ export function validateCsvData(data: any[]): boolean {
   const columnCount = Object.keys(firstRow).length;
   return columnCount > 0 && columnCount < 1000;
 }
+
+

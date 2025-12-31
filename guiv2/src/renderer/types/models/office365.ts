@@ -603,3 +603,5 @@ export interface IncidentPost {
   postType: 'regular' | 'quick' | 'strategic' | 'unknown';
   description: string;
 }
+
+

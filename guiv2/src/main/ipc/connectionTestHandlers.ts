@@ -119,3 +119,5 @@ export function registerConnectionTestHandlers(window?: BrowserWindow): void {
 }
 
 export default registerConnectionTestHandlers;
+
+

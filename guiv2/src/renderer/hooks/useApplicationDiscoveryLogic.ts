@@ -560,3 +560,5 @@ export const useApplicationDiscoveryLogic = (): ApplicationDiscoveryHookResult =
 
   };
 };
+
+

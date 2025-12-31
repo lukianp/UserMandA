@@ -30,3 +30,5 @@ export const PaloaltoDiscoveredView: React.FC = () => {
 };
 
 export default PaloaltoDiscoveredView;
+
+

@@ -31,3 +31,5 @@ export const AzureServicePrincipalCredentialsDiscoveredView: React.FC = () => {
 };
 
 export default AzureServicePrincipalCredentialsDiscoveredView;
+
+

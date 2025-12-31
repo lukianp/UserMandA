@@ -153,3 +153,5 @@ if (typeof document !== 'undefined' && !document.getElementById('progress-bar-st
 }
 
 export default ProgressBar;
+
+

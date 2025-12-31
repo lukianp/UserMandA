@@ -114,3 +114,5 @@ export const DiscoveryProgressTile: React.FC = () => {
 };
 
 export default DiscoveryProgressTile;
+
+

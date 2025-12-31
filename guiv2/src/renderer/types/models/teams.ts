@@ -485,3 +485,5 @@ export interface TeamComplianceStatus {
   complianceScore: number; // 0-100
   issues: string[];
 }
+
+

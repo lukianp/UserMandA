@@ -323,3 +323,4 @@ export interface BackupSchedule extends Identifiable, Named, TimestampMetadata {
   /** Updated timestamp */
   updatedAt: Date | string;
 }
+

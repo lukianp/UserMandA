@@ -346,3 +346,5 @@ class EventAggregatorService {
 }
 
 export default new EventAggregatorService();
+
+

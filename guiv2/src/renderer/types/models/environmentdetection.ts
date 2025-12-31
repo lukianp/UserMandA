@@ -85,3 +85,5 @@ export interface DetectionFilterState {
   selectedStatuses: string[];
   showOnlyAvailable: boolean;
 }
+
+

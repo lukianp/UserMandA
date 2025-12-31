@@ -244,3 +244,5 @@ const SeverityBadge: React.FC<{ severity: ConflictSeverity }> = ({ severity }) =
 };
 
 export default ConflictResolver;
+
+

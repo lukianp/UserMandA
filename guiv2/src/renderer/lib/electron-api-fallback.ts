@@ -388,3 +388,4 @@ export const getElectronAPI = () => {
   console.warn('Using fallback Electron API - running in development mode without Electron');
   return electronAPIFallback;
 };
+

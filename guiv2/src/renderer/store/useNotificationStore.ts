@@ -407,3 +407,5 @@ function playNotificationSound(type: NotificationType): void {
     console.warn('Notification sound not available:', error);
   }
 }
+
+

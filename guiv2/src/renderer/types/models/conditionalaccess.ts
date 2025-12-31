@@ -94,3 +94,5 @@ export interface CAFilterState {
   searchText: string;
   selectedStates: PolicyState[];
 }
+
+

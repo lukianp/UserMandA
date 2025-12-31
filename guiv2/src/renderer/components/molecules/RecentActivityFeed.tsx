@@ -196,3 +196,5 @@ export const RecentActivityFeed: React.FC<RecentActivityFeedProps> = ({
 };
 
 export default RecentActivityFeed;
+
+

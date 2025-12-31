@@ -30,3 +30,5 @@ export const ApplicationsDiscoveredView: React.FC = () => {
 };
 
 export default ApplicationsDiscoveredView;
+
+

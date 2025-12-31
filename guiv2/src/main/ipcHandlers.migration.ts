@@ -135,3 +135,5 @@ export function registerMigrationHandlers(powerShellService?: PowerShellExecutio
 
   console.log('Migration planning and consolidated inventory IPC handlers registered');
 }
+
+

@@ -31,3 +31,5 @@ export const AzureSubscriptionOwnersDiscoveredView: React.FC = () => {
 };
 
 export default AzureSubscriptionOwnersDiscoveredView;
+
+

@@ -199,3 +199,5 @@ export interface ClassificationFilter {
   dateTo?: Date;
   searchText?: string;
 }
+
+

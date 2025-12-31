@@ -23,3 +23,5 @@ export interface DatabaseData {
   status: string | null;
   lastBackup: Date | string | null;
 }
+
+

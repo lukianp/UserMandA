@@ -22,3 +22,5 @@ export interface ThreatIndicator {
   severityColor: string;
   isOverdue: boolean;
 }
+
+

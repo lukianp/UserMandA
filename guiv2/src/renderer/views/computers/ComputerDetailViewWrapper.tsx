@@ -30,3 +30,5 @@ export const ComputerDetailViewWrapper: React.FC = () => {
 };
 
 export default ComputerDetailViewWrapper;
+
+

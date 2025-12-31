@@ -516,3 +516,4 @@ export interface ThreatAnalysisProjection {
   MitreTactics: Record<string, number>;
   GeneratedAt: Date;
 }
+

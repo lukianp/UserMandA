@@ -152,13 +152,13 @@ export class UpdateService extends EventEmitter {
 
       if (updateAvailable) {
         // Find .nupkg asset
-        const asset = release.assets.find(a => a.name.endsWith('.nupkg'));
+        const asset = release.assets.find((a: { name: string; browser_download_url: string }) => a.name.endsWith('.nupkg'));
         if (asset) {
           updateInfo.downloadUrl = asset.browser_download_url;
         }
 
         // Find checksum
-        const checksumAsset = release.assets.find(a =>
+        const checksumAsset = release.assets.find((a: { name: string; browser_download_url: string }) =>
           a.name === 'CHECKSUMS.txt' || a.name === 'SHA256SUMS'
         );
         if (checksumAsset) {
@@ -471,3 +471,5 @@ export class UpdateService extends EventEmitter {
 }
 
 export default UpdateService;
+
+

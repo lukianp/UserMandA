@@ -397,3 +397,5 @@ export interface ADDiscoveryTemplate {
   modifiedDate: Date | string | null;
   isSystem: boolean;
 }
+
+

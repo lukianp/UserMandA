@@ -33,3 +33,5 @@ export const AzureresourceDiscoveredView: React.FC = () => {
 };
 
 export default AzureresourceDiscoveredView;
+
+

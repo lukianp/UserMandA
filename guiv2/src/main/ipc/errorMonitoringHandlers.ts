@@ -123,3 +123,5 @@ export function registerErrorMonitoringHandlers(mainWindow?: BrowserWindow): voi
     return { success: true };
   });
 }
+
+

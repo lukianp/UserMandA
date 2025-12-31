@@ -739,3 +739,5 @@ class ConflictResolutionService extends EventEmitter {
 }
 
 export default ConflictResolutionService;
+
+

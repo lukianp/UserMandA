@@ -1,6 +1,11 @@
 /**
  * Certificate Authority Discovery Logic Hook
  * Contains all business logic for Certificate Authority discovery
+ *
+ * @author ljpops.com (Lukian Poleschtschuk)
+ * **Last Updated:** 30/12/2025
+ * **Status:** Production
+ * **Version:** 1.0
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -367,3 +372,4 @@ export const useCertificateAuthorityDiscoveryLogic = () => {
     setShowExecutionDialog,
   };
 };
+

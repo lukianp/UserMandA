@@ -25,3 +25,5 @@ export interface DatabaseServerData {
   statusIcon: string;
   typeIcon: string;
 }
+
+

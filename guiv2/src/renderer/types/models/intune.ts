@@ -339,3 +339,5 @@ export interface IntuneFilterState {
   showOnlyNonCompliant: boolean;
   lastSyncRange?: { start: Date; end: Date; };
 }
+
+

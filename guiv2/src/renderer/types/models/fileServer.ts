@@ -27,3 +27,5 @@ export interface ShareData {
   files: number;
   lastAccess: Date | string | null;
 }
+
+

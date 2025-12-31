@@ -130,3 +130,5 @@ export interface PowerPlatformFilterState {
   selectedAppTypes: string[];
   selectedFlowStates: string[];
 }
+
+

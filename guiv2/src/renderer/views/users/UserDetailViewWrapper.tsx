@@ -30,3 +30,5 @@ export const UserDetailViewWrapper: React.FC = () => {
 };
 
 export default UserDetailViewWrapper;
+
+

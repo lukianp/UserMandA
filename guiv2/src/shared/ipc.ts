@@ -156,3 +156,5 @@ export interface LegacyDiscoveryCredential {
   CreatedOnComputer?: string;
   RoleAssignmentSuccess?: boolean;
 }
+
+

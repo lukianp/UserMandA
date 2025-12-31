@@ -30,3 +30,5 @@ export const ScheduledtasksDiscoveredView: React.FC = () => {
 };
 
 export default ScheduledtasksDiscoveredView;
+
+

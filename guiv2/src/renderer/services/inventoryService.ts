@@ -499,3 +499,5 @@ export class InventoryService {
 
 // Export singleton instance
 export const inventoryService = new InventoryService();
+
+

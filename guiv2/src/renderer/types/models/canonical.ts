@@ -431,3 +431,5 @@ export interface CanonicalInfrastructure extends CanonicalEntity {
     // ... additional infrastructure-specific fields
   };
 }
+
+

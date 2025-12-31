@@ -583,3 +583,5 @@ export const ApplicationInventoryView: React.FC = () => {
 };
 
 export default ApplicationInventoryView;
+
+

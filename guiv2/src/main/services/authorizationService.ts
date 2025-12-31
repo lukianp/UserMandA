@@ -8,6 +8,11 @@
  * - Permission inheritance and caching
  * - Audit trail for authorization decisions
  * - Dynamic permission evaluation
+ *
+ * @author ljpops.com (Lukian Poleschtschuk)
+ * **Last Updated:** 30/12/2025
+ * **Status:** Production
+ * **Version:** 1.0
  */
 
 import { EventEmitter } from 'events';
@@ -819,3 +824,4 @@ export class AuthorizationService extends EventEmitter {
 }
 
 export default new AuthorizationService();
+

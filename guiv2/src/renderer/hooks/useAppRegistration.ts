@@ -602,3 +602,5 @@ export function useAppRegistration() {
     REGISTRATION_STEPS, // Export for UI consumption
   };
 }
+
+

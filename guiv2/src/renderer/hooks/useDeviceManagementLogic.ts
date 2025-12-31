@@ -189,3 +189,5 @@ function getMockDeviceManagement(): DeviceManagementData {
     topIssues: calculateTopIssues(devices),
   };
 }
+
+

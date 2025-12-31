@@ -172,7 +172,8 @@
       "Bash(cmd /c \"cd C:\\\\enterprisediscovery\\\\guiv2 && start npm start\")",
       "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*.csv 2>nul | head -60\")",
       "Bash(tasklist:*)",
-      "Bash(git -C D:ScriptsUserMandA status --short)"
+      "Bash(git -C D:ScriptsUserMandA status --short)",
+      "Bash(git -C D:ScriptsUserMandA pull origin main)"
     ],
     "deny": [],
     "ask": []

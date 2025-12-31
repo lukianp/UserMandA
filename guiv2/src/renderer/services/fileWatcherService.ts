@@ -264,3 +264,5 @@ export const fileWatcherService = new FileWatcherService();
 
 // Export class for custom instances
 export default FileWatcherService;
+
+

@@ -714,3 +714,5 @@ class BackgroundTaskQueueService extends EventEmitter {
 }
 
 export default BackgroundTaskQueueService;
+
+

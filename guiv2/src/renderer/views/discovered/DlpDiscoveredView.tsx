@@ -30,3 +30,5 @@ export const DlpDiscoveredView: React.FC = () => {
 };
 
 export default DlpDiscoveredView;
+
+

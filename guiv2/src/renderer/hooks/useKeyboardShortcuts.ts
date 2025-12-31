@@ -388,3 +388,5 @@ export const formatShortcut = (shortcut: KeyboardShortcut): string => {
 };
 
 export default useKeyboardShortcuts;
+
+

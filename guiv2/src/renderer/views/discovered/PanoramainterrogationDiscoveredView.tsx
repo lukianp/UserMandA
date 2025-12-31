@@ -30,3 +30,5 @@ export const PanoramainterrogationDiscoveredView: React.FC = () => {
 };
 
 export default PanoramainterrogationDiscoveredView;
+
+

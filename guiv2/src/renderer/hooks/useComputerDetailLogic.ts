@@ -305,3 +305,5 @@ export function useComputerDetailLogic(computerId: string): UseComputerDetailLog
     closeView,
   };
 }
+
+

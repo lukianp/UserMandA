@@ -30,3 +30,5 @@ export const IntuneDiscoveredView: React.FC = () => {
 };
 
 export default IntuneDiscoveredView;
+
+

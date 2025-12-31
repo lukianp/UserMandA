@@ -17,3 +17,5 @@ export interface InfrastructureData {
   id?: string | null;
   domain?: string | null;
 }
+
+

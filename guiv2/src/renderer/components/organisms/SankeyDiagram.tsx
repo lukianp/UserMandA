@@ -49,7 +49,13 @@ const TYPE_PRIORITY: Record<EntityType, number> = {
   'provider-interface': 3,
   'consumer-interface': 3,
   'company': 4,
-  'business-capability': 4
+  'business-capability': 4,
+  'user': 3,
+  'group': 3,
+  'mailbox': 2,
+  'license': 3,
+  'subscription': 3,
+  'resource-group': 2
 };
 
 // Enhanced type color mapping with layer-based gradients
@@ -62,6 +68,12 @@ const TYPE_COLORS: Record<EntityType, string> = {
   'consumer-interface': '#ec4899', // pink-500
   'business-capability': '#6366f1', // indigo-500
   'it-component': '#84cc16',      // lime-500
+  'user': '#0ea5e9',              // sky-500
+  'group': '#a855f7',             // purple-500
+  'mailbox': '#f97316',           // orange-500
+  'license': '#22c55e',           // green-500
+  'subscription': '#eab308',      // yellow-500
+  'resource-group': '#14b8a6'     // teal-500
 };
 
 // Category-based colors for more granular coloring
@@ -659,3 +671,5 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
     </div>
   );
 };
+
+

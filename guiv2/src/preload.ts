@@ -1353,3 +1353,5 @@ console.log('[PRELOAD] project methods:', electronAPI.project ? Object.keys(elec
 console.log('[PRELOAD] profile methods:', electronAPI.profile ? Object.keys(electronAPI.profile).length : 'UNDEFINED');
 console.log('[PRELOAD] Context isolation:', true);
 console.log('========================================');
+
+

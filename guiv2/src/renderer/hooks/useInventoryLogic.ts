@@ -87,3 +87,5 @@ export const useInventoryLogic = (sourceProfileId: string) => {
     getStats: handleGetStats,
   };
 };
+
+

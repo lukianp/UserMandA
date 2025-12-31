@@ -228,3 +228,5 @@ export const CertificationView: React.FC = () => {
 };
 
 export default CertificationView;
+
+

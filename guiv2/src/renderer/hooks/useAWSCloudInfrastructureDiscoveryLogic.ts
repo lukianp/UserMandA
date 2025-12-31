@@ -286,3 +286,4 @@ export const useAWSCloudInfrastructureDiscoveryLogic = (): AWSCloudInfrastructur
     selectedProfile,
   };
 };
+

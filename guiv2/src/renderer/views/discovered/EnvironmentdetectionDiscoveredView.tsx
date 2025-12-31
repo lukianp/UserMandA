@@ -30,3 +30,5 @@ export const EnvironmentdetectionDiscoveredView: React.FC = () => {
 };
 
 export default EnvironmentdetectionDiscoveredView;
+
+

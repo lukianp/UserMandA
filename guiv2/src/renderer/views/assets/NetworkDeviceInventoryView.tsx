@@ -266,3 +266,5 @@ const NetworkDeviceInventoryView: React.FC = () => {
 };
 
 export default NetworkDeviceInventoryView;
+
+

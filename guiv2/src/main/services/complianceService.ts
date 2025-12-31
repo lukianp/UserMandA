@@ -926,3 +926,5 @@ export class ComplianceService extends EventEmitter {
 }
 
 export default new ComplianceService();
+
+
