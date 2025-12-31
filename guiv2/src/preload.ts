@@ -1238,6 +1238,104 @@ const electronAPI: ElectronAPI = {
       sourceFile: string;
     }) => ipcRenderer.invoke('factsheet:importFromDiscovery', params),
   },
+
+  // ========================================
+  // License Management
+  // ========================================
+
+  license: {
+    activate: (licenseKey: string) =>
+      ipcRenderer.invoke('license:activate', licenseKey),
+
+    getInfo: () =>
+      ipcRenderer.invoke('license:getInfo'),
+
+    isValid: () =>
+      ipcRenderer.invoke('license:isValid'),
+
+    getDetails: () =>
+      ipcRenderer.invoke('license:getDetails'),
+
+    hasFeature: (featureId: string) =>
+      ipcRenderer.invoke('license:hasFeature', featureId),
+
+    getCustomerId: () =>
+      ipcRenderer.invoke('license:getCustomerId'),
+
+    deactivate: () =>
+      ipcRenderer.invoke('license:deactivate'),
+
+    refresh: () =>
+      ipcRenderer.invoke('license:refresh'),
+
+    // Event listeners
+    onActivated: (callback: (licenseInfo: any) => void) => {
+      const subscription = (_: any, licenseInfo: any) => callback(licenseInfo);
+      ipcRenderer.on('license:activated', subscription);
+      return () => ipcRenderer.removeListener('license:activated', subscription);
+    },
+
+    onDeactivated: (callback: () => void) => {
+      const subscription = () => callback();
+      ipcRenderer.on('license:deactivated', subscription);
+      return () => ipcRenderer.removeListener('license:deactivated', subscription);
+    },
+  },
+
+  // ========================================
+  // Update Management
+  // ========================================
+
+  updates: {
+    check: () =>
+      ipcRenderer.invoke('update:check'),
+
+    download: (updateInfo: any) =>
+      ipcRenderer.invoke('update:download', updateInfo),
+
+    apply: (installerPath: string, mode?: 'prompt' | 'silent') =>
+      ipcRenderer.invoke('update:apply', installerPath, mode),
+
+    rollback: () =>
+      ipcRenderer.invoke('update:rollback'),
+
+    getHistory: () =>
+      ipcRenderer.invoke('update:getHistory'),
+
+    setAutoUpdate: (enabled: boolean) =>
+      ipcRenderer.invoke('update:setAutoUpdate', enabled),
+
+    // Event listeners
+    onAvailable: (callback: (updateInfo: any) => void) => {
+      const subscription = (_: any, updateInfo: any) => callback(updateInfo);
+      ipcRenderer.on('update:available', subscription);
+      return () => ipcRenderer.removeListener('update:available', subscription);
+    },
+
+    onDownloadProgress: (callback: (progress: any) => void) => {
+      const subscription = (_: any, progress: any) => callback(progress);
+      ipcRenderer.on('update:download-progress', subscription);
+      return () => ipcRenderer.removeListener('update:download-progress', subscription);
+    },
+
+    onDownloadComplete: (callback: (data: any) => void) => {
+      const subscription = (_: any, data: any) => callback(data);
+      ipcRenderer.on('update:download-complete', subscription);
+      return () => ipcRenderer.removeListener('update:download-complete', subscription);
+    },
+
+    onInstallStarted: (callback: () => void) => {
+      const subscription = () => callback();
+      ipcRenderer.on('update:install-started', subscription);
+      return () => ipcRenderer.removeListener('update:install-started', subscription);
+    },
+
+    onInstallComplete: (callback: () => void) => {
+      const subscription = () => callback();
+      ipcRenderer.on('update:install-complete', subscription);
+      return () => ipcRenderer.removeListener('update:install-complete', subscription);
+    },
+  },
 };
 
 // Expose the API to the renderer process

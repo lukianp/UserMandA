@@ -1,0 +1,169 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v2.0.0
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 2.0.1)'
+        required: true
+      customer_id:
+        description: 'Customer ID for this build'
+        required: false
+
+env:
+  NODE_VERSION: '20.17.0'
+
+jobs:
+  build-windows:
+    name: Build Windows Application
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: guiv2/package-lock.json
+
+      - name: Install dependencies
+        working-directory: guiv2
+        run: npm ci
+
+      - name: Build main process
+        working-directory: guiv2
+        run: npm run build:main
+
+      - name: Build preload script
+        working-directory: guiv2
+        run: npx webpack --config webpack.preload.config.js --mode=production
+
+      - name: Build renderer
+        working-directory: guiv2
+        run: npm run build:renderer
+
+      - name: Package application
+        working-directory: guiv2
+        run: npx electron-forge package
+
+      - name: Create installer
+        working-directory: guiv2
+        run: npx electron-forge make --platform=win32
+
+      - name: Generate checksums
+        working-directory: guiv2/out/make/squirrel.windows/x64
+        run: |
+          Get-ChildItem -Filter *.nupkg | ForEach-Object {
+            $hash = Get-FileHash $_.FullName -Algorithm SHA256
+            "$($hash.Hash.ToLower())  $($_.Name)" | Out-File -FilePath CHECKSUMS.txt -Append
+          }
+          Get-ChildItem -Filter *.exe | ForEach-Object {
+            $hash = Get-FileHash $_.FullName -Algorithm SHA256
+            "$($hash.Hash.ToLower())  $($_.Name)" | Out-File -FilePath CHECKSUMS.txt -Append
+          }
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            guiv2/out/make/squirrel.windows/x64/*.nupkg
+            guiv2/out/make/squirrel.windows/x64/*.exe
+            guiv2/out/make/squirrel.windows/x64/CHECKSUMS.txt
+
+  create-release:
+    name: Create GitHub Release
+    needs: build-windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: ./release
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          cat << 'EOF' > release_notes.md
+          ## Enterprise Discovery Suite v${{ steps.get_version.outputs.VERSION }}
+
+          ### What's New
+          - Comprehensive IT discovery and migration planning
+          - Enhanced licensing and update system
+          - Improved performance and stability
+
+          ### Installation
+          1. Download `EnterpriseDiscoverySuite-Setup-${{ steps.get_version.outputs.VERSION }}.exe`
+          2. Run the installer
+          3. Activate with your license key
+
+          ### Verification
+          - Verify the integrity of the download using the checksums in `CHECKSUMS.txt`
+          - SHA256 checksums are provided for all downloads
+
+          ### Support
+          - Documentation: https://github.com/${{ github.repository }}/wiki
+          - Issues: https://github.com/${{ github.repository }}/issues
+          - Contact: support@example.com
+
+          ---
+          **Note:** This is a customer-specific build. Contact your administrator for license activation.
+          EOF
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.get_version.outputs.VERSION }}
+          name: Enterprise Discovery Suite v${{ steps.get_version.outputs.VERSION }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          files: |
+            ./release/*.nupkg
+            ./release/*.exe
+            ./release/CHECKSUMS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    name: Send Notifications
+    needs: create-release
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify success
+        run: |
+          echo "✅ Release v${{ steps.get_version.outputs.VERSION }} published successfully"
+          echo "📦 Download: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.get_version.outputs.VERSION }}"
