@@ -1,3 +1,10 @@
+**Author:** ljpops.com (Lukian Poleschtschuk)
+
+**Last Updated:** 30/12/2025
+
+**Status:** Production
+
+**Version:** 1.0
 # M&A Discovery Suite GUI v2 - User Guide
 
 ## Table of Contents
@@ -712,3 +719,4 @@ For more information, see:
 - [API Reference](API_REFERENCE.md)
 - [Architecture](ARCHITECTURE.md)
 - [Deployment Guide](DEPLOYMENT.md)
+

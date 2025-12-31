@@ -1,3 +1,10 @@
+**Author:** ljpops.com (Lukian Poleschtschuk)
+
+**Last Updated:** 30/12/2025
+
+**Status:** Production
+
+**Version:** 1.0
 # M&A Discovery Suite GUI v2 - Documentation Index
 
 ## Welcome
@@ -281,3 +288,4 @@ For documentation questions or issues:
 
 **Quick Navigation:**
 [README](README.md) | [User Guide](USER_GUIDE.md) | [Developer Guide](DEVELOPER_GUIDE.md) | [Architecture](ARCHITECTURE.md) | [API Reference](API_REFERENCE.md) | [Deployment](DEPLOYMENT.md) | [Migration](MIGRATION_GUIDE.md)
+

@@ -1,3 +1,10 @@
+**Author:** ljpops.com (Lukian Poleschtschuk)
+
+**Last Updated:** 30/12/2025
+
+**Status:** Production
+
+**Version:** 1.0
 # E2E Test Suite for M&A Discovery Suite GUI v2
 
 This directory contains comprehensive End-to-End (E2E) tests for the Electron application using Playwright.
@@ -379,3 +386,4 @@ Sample profile configuration with Azure AD connection details
 - [Playwright Electron Guide](https://playwright.dev/docs/api/class-electron)
 - [Testing Best Practices](https://playwright.dev/docs/best-practices)
 - [Accessibility Testing](https://playwright.dev/docs/accessibility-testing)
+

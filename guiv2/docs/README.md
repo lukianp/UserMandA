@@ -1,5 +1,13 @@
 # M&A Discovery Suite GUI v2 - Documentation
 
+**Author:** ljpops.com (Lukian Poleschtschuk)
+
+**Last Updated:** 30/12/2025
+
+**Status:** Production
+
+**Version:** 1.0
+
 ## Overview
 
 The M&A Discovery Suite GUI v2 is an enterprise-grade Electron-based application for managing mergers and acquisitions discovery, user management, and tenant migrations. This is a complete rewrite of the original C#/WPF application in TypeScript/React/Electron.

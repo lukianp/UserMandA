@@ -130,9 +130,12 @@ const OverviewView: React.FC = () => {
   });
   const [showAddTile, setShowAddTile] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [gridReady, setGridReady] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
   const mountedRef = useRef(false);
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const layoutKeyRef = useRef(Date.now());
 
   // Load dashboard state from localStorage on mount
   useEffect(() => {
@@ -186,18 +189,28 @@ const OverviewView: React.FC = () => {
 
     loadDashboardState();
 
+    // Update layout key to force grid re-render with correct layouts
+    layoutKeyRef.current = Date.now();
+
+    // Mark grid as ready after a short delay to ensure container has width
+    const gridReadyTimer = setTimeout(() => {
+      setGridReady(true);
+    }, 100);
+
     // Mark as initialized after a short delay to allow layouts to apply
     const initTimer = setTimeout(() => {
       isInitializedRef.current = true;
       mountedRef.current = true;
       console.log('[OverviewView] Dashboard initialized, layout changes will now be saved');
-    }, 500);
+    }, 600);
 
     return () => {
+      clearTimeout(gridReadyTimer);
       clearTimeout(initTimer);
-      // Reset refs on unmount so next mount loads fresh from localStorage
+      // Reset refs and state on unmount so next mount loads fresh from localStorage
       isInitializedRef.current = false;
       mountedRef.current = false;
+      setGridReady(false);
     };
   }, []);
 
@@ -279,12 +292,21 @@ const OverviewView: React.FC = () => {
     }, 500); // 500ms debounce for responsive feel
   }, [dashboardState.autoSave, saveDashboardState]);
 
-  // Handle layout change with snapping and collision resolution
-  // Note: react-grid-layout types may vary, using type assertions for compatibility
+  // Track if user is actively interacting (dragging/resizing)
+  const isUserInteractingRef = useRef(false);
+
+  // Handle layout change - only update state, don't save automatically
+  // Saving happens in onDragStop/onResizeStop to avoid overwriting saved layouts
   const onLayoutChange = useCallback((_currentLayout: unknown, allLayouts: unknown) => {
     // Skip layout changes during initialization to preserve loaded state
     if (!isInitializedRef.current) {
       console.log('[OverviewView] Skipping layout change during initialization');
+      return;
+    }
+
+    // Only process layout changes if user is actively interacting
+    if (!isUserInteractingRef.current) {
+      console.log('[OverviewView] Skipping layout change - no user interaction');
       return;
     }
 
@@ -312,15 +334,39 @@ const OverviewView: React.FC = () => {
       enhancedLayouts[breakpoint] = resolved;
     });
 
-    // Update state immediately for responsive feel
+    // Update state immediately for responsive feel (but don't save yet)
     setDashboardState(prev => ({
       ...prev,
       layouts: enhancedLayouts,
     }));
 
-    // Debounced save
-    debouncedSave(enhancedLayouts);
-  }, [snapToGrid, resolveCollisions, debouncedSave]);
+    // Note: Saving is handled by onDragStop/onResizeStop, not here
+  }, [snapToGrid, resolveCollisions]);
+
+  // Handle drag/resize start
+  const handleInteractionStart = useCallback(() => {
+    isUserInteractingRef.current = true;
+    setIsDragging(true);
+  }, []);
+
+  // Handle drag/resize stop - this is where we save
+  const handleInteractionStop = useCallback(() => {
+    setIsDragging(false);
+    // Small delay to ensure layout change has been processed
+    setTimeout(() => {
+      isUserInteractingRef.current = false;
+      // Save the current state
+      if (dashboardState.autoSave && isInitializedRef.current) {
+        const updatedState = {
+          ...dashboardState,
+          lastSaved: new Date().toISOString(),
+        };
+        localStorage.setItem(DASHBOARD_STATE_KEY, JSON.stringify(updatedState));
+        setDashboardState(updatedState);
+        console.log('[OverviewView] Layout saved after user interaction');
+      }
+    }, 100);
+  }, [dashboardState]);
 
   // Add tile
   const addTile = useCallback((tileId: string) => {
@@ -740,14 +786,17 @@ const OverviewView: React.FC = () => {
           </div>
         )}
 
+        <div ref={gridContainerRef}>
+        {gridReady ? (
         <ResponsiveGridLayout
+          key={layoutKeyRef.current}
           className="layout"
           layouts={dashboardState.layouts}
           onLayoutChange={onLayoutChange as any}
-          onDragStart={() => setIsDragging(true)}
-          onDragStop={() => setTimeout(() => setIsDragging(false), 200)}
-          onResizeStart={() => setIsDragging(true)}
-          onResizeStop={() => setTimeout(() => setIsDragging(false), 200)}
+          onDragStart={handleInteractionStart}
+          onDragStop={handleInteractionStop}
+          onResizeStart={handleInteractionStart}
+          onResizeStop={handleInteractionStop}
           breakpoints={GRID_CONFIG.breakpoints}
           cols={GRID_CONFIG.cols}
           rowHeight={GRID_CONFIG.rowHeight}
@@ -792,6 +841,12 @@ const OverviewView: React.FC = () => {
             );
           })}
         </ResponsiveGridLayout>
+        ) : (
+          <div className="flex items-center justify-center h-64">
+            <Spinner size="lg" className="mx-auto" />
+          </div>
+        )}
+        </div>
       </div>
 
       {/* Enhanced Footer with Save Status */}

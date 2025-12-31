@@ -1,3 +1,10 @@
+**Author:** ljpops.com (Lukian Poleschtschuk)
+
+**Last Updated:** 30/12/2025
+
+**Status:** Production
+
+**Version:** 1.0
 # M&A Discovery Suite GUI v2 - API Reference
 
 ## IPC API Reference
@@ -267,3 +274,4 @@ class NotificationService {
 ---
 
 For complete API documentation generated from source code, see the [TypeDoc documentation](api/index.html) (run `npm run docs:generate` to create).
+
