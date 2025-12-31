@@ -27,6 +27,9 @@ import { DecisionTraceService } from './services/decisionTraceService';
 import type { DecisionTrace } from '../renderer/types/models/canonical';
 import { ConsolidationEngine } from './services/consolidationEngine';
 import type { ConsolidationResult } from './services/consolidationEngine';
+import { LicenseService } from './services/licenseService';
+import { UpdateService } from './services/updateService';
+import { ConfigService } from './services/configService';
 
 
 // Service instances
@@ -40,6 +43,9 @@ let dashboardService: DashboardService;
 let profileService: ProfileService;
 let decisionTraceService: DecisionTraceService;
 let consolidationEngine: ConsolidationEngine;
+let configService: ConfigService;
+let licenseService: LicenseService;
+let updateService: UpdateService;
 
 // Secure window management with proper lifecycle handling
 class WindowManager {
@@ -211,6 +217,21 @@ async function initializeServices(): Promise<void> {
       console.error(`Failed to load config: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
+
+  // Initialize ConfigService
+  configService = new ConfigService();
+  await configService.initialize();
+  console.log('Config Service initialized');
+
+  // Initialize LicenseService
+  licenseService = new LicenseService(configService);
+  await licenseService.initialize();
+  console.log('License Service initialized');
+
+  // Initialize UpdateService
+  updateService = new UpdateService(configService, licenseService);
+  await updateService.initialize();
+  console.log('Update Service initialized');
 
   console.log('IPC services initialized successfully');
 }
@@ -1223,6 +1244,293 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         ok: false,
         error: error instanceof Error ? error.message : String(error)
       };
+    }
+  });
+
+  // ========================================
+  // License Management Handlers
+  // ========================================
+
+  /**
+   * Activate a new license key
+   */
+  ipcMain.handle('license:activate', async (_, licenseKey: string) => {
+    try {
+      const result = await licenseService.activateLicense(licenseKey);
+      return result;
+    } catch (error: unknown) {
+      console.error(`license:activate error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Get current license information
+   */
+  ipcMain.handle('license:getInfo', async () => {
+    try {
+      const info = await licenseService.getLicenseInfo();
+      return { success: true, licenseInfo: info };
+    } catch (error: unknown) {
+      console.error(`license:getInfo error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Check if license is valid
+   */
+  ipcMain.handle('license:isValid', async () => {
+    try {
+      const isValid = await licenseService.isLicenseValid();
+      return { success: true, isValid };
+    } catch (error: unknown) {
+      console.error(`license:isValid error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Get detailed license information
+   */
+  ipcMain.handle('license:getDetails', async () => {
+    try {
+      const details = await licenseService.getLicenseDetails();
+      return { success: true, details };
+    } catch (error: unknown) {
+      console.error(`license:getDetails error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Check if a specific feature is enabled
+   */
+  ipcMain.handle('license:hasFeature', async (_, featureId: string) => {
+    try {
+      const hasFeature = await licenseService.hasFeature(featureId);
+      return { success: true, hasFeature };
+    } catch (error: unknown) {
+      console.error(`license:hasFeature error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Get customer ID
+   */
+  ipcMain.handle('license:getCustomerId', async () => {
+    try {
+      const customerId = await licenseService.getCustomerId();
+      return { success: true, customerId };
+    } catch (error: unknown) {
+      console.error(`license:getCustomerId error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Deactivate current license
+   */
+  ipcMain.handle('license:deactivate', async () => {
+    try {
+      await licenseService.deactivateLicense();
+      return { success: true };
+    } catch (error: unknown) {
+      console.error(`license:deactivate error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Refresh license validation
+   */
+  ipcMain.handle('license:refresh', async () => {
+    try {
+      const info = await licenseService.refreshLicense();
+      return { success: true, licenseInfo: info };
+    } catch (error: unknown) {
+      console.error(`license:refresh error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  // ========================================
+  // Update Management Handlers
+  // ========================================
+
+  /**
+   * Check for available updates
+   */
+  ipcMain.handle('update:check', async () => {
+    try {
+      const updateInfo = await updateService.checkForUpdates();
+      return { success: true, updateInfo };
+    } catch (error: unknown) {
+      console.error(`update:check error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Download update package
+   */
+  ipcMain.handle('update:download', async (_, updateInfo: any) => {
+    try {
+      const filePath = await updateService.downloadUpdate(updateInfo);
+      return { success: true, filePath };
+    } catch (error: unknown) {
+      console.error(`update:download error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Apply downloaded update
+   */
+  ipcMain.handle('update:apply', async (_, installerPath: string, mode: 'prompt' | 'silent' = 'prompt') => {
+    try {
+      await updateService.applyUpdate(installerPath, mode);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error(`update:apply error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Rollback to previous version
+   */
+  ipcMain.handle('update:rollback', async () => {
+    try {
+      await updateService.rollback();
+      return { success: true };
+    } catch (error: unknown) {
+      console.error(`update:rollback error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Get update history
+   */
+  ipcMain.handle('update:getHistory', async () => {
+    try {
+      const history = await updateService.getUpdateHistory();
+      return { success: true, history };
+    } catch (error: unknown) {
+      console.error(`update:getHistory error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Enable/disable automatic updates
+   */
+  ipcMain.handle('update:setAutoUpdate', async (_, enabled: boolean) => {
+    try {
+      await updateService.setAutoUpdateEnabled(enabled);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error(`update:setAutoUpdate error: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  /**
+   * Listen for update events
+   */
+  updateService.on('update-available', (updateInfo) => {
+    const window = getMainWindow();
+    if (window) {
+      window.webContents.send('update:available', updateInfo);
+    }
+  });
+
+  updateService.on('download-progress', (progress) => {
+    const window = getMainWindow();
+    if (window) {
+      window.webContents.send('update:download-progress', progress);
+    }
+  });
+
+  updateService.on('download-complete', (data) => {
+    const window = getMainWindow();
+    if (window) {
+      window.webContents.send('update:download-complete', data);
+    }
+  });
+
+  updateService.on('install-started', () => {
+    const window = getMainWindow();
+    if (window) {
+      window.webContents.send('update:install-started');
+    }
+  });
+
+  updateService.on('install-complete', () => {
+    const window = getMainWindow();
+    if (window) {
+      window.webContents.send('update:install-complete');
+    }
+  });
+
+  /**
+   * Listen for license events
+   */
+  licenseService.on('license-activated', (licenseInfo) => {
+    const window = getMainWindow();
+    if (window) {
+      window.webContents.send('license:activated', licenseInfo);
+    }
+  });
+
+  licenseService.on('license-deactivated', () => {
+    const window = getMainWindow();
+    if (window) {
+      window.webContents.send('license:deactivated');
     }
   });
 

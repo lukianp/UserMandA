@@ -144,6 +144,28 @@ export class ConfigService {
         maxLogFiles: 10,
         maxLogSize: 10485760, // 10MB
       },
+      license: {
+        // Machine ID (generated on first run)
+        machineId: undefined,
+        // Encrypted license key (stored after activation)
+        key: undefined,
+        // License metadata (cached for performance)
+        customerId: undefined,
+        type: undefined,
+        activatedAt: undefined,
+        expiresAt: undefined,
+        features: [],
+      },
+      updates: {
+        // Current version (updated after successful update)
+        currentVersion: undefined,
+        // Auto-update settings
+        autoUpdateEnabled: false,
+        // Last check timestamp
+        lastCheckTime: undefined,
+        // Update history (last 20 updates)
+        history: [],
+      },
     };
   }
 }
