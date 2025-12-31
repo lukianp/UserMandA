@@ -9,6 +9,11 @@
  *   node scripts/generate-discovery-views.js
  *   node scripts/generate-discovery-views.js --dry-run
  *   node scripts/generate-discovery-views.js --module=aws
+ *
+ * @author ljpops.com (Lukian Poleschtschuk)
+ * **Last Updated:** 30/12/2025
+ * **Status:** Production
+ * **Version:** 1.0
  */
 
 const fs = require('fs');

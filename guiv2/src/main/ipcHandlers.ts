@@ -657,8 +657,9 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
         size: stats.size,
         isFile: stats.isFile(),
         isDirectory: stats.isDirectory(),
-        created: stats.birthtime,
-        modified: stats.mtime,
+        mtime: stats.mtime,
+        atime: stats.atime,
+        ctime: stats.ctime,
       };
     } catch (error: unknown) {
       // Don't log ENOENT errors - these are expected when checking if optional files exist
@@ -668,6 +669,35 @@ export async function registerIpcHandlers(window?: BrowserWindow): Promise<void>
       // Log other errors (permissions, etc.)
       console.error(`statFile error: ${error instanceof Error ? error.message : String(error)}`);
       throw new Error(`Failed to stat file: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  // Count CSV rows efficiently (without loading entire file into memory for display)
+  ipcMain.handle('file:countCsvRows', async (_, filePath: string) => {
+    try {
+      const sanitized = sanitizePath(filePath);
+      const content = await fs.readFile(sanitized, 'utf-8');
+      const lines = content.split('\n').filter(line => line.trim());
+      return Math.max(0, lines.length - 1); // Subtract header row
+    } catch (error: unknown) {
+      // File doesn't exist or can't be read - return 0
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        return 0;
+      }
+      console.error(`countCsvRows error: ${error instanceof Error ? error.message : String(error)}`);
+      return 0;
+    }
+  });
+
+  // Get discovery module status from status file
+  ipcMain.handle('discovery:getModuleStatus', async (_, moduleId: string, companyName: string) => {
+    try {
+      const statusPath = path.join('C:\\DiscoveryData', companyName, 'DiscoveryStatus', `${moduleId}.json`);
+      const content = await fs.readFile(statusPath, 'utf-8');
+      return JSON.parse(content);
+    } catch (error: unknown) {
+      // No status file exists - return null
+      return null;
     }
   });
 

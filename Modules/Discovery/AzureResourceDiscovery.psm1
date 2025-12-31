@@ -864,45 +864,9 @@ function Invoke-AzureResourceDiscovery {
                     }
                     #endregion
 
-                    #region Function Apps Discovery (AzureHound-inspired)
-                    try {
-                        $functionApps = Get-AzFunctionApp -ErrorAction Stop
-
-                        foreach ($func in $functionApps) {
-                            $funcData = [PSCustomObject]@{
-                                ObjectType = "FunctionApp"
-                                Name = $func.Name
-                                SubscriptionId = $subscription.Id
-                                ResourceGroupName = $func.ResourceGroup
-                                Location = $func.Location
-                                Runtime = $func.Runtime
-                                RuntimeVersion = $func.RuntimeVersion
-                                State = $func.State
-                                Kind = $func.Kind
-                                HostNames = ($func.HostNames -join '; ')
-                                HttpsOnly = $func.HttpsOnly
-                                AppServicePlan = $func.AppServicePlan
-                                DefaultHostName = $func.DefaultHostName
-                                OSType = $func.OSType
-                                ContainerSize = $func.ContainerSize
-                                DailyMemoryTimeQuota = $func.DailyMemoryTimeQuota
-                                Enabled = $func.Enabled
-                                Tags = ($func.Tags | ConvertTo-Json -Compress -ErrorAction SilentlyContinue)
-                                _DataType = 'FunctionApps'
-                                SessionId = $SessionId
-                            }
-                            $null = $allDiscoveredData.Add($funcData)
-                        }
-
-                        Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Discovered $(@($functionApps).Count) Function Apps in subscription $($subscription.Name)" -Level "SUCCESS"
-
-                    } catch {
-                        if ($_.Exception.Message -notlike "*'Az.Functions' is not installed*" -and $_.Exception.Message -notlike "*CommandNotFoundException*") {
-                            $Result.AddWarning("Failed to discover Function Apps in subscription $($subscription.Name): $($_.Exception.Message)", @{Subscription=$subscription.Name})
-                        } else {
-                            Write-ModuleLog -ModuleName "AzureResourceDiscovery" -Message "Az.Functions module not installed, skipping Function Apps discovery" -Level "WARNING"
-                        }
-                    }
+                    #region Function Apps Discovery - DISABLED (Az.Functions module causes slowdown)
+                    # Function Apps discovery removed to improve performance
+                    # Az.Functions module takes too long to load
                     #endregion
 
                     #region Container Registries Discovery (AzureHound-inspired)
@@ -1138,8 +1102,27 @@ function Invoke-AzureResourceDiscovery {
         }
         #endregion
 
-        # Return data grouped by type
-        return $allDiscoveredData | Group-Object -Property _DataType
+        # Return data as structured hashtable (expected by TypeScript hook)
+        return @{
+            Subscriptions = @($allDiscoveredData | Where-Object { $_._DataType -eq 'Subscriptions' })
+            ResourceGroups = @($allDiscoveredData | Where-Object { $_._DataType -eq 'ResourceGroups' })
+            VirtualMachines = @($allDiscoveredData | Where-Object { $_._DataType -eq 'VirtualMachines' })
+            StorageAccounts = @($allDiscoveredData | Where-Object { $_._DataType -eq 'StorageAccounts' })
+            KeyVaults = @($allDiscoveredData | Where-Object { $_._DataType -eq 'KeyVaults' })
+            NetworkSecurityGroups = @($allDiscoveredData | Where-Object { $_._DataType -eq 'NetworkSecurityGroups' })
+            VirtualNetworks = @($allDiscoveredData | Where-Object { $_._DataType -eq 'VirtualNetworks' })
+            WebApps = @($allDiscoveredData | Where-Object { $_._DataType -eq 'WebApps' })
+            SqlServers = @($allDiscoveredData | Where-Object { $_._DataType -eq 'SQLServers' })
+            VMScaleSets = @($allDiscoveredData | Where-Object { $_._DataType -eq 'VMScaleSets' })
+            ContainerRegistries = @($allDiscoveredData | Where-Object { $_._DataType -eq 'ContainerRegistries' })
+            AutomationAccounts = @($allDiscoveredData | Where-Object { $_._DataType -eq 'AutomationAccounts' })
+            LogicApps = @($allDiscoveredData | Where-Object { $_._DataType -eq 'LogicApps' })
+            summary = @{
+                totalResources = $allDiscoveredData.Count
+                subscriptionCount = $subscriptionCount
+                resourceTypes = @($allDiscoveredData | Select-Object -Property _DataType -Unique).Count
+            }
+        }
     }
 
     # Execute discovery using the base module

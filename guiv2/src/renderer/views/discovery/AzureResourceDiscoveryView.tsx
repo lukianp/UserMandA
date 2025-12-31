@@ -30,6 +30,7 @@ import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 const AzureResourceDiscoveryView: React.FC = () => {
   const { selectedSourceProfile } = useProfileStore();
@@ -437,6 +438,13 @@ const AzureResourceDiscoveryView: React.FC = () => {
             </div>
           </>
         )}
+
+        {/* Navigation to Discovered View */}
+        <ViewDiscoveredDataButton
+          moduleId="azure-resource"
+          recordCount={stats?.totalResources}
+          disabled={!stats || stats.totalResources === 0}
+        />
       </div>
 
       {/* PowerShell Execution Dialog */}

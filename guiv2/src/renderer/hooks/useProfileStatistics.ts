@@ -71,13 +71,11 @@ export function useProfileStatistics(profileId?: string) {
       console.log(`[ProfileStatistics] Loading statistics for profile: ${effectiveProfileId}`);
 
       // Get profile data path
-      const dataPathResult = await window.electronAPI.getProfileDataPath(effectiveProfileId) as { success: boolean; error?: string; dataPath: string };
-
-      if (!dataPathResult.success) {
-        throw new Error(dataPathResult.error || 'Failed to get profile data path');
+      if (!window.electronAPI.getProfileDataPath) {
+        throw new Error('getProfileDataPath not available');
       }
 
-      const profileDataPath = dataPathResult.dataPath;
+      const profileDataPath = await window.electronAPI.getProfileDataPath(effectiveProfileId);
       const rawPath = `${profileDataPath}\\Raw`;
 
       // Get LogicEngine statistics
@@ -106,7 +104,7 @@ export function useProfileStatistics(profileId?: string) {
             const fileInfo = {
               name: filePath.split('\\').pop() || filePath,
               size: stats.size || 0,
-              lastModified: new Date(stats.modified),
+              lastModified: new Date(stats.mtime),
             };
 
             csvFiles.push(fileInfo);

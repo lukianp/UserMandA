@@ -4,6 +4,7 @@ import { Key, Play, AlertCircle, Lock, Unlock, Shield } from 'lucide-react';
 import { useAzureKeyVaultAccessDiscoveryLogic } from '../../hooks/useAzureKeyVaultAccessDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 /**
  * Azure Key Vault Access Discovery View

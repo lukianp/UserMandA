@@ -36,7 +36,7 @@ const electronAPI: ElectronAPI = {
   // PowerShell Execution
   // ========================================
 
-  executeScript: <T = unknown>(params: ScriptExecutionParams) => {
+  executeScript: <T = any>(params: ScriptExecutionParams | InlineScriptParams) => {
     return ipcRenderer.invoke('powershell:executeScript', params);
   },
 
@@ -97,6 +97,10 @@ const electronAPI: ElectronAPI = {
       return ipcRenderer.invoke('file:stat', path);
     },
 
+    countCsvRows: (path: string) => {
+      return ipcRenderer.invoke('file:countCsvRows', path);
+    },
+
     getRawDataPath: (companyName: string) => {
       return ipcRenderer.invoke('file:getRawDataPath', companyName);
     },
@@ -140,6 +144,12 @@ const electronAPI: ElectronAPI = {
 
   logToFile: (entry: any) => {
     return ipcRenderer.invoke('logging:write', entry);
+  },
+
+  discovery: {
+    getModuleStatus: (moduleId: string, companyName: string) => {
+      return ipcRenderer.invoke('discovery:getModuleStatus', moduleId, companyName);
+    },
   },
 
   // ========================================
@@ -1250,23 +1260,8 @@ const electronAPI: ElectronAPI = {
     getInfo: () =>
       ipcRenderer.invoke('license:getInfo'),
 
-    isValid: () =>
-      ipcRenderer.invoke('license:isValid'),
-
-    getDetails: () =>
-      ipcRenderer.invoke('license:getDetails'),
-
-    hasFeature: (featureId: string) =>
-      ipcRenderer.invoke('license:hasFeature', featureId),
-
-    getCustomerId: () =>
-      ipcRenderer.invoke('license:getCustomerId'),
-
     deactivate: () =>
       ipcRenderer.invoke('license:deactivate'),
-
-    refresh: () =>
-      ipcRenderer.invoke('license:refresh'),
 
     // Event listeners
     onActivated: (callback: (licenseInfo: any) => void) => {

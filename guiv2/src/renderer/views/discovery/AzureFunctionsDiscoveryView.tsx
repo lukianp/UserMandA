@@ -4,6 +4,7 @@ import { Zap, Play, AlertCircle, CheckCircle2, Code, Globe } from 'lucide-react'
 import { useAzureFunctionsDiscoveryLogic } from '../../hooks/useAzureFunctionsDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 /**
  * Azure Functions Discovery View

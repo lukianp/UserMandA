@@ -289,3 +289,4 @@ fixer.run().catch(error => {
   console.error('Auto-fixer failed:', error);
   process.exit(1);
 });
+

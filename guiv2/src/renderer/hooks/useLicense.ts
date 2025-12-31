@@ -55,6 +55,15 @@ export function useLicense(): UseLicenseReturn {
     setError(null);
 
     try {
+      // Check if electronAPI.license is available
+      if (!window.electronAPI?.license) {
+        setError('License API not available');
+        setLicenseInfo(null);
+        setIsValid(false);
+        setIsLoading(false);
+        return;
+      }
+
       const result = await window.electronAPI.license.getInfo();
 
       if (result.success && result.licenseInfo) {
@@ -83,6 +92,12 @@ export function useLicense(): UseLicenseReturn {
     setError(null);
 
     try {
+      if (!window.electronAPI?.license) {
+        setError('License API not available');
+        setIsLoading(false);
+        return { success: false, error: 'License API not available' };
+      }
+
       const result = await window.electronAPI.license.activate(licenseKey);
 
       if (result.success && result.licenseInfo) {
@@ -113,6 +128,12 @@ export function useLicense(): UseLicenseReturn {
     setError(null);
 
     try {
+      if (!window.electronAPI?.license) {
+        setError('License API not available');
+        setIsLoading(false);
+        return;
+      }
+
       const result = await window.electronAPI.license.deactivate();
 
       if (result.success) {

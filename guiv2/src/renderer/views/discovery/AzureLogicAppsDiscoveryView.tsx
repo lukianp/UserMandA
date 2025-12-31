@@ -4,6 +4,7 @@ import { Workflow, Play, AlertCircle, CheckCircle2, Zap, Activity, Timer } from 
 import { useAzureLogicAppsDiscoveryLogic } from '../../hooks/useAzureLogicAppsDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 /**
  * Azure Logic Apps Discovery View

@@ -4,6 +4,7 @@ import { FolderTree, Play, AlertCircle, GitBranch, Layers } from 'lucide-react';
 import { useAzureManagementGroupsDiscoveryLogic } from '../../hooks/useAzureManagementGroupsDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 /**
  * Azure Management Groups Discovery View

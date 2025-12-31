@@ -4,6 +4,7 @@ import { Fingerprint, Play, AlertCircle, User, Server, Globe } from 'lucide-reac
 import { useAzureManagedIdentitiesDiscoveryLogic } from '../../hooks/useAzureManagedIdentitiesDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 /**
  * Azure Managed Identities Discovery View

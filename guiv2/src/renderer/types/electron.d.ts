@@ -546,6 +546,13 @@ export interface ElectronAPI {
     }>;
 
     /**
+     * Count CSV rows in a file (excluding header)
+     * @param path Path to CSV file
+     * @returns Promise resolving to row count (0 if file doesn't exist)
+     */
+    countCsvRows: (path: string) => Promise<number>;
+
+    /**
      * Get the raw data path for a profile
      * @param companyName Company name
      * @returns Promise resolving to raw data path
@@ -623,6 +630,44 @@ export interface ElectronAPI {
    * @returns Promise resolving when log is written
    */
   logToFile: (entry: any) => Promise<void>;
+
+  /**
+   * Discovery module status operations
+   */
+  discovery: {
+    /**
+     * Get the status of a discovery module from its status file
+     * @param moduleId Discovery module ID (e.g., 'active-directory')
+     * @param companyName Company/profile name
+     * @returns Promise resolving to status object or null if not found
+     */
+    getModuleStatus: (moduleId: string, companyName: string) => Promise<{
+      moduleId: string;
+      moduleName: string;
+      status: 'completed' | 'partial' | 'failed';
+      lastRun: string;
+      recordCount: number;
+      duration: number;
+      success: boolean;
+      hasWarnings: boolean;
+      hasErrors: boolean;
+      warnings: string[];
+      errors: string[];
+      csvFiles: string[];
+      executedBy: string;
+    } | null>;
+  };
+
+  /**
+   * License management operations
+   */
+  license: {
+    getInfo: () => Promise<{ success: boolean; licenseInfo?: any; error?: string }>;
+    activate: (licenseKey: string) => Promise<{ success: boolean; licenseInfo?: any; error?: string }>;
+    deactivate: () => Promise<{ success: boolean; error?: string }>;
+    onActivated: (callback: (info: any) => void) => () => void;
+    onDeactivated: (callback: () => void) => () => void;
+  };
 
   /**
    * Get the profile data path for a company

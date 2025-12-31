@@ -22,36 +22,71 @@ export const DISCOVERY_MODULE_CSV_MAPPING: Record<string, CsvFilePattern> = {
   // IDENTITY & ACCESS
   // =========================================================================
   'active-directory': [
-    'ActiveDirectoryDiscovery.csv',
-    'ADUsers.csv',
-    'ADGroups.csv',
-    'ADComputers.csv',
+    'Users.csv',
+    'Groups.csv',
+    'ADPolicies.csv',
   ],
   'entra-id-app': [
     'AzureDiscovery_Applications.csv',
     'AzureDiscovery_ApplicationSecrets.csv',
     'AzureDiscovery_ServicePrincipals.csv',
+    'EntraIDAppRegistrations.csv',
+    'EntraIDEnterpriseApps.csv',
+    'EntraIDServicePrincipals.csv',
   ],
-  'external-identity': 'ExternalIdentity.csv',
+  'external-identity': 'AzureDiscovery_Users.csv',
   'graph': [
     'AzureDiscovery_Users.csv',
     'AzureDiscovery_Groups.csv',
+    'GraphUsers.csv',
+    'GraphGroups.csv',
   ],
-  'multi-domain-forest': 'MultiDomainForestDiscovery.csv',
+  'multi-domain-forest': 'EnvironmentDetection_DomainEnvironment.csv',
   'conditional-access': [
     'ConditionalAccessDiscovery.csv',
     'ConditionalAccessStatistics.csv',
   ],
-  'gpo': 'GroupPolicyDiscovery.csv',
+  'gpo': [
+    'GroupPolicies.csv',
+    'GPO_PlaceholderData.csv',
+  ],
 
   // =========================================================================
-  // CLOUD PLATFORMS
+  // AZURE CLOUD
   // =========================================================================
   'azure-infrastructure': [
     'AzureDiscovery_Tenant.csv',
-    'AzureInfrastructureDiscovery.csv',
+    'AzureInfrastructure.csv',
   ],
-  'azure-resource': 'AzureResourceDiscovery.csv',
+  'azure-resource': [
+    'AzureResourceDiscovery.csv',
+    'AzureResourceDiscovery_KeyVaults.csv',
+    'AzureResourceDiscovery_StorageAccounts.csv',
+    'AzureResourceDiscovery_Subscriptions.csv',
+    'AzureResourceDiscovery_ResourceGroups.csv',
+    'AzureResourceDiscovery_VirtualNetworks.csv',
+    'AzureResourceDiscovery_WebApps.csv',
+    'AzureResourceDiscovery_NetworkSecurityGroups.csv',
+  ],
+  'azure-automation': 'AzureResourceDiscovery.csv',
+  'azure-acr': 'AzureResourceDiscovery.csv',
+  'azure-functions': 'AzureResourceDiscovery_WebApps.csv',
+  'azure-keyvault-access': 'AzureResourceDiscovery_KeyVaults.csv',
+  'azure-logicapps': 'AzureResourceDiscovery.csv',
+  'azure-managed-identities': 'AzureDiscovery_ServicePrincipals.csv',
+  'azure-mgmt-groups': 'AzureResourceDiscovery_Subscriptions.csv',
+  'azure-sp-credentials': [
+    'AzureDiscovery_ApplicationSecrets.csv',
+    'EntraIDApplicationSecrets.csv',
+  ],
+  'azure-storage-access': 'AzureResourceDiscovery_StorageAccounts.csv',
+  'azure-pim': 'AzureDiscovery_DirectoryRoles.csv',
+  'azure-sub-owners': 'AzureResourceDiscovery_Subscriptions.csv',
+  'azure-vmss': 'AzureResourceDiscovery.csv',
+
+  // =========================================================================
+  // OTHER CLOUD PLATFORMS
+  // =========================================================================
   'aws': 'AWSDiscovery.csv',
   'gcp': 'GCPDiscovery.csv',
   'google-workspace': 'GoogleWorkspaceDiscovery.csv',
@@ -59,23 +94,36 @@ export const DISCOVERY_MODULE_CSV_MAPPING: Record<string, CsvFilePattern> = {
   // =========================================================================
   // MICROSOFT 365
   // =========================================================================
-  'exchange': 'ExchangeDiscovery.csv',
+  'exchange': [
+    'ExchangeDiscovery.csv',
+    'ExchangeMailboxes.csv',
+    'ExchangeDistributionGroups.csv',
+  ],
   'sharepoint': [
     'AzureDiscovery_SharePointSites.csv',
-    'SharePointDiscovery.csv',
+    'SharePointSites.csv',
+    'SharePointLists.csv',
   ],
   'teams': [
     'AzureDiscovery_MicrosoftTeams.csv',
-    'TeamsDiscovery.csv',
   ],
-  'onedrive': 'OneDriveDiscovery.csv',
+  'onedrive': [
+    'OneDriveDiscovery.csv',
+    'OneDriveStatistics.csv',
+  ],
   'office365': [
     'AzureDiscovery_Users.csv',
-    'Office365Discovery.csv',
+    'GraphUsers.csv',
   ],
-  'intune': 'IntuneDiscovery.csv',
-  'power-platform': 'PowerPlatformDiscovery.csv',
-  'powerbi': 'PowerBIDiscovery.csv',
+  'intune': 'AzureDiscovery_Users.csv',
+  'power-platform': [
+    'PowerPlatformDiscovery.csv',
+    'PowerPlatform_Environments.csv',
+  ],
+  'powerbi': [
+    'PowerBIDiscovery.csv',
+    'PowerBIStatistics.csv',
+  ],
 
   // =========================================================================
   // INFRASTRUCTURE
@@ -87,51 +135,83 @@ export const DISCOVERY_MODULE_CSV_MAPPING: Record<string, CsvFilePattern> = {
     'FileSystemPermissions.csv',
     'FileSystemLargeFiles.csv',
   ],
-  'file-server': 'FileServerDiscovery.csv',
+  'file-server': 'FileServers.csv',
   'domain': [
     'EnvironmentDetection_DomainEnvironment.csv',
-    'DomainDiscovery.csv',
   ],
-  'network': 'NetworkDiscovery.csv',
-  'applications': 'ApplicationDiscovery.csv',
+  'network': [
+    'NetworkInfrastructure_NetworkAdapter.csv',
+    'NetworkInfrastructure_NetworkRoute.csv',
+    'NetworkInfrastructure_NetworkShare.csv',
+    'NetworkInfrastructure_FirewallRule.csv',
+  ],
+  'applications': [
+    'Applications.csv',
+    'ApplicationCatalog.csv',
+    'SoftwareInventory.csv',
+  ],
   'environment': [
     'EnvironmentDetection_OperatingSystem.csv',
     'EnvironmentDetection_Hardware.csv',
     'EnvironmentDetection_NetworkAdapter.csv',
     'EnvironmentDetection_CloudEnvironment.csv',
     'EnvironmentDetection_SecurityEnvironment.csv',
+    'EnvironmentDetection_SoftwareEnvironment.csv',
+    'EnvironmentDetection_VirtualizationEnvironment.csv',
   ],
-  'physical-server': 'PhysicalServerDiscovery.csv',
-  'storage-array': 'StorageArrayDiscovery.csv',
+  'physical-server': [
+    'PhysicalServerDiscovery.csv',
+    'PhysicalServer_Hardware.csv',
+    'PhysicalServer_BIOS.csv',
+    'PhysicalServer_Storage.csv',
+  ],
+  'storage-array': [
+    'Storage_LocalStorage.csv',
+    'Storage_StorageSpaces.csv',
+    'Storage_StorageSummary.csv',
+  ],
+  'infrastructure': [
+    'Infrastructure.csv',
+    'InfrastructureDiscovery_Subnet.csv',
+    'TestInfrastructure.csv',
+  ],
   'printer': 'PrinterDiscovery.csv',
-  'scheduled-task': 'ScheduledTaskDiscovery.csv',
+  'scheduled-task': [
+    'ScheduledTask_ScheduledTask.csv',
+    'ScheduledTask_TaskAction.csv',
+    'ScheduledTask_TaskSummary.csv',
+    'ScheduledTask_TaskTrigger.csv',
+  ],
   'backup-recovery': [
     'BackupRecoveryDiscovery.csv',
     'Backup_BackupAssessment.csv',
     'Backup_SystemRecovery.csv',
     'Backup_VSS.csv',
   ],
-  'web-server': 'WebServerDiscovery.csv',
+  'web-server': 'WebServer_WebFramework.csv',
 
   // =========================================================================
   // VIRTUALIZATION
   // =========================================================================
-  'vmware': 'VMwareDiscovery.csv',
-  'hyper-v': 'HyperVDiscovery.csv',
-  'virtualization': 'VirtualizationDiscovery.csv',
+  'vmware': 'EnvironmentDetection_VirtualizationEnvironment.csv',
+  'hyper-v': 'EnvironmentDetection_VirtualizationEnvironment.csv',
+  'virtualization': 'EnvironmentDetection_VirtualizationEnvironment.csv',
 
   // =========================================================================
   // DATABASE
   // =========================================================================
-  'sql-server': 'SQLServerDiscovery.csv',
-  'database-schema': 'DatabaseSchemaDiscovery.csv',
+  'sql-server': 'SQLInventory.csv',
+  'database-schema': 'Databases.csv',
 
   // =========================================================================
   // SECURITY
   // =========================================================================
   'security': [
     'EnvironmentDetection_SecurityEnvironment.csv',
-    'SecurityDiscovery.csv',
+    'SecurityInfrastructureDiscovery.csv',
+    'Security_AntivirusProducts.csv',
+    'Security_FirewallProfiles.csv',
+    'Security_SecurityServices.csv',
   ],
   'certificate': 'Certificate_LocalCertificate.csv',
   'certificate-authority': [
@@ -143,8 +223,8 @@ export const DISCOVERY_MODULE_CSV_MAPPING: Record<string, CsvFilePattern> = {
     'DLPDiscovery.csv',
     'DLPStatistics.csv',
   ],
-  'palo-alto': 'PaloAltoDiscovery.csv',
-  'panorama-interrogation': 'PanoramaDiscovery.csv',
+  'palo-alto': 'NetworkInfrastructure_FirewallRule.csv',
+  'panorama-interrogation': 'NetworkInfrastructure_FirewallRule.csv',
 
   // =========================================================================
   // DATA & LICENSING
@@ -153,10 +233,18 @@ export const DISCOVERY_MODULE_CSV_MAPPING: Record<string, CsvFilePattern> = {
     'DataClassification_ClassificationSummary.csv',
     'DataClassification_LocalDriveClassification.csv',
   ],
-  'licensing': 'LicensingDiscovery.csv',
+  'licensing': [
+    'LicensingDiscovery_Licenses.csv',
+    'LicensingDiscovery_Summary.csv',
+    'LicensingDiscovery_UserAssignments.csv',
+    'LicensingDiscovery_ServicePlans.csv',
+    'LicensingSubscriptions.csv',
+  ],
   'dns-dhcp': [
     'DNSDHCPDiscovery.csv',
-    'DNSDHCPDiscoverySummary.json',
+    'NetworkInfrastructure_DNSInfrastructure.csv',
+    'NetworkInfrastructure_DHCPServer.csv',
+    'Network_DNSServers.csv',
   ],
 };
 

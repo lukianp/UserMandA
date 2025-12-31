@@ -244,9 +244,11 @@ export interface DiscoveryTile {
   icon: string;
   description: string;
   lastRun?: Date | string;
-  status: 'idle' | 'running' | 'completed' | 'failed';
+  status: 'idle' | 'running' | 'completed' | 'partial' | 'failed';
   resultCount?: number;
   route: string;
+  hasWarnings?: boolean;
+  hasErrors?: boolean;
 }
 
 /**

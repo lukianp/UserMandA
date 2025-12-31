@@ -60,7 +60,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   // =========================================================================
   {
     id: 'azure-automation',
-    name: 'Azure Automation',
+    name: 'Automation Accounts',
     icon: 'Settings',
     description: 'Discover Azure Automation Accounts, runbooks, schedules, and credentials',
     route: '/discovery/azure-automation',
@@ -68,7 +68,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'azure-acr',
-    name: 'Azure Container Registries',
+    name: 'Container Registry',
     icon: 'Package',
     description: 'Discover Azure Container Registries with SKU, access settings, and network configuration',
     route: '/discovery/azure-acr',
@@ -76,7 +76,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'azure-functions',
-    name: 'Azure Function Apps',
+    name: 'Function Apps',
     icon: 'Zap',
     description: 'Discover Azure Function Apps, runtimes, and hosting configurations',
     route: '/discovery/azure-functions',
@@ -84,9 +84,9 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'azure-resource',
-    name: 'Azure Infrastructure',
+    name: 'Azure Resource',
     icon: 'Layers',
-    description: 'Detailed discovery of Azure resources, VMs, storage, and networking',
+    description: 'Discover Azure subscriptions, VMs, storage accounts, networking, and Key Vaults',
     route: '/discovery/azure-resource',
     status: 'idle',
   },
@@ -100,7 +100,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'azure-logicapps',
-    name: 'Azure Logic Apps',
+    name: 'Logic Apps',
     icon: 'Workflow',
     description: 'Discover Azure Logic Apps, triggers, workflow runs, and integrations',
     route: '/discovery/azure-logicapps',
@@ -116,7 +116,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'azure-sp-credentials',
-    name: 'SP Credentials',
+    name: 'Service Principal Credentials',
     icon: 'KeyRound',
     description: 'Discover Azure Service Principal credentials including secrets and certificates with expiry tracking',
     route: '/discovery/azure-sp-credentials',
@@ -132,7 +132,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'azure-vmss',
-    name: 'Azure VM Scale Sets',
+    name: 'VM Scale Sets',
     icon: 'Layers',
     description: 'Discover Azure VM Scale Sets with capacity, networking, and scaling configuration',
     route: '/discovery/azure-vmss',
@@ -172,7 +172,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'azure-infrastructure',
-    name: 'Entra ID & M365',
+    name: 'Entra ID & Microsoft 365',
     icon: 'Cloud',
     description: 'Discover Entra ID users, groups, security policies, and Microsoft 365 services',
     route: '/discovery/azure',
@@ -180,7 +180,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'entra-id-app',
-    name: 'Entra ID Apps',
+    name: 'Entra ID Application',
     icon: 'AppWindow',
     description: 'Discover Azure AD/Entra ID app registrations, service principals, and permissions',
     route: '/discovery/entra-id-app',
@@ -220,7 +220,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'teams',
-    name: 'Microsoft Teams',
+    name: 'Teams',
     icon: 'MessageSquare',
     description: 'Discover Teams, channels, memberships, and collaboration data',
     route: '/discovery/teams',
@@ -308,7 +308,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   // =========================================================================
   {
     id: 'applications',
-    name: 'Applications',
+    name: 'Application',
     icon: 'Package',
     description: 'Discover installed applications, dependencies, and versions',
     route: '/discovery/applications',
@@ -316,7 +316,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'aws',
-    name: 'AWS',
+    name: 'AWS Cloud Infrastructure',
     icon: 'Cloud',
     description: 'Discover Amazon Web Services resources and infrastructure',
     route: '/discovery/aws',
@@ -340,7 +340,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'certificate',
-    name: 'Certificates',
+    name: 'Certificate',
     icon: 'Key',
     description: 'Discover SSL/TLS certificates, expiration dates, and certificate stores',
     route: '/discovery/certificate',
@@ -380,7 +380,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'environment',
-    name: 'Environment',
+    name: 'Environment Detection',
     icon: 'Radar',
     description: 'Discover environment configuration, variables, and system settings',
     route: '/discovery/environment',
@@ -388,7 +388,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'external-identity',
-    name: 'External Identities',
+    name: 'External Identity',
     icon: 'Users',
     description: 'Discover guest users, B2B collaborators, and external identities',
     route: '/discovery/external-identity',
@@ -412,7 +412,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'gcp',
-    name: 'GCP',
+    name: 'GCP Cloud Infrastructure',
     icon: 'Cloud',
     description: 'Discover Google Cloud Platform projects, resources, and services',
     route: '/discovery/gcp',
@@ -444,7 +444,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'network',
-    name: 'Network Infrastructure',
+    name: 'Network',
     icon: 'Network',
     description: 'Discover network topology, subnets, and IP address management',
     route: '/discovery/network',
@@ -460,7 +460,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'panorama-interrogation',
-    name: 'Panorama',
+    name: 'Panorama Interrogation',
     icon: 'Shield',
     description: 'Discover Palo Alto Panorama managed devices and policies',
     route: '/discovery/panorama-interrogation',
@@ -476,7 +476,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'printer',
-    name: 'Printers',
+    name: 'Printer',
     icon: 'Printer',
     description: 'Discover print servers, printers, and print queues',
     route: '/discovery/printer',
@@ -484,7 +484,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'scheduled-task',
-    name: 'Scheduled Tasks',
+    name: 'Scheduled Task',
     icon: 'Calendar',
     description: 'Discover Windows scheduled tasks, triggers, and actions',
     route: '/discovery/scheduled-task',
@@ -532,7 +532,7 @@ const defaultDiscoveryModules: DiscoveryTile[] = [
   },
   {
     id: 'web-server',
-    name: 'Web Server Config',
+    name: 'Web Server Configuration',
     icon: 'Globe',
     description: 'Discover IIS sites, application pools, and web configurations',
     route: '/discovery/web-server',
@@ -607,6 +607,80 @@ export const useInfrastructureDiscoveryHubLogic = () => {
   }, []);
 
   /**
+   * Get the record count for a discovery module by counting CSV rows
+   *
+   * @param moduleId - The discovery module ID
+   * @param companyName - The company name for the data path
+   * @returns Total record count across all CSV files, or 0 if no files found
+   */
+  const getModuleRecordCount = useCallback(async (moduleId: string, companyName: string): Promise<number> => {
+    try {
+      const csvFiles = getModuleCsvFiles(moduleId);
+
+      if (csvFiles.length === 0) {
+        return 0;
+      }
+
+      const basePath = `C:\\DiscoveryData\\${companyName}\\Raw`;
+      let totalCount = 0;
+
+      // Count rows in the first CSV file that exists (primary file)
+      for (const csvFile of csvFiles) {
+        const fullPath = `${basePath}\\${csvFile}`;
+
+        try {
+          const count = await window.electronAPI.fs.countCsvRows(fullPath);
+          if (count > 0) {
+            totalCount = count; // Use the first file with data
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      return totalCount;
+    } catch (error) {
+      console.error(`Failed to get record count for module ${moduleId}:`, error);
+      return 0;
+    }
+  }, []);
+
+  /**
+   * Get the execution status for a discovery module from status file
+   *
+   * @param moduleId - The discovery module ID
+   * @param companyName - The company name for the data path
+   * @returns Status info or null if no status file exists
+   */
+  const getModuleExecutionStatus = useCallback(async (moduleId: string, companyName: string): Promise<{
+    status: 'completed' | 'partial' | 'failed';
+    hasWarnings: boolean;
+    hasErrors: boolean;
+    recordCount?: number;
+    lastRun?: string;
+  } | null> => {
+    try {
+      const statusData = await window.electronAPI.discovery.getModuleStatus(moduleId, companyName);
+
+      if (statusData) {
+        return {
+          status: statusData.status,
+          hasWarnings: statusData.hasWarnings,
+          hasErrors: statusData.hasErrors,
+          recordCount: statusData.recordCount,
+          lastRun: statusData.lastRun,
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`Failed to get execution status for module ${moduleId}:`, error);
+      return null;
+    }
+  }, []);
+
+  /**
    * Get company name from localStorage or default locations
    */
   const getCompanyName = useCallback((): string => {
@@ -651,19 +725,37 @@ export const useInfrastructureDiscoveryHubLogic = () => {
       // Get the company name from localStorage
       const companyName = getCompanyName();
 
-      // Load modules and check for CSV file dates
+      // Load modules and check for CSV file dates, record counts, and status
       const modulesPromises = defaultDiscoveryModules.map(async (module) => {
-        // First try to get the last run date from CSV files
+        // Get last run date from CSV files
         const csvLastRun = await getModuleLastRunDate(module.id, companyName);
 
-        // Use CSV date if available, otherwise fall back to localStorage
-        const lastRun = csvLastRun?.toISOString() || statusMap[module.id]?.lastRun;
+        // Get record count from CSV files
+        const recordCount = await getModuleRecordCount(module.id, companyName);
+
+        // Get execution status from status file
+        const executionStatus = await getModuleExecutionStatus(module.id, companyName);
+
+        // Use CSV date if available, otherwise fall back to status file or localStorage
+        const lastRun = csvLastRun?.toISOString() || executionStatus?.lastRun || statusMap[module.id]?.lastRun;
+
+        // Determine status: status file > localStorage > infer from data
+        let status: DiscoveryTile['status'] = 'idle';
+        if (executionStatus) {
+          status = executionStatus.status;
+        } else if (statusMap[module.id]?.status) {
+          status = statusMap[module.id].status;
+        } else if (recordCount > 0 || csvLastRun) {
+          status = 'completed'; // Infer completed if we have data
+        }
 
         return {
           ...module,
           lastRun,
-          resultCount: statusMap[module.id]?.resultCount,
-          status: statusMap[module.id]?.status || 'idle',
+          resultCount: recordCount || executionStatus?.recordCount || statusMap[module.id]?.resultCount,
+          status,
+          hasWarnings: executionStatus?.hasWarnings || false,
+          hasErrors: executionStatus?.hasErrors || false,
         };
       });
 
@@ -678,7 +770,7 @@ export const useInfrastructureDiscoveryHubLogic = () => {
         isLoading: false
       }));
     }
-  }, [getModuleLastRunDate, getCompanyName]);
+  }, [getModuleLastRunDate, getModuleRecordCount, getModuleExecutionStatus, getCompanyName]);
 
   /**
    * Load recent discovery activity

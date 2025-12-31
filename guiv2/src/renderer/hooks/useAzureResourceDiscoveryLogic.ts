@@ -321,22 +321,27 @@ export const useAzureResourceDiscoveryLogic = () => {
     console.log('[AzureResourceDiscoveryHook] filteredData - data keys:', Object.keys(data));
 
     // Map PowerShell output fields to resource types (PascalCase from PowerShell)
-    if (data.Subscriptions) allResources.push(...data.Subscriptions.map((r: any) => ({ ...r, resourceType: 'Subscription' })));
-    if (data.ResourceGroups) allResources.push(...data.ResourceGroups.map((r: any) => ({ ...r, resourceType: 'ResourceGroup', name: r.ResourceGroupName || r.Name })));
-    if (data.VirtualMachines) allResources.push(...data.VirtualMachines.map((r: any) => ({ ...r, resourceType: 'VirtualMachine' })));
-    if (data.StorageAccounts) allResources.push(...data.StorageAccounts.map((r: any) => ({ ...r, resourceType: 'StorageAccount', name: r.StorageAccountName || r.Name })));
-    if (data.KeyVaults) allResources.push(...data.KeyVaults.map((r: any) => ({ ...r, resourceType: 'KeyVault', name: r.VaultName || r.Name })));
-    if (data.NetworkSecurityGroups) allResources.push(...data.NetworkSecurityGroups.map((r: any) => ({ ...r, resourceType: 'NetworkSecurityGroup' })));
-    if (data.VirtualNetworks) allResources.push(...data.VirtualNetworks.map((r: any) => ({ ...r, resourceType: 'VirtualNetwork' })));
-    if (data.WebApps) allResources.push(...data.WebApps.map((r: any) => ({ ...r, resourceType: 'WebApp' })));
-    if (data.SqlServers) allResources.push(...data.SqlServers.map((r: any) => ({ ...r, resourceType: 'SqlServer' })));
+    if (data.Subscriptions?.length) allResources.push(...data.Subscriptions.map((r: any) => ({ ...r, resourceType: 'Subscription' })));
+    if (data.ResourceGroups?.length) allResources.push(...data.ResourceGroups.map((r: any) => ({ ...r, resourceType: 'ResourceGroup', name: r.ResourceGroupName || r.Name })));
+    if (data.VirtualMachines?.length) allResources.push(...data.VirtualMachines.map((r: any) => ({ ...r, resourceType: 'VirtualMachine' })));
+    if (data.StorageAccounts?.length) allResources.push(...data.StorageAccounts.map((r: any) => ({ ...r, resourceType: 'StorageAccount', name: r.StorageAccountName || r.Name })));
+    if (data.KeyVaults?.length) allResources.push(...data.KeyVaults.map((r: any) => ({ ...r, resourceType: 'KeyVault', name: r.VaultName || r.Name })));
+    if (data.NetworkSecurityGroups?.length) allResources.push(...data.NetworkSecurityGroups.map((r: any) => ({ ...r, resourceType: 'NetworkSecurityGroup' })));
+    if (data.VirtualNetworks?.length) allResources.push(...data.VirtualNetworks.map((r: any) => ({ ...r, resourceType: 'VirtualNetwork' })));
+    if (data.WebApps?.length) allResources.push(...data.WebApps.map((r: any) => ({ ...r, resourceType: 'WebApp' })));
+    if (data.SqlServers?.length) allResources.push(...data.SqlServers.map((r: any) => ({ ...r, resourceType: 'SqlServer' })));
+    // Additional resource types from PowerShell
+    if (data.VMScaleSets?.length) allResources.push(...data.VMScaleSets.map((r: any) => ({ ...r, resourceType: 'VMScaleSet' })));
+    if (data.ContainerRegistries?.length) allResources.push(...data.ContainerRegistries.map((r: any) => ({ ...r, resourceType: 'ContainerRegistry' })));
+    if (data.AutomationAccounts?.length) allResources.push(...data.AutomationAccounts.map((r: any) => ({ ...r, resourceType: 'AutomationAccount' })));
+    if (data.LogicApps?.length) allResources.push(...data.LogicApps.map((r: any) => ({ ...r, resourceType: 'LogicApp' })));
 
     // Also handle lower-case variants (backwards compatibility)
-    if (data.virtualMachines) allResources.push(...data.virtualMachines.map((r: any) => ({ ...r, resourceType: 'VirtualMachine' })));
-    if (data.storageAccounts) allResources.push(...data.storageAccounts.map((r: any) => ({ ...r, resourceType: 'StorageAccount' })));
-    if (data.networkResources) allResources.push(...data.networkResources.map((r: any) => ({ ...r, resourceType: 'Network' })));
-    if (data.databases) allResources.push(...data.databases.map((r: any) => ({ ...r, resourceType: 'Database' })));
-    if (data.webApps) allResources.push(...data.webApps.map((r: any) => ({ ...r, resourceType: 'WebApp' })));
+    if (data.virtualMachines?.length) allResources.push(...data.virtualMachines.map((r: any) => ({ ...r, resourceType: 'VirtualMachine' })));
+    if (data.storageAccounts?.length) allResources.push(...data.storageAccounts.map((r: any) => ({ ...r, resourceType: 'StorageAccount' })));
+    if (data.networkResources?.length) allResources.push(...data.networkResources.map((r: any) => ({ ...r, resourceType: 'Network' })));
+    if (data.databases?.length) allResources.push(...data.databases.map((r: any) => ({ ...r, resourceType: 'Database' })));
+    if (data.webApps?.length) allResources.push(...data.webApps.map((r: any) => ({ ...r, resourceType: 'WebApp' })));
 
     console.log('[AzureResourceDiscoveryHook] filteredData - allResources count:', allResources.length);
     if (allResources.length > 0) {
@@ -380,6 +385,10 @@ export const useAzureResourceDiscoveryLogic = () => {
     const vnetCount = data.VirtualNetworks?.length || 0;
     const webAppCount = data.WebApps?.length || data.webApps?.length || 0;
     const sqlCount = data.SqlServers?.length || data.databases?.length || 0;
+    const vmssCount = data.VMScaleSets?.length || 0;
+    const acrCount = data.ContainerRegistries?.length || 0;
+    const automationCount = data.AutomationAccounts?.length || 0;
+    const logicAppCount = data.LogicApps?.length || 0;
     const networkCount = nsgCount + vnetCount + (data.networkResources?.length || 0);
 
     // Build resourcesByType for charts
@@ -392,9 +401,14 @@ export const useAzureResourceDiscoveryLogic = () => {
     if (vnetCount > 0) resourcesByType['Virtual Networks'] = vnetCount;
     if (webAppCount > 0) resourcesByType['Web Apps'] = webAppCount;
     if (sqlCount > 0) resourcesByType['SQL Servers'] = sqlCount;
+    if (vmssCount > 0) resourcesByType['VM Scale Sets'] = vmssCount;
+    if (acrCount > 0) resourcesByType['Container Registries'] = acrCount;
+    if (automationCount > 0) resourcesByType['Automation Accounts'] = automationCount;
+    if (logicAppCount > 0) resourcesByType['Logic Apps'] = logicAppCount;
 
     const totalResources = data.summary?.totalResources ||
-      subscriptionCount + resourceGroupCount + vmCount + storageCount + keyVaultCount + nsgCount + vnetCount + webAppCount + sqlCount;
+      subscriptionCount + resourceGroupCount + vmCount + storageCount + keyVaultCount +
+      nsgCount + vnetCount + webAppCount + sqlCount + vmssCount + acrCount + automationCount + logicAppCount;
 
     return {
       totalResources,
@@ -408,6 +422,10 @@ export const useAzureResourceDiscoveryLogic = () => {
       networkResources: networkCount,
       webApps: webAppCount,
       resourceGroups: resourceGroupCount,
+      vmScaleSets: vmssCount,
+      containerRegistries: acrCount,
+      automationAccounts: automationCount,
+      logicApps: logicAppCount,
     };
   }, [results]);
 

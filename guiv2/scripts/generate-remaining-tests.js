@@ -486,3 +486,4 @@ console.log(`\nSummary by category:`);
 Object.entries(remainingCategories).forEach(([category, views]) => {
   console.log(`  ${category}: ${views.length} tests`);
 });
+

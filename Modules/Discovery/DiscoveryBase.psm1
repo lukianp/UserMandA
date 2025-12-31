@@ -344,10 +344,114 @@ function Invoke-GraphAPIWithPaging {
     return $allResults
 }
 
+function Write-DiscoveryStatus {
+    <#
+    .SYNOPSIS
+        Writes discovery module execution status to a JSON file
+    .DESCRIPTION
+        Creates or updates a status file for a discovery module in the DiscoveryStatus directory.
+        This status is used by the GUI to show completion status, record counts, and any warnings/errors.
+    .PARAMETER ModuleId
+        The discovery module ID (e.g., 'active-directory', 'azure-resource')
+    .PARAMETER ModuleName
+        Human-readable name of the module (e.g., 'Active Directory', 'Azure Resource')
+    .PARAMETER Status
+        Execution status: 'completed', 'partial', or 'failed'
+    .PARAMETER RecordCount
+        Number of records discovered
+    .PARAMETER Duration
+        Execution duration in milliseconds
+    .PARAMETER Warnings
+        Array of warning messages (optional)
+    .PARAMETER Errors
+        Array of error messages (optional)
+    .PARAMETER CsvFiles
+        Array of CSV file names created (optional)
+    .PARAMETER CompanyName
+        Company/profile name for determining the status file path
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$ModuleId,
+
+        [Parameter(Mandatory=$true)]
+        [string]$ModuleName,
+
+        [Parameter(Mandatory=$true)]
+        [ValidateSet('completed', 'partial', 'failed')]
+        [string]$Status,
+
+        [Parameter(Mandatory=$false)]
+        [int]$RecordCount = 0,
+
+        [Parameter(Mandatory=$false)]
+        [int]$Duration = 0,
+
+        [Parameter(Mandatory=$false)]
+        [string[]]$Warnings = @(),
+
+        [Parameter(Mandatory=$false)]
+        [string[]]$Errors = @(),
+
+        [Parameter(Mandatory=$false)]
+        [string[]]$CsvFiles = @(),
+
+        [Parameter(Mandatory=$false)]
+        [string]$CompanyName
+    )
+
+    try {
+        # Determine profile path
+        if ([string]::IsNullOrEmpty($CompanyName)) {
+            # Try to get from environment or use default
+            $CompanyName = $env:DISCOVERY_COMPANY_NAME
+            if ([string]::IsNullOrEmpty($CompanyName)) {
+                Write-Warning "CompanyName not provided and DISCOVERY_COMPANY_NAME not set. Status file will not be written."
+                return
+            }
+        }
+
+        $profilePath = Join-Path "C:\DiscoveryData" $CompanyName
+        $statusDir = Join-Path $profilePath "DiscoveryStatus"
+
+        # Create status directory if it doesn't exist
+        if (-not (Test-Path $statusDir)) {
+            New-Item -Path $statusDir -ItemType Directory -Force | Out-Null
+        }
+
+        $statusFile = Join-Path $statusDir "$ModuleId.json"
+
+        $statusData = @{
+            moduleId = $ModuleId
+            moduleName = $ModuleName
+            status = $Status
+            lastRun = (Get-Date).ToString("o")
+            recordCount = $RecordCount
+            duration = $Duration
+            success = ($Status -eq 'completed')
+            hasWarnings = ($Warnings.Count -gt 0)
+            hasErrors = ($Errors.Count -gt 0)
+            warnings = $Warnings
+            errors = $Errors
+            csvFiles = $CsvFiles
+            executedBy = "$env:USERDOMAIN\$env:USERNAME"
+        }
+
+        $statusData | ConvertTo-Json -Depth 3 | Set-Content $statusFile -Encoding UTF8
+
+        Write-ModuleLog -ModuleName "DiscoveryBase" -Message "Status written for $ModuleId`: $Status ($RecordCount records)" -Level "INFO"
+    }
+    catch {
+        Write-Warning "Failed to write discovery status for $ModuleId`: $_"
+    }
+}
+
 Export-ModuleMember -Function @(
     'Start-DiscoveryModule',
     'Test-DiscoveryPrerequisites',
     'Write-ModuleLog',
     'Export-DiscoveryResults',
-    'Invoke-GraphAPIWithPaging'
+    'Invoke-GraphAPIWithPaging',
+    'Write-DiscoveryStatus'
 )

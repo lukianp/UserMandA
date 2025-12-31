@@ -56,3 +56,4 @@ console.log(`Total files: ${files.length}`);
 console.log(`Fixed: ${fixedCount}`);
 console.log(`Skipped (already correct): ${skippedCount}`);
 console.log(`============================\n`);
+

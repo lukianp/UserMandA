@@ -4,6 +4,7 @@ import { UserCog, Play, AlertCircle, CreditCard, Users } from 'lucide-react';
 import { useAzureSubscriptionOwnersDiscoveryLogic } from '../../hooks/useAzureSubscriptionOwnersDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 /**
  * Azure Subscription Owners Discovery View

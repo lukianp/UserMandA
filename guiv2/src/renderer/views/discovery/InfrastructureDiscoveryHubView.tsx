@@ -31,6 +31,7 @@ import {
   Key,
   KeyRound,
   Fingerprint,
+  AlertTriangle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -75,6 +76,7 @@ const statusVariantMap: Record<string, 'default' | 'primary' | 'success' | 'warn
   idle: 'default',
   running: 'primary',
   completed: 'success',
+  partial: 'warning',
   failed: 'danger',
 };
 
@@ -252,19 +254,30 @@ const InfrastructureDiscoveryHubView: React.FC = () => {
                       </div>
 
                       {/* Footer */}
-                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-500 pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          <span>
-                            {module.lastRun
-                              ? format(new Date(module.lastRun), 'MMM d, yyyy')
-                              : 'Never run'}
-                          </span>
-                        </div>
-                        {module.resultCount !== undefined && module.resultCount > 0 && (
+                      <div className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-500 pt-3 border-t border-gray-100 dark:border-gray-700">
+                        {/* Row 1: Date/Time and Record Count */}
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1">
-                            <Database className="w-3 h-3" />
-                            <span>{(module.resultCount ?? 0).toLocaleString()} items</span>
+                            <Clock className="w-3 h-3" />
+                            <span>
+                              {module.lastRun
+                                ? format(new Date(module.lastRun), 'MMM d, yyyy h:mm a')
+                                : 'Never run'}
+                            </span>
+                          </div>
+                          {module.resultCount !== undefined && module.resultCount > 0 && (
+                            <div className="flex items-center gap-1 font-medium text-gray-700 dark:text-gray-300">
+                              <Database className="w-3 h-3" />
+                              <span>{(module.resultCount ?? 0).toLocaleString()} records</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Row 2: Warning indicator (if warnings exist) */}
+                        {module.hasWarnings && (
+                          <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>Completed with warnings</span>
                           </div>
                         )}
                       </div>

@@ -4,6 +4,7 @@ import { Shield, Play, AlertCircle, Users, AlertTriangle } from 'lucide-react';
 import { useAzurePIMDiscoveryLogic } from '../../hooks/useAzurePIMDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 /**
  * Azure PIM Eligible Roles Discovery View

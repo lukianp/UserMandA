@@ -395,3 +395,4 @@ discoveryViews.forEach(({ name, title, description }) => {
 });
 
 console.log(`\nCompleted! Created ${testsCreated} test files.`);
+

@@ -4,6 +4,7 @@ import { Layers, Play, AlertCircle, CheckCircle2, Server, Network } from 'lucide
 import { useAzureVMSSDiscoveryLogic } from '../../hooks/useAzureVMSSDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 /**
  * Azure VM Scale Sets Discovery View

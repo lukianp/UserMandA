@@ -4,6 +4,7 @@ import { Package, Play, AlertCircle, CheckCircle2, Lock, Globe } from 'lucide-re
 import { useAzureACRDiscoveryLogic } from '../../hooks/useAzureACRDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 /**
  * Azure Container Registry Discovery View

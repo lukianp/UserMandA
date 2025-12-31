@@ -173,7 +173,14 @@
       "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*.csv 2>nul | head -60\")",
       "Bash(tasklist:*)",
       "Bash(git -C D:ScriptsUserMandA status --short)",
-      "Bash(git -C D:ScriptsUserMandA pull origin main)"
+      "Bash(git -C D:ScriptsUserMandA pull origin main)",
+      "WebFetch(domain:github.com)",
+      "Bash(Select-Object -First 80)",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*.csv 2>nul | findstr /i Azure\")",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*Azure*.csv 2>nul | head -10\")",
+      "Bash(cmd /c \"dir /b D:\\\\Scripts\\\\UserMandA\\\\guiv2\\\\src\\\\renderer\\\\views\\\\discovered\\\\*Azure*.tsx\")",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*Azure*.csv 2>nul\")",
+      "Bash(cmd /c \"tasklist 2>nul | findstr /i electron\")"
     ],
     "deny": [],
     "ask": []

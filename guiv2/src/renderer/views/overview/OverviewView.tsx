@@ -2,20 +2,20 @@
  * OverviewView Component
  *
  * Dashboard overview with draggable, resizable tiles using react-grid-layout.
- * Displays project timeline, statistics, system health, and recent activity.
+ * Uses controlled width and state machine for reliable tile persistence.
  *
- * Phase 7: Complete Dashboard Implementation with Tile System
+ * Phase 8: Refactored with useDashboardLayout hook for proper persistence
  */
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import GridLayout, { Responsive } from 'react-grid-layout';
-import type { Layout } from 'react-grid-layout';
-import { RefreshCw, Users, Layers, Monitor, Server, AlertCircle, Plus, X, GripVertical, Grid3X3, Save, RotateCcw, Key, Download, ChevronDown, Check, Loader2, LayoutGrid } from 'lucide-react';
+import { Responsive } from 'react-grid-layout';
+import { RefreshCw, Users, Layers, Monitor, Server, AlertCircle, Plus, X, GripVertical, Save, RotateCcw, Key, Download, ChevronDown, Loader2, LayoutGrid, Pencil } from 'lucide-react';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
 import { useDashboardLogic } from '../../hooks/useDashboardLogic';
+import { useDashboardLayout, type DashboardTile } from '../../hooks/useDashboardLayout';
 import { ProjectTimelineCard } from '../../components/molecules/ProjectTimelineCard';
 import { StatisticsCard } from '../../components/molecules/StatisticsCard';
 import { SystemHealthPanel } from '../../components/molecules/SystemHealthPanel';
@@ -29,42 +29,6 @@ import { SecurityAlertsTile } from '../../components/molecules/SecurityAlertsTil
 import { useLicense } from '../../hooks/useLicense';
 import { useUpdates } from '../../hooks/useUpdates';
 
-// WidthProvider HOC - use type assertion since library types may not match exports
-const WidthProvider = (GridLayout as any).WidthProvider as
-  (<P extends object>(component: React.ComponentType<P>) => React.ComponentType<Omit<P, 'width'>>) | undefined;
-const ResponsiveGridLayout = WidthProvider ? WidthProvider(Responsive) : Responsive;
-
-// Tile configuration interface
-interface DashboardTile {
-  id: string;
-  title: string;
-  defaultSize: { w: number; h: number };
-  minSize?: { w: number; h: number };
-}
-
-// Layout persistence with enhanced grid snapping
-interface TileLayout {
-  i: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  minW?: number;
-  minH?: number;
-  maxW?: number;
-  maxH?: number;
-  isBounded?: boolean;
-}
-
-// Enhanced dashboard state for persistence
-interface DashboardState {
-  layouts: { [key: string]: TileLayout[] };
-  activeTiles: string[];
-  showGrid: boolean;
-  autoSave: boolean;
-  lastSaved: string | null;
-}
-
 // Grid configuration constants
 const GRID_CONFIG = {
   breakpoints: { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 },
@@ -75,7 +39,7 @@ const GRID_CONFIG = {
 };
 
 // Storage key for dashboard state
-const DASHBOARD_STATE_KEY = 'dashboard-state-v2';
+const DASHBOARD_STATE_KEY = 'dashboard-state-v3';
 
 // Available tiles configuration
 const AVAILABLE_TILES: DashboardTile[] = [
@@ -92,7 +56,7 @@ const AVAILABLE_TILES: DashboardTile[] = [
 ];
 
 // Default layouts
-const DEFAULT_LAYOUTS: { lg: TileLayout[] } = {
+const DEFAULT_LAYOUTS = {
   lg: [
     { i: 'timeline', x: 0, y: 0, w: 12, h: 2, minW: 6, minH: 2 },
     { i: 'users', x: 0, y: 2, w: 3, h: 2, minW: 2, minH: 2 },
@@ -119,382 +83,35 @@ const OverviewView: React.FC = () => {
   const { licenseInfo, isValid: licenseIsValid, isExpiringSoon } = useLicense();
   const { updateInfo, isChecking: isCheckingUpdates, checkForUpdates, hasUpdateAvailable } = useUpdates();
   const [showLicenseMenu, setShowLicenseMenu] = useState(false);
-
-  // Enhanced state management with full persistence
-  const [dashboardState, setDashboardState] = useState<DashboardState>({
-    layouts: DEFAULT_LAYOUTS,
-    activeTiles: DEFAULT_ACTIVE_TILES,
-    showGrid: false,
-    autoSave: true,
-    lastSaved: null,
-  });
   const [showAddTile, setShowAddTile] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [gridReady, setGridReady] = useState(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isInitializedRef = useRef(false);
-  const mountedRef = useRef(false);
-  const gridContainerRef = useRef<HTMLDivElement>(null);
-  const layoutKeyRef = useRef(Date.now());
+  const [isEditing, setIsEditing] = useState(false);
 
-  // Load dashboard state from localStorage on mount
-  useEffect(() => {
-    const loadDashboardState = () => {
-      try {
-        // Try new storage format first
-        const savedState = localStorage.getItem(DASHBOARD_STATE_KEY);
-        if (savedState) {
-          const parsed = JSON.parse(savedState);
-          console.log('[OverviewView] Loaded dashboard state:', parsed);
-          setDashboardState({
-            layouts: parsed.layouts || DEFAULT_LAYOUTS,
-            activeTiles: parsed.activeTiles || DEFAULT_ACTIVE_TILES,
-            showGrid: parsed.showGrid || false,
-            autoSave: parsed.autoSave !== false,
-            lastSaved: parsed.lastSaved || null,
-          });
-          return;
-        }
-
-        // Migrate from old storage format
-        const oldLayout = localStorage.getItem('dashboard-layout');
-        const oldTiles = localStorage.getItem('dashboard-active-tiles');
-        if (oldLayout || oldTiles) {
-          console.log('[OverviewView] Migrating from old storage format');
-          const migratedState: DashboardState = {
-            layouts: oldLayout ? JSON.parse(oldLayout) : DEFAULT_LAYOUTS,
-            activeTiles: oldTiles ? JSON.parse(oldTiles) : DEFAULT_ACTIVE_TILES,
-            showGrid: false,
-            autoSave: true,
-            lastSaved: null,
-          };
-          setDashboardState(migratedState);
-          // Save in new format and remove old keys
-          localStorage.setItem(DASHBOARD_STATE_KEY, JSON.stringify(migratedState));
-          localStorage.removeItem('dashboard-layout');
-          localStorage.removeItem('dashboard-active-tiles');
-        }
-      } catch (e) {
-        console.error('[OverviewView] Failed to load dashboard state:', e);
-        // Reset to defaults on error
-        setDashboardState({
-          layouts: DEFAULT_LAYOUTS,
-          activeTiles: DEFAULT_ACTIVE_TILES,
-          showGrid: false,
-          autoSave: true,
-          lastSaved: null,
-        });
-      }
-    };
-
-    loadDashboardState();
-
-    // Update layout key to force grid re-render with correct layouts
-    layoutKeyRef.current = Date.now();
-
-    // Mark grid as ready after a short delay to ensure container has width
-    const gridReadyTimer = setTimeout(() => {
-      setGridReady(true);
-    }, 100);
-
-    // Mark as initialized after a short delay to allow layouts to apply
-    const initTimer = setTimeout(() => {
-      isInitializedRef.current = true;
-      mountedRef.current = true;
-      console.log('[OverviewView] Dashboard initialized, layout changes will now be saved');
-    }, 600);
-
-    return () => {
-      clearTimeout(gridReadyTimer);
-      clearTimeout(initTimer);
-      // Reset refs and state on unmount so next mount loads fresh from localStorage
-      isInitializedRef.current = false;
-      mountedRef.current = false;
-      setGridReady(false);
-    };
-  }, []);
-
-  // Grid snapping function - ensures tiles align to grid
-  const snapToGrid = useCallback((layout: TileLayout[], cols: number): TileLayout[] => {
-    return layout.map(item => ({
-      ...item,
-      x: Math.max(0, Math.min(Math.round(item.x), cols - item.w)),
-      y: Math.max(0, Math.round(item.y)),
-      w: Math.max(item.minW || 2, Math.min(Math.round(item.w), cols - Math.round(item.x))),
-      h: Math.max(item.minH || 2, Math.round(item.h)),
-    }));
-  }, []);
-
-  // Collision detection and resolution
-  const resolveCollisions = useCallback((layout: TileLayout[], cols: number): TileLayout[] => {
-    const sorted = [...layout].sort((a, b) => a.y - b.y || a.x - b.x);
-    const resolved: TileLayout[] = [];
-
-    sorted.forEach(item => {
-      let newItem = { ...item };
-      let collision = true;
-      let attempts = 0;
-      const maxAttempts = 50;
-
-      while (collision && attempts < maxAttempts) {
-        collision = false;
-
-        for (const existing of resolved) {
-          if (newItem.i !== existing.i &&
-              newItem.x < existing.x + existing.w &&
-              newItem.x + newItem.w > existing.x &&
-              newItem.y < existing.y + existing.h &&
-              newItem.y + newItem.h > existing.y) {
-            // Collision detected - move below
-            newItem.y = existing.y + existing.h;
-            collision = true;
-            break;
-          }
-        }
-
-        // If still colliding and can move right, do so
-        if (collision && newItem.x + newItem.w < cols) {
-          newItem.x = Math.min(newItem.x + 1, cols - newItem.w);
-        }
-
-        attempts++;
-      }
-
-      resolved.push(newItem);
-    });
-
-    return resolved;
-  }, []);
-
-  // Save dashboard state (debounced)
-  const saveDashboardState = useCallback((newState: Partial<DashboardState>) => {
-    const updatedState = {
-      ...dashboardState,
-      ...newState,
-      lastSaved: new Date().toISOString(),
-    };
-
-    setDashboardState(updatedState);
-    localStorage.setItem(DASHBOARD_STATE_KEY, JSON.stringify(updatedState));
-    console.log('[OverviewView] Dashboard state saved at', updatedState.lastSaved);
-  }, [dashboardState]);
-
-  // Debounced auto-save for layout changes
-  const debouncedSave = useCallback((newLayouts: { [key: string]: TileLayout[] }) => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    saveTimeoutRef.current = setTimeout(() => {
-      if (dashboardState.autoSave) {
-        saveDashboardState({ layouts: newLayouts });
-      }
-    }, 500); // 500ms debounce for responsive feel
-  }, [dashboardState.autoSave, saveDashboardState]);
-
-  // Track if user is actively interacting (dragging/resizing)
-  const isUserInteractingRef = useRef(false);
-
-  // Handle layout change - only update state, don't save automatically
-  // Saving happens in onDragStop/onResizeStop to avoid overwriting saved layouts
-  const onLayoutChange = useCallback((_currentLayout: unknown, allLayouts: unknown) => {
-    // Skip layout changes during initialization to preserve loaded state
-    if (!isInitializedRef.current) {
-      console.log('[OverviewView] Skipping layout change during initialization');
-      return;
-    }
-
-    // Only process layout changes if user is actively interacting
-    if (!isUserInteractingRef.current) {
-      console.log('[OverviewView] Skipping layout change - no user interaction');
-      return;
-    }
-
-    // Convert and enhance layouts
-    const enhancedLayouts: { [key: string]: TileLayout[] } = {};
-    const layoutsObj = allLayouts as { [key: string]: TileLayout[] };
-
-    Object.entries(layoutsObj).forEach(([breakpoint, layout]) => {
-      const enhanced = layout.map((item: TileLayout) => {
-        const tileConfig = AVAILABLE_TILES.find(t => t.id === item.i);
-        return {
-          ...item,
-          minW: tileConfig?.minSize?.w || 2,
-          minH: tileConfig?.minSize?.h || 2,
-        } as TileLayout;
-      });
-
-      // Apply grid snapping
-      const cols = GRID_CONFIG.cols[breakpoint as keyof typeof GRID_CONFIG.cols] || 12;
-      const snapped = snapToGrid(enhanced, cols);
-
-      // Resolve collisions
-      const resolved = resolveCollisions(snapped, cols);
-
-      enhancedLayouts[breakpoint] = resolved;
-    });
-
-    // Update state immediately for responsive feel (but don't save yet)
-    setDashboardState(prev => ({
-      ...prev,
-      layouts: enhancedLayouts,
-    }));
-
-    // Note: Saving is handled by onDragStop/onResizeStop, not here
-  }, [snapToGrid, resolveCollisions]);
-
-  // Handle drag/resize start
-  const handleInteractionStart = useCallback(() => {
-    isUserInteractingRef.current = true;
-    setIsDragging(true);
-  }, []);
-
-  // Handle drag/resize stop - this is where we save
-  const handleInteractionStop = useCallback(() => {
-    setIsDragging(false);
-    // Small delay to ensure layout change has been processed
-    setTimeout(() => {
-      isUserInteractingRef.current = false;
-      // Save the current state
-      if (dashboardState.autoSave && isInitializedRef.current) {
-        const updatedState = {
-          ...dashboardState,
-          lastSaved: new Date().toISOString(),
-        };
-        localStorage.setItem(DASHBOARD_STATE_KEY, JSON.stringify(updatedState));
-        setDashboardState(updatedState);
-        console.log('[OverviewView] Layout saved after user interaction');
-      }
-    }, 100);
-  }, [dashboardState]);
-
-  // Add tile
-  const addTile = useCallback((tileId: string) => {
-    if (dashboardState.activeTiles.includes(tileId)) return;
-
-    const tile = AVAILABLE_TILES.find(t => t.id === tileId);
-    if (!tile) return;
-
-    const newTiles = [...dashboardState.activeTiles, tileId];
-
-    // Calculate Y position for new tile (find max Y + height)
-    const maxY = dashboardState.layouts.lg?.reduce((max, item) => Math.max(max, item.y + item.h), 0) || 0;
-
-    // Add to layout with snapped position
-    const newLayout: TileLayout = {
-      i: tileId,
-      x: 0,
-      y: maxY, // Place at the bottom
-      w: tile.defaultSize.w,
-      h: tile.defaultSize.h,
-      minW: tile.minSize?.w || 2,
-      minH: tile.minSize?.h || 2,
-    };
-
-    const newLayouts = {
-      ...dashboardState.layouts,
-      lg: [...(dashboardState.layouts.lg || []), newLayout],
-    };
-
-    saveDashboardState({ layouts: newLayouts, activeTiles: newTiles });
-    setShowAddTile(false);
-  }, [dashboardState.activeTiles, dashboardState.layouts, saveDashboardState]);
-
-  // Remove tile
-  const removeTile = useCallback((tileId: string) => {
-    const newTiles = dashboardState.activeTiles.filter(t => t !== tileId);
-    const newLayouts: { [key: string]: TileLayout[] } = {};
-
-    Object.entries(dashboardState.layouts).forEach(([breakpoint, layout]) => {
-      newLayouts[breakpoint] = layout.filter(l => l.i !== tileId);
-    });
-
-    saveDashboardState({ layouts: newLayouts, activeTiles: newTiles });
-  }, [dashboardState.activeTiles, dashboardState.layouts, saveDashboardState]);
-
-  // Reset layout to defaults
-  const resetLayout = useCallback(() => {
-    const resetState: DashboardState = {
-      layouts: DEFAULT_LAYOUTS,
-      activeTiles: DEFAULT_ACTIVE_TILES,
-      showGrid: dashboardState.showGrid,
-      autoSave: dashboardState.autoSave,
-      lastSaved: new Date().toISOString(),
-    };
-    setDashboardState(resetState);
-    localStorage.setItem(DASHBOARD_STATE_KEY, JSON.stringify(resetState));
-    console.log('[OverviewView] Dashboard reset to defaults');
-  }, [dashboardState.showGrid, dashboardState.autoSave]);
-
-  // Auto-arrange tiles - organizes all active tiles into a clean grid
-  const autoArrangeTiles = useCallback(() => {
-    const cols = 12; // lg breakpoint columns
-    const activeTiles = dashboardState.activeTiles;
-    const newLayout: TileLayout[] = [];
-
-    let currentX = 0;
-    let currentY = 0;
-    let rowHeight = 0;
-
-    // Sort tiles by their default size (larger tiles first for better packing)
-    const sortedTiles = [...activeTiles].sort((a, b) => {
-      const tileA = AVAILABLE_TILES.find(t => t.id === a);
-      const tileB = AVAILABLE_TILES.find(t => t.id === b);
-      const sizeA = (tileA?.defaultSize.w || 3) * (tileA?.defaultSize.h || 2);
-      const sizeB = (tileB?.defaultSize.w || 3) * (tileB?.defaultSize.h || 2);
-      return sizeB - sizeA; // Larger tiles first
-    });
-
-    // Place each tile
-    sortedTiles.forEach((tileId) => {
-      const tileConfig = AVAILABLE_TILES.find(t => t.id === tileId);
-      if (!tileConfig) return;
-
-      const w = tileConfig.defaultSize.w;
-      const h = tileConfig.defaultSize.h;
-      const minW = tileConfig.minSize?.w || 2;
-      const minH = tileConfig.minSize?.h || 2;
-
-      // Check if tile fits in current row
-      if (currentX + w > cols) {
-        // Move to next row
-        currentX = 0;
-        currentY += rowHeight;
-        rowHeight = 0;
-      }
-
-      newLayout.push({
-        i: tileId,
-        x: currentX,
-        y: currentY,
-        w,
-        h,
-        minW,
-        minH,
-      });
-
-      currentX += w;
-      rowHeight = Math.max(rowHeight, h);
-    });
-
-    const newLayouts = {
-      ...dashboardState.layouts,
-      lg: newLayout,
-    };
-
-    saveDashboardState({ layouts: newLayouts });
-    console.log('[OverviewView] Tiles auto-arranged');
-  }, [dashboardState.activeTiles, dashboardState.layouts, saveDashboardState]);
-
-  // Toggle grid visibility
-  const toggleGrid = useCallback(() => {
-    saveDashboardState({ showGrid: !dashboardState.showGrid });
-  }, [dashboardState.showGrid, saveDashboardState]);
-
-  // Manual save
-  const manualSave = useCallback(() => {
-    saveDashboardState({});
-  }, [saveDashboardState]);
+  // Dashboard layout hook with state machine
+  const {
+    layouts,
+    activeTiles,
+    gridState,
+    isDragging,
+    lastSaved,
+    containerWidth,
+    containerRef,
+    onLayoutChange,
+    onDragStart,
+    onDragStop,
+    onResizeStart,
+    onResizeStop,
+    addTile,
+    removeTile,
+    resetLayout,
+    autoArrange,
+    forceSave,
+  } = useDashboardLayout({
+    storageKey: DASHBOARD_STATE_KEY,
+    defaultLayouts: DEFAULT_LAYOUTS,
+    defaultActiveTiles: DEFAULT_ACTIVE_TILES,
+    availableTiles: AVAILABLE_TILES,
+    cols: GRID_CONFIG.cols,
+  });
 
   // Render tile content
   const renderTileContent = useCallback((tileId: string) => {
@@ -559,8 +176,8 @@ const OverviewView: React.FC = () => {
 
   // Available tiles that are not active
   const availableTilesToAdd = useMemo(() =>
-    AVAILABLE_TILES.filter(tile => !dashboardState.activeTiles.includes(tile.id)),
-  [dashboardState.activeTiles]);
+    AVAILABLE_TILES.filter(tile => !activeTiles.includes(tile.id)),
+  [activeTiles]);
 
   // Loading state
   if (isLoading && !stats) {
@@ -609,6 +226,86 @@ const OverviewView: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          {/* Edit Dashboard Toggle */}
+          <Button
+            onClick={() => setIsEditing(!isEditing)}
+            variant={isEditing ? "primary" : "secondary"}
+            size="sm"
+          >
+            <Pencil className="w-4 h-4 mr-2" />
+            {isEditing ? 'Done Editing' : 'Edit Dashboard'}
+          </Button>
+
+          {/* Add Tile Dropdown - only when editing */}
+          {isEditing && (
+            <div className="relative">
+              <Button
+                onClick={() => setShowAddTile(!showAddTile)}
+                variant="secondary"
+                size="sm"
+                disabled={availableTilesToAdd.length === 0}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Tile
+              </Button>
+              {showAddTile && availableTilesToAdd.length > 0 && (
+                <div className="absolute right-0 mt-2 w-48 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg shadow-lg z-50">
+                  {availableTilesToAdd.map(tile => (
+                    <button
+                      key={tile.id}
+                      onClick={() => {
+                        addTile(tile.id);
+                        setShowAddTile(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] first:rounded-t-lg last:rounded-b-lg"
+                    >
+                      {tile.title}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Auto-Arrange Tiles - only when editing */}
+          {isEditing && (
+            <Button onClick={autoArrange} variant="secondary" size="sm">
+              <LayoutGrid className="w-4 h-4 mr-2" />
+              Auto-Arrange
+            </Button>
+          )}
+
+          {/* Refresh Data */}
+          <Button
+            onClick={reload}
+            variant="secondary"
+            size="sm"
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+
+          {/* Save - only when editing */}
+          {isEditing && (
+            <Button
+              onClick={forceSave}
+              variant="secondary"
+              size="sm"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Save
+            </Button>
+          )}
+
+          {/* Reset Layout - only when editing */}
+          {isEditing && (
+            <Button onClick={resetLayout} variant="secondary" size="sm">
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Reset
+            </Button>
+          )}
+
           {/* License & Update Dropdown */}
           <div className="relative">
             <Button
@@ -628,56 +325,66 @@ const OverviewView: React.FC = () => {
               <div className="absolute right-0 mt-2 w-64 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg shadow-lg z-50">
                 {/* License Status */}
                 <div className="px-4 py-3 border-b border-[var(--border)]">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-[var(--text-primary)]">License Status</span>
-                    <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                      licenseIsValid ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                    }`}>
-                      {licenseIsValid ? <Check className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                      {licenseInfo?.status || 'Not Activated'}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`w-2 h-2 rounded-full ${licenseIsValid ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className="text-sm font-medium">
+                      {licenseInfo?.status === 'active' ? 'Licensed' : 'Unlicensed'}
                     </span>
                   </div>
-                  {licenseInfo?.type && (
-                    <div className="text-xs text-[var(--text-secondary)] mt-1">
-                      {licenseInfo.type.charAt(0).toUpperCase() + licenseInfo.type.slice(1)} License
-                      {licenseInfo.daysRemaining !== undefined && ` • ${licenseInfo.daysRemaining} days remaining`}
-                    </div>
+                  {licenseInfo && (
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      {licenseInfo.type} • {licenseInfo.customerId}
+                    </p>
                   )}
                 </div>
 
-                {/* Menu Items */}
-                <button
-                  onClick={() => {
-                    navigate('/admin/license');
-                    setShowLicenseMenu(false);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] flex items-center gap-2"
-                >
-                  <Key className="w-4 h-4" />
-                  License Activation
-                </button>
-
-                <button
-                  onClick={async () => {
-                    await checkForUpdates();
-                    setShowLicenseMenu(false);
-                  }}
-                  disabled={isCheckingUpdates}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] flex items-center gap-2 disabled:opacity-50"
-                >
-                  {isCheckingUpdates ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                {/* Update Status */}
+                <div className="px-4 py-3 border-b border-[var(--border)]">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium">Updates</span>
+                    {hasUpdateAvailable && (
+                      <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">Available</span>
+                    )}
+                  </div>
+                  {updateInfo && hasUpdateAvailable ? (
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      v{updateInfo.currentVersion} → v{updateInfo.latestVersion}
+                    </p>
                   ) : (
-                    <Download className="w-4 h-4" />
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      v{updateInfo?.currentVersion || '2.0.0'} (Latest)
+                    </p>
                   )}
-                  {isCheckingUpdates ? 'Checking...' : 'Check for Updates'}
-                  {hasUpdateAvailable && (
-                    <span className="ml-auto text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">
-                      v{updateInfo?.latestVersion}
-                    </span>
-                  )}
-                </button>
+                </div>
+
+                {/* Actions */}
+                <div className="p-2">
+                  <button
+                    onClick={() => {
+                      checkForUpdates();
+                      setShowLicenseMenu(false);
+                    }}
+                    disabled={isCheckingUpdates}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] rounded flex items-center gap-2"
+                  >
+                    {isCheckingUpdates ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    {isCheckingUpdates ? 'Checking...' : 'Check for Updates'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      navigate('/admin/license');
+                      setShowLicenseMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] rounded flex items-center gap-2"
+                  >
+                    <Key className="w-4 h-4" />
+                    Manage License
+                  </button>
+                </div>
 
                 {/* Update Available Notice */}
                 {hasUpdateAvailable && (
@@ -690,184 +397,114 @@ const OverviewView: React.FC = () => {
               </div>
             )}
           </div>
-
-          {/* Grid Toggle */}
-          <Button
-            onClick={toggleGrid}
-            variant={dashboardState.showGrid ? "primary" : "secondary"}
-            size="sm"
-          >
-            <Grid3X3 className="w-4 h-4 mr-2" />
-            {dashboardState.showGrid ? 'Hide Grid' : 'Show Grid'}
-          </Button>
-
-          {/* Manual Save */}
-          <Button
-            onClick={manualSave}
-            variant="secondary"
-            size="sm"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            Save
-          </Button>
-
-          {/* Add Tile Dropdown */}
-          <div className="relative">
-            <Button
-              onClick={() => setShowAddTile(!showAddTile)}
-              variant="secondary"
-              size="sm"
-              disabled={availableTilesToAdd.length === 0}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Tile
-            </Button>
-            {showAddTile && availableTilesToAdd.length > 0 && (
-              <div className="absolute right-0 mt-2 w-48 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg shadow-lg z-50">
-                {availableTilesToAdd.map(tile => (
-                  <button
-                    key={tile.id}
-                    onClick={() => addTile(tile.id)}
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-[var(--bg-secondary)] first:rounded-t-lg last:rounded-b-lg"
-                  >
-                    {tile.title}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Auto-Arrange Tiles */}
-          <Button onClick={autoArrangeTiles} variant="secondary" size="sm">
-            <LayoutGrid className="w-4 h-4 mr-2" />
-            Auto-Arrange
-          </Button>
-
-          {/* Reset Layout */}
-          <Button onClick={resetLayout} variant="secondary" size="sm">
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Reset
-          </Button>
-
-          {/* Refresh Data */}
-          <Button
-            onClick={reload}
-            variant="secondary"
-            size="sm"
-            disabled={isLoading}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
         </div>
       </div>
 
-      {/* Draggable Grid with Enhanced Features */}
-      <div className="relative">
-        {/* Grid Overlay for Visual Alignment */}
-        {dashboardState.showGrid && (
-          <div
-            className="absolute inset-0 pointer-events-none z-0"
-            style={{
-              backgroundImage: `
-                linear-gradient(to right, rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(59, 130, 246, 0.1) 1px, transparent 1px)
-              `,
-              backgroundSize: `${(GRID_CONFIG.rowHeight + GRID_CONFIG.margin[0])}px ${(GRID_CONFIG.rowHeight + GRID_CONFIG.margin[1])}px`,
-              backgroundPosition: `${GRID_CONFIG.margin[0] / 2}px ${GRID_CONFIG.margin[1] / 2}px`,
-            }}
-          />
-        )}
+      {/* Grid State Indicator (debug) */}
+      {gridState !== 'ready' && (
+        <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>
+            {gridState === 'loading' && 'Loading layout...'}
+            {gridState === 'measuring' && 'Measuring container...'}
+            {gridState === 'stabilizing' && 'Stabilizing grid...'}
+          </span>
+        </div>
+      )}
 
+      {/* Draggable Grid */}
+      <div className="relative">
         {/* Dragging Indicator */}
-        {isDragging && (
+        {isDragging && isEditing && (
           <div className="absolute top-2 right-2 z-20 px-3 py-1 bg-blue-500 text-white text-xs rounded-full animate-pulse">
             Arranging tiles...
           </div>
         )}
 
-        <div ref={gridContainerRef}>
-        {gridReady ? (
-        <ResponsiveGridLayout
-          key={layoutKeyRef.current}
-          className="layout"
-          layouts={dashboardState.layouts}
-          onLayoutChange={onLayoutChange as any}
-          onDragStart={handleInteractionStart}
-          onDragStop={handleInteractionStop}
-          onResizeStart={handleInteractionStart}
-          onResizeStop={handleInteractionStop}
-          breakpoints={GRID_CONFIG.breakpoints}
-          cols={GRID_CONFIG.cols}
-          rowHeight={GRID_CONFIG.rowHeight}
-          margin={GRID_CONFIG.margin}
-          containerPadding={GRID_CONFIG.containerPadding}
-          draggableHandle=".tile-drag-handle"
-          compactType={null}
-          {...{ isDraggable: true, isResizable: true, resizeHandles: ['se'], preventCollision: false } as any}
-        >
-          {dashboardState.activeTiles.map(tileId => {
-            const tile = AVAILABLE_TILES.find(t => t.id === tileId);
-            if (!tile) return null;
+        {/* Grid Container with ResizeObserver */}
+        <div ref={containerRef as React.RefObject<HTMLDivElement>}>
+          {containerWidth ? (
+            <Responsive
+              className="layout"
+              width={containerWidth}
+              layouts={layouts}
+              onLayoutChange={onLayoutChange}
+              onDragStart={onDragStart}
+              onDragStop={onDragStop}
+              onResizeStart={onResizeStart}
+              onResizeStop={onResizeStop}
+              breakpoints={GRID_CONFIG.breakpoints}
+              cols={GRID_CONFIG.cols}
+              rowHeight={GRID_CONFIG.rowHeight}
+              margin={GRID_CONFIG.margin}
+              containerPadding={GRID_CONFIG.containerPadding}
+              dragConfig={{ handle: '.tile-drag-handle', enabled: isEditing }}
+              resizeConfig={{ enabled: isEditing, handles: ['se'] }}
+            >
+              {activeTiles.map(tileId => {
+                const tile = AVAILABLE_TILES.find(t => t.id === tileId);
+                if (!tile) return null;
 
-            return (
-              <div
-                key={tileId}
-                className={`
-                  bg-[var(--bg-primary)] rounded-lg border border-[var(--border)] shadow-sm overflow-hidden
-                  hover:shadow-md transition-shadow duration-200
-                  ${isDragging ? 'pointer-events-none' : ''}
-                `}
-              >
-                {/* Tile Header with Drag Handle */}
-                <div className="flex items-center justify-between px-3 py-2 bg-[var(--bg-secondary)] border-b border-[var(--border)]">
-                  <div className="flex items-center gap-2 tile-drag-handle cursor-move">
-                    <GripVertical className="w-4 h-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors" />
-                    <span className="text-sm font-medium text-[var(--text-secondary)] select-none">{tile.title}</span>
-                  </div>
-                  <button
-                    onClick={() => removeTile(tileId)}
-                    className="p-1 hover:bg-[var(--bg-primary)] rounded text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors"
-                    disabled={isDragging}
+                return (
+                  <div
+                    key={tileId}
+                    className={`
+                      bg-[var(--bg-primary)] rounded-lg shadow-sm overflow-hidden
+                      transition-all duration-300
+                      ${isEditing ? 'border border-[var(--border)] hover:shadow-md' : ''}
+                      ${isDragging ? 'pointer-events-none' : ''}
+                    `}
                   >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                {/* Tile Content */}
-                <div className="p-4 h-[calc(100%-44px)] overflow-auto">
-                  {renderTileContent(tileId)}
-                </div>
-              </div>
-            );
-          })}
-        </ResponsiveGridLayout>
-        ) : (
-          <div className="flex items-center justify-center h-64">
-            <Spinner size="lg" className="mx-auto" />
-          </div>
-        )}
+                    {/* Tile Header - only show drag handle and close when editing */}
+                    {isEditing ? (
+                      <div className="flex items-center justify-between px-3 py-2 bg-[var(--bg-secondary)] border-b border-[var(--border)]">
+                        <div className="flex items-center gap-2 tile-drag-handle cursor-move">
+                          <GripVertical className="w-4 h-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors" />
+                          <span className="text-sm font-medium text-[var(--text-secondary)] select-none">{tile.title}</span>
+                        </div>
+                        <button
+                          onClick={() => removeTile(tileId)}
+                          className="p-1 hover:bg-[var(--bg-primary)] rounded text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors"
+                          disabled={isDragging}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : null}
+                    {/* Tile Content - full height when not editing (no header) */}
+                    <div className={`overflow-auto ${isEditing ? 'p-4 h-[calc(100%-44px)]' : 'p-4 h-full'}`}>
+                      {renderTileContent(tileId)}
+                    </div>
+                  </div>
+                );
+              })}
+            </Responsive>
+          ) : (
+            <div className="flex items-center justify-center h-64">
+              <Spinner size="lg" className="mx-auto" />
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Enhanced Footer with Save Status */}
+      {/* Footer with Status */}
       <div className="text-center text-xs text-[var(--text-secondary)] pt-4 border-t border-[var(--border)]">
         <div className="flex items-center justify-center gap-4 flex-wrap">
           <span>Last updated: {new Date((stats?.lastDataRefresh ?? 0)).toLocaleString()}</span>
           <span>|</span>
           <span>Data source: {stats?.dataSource ?? 'N/A'}</span>
-          <span>|</span>
-          <span className="flex items-center gap-1">
-            <span className={`w-2 h-2 rounded-full ${dashboardState.autoSave ? 'bg-green-500' : 'bg-gray-400'}`} />
-            Auto-save: {dashboardState.autoSave ? 'On' : 'Off'}
-          </span>
-          {dashboardState.lastSaved && (
+          {lastSaved && (
             <>
               <span>|</span>
-              <span>Layout saved: {new Date(dashboardState.lastSaved).toLocaleTimeString()}</span>
+              <span>Layout saved: {new Date(lastSaved).toLocaleTimeString()}</span>
             </>
           )}
-          <span>|</span>
-          <span>Drag tiles to rearrange • Tiles snap to grid</span>
+          {isEditing && (
+            <>
+              <span>|</span>
+              <span className="text-blue-500">Editing mode - drag tiles to rearrange</span>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -875,5 +512,3 @@ const OverviewView: React.FC = () => {
 };
 
 export default OverviewView;
-
-

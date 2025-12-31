@@ -4,6 +4,7 @@ import { Settings, Play, AlertCircle, CheckCircle2, FileCode, Clock, Key } from 
 import { useAzureAutomationDiscoveryLogic } from '../../hooks/useAzureAutomationDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 /**
  * Azure Automation Accounts Discovery View
