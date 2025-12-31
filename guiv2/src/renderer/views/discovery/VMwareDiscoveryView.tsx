@@ -7,6 +7,7 @@ import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { Select } from '../../components/atoms/Select';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 import type { VMwareDiscoveryResult } from '../../types/models/vmware';
 
 const formatBytes = (bytes: number): string => {
@@ -336,6 +337,14 @@ const VMwareDiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      <div className="px-6 pb-6">
+        <ViewDiscoveredDataButton
+          moduleId="vmware"
+          recordCount={stats?.totalVMs || 0}
+          disabled={!result || (filteredVMs?.length || 0) === 0}
+        />
+      </div>
 
       {/* PowerShell Execution Dialog */}
       <PowerShellExecutionDialog

@@ -14,6 +14,7 @@ import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 const GoogleWorkspaceDiscoveryView: React.FC = () => {
   const {
@@ -300,17 +301,33 @@ const GoogleWorkspaceDiscoveryView: React.FC = () => {
       </div>
 
       {/* Grid */}
-      <div className="flex-1 px-6 pb-6 bg-gray-50 dark:bg-gray-900">
+      <div className="flex-1 px-6 pb-6 bg-gray-50 dark:bg-gray-900 flex flex-col">
         {activeTab === 'overview' && result ? (
-          <OverviewTab stats={stats} result={result} />
+          <div className="flex flex-col h-full">
+            <div className="flex-1 overflow-auto">
+              <OverviewTab stats={stats} result={result} />
+            </div>
+            <ViewDiscoveredDataButton
+              moduleId="google-workspace"
+              recordCount={stats?.totalUsers || 0}
+              disabled={!result}
+            />
+          </div>
         ) : (
-          <div className="h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border">
-            <VirtualizedDataGrid
-              data={filteredData}
-              columns={columns}
-              loading={isDiscovering}
-              enableColumnReorder
-              enableColumnResize
+          <div className="h-full flex flex-col">
+            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border">
+              <VirtualizedDataGrid
+                data={filteredData}
+                columns={columns}
+                loading={isDiscovering}
+                enableColumnReorder
+                enableColumnResize
+              />
+            </div>
+            <ViewDiscoveredDataButton
+              moduleId="google-workspace"
+              recordCount={stats?.totalUsers || 0}
+              disabled={!result}
             />
           </div>
         )}

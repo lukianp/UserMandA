@@ -180,7 +180,15 @@
       "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*Azure*.csv 2>nul | head -10\")",
       "Bash(cmd /c \"dir /b D:\\\\Scripts\\\\UserMandA\\\\guiv2\\\\src\\\\renderer\\\\views\\\\discovered\\\\*Azure*.tsx\")",
       "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*Azure*.csv 2>nul\")",
-      "Bash(cmd /c \"tasklist 2>nul | findstr /i electron\")"
+      "Bash(cmd /c \"tasklist 2>nul | findstr /i electron\")",
+      "Bash(cmd /c \"robocopy D:\\\\Scripts\\\\UserMandA\\\\guiv2\\\\src\\\\renderer\\\\constants C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\constants /MIR /NFL /NDL /NJH /NJS\")",
+      "Bash(cmd /c \"robocopy D:\\\\Scripts\\\\UserMandA\\\\guiv2\\\\src\\\\renderer\\\\views\\\\discovery C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\views\\\\discovery /MIR /NFL /NDL /NJH /NJS\")",
+      "Bash(cmd /c \"dir /s /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*.csv 2>nul | findstr /i Azure\")",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*M365*.csv 2>nul & dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*Entra*.csv 2>nul & dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*Azure*.csv 2>nul | findstr /i Discovery\")",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*.csv 2>nul | findstr /i /v License | findstr /i /v Azure\")",
+      "Bash(cmd /c \"dir /b D:\\\\Scripts\\\\UserMandA\\\\.agent 2>nul & dir /b D:\\\\Scripts\\\\UserMandA\\\\.claude 2>nul\")",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\*.csv 2>nul | findstr -i Auto\")",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\AzureResource*.csv 2>nul\")"
     ],
     "deny": [],
     "ask": []

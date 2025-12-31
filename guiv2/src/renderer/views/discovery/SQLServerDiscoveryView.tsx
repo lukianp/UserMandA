@@ -7,6 +7,7 @@ import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import { Select } from '../../components/atoms/Select';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return '0 B';
@@ -324,6 +325,14 @@ const SQLServerDiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      <div className="px-6 pb-6">
+        <ViewDiscoveredDataButton
+          moduleId="sql-server"
+          recordCount={stats?.totalDatabases || 0}
+          disabled={!result || (filteredDatabases?.length || 0) === 0}
+        />
+      </div>
 
       {/* PowerShell Execution Dialog */}
       <PowerShellExecutionDialog

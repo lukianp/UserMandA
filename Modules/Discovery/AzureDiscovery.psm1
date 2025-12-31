@@ -362,19 +362,39 @@ function Invoke-AzureDiscovery {
         $azureConnection = $null
         $azModuleAvailable = $false
 
-        # Test for required Azure modules (do NOT install - should be done during setup)
-        if (-not (Test-AzureModules)) {
-            $Result.AddWarning("Az module not installed. Azure resource discovery (VMs, Storage, etc.) will be skipped. Graph API discovery (Users, Groups, Licenses) will continue.")
-            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Skipping Azure connection - Az module not available. Continuing with Graph API only." -Level "WARN"
+        # CRITICAL FIX: Only load Az modules if Azure Resources are explicitly requested
+        # For Entra ID/M365 discovery (Users, Groups, Licenses, Teams, SharePoint, OneDrive, Exchange),
+        # we only need Microsoft Graph API - no Az PowerShell modules required.
+        # Az modules are ONLY needed for: VMs, Storage, Network, KeyVault, RBAC, etc.
+        $needsAzureResources = $Configuration.ContainsKey('IncludeAzureResources') -and $Configuration.IncludeAzureResources
+
+        # Also check for legacy Azure infrastructure flags that would require Az modules
+        $azureResourceFlags = @('IncludeVMs', 'IncludeStorage', 'IncludeNetworkSecurity', 'IncludeKeyVault', 'IncludeRBAC', 'IncludeMySql', 'IncludeLoadBalancers')
+        foreach ($flag in $azureResourceFlags) {
+            if ($Configuration.ContainsKey($flag) -and $Configuration[$flag]) {
+                $needsAzureResources = $true
+                break
+            }
+        }
+
+        if (-not $needsAzureResources) {
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure Resource discovery not requested. Using Microsoft Graph API only (no Az modules needed)." -Level "INFO"
+            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "This avoids potential MSAL token cache conflicts with Az PowerShell modules." -Level "INFO"
         } else {
-            $azModuleAvailable = $true
-            # Establish Azure connection using multiple authentication strategies
-            Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Initiating Azure connection..." -Level "INFO"
-            $azureConnection = Connect-AzureWithMultipleStrategies -Configuration $Configuration -Result $Result
-            if ($azureConnection) {
-                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure authentication successful" -Level "SUCCESS"
+            # Test for required Azure modules only when Azure Resources are needed
+            if (-not (Test-AzureModules)) {
+                $Result.AddWarning("Az module not installed. Azure resource discovery (VMs, Storage, etc.) will be skipped. Graph API discovery (Users, Groups, Licenses) will continue.")
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Skipping Azure connection - Az module not available. Continuing with Graph API only." -Level "WARN"
             } else {
-                $Result.AddWarning("Could not establish Azure connection, will use Graph API where possible", @{Error="All authentication strategies failed"})
+                $azModuleAvailable = $true
+                # Establish Azure connection using multiple authentication strategies
+                Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Initiating Azure connection..." -Level "INFO"
+                $azureConnection = Connect-AzureWithMultipleStrategies -Configuration $Configuration -Result $Result
+                if ($azureConnection) {
+                    Write-ModuleLog -ModuleName "AzureDiscovery" -Message "Azure authentication successful" -Level "SUCCESS"
+                } else {
+                    $Result.AddWarning("Could not establish Azure connection, will use Graph API where possible", @{Error="All authentication strategies failed"})
+                }
             }
         }
         

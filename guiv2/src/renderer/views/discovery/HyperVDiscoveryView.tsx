@@ -14,6 +14,7 @@ import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 const HyperVDiscoveryView: React.FC = () => {
   const {
@@ -308,6 +309,14 @@ const HyperVDiscoveryView: React.FC = () => {
             />
           </div>
         )}
+      </div>
+
+      <div className="px-6 pb-6">
+        <ViewDiscoveredDataButton
+          moduleId="hyper-v"
+          recordCount={stats?.totalVMs || 0}
+          disabled={!result || (stats?.totalVMs || 0) === 0}
+        />
       </div>
 
       <PowerShellExecutionDialog

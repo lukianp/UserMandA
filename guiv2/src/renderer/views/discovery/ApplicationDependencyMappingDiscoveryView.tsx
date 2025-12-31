@@ -25,6 +25,7 @@ import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 const ApplicationDependencyMappingDiscoveryView: React.FC = () => {
   const {
@@ -421,6 +422,14 @@ const ApplicationDependencyMappingDiscoveryView: React.FC = () => {
             </div>
           </>
         )}
+      </div>
+
+      <div className="px-6 pb-6">
+        <ViewDiscoveredDataButton
+          moduleId="applications"
+          recordCount={stats?.totalApplications || 0}
+          disabled={!result || (stats?.totalApplications || 0) === 0}
+        />
       </div>
 
       {/* PowerShell Execution Dialog */}

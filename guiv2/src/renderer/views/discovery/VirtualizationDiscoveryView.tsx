@@ -4,6 +4,7 @@ import { Server, Play, AlertCircle, CheckCircle2, HardDrive } from 'lucide-react
 import { useVirtualizationDiscoveryLogic } from '../../hooks/useVirtualizationDiscoveryLogic';
 import { Button } from '../../components/atoms/Button';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 /**
  * Virtualization Discovery View Component
@@ -165,6 +166,14 @@ const VirtualizationDiscoveryView: FC = () => {
           </div>
         </div>
       )}
+
+      <div className="px-6 pb-6">
+        <ViewDiscoveredDataButton
+          moduleId="virtualization"
+          recordCount={result?.totalVMs || 0}
+          disabled={!result || (result?.totalVMs || 0) === 0}
+        />
+      </div>
 
       {/* PowerShell Execution Dialog */}
       <PowerShellExecutionDialog

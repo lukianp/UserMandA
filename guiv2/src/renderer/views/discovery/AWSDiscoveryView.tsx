@@ -22,6 +22,7 @@ import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 const AWSDiscoveryView: React.FC = () => {
   const {
@@ -470,6 +471,13 @@ const AWSDiscoveryView: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* View Discovered Data Button */}
+            <ViewDiscoveredDataButton
+              moduleId="aws"
+              recordCount={stats?.totalResources || 0}
+              disabled={!result || exportPayload.length === 0}
+            />
           </div>
         )}
 

@@ -18,6 +18,7 @@ import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 const WebServerConfigurationDiscoveryView: React.FC = () => {
   const {
@@ -535,6 +536,14 @@ const WebServerConfigurationDiscoveryView: React.FC = () => {
             />
           )}
         </div>
+      </div>
+
+      <div className="px-6 pb-6">
+        <ViewDiscoveredDataButton
+          moduleId="web-server"
+          recordCount={stats?.totalServers || 0}
+          disabled={!stats || (stats?.totalServers || 0) === 0}
+        />
       </div>
     </div>
   );

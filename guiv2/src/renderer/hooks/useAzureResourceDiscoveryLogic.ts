@@ -316,9 +316,13 @@ export const useAzureResourceDiscoveryLogic = () => {
 
     // Flatten all resource arrays into one - PowerShell returns these categories
     const allResources: any[] = [];
-    // Cast to any to handle PowerShell PascalCase property names
-    const data = results.data as any;
-    console.log('[AzureResourceDiscoveryHook] filteredData - data keys:', Object.keys(data));
+    // Data structure: results.data -> execution wrapper -> .data -> PS result -> .Data -> actual resources
+    const rawData = results.data as any;
+    const psResult = rawData.data || rawData; // PowerShell result wrapper (has Success, ModuleName, Data, etc.)
+    const data = psResult.Data || psResult; // Actual resource data (has Subscriptions, ResourceGroups, etc.)
+    console.log('[AzureResourceDiscoveryHook] filteredData - rawData keys:', Object.keys(rawData));
+    console.log('[AzureResourceDiscoveryHook] filteredData - psResult keys:', Object.keys(psResult || {}));
+    console.log('[AzureResourceDiscoveryHook] filteredData - data keys:', Object.keys(data || {}));
 
     // Map PowerShell output fields to resource types (PascalCase from PowerShell)
     if (data.Subscriptions?.length) allResources.push(...data.Subscriptions.map((r: any) => ({ ...r, resourceType: 'Subscription' })));
@@ -371,8 +375,10 @@ export const useAzureResourceDiscoveryLogic = () => {
   const stats = useMemo(() => {
     if (!results?.data) return null;
 
-    // Cast to any to handle PowerShell PascalCase property names
-    const data = results.data as any;
+    // Data structure: results.data -> execution wrapper -> .data -> PS result -> .Data -> actual resources
+    const rawData = results.data as any;
+    const psResult = rawData.data || rawData; // PowerShell result wrapper
+    const data = psResult.Data || psResult; // Actual resource data
     const resourcesByType: Record<string, number> = {};
 
     // Count from PowerShell output (PascalCase) with camelCase fallback

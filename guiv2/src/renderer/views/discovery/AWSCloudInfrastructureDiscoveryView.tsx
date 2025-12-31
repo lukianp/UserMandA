@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import {
   Cloud, Server, Database, Settings, Download, Play, Square,
-  ChevronDown, ChevronUp, AlertTriangle, DollarSign, Shield
+  ChevronDown, ChevronUp, AlertTriangle, DollarSign, Shield, FileText
 } from 'lucide-react';
 
 import { useAWSDiscoveryLogic } from '../../hooks/useAWSDiscoveryLogic';
@@ -18,6 +18,7 @@ import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import ProgressBar from '../../components/molecules/ProgressBar';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 /**
  * AWS Cloud Infrastructure Discovery View Component
@@ -49,7 +50,7 @@ const AWSCloudInfrastructureDiscoveryView = () => {
   } = useAWSDiscoveryLogic();
 
   // Local UI state
-  const [showConfig, setShowConfig] = useState(true);
+  const [showConfig, setShowConfig] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   /**
@@ -119,129 +120,124 @@ const AWSCloudInfrastructureDiscoveryView = () => {
       )}
 
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Cloud className="w-8 h-8 text-orange-600 dark:text-orange-400" />
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                AWS Cloud Infrastructure Discovery
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Discover cloud infrastructure to assess workload portability and plan hybrid cloud optimization
-              </p>
-            </div>
+      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg">
+            <Cloud size={28} />
           </div>
-
-          <div className="flex items-center gap-2">
-            {result && (() => {
-              const exportPayload = Array.isArray((result as any)?.data)
-                ? (result as any).data
-                : Array.isArray(result as any)
-                ? (result as any)
-                : [];
-              return (
-                <>
-                 <Button
-                   variant="secondary"
-                   icon={<Download />}
-                   onClick={() => exportToCSV()}
-                   disabled={isDiscovering || exportPayload.length === 0}
-                   data-cy="export-csv-btn" data-testid="export-csv-btn"
-                 >
-                   Export CSV
-                 </Button>
-                 <Button
-                   variant="secondary"
-                   icon={<Download />}
-                   onClick={() => exportToExcel()}
-                   disabled={isDiscovering || exportPayload.length === 0}
-                   data-cy="export-excel-btn" data-testid="export-excel-btn"
-                 >
-                   Export Excel
-                 </Button>
-                </>
-              );
-            })()}
-            {!isDiscovering ? (
-              <Button
-                variant="primary"
-                icon={<Play />}
-                onClick={handleStartDiscovery}
-                data-cy="start-discovery-btn" data-testid="start-discovery-btn"
-              >
-                Start Discovery
-              </Button>
-            ) : (
-              <Button
-                variant="danger"
-                icon={<Square />}
-                onClick={cancelDiscovery}
-                data-cy="cancel-discovery-btn" data-testid="cancel-discovery-btn"
-              >
-                Cancel
-              </Button>
-            )}
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              AWS Cloud Infrastructure Discovery
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Discover cloud infrastructure to assess workload portability and plan hybrid cloud optimization
+            </p>
           </div>
         </div>
-
-        {/* Progress Bar */}
-        {isDiscovering && progress > 0 && (
-          <div className="px-4 pb-4">
-            <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-orange-900 dark:text-orange-100">
-                  Discovery in progress...
-                </span>
-                <span className="text-sm text-orange-700 dark:text-orange-300">
-                  {progress}% complete
-                </span>
-              </div>
-              <ProgressBar value={progress} max={100} />
-            </div>
-          </div>
-        )}
-
-        {/* Error Display */}
-        {(error || validationErrors.length > 0) && (
-          <div className="px-4 pb-4">
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">
-                    {error ? 'Discovery Error' : 'Configuration Errors'}
-                  </h3>
-                  {error && <p className="text-sm text-red-700 dark:text-red-300">{error}</p>}
-                  {validationErrors.length > 0 && (
-                    <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
-                      {validationErrors.map((err, index) => (
-                        <li key={index}>{err}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {result && (() => {
+            const exportPayload = Array.isArray((result as any)?.data)
+              ? (result as any).data
+              : Array.isArray(result as any)
+              ? (result as any)
+              : [];
+            return (
+              <>
+                <Button
+                  variant="secondary"
+                  icon={<Download className="w-4 h-4" />}
+                  onClick={() => exportToCSV()}
+                  disabled={isDiscovering || exportPayload.length === 0}
+                  data-cy="export-csv-btn" data-testid="export-csv-btn"
+                >
+                  Export CSV
+                </Button>
+                <Button
+                  variant="secondary"
+                  icon={<Download className="w-4 h-4" />}
+                  onClick={() => exportToExcel()}
+                  disabled={isDiscovering || exportPayload.length === 0}
+                  data-cy="export-excel-btn" data-testid="export-excel-btn"
+                >
+                  Export Excel
+                </Button>
+              </>
+            );
+          })()}
+          <Button
+            variant="primary"
+            onClick={handleStartDiscovery}
+            disabled={isDiscovering}
+            data-cy="start-discovery-btn" data-testid="start-discovery-btn"
+          >
+            {isDiscovering ? 'Discovering...' : 'Start Discovery'}
+          </Button>
+        </div>
       </div>
 
+      {/* Progress Bar */}
+      {isDiscovering && progress > 0 && (
+        <div className="mx-6 mt-4">
+          <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                Discovery in progress...
+              </span>
+              <span className="text-sm text-orange-700 dark:text-orange-300">
+                {progress}% complete
+              </span>
+            </div>
+            <ProgressBar value={progress} max={100} />
+          </div>
+        </div>
+      )}
+
+      {/* Error Display */}
+      {(error || validationErrors.length > 0) && (
+        <div className="mx-6 mt-4">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">
+                  {error ? 'Discovery Error' : 'Configuration Errors'}
+                </h3>
+                {error && <p className="text-sm text-red-700 dark:text-red-300">{error}</p>}
+                {validationErrors.length > 0 && (
+                  <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
+                    {validationErrors.map((err, index) => (
+                      <li key={index}>{err}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Configuration Panel */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="mx-6 mt-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setShowConfig(!showConfig)}
-          className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
           data-cy="config-toggle" data-testid="config-toggle"
         >
-          <div className="flex items-center gap-2">
-            <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            <span className="font-medium text-gray-900 dark:text-gray-100">Configuration</span>
+          <div className="flex items-center gap-3">
+            <span className="font-semibold text-gray-900 dark:text-gray-100">Discovery Configuration</span>
+            {config.accessKeyId && (
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                • Access Key: <span className="font-medium text-orange-600 dark:text-orange-400">{config.accessKeyId.substring(0, 8)}...</span>
+                {config.awsRegions && config.awsRegions.length > 0 && (
+                  <span className="ml-2">• {config.awsRegions.length} region(s)</span>
+                )}
+              </span>
+            )}
           </div>
           {showConfig ? (
-            <ChevronUp className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <ChevronUp className="w-5 h-5 text-gray-500" />
           ) : (
-            <ChevronDown className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <ChevronDown className="w-5 h-5 text-gray-500" />
           )}
         </button>
 
@@ -356,90 +352,95 @@ const AWSCloudInfrastructureDiscoveryView = () => {
         )}
       </div>
 
-      {/* Statistics Dashboard */}
-      {stats && (
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-          <div className="grid grid-cols-6 gap-4">
-            <StatCard
-              value={stats?.totalResources ?? 0}
-              label="Total Resources"
-              icon={<Cloud className="w-5 h-5" />}
-              color="orange"
-            />
-            <StatCard
-              value={stats?.ec2Count ?? 0}
-              label="EC2 Instances"
-              icon={<Server className="w-5 h-5" />}
-              color="blue"
-            />
-            <StatCard
-              value={stats?.s3Count ?? 0}
-              label="S3 Buckets"
-              icon={<Database className="w-5 h-5" />}
-              color="green"
-            />
-            <StatCard
-              value={stats?.rdsCount ?? 0}
-              label="RDS Databases"
-              icon={<Database className="w-5 h-5" />}
-              color="purple"
-            />
-            <StatCard
-              value={`$${typeof stats?.estimatedCost === 'number' ? stats.estimatedCost.toFixed(2) : '0'}`}
-              label="Est. Monthly Cost"
-              icon={<DollarSign className="w-5 h-5" />}
-              color="gray"
-            />
-            <StatCard
-              value={stats?.securityRisks ?? 0}
-              label="Security Risks"
-              icon={<Shield className="w-5 h-5" />}
-              color={(stats?.securityRisks ?? 0) > 0 ? "red" : "green"}
-            />
+      {/* Statistics Cards */}
+      <div className="mx-6 mt-4 grid grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 text-white shadow-lg">
+          <div className="flex items-center gap-3">
+            <Cloud className="w-8 h-8 opacity-80" />
+            <div>
+              <p className="text-2xl font-bold">{stats?.totalResources ?? 0}</p>
+              <p className="text-sm opacity-90">Total Resources</p>
+            </div>
           </div>
         </div>
-      )}
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white shadow-lg">
+          <div className="flex items-center gap-3">
+            <Server className="w-8 h-8 opacity-80" />
+            <div>
+              <p className="text-2xl font-bold">{stats?.ec2Count ?? 0}</p>
+              <p className="text-sm opacity-90">EC2 Instances</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white shadow-lg">
+          <div className="flex items-center gap-3">
+            <Database className="w-8 h-8 opacity-80" />
+            <div>
+              <p className="text-2xl font-bold">{stats?.s3Count ?? 0}</p>
+              <p className="text-sm opacity-90">S3 Buckets</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white shadow-lg">
+          <div className="flex items-center gap-3">
+            <Database className="w-8 h-8 opacity-80" />
+            <div>
+              <p className="text-2xl font-bold">{stats?.rdsCount ?? 0}</p>
+              <p className="text-sm opacity-90">RDS Databases</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Tab Navigation */}
-      {result && (
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-1 px-4">
-            <TabButton
-              active={activeTab === 'overview'}
-              onClick={() => setActiveTab('overview')}
-              label="Overview"
-              icon={<Cloud className="w-4 h-4" />}
-              data-cy="tab-overview" data-testid="tab-overview"
-            />
-            <TabButton
-              active={activeTab === 'ec2'}
-              onClick={() => setActiveTab('ec2')}
-              label={`EC2 (${stats?.ec2Count || 0})`}
-              icon={<Server className="w-4 h-4" />}
-              data-cy="tab-ec2" data-testid="tab-ec2"
-            />
-            <TabButton
-              active={activeTab === 's3'}
-              onClick={() => setActiveTab('s3')}
-              label={`S3 (${stats?.s3Count || 0})`}
-              icon={<Database className="w-4 h-4" />}
-              data-cy="tab-s3" data-testid="tab-s3"
-            />
-            <TabButton
-              active={activeTab === 'rds'}
-              onClick={() => setActiveTab('rds')}
-              label={`RDS (${stats?.rdsCount || 0})`}
-              icon={<Database className="w-4 h-4" />}
-              data-cy="tab-rds" data-testid="tab-rds"
-            />
-          </div>
+      <div className="mx-6 mt-4 bg-white dark:bg-gray-800 rounded-t-lg border border-b-0 border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-1 px-4">
+          <TabButton
+            active={activeTab === 'overview'}
+            onClick={() => setActiveTab('overview')}
+            label="Overview"
+            icon={<Cloud className="w-4 h-4" />}
+            data-cy="tab-overview" data-testid="tab-overview"
+          />
+          {result && (
+            <>
+              <TabButton
+                active={activeTab === 'ec2'}
+                onClick={() => setActiveTab('ec2')}
+                label={`EC2 (${stats?.ec2Count || 0})`}
+                icon={<Server className="w-4 h-4" />}
+                data-cy="tab-ec2" data-testid="tab-ec2"
+              />
+              <TabButton
+                active={activeTab === 's3'}
+                onClick={() => setActiveTab('s3')}
+                label={`S3 (${stats?.s3Count || 0})`}
+                icon={<Database className="w-4 h-4" />}
+                data-cy="tab-s3" data-testid="tab-s3"
+              />
+              <TabButton
+                active={activeTab === 'rds'}
+                onClick={() => setActiveTab('rds')}
+                label={`RDS (${stats?.rdsCount || 0})`}
+                icon={<Database className="w-4 h-4" />}
+                data-cy="tab-rds" data-testid="tab-rds"
+              />
+            </>
+          )}
+          <TabButton
+            active={activeTab === 'logs'}
+            onClick={() => setActiveTab('logs' as any)}
+            label="Execution Log"
+            icon={<FileText className="w-4 h-4" />}
+            data-cy="tab-logs" data-testid="tab-logs"
+          />
         </div>
-      )}
+      </div>
 
       {/* Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {result && activeTab !== 'overview' && (
-          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+      <div className="mx-6 flex-1 flex flex-col overflow-hidden bg-white dark:bg-gray-800 rounded-b-lg border border-t-0 border-gray-200 dark:border-gray-700 mb-6">
+        {result && activeTab !== 'overview' && activeTab !== 'logs' && (
+          <div className="border-b border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center justify-between">
               <div className="flex-1 max-w-md">
                 <Input
@@ -453,18 +454,71 @@ const AWSCloudInfrastructureDiscoveryView = () => {
           </div>
         )}
 
-        <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
-          {result ? (
+        <div className="flex-1 overflow-hidden">
+          {activeTab === 'logs' ? (
+            /* Execution Log Tab */
+            <div className="h-full flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {logs.length} log entries
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={clearLogs}
+                  disabled={logs.length === 0}
+                >
+                  Clear Logs
+                </Button>
+              </div>
+              <div className="flex-1 overflow-auto p-4 bg-gray-900 font-mono text-sm">
+                {logs.length === 0 ? (
+                  <p className="text-gray-500">No execution logs yet. Start a discovery to see logs.</p>
+                ) : (
+                  logs.map((log, index) => (
+                    <div
+                      key={index}
+                      className={`py-1 ${
+                        log.type === 'error' ? 'text-red-400' :
+                        log.type === 'warning' ? 'text-yellow-400' :
+                        log.type === 'success' ? 'text-green-400' :
+                        'text-gray-300'
+                      }`}
+                    >
+                      <span className="text-gray-500">[{new Date(log.timestamp).toLocaleTimeString()}]</span>{' '}
+                      {log.message}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : result ? (
             activeTab === 'overview' ? (
-              <OverviewTab result={result} />
+              <div className="h-full flex flex-col overflow-auto">
+                <OverviewTab result={result} />
+                <div className="p-4">
+                  <ViewDiscoveredDataButton
+                    moduleId="aws"
+                    recordCount={stats?.totalResources || 0}
+                    disabled={!result}
+                  />
+                </div>
+              </div>
             ) : (
-              <div className="h-full p-4">
-                <VirtualizedDataGrid
-                  data={filteredData}
-                  columns={columns}
-                  loading={isDiscovering}
-                  enableColumnReorder
-                  data-cy={`aws-${activeTab}-grid`}
+              <div className="h-full p-4 flex flex-col">
+                <div className="flex-1">
+                  <VirtualizedDataGrid
+                    data={filteredData}
+                    columns={columns}
+                    loading={isDiscovering}
+                    enableColumnReorder
+                    data-cy={`aws-${activeTab}-grid`}
+                  />
+                </div>
+                <ViewDiscoveredDataButton
+                  moduleId="aws"
+                  recordCount={stats?.totalResources || 0}
+                  disabled={!result}
                 />
               </div>
             )
@@ -495,8 +549,8 @@ const AWSCloudInfrastructureDiscoveryView = () => {
       <PowerShellExecutionDialog
         isOpen={showExecutionDialog}
         onClose={() => !isDiscovering && setShowExecutionDialog(false)}
-        scriptName="AWS Discovery"
-        scriptDescription="Discovering AWS cloud infrastructure resources"
+        scriptName="AWS Cloud Infrastructure Discovery"
+        scriptDescription="Discovering EC2 instances, S3 buckets, RDS databases, and Lambda functions"
         logs={logs}
         isRunning={isDiscovering}
         isCancelling={isCancelling}

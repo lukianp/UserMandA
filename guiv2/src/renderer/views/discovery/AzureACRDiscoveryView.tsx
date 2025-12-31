@@ -1,7 +1,8 @@
 import { FC } from 'react';
-import { Package, Play, AlertCircle, CheckCircle2, Lock, Globe } from 'lucide-react';
+import { Package, Play, AlertCircle, Lock, Globe, Eye } from 'lucide-react';
 
 import { useAzureACRDiscoveryLogic } from '../../hooks/useAzureACRDiscoveryLogic';
+import { useAzureACRDiscoveredLogic } from '../../hooks/useAzureACRDiscoveredLogic';
 import { Button } from '../../components/atoms/Button';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
@@ -27,6 +28,9 @@ const AzureACRDiscoveryView: FC = () => {
     clearLogs,
   } = useAzureACRDiscoveryLogic();
 
+  // Load discovered data for viewing existing results
+  const { stats: discoveredStats, registries: discoveredRegistries } = useAzureACRDiscoveredLogic();
+
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-testid="azure-acr-discovery-view">
       {/* Header */}
@@ -39,6 +43,12 @@ const AzureACRDiscoveryView: FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {(discoveredStats || discoveredRegistries.length > 0) && (
+            <ViewDiscoveredDataButton
+              moduleId="azure-acr"
+              recordCount={discoveredStats?.totalRegistries || discoveredRegistries.length}
+            />
+          )}
           <Button
             onClick={startDiscovery}
             disabled={isDiscovering}

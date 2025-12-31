@@ -9,6 +9,7 @@ import { useWebServerConfigDiscoveryLogic, type TabType } from '../../hooks/useW
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 const WebServerConfigDiscoveryView: React.FC = () => {
   console.log('[WebServerConfigDiscoveryView] Component rendering');
@@ -471,6 +472,14 @@ const WebServerConfigDiscoveryView: React.FC = () => {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="px-6 pb-6">
+        <ViewDiscoveredDataButton
+          moduleId="web-server"
+          recordCount={stats?.totalIISSites || 0}
+          disabled={!result || filteredData.length === 0}
+        />
       </div>
 
       {/* PowerShell Execution Dialog */}

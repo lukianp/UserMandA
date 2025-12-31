@@ -30,6 +30,7 @@ import Badge from '../../components/atoms/Badge';
 import ProgressBar from '../../components/molecules/ProgressBar';
 import Checkbox from '../../components/atoms/Checkbox';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 /**
  * Application Discovery View Component
@@ -380,6 +381,14 @@ const ApplicationDiscoveryView: React.FC = () => {
           </div>
         </div>
       )}
+
+      <div className="px-6 pb-6">
+        <ViewDiscoveredDataButton
+          moduleId="applications"
+          recordCount={currentResult?.stats?.totalApplications || 0}
+          disabled={!currentResult || (currentResult?.applications?.length || 0) === 0}
+        />
+      </div>
 
       {/* PowerShell Execution Dialog */}
       <PowerShellExecutionDialog

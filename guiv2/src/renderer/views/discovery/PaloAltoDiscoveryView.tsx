@@ -17,6 +17,7 @@ import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 const PaloAltoDiscoveryView: React.FC = () => {
   const {
@@ -309,6 +310,14 @@ const PaloAltoDiscoveryView: React.FC = () => {
             </div>
           </>
         )}
+      </div>
+
+      <div className="px-6 pb-6">
+        <ViewDiscoveredDataButton
+          moduleId="palo-alto"
+          recordCount={stats?.totalRules || 0}
+          disabled={!result || (stats?.totalRules || 0) === 0}
+        />
       </div>
 
       {/* PowerShell Execution Dialog */}

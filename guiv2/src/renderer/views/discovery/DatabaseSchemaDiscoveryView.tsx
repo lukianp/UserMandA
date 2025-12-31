@@ -25,6 +25,7 @@ import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 const DatabaseSchemaDiscoveryView: React.FC = () => {
   const {
@@ -414,6 +415,14 @@ const DatabaseSchemaDiscoveryView: React.FC = () => {
             </div>
           </>
         )}
+      </div>
+
+      <div className="px-6 pb-6">
+        <ViewDiscoveredDataButton
+          moduleId="database-schema"
+          recordCount={stats?.totalTables || 0}
+          disabled={!result || (stats?.totalDatabases || 0) === 0}
+        />
       </div>
 
       {/* PowerShell Execution Dialog */}

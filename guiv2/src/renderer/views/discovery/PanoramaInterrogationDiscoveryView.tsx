@@ -25,6 +25,7 @@ import { Input } from '../../components/atoms/Input';
 import Checkbox from '../../components/atoms/Checkbox';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
 import PowerShellExecutionDialog from '../../components/molecules/PowerShellExecutionDialog';
+import { ViewDiscoveredDataButton } from '../../components/molecules/ViewDiscoveredDataButton';
 
 const PanoramaInterrogationDiscoveryView: React.FC = () => {
   const {
@@ -443,6 +444,14 @@ const PanoramaInterrogationDiscoveryView: React.FC = () => {
             </div>
           </>
         )}
+      </div>
+
+      <div className="px-6 pb-6">
+        <ViewDiscoveredDataButton
+          moduleId="panorama-interrogation"
+          recordCount={stats?.totalSecurityPolicies || 0}
+          disabled={!result || (stats?.totalSecurityPolicies || 0) === 0}
+        />
       </div>
 
       {/* PowerShell Execution Dialog */}
