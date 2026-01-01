@@ -21,9 +21,19 @@ import {
   Database,
   Inbox,
   Send,
+  Globe,
+  UserCheck,
+  Archive,
+  Forward,
+  Lock,
+  HardDrive,
+  Building2,
+  CheckCircle2,
+  FileText,
 } from 'lucide-react';
 
 import { useExchangeDiscoveryLogic } from '../../hooks/useExchangeDiscoveryLogic';
+import { useExchangeDiscoveredLogic } from '../../hooks/useExchangeDiscoveredLogic';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { SearchBar } from '../../components/molecules/SearchBar';
 import { Button } from '../../components/atoms/Button';
@@ -68,6 +78,26 @@ const ExchangeDiscoveryView: React.FC = () => {
     setSelectedTab,
     statistics,
   } = useExchangeDiscoveryLogic();
+
+  // Use discovered logic for rich CSV-based results
+  const {
+    activeTab: discoveredTab,
+    setActiveTab: setDiscoveredTab,
+    searchTerm: discoveredSearchTerm,
+    setSearchTerm: setDiscoveredSearchTerm,
+    loading: discoveredLoading,
+    error: discoveredError,
+    statistics: discoveredStatistics,
+    filteredMailboxes,
+    filteredGroups,
+    filteredContacts,
+    filteredDomains,
+    mailboxColumns: discoveredMailboxColumns,
+    groupColumns: discoveredGroupColumns,
+    contactColumns: discoveredContactColumns,
+    domainColumns: discoveredDomainColumns,
+    exportToCSV,
+  } = useExchangeDiscoveredLogic();
 
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="exchange-discovery-view" data-testid="exchange-discovery-view">
@@ -226,38 +256,87 @@ const ExchangeDiscoveryView: React.FC = () => {
       </div>
 
       {/* Results Section */}
-      {result && (
+      {result && !discoveredLoading && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Summary Stats */}
-          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard
-                icon={<Inbox className="w-5 h-5" />}
+          {/* Rich Statistics Cards (3 rows × 4 columns = 12 cards) */}
+          <div className="bg-gray-50 dark:bg-gray-900 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Row 1: Primary metrics */}
+              <RichStatCard
+                icon={Mail}
                 label="Total Mailboxes"
-                value={(result?.statistics?.totalMailboxes ?? 0)}
-                subValue={`Avg size: ${formatBytes((result?.statistics?.averageMailboxSize ?? 0))}`}
-                color="green"
+                value={discoveredStatistics.totalMailboxes}
+                gradient="from-blue-500 to-blue-600"
               />
-              <StatCard
-                icon={<Database className="w-5 h-5" />}
-                label="Total Storage"
-                value={formatBytes((result?.statistics?.totalMailboxSize ?? 0))}
-                subValue={`${(result?.statistics?.totalMailboxes ?? 0).toLocaleString()} mailboxes`}
-                color="blue"
-              />
-              <StatCard
-                icon={<Users className="w-5 h-5" />}
+              <RichStatCard
+                icon={Users}
                 label="Distribution Groups"
-                value={(result?.statistics?.totalDistributionGroups ?? 0)}
-                subValue={`${(result?.statistics?.securityGroups ?? 0)} security`}
-                color="purple"
+                value={discoveredStatistics.totalGroups}
+                gradient="from-green-500 to-green-600"
               />
-              <StatCard
-                icon={<Shield className="w-5 h-5" />}
-                label="Transport Rules"
-                value={(result?.statistics?.totalTransportRules ?? 0)}
-                subValue={`${(result?.statistics?.enabledRules ?? 0)} enabled`}
-                color="orange"
+              <RichStatCard
+                icon={Globe}
+                label="Accepted Domains"
+                value={discoveredStatistics.totalDomains}
+                gradient="from-purple-500 to-purple-600"
+              />
+              <RichStatCard
+                icon={UserCheck}
+                label="Mail Contacts"
+                value={discoveredStatistics.totalContacts}
+                gradient="from-yellow-500 to-yellow-600"
+              />
+
+              {/* Row 2: Mailbox details */}
+              <RichStatCard
+                icon={CheckCircle2}
+                label="Active Mailboxes"
+                value={discoveredStatistics.activeMailboxes}
+                gradient="from-indigo-500 to-indigo-600"
+              />
+              <RichStatCard
+                icon={Archive}
+                label="With Archive"
+                value={discoveredStatistics.mailboxesWithArchive}
+                gradient="from-cyan-500 to-cyan-600"
+              />
+              <RichStatCard
+                icon={HardDrive}
+                label="Total Size (MB)"
+                value={discoveredStatistics.totalMailboxSizeMB}
+                gradient="from-emerald-500 to-emerald-600"
+              />
+              <RichStatCard
+                icon={FileText}
+                label="Total Items"
+                value={discoveredStatistics.totalItems}
+                gradient="from-orange-500 to-orange-600"
+              />
+
+              {/* Row 3: Advanced metrics */}
+              <RichStatCard
+                icon={Forward}
+                label="With Forwarding"
+                value={discoveredStatistics.mailboxesWithForwarding}
+                gradient="from-rose-500 to-rose-600"
+              />
+              <RichStatCard
+                icon={Lock}
+                label="Litigation Hold"
+                value={discoveredStatistics.mailboxesWithLitigationHold}
+                gradient="from-violet-500 to-violet-600"
+              />
+              <RichStatCard
+                icon={Shield}
+                label="Delegated Access"
+                value={discoveredStatistics.mailboxesWithDelegatedAccess}
+                gradient="from-teal-500 to-teal-600"
+              />
+              <RichStatCard
+                icon={Building2}
+                label="M365 Groups"
+                value={discoveredStatistics.m365Groups}
+                gradient="from-pink-500 to-pink-600"
               />
             </div>
           </div>
@@ -266,51 +345,56 @@ const ExchangeDiscoveryView: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-1 px-4">
               <TabButton
-                active={selectedTab === 'overview'}
-                onClick={() => setSelectedTab('overview')}
+                active={discoveredTab === 'overview'}
+                onClick={() => setDiscoveredTab('overview')}
                 label="Overview"
+                icon={<FileText className="w-4 h-4" />}
+              />
+              <TabButton
+                active={discoveredTab === 'mailboxes'}
+                onClick={() => setDiscoveredTab('mailboxes')}
+                label={`Mailboxes (${discoveredStatistics.totalMailboxes})`}
                 icon={<Mail className="w-4 h-4" />}
               />
               <TabButton
-                active={selectedTab === 'mailboxes'}
-                onClick={() => setSelectedTab('mailboxes')}
-                label={`Mailboxes (${mailboxes?.length || 0})`}
-                icon={<Inbox className="w-4 h-4" />}
-              />
-              <TabButton
-                active={selectedTab === 'groups'}
-                onClick={() => setSelectedTab('groups')}
-                label={`Groups (${groups?.length || 0})`}
+                active={discoveredTab === 'groups'}
+                onClick={() => setDiscoveredTab('groups')}
+                label={`Groups (${discoveredStatistics.totalGroups})`}
                 icon={<Users className="w-4 h-4" />}
               />
               <TabButton
-                active={selectedTab === 'rules'}
-                onClick={() => setSelectedTab('rules')}
-                label={`Transport Rules (${rules?.length || 0})`}
-                icon={<Shield className="w-4 h-4" />}
+                active={discoveredTab === 'contacts'}
+                onClick={() => setDiscoveredTab('contacts')}
+                label={`Contacts (${discoveredStatistics.totalContacts})`}
+                icon={<UserCheck className="w-4 h-4" />}
+              />
+              <TabButton
+                active={discoveredTab === 'domains'}
+                onClick={() => setDiscoveredTab('domains')}
+                label={`Domains (${discoveredStatistics.totalDomains})`}
+                icon={<Globe className="w-4 h-4" />}
               />
             </div>
           </div>
 
           {/* Actions */}
-          {selectedTab !== 'overview' && (
+          {discoveredTab !== 'overview' && (
             <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  variant="secondary"
-                  icon={<RefreshCw />}
-                  onClick={startDiscovery}
-                  data-cy="refresh-btn" data-testid="refresh-btn"
-                >
-                  Refresh
-                </Button>
+              <div className="flex items-center justify-between gap-2">
+                <input
+                  type="text"
+                  value={discoveredSearchTerm}
+                  onChange={(e) => setDiscoveredSearchTerm(e.target.value)}
+                  placeholder="Search..."
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                />
                 <Button
                   variant="secondary"
                   icon={<Download />}
-                  onClick={() => exportData({ format: 'CSV', includeMailboxes: true, includeGroups: true, includeRules: true, includeConnectors: false, includePublicFolders: false, includeStatistics: true, splitByType: false })}
+                  onClick={exportToCSV}
                   data-cy="export-results-btn" data-testid="export-results-btn"
                 >
-                  Export
+                  Export CSV
                 </Button>
               </div>
             </div>
@@ -318,19 +402,29 @@ const ExchangeDiscoveryView: React.FC = () => {
 
           {/* Content Area */}
           <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
-            {selectedTab === 'overview' ? (
-              <OverviewTab result={result} />
+            {discoveredTab === 'overview' ? (
+              <DiscoveredOverviewTab statistics={discoveredStatistics} />
             ) : (
               <div className="h-full p-4">
-                <VirtualizedDataGrid
-                  data={(selectedTab === 'mailboxes' ? mailboxes : selectedTab === 'groups' ? groups : rules) as any[]}
-                  columns={selectedTab === 'mailboxes' ? mailboxColumns : selectedTab === 'groups' ? groupColumns : ruleColumns}
-                  loading={isDiscovering}
-                  enableExport
-                  enableColumnReorder
-                  enableFiltering
-                  data-cy={`exchange-${selectedTab}-grid`}
-                />
+                <div className="h-full bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                  <VirtualizedDataGrid
+                    data={
+                      discoveredTab === 'mailboxes' ? filteredMailboxes :
+                      discoveredTab === 'groups' ? filteredGroups :
+                      discoveredTab === 'contacts' ? filteredContacts :
+                      discoveredTab === 'domains' ? filteredDomains : []
+                    }
+                    columns={
+                      discoveredTab === 'mailboxes' ? discoveredMailboxColumns :
+                      discoveredTab === 'groups' ? discoveredGroupColumns :
+                      discoveredTab === 'contacts' ? discoveredContactColumns :
+                      discoveredTab === 'domains' ? discoveredDomainColumns : []
+                    }
+                    enableFiltering={true}
+                    enableColumnResize={true}
+                    data-cy={`exchange-${discoveredTab}-grid`}
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -557,6 +651,139 @@ const SummaryRow: React.FC<SummaryRowProps> = ({ label, value }) => (
     <span className="text-sm text-gray-900 dark:text-gray-100">{value}</span>
   </div>
 );
+
+/**
+ * Rich Stat Card Component (for discovered statistics)
+ */
+interface RichStatCardProps {
+  icon: React.ComponentType<any>;
+  label: string;
+  value: number;
+  gradient: string;
+}
+
+const RichStatCard: React.FC<RichStatCardProps> = ({ icon: Icon, label, value, gradient }) => {
+  return (
+    <div className={`bg-gradient-to-br ${gradient} rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm opacity-90">{label}</p>
+          <p className="text-3xl font-bold mt-2">{value.toLocaleString()}</p>
+        </div>
+        <Icon size={40} className="opacity-80" />
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Discovered Overview Tab Component
+ */
+interface DiscoveredOverviewTabProps {
+  statistics: any;
+}
+
+const DiscoveredOverviewTab: React.FC<DiscoveredOverviewTabProps> = ({ statistics }) => {
+  return (
+    <div className="p-6 overflow-y-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Mailbox Breakdown */}
+        <BreakdownPanel
+          title="Mailbox Breakdown"
+          icon={Mail}
+          items={[
+            { label: 'Active Mailboxes', value: statistics.activeMailboxes, total: statistics.totalMailboxes },
+            { label: 'Inactive Mailboxes', value: statistics.inactiveMailboxes, total: statistics.totalMailboxes },
+            { label: 'With Archive', value: statistics.mailboxesWithArchive, total: statistics.totalMailboxes },
+            { label: 'With Forwarding', value: statistics.mailboxesWithForwarding, total: statistics.totalMailboxes },
+            { label: 'Litigation Hold', value: statistics.mailboxesWithLitigationHold, total: statistics.totalMailboxes },
+          ]}
+        />
+
+        {/* Group Breakdown */}
+        <BreakdownPanel
+          title="Group Breakdown"
+          icon={Users}
+          items={[
+            { label: 'Microsoft 365 Groups', value: statistics.m365Groups, total: statistics.totalGroups },
+            { label: 'Distribution Lists', value: statistics.distributionLists, total: statistics.totalGroups },
+            { label: 'Security Enabled', value: statistics.securityGroups, total: statistics.totalGroups },
+            { label: 'Mail Enabled', value: statistics.mailEnabledGroups, total: statistics.totalGroups },
+            { label: 'Public Groups', value: statistics.publicGroups, total: statistics.totalGroups },
+          ]}
+        />
+
+        {/* Top Departments */}
+        <BreakdownPanel
+          title="Top Departments"
+          icon={Building2}
+          items={statistics.topDepartments?.slice(0, 10).map((dept: any) => ({
+            label: dept.name,
+            value: dept.count,
+            total: statistics.totalMailboxes,
+          })) || []}
+        />
+
+        {/* Top Groups by Members */}
+        <BreakdownPanel
+          title="Top Groups by Members"
+          icon={Users}
+          items={statistics.topGroupsByMembers?.slice(0, 10).map((group: any) => ({
+            label: group.name,
+            value: group.count,
+            total: statistics.totalGroupMembers,
+          })) || []}
+        />
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Breakdown Panel Component
+ */
+interface BreakdownPanelProps {
+  title: string;
+  icon: React.ComponentType<any>;
+  items: Array<{ label: string; value: number; total: number }>;
+}
+
+const BreakdownPanel: React.FC<BreakdownPanelProps> = ({ title, icon: Icon, items }) => {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400">
+          <Icon size={24} />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+      </div>
+
+      <div className="space-y-4">
+        {items.map((item, index) => (
+          <div key={index} className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-700 dark:text-gray-300">{item.label}</span>
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {item.value.toLocaleString()}
+                {item.total > 0 && (
+                  <span className="text-gray-500 dark:text-gray-400 ml-2">
+                    ({Math.round((item.value / item.total) * 100)}%)
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all"
+                style={{ width: `${item.total > 0 ? (item.value / item.total) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 /**
  * Format bytes utility

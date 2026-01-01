@@ -192,7 +192,10 @@
       "Bash(cmd /c \"dir /b C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\hooks\\\\useAzureKeyVaultDiscoveredLogic.ts 2>nul && echo File exists || echo File NOT found\")",
       "Bash(cmd /c \"dir /b C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\views\\\\discovered\\\\AzureKeyVaultDiscoveredView.tsx 2>nul && echo File exists || echo File NOT found\")",
       "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\AzureResourceDiscovery_KeyVaults.csv 2>nul && echo CSV exists || echo CSV NOT found\")",
-      "Bash(git -C D:ScriptsUserMandA log --oneline -3)"
+      "Bash(git -C D:ScriptsUserMandA log --oneline -3)",
+      "Bash(cmd /c \"robocopy D:\\\\Scripts\\\\UserMandA-1 C:\\\\enterprisediscovery /MIR /XD .git node_modules .webpack /XF *.log /NFL /NDL /NJH /NJS\")",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\EntraID*.csv 2>nul\")",
+      "Skill(buildviewsenrich)"
     ],
     "deny": [],
     "ask": []

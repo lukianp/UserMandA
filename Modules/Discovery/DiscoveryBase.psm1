@@ -145,6 +145,80 @@ function Start-DiscoveryModule {
                     }
                 }
 
+                # Handle Azure service authentication
+                if (-not $authSuccess -and $service -eq 'Azure') {
+                    # Fallback to direct service principal authentication
+                    $tenantId = $Configuration.TenantId
+                    $clientId = $Configuration.ClientId
+                    $clientSecret = $Configuration.ClientSecret
+                    $subscriptionId = $Configuration.SubscriptionId
+
+                    if ($tenantId -and $clientId -and $clientSecret) {
+                        Write-ModuleLog -ModuleName $ModuleName -Message "Attempting direct Azure service principal authentication..." -Level "INFO"
+
+                        # Import Az modules if needed
+                        if (-not (Get-Module -Name Az.Accounts)) {
+                            Import-Module Az.Accounts -ErrorAction Stop
+                        }
+
+                        try {
+                            $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+                            $credential = New-Object System.Management.Automation.PSCredential($clientId, $secureSecret)
+
+                            Connect-AzAccount -ServicePrincipal -Credential $credential -TenantId $tenantId -ErrorAction Stop | Out-Null
+
+                            if ($subscriptionId) {
+                                Set-AzContext -SubscriptionId $subscriptionId -ErrorAction Stop | Out-Null
+                            }
+
+                            $azContext = Get-AzContext
+                            if ($azContext) {
+                                $connections[$service] = @{
+                                    AuthType = 'ServicePrincipal'
+                                    TenantId = $azContext.Tenant.Id
+                                    SubscriptionId = $azContext.Subscription.Id
+                                    Account = $azContext.Account.Id
+                                    Connected = $true
+                                }
+                                $authSuccess = $true
+                                Write-ModuleLog -ModuleName $ModuleName -Message "Connected to Azure via service principal successfully" -Level "SUCCESS"
+                            }
+                        } catch {
+                            Write-ModuleLog -ModuleName $ModuleName -Message "Service principal auth failed: $($_.Exception.Message)" -Level "ERROR"
+                        }
+                    } else {
+                        Write-ModuleLog -ModuleName $ModuleName -Message "Direct Azure auth failed - missing credentials. TenantId: $($null -ne $tenantId), ClientId: $($null -ne $clientId), ClientSecret: $($null -ne $clientSecret)" -Level "WARN"
+                    }
+
+                    # Fallback to interactive authentication for Azure
+                    if (-not $authSuccess) {
+                        Write-ModuleLog -ModuleName $ModuleName -Message "Attempting interactive Azure authentication..." -Level "INFO"
+                        try {
+                            # Import Az modules if needed
+                            if (-not (Get-Module -Name Az.Accounts)) {
+                                Import-Module Az.Accounts -ErrorAction Stop
+                            }
+
+                            Connect-AzAccount -ErrorAction Stop | Out-Null
+
+                            $azContext = Get-AzContext
+                            if ($azContext) {
+                                $connections[$service] = @{
+                                    AuthType = 'Interactive'
+                                    TenantId = $azContext.Tenant.Id
+                                    SubscriptionId = $azContext.Subscription.Id
+                                    Account = $azContext.Account.Id
+                                    Connected = $true
+                                }
+                                $authSuccess = $true
+                                Write-ModuleLog -ModuleName $ModuleName -Message "Connected to Azure via interactive authentication successfully" -Level "SUCCESS"
+                            }
+                        } catch {
+                            Write-ModuleLog -ModuleName $ModuleName -Message "Interactive Azure auth failed: $($_.Exception.Message)" -Level "ERROR"
+                        }
+                    }
+                }
+
                 if (-not $authSuccess) {
                     throw "Failed to authenticate to $service service using session, direct, and interactive methods"
                 }

@@ -273,6 +273,14 @@ $script:AppConfig = @{
         "LicenseAssignment.Read.All" = "Read license assignments and usage"
     }
 
+    # OFFICE 365 EXCHANGE ONLINE API PERMISSIONS - REQUIRED FOR CERTIFICATE-BASED EXCHANGE AUTH
+    RequiredExchangePermissions = @{
+        ApiAppId = "00000002-0000-0ff1-ce00-000000000000"  # Office 365 Exchange Online
+        Permissions = @{
+            "dc50a0fb-09a3-484d-be87-e023b12c6440" = "Exchange.ManageAsApp - Full Exchange access for app-only auth"
+        }
+    }
+
     # AZURE RESOURCE MANAGER (ARM) API PERMISSIONS - CRITICAL FOR AZURE INFRASTRUCTURE DISCOVERY
     RequiredAzurePermissions = @{
         # Azure Resource Manager permissions for infrastructure discovery
@@ -288,6 +296,7 @@ $script:AppConfig = @{
 
     AzureADRoles = @(
         "Cloud Application Administrator"
+        "Exchange Administrator"
     )
     AzureRoles = @(
         "Reader"
@@ -1226,14 +1235,33 @@ function New-EnhancedAppRegistration {
         }
         
         Write-EnhancedLog "Successfully mapped $($foundPermissions.Count) of $totalPermissions permissions" -Level SUCCESS
-        
-        # Prepare required resource access
+
+        # Prepare Microsoft Graph resource access
         $requiredResourceAccess = @(
             @{
                 ResourceAppId = "00000003-0000-0000-c000-000000000000"  # Microsoft Graph
                 ResourceAccess = $resourceAccess
             }
         )
+
+        # Add Office 365 Exchange Online API permissions
+        Write-EnhancedLog "Configuring Office 365 Exchange Online API permissions..." -Level PROGRESS
+        $exchangeResourceAccess = @()
+        foreach ($permissionId in $script:AppConfig.RequiredExchangePermissions.Permissions.Keys) {
+            $exchangeResourceAccess += @{
+                Id = $permissionId
+                Type = "Role"
+            }
+            $permissionDesc = $script:AppConfig.RequiredExchangePermissions.Permissions[$permissionId]
+            Write-EnhancedLog "  Adding Exchange permission: $permissionDesc" -Level SUCCESS
+        }
+
+        $requiredResourceAccess += @{
+            ResourceAppId = $script:AppConfig.RequiredExchangePermissions.ApiAppId  # Office 365 Exchange Online
+            ResourceAccess = $exchangeResourceAccess
+        }
+
+        Write-EnhancedLog "Configured $($exchangeResourceAccess.Count) Exchange API permissions" -Level SUCCESS
         
         # Create the application with enhanced metadata
         Write-EnhancedLog "Creating application registration '$appName'..." -Level PROGRESS
@@ -1284,60 +1312,85 @@ function Grant-EnhancedAdminConsent {
         
         # Get service principals for permission granting
         $graphSp = Get-MgServicePrincipal -Filter "AppId eq '00000003-0000-0000-c000-000000000000'" -ErrorAction Stop
+        $exchangeSp = Get-MgServicePrincipal -Filter "AppId eq '00000002-0000-0ff1-ce00-000000000000'" -ErrorAction Stop
         $appSp = Get-MgServicePrincipal -Filter "AppId eq '$($AppRegistration.AppId)'" -ErrorAction Stop
-        
+
         Write-EnhancedLog "Granting admin consent for application permissions..." -Level PROGRESS
-        
+
         $grantedCount = 0
         $skippedCount = 0
         $failedCount = 0
-        $totalPermissions = $AppRegistration.RequiredResourceAccess[0].ResourceAccess.Count
-        
-        # Process each permission with enhanced progress tracking
+
+        # Calculate total permissions across all APIs
+        $totalPermissions = 0
+        foreach ($resourceReq in $AppRegistration.RequiredResourceAccess) {
+            $totalPermissions += $resourceReq.ResourceAccess.Count
+        }
+
+        # Process permissions for each API
         $currentPermission = 0
-        foreach ($resourceAccess in $AppRegistration.RequiredResourceAccess[0].ResourceAccess) {
-            $currentPermission++
-            
-            if ($resourceAccess.Type -eq "Role") {
-                $permissionId = $resourceAccess.Id
-                
-                # Find permission name for logging
-                $permissionName = $null
-                $matchingRole = $graphSp.AppRoles | Where-Object { $_.Id -eq $permissionId }
-                if ($matchingRole) {
-                    $permissionName = $matchingRole.Value
-                } else {
-                    $permissionName = "Unknown Permission"
-                }
-                
-                Write-Progress -Activity "Granting Permissions" -Status "Processing $permissionName - $currentPermission of $totalPermissions" -PercentComplete (($currentPermission / $totalPermissions) * 100)
-                
-                # Check if already assigned
-                $existingAssignment = Get-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $appSp.Id -ErrorAction SilentlyContinue | 
-                    Where-Object { $_.AppRoleId -eq $permissionId -and $_.ResourceId -eq $graphSp.Id }
-                
-                if ($existingAssignment) {
-                    Write-EnhancedLog "Already granted: $permissionName" -Level INFO
-                    $skippedCount++
-                    continue
-                }
-                
-                try {
-                    $assignmentParams = @{
-                        ServicePrincipalId = $appSp.Id
-                        PrincipalId = $appSp.Id
-                        ResourceId = $graphSp.Id
-                        AppRoleId = $permissionId
+        foreach ($resourceReq in $AppRegistration.RequiredResourceAccess) {
+            # Determine which service principal this is for
+            $targetSp = $null
+            $apiName = ""
+
+            if ($resourceReq.ResourceAppId -eq "00000003-0000-0000-c000-000000000000") {
+                $targetSp = $graphSp
+                $apiName = "Microsoft Graph"
+            } elseif ($resourceReq.ResourceAppId -eq "00000002-0000-0ff1-ce00-000000000000") {
+                $targetSp = $exchangeSp
+                $apiName = "Office 365 Exchange Online"
+            } else {
+                Write-EnhancedLog "Unknown API: $($resourceReq.ResourceAppId) - skipping" -Level WARN
+                continue
+            }
+
+            Write-EnhancedLog "Processing $apiName API permissions..." -Level PROGRESS
+
+            foreach ($resourceAccess in $resourceReq.ResourceAccess) {
+                $currentPermission++
+
+                if ($resourceAccess.Type -eq "Role") {
+                    $permissionId = $resourceAccess.Id
+
+                    # Find permission name for logging
+                    $permissionName = $null
+                    $matchingRole = $targetSp.AppRoles | Where-Object { $_.Id -eq $permissionId }
+                    if ($matchingRole) {
+                        $permissionName = $matchingRole.Value
+                    } else {
+                        $permissionName = "Unknown Permission"
                     }
-                    
-                    New-MgServicePrincipalAppRoleAssignment @assignmentParams -ErrorAction Stop | Out-Null
-                    
-                    Write-EnhancedLog "Granted: $permissionName" -Level SUCCESS
-                    $grantedCount++
-                    
-                } catch {
-                    Write-EnhancedLog "Failed to grant $permissionName`: $($_.Exception.Message)" -Level ERROR
-                    $failedCount++
+
+                    Write-Progress -Activity "Granting Permissions" -Status "Processing $apiName - $permissionName - $currentPermission of $totalPermissions" -PercentComplete (($currentPermission / $totalPermissions) * 100)
+
+                    # Check if already assigned
+                    $existingAssignment = Get-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $appSp.Id -ErrorAction SilentlyContinue |
+                        Where-Object { $_.AppRoleId -eq $permissionId -and $_.ResourceId -eq $targetSp.Id }
+
+                    if ($existingAssignment) {
+                        Write-EnhancedLog "Already granted ($apiName): $permissionName" -Level INFO
+                        $skippedCount++
+                        continue
+                    }
+
+                    try {
+                        $assignmentParams = @{
+                            ServicePrincipalId = $appSp.Id
+                            PrincipalId = $appSp.Id
+                            ResourceId = $targetSp.Id
+                            AppRoleId = $permissionId
+                        }
+
+                        New-MgServicePrincipalAppRoleAssignment @assignmentParams -ErrorAction Stop | Out-Null
+
+                        Write-EnhancedLog "Granted ($apiName): $permissionName" -Level SUCCESS
+                        $grantedCount++
+
+                    } catch {
+                        Write-EnhancedLog "Failed to grant $permissionName ($apiName): $($_.Exception.Message)" -Level ERROR
+                        $failedCount++
+                    }
                 }
             }
         }
@@ -1630,12 +1683,328 @@ function Set-EnhancedRoleAssignments {
     }
 }
 
+function Set-ExchangeRBACRoleAssignments {
+    <#
+    .SYNOPSIS
+        Assigns Exchange Online RBAC roles to service principal for app-only PowerShell access
+    .DESCRIPTION
+        Connects to Exchange Online using certificate authentication and assigns the service principal
+        to Exchange RBAC role groups. This is REQUIRED for app-only authentication to Exchange Online
+        PowerShell, separate from Entra ID "Exchange Administrator" role.
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [Microsoft.Graph.PowerShell.Models.MicrosoftGraphServicePrincipal]$ServicePrincipal,
+
+        [Parameter(Mandatory=$true)]
+        [string]$TenantId,
+
+        [Parameter(Mandatory=$true)]
+        [string]$ClientId,
+
+        [Parameter(Mandatory=$true)]
+        [string]$CertificateThumbprint,
+
+        [Parameter(Mandatory=$true)]
+        [string]$OrganizationDomain
+    )
+
+    Start-OperationTimer "ExchangeRBACAssignment"
+    Write-ProgressHeader "EXCHANGE RBAC ROLES" "Assigning Exchange Online role groups for PowerShell access"
+
+    $exchangeRoleResults = @{
+        Assigned = 0
+        Skipped = 0
+        Failed = 0
+        Roles = @()
+    }
+
+    try {
+        # Check if Exchange Online Management module is available
+        Write-EnhancedLog "Checking Exchange Online Management module..." -Level PROGRESS
+        $exoModule = Get-Module -ListAvailable -Name ExchangeOnlineManagement | Select-Object -First 1
+
+        if (-not $exoModule) {
+            Write-EnhancedLog "Exchange Online Management module not installed - skipping Exchange RBAC assignments" -Level WARN
+            Write-EnhancedLog "  To enable Exchange PowerShell access, install module: Install-Module ExchangeOnlineManagement" -Level WARN
+            Write-EnhancedLog "  Then manually run: New-ManagementRoleAssignment -App '$($ServicePrincipal.Id)' -Role 'Organization Management'" -Level WARN
+            Stop-OperationTimer "ExchangeRBACAssignment" $false
+            return $exchangeRoleResults
+        }
+
+        Write-EnhancedLog "Exchange Online Management module found: v$($exoModule.Version)" -Level SUCCESS
+
+        # Import the module
+        Import-Module ExchangeOnlineManagement -ErrorAction Stop
+        Write-EnhancedLog "Exchange Online Management module imported" -Level SUCCESS
+
+        # Connect to Exchange Online using certificate-based app-only authentication
+        Write-EnhancedLog "Connecting to Exchange Online with certificate authentication..." -Level PROGRESS
+        Write-EnhancedLog "  Organization: $OrganizationDomain" -Level INFO
+        Write-EnhancedLog "  App ID: $ClientId" -Level INFO
+        Write-EnhancedLog "  Certificate Thumbprint: $CertificateThumbprint" -Level INFO
+
+        try {
+            # Connect using certificate
+            Write-EnhancedLog "Establishing certificate-based connection..." -Level DEBUG
+
+            Connect-ExchangeOnline `
+                -CertificateThumbprint $CertificateThumbprint `
+                -AppId $ClientId `
+                -Organization $OrganizationDomain `
+                -ShowBanner:$false `
+                -ErrorAction Stop
+
+            Write-EnhancedLog "Successfully connected to Exchange Online" -Level SUCCESS
+
+            # Verify connection
+            $connection = Get-ConnectionInformation -ErrorAction SilentlyContinue
+            if ($connection -and $connection.State -eq 'Connected') {
+                Write-EnhancedLog "Connection verified: $($connection.TokenStatus)" -Level SUCCESS
+
+                # Enable organization customization if needed
+                Write-EnhancedLog "Checking organization customization status..." -Level PROGRESS
+                try {
+                    $orgConfig = Get-OrganizationConfig -ErrorAction Stop
+
+                    if (-not $orgConfig.IsDehydrated) {
+                        Write-EnhancedLog "Organization customization already enabled" -Level SUCCESS
+                    } else {
+                        Write-EnhancedLog "Organization customization required - enabling..." -Level WARN
+                        Write-EnhancedLog "  This is a one-time operation that may take several minutes" -Level INFO
+
+                        Enable-OrganizationCustomization -ErrorAction Stop
+
+                        Write-EnhancedLog "Organization customization enabled successfully" -Level SUCCESS
+                        Write-EnhancedLog "  Waiting 30 seconds for changes to propagate..." -Level INFO
+                        Start-Sleep -Seconds 30
+                    }
+                } catch {
+                    Write-EnhancedLog "Could not check/enable organization customization: $($_.Exception.Message)" -Level WARN
+                    Write-EnhancedLog "Proceeding with role assignment attempt..." -Level INFO
+                }
+            } else {
+                throw "Connection verification failed - not connected to Exchange Online"
+            }
+
+        } catch {
+            Write-EnhancedLog "Failed to connect to Exchange Online: $($_.Exception.Message)" -Level ERROR
+            Write-EnhancedLog "Certificate-based connection failed" -Level WARN
+
+            # Provide troubleshooting guidance
+            Write-EnhancedLog "" -Level WARN
+            Write-EnhancedLog "TROUBLESHOOTING:" -Level IMPORTANT
+            Write-EnhancedLog "  1. Verify certificate is uploaded to app registration" -Level IMPORTANT
+            Write-EnhancedLog "  2. Grant admin consent for Office 365 Exchange Online API permission" -Level IMPORTANT
+            Write-EnhancedLog "  3. Wait 5-10 minutes for Azure permission propagation" -Level IMPORTANT
+            Write-EnhancedLog "  4. Ensure app has 'Exchange.ManageAsApp' and 'full_access_as_app' permissions" -Level IMPORTANT
+            Write-EnhancedLog "" -Level WARN
+
+            $exchangeRoleResults.Failed++
+            Stop-OperationTimer "ExchangeRBACAssignment" $false
+            return $exchangeRoleResults
+        }
+
+        # Define management roles to assign (not role groups - service principals can't join role groups)
+            # These are the individual Exchange management roles required for full discovery
+            $rolesToAssign = @(
+                "Mail Recipients",                    # Core mailbox and recipient management
+                "Organization Configuration",         # Organization settings and configuration
+                "Organization Transport Settings",    # Mail flow and transport rules
+                "View-Only Recipients",              # Read-only access to recipients
+                "View-Only Configuration"            # Read-only access to configuration
+            )
+
+            Write-EnhancedLog "Assigning Exchange management roles for app-only authentication..." -Level PROGRESS
+            Write-EnhancedLog "  Service Principal Object ID: $($ServicePrincipal.Id)" -Level INFO
+            Write-EnhancedLog "  Roles to assign: $($rolesToAssign.Count)" -Level INFO
+
+            foreach ($roleName in $rolesToAssign) {
+                try {
+                    Write-EnhancedLog "Processing role: $roleName" -Level DEBUG
+
+                    # Check if assignment already exists using Object ID
+                    $existingAssignment = Get-ManagementRoleAssignment -RoleAssignee $ServicePrincipal.Id -ErrorAction SilentlyContinue |
+                        Where-Object { $_.Role -eq $roleName }
+
+                    if ($existingAssignment) {
+                        Write-EnhancedLog "Role already assigned: $roleName" -Level INFO
+                        Write-EnhancedLog "  Assignment Name: $($existingAssignment.Name)" -Level DEBUG
+                        $exchangeRoleResults.Skipped++
+                        $exchangeRoleResults.Roles += @{
+                            Role = $roleName
+                            Status = "Already Assigned"
+                            Assignment = $existingAssignment.Name
+                        }
+                    } else {
+                        # Assign the management role using -App parameter
+                        Write-EnhancedLog "Assigning role: $roleName..." -Level PROGRESS
+
+                        $assignment = New-ManagementRoleAssignment `
+                            -App $ServicePrincipal.Id `
+                            -Role $roleName `
+                            -ErrorAction Stop
+
+                        Write-EnhancedLog "Successfully assigned: $roleName" -Level SUCCESS
+                        Write-EnhancedLog "  Assignment Name: $($assignment.Name)" -Level DEBUG
+                        Write-EnhancedLog "  Role: $($assignment.Role)" -Level DEBUG
+
+                        $exchangeRoleResults.Assigned++
+                        $exchangeRoleResults.Roles += @{
+                            Role = $roleName
+                            Status = "Newly Assigned"
+                            Assignment = $assignment.Name
+                        }
+                    }
+
+                } catch {
+                    $errorMsg = $_.Exception.Message
+
+                    # Check if it's a "already exists" error
+                    if ($errorMsg -like "*already exists*") {
+                        Write-EnhancedLog "Role already assigned: $roleName" -Level INFO
+                        $exchangeRoleResults.Skipped++
+                        $exchangeRoleResults.Roles += @{
+                            Role = $roleName
+                            Status = "Already Assigned"
+                            Assignment = "N/A"
+                        }
+                    } else {
+                        Write-EnhancedLog "Failed to assign role '$roleName': $errorMsg" -Level ERROR
+                        $exchangeRoleResults.Failed++
+                        $exchangeRoleResults.Roles += @{
+                            Role = $roleName
+                            Status = "Failed"
+                            Error = $errorMsg
+                        }
+                    }
+                }
+            }
+
+            # Summary
+            Write-EnhancedLog "Exchange RBAC assignment summary:" -Level INFO
+            Write-EnhancedLog "  Assigned: $($exchangeRoleResults.Assigned)" -Level INFO
+            Write-EnhancedLog "  Skipped: $($exchangeRoleResults.Skipped)" -Level INFO
+            Write-EnhancedLog "  Failed: $($exchangeRoleResults.Failed)" -Level INFO
+
+            if ($exchangeRoleResults.Assigned -gt 0 -or $exchangeRoleResults.Skipped -gt 0) {
+                Write-EnhancedLog "Service principal can now use Exchange Online PowerShell with app-only authentication" -Level SUCCESS
+            }
+
+        Stop-OperationTimer "ExchangeRBACAssignment" ($exchangeRoleResults.Failed -eq 0)
+        return $exchangeRoleResults
+
+    } catch {
+        Write-EnhancedLog "Exchange RBAC assignment process failed: $($_.Exception.Message)" -Level ERROR
+        Stop-OperationTimer "ExchangeRBACAssignment" $false
+        return $exchangeRoleResults
+    }
+}
+
+function New-EnhancedCertificate {
+    <#
+    .SYNOPSIS
+        Creates and uploads a self-signed certificate for Exchange Online authentication
+    .DESCRIPTION
+        Generates a self-signed certificate for app-only authentication to Exchange Online.
+        Certificates are required for Exchange Online PowerShell service principal access.
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [Microsoft.Graph.PowerShell.Models.MicrosoftGraphApplication]$AppRegistration,
+
+        [Parameter(Mandatory=$false)]
+        [int]$ValidityYears = 2
+    )
+
+    Start-OperationTimer "CertificateCreation"
+    Write-ProgressHeader "CERTIFICATE GENERATION" "Creating certificate for Exchange Online authentication"
+
+    try {
+        $certSubject = "CN=$($script:AppConfig.DisplayName)"
+        $certExpiryDate = (Get-Date).AddYears($ValidityYears)
+
+        Write-EnhancedLog "Generating self-signed certificate..." -Level PROGRESS
+        Write-EnhancedLog "  Subject: $certSubject" -Level INFO
+        Write-EnhancedLog "  Validity: $ValidityYears years" -Level INFO
+        Write-EnhancedLog "  Expires: $($certExpiryDate.ToString('yyyy-MM-dd HH:mm:ss'))" -Level INFO
+
+        # Generate self-signed certificate
+        $cert = New-SelfSignedCertificate `
+            -Subject $certSubject `
+            -CertStoreLocation "Cert:\CurrentUser\My" `
+            -KeyExportPolicy Exportable `
+            -KeySpec Signature `
+            -KeyLength 2048 `
+            -KeyAlgorithm RSA `
+            -HashAlgorithm SHA256 `
+            -NotAfter $certExpiryDate `
+            -ErrorAction Stop
+
+        Write-EnhancedLog "Certificate created successfully" -Level SUCCESS
+        Write-EnhancedLog "  Thumbprint: $($cert.Thumbprint)" -Level INFO
+        Write-EnhancedLog "  Valid until: $($cert.NotAfter.ToString('yyyy-MM-dd HH:mm:ss'))" -Level INFO
+
+        # Export certificate to file for backup
+        $certExportPath = Join-Path $env:TEMP "$($script:AppConfig.DisplayName)_$($cert.Thumbprint).cer"
+
+        Write-EnhancedLog "Exporting certificate for backup..." -Level PROGRESS
+        Export-Certificate -Cert $cert -FilePath $certExportPath -ErrorAction Stop | Out-Null
+        Write-EnhancedLog "Certificate exported to: $certExportPath" -Level SUCCESS
+
+        # Upload certificate to app registration
+        Write-EnhancedLog "Uploading certificate to app registration..." -Level PROGRESS
+
+        # Read certificate file as base64
+        $certBytes = [System.IO.File]::ReadAllBytes($certExportPath)
+        $certBase64 = [System.Convert]::ToBase64String($certBytes)
+
+        # Create certificate credential
+        $certCredential = @{
+            Type = "AsymmetricX509Cert"
+            Usage = "Verify"
+            Key = $certBase64
+        }
+
+        # Upload to app registration
+        Update-MgApplication `
+            -ApplicationId $AppRegistration.Id `
+            -KeyCredentials @($certCredential) `
+            -ErrorAction Stop
+
+        Write-EnhancedLog "Certificate uploaded to app registration successfully" -Level SUCCESS
+
+        # Return certificate info
+        $certInfo = @{
+            Certificate = $cert
+            Thumbprint = $cert.Thumbprint
+            ExpiryDate = $cert.NotAfter
+            ExportPath = $certExportPath
+            Subject = $certSubject
+        }
+
+        Write-EnhancedLog "CERTIFICATE SECURITY NOTICE:" -Level CRITICAL
+        Write-EnhancedLog "  * Certificate stored in current user's certificate store" -Level IMPORTANT
+        Write-EnhancedLog "  * Certificate thumbprint will be saved in credentials file" -Level IMPORTANT
+        Write-EnhancedLog "  * Certificate expires in $(($certExpiryDate - (Get-Date)).Days) days" -Level IMPORTANT
+        Write-EnhancedLog "  * Backup certificate exported to: $certExportPath" -Level IMPORTANT
+
+        Stop-OperationTimer "CertificateCreation" $true
+        return $certInfo
+
+    } catch {
+        Write-EnhancedLog "Failed to create certificate: $($_.Exception.Message)" -Level ERROR
+        Stop-OperationTimer "CertificateCreation" $false
+        throw
+    }
+}
+
 function New-EnhancedClientSecret {
     param(
         [Parameter(Mandatory=$true)]
         [Microsoft.Graph.PowerShell.Models.MicrosoftGraphApplication]$AppRegistration
     )
-    
+
     Start-OperationTimer "SecretCreation"
     Write-ProgressHeader "CLIENT SECRET" "Generating secure authentication credentials"
     
@@ -1831,6 +2200,8 @@ function Save-EnhancedCredentials {
         [Microsoft.Graph.PowerShell.Models.MicrosoftGraphApplication]$AppRegistration,
         [Parameter(Mandatory=$true)]
         $ClientSecret,
+        [Parameter(Mandatory=$false)]
+        $CertificateInfo,
         [Parameter(Mandatory=$true)]
         [string]$TenantId
     )
@@ -1845,12 +2216,18 @@ function Save-EnhancedCredentials {
             ClientId = $AppRegistration.AppId
             ClientSecret = $ClientSecret.SecretText
             TenantId = $TenantId
-            
+
+            # Certificate authentication (for Exchange Online)
+            CertificateThumbprint = if ($CertificateInfo) { $CertificateInfo.Thumbprint } else { $null }
+            CertificateExpiryDate = if ($CertificateInfo) { $CertificateInfo.ExpiryDate.ToString('yyyy-MM-dd HH:mm:ss') } else { $null }
+            CertificateSubject = if ($CertificateInfo) { $CertificateInfo.Subject } else { $null }
+            CertificateExportPath = if ($CertificateInfo) { $CertificateInfo.ExportPath } else { $null }
+
             # Metadata
             ApplicationName = $AppRegistration.DisplayName
             ApplicationObjectId = $AppRegistration.Id
             SecretKeyId = $ClientSecret.KeyId
-            
+
             # Lifecycle information
             CreatedDate = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
             CreatedBy = $env:USERNAME
@@ -1858,21 +2235,21 @@ function Save-EnhancedCredentials {
             ExpiryDate = $ClientSecret.EndDateTime.ToString('yyyy-MM-dd HH:mm:ss')
             ValidityYears = $SecretValidityYears
             DaysUntilExpiry = ($ClientSecret.EndDateTime - (Get-Date)).Days
-            
+
             # Permissions summary
             PermissionCount = $script:AppConfig.RequiredGraphPermissions.Count
             AzureADRoles = $script:AppConfig.AzureADRoles
             AzureRoles = $(if (-not $SkipAzureRoles) { $script:AppConfig.AzureRoles } else { @() })
-            
+
             # Technical metadata
             ScriptVersion = $script:ScriptInfo.Version
             PowerShellVersion = $PSVersionTable.PSVersion.ToString()
             ComputerName = $env:COMPUTERNAME
             Domain = $env:USERDOMAIN
-            
+
             # Deployment metadata
-            AzureSubscriptionCount = if ($script:ConnectionStatus.Azure.RoleAssignmentDetails) { 
-                $script:ConnectionStatus.Azure.RoleAssignmentDetails.SuccessfulSubscriptions.Count 
+            AzureSubscriptionCount = if ($script:ConnectionStatus.Azure.RoleAssignmentDetails) {
+                $script:ConnectionStatus.Azure.RoleAssignmentDetails.SuccessfulSubscriptions.Count
             } else { 0 }
             RoleAssignmentSuccess = $script:ConnectionStatus.Azure.RoleAssignmentSuccess
         }
@@ -2150,9 +2527,29 @@ PowerShell: $($PSVersionTable.PSVersion)
     $clientSecret = New-EnhancedClientSecret -AppRegistration $appRegistration
     Start-Sleep -Milliseconds 250  # Brief pause to ensure GUI catches this step
 
+    # Create certificate for Exchange Online authentication
+    Write-RegistrationStatus -Status 'running' -Message 'Creating certificate for Exchange Online...' -Step 'CertificateCreation'
+    try {
+        $certificateInfo = New-EnhancedCertificate -AppRegistration $appRegistration -ValidityYears 2
+        Write-EnhancedLog "Certificate created and uploaded successfully" -Level SUCCESS
+        Write-EnhancedLog "  Thumbprint: $($certificateInfo.Thumbprint)" -Level INFO
+        Write-EnhancedLog "  Exchange Online authentication: Ready" -Level SUCCESS
+        Write-EnhancedLog "" -Level INFO
+        Write-EnhancedLog "IMPORTANT: Exchange Online access is now enabled via certificate authentication" -Level IMPORTANT
+        Write-EnhancedLog "  - Exchange.ManageAsApp Graph permission provides full Exchange access" -Level INFO
+        Write-EnhancedLog "  - No Exchange RBAC role assignments required" -Level INFO
+        Write-EnhancedLog "  - Certificate authentication works immediately after 2-5 minute sync" -Level INFO
+    } catch {
+        Write-EnhancedLog "Certificate creation failed: $($_.Exception.Message)" -Level ERROR
+        Write-EnhancedLog "Exchange Online certificate auth will not be available" -Level WARN
+        Write-EnhancedLog "You can manually create and upload a certificate later" -Level WARN
+        $certificateInfo = $null
+    }
+    Start-Sleep -Milliseconds 250  # Brief pause to ensure GUI catches this step
+
     # Save encrypted credentials
     Write-RegistrationStatus -Status 'running' -Message 'Saving encrypted credentials...' -Step 'CredentialStorage'
-    Save-EnhancedCredentials -AppRegistration $appRegistration -ClientSecret $clientSecret -TenantId $tenantId
+    Save-EnhancedCredentials -AppRegistration $appRegistration -ClientSecret $clientSecret -CertificateInfo $certificateInfo -TenantId $tenantId
     Start-Sleep -Milliseconds 250  # Brief pause to ensure GUI catches this step
     
     # Calculate final metrics

@@ -24,6 +24,114 @@
 # Import base module
 Import-Module (Join-Path $PSScriptRoot "DiscoveryBase.psm1") -Force
 
+# --- OAuth Token and Exchange Online PowerShell Functions ---
+
+function Get-ExchangeOnlineAccessToken {
+    <#
+    .SYNOPSIS
+        Gets OAuth 2.0 access token for Exchange Online using client credentials flow
+    .DESCRIPTION
+        Obtains an access token from Microsoft identity platform using client ID and secret.
+        This token can be used with Connect-ExchangeOnline for app-only authentication.
+    .PARAMETER TenantId
+        Azure AD tenant ID
+    .PARAMETER ClientId
+        Application (client) ID from app registration
+    .PARAMETER ClientSecret
+        Client secret value
+    .OUTPUTS
+        String containing the access token, or $null on failure
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$TenantId,
+
+        [Parameter(Mandatory=$true)]
+        [string]$ClientId,
+
+        [Parameter(Mandatory=$true)]
+        [string]$ClientSecret
+    )
+
+    try {
+        Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Requesting OAuth access token for Exchange Online..." -Level "INFO"
+
+        $tokenBody = @{
+            grant_type    = "client_credentials"
+            scope         = "https://outlook.office365.com/.default"
+            client_id     = $ClientId
+            client_secret = $ClientSecret
+        }
+
+        $tokenUrl = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+
+        $tokenResponse = Invoke-RestMethod -Uri $tokenUrl -Method POST -Body $tokenBody -ErrorAction Stop
+
+        if ($tokenResponse.access_token) {
+            Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Access token obtained successfully (expires in $($tokenResponse.expires_in) seconds)" -Level "SUCCESS"
+            return $tokenResponse.access_token
+        } else {
+            Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Token response did not contain access_token" -Level "ERROR"
+            return $null
+        }
+
+    } catch {
+        Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Failed to obtain access token: $($_.Exception.Message)" -Level "ERROR"
+        return $null
+    }
+}
+
+function Connect-ExchangeOnlineWithToken {
+    <#
+    .SYNOPSIS
+        Connects to Exchange Online PowerShell using an OAuth access token
+    .DESCRIPTION
+        Establishes connection to Exchange Online using app-only authentication with access token.
+        Requires Exchange.ManageAsApp permission and Exchange Administrator role.
+    .PARAMETER AccessToken
+        OAuth 2.0 access token obtained from Get-ExchangeOnlineAccessToken
+    .PARAMETER Organization
+        Organization name (e.g., "contoso.onmicrosoft.com")
+    .OUTPUTS
+        Boolean indicating success or failure
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$AccessToken,
+
+        [Parameter(Mandatory=$true)]
+        [string]$Organization
+    )
+
+    try {
+        Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Connecting to Exchange Online PowerShell..." -Level "INFO"
+
+        # Check if ExchangeOnlineManagement module is available
+        if (-not (Get-Module -ListAvailable -Name ExchangeOnlineManagement)) {
+            Write-ModuleLog -ModuleName "ExchangeAuth" -Message "ExchangeOnlineManagement module not found. Installing..." -Level "WARN"
+            Install-Module -Name ExchangeOnlineManagement -Force -AllowClobber -Scope CurrentUser -ErrorAction Stop
+            Write-ModuleLog -ModuleName "ExchangeAuth" -Message "ExchangeOnlineManagement module installed successfully" -Level "SUCCESS"
+        }
+
+        # Import module
+        Import-Module ExchangeOnlineManagement -ErrorAction Stop
+
+        # Connect using access token
+        Connect-ExchangeOnline -AccessToken $AccessToken -Organization $Organization -ShowBanner:$false -ErrorAction Stop
+
+        Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Successfully connected to Exchange Online PowerShell" -Level "SUCCESS"
+        Write-ModuleLog -ModuleName "ExchangeAuth" -Message "  Organization: $Organization" -Level "INFO"
+
+        return $true
+
+    } catch {
+        Write-ModuleLog -ModuleName "ExchangeAuth" -Message "Failed to connect to Exchange Online: $($_.Exception.Message)" -Level "ERROR"
+        return $false
+    }
+}
+
 # --- Multi-Strategy Authentication Function ---
 
 function Connect-MgGraphWithMultipleStrategies {
@@ -246,6 +354,57 @@ function Invoke-ExchangeDiscovery {
             return $result
         }
 
+        # EXCHANGE ONLINE POWERSHELL CONNECTION (for migration-critical data)
+        Write-ModuleLog -ModuleName "Exchange" -Message "Establishing Exchange Online PowerShell connection..." -Level "INFO"
+
+        # Get organization domain from tenant (try to derive from TenantId or use onmicrosoft.com)
+        $organizationDomain = if ($Configuration.OrganizationDomain) {
+            $Configuration.OrganizationDomain
+        } else {
+            # Try to get from Graph context or construct default
+            try {
+                $orgInfo = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/organization" -ErrorAction SilentlyContinue
+                if ($orgInfo.value -and $orgInfo.value[0].verifiedDomains) {
+                    $initialDomain = $orgInfo.value[0].verifiedDomains | Where-Object { $_.isInitial -eq $true } | Select-Object -First 1
+                    if ($initialDomain) {
+                        $initialDomain.name
+                    } else {
+                        $orgInfo.value[0].verifiedDomains[0].name
+                    }
+                } else {
+                    $null
+                }
+            } catch {
+                $null
+            }
+        }
+
+        $exoConnected = $false
+        if ($organizationDomain) {
+            Write-ModuleLog -ModuleName "Exchange" -Message "Organization domain: $organizationDomain" -Level "INFO"
+
+            # Get access token for Exchange Online
+            $accessToken = Get-ExchangeOnlineAccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret
+
+            if ($accessToken) {
+                # Connect to Exchange Online PowerShell
+                $exoConnected = Connect-ExchangeOnlineWithToken -AccessToken $accessToken -Organization $organizationDomain
+
+                if ($exoConnected) {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Exchange Online PowerShell connection established successfully" -Level "SUCCESS"
+                    Write-ModuleLog -ModuleName "Exchange" -Message "  Migration-critical cmdlets (Get-EXOMailboxStatistics, Get-EXOMailboxPermission, etc.) now available" -Level "INFO"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Exchange Online PowerShell connection failed - continuing with Graph API only" -Level "WARN"
+                    Write-ModuleLog -ModuleName "Exchange" -Message "  Migration data (permissions, forwarding, detailed stats) will be limited" -Level "WARN"
+                }
+            } else {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Failed to obtain access token for Exchange Online - continuing with Graph API only" -Level "WARN"
+            }
+        } else {
+            Write-ModuleLog -ModuleName "Exchange" -Message "Could not determine organization domain - skipping Exchange Online PowerShell connection" -Level "WARN"
+            Write-ModuleLog -ModuleName "Exchange" -Message "  To enable EXO cmdlets, add 'OrganizationDomain' to Configuration (e.g., 'contoso.onmicrosoft.com')" -Level "WARN"
+        }
+
     } catch {
         $errorMsg = "Failed to connect to Microsoft Graph: $($_.Exception.Message)"
         Write-ModuleLog -ModuleName "Exchange" -Message $errorMsg -Level "ERROR"
@@ -267,8 +426,10 @@ function Invoke-ExchangeDiscovery {
         param($Configuration, $Context, $SessionId, $Connections, $Result)
         
         $allDiscoveredData = [System.Collections.ArrayList]::new()
-        $batchSize = 100
+        # Use config batch size if available, otherwise default to 100
+        $batchSize = if ($Configuration.exchangeOnline.mailboxStatsBatchSize) { $Configuration.exchangeOnline.mailboxStatsBatchSize } else { 100 }
         $maxRetries = 3
+        Write-ModuleLog -ModuleName "Exchange" -Message "Using batch size: $batchSize (from config)" -Level "DEBUG"
         
         # Helper function for Graph API calls with retry and exponential backoff
         function Invoke-GraphWithRetry {
@@ -290,14 +451,24 @@ function Invoke-ExchangeDiscovery {
                     return $response
                 } catch {
                     if ($i -eq $MaxRetries) { throw }
-                    
-                    $delay = [Math]::Pow(2, $i) # Exponential backoff
+
+                    # Try to extract Retry-After header from response
+                    $retryAfter = $null
+                    if ($_.Exception.Response -and $_.Exception.Response.Headers) {
+                        $retryAfterHeader = $_.Exception.Response.Headers | Where-Object { $_.Key -eq 'Retry-After' } | Select-Object -First 1
+                        if ($retryAfterHeader) {
+                            $retryAfter = [int]$retryAfterHeader.Value[0]
+                        }
+                    }
+
+                    # Use Retry-After if provided, otherwise exponential backoff
+                    $delay = if ($retryAfter) { $retryAfter } else { [Math]::Pow(2, $i) }
                     $errorMessage = $_.Exception.Message
-                    
+
                     # Handle specific throttling scenarios
                     if ($errorMessage -match "Too Many Requests" -or $errorMessage -match "TooManyRequests" -or $errorMessage -match "429") {
-                        $delay = $delay * 2  # Extra delay for throttling
-                        Write-ModuleLog -ModuleName "Exchange" -Message "Rate limited (429). Retry $i/$MaxRetries after $delay seconds..." -Level "WARN"
+                        if (-not $retryAfter) { $delay = $delay * 2 }  # Extra delay only if Retry-After not provided
+                        Write-ModuleLog -ModuleName "Exchange" -Message "Rate limited (429). Retry $i/$MaxRetries after $delay seconds$(if ($retryAfter) { ' (from Retry-After header)' })..." -Level "WARN"
                     } elseif ($errorMessage -match "Service Unavailable" -or $errorMessage -match "503") {
                         Write-ModuleLog -ModuleName "Exchange" -Message "Service unavailable (503). Retry $i/$MaxRetries after $delay seconds..." -Level "WARN"
                     } elseif ($errorMessage -match "Timeout" -or $errorMessage -match "408") {
@@ -305,7 +476,7 @@ function Invoke-ExchangeDiscovery {
                     } else {
                         Write-ModuleLog -ModuleName "Exchange" -Message "Retry $i/$MaxRetries after error: $errorMessage. Waiting $delay seconds..." -Level "WARN"
                     }
-                    
+
                     Start-Sleep -Seconds $delay
                 }
             }
@@ -457,6 +628,168 @@ function Invoke-ExchangeDiscovery {
                         }
                     }
 
+                    # ENHANCEMENT: Get mailbox storage and quota statistics (CRITICAL for migration planning)
+                    $storageStats = @{
+                        StorageUsedMB = $null
+                        StorageQuotaMB = $null
+                        StoragePercentUsed = $null
+                        TotalItemCount = 0
+                        MailboxSizeBytes = $null
+                        HasArchive = $false
+                        ArchiveSizeBytes = $null
+                        LastActivityDate = $null
+                    }
+
+                    try {
+                        if ($user.mail -and $user.accountEnabled) {
+                            # FIXED: Use beta endpoint with JSON format instead of v1.0 CSV format
+                            # Reference: https://learn.microsoft.com/en-us/graph/api/reportroot-getmailboxusagedetail
+                            # v1.0 returns CSV causing "Specify '-OutputFilePath'" errors, beta supports JSON
+                            $reportUri = "https://graph.microsoft.com/beta/reports/getMailboxUsageDetail(period='D7')?`$format=application/json"
+                            $usageReport = Invoke-GraphWithRetry -Uri $reportUri
+
+                            if ($usageReport -and $usageReport.value) {
+                                # Beta API with JSON format returns structured data
+                                $userStats = $usageReport.value | Where-Object { $_.'User Principal Name' -eq $user.userPrincipalName } | Select-Object -First 1
+
+                                if ($userStats) {
+                                    $storageUsedBytes = if ($userStats.'Storage Used (Byte)') { [long]$userStats.'Storage Used (Byte)' } else { 0 }
+                                    $itemCount = if ($userStats.'Item Count') { [int]$userStats.'Item Count' } else { 0 }
+                                    $issueWarningQuota = if ($userStats.'Issue Warning Quota (Byte)') { [long]$userStats.'Issue Warning Quota (Byte)' } else { 0 }
+
+                                    $storageStats.StorageUsedMB = if ($storageUsedBytes -gt 0) { [math]::Round([double]$storageUsedBytes / 1MB, 2) } else { $null }
+                                    $storageStats.TotalItemCount = $itemCount
+                                    $storageStats.MailboxSizeBytes = if ($storageUsedBytes -gt 0) { $storageUsedBytes } else { $null }
+                                    $storageStats.LastActivityDate = if ($userStats.'Last Activity Date') { $userStats.'Last Activity Date' } else { $null }
+                                    $storageStats.HasArchive = if ($userStats.'Has Archive' -eq 'True') { $true } else { $false }
+
+                                    # Calculate percentage if quota is available
+                                    if ($issueWarningQuota -gt 0) {
+                                        $storageStats.StorageQuotaMB = [math]::Round([double]$issueWarningQuota / 1MB, 2)
+                                        $storageStats.StoragePercentUsed = [math]::Round(([double]$storageUsedBytes / [double]$issueWarningQuota) * 100, 2)
+                                    }
+                                }
+                            }
+                        }
+                    } catch {
+                        $storageErr = $_.Exception.Message
+                        # Storage stats are optional - log but don't fail discovery
+                        Write-ModuleLog -ModuleName "Exchange" -Message "Could not get storage stats for $($user.userPrincipalName): $storageErr" -Level "DEBUG"
+                    }
+
+                    # ENHANCEMENT: Check for archive mailbox
+                    if ($Configuration.exchangeOnline.includeArchiveMailboxes -and $user.mail -and $user.accountEnabled) {
+                        try {
+                            $archiveUri = "https://graph.microsoft.com/beta/users/$($user.id)/mailFolders?`$filter=displayName eq 'Archive'"
+                            $archiveFolders = Invoke-GraphWithRetry -Uri $archiveUri
+
+                            if ($archiveFolders -and $archiveFolders.value -and $archiveFolders.value.Count -gt 0) {
+                                $storageStats.HasArchive = $true
+                                # Try to get archive size if available
+                                if ($archiveFolders.value[0].sizeInBytes) {
+                                    $storageStats.ArchiveSizeBytes = $archiveFolders.value[0].sizeInBytes
+                                }
+                            }
+                        } catch {
+                            # Archive check is optional - ignore errors
+                            Write-ModuleLog -ModuleName "Exchange" -Message "Could not check archive for $($user.userPrincipalName)" -Level "DEBUG"
+                        }
+                    }
+
+                    # ENHANCEMENT: Get migration-critical data from Exchange Online PowerShell (if connected)
+                    $exoData = @{
+                        # Mailbox Statistics (accurate sizes)
+                        EXO_TotalItemSize = $null
+                        EXO_TotalItemCount = $null
+                        EXO_TotalDeletedItemSize = $null
+                        EXO_ItemCountInFolder = $null
+                        EXO_ProhibitSendQuota = $null
+                        EXO_ProhibitSendReceiveQuota = $null
+                        EXO_IssueWarningQuota = $null
+                        EXO_LastLogonTime = $null
+                        EXO_LastLogoffTime = $null
+
+                        # Permissions (Full Access, Send As)
+                        EXO_FullAccessPermissions = @()
+                        EXO_SendAsPermissions = @()
+                        EXO_SendOnBehalfPermissions = @()
+
+                        # Forwarding and Rules
+                        EXO_ForwardingAddress = $null
+                        EXO_ForwardingSmtpAddress = $null
+                        EXO_DeliverToMailboxAndForward = $false
+                        EXO_InboxRulesCount = 0
+                        EXO_InboxRulesWithForwarding = @()
+
+                        # Mailbox Configuration
+                        EXO_MailboxType = $null
+                        EXO_LitigationHoldEnabled = $false
+                        EXO_RetentionPolicy = $null
+                        EXO_HiddenFromAddressListsEnabled = $false
+                    }
+
+                    if ($exoConnected -and $user.mail -and $user.accountEnabled) {
+                        try {
+                            # Get detailed mailbox statistics using EXO cmdlet
+                            $exoStats = Get-EXOMailboxStatistics -Identity $user.userPrincipalName -ErrorAction SilentlyContinue
+                            if ($exoStats) {
+                                $exoData.EXO_TotalItemSize = $exoStats.TotalItemSize
+                                $exoData.EXO_TotalItemCount = $exoStats.ItemCount
+                                $exoData.EXO_TotalDeletedItemSize = $exoStats.TotalDeletedItemSize
+                                $exoData.EXO_LastLogonTime = $exoStats.LastLogonTime
+                                $exoData.EXO_LastLogoffTime = $exoStats.LastLogoffTime
+                            }
+
+                            # Get mailbox configuration (forwarding, quotas, retention)
+                            $exoMailbox = Get-EXOMailbox -Identity $user.userPrincipalName -PropertySets Quota,Retention,Delivery -ErrorAction SilentlyContinue
+                            if ($exoMailbox) {
+                                $exoData.EXO_MailboxType = $exoMailbox.RecipientTypeDetails
+                                $exoData.EXO_ProhibitSendQuota = $exoMailbox.ProhibitSendQuota
+                                $exoData.EXO_ProhibitSendReceiveQuota = $exoMailbox.ProhibitSendReceiveQuota
+                                $exoData.EXO_IssueWarningQuota = $exoMailbox.IssueWarningQuota
+                                $exoData.EXO_ForwardingAddress = $exoMailbox.ForwardingAddress
+                                $exoData.EXO_ForwardingSmtpAddress = $exoMailbox.ForwardingSmtpAddress
+                                $exoData.EXO_DeliverToMailboxAndForward = $exoMailbox.DeliverToMailboxAndForward
+                                $exoData.EXO_LitigationHoldEnabled = $exoMailbox.LitigationHoldEnabled
+                                $exoData.EXO_RetentionPolicy = $exoMailbox.RetentionPolicy
+                                $exoData.EXO_HiddenFromAddressListsEnabled = $exoMailbox.HiddenFromAddressListsEnabled
+                                $exoData.EXO_SendOnBehalfPermissions = if ($exoMailbox.GrantSendOnBehalfTo) { $exoMailbox.GrantSendOnBehalfTo -join ';' } else { $null }
+                            }
+
+                            # Get Full Access permissions
+                            $fullAccessPerms = Get-EXOMailboxPermission -Identity $user.userPrincipalName -ErrorAction SilentlyContinue |
+                                Where-Object { $_.AccessRights -contains "FullAccess" -and $_.IsInherited -eq $false -and $_.User -ne "NT AUTHORITY\SELF" }
+                            if ($fullAccessPerms) {
+                                $exoData.EXO_FullAccessPermissions = $fullAccessPerms | ForEach-Object { "$($_.User):$($_.AccessRights -join ',')" }
+                            }
+
+                            # Get Send As permissions
+                            $sendAsPerms = Get-EXORecipientPermission -Identity $user.userPrincipalName -ErrorAction SilentlyContinue |
+                                Where-Object { $_.AccessRights -contains "SendAs" -and $_.Trustee -ne "NT AUTHORITY\SELF" }
+                            if ($sendAsPerms) {
+                                $exoData.EXO_SendAsPermissions = $sendAsPerms | ForEach-Object { $_.Trustee }
+                            }
+
+                            # Get inbox rules (check for forwarding rules)
+                            $inboxRules = Get-EXOInboxRule -Mailbox $user.userPrincipalName -ErrorAction SilentlyContinue
+                            if ($inboxRules) {
+                                $exoData.EXO_InboxRulesCount = $inboxRules.Count
+                                $forwardingRules = $inboxRules | Where-Object {
+                                    $_.ForwardTo -or $_.ForwardAsAttachmentTo -or $_.RedirectTo
+                                }
+                                if ($forwardingRules) {
+                                    $exoData.EXO_InboxRulesWithForwarding = $forwardingRules | ForEach-Object {
+                                        "$($_.Name):$($_.ForwardTo)$($_.ForwardAsAttachmentTo)$($_.RedirectTo)"
+                                    }
+                                }
+                            }
+
+                        } catch {
+                            # EXO data is optional - log error but continue
+                            Write-ModuleLog -ModuleName "Exchange" -Message "Could not get EXO data for $($user.userPrincipalName): $($_.Exception.Message)" -Level "DEBUG"
+                        }
+                    }
+
                     # Build comprehensive mailbox object
                     $mailboxObj = [PSCustomObject]@{
                         # Identity
@@ -521,7 +854,18 @@ function Invoke-ExchangeDiscovery {
                         DraftsItemCount = $folderStats.DraftsCount
                         DeletedItemCount = $folderStats.DeletedCount
                         TotalFolderCount = $folderStats.TotalFolders
-                        
+
+                        # ENHANCEMENT: Storage and Quota Statistics (CRITICAL for migration planning)
+                        MailboxSizeMB = $storageStats.StorageUsedMB
+                        MailboxSizeBytes = $storageStats.MailboxSizeBytes
+                        MailboxQuotaMB = $storageStats.StorageQuotaMB
+                        MailboxQuotaPercentUsed = $storageStats.StoragePercentUsed
+                        MailboxTotalItemCount = $storageStats.TotalItemCount
+                        MailboxLastActivityDate = $storageStats.LastActivityDate
+                        HasArchiveMailbox = $storageStats.HasArchive
+                        ArchiveSizeBytes = $storageStats.ArchiveSizeBytes
+                        ArchiveSizeMB = if ($storageStats.ArchiveSizeBytes) { [math]::Round([double]$storageStats.ArchiveSizeBytes / 1MB, 2) } else { $null }
+
                         # Permissions and Delegation
                         CalendarPermissions = ($calendarPermissions -join ';')
                         
@@ -543,10 +887,34 @@ function Invoke-ExchangeDiscovery {
                         
                         # Management
                         ManagerId = $managerId
-                        
+
                         # Classification
                         RecipientType = "UserMailbox"
                         RecipientTypeDetails = if ($user.accountEnabled) { "UserMailbox" } else { "DisabledUserMailbox" }
+
+                        # MIGRATION-CRITICAL: Exchange Online PowerShell Data (EXO cmdlets)
+                        # These fields are ONLY populated if Exchange Online PowerShell connection succeeded
+                        EXO_TotalItemSize = $exoData.EXO_TotalItemSize
+                        EXO_TotalItemCount = $exoData.EXO_TotalItemCount
+                        EXO_TotalDeletedItemSize = $exoData.EXO_TotalDeletedItemSize
+                        EXO_ProhibitSendQuota = $exoData.EXO_ProhibitSendQuota
+                        EXO_ProhibitSendReceiveQuota = $exoData.EXO_ProhibitSendReceiveQuota
+                        EXO_IssueWarningQuota = $exoData.EXO_IssueWarningQuota
+                        EXO_LastLogonTime = $exoData.EXO_LastLogonTime
+                        EXO_LastLogoffTime = $exoData.EXO_LastLogoffTime
+                        EXO_MailboxType = $exoData.EXO_MailboxType
+                        EXO_LitigationHoldEnabled = $exoData.EXO_LitigationHoldEnabled
+                        EXO_RetentionPolicy = $exoData.EXO_RetentionPolicy
+                        EXO_HiddenFromAddressLists = $exoData.EXO_HiddenFromAddressListsEnabled
+                        EXO_ForwardingAddress = $exoData.EXO_ForwardingAddress
+                        EXO_ForwardingSmtpAddress = $exoData.EXO_ForwardingSmtpAddress
+                        EXO_DeliverToMailboxAndForward = $exoData.EXO_DeliverToMailboxAndForward
+                        EXO_FullAccessPermissions = ($exoData.EXO_FullAccessPermissions -join ';')
+                        EXO_SendAsPermissions = ($exoData.EXO_SendAsPermissions -join ';')
+                        EXO_SendOnBehalfPermissions = $exoData.EXO_SendOnBehalfPermissions
+                        EXO_InboxRulesCount = $exoData.EXO_InboxRulesCount
+                        EXO_InboxRulesWithForwarding = ($exoData.EXO_InboxRulesWithForwarding -join ';')
+
                         _DataType = "Mailbox"
                     }
                     
@@ -780,7 +1148,65 @@ function Invoke-ExchangeDiscovery {
                     
                     $nextLink = $response.'@odata.nextLink'
                 }
-                
+
+                # ENHANCEMENT: Discover equipment mailboxes (projectors, vehicles, devices, etc.)
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering equipment mailboxes..." -Level "INFO"
+                $equipmentUri = "https://graph.microsoft.com/v1.0/places/microsoft.graph.room?`$filter=bookingType eq 'standard'&`$top=$batchSize"
+
+                # Note: Graph API doesn't have dedicated equipment endpoint yet, but we can try filtering rooms
+                # Alternatively, we might need to use Exchange Online PowerShell for true equipment mailboxes
+                # For now, we'll attempt to identify equipment-like rooms
+                try {
+                    $nextLink = $equipmentUri
+                    $equipmentCount = 0
+
+                    while ($nextLink) {
+                        $equipResponse = Invoke-GraphWithRetry -Uri $nextLink
+
+                        foreach ($equip in $equipResponse.value) {
+                            # Only include if it looks like equipment (has equipment-related tags or naming)
+                            $isEquipment = ($equip.tags -and ($equip.tags -match "Equipment|Projector|Vehicle|Device")) -or
+                                          ($equip.displayName -match "Equipment|Projector|Vehicle|Device")
+
+                            if ($isEquipment) {
+                                $equipObj = [PSCustomObject]@{
+                                    Id = $equip.id
+                                    DisplayName = $equip.displayName
+                                    EmailAddress = $equip.emailAddress
+                                    Nickname = $equip.nickname
+                                    Building = $equip.building
+                                    Floor = if ($equip.floor) { $equip.floor } else { $null }
+                                    Capacity = $equip.capacity
+                                    Label = $equip.label
+                                    BookingType = $equip.bookingType
+                                    AudioDeviceName = $equip.audioDeviceName
+                                    VideoDeviceName = $equip.videoDeviceName
+                                    DisplayDeviceName = $equip.displayDeviceName
+                                    Tags = ($equip.tags -join ';')
+                                    Address = if ($equip.address) {
+                                        "$($equip.address.street), $($equip.address.city), $($equip.address.state) $($equip.address.postalCode)"
+                                    } else { $null }
+                                    Phone = $equip.phone
+                                    RecipientType = "EquipmentMailbox"
+                                    RecipientTypeDetails = "EquipmentMailbox"
+                                    _DataType = "EquipmentMailbox"
+                                }
+
+                                $null = $allDiscoveredData.Add($equipObj)
+                                $equipmentCount++
+                            }
+                        }
+
+                        $nextLink = $equipResponse.'@odata.nextLink'
+                    }
+
+                    if ($equipmentCount -gt 0) {
+                        Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $equipmentCount equipment mailboxes" -Level "SUCCESS"
+                    }
+                } catch {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Equipment mailbox discovery not available or failed: $($_.Exception.Message)" -Level "WARN"
+                }
+
             } catch {
                 $Result.AddWarning("Failed to discover resource mailboxes: $($_.Exception.Message)", @{Section="ResourceMailboxes"})
             }
@@ -788,21 +1214,21 @@ function Invoke-ExchangeDiscovery {
         
         # Discover Mail Contacts
         try {
-            Write-ModuleLog -ModuleName "Exchange" -Message "Discovering mail contacts..." -Level "INFO"
-            
-            $contactUri = "https://graph.microsoft.com/v1.0/contacts?`$select=id,displayName,emailAddresses,givenName,surname,companyName,department,jobTitle,businessPhones,mobilePhone,businessAddress&`$top=$batchSize"
+            Write-ModuleLog -ModuleName "Exchange" -Message "Discovering organizational mail contacts (external users)..." -Level "INFO"
+
+            # Fix: Use guest users with mail (organizational contacts) instead of personal contacts
+            # Filter syntax: userType eq 'Guest' is valid, ensure proper encoding for 'and mail ne null'
+            $contactUri = "https://graph.microsoft.com/v1.0/users?`$filter=userType eq 'Guest'&`$select=id,displayName,mail,givenName,surname,companyName,department,jobTitle,businessPhones,mobilePhone,streetAddress,city,state,postalCode,country&`$top=$batchSize"
             
             $nextLink = $contactUri
             while ($nextLink) {
                 $response = Invoke-GraphWithRetry -Uri $nextLink
                 
                 foreach ($contact in $response.value) {
-                    $primaryEmail = $contact.emailAddresses | Where-Object { $_.name -eq "EmailAddress1" } | Select-Object -First 1
-                    
                     $contactObj = [PSCustomObject]@{
                         Id = $contact.id
                         DisplayName = $contact.displayName
-                        EmailAddress = if ($primaryEmail) { $primaryEmail.address } else { $null }
+                        EmailAddress = $contact.mail  # Updated to use mail property from user object
                         GivenName = $contact.givenName
                         Surname = $contact.surname
                         CompanyName = $contact.companyName
@@ -810,14 +1236,14 @@ function Invoke-ExchangeDiscovery {
                         JobTitle = $contact.jobTitle
                         BusinessPhones = ($contact.businessPhones -join ';')
                         MobilePhone = $contact.mobilePhone
-                        BusinessAddress = if ($contact.businessAddress) {
-                            "$($contact.businessAddress.street), $($contact.businessAddress.city), $($contact.businessAddress.state) $($contact.businessAddress.postalCode)"
+                        BusinessAddress = if ($contact.streetAddress -or $contact.city -or $contact.state -or $contact.postalCode) {
+                            "$($contact.streetAddress), $($contact.city), $contact.state) $($contact.postalCode), $($contact.country)"
                         } else { $null }
-                        RecipientType = "MailContact"
-                        RecipientTypeDetails = "MailContact"
+                        RecipientType = "GuestMailContact"  # Updated to reflect guest user type
+                        RecipientTypeDetails = "GuestMailContact"
                         _DataType = "MailContact"
                     }
-                    
+
                     $null = $allDiscoveredData.Add($contactObj)
                 }
                 
@@ -826,6 +1252,43 @@ function Invoke-ExchangeDiscovery {
             
         } catch {
             $Result.AddWarning("Failed to discover mail contacts: $($_.Exception.Message)", @{Section="MailContacts"})
+        }
+
+        # ENHANCEMENT: Discover Accepted Domains
+        try {
+            Write-ModuleLog -ModuleName "Exchange" -Message "Discovering accepted domains..." -Level "INFO"
+
+            $domainsUri = "https://graph.microsoft.com/v1.0/domains?`$select=id,authenticationType,availabilityStatus,isDefault,isInitial,isVerified,supportedServices"
+
+            $response = Invoke-GraphWithRetry -Uri $domainsUri
+
+            if ($response -and $response.value) {
+                foreach ($domain in $response.value) {
+                    # Only include verified domains
+                    if ($domain.isVerified) {
+                        $domainObj = [PSCustomObject]@{
+                            DomainName = $domain.id
+                            AuthenticationType = $domain.authenticationType
+                            IsDefault = $domain.isDefault
+                            IsInitial = $domain.isInitial
+                            IsVerified = $domain.isVerified
+                            AvailabilityStatus = $domain.availabilityStatus
+                            SupportedServices = ($domain.supportedServices -join ';')
+                            MailFlowStatus = if (($domain.supportedServices -contains 'Email') -or ($domain.supportedServices -contains 'Exchange')) { "Active" } else { "NotConfigured" }
+                            RecipientType = "AcceptedDomain"
+                            _DataType = "AcceptedDomain"
+                        }
+
+                        $null = $allDiscoveredData.Add($domainObj)
+                    }
+                }
+
+                $domainCount = ($response.value | Where-Object { $_.isVerified }).Count
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $domainCount accepted domains" -Level "SUCCESS"
+            }
+
+        } catch {
+            $Result.AddWarning("Failed to discover accepted domains: $($_.Exception.Message)", @{Section="AcceptedDomains"})
         }
 
         # Data Validation and Quality Checks
@@ -847,26 +1310,29 @@ function Invoke-ExchangeDiscovery {
             
             foreach ($record in $allDiscoveredData) {
                 $isValid = $true
-                
-                # Check for critical field presence
+
+                # FIXED: Check for critical field presence (prevents "Key cannot be null" error)
                 if (-not $record.Id -or -not $record.DisplayName) {
                     $validationResults.MissingCriticalData++
                     $isValid = $false
                 }
-                
-                # Check for duplicates
-                if ($processedIds.ContainsKey($record.Id)) {
-                    $validationResults.DuplicateRecords++
-                    $isValid = $false
-                } else {
-                    $processedIds[$record.Id] = $true
+
+                # FIXED: Only use Id as hashtable key if it's not null (prevents "Key cannot be null" error)
+                if ($record.Id) {
+                    # Check for duplicates
+                    if ($processedIds.ContainsKey($record.Id)) {
+                        $validationResults.DuplicateRecords++
+                        $isValid = $false
+                    } else {
+                        $processedIds[$record.Id] = $true
+                    }
+
+                    # Track manager relationships for cross-referencing
+                    if ($record.ManagerId) {
+                        $managerIds[$record.Id] = $record.ManagerId
+                    }
                 }
-                
-                # Track manager relationships for cross-referencing
-                if ($record.ManagerId) {
-                    $managerIds[$record.Id] = $record.ManagerId
-                }
-                
+
                 if ($isValid) {
                     $validationResults.ValidRecords++
                 } else {
@@ -1029,6 +1495,17 @@ function Invoke-ExchangeDiscovery {
         Write-ModuleLog -ModuleName "Exchange" -Message "Exception Type: $($_.Exception.GetType().FullName)" -Level "ERROR"
         Write-ModuleLog -ModuleName "Exchange" -Message "Stack Trace: $($_.ScriptStackTrace)" -Level "DEBUG"
     } finally {
+        # Disconnect from Exchange Online PowerShell
+        if ($exoConnected) {
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Disconnecting from Exchange Online PowerShell..." -Level "INFO"
+                Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+                Write-ModuleLog -ModuleName "Exchange" -Message "Disconnected from Exchange Online PowerShell" -Level "SUCCESS"
+            } catch {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Error during Exchange Online disconnect: $($_.Exception.Message)" -Level "WARN"
+            }
+        }
+
         # Disconnect from Graph
         try {
             Write-ModuleLog -ModuleName "Exchange" -Message "Disconnecting from Microsoft Graph..." -Level "INFO"
@@ -1041,7 +1518,17 @@ function Invoke-ExchangeDiscovery {
         Write-ModuleLog -ModuleName "Exchange" -Message "=== Exchange Discovery Module Completed ===" -Level "HEADER"
     }
 
-    return $result
+    # FIXED: Return clean object without ScriptMethods (prevents JSON serialization errors)
+    # ScriptMethods (AddError, AddWarning) cause "ListDictionaryInternal not supported" errors
+    $cleanResult = [PSCustomObject]@{
+        Success = $result.Success
+        Message = $result.Message
+        Data = $result.Data
+        Errors = $result.Errors
+        Warnings = $result.Warnings
+    }
+
+    return $cleanResult
 }
 
 # --- Module Export ---

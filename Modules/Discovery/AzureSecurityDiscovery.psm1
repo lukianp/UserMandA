@@ -15,13 +15,20 @@
     - Conditional Access Policies with migration assessment
     - Azure Directory Roles and Role Assignments
     - Azure RBAC Assignments (subscription-level)
+    - Management Groups hierarchy
+    - PIM Eligible Role Assignments
+    - Subscription Owners
+    - Key Vault Access Policies
+    - Managed Identities
+    - Service Principal Credentials
 
     Part of the Azure Discovery refactoring initiative to break monolithic
     AzureDiscovery.psm1 into focused, maintainable modules.
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
     Author: System Enhancement
     Created: 2025-12-19
+    Last Modified: 2025-12-31
     Requires: PowerShell 5.1+, Microsoft.Graph modules
 #>
 
@@ -1024,126 +1031,6 @@ function Invoke-AzureSecurityDiscovery {
 
         } catch {
             $Result.AddError("Failed to discover Service Principal Credentials: $($_.Exception.Message)", $_.Exception, @{Section="ServicePrincipalCredentials"})
-        }
-        #endregion
-
-        #region Storage Account Access Discovery (AzureHound-inspired Phase 5)
-        Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Discovering Storage Account Access..." -Level "INFO"
-
-        try {
-            # Use subscriptions already discovered
-            if (-not $subscriptions) {
-                try {
-                    $subsUri = "https://management.azure.com/subscriptions?api-version=2020-01-01"
-                    $subsResponse = Invoke-MgGraphRequest -Uri $subsUri -Method GET
-                    $subscriptions = $subsResponse.value
-                } catch {
-                    $subscriptions = @()
-                }
-            }
-
-            foreach ($subscription in $subscriptions) {
-                $subId = $subscription.subscriptionId
-                $subName = $subscription.displayName
-
-                # Get all Storage Accounts in this subscription
-                try {
-                    $storageUri = "https://management.azure.com/subscriptions/$subId/providers/Microsoft.Storage/storageAccounts?api-version=2023-01-01"
-                    $storageResponse = Invoke-MgGraphRequest -Uri $storageUri -Method GET
-                    $storageAccounts = $storageResponse.value
-
-                    foreach ($storage in $storageAccounts) {
-                        $resourceGroup = ($storage.id -split '/resourceGroups/')[1] -split '/' | Select-Object -First 1
-                        $properties = $storage.properties
-
-                        # Security assessment flags
-                        $allowBlobPublicAccess = $properties.allowBlobPublicAccess -eq $true
-                        $allowSharedKeyAccess = $properties.allowSharedKeyAccess -ne $false # Default is true
-                        $httpsOnly = $properties.supportsHttpsTrafficOnly -eq $true
-                        $minimumTlsVersion = $properties.minimumTlsVersion
-                        $isTls12 = $minimumTlsVersion -eq 'TLS1_2'
-
-                        # Network rules
-                        $networkRules = $properties.networkAcls
-                        $defaultAction = if ($networkRules) { $networkRules.defaultAction } else { 'Allow' }
-                        $isPubliclyAccessible = $defaultAction -eq 'Allow'
-                        $virtualNetworkRules = if ($networkRules.virtualNetworkRules) { @($networkRules.virtualNetworkRules).Count } else { 0 }
-                        $ipRules = if ($networkRules.ipRules) { @($networkRules.ipRules).Count } else { 0 }
-                        $bypass = if ($networkRules.bypass) { $networkRules.bypass } else { 'None' }
-
-                        # Encryption
-                        $encryption = $properties.encryption
-                        $keySource = if ($encryption) { $encryption.keySource } else { 'Microsoft.Storage' }
-                        $isCustomerManagedKey = $keySource -ne 'Microsoft.Storage'
-
-                        # Infrastructure encryption
-                        $requireInfraEncryption = $encryption.requireInfrastructureEncryption -eq $true
-
-                        $storageData = [PSCustomObject]@{
-                            ObjectType = "StorageAccountAccess"
-                            Id = $storage.id
-                            Name = $storage.name
-                            Location = $storage.location
-                            ResourceGroup = $resourceGroup
-                            SubscriptionId = $subId
-                            SubscriptionName = $subName
-                            Kind = $storage.kind
-                            SkuName = $storage.sku.name
-                            SkuTier = $storage.sku.tier
-                            CreationTime = $properties.creationTime
-                            PrimaryLocation = $properties.primaryLocation
-                            StatusOfPrimary = $properties.statusOfPrimary
-
-                            # Access Settings
-                            AllowBlobPublicAccess = $allowBlobPublicAccess
-                            AllowSharedKeyAccess = $allowSharedKeyAccess
-                            HttpsOnly = $httpsOnly
-                            MinimumTlsVersion = $minimumTlsVersion
-                            IsTls12 = $isTls12
-
-                            # Network Security
-                            NetworkDefaultAction = $defaultAction
-                            IsPubliclyAccessible = $isPubliclyAccessible
-                            VirtualNetworkRuleCount = $virtualNetworkRules
-                            IpRuleCount = $ipRules
-                            NetworkBypass = $bypass
-
-                            # Encryption
-                            KeySource = $keySource
-                            IsCustomerManagedKey = $isCustomerManagedKey
-                            RequireInfrastructureEncryption = $requireInfraEncryption
-
-                            # Endpoints
-                            BlobEndpoint = $properties.primaryEndpoints.blob
-                            FileEndpoint = $properties.primaryEndpoints.file
-                            TableEndpoint = $properties.primaryEndpoints.table
-                            QueueEndpoint = $properties.primaryEndpoints.queue
-
-                            # Security Risk Flags
-                            HasPublicBlobAccess = $allowBlobPublicAccess
-                            HasWeakTls = -not $isTls12
-                            HasPublicNetworkAccess = $isPubliclyAccessible
-
-                            _DataType = 'StorageAccountAccess'
-                            SessionId = $SessionId
-                        }
-                        $null = $allDiscoveredData.Add($storageData)
-                    }
-                } catch {
-                    Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Could not enumerate Storage Accounts in subscription $subName" -Level "WARNING"
-                }
-            }
-
-            $storageCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'StorageAccountAccess' }).Count
-            $publicBlobCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'StorageAccountAccess' -and $_.HasPublicBlobAccess }).Count
-            $publicNetworkCount = @($allDiscoveredData | Where-Object { $_._DataType -eq 'StorageAccountAccess' -and $_.HasPublicNetworkAccess }).Count
-            $Result.Metadata["StorageAccountCount"] = $storageCount
-            $Result.Metadata["PublicBlobAccessCount"] = $publicBlobCount
-            $Result.Metadata["PublicNetworkAccessCount"] = $publicNetworkCount
-            Write-ModuleLog -ModuleName "AzureSecurityDiscovery" -Message "Storage Account Discovery - Found $storageCount accounts ($publicBlobCount with public blob access, $publicNetworkCount publicly accessible)" -Level "SUCCESS"
-
-        } catch {
-            $Result.AddError("Failed to discover Storage Account Access: $($_.Exception.Message)", $_.Exception, @{Section="StorageAccountAccess"})
         }
         #endregion
 

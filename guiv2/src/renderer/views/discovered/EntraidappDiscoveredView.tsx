@@ -1,183 +1,430 @@
 /**
  * Entra ID Applications Discovered View
  *
- * Displays discovered data from Entra ID applications, enterprise applications,
- * service principals, and application secrets using tabbed navigation.
- *
- * @module entraidapp
- * @category identity
+ * Rich discovered view with statistics, breakdowns, and data grids
  */
 
-import React, { useState } from 'react';
-import { Settings, Shield, Server, Key, FileText, Lock } from 'lucide-react';
-import { DiscoveredViewWrapper } from '../../components/organisms/DiscoveredViewWrapper';
+import React from 'react';
+import {
+  Settings,
+  Shield,
+  Server,
+  Key,
+  Users,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Clock,
+  Building2,
+  Lock,
+  FileText,
+} from 'lucide-react';
+import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
+import { useEntraIDAppDiscoveredLogic } from '../../hooks/useEntraIDAppDiscoveredLogic';
 
-// Tab configuration for Entra ID app data types
-interface EntraIDAppTab {
-  id: string;
-  label: string;
-  icon: React.ComponentType<any>;
-  csvPath: string;
-  description: string;
-  category: 'applications' | 'security' | 'credentials';
-}
-
-const entraIDAppTabs: EntraIDAppTab[] = [
-  {
-    id: 'app-registrations',
-    label: 'App Registrations',
-    icon: Settings,
-    csvPath: 'EntraIDAppRegistrations.csv',
-    description: 'Azure AD application registrations with permissions and configurations',
-    category: 'applications',
-  },
-  {
-    id: 'enterprise-apps',
-    label: 'Enterprise Applications',
-    icon: Server,
-    csvPath: 'EntraIDEnterpriseApps.csv',
-    description: 'Enterprise applications with SSO configurations and settings',
-    category: 'applications',
-  },
-  {
-    id: 'service-principals',
-    label: 'Service Principals',
-    icon: Shield,
-    csvPath: 'EntraIDServicePrincipals.csv',
-    description: 'Service principals representing applications in the directory',
-    category: 'security',
-  },
-  {
-    id: 'application-secrets',
-    label: 'Application Secrets',
-    icon: Key,
-    csvPath: 'EntraIDApplicationSecrets.csv',
-    description: 'Application secrets and their expiration status',
-    category: 'credentials',
-  },
-];
-
-/**
- * Entra ID Applications discovered data view component
- * Provides tabbed navigation for different types of Entra ID application data
- */
 export const EntraidappDiscoveredView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('app-registrations');
-  const currentTab = entraIDAppTabs.find(t => t.id === activeTab) || entraIDAppTabs[0];
+  const {
+    activeTab,
+    setActiveTab,
+    searchTerm,
+    setSearchTerm,
+    loading,
+    error,
+    filteredData,
+    statistics,
+    exportToCSV,
+  } = useEntraIDAppDiscoveredLogic();
 
-  // Group tabs by category for visual organization
-  const applicationTabs = entraIDAppTabs.filter(t => t.category === 'applications');
-  const securityTabs = entraIDAppTabs.filter(t => t.category === 'security');
-  const credentialTabs = entraIDAppTabs.filter(t => t.category === 'credentials');
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading Entra ID Applications data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center text-red-600">
+          <XCircle className="w-12 h-12 mx-auto mb-4" />
+          <p>Error loading data: {error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900" data-cy="entraidapp-discovered-view">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
             <Settings size={28} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Entra ID Applications</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Entra ID Applications
+            </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Application registrations, enterprise applications, service principals, and security credentials from your Microsoft cloud tenant
+              Application registrations, enterprise apps, service principals, and secrets
             </p>
           </div>
         </div>
       </div>
 
-      {/* Tab Categories */}
-      <div className="px-6 pt-4 bg-white dark:bg-gray-800">
-        {/* Applications Section */}
-        <div className="mb-2">
-          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
-            Applications
-          </h3>
-          <div className="flex gap-1 flex-wrap">
-            {applicationTabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
-                }`}
-                title={tab.description}
-              >
-                <tab.icon size={16} />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Statistics Cards Grid (3 rows × 4 columns = 12 cards) */}
+      <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Row 1 */}
+        <StatCard
+          icon={Settings}
+          label="App Registrations"
+          value={statistics.totalAppRegistrations}
+          gradient="from-blue-500 to-blue-600"
+        />
+        <StatCard
+          icon={Server}
+          label="Enterprise Apps"
+          value={statistics.totalEnterpriseApps}
+          gradient="from-green-500 to-green-600"
+        />
+        <StatCard
+          icon={Shield}
+          label="Service Principals"
+          value={statistics.totalServicePrincipals}
+          gradient="from-purple-500 to-purple-600"
+        />
+        <StatCard
+          icon={Key}
+          label="Application Secrets"
+          value={statistics.totalSecrets}
+          gradient="from-yellow-500 to-yellow-600"
+        />
 
-        {/* Security Section */}
-        <div className="mb-2">
-          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
-            Security & Access
-          </h3>
-          <div className="flex gap-1 flex-wrap">
-            {securityTabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
-                }`}
-                title={tab.description}
-              >
-                <tab.icon size={16} />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Row 2 */}
+        <StatCard
+          icon={AlertTriangle}
+          label="Secrets Expiring Soon"
+          value={statistics.secretsExpiringSoon}
+          gradient="from-orange-500 to-orange-600"
+        />
+        <StatCard
+          icon={CheckCircle2}
+          label="Valid Secrets"
+          value={statistics.secretsValid}
+          gradient="from-emerald-500 to-emerald-600"
+        />
+        <StatCard
+          icon={XCircle}
+          label="Expired Secrets"
+          value={statistics.secretsExpired}
+          gradient="from-red-500 to-red-600"
+        />
+        <StatCard
+          icon={Lock}
+          label="Apps with Secrets"
+          value={statistics.appsWithSecrets}
+          gradient="from-indigo-500 to-indigo-600"
+        />
 
-        {/* Credentials Section */}
-        <div className="mb-4">
-          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
-            Credentials & Secrets
-          </h3>
-          <div className="flex gap-1 flex-wrap">
-            {credentialTabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
-                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
-                }`}
-                title={tab.description}
-              >
-                <tab.icon size={16} />
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        {/* Row 3 */}
+        <StatCard
+          icon={FileText}
+          label="Apps with Certificates"
+          value={statistics.appsWithCertificates}
+          gradient="from-cyan-500 to-cyan-600"
+        />
+        <StatCard
+          icon={CheckCircle2}
+          label="Enabled Service Principals"
+          value={statistics.enabledServicePrincipals}
+          gradient="from-teal-500 to-teal-600"
+        />
+        <StatCard
+          icon={XCircle}
+          label="Disabled Service Principals"
+          value={statistics.disabledServicePrincipals}
+          gradient="from-rose-500 to-rose-600"
+        />
+        <StatCard
+          icon={Shield}
+          label="High Privilege Apps"
+          value={statistics.appsWithHighPrivileges}
+          gradient="from-pink-500 to-pink-600"
+        />
+      </div>
+
+      {/* Tabs */}
+      <div className="px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex gap-2">
+          <TabButton
+            active={activeTab === 'overview'}
+            onClick={() => setActiveTab('overview')}
+            icon={FileText}
+            label="Overview"
+          />
+          <TabButton
+            active={activeTab === 'app-registrations'}
+            onClick={() => setActiveTab('app-registrations')}
+            icon={Settings}
+            label={`App Registrations (${statistics.totalAppRegistrations})`}
+          />
+          <TabButton
+            active={activeTab === 'enterprise-apps'}
+            onClick={() => setActiveTab('enterprise-apps')}
+            icon={Server}
+            label={`Enterprise Apps (${statistics.totalEnterpriseApps})`}
+          />
+          <TabButton
+            active={activeTab === 'service-principals'}
+            onClick={() => setActiveTab('service-principals')}
+            icon={Shield}
+            label={`Service Principals (${statistics.totalServicePrincipals})`}
+          />
+          <TabButton
+            active={activeTab === 'secrets'}
+            onClick={() => setActiveTab('secrets')}
+            icon={Key}
+            label={`Secrets (${statistics.totalSecrets})`}
+          />
         </div>
       </div>
 
-      {/* Content Area */}
+      {/* Tab Content */}
       <div className="flex-1 overflow-hidden">
-        <DiscoveredViewWrapper
-          key={currentTab.id}
-          moduleName={`Entra ID Apps - ${currentTab.label}`}
-          csvPath={currentTab.csvPath}
-          title={currentTab.label}
-          description={currentTab.description}
-          enableSearch={true}
-          enableExport={true}
-          data-cy={`entraidapp-${currentTab.id}-data`}
-        />
+        {activeTab === 'overview' && (
+          <OverviewTab statistics={statistics} />
+        )}
+
+        {activeTab !== 'overview' && (
+          <div className="h-full flex flex-col p-6">
+            {/* Search and Export */}
+            <div className="flex gap-4 mb-4">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search..."
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+              />
+              <button
+                onClick={exportToCSV}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Export CSV
+              </button>
+            </div>
+
+            {/* Data Grid */}
+            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+              <VirtualizedDataGrid
+                data={filteredData}
+                enableFiltering={true}
+                enableColumnResize={true}
+                enableSorting={true}
+                csvFileName={getCSVFileName(activeTab)}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-export default EntraidappDiscoveredView;
+// Helper Components
+interface StatCardProps {
+  icon: React.ComponentType<any>;
+  label: string;
+  value: number;
+  gradient: string;
+}
 
+const StatCard: React.FC<StatCardProps> = ({ icon: Icon, label, value, gradient }) => {
+  return (
+    <div className={`bg-gradient-to-br ${gradient} rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm opacity-90 mb-1">{label}</p>
+          <p className="text-3xl font-bold">{value.toLocaleString()}</p>
+        </div>
+        <Icon className="w-12 h-12 opacity-80" />
+      </div>
+    </div>
+  );
+};
+
+interface TabButtonProps {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ComponentType<any>;
+  label: string;
+}
+
+const TabButton: React.FC<TabButtonProps> = ({ active, onClick, icon: Icon, label }) => {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
+        active
+          ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+          : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+      }`}
+    >
+      <Icon size={18} />
+      <span className="font-medium">{label}</span>
+    </button>
+  );
+};
+
+interface OverviewTabProps {
+  statistics: any;
+}
+
+const OverviewTab: React.FC<OverviewTabProps> = ({ statistics }) => {
+  return (
+    <div className="p-6 overflow-y-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Sign-In Audience Breakdown */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <Users className="w-5 h-5 text-blue-600" />
+            Sign-In Audience Breakdown
+          </h3>
+          <div className="space-y-3">
+            {Object.entries(statistics.signInAudienceBreakdown).map(([audience, count]) => {
+              const countNum = count as number;
+              return (
+                <div key={audience}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{audience}</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {countNum}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all"
+                      style={{
+                        width: `${(countNum / statistics.totalAppRegistrations) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Service Principal Type Breakdown */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <Shield className="w-5 h-5 text-purple-600" />
+            Service Principal Type Breakdown
+          </h3>
+          <div className="space-y-3">
+            {Object.entries(statistics.spTypeBreakdown).map(([type, count]) => {
+              const countNum = count as number;
+              return (
+                <div key={type}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{type}</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {countNum}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-purple-600 h-2 rounded-full transition-all"
+                      style={{
+                        width: `${(countNum / statistics.totalServicePrincipals) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Top Apps by Secrets */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <Key className="w-5 h-5 text-yellow-600" />
+            Top Apps by Credential Count
+          </h3>
+          <div className="space-y-3">
+            {statistics.topAppsBySecrets.slice(0, 10).map((app: any, index: number) => (
+              <div key={index}>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                    {app.name}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {app.count}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div
+                    className="bg-yellow-600 h-2 rounded-full transition-all"
+                    style={{
+                      width: `${(app.count / statistics.topAppsBySecrets[0]?.count || 1) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top Publishers */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-green-600" />
+            Top Publishers
+          </h3>
+          <div className="space-y-3">
+            {statistics.topPublishers.slice(0, 10).map((publisher: any, index: number) => (
+              <div key={index}>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                    {publisher.name}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {publisher.count}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div
+                    className="bg-green-600 h-2 rounded-full transition-all"
+                    style={{
+                      width: `${(publisher.count / statistics.topPublishers[0]?.count || 1) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+function getCSVFileName(activeTab: string): string {
+  switch (activeTab) {
+    case 'app-registrations':
+      return 'EntraIDAppRegistrations.csv';
+    case 'enterprise-apps':
+      return 'EntraIDEnterpriseApps.csv';
+    case 'service-principals':
+      return 'EntraIDServicePrincipals.csv';
+    case 'secrets':
+      return 'EntraIDApplicationSecrets.csv';
+    default:
+      return 'EntraIDApp.csv';
+  }
+}
