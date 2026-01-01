@@ -2,7 +2,7 @@
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
-# Version: 1.1.0
+# Version: 1.2.0
 # Created: 2025-08-30
 # Last Modified: 2026-01-01
 
@@ -14,10 +14,10 @@
     This module provides comprehensive OneDrive discovery including personal document libraries, file analysis,
     storage usage, sync status, and sharing configurations essential for M&A data discovery and migration planning.
 .NOTES
-    Version: 1.1.0
+    Version: 1.2.0
     Author: Lukian Poleschtschuk
     Created: 2025-08-30
-    Modified: 2026-01-01 - Added direct OAuth2 authentication fallback
+    Modified: 2026-01-01 - Added direct OAuth2 authentication fallback, enhanced provisioning diagnostics
     Requires: PowerShell 5.1+, Microsoft.Graph modules, DiscoveryBase module
 #>
 
@@ -94,8 +94,9 @@ function Invoke-OneDriveDiscovery {
     )
     
     # START: Enhanced discovery context validation and initialization
-    Write-OneDriveLog -Level "HEADER" -Message "=== M&A OneDrive Discovery Module v1.1.0 ===" -Context $Context
+    Write-OneDriveLog -Level "HEADER" -Message "=== M&A OneDrive Discovery Module v1.2.0 ===" -Context $Context
     Write-OneDriveLog -Level "INFO" -Message "OAuth2 fallback authentication enabled" -Context $Context
+    Write-OneDriveLog -Level "INFO" -Message "Enhanced provisioning diagnostics enabled" -Context $Context
     
     $result = [PSCustomObject]@{
         Success = $true
@@ -418,7 +419,7 @@ if (-not $Configuration.discovery -or
         }
 
         # 5. DISCOVERY EXECUTION
-        Write-OneDriveLog -Level "HEADER" -Message "=== OneDrive Discovery Module v1.1.0 ===" -Context $Context
+        Write-OneDriveLog -Level "HEADER" -Message "=== OneDrive Discovery Module v1.2.0 ===" -Context $Context
         Write-OneDriveLog -Level "HEADER" -Message "Starting OneDrive Discovery Process" -Context $Context
 
         $discoveryData = @{
@@ -446,28 +447,66 @@ if (-not $Configuration.discovery -or
                 LowStorageUsers = 0    # Users <20% storage
                 InactiveUsers = 0      # No activity in 90 days
                 LastSyncUsers = 0
+                # Provisioning diagnostics
+                UsersWithOneDrive = 0
+                UsersWithoutOneDrive = 0
+                UsersWithOneDriveLicense = 0
+                UsersWithoutLicense = 0
+                UsersNotProvisioned = 0
+                UsersWithErrors = 0
             }
+            UsersWithoutOneDrive = @()  # Detailed tracking of users missing OneDrive
         }
 
         # 5a. Discover all users with OneDrive
         Write-OneDriveLog -Level "INFO" -Message "Discovering users with OneDrive..." -Context $Context
+
+        # OneDrive license SKU identifiers (common ones)
+        $oneDriveLicenseSkus = @(
+            "a403ebcc-fae0-4ca2-8c8c-7a907fd6c235",  # Microsoft 365 E5
+            "6fd2c87f-b296-42f0-b197-1e91e994b900",  # Microsoft 365 E3
+            "05e9a617-0261-4cee-bb44-138d3ef5d965",  # Microsoft 365 E5 Developer
+            "06ebc4ee-1bb5-47dd-8120-11324bc54e06",  # Microsoft 365 Business Basic
+            "cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46",  # Microsoft 365 Business Standard
+            "b05e124f-c7cc-45a0-a6aa-8cf78c946968",  # Microsoft 365 Business Premium
+            "c7df2760-2c81-4ef7-b578-5b5392b571df",  # OneDrive for Business Plan 1
+            "afcafa6a-d966-4462-918c-ec0b4e0fe642",  # OneDrive for Business Plan 2
+            "18181a46-0d4e-45cd-891e-60aabd171b4e"   # Office 365 E1
+        )
+
         try {
-            $users = Get-MgUser -All -Property Id,UserPrincipalName,DisplayName,Mail,JobTitle,Department,AccountEnabled -ErrorAction Stop
+            $users = Get-MgUser -All -Property Id,UserPrincipalName,DisplayName,Mail,JobTitle,Department,AccountEnabled,AssignedLicenses,AssignedPlans -ErrorAction Stop
             $discoveryData.Statistics.TotalUsers = $users.Count
             Write-OneDriveLog -Level "SUCCESS" -Message "Found $($users.Count) users" -Context $Context
-            
+
             $processedUsers = 0
             foreach ($user in $users) {
                 $processedUsers++
-                if ($processedUsers % 50 -eq 0) {
-                    Write-OneDriveLog -Level "INFO" -Message "Processed $processedUsers of $($users.Count) users..." -Context $Context
+                if ($processedUsers % 10 -eq 0 -or $processedUsers -eq $users.Count) {
+                    Write-OneDriveLog -Level "INFO" -Message "Processing user $processedUsers of $($users.Count): $($user.UserPrincipalName)..." -Context $Context
                 }
-                
+
+                # Check if user has OneDrive-capable license
+                $hasOneDriveLicense = $false
+                $licenseNames = @()
+                if ($user.AssignedLicenses -and $user.AssignedLicenses.Count -gt 0) {
+                    foreach ($license in $user.AssignedLicenses) {
+                        if ($oneDriveLicenseSkus -contains $license.SkuId) {
+                            $hasOneDriveLicense = $true
+                            $licenseNames += $license.SkuId
+                        }
+                    }
+                    if ($hasOneDriveLicense) {
+                        $discoveryData.Statistics.UsersWithOneDriveLicense++
+                    }
+                }
+
                 try {
                     # Get user's OneDrive
-                    $drive = Get-MgUserDrive -UserId $user.Id -ErrorAction SilentlyContinue
+                    $drive = Get-MgUserDrive -UserId $user.Id -ErrorAction Stop
                     if ($drive) {
                         $discoveryData.Statistics.TotalDrives++
+                        $discoveryData.Statistics.UsersWithOneDrive++
                         
                         # Calculate usage percentage
                         $usagePercent = if ($drive.Quota.Total -gt 0) { [math]::Round(($drive.Quota.Used / $drive.Quota.Total) * 100, 2) } else { 0 }
@@ -654,13 +693,71 @@ if (-not $Configuration.discovery -or
                         }
                     }
                 } catch {
-                    Write-OneDriveLog -Level "DEBUG" -Message "Could not get OneDrive for user $($user.UserPrincipalName): $($_.Exception.Message)" -Context $Context
+                    # Track users without OneDrive with detailed reason
+                    $errorMessage = $_.Exception.Message
+                    $discoveryData.Statistics.UsersWithoutOneDrive++
+
+                    # Determine the reason for no OneDrive
+                    $reason = "Unknown"
+                    $status = "Error"
+                    if ($errorMessage -match "ResourceNotFound" -or $errorMessage -match "itemNotFound" -or $errorMessage -match "404") {
+                        if (-not $hasOneDriveLicense) {
+                            $reason = "No OneDrive-capable license assigned"
+                            $status = "NoLicense"
+                            $discoveryData.Statistics.UsersWithoutLicense++
+                        } else {
+                            $reason = "OneDrive not provisioned (licensed but never activated)"
+                            $status = "NotProvisioned"
+                            $discoveryData.Statistics.UsersNotProvisioned++
+                        }
+                    } elseif ($errorMessage -match "Forbidden" -or $errorMessage -match "AccessDenied" -or $errorMessage -match "403") {
+                        $reason = "Access denied to OneDrive (may be disabled or restricted)"
+                        $status = "AccessDenied"
+                        $discoveryData.Statistics.UsersWithErrors++
+                    } else {
+                        $reason = "Error: $errorMessage"
+                        $status = "Error"
+                        $discoveryData.Statistics.UsersWithErrors++
+                    }
+
+                    # Log at INFO level for visibility
+                    Write-OneDriveLog -Level "WARN" -Message "No OneDrive for $($user.UserPrincipalName): $reason" -Context $Context
+
+                    # Track detailed information
+                    $noOneDriveUser = [PSCustomObject]@{
+                        UserId = $user.Id
+                        UserPrincipalName = $user.UserPrincipalName
+                        DisplayName = $user.DisplayName
+                        Mail = $user.Mail
+                        JobTitle = $user.JobTitle
+                        Department = $user.Department
+                        AccountEnabled = $user.AccountEnabled
+                        HasOneDriveLicense = $hasOneDriveLicense
+                        LicenseCount = if ($user.AssignedLicenses) { $user.AssignedLicenses.Count } else { 0 }
+                        Status = $status
+                        Reason = $reason
+                        ErrorMessage = if ($status -eq "Error") { $errorMessage } else { $null }
+                        DiscoveryTimestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+                    }
+                    $discoveryData.UsersWithoutOneDrive += $noOneDriveUser
                 }
             }
-            
+
             Write-OneDriveLog -Level "SUCCESS" -Message "Completed OneDrive discovery for $($users.Count) users" -Context $Context
-            Write-OneDriveLog -Level "INFO" -Message "Statistics Summary:" -Context $Context
-            Write-OneDriveLog -Level "INFO" -Message "  - Drives: $($discoveryData.Statistics.TotalDrives)" -Context $Context
+            Write-OneDriveLog -Level "HEADER" -Message "=== OneDrive Discovery Summary ===" -Context $Context
+            Write-OneDriveLog -Level "INFO" -Message "  Total Users: $($discoveryData.Statistics.TotalUsers)" -Context $Context
+            Write-OneDriveLog -Level "SUCCESS" -Message "  Users WITH OneDrive: $($discoveryData.Statistics.UsersWithOneDrive)" -Context $Context
+            Write-OneDriveLog -Level "WARN" -Message "  Users WITHOUT OneDrive: $($discoveryData.Statistics.UsersWithoutOneDrive)" -Context $Context
+            if ($discoveryData.Statistics.UsersWithoutLicense -gt 0) {
+                Write-OneDriveLog -Level "INFO" -Message "    - No License: $($discoveryData.Statistics.UsersWithoutLicense)" -Context $Context
+            }
+            if ($discoveryData.Statistics.UsersNotProvisioned -gt 0) {
+                Write-OneDriveLog -Level "INFO" -Message "    - Not Provisioned: $($discoveryData.Statistics.UsersNotProvisioned)" -Context $Context
+            }
+            if ($discoveryData.Statistics.UsersWithErrors -gt 0) {
+                Write-OneDriveLog -Level "ERROR" -Message "    - Errors: $($discoveryData.Statistics.UsersWithErrors)" -Context $Context
+            }
+            Write-OneDriveLog -Level "INFO" -Message "  - Total Drives: $($discoveryData.Statistics.TotalDrives)" -Context $Context
             Write-OneDriveLog -Level "INFO" -Message "  - Files: $($discoveryData.Statistics.TotalFiles), Folders: $($discoveryData.Statistics.TotalFolders)" -Context $Context
             Write-OneDriveLog -Level "INFO" -Message "  - Total Storage Used: $([math]::Round($discoveryData.Statistics.TotalSize / 1GB, 2)) GB" -Context $Context
             Write-OneDriveLog -Level "INFO" -Message "  - Total Quota: $([math]::Round($discoveryData.Statistics.TotalQuota / 1GB, 2)) GB" -Context $Context
@@ -703,7 +800,14 @@ if (-not $Configuration.discovery -or
                 $discoveryData.SharingLinks | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
                 Write-OneDriveLog -Level "SUCCESS" -Message "Saved $($discoveryData.SharingLinks.Count) OneDrive sharing links to $csvPath" -Context $Context
             }
-            
+
+            # Save Users WITHOUT OneDrive (diagnostic data)
+            if ($discoveryData.UsersWithoutOneDrive.Count -gt 0) {
+                $csvPath = Join-Path $outputPath "OneDriveUsersWithoutOneDrive.csv"
+                $discoveryData.UsersWithoutOneDrive | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
+                Write-OneDriveLog -Level "WARN" -Message "Saved $($discoveryData.UsersWithoutOneDrive.Count) users WITHOUT OneDrive to $csvPath" -Context $Context
+            }
+
             # Save Statistics summary
             $statsPath = Join-Path $outputPath "OneDriveStatistics.csv"
             $statsObject = [PSCustomObject]@{
@@ -711,6 +815,17 @@ if (-not $Configuration.discovery -or
                 TenantName = $tenantName
                 TotalUsers = $discoveryData.Statistics.TotalUsers
                 TotalDrives = $discoveryData.Statistics.TotalDrives
+                # Provisioning diagnostics
+                UsersWithOneDrive = $discoveryData.Statistics.UsersWithOneDrive
+                UsersWithoutOneDrive = $discoveryData.Statistics.UsersWithoutOneDrive
+                UsersWithOneDriveLicense = $discoveryData.Statistics.UsersWithOneDriveLicense
+                UsersWithoutLicense = $discoveryData.Statistics.UsersWithoutLicense
+                UsersNotProvisioned = $discoveryData.Statistics.UsersNotProvisioned
+                UsersWithErrors = $discoveryData.Statistics.UsersWithErrors
+                OneDriveAdoptionPercent = if ($discoveryData.Statistics.TotalUsers -gt 0) {
+                    [math]::Round(($discoveryData.Statistics.UsersWithOneDrive / $discoveryData.Statistics.TotalUsers) * 100, 1)
+                } else { 0 }
+                # Storage statistics
                 TotalFiles = $discoveryData.Statistics.TotalFiles
                 TotalFolders = $discoveryData.Statistics.TotalFolders
                 TotalSizeBytes = $discoveryData.Statistics.TotalSize
@@ -720,11 +835,13 @@ if (-not $Configuration.discovery -or
                 StorageUsagePercent = if ($discoveryData.Statistics.TotalQuota -gt 0) {
                     [math]::Round(($discoveryData.Statistics.TotalSize / $discoveryData.Statistics.TotalQuota) * 100, 2)
                 } else { 0 }
+                # Sharing statistics
                 SharedItems = $discoveryData.Statistics.SharedItems
                 InternalShares = $discoveryData.Statistics.InternalShares
                 ExternalShares = $discoveryData.Statistics.ExternalShares
                 AnonymousLinks = $discoveryData.Statistics.AnonymousLinks
                 CompanyWideLinks = $discoveryData.Statistics.CompanyWideLinks
+                # User status
                 HighStorageUsers = $discoveryData.Statistics.HighStorageUsers
                 LowStorageUsers = $discoveryData.Statistics.LowStorageUsers
                 InactiveUsers = $discoveryData.Statistics.InactiveUsers

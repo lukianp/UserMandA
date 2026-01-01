@@ -206,7 +206,11 @@
       "Bash(cmd /c \"robocopy D:\\\\Scripts\\\\UserMandA\\\\Modules\\\\Discovery C:\\\\enterprisediscovery\\\\Modules\\\\Discovery ExchangeDiscovery.psm1 /NFL /NDL /NJH /NJS /NP\")",
       "Bash(git -C D:ScriptsUserMandA log --oneline -5 -- guiv2/src/preload.ts)",
       "Bash(git -C D:ScriptsUserMandA diff HEAD -- guiv2/src/preload.ts)",
-      "Bash(git -C D:ScriptsUserMandA status guiv2/src/preload.ts)"
+      "Bash(git -C D:ScriptsUserMandA status guiv2/src/preload.ts)",
+      "Bash(cmd /c \"dir /b D:\\\\Scripts\\\\UserMandA\\\\guiv2\\\\src\\\\renderer\\\\views\\\\discovered\\\\*OneDrive*.tsx 2>nul & dir /b D:\\\\Scripts\\\\UserMandA\\\\guiv2\\\\src\\\\renderer\\\\hooks\\\\*OneDrive*Discovered*.ts 2>nul\")",
+      "Bash(cmd /c \"dir /b C:\\\\DiscoveryData\\\\ljpops\\\\Raw\\\\OneDrive*.csv 2>nul\")",
+      "Bash(cmd /c \"if exist D:\\\\Scripts\\\\UserMandA\\\\guiv2\\\\src\\\\renderer\\\\views\\\\discovered\\\\OneDriveDiscoveredView.tsx \\(echo File exists\\) else \\(echo File does NOT exist\\)\")",
+      "Bash(cmd /c \"dir /b C:\\\\enterprisediscovery\\\\guiv2\\\\src\\\\renderer\\\\hooks\\\\useOneDriveDiscoveredLogic.ts 2>nul && echo Hook exists || echo Hook NOT found\")"
     ],
     "deny": [],
     "ask": []
