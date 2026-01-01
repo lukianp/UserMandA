@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@main/*": ["src/main/*"],
+      "@renderer/*": ["src/renderer/*"],
+      "@shared/*": ["src/shared/*"],
+      "@components/*": ["src/renderer/components/*"],
+      "@hooks/*": ["src/renderer/hooks/*"],
+      "@store/*": ["src/renderer/store/*"],
+      "@views/*": ["src/renderer/views/*"],
+      "@types/*": ["src/renderer/types/*"],
+      "@lib/*": ["src/renderer/lib/*"]
+    },
+    "typeRoots": ["src/renderer/types", "node_modules/@types"],
+    "types": []
+  },
+  "include": [
+    "src/**/*",
+    "forge.config.ts",
+    "bulk-fix-null-safety.js",
+    "batch-fix-tests.js",
+    "*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    ".webpack",
+    "out",
+    "e2e",
+    "playwright-report"
+  ]
+}

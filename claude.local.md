@@ -102,10 +102,40 @@ Create `guiv2/src/renderer/hooks/use<ModuleName>DiscoveredLogic.ts`:
 ### Step 4: Create/Update Discovered View
 Update `guiv2/src/renderer/views/discovered/<ModuleName>DiscoveredView.tsx`:
 - Import the logic hook
+- **MANDATORY: Add Discovery Success % Card as FIRST statistics card**
 - Add 12 statistics cards (3 rows x 4 columns) with gradient colors
 - Add tabs for each data type (Overview + data tabs)
 - Overview tab: breakdown panels, top lists with progress bars
 - Data tabs: search, filters, VirtualizedDataGrid
+
+#### Discovery Success % Card (REQUIRED on ALL enriched views)
+```typescript
+// Add to logic hook statistics calculation:
+discoverySuccessPercentage: (() => {
+  const expectedSources = [
+    { name: 'DataSource1', hasData: data1.length > 0, weight: 20 },
+    { name: 'DataSource2', hasData: data2.length > 0, weight: 15 },
+    // ... weight by importance (total should = 100)
+  ];
+  const totalWeight = expectedSources.reduce((sum, s) => sum + s.weight, 0);
+  const achievedWeight = expectedSources.reduce((sum, s) => sum + (s.hasData ? s.weight : 0), 0);
+  return Math.round((achievedWeight / totalWeight) * 100);
+})(),
+dataSourcesReceivedCount: expectedSources.filter(s => s.hasData).length,
+dataSourcesTotal: expectedSources.length,
+
+// Add DiscoverySuccessCard component to BOTH Discovery and Discovered views:
+const DiscoverySuccessCard: React.FC<{percentage: number; received: number; total: number}> = ({ percentage, received, total }) => {
+  const getGradient = () => {
+    if (percentage >= 80) return 'from-green-500 to-emerald-600';
+    if (percentage >= 60) return 'from-yellow-500 to-amber-600';
+    if (percentage >= 40) return 'from-orange-500 to-orange-600';
+    return 'from-red-500 to-rose-600';
+  };
+  // ... renders colored card showing X% and X/Y data sources
+};
+```
+Color thresholds: 80%+ green, 60-79% yellow, 40-59% orange, <40% red
 
 ### Step 5: Update Discovery View Results
 Update `guiv2/src/renderer/views/discovery/<ModuleName>DiscoveryView.tsx`:
@@ -144,3 +174,53 @@ Row 3: `rose-500`, `violet-500`, `teal-500`, `pink-500`
 - Applications: `Settings`, `Key`
 - Security: `Shield`, `Lock`
 - Devices: `Server`, `HardDrive`
+
+---
+
+## PowerShell Module Version Tracking
+
+**Rule**: Increment version by +0.1 on each change, update changelog.
+
+| Module | Current Version | Last Modified | Description |
+|--------|-----------------|---------------|-------------|
+| ExchangeDiscovery.psm1 | v2.0.0 | 2026-01-01 | Mail flow, DNS, security policies |
+
+### ExchangeDiscovery.psm1 Changelog
+- **v2.0.0** (2026-01-01) - Major mail flow enhancement:
+  - Added Transport Rules discovery (Get-TransportRule)
+  - Added Inbound/Outbound Connectors discovery
+  - Added Remote Domains discovery
+  - Added Organization Config discovery
+  - Added Organization Relationships (federation)
+  - Added DKIM Signing Config discovery
+  - Added Anti-Spam, Anti-Phishing, Malware policy discovery
+  - Added Migration Endpoints and Batches discovery
+  - Added Retention Policies and Journal Rules discovery
+  - Added DNS/MX/SPF/DKIM/DMARC discovery with third-party gateway detection
+- **v1.0.0** (2025-01-18) - Initial release with mailboxes, groups, contacts
+
+---
+
+## Current Session Tracker (2026-01-01)
+
+### Task: Exchange Module Enhancement for Mail Flow
+
+**Status**: Exchange views fully operational with Discovery Success % card
+
+**Completed:**
+1. ✅ Enhanced ExchangeDiscovery.psm1 with comprehensive mail flow discovery
+2. ✅ Added Transport Rules, Connectors, Remote Domains discovery
+3. ✅ Added Organization Config, Org Relationships discovery
+4. ✅ Added Security Policies (DKIM, Anti-Spam, Anti-Phish, Malware) discovery
+5. ✅ Added Migration Config (Endpoints, Batches) discovery
+6. ✅ Added DNS/MX/SPF/DKIM/DMARC discovery with third-party gateway detection
+7. ✅ Deployed module v2.0.0 to C:\enterprisediscovery
+8. ✅ Added Discovery Success % card to Exchange views (both Discovery and Discovered)
+9. ✅ Synced tabs between ExchangeDiscoveryView and ExchangeDiscoveredView
+10. ✅ Documented Discovery Success % requirement in buildviewsenrich.md
+11. ✅ Documented Discovery Success % requirement in claude.local.md
+12. ✅ preload.ts restored (Grok demo changes discarded)
+
+**Exchange Column Definitions**: Already using correct AG Grid ColDef format (`field`, `headerName`). The AG Grid warnings in console are from OTHER modules (EntraIDM365, Azure, Licensing, etc.) still using legacy `key`, `header` format - not from Exchange.
+
+**Important**: Mail flow cmdlets (Get-TransportRule, etc.) require Exchange Online PowerShell connection, not just Graph API. The `$exoConnected` variable must be true for mail flow discovery to run.

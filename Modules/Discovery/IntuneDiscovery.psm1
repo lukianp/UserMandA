@@ -2,9 +2,9 @@
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
-# Version: 1.0.0
+# Version: 1.1.0
 # Created: 2025-01-18
-# Last Modified: 2025-01-18
+# Last Modified: 2026-01-01
 
 <#
 .SYNOPSIS
@@ -14,9 +14,10 @@
     comprehensive Intune discovery including device management policies, configuration profiles, compliance settings, 
     and mobile device management configurations essential for M&A device management assessment and migration planning.
 .NOTES
-    Version: 1.0.0
+    Version: 1.1.0
     Author: Lukian Poleschtschuk
     Created: 2025-01-18
+    Modified: 2026-01-01 - Switch from beta to v1.0 API for stable discovery data
     Requires: PowerShell 5.1+, Microsoft.Graph modules, DiscoveryBase module
 #>
 
@@ -129,8 +130,8 @@ function Invoke-IntuneDiscovery {
         try {
             Write-ModuleLog -ModuleName "Intune" -Message "Discovering Intune managed devices..." -Level "INFO"
             
-            # Use beta endpoint for comprehensive device data
-            $uri = "https://graph.microsoft.com/beta/deviceManagement/managedDevices?`$top=999"
+            # Use v1.0 endpoint for stable device data
+            $uri = "https://graph.microsoft.com/v1.0/deviceManagement/managedDevices?`$top=999"
             
             $managedDevices = Invoke-GraphAPIWithPaging -Uri $uri -ModuleName "Intune"
             
@@ -241,14 +242,14 @@ function Invoke-IntuneDiscovery {
         try {
             Write-ModuleLog -ModuleName "Intune" -Message "Discovering device configuration profiles..." -Level "INFO"
             
-            $configUri = "https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?`$top=999"
+            $configUri = "https://graph.microsoft.com/v1.0/deviceManagement/deviceConfigurations?`$top=999"
             $deviceConfigurations = Invoke-GraphAPIWithPaging -Uri $configUri -ModuleName "Intune"
             
             foreach ($config in $deviceConfigurations) {
                 # Get assignments for this configuration
                 $assignments = @()
                 try {
-                    $assignmentUri = "https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations/$($config.id)/assignments"
+                    $assignmentUri = "https://graph.microsoft.com/v1.0/deviceManagement/deviceConfigurations/$($config.id)/assignments"
                     $assignmentResponse = Invoke-MgGraphRequest -Uri $assignmentUri -Method GET -ErrorAction Stop
                     $assignments = $assignmentResponse.value
                 } catch {
@@ -294,14 +295,14 @@ function Invoke-IntuneDiscovery {
         try {
             Write-ModuleLog -ModuleName "Intune" -Message "Discovering compliance policies..." -Level "INFO"
             
-            $complianceUri = "https://graph.microsoft.com/beta/deviceManagement/deviceCompliancePolicies?`$top=999"
+            $complianceUri = "https://graph.microsoft.com/v1.0/deviceManagement/deviceCompliancePolicies?`$top=999"
             $compliancePolicies = Invoke-GraphAPIWithPaging -Uri $complianceUri -ModuleName "Intune"
             
             foreach ($policy in $compliancePolicies) {
                 # Get assignments
                 $assignments = @()
                 try {
-                    $assignmentUri = "https://graph.microsoft.com/beta/deviceManagement/deviceCompliancePolicies/$($policy.id)/assignments"
+                    $assignmentUri = "https://graph.microsoft.com/v1.0/deviceManagement/deviceCompliancePolicies/$($policy.id)/assignments"
                     $assignmentResponse = Invoke-MgGraphRequest -Uri $assignmentUri -Method GET -ErrorAction Stop
                     $assignments = $assignmentResponse.value
                 } catch {
@@ -342,7 +343,7 @@ function Invoke-IntuneDiscovery {
             
             # iOS App Protection Policies
             try {
-                $iosAppPolicyUri = "https://graph.microsoft.com/beta/deviceAppManagement/iosManagedAppProtections?`$top=999"
+                $iosAppPolicyUri = "https://graph.microsoft.com/v1.0/deviceAppManagement/iosManagedAppProtections?`$top=999"
                 $iosAppPolicies = Invoke-GraphAPIWithPaging -Uri $iosAppPolicyUri -ModuleName "Intune"
                 
                 foreach ($policy in $iosAppPolicies) {
@@ -384,7 +385,7 @@ function Invoke-IntuneDiscovery {
             
             # Android App Protection Policies
             try {
-                $androidAppPolicyUri = "https://graph.microsoft.com/beta/deviceAppManagement/androidManagedAppProtections?`$top=999"
+                $androidAppPolicyUri = "https://graph.microsoft.com/v1.0/deviceAppManagement/androidManagedAppProtections?`$top=999"
                 $androidAppPolicies = Invoke-GraphAPIWithPaging -Uri $androidAppPolicyUri -ModuleName "Intune"
                 
                 foreach ($policy in $androidAppPolicies) {
@@ -435,14 +436,14 @@ function Invoke-IntuneDiscovery {
         try {
             Write-ModuleLog -ModuleName "Intune" -Message "Discovering managed applications..." -Level "INFO"
             
-            $mobileAppsUri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps?`$top=999"
+            $mobileAppsUri = "https://graph.microsoft.com/v1.0/deviceAppManagement/mobileApps?`$top=999"
             $managedApps = Invoke-GraphAPIWithPaging -Uri $mobileAppsUri -ModuleName "Intune"
             
             foreach ($app in $managedApps) {
                 # Get assignments
                 $assignments = @()
                 try {
-                    $assignmentUri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($app.id)/assignments"
+                    $assignmentUri = "https://graph.microsoft.com/v1.0/deviceAppManagement/mobileApps/$($app.id)/assignments"
                     $assignmentResponse = Invoke-MgGraphRequest -Uri $assignmentUri -Method GET -ErrorAction Stop
                     $assignments = $assignmentResponse.value
                 } catch {

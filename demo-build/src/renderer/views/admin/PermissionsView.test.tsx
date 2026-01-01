@@ -1,0 +1,173 @@
+/**
+ * Unit Tests for PermissionsView
+ */
+
+import * as React from 'react';
+import { renderWithProviders as render, screen } from '../../test-utils/testWrappers';
+
+import { createUniversalDiscoveryHook } from '../../../test-utils/universalDiscoveryMocks';
+
+import '@testing-library/jest-dom';
+import {
+  resetAllMocks,
+} from '../../test-utils/viewTestHelpers';
+
+import PermissionsView from './PermissionsView';
+
+// Mock the hook
+jest.mock('../../hooks/usePermissionsLogic', () => ({
+  usePermissionsLogic: jest.fn(),
+}));
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { usePermissionsLogic } = require('../../hooks/usePermissionsLogic');
+
+describe('PermissionsView', () => {
+  const mockHookDefaults = createUniversalDiscoveryHook();
+  beforeEach(() => {
+    resetAllMocks();
+    usePermissionsLogic.mockReturnValue(mockHookDefaults);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  // ============================================================================
+  // Rendering Tests
+  // ============================================================================
+
+  describe('Rendering', () => {
+    it('renders without crashing', () => {
+      render(<PermissionsView />);
+      expect(screen.getByTestId('permissions-view')).toBeInTheDocument();
+    });
+
+    it('displays the view title', () => {
+      render(<PermissionsView />);
+      expect(screen.getByText('Permissions')).toBeInTheDocument();
+    });
+
+    it('displays the view description', () => {
+      render(<PermissionsView />);
+      expect(
+        screen.getByText(/Manage user permissions/i)
+      ).toBeInTheDocument();
+    });
+
+    it('displays the icon', () => {
+      const { container } = render(<PermissionsView />);
+      const icon = container.querySelector('svg');
+      expect(icon).toBeInTheDocument();
+    });
+  });
+
+  // ============================================================================
+  // Loading State Tests
+  // ============================================================================
+
+  describe('Loading State', () => {
+    it('shows loading state when data is loading', () => {
+      usePermissionsLogic.mockReturnValue({
+        ...mockHookDefaults,
+        isLoading: true,
+      });
+
+      render(<PermissionsView />);
+      const hasLoadingIndicator = screen.queryAllByRole('status').length > 0 || screen.queryByText(/loading/i) !== null;
+      expect(hasLoadingIndicator).toBe(true);
+    });
+
+    it('does not show loading state when data is loaded', () => {
+      render(<PermissionsView />);
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+  });
+
+  
+
+  
+
+  
+
+  // ============================================================================
+  // Button Action Tests
+  // ============================================================================
+
+  describe('Button Actions', () => {
+    it('renders action buttons', () => {
+      render(<PermissionsView />);
+      const buttons = screen.getAllByRole('button');
+      expect(buttons.length).toBeGreaterThan(0);
+    });
+
+    
+  });
+
+  // ============================================================================
+  // Error Handling Tests
+  // ============================================================================
+
+  describe('Error Handling', () => {
+    it('displays error message when error occurs', () => {
+      usePermissionsLogic.mockReturnValue({
+        ...mockHookDefaults,
+        error: 'Test error message',
+      });
+
+      render(<PermissionsView />);
+      expect(screen.queryByText(/error/i)).toBeInTheDocument();
+    });
+
+    it('does not display error when no error', () => {
+      render(<PermissionsView />);
+      const alertElements = screen.queryAllByRole('alert');
+      expect(alertElements.every(el => !el.textContent?.includes('error'))).toBe(true);
+    });
+
+    it('shows error alert with proper styling', () => {
+      usePermissionsLogic.mockReturnValue({
+        ...mockHookDefaults,
+        error: 'Test error',
+      });
+
+      const { container } = render(<PermissionsView />);
+      const alert = container.querySelector('[role="alert"]');
+      expect(alert).toBeInTheDocument();
+    });
+  });
+
+  // ============================================================================
+  // Accessibility Tests
+  // ============================================================================
+
+  describe('Accessibility', () => {
+    it('has accessible data-cy attributes', () => {
+      render(<PermissionsView />);
+      expect(screen.getByTestId('permissions-view')).toBeInTheDocument();
+    });
+
+    it('has accessible button labels', () => {
+      render(<PermissionsView />);
+      const buttons = screen.getAllByRole('button');
+      buttons.forEach(button => {
+        // Each button should have accessible text or aria-label
+        const hasText = button.textContent && button.textContent.length > 0;
+        const hasAriaLabel = button.getAttribute('aria-label');
+        expect(hasText || hasAriaLabel).toBeTruthy();
+      });
+    });
+
+    it('has proper heading structure', () => {
+      render(<PermissionsView />);
+      const headings = screen.getAllByRole('heading');
+      expect(headings.length).toBeGreaterThan(0);
+    });
+  });
+
+  
+});
+
+
+
+

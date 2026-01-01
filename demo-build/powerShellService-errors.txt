@@ -1,0 +1,300 @@
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    [0m [90m 189 |[39m       [36mconst[39m result [33m=[39m [36mawait[39m service[33m.[39mexecuteModule([32m'Modules/Discovery/ActiveDirectory.psm1'[39m[33m,[39m [32m'Get-ADUsers'[39m[33m,[39m { [33mDomain[39m[33m:[39m [32m'contoso.com'[39m[33m,[39m [33mIncludeGroups[39m[33m:[39m [36mtrue[39m }[33m,[39m {})[33m;[39m
+     [90m 190 |[39m
+    [31m[1m>[22m[39m[90m 191 |[39m       expect(result[33m.[39msuccess)[33m.[39mtoBe([36mtrue[39m)[33m;[39m
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 192 |[39m       expect(result[33m.[39mdata)[33m.[39mtoBeDefined()[33m;[39m
+     [90m 193 |[39m     })[33m;[39m
+     [90m 194 |[39m[0m
+
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:191:30)
+
+  ● PowerShellExecutionService › Session Pooling › should reuse idle sessions
+
+    thrown: "Exceeded timeout of 10000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 217 |[39m
+     [90m 218 |[39m   describe([32m'Session Pooling'[39m[33m,[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 219 |[39m     it([32m'should reuse idle sessions'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 220 |[39m       [36mconst[39m mockResult [33m=[39m { success[33m:[39m [36mtrue[39m[33m,[39m data[33m:[39m {} }[33m;[39m
+     [90m 221 |[39m
+     [90m 222 |[39m       [90m// Execute first script[39m[0m
+
+      at src/main/services/powerShellService.test.ts:219:5
+      at src/main/services/powerShellService.test.ts:218:3
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:41:1)
+
+  ● PowerShellExecutionService › Error Handling › should handle syntax errors
+
+    expect(received).rejects.toThrow()
+
+    Received promise resolved instead of rejected
+    Resolved to value: {"duration": 12, "error": "Script contains syntax errors:
+    SyntaxError: Unexpected token", "exitCode": 1, "stderr": "SyntaxError: Unexpected token", "stdout": "", "success": false, "warnings": []}
+
+    [0m [90m 317 |[39m       }[33m,[39m [35m10[39m)[33m;[39m
+     [90m 318 |[39m
+    [31m[1m>[22m[39m[90m 319 |[39m       [36mawait[39m expect(
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 320 |[39m         service[33m.[39mexecuteScript([32m'Scripts/SyntaxError.ps1'[39m[33m,[39m [][33m,[39m {})
+     [90m 321 |[39m       )[33m.[39mrejects[33m.[39mtoThrow([33mPowerShellError[39m)[33m;[39m
+     [90m 322 |[39m     })[33m;[39m[0m
+
+      at expect (node_modules/expect/build/index.js:2116:15)
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:319:13)
+
+  ● PowerShellExecutionService › Error Handling › should handle runtime errors
+
+    expect(received).rejects.toThrow()
+
+    Received promise resolved instead of rejected
+    Resolved to value: {"duration": 12, "error": "Script failed with exit code 1", "exitCode": 1, "stderr": "RuntimeError: Object not found", "stdout": "", "success": false, "warnings": []}
+
+    [0m [90m 329 |[39m       }[33m,[39m [35m10[39m)[33m;[39m
+     [90m 330 |[39m
+    [31m[1m>[22m[39m[90m 331 |[39m       [36mawait[39m expect(
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 332 |[39m         service[33m.[39mexecuteScript([32m'Scripts/RuntimeError.ps1'[39m[33m,[39m [][33m,[39m {})
+     [90m 333 |[39m       )[33m.[39mrejects[33m.[39mtoThrow()[33m;[39m
+     [90m 334 |[39m     })[33m;[39m[0m
+
+      at expect (node_modules/expect/build/index.js:2116:15)
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:331:13)
+
+  ● PowerShellExecutionService › Error Handling › should handle JSON parsing errors
+
+    expect(received).rejects.toThrow()
+
+    Received promise resolved instead of rejected
+    Resolved to value: {"duration": 26, "error": "Failed to parse JSON output: Unexpected token 'I', \"Invalid JSON {{{\" is not valid JSON·
+    Output:
+    Invalid JSON {{{", "exitCode": 0, "stderr": "", "stdout": "Invalid JSON {{{", "success": false, "warnings": []}
+
+    [0m [90m 341 |[39m       }[33m,[39m [35m10[39m)[33m;[39m
+     [90m 342 |[39m
+    [31m[1m>[22m[39m[90m 343 |[39m       [36mawait[39m expect(
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 344 |[39m         service[33m.[39mexecuteScript([32m'Scripts/BadJSON.ps1'[39m[33m,[39m [][33m,[39m {})
+     [90m 345 |[39m       )[33m.[39mrejects[33m.[39mtoThrow()[33m;[39m
+     [90m 346 |[39m     })[33m;[39m[0m
+
+      at expect (node_modules/expect/build/index.js:2116:15)
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:343:13)
+
+  ● PowerShellExecutionService › Stream Handling › should emit output stream events
+
+    expect(jest.fn()).toHaveBeenCalled()
+
+    Expected number of calls: >= 1
+    Received number of calls:    0
+
+    [0m [90m 361 |[39m       [36mawait[39m service[33m.[39mexecuteScript([32m'Scripts/Test.ps1'[39m[33m,[39m [][33m,[39m {})[33m;[39m
+     [90m 362 |[39m
+    [31m[1m>[22m[39m[90m 363 |[39m       expect(outputHandler)[33m.[39mtoHaveBeenCalled()[33m;[39m
+     [90m     |[39m                             [31m[1m^[22m[39m
+     [90m 364 |[39m     })[33m;[39m
+     [90m 365 |[39m
+     [90m 366 |[39m     it([32m'should emit error stream events'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:363:29)
+
+  ● PowerShellExecutionService › Stream Handling › should emit error stream events
+
+    expect(jest.fn()).toHaveBeenCalled()
+
+    Expected number of calls: >= 1
+    Received number of calls:    0
+
+    [0m [90m 380 |[39m       }
+     [90m 381 |[39m
+    [31m[1m>[22m[39m[90m 382 |[39m       expect(errorHandler)[33m.[39mtoHaveBeenCalled()[33m;[39m
+     [90m     |[39m                            [31m[1m^[22m[39m
+     [90m 383 |[39m     })[33m;[39m
+     [90m 384 |[39m
+     [90m 385 |[39m     it([32m'should handle verbose stream'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:382:28)
+
+  ● PowerShellExecutionService › Stream Handling › should handle verbose stream
+
+    expect(jest.fn()).toHaveBeenCalled()
+
+    Expected number of calls: >= 1
+    Received number of calls:    0
+
+    [0m [90m 396 |[39m       [36mawait[39m service[33m.[39mexecuteScript([32m'Scripts/Test.ps1'[39m[33m,[39m [][33m,[39m { streamOutput[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 397 |[39m
+    [31m[1m>[22m[39m[90m 398 |[39m       expect(verboseHandler)[33m.[39mtoHaveBeenCalled()[33m;[39m
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 399 |[39m     })[33m;[39m
+     [90m 400 |[39m
+     [90m 401 |[39m     it([32m'should handle warning stream'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:398:30)
+
+  ● PowerShellExecutionService › Stream Handling › should handle warning stream
+
+    expect(jest.fn()).toHaveBeenCalled()
+
+    Expected number of calls: >= 1
+    Received number of calls:    0
+
+    [0m [90m 412 |[39m       [36mawait[39m service[33m.[39mexecuteScript([32m'Scripts/Test.ps1'[39m[33m,[39m [][33m,[39m { streamOutput[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 413 |[39m
+    [31m[1m>[22m[39m[90m 414 |[39m       expect(warningHandler)[33m.[39mtoHaveBeenCalled()[33m;[39m
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 415 |[39m     })[33m;[39m
+     [90m 416 |[39m
+     [90m 417 |[39m     it([32m'should handle debug stream'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:414:30)
+
+  ● PowerShellExecutionService › Stream Handling › should handle debug stream
+
+    expect(jest.fn()).toHaveBeenCalled()
+
+    Expected number of calls: >= 1
+    Received number of calls:    0
+
+    [0m [90m 428 |[39m       [36mawait[39m service[33m.[39mexecuteScript([32m'Scripts/Test.ps1'[39m[33m,[39m [][33m,[39m { streamOutput[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 429 |[39m
+    [31m[1m>[22m[39m[90m 430 |[39m       expect(debugHandler)[33m.[39mtoHaveBeenCalled()[33m;[39m
+     [90m     |[39m                            [31m[1m^[22m[39m
+     [90m 431 |[39m     })[33m;[39m
+     [90m 432 |[39m
+     [90m 433 |[39m     it([32m'should handle progress events'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:430:28)
+
+  ● PowerShellExecutionService › Stream Handling › should handle progress events
+
+    expect(jest.fn()).toHaveBeenCalled()
+
+    Expected number of calls: >= 1
+    Received number of calls:    0
+
+    [0m [90m 444 |[39m       [36mawait[39m service[33m.[39mexecuteScript([32m'Scripts/Test.ps1'[39m[33m,[39m [][33m,[39m { streamOutput[33m:[39m [36mtrue[39m })[33m;[39m
+     [90m 445 |[39m
+    [31m[1m>[22m[39m[90m 446 |[39m       expect(progressHandler)[33m.[39mtoHaveBeenCalled()[33m;[39m
+     [90m     |[39m                               [31m[1m^[22m[39m
+     [90m 447 |[39m     })[33m;[39m
+     [90m 448 |[39m   })[33m;[39m
+     [90m 449 |[39m[0m
+
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:446:31)
+
+  ● PowerShellExecutionService › Parallel Execution › should execute multiple scripts in parallel
+
+    thrown: "Exceeded timeout of 10000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 449 |[39m
+     [90m 450 |[39m   describe([32m'Parallel Execution'[39m[33m,[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 451 |[39m     it([32m'should execute multiple scripts in parallel'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 452 |[39m       [36mconst[39m mockResult [33m=[39m { success[33m:[39m [36mtrue[39m[33m,[39m data[33m:[39m {} }[33m;[39m
+     [90m 453 |[39m
+     [90m 454 |[39m       [36mconst[39m promises [33m=[39m [[0m
+
+      at src/main/services/powerShellService.test.ts:451:5
+      at src/main/services/powerShellService.test.ts:450:3
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:41:1)
+
+  ● PowerShellExecutionService › Parallel Execution › should handle parallel execution with failures
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "rejected"
+    Received: "fulfilled"
+
+    [0m [90m 502 |[39m
+     [90m 503 |[39m       expect(results[[35m0[39m][33m.[39mstatus)[33m.[39mtoBe([32m'fulfilled'[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 504 |[39m       expect(results[[35m1[39m][33m.[39mstatus)[33m.[39mtoBe([32m'rejected'[39m)[33m;[39m
+     [90m     |[39m                                 [31m[1m^[22m[39m
+     [90m 505 |[39m       expect(results[[35m2[39m][33m.[39mstatus)[33m.[39mtoBe([32m'fulfilled'[39m)[33m;[39m
+     [90m 506 |[39m     })[33m;[39m
+     [90m 507 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:504:33)
+
+  ● PowerShellExecutionService › Module Discovery › should discover available modules
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+    [0m [90m 531 |[39m       [36mconst[39m modules [33m=[39m [36mawait[39m service[33m.[39mdiscoverModules()[33m;[39m
+     [90m 532 |[39m
+    [31m[1m>[22m[39m[90m 533 |[39m       expect(modules[33m.[39mlength)[33m.[39mtoBeGreaterThan([35m0[39m)[33m;[39m
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 534 |[39m       expect(modules[33m.[39msome(m [33m=>[39m m[33m.[39mname [33m===[39m [32m'Module1'[39m))[33m.[39mtoBe([36mtrue[39m)[33m;[39m
+     [90m 535 |[39m     })[33m;[39m
+     [90m 536 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:533:30)
+
+  ● PowerShellExecutionService › Retry Logic › should retry failed executions
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    [0m [90m 558 |[39m       [36mconst[39m result [33m=[39m [36mawait[39m service[33m.[39mexecuteScript([32m'Scripts/RetryTest.ps1'[39m[33m,[39m [][33m,[39m { timeout[33m:[39m [35m10000[39m })[33m;[39m
+     [90m 559 |[39m
+    [31m[1m>[22m[39m[90m 560 |[39m       expect(result[33m.[39msuccess)[33m.[39mtoBe([36mtrue[39m)[33m;[39m
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 561 |[39m       expect(attemptCount)[33m.[39mtoBe([35m3[39m)[33m;[39m
+     [90m 562 |[39m     })[33m;[39m
+     [90m 563 |[39m[0m
+
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:560:30)
+
+  ● PowerShellExecutionService › Retry Logic › should fail after max retries
+
+    expect(received).rejects.toThrow()
+
+    Received promise resolved instead of rejected
+    Resolved to value: {"duration": 12, "error": "Script failed with exit code 1", "exitCode": 1, "stderr": "Persistent error", "stdout": "", "success": false, "warnings": []}
+
+    [0m [90m 573 |[39m       })[33m;[39m
+     [90m 574 |[39m
+    [31m[1m>[22m[39m[90m 575 |[39m       [36mawait[39m expect(
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 576 |[39m         service[33m.[39mexecuteScript([32m'Scripts/AlwaysFails.ps1'[39m[33m,[39m [][33m,[39m { timeout[33m:[39m [35m1000[39m })
+     [90m 577 |[39m       )[33m.[39mrejects[33m.[39mtoThrow()[33m;[39m
+     [90m 578 |[39m     })[33m;[39m[0m
+
+      at expect (node_modules/expect/build/index.js:2116:15)
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:575:13)
+
+  ● PowerShellExecutionService › Performance Monitoring › should track failure rate
+
+    thrown: "Exceeded timeout of 10000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 609 |[39m     })[33m;[39m
+     [90m 610 |[39m
+    [31m[1m>[22m[39m[90m 611 |[39m     it([32m'should track failure rate'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 612 |[39m       [90m// Execute successful script[39m
+     [90m 613 |[39m       setTimeout(() [33m=>[39m {
+     [90m 614 |[39m         mockProcess[33m.[39mstdout[33m![39m[33m.[39memit([32m'data'[39m[33m,[39m [33mJSON[39m[33m.[39mstringify({ success[33m:[39m [36mtrue[39m }))[33m;[39m[0m
+
+      at src/main/services/powerShellService.test.ts:611:5
+      at src/main/services/powerShellService.test.ts:581:3
+      at Object.<anonymous> (src/main/services/powerShellService.test.ts:41:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       21 failed, 11 passed, 32 total
+Snapshots:   0 total
+Time:        49.746 s, estimated 50 s
+Ran all test suites matching powerShellService.test.ts.

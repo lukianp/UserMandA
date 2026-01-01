@@ -239,11 +239,11 @@ const OneDriveDiscoveryView: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 <Users className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
                 <Badge variant="info" className="text-xs">
-                  {currentResult.statistics.activeAccounts} active
+                  {currentResult.statistics?.activeAccounts ?? 0} active
                 </Badge>
               </div>
               <div className="text-2xl font-bold text-cyan-900 dark:text-cyan-100">
-                {currentResult.statistics.totalAccounts.toLocaleString()}
+                {(currentResult.statistics?.totalAccounts ?? 0).toLocaleString()}
               </div>
               <div className="text-xs text-cyan-700 dark:text-cyan-300 mt-1">
                 Total Accounts
@@ -259,7 +259,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                 </Badge>
               </div>
               <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                {formatBytes(currentResult.statistics.totalStorageUsed)}
+                {formatBytes(currentResult.statistics?.totalStorageUsed ?? 0)}
               </div>
               <div className="text-xs text-purple-700 dark:text-purple-300 mt-1">
                 Total Storage Used
@@ -271,11 +271,11 @@ const OneDriveDiscoveryView: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 <Files className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 <Badge variant="info" className="text-xs">
-                  {currentResult.statistics.totalFolders.toLocaleString()} folders
+                  {(currentResult.statistics?.totalFolders ?? 0).toLocaleString()} folders
                 </Badge>
               </div>
               <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                {currentResult.statistics.totalFiles.toLocaleString()}
+                {(currentResult.statistics?.totalFiles ?? 0).toLocaleString()}
               </div>
               <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">
                 Total Files
@@ -287,11 +287,11 @@ const OneDriveDiscoveryView: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 <Share2 className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                 <Badge variant="warning" className="text-xs">
-                  {currentResult.statistics.externalShares.toLocaleString()} external
+                  {(currentResult.statistics?.externalShares ?? 0).toLocaleString()} external
                 </Badge>
               </div>
               <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-                {currentResult.statistics.totalShares.toLocaleString()}
+                {(currentResult.statistics?.totalShares ?? 0).toLocaleString()}
               </div>
               <div className="text-xs text-orange-700 dark:text-orange-300 mt-1">
                 Shared Items
@@ -303,11 +303,11 @@ const OneDriveDiscoveryView: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 <Shield className="w-5 h-5 text-red-600 dark:text-red-400" />
                 <Badge variant="danger" className="text-xs">
-                  {currentResult.statistics.highRiskShares} high risk
+                  {currentResult.statistics?.highRiskShares ?? 0} high risk
                 </Badge>
               </div>
               <div className="text-2xl font-bold text-red-900 dark:text-red-100">
-                {currentResult.statistics.filesWithExternalAccess.toLocaleString()}
+                {(currentResult.statistics?.filesWithExternalAccess ?? 0).toLocaleString()}
               </div>
               <div className="text-xs text-red-700 dark:text-red-300 mt-1">
                 External Access
@@ -467,24 +467,24 @@ const OneDriveDiscoveryView: React.FC = () => {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Total Quota</span>
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {formatBytes(currentResult.statistics.totalStorageQuota)}
+                        {formatBytes(currentResult.statistics?.totalStorageQuota ?? 0)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Used</span>
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {formatBytes(currentResult.statistics.totalStorageUsed)}
+                        {formatBytes(currentResult.statistics?.totalStorageUsed ?? 0)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Available</span>
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {formatBytes(currentResult.statistics.totalStorageAvailable)}
+                        {formatBytes(currentResult.statistics?.totalStorageAvailable ?? 0)}
                       </span>
                     </div>
                     <div className="pt-2">
                       <ProgressBar
-                        value={currentResult.statistics.averageStorageUsage}
+                        value={currentResult.statistics?.averageStorageUsage ?? 0}
                         variant="default"
                         showLabel
                       />
@@ -503,7 +503,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                       <div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">High Risk Shares</div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          {currentResult.statistics.highRiskShares}
+                          {currentResult.statistics?.highRiskShares ?? 0}
                         </div>
                       </div>
                     </div>
@@ -512,7 +512,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                       <div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">External Shares</div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          {currentResult.statistics.externalShares}
+                          {currentResult.statistics?.externalShares ?? 0}
                         </div>
                       </div>
                     </div>
@@ -521,7 +521,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                       <div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Unlabeled Files</div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          {currentResult.statistics.unlabeledFiles}
+                          {currentResult.statistics?.unlabeledFiles ?? 0}
                         </div>
                       </div>
                     </div>
@@ -530,7 +530,7 @@ const OneDriveDiscoveryView: React.FC = () => {
                       <div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Stale Files</div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          {currentResult.statistics.staleFiles}
+                          {currentResult.statistics?.staleFiles ?? 0}
                         </div>
                       </div>
                     </div>

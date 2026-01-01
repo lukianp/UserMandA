@@ -1,0 +1,1024 @@
+/**
+ * Unit Tests for useSharePointDiscoveryLogic Hook
+ * Tests all business logic for SharePoint discovery functionality
+ */
+
+import { renderHook, act, waitFor } from '@testing-library/react';
+
+import type {
+  SharePointDiscoveryResult,
+  SharePointSite,
+  SharePointList,
+  SharePointPermission,
+  SharePointDiscoveryStatistics,
+  SharePointDiscoveryTemplate,
+  SharePointDiscoveryConfig,
+  SharePointExportOptions,
+} from '../types/models/sharepoint';
+import { DEFAULT_SHAREPOINT_CONFIG } from '../types/models/sharepoint';
+import type { ProgressData } from '../../shared/types';
+
+import { useSharePointDiscoveryLogic } from './useSharePointDiscoveryLogic';
+
+const baseStatistics: SharePointDiscoveryStatistics = {
+  totalSites: 0,
+  totalStorage: 0,
+  averageStoragePerSite: 0,
+  hubSites: 0,
+  groupConnectedSites: 0,
+  personalSites: 0,
+  totalLists: 0,
+  documentLibraries: 0,
+  totalDocuments: 0,
+  totalListItems: 0,
+  uniquePermissions: 0,
+  brokenInheritanceCount: 0,
+  externallySharedSites: 0,
+  externallySharedLists: 0,
+  customContentTypes: 0,
+  activeWorkflows: 0,
+  runningWorkflowInstances: 0,
+};
+
+const createStatistics = (
+  overrides: Partial<SharePointDiscoveryStatistics> = {}
+): SharePointDiscoveryStatistics => ({
+  ...baseStatistics,
+  ...overrides,
+});
+
+const createSite = (overrides: Partial<SharePointSite> = {}): SharePointSite => ({
+  id: 'site-base',
+  url: 'https://contoso.sharepoint.com/sites/base',
+  title: 'Base Site',
+  description: 'Base site description',
+  template: 'STS#0',
+  templateName: 'STS#0',
+  owner: 'owner@contoso.com',
+  ownerEmail: 'owner@contoso.com',
+  siteAdmins: ['owner@contoso.com'],
+  storageUsage: 1000,
+  storageQuota: 5000,
+  storageWarningLevel: 4000,
+  isHubSite: false,
+  hubSiteId: undefined,
+  sensitivityLabel: undefined,
+  classification: undefined,
+  groupId: undefined,
+  sharingCapability: 'Disabled',
+  externalSharingEnabled: false,
+  allowDownloadingNonWebViewableFiles: true,
+  conditionalAccessPolicy: 'AllowFullAccess',
+  subsiteCount: 0,
+  subsites: [],
+  listCount: 0,
+  documentLibraryCount: 0,
+  lists: [],
+  lastItemModifiedDate: new Date('2024-01-01T00:00:00Z'),
+  lastItemUserModifiedDate: undefined,
+  pageViews: undefined,
+  uniqueVisitors: undefined,
+  created: new Date('2023-01-01T00:00:00Z'),
+  modified: new Date('2024-01-01T00:00:00Z'),
+  timeZoneId: 13,
+  lcid: 1033,
+  ...overrides,
+});
+
+const createList = (overrides: Partial<SharePointList> = {}): SharePointList => ({
+  id: 'list-base',
+  title: 'Documents',
+  description: 'Base list',
+  siteUrl: 'https://contoso.sharepoint.com/sites/base',
+  listUrl: 'https://contoso.sharepoint.com/sites/base/Documents',
+  baseTemplate: 101,
+  baseType: 'DocumentLibrary',
+  itemCount: 0,
+  folderCount: 0,
+  documentCount: 0,
+  totalFileSize: 0,
+  enableVersioning: true,
+  majorVersionLimit: undefined,
+  minorVersionLimit: undefined,
+  contentTypesEnabled: true,
+  contentTypes: [],
+  hasUniquePermissions: false,
+  permissions: [],
+  enableFolderCreation: true,
+  enableAttachments: true,
+  enableModeration: false,
+  requireCheckout: false,
+  created: new Date('2023-01-01T00:00:00Z'),
+  modified: new Date('2024-01-01T00:00:00Z'),
+  lastItemModifiedDate: new Date('2024-01-01T00:00:00Z'),
+  lastItemDeletedDate: undefined,
+  defaultViewUrl: 'https://contoso.sharepoint.com/sites/base/Documents/AllItems.aspx',
+  viewCount: 1,
+  ...overrides,
+});
+
+const createDiscoveryResult = (
+  overrides: Partial<SharePointDiscoveryResult> = {}
+): SharePointDiscoveryResult => ({
+  id: 'result-1',
+  startTime: new Date('2024-01-01T00:00:00Z'),
+  endTime: new Date('2024-01-01T01:00:00Z'),
+  duration: 3600,
+  status: 'completed',
+  config: DEFAULT_SHAREPOINT_CONFIG,
+  sites: [],
+  lists: [],
+  permissions: [],
+  contentTypes: [],
+  workflows: [],
+  statistics: createStatistics(),
+  errors: [],
+  warnings: [],
+  discoveredBy: 'tester@contoso.com',
+  environment: 'Online',
+  tenantUrl: 'https://contoso.sharepoint.com',
+  ...overrides,
+});
+
+const createExportOptions = (
+  overrides: Partial<SharePointExportOptions> = {}
+): SharePointExportOptions => ({
+  format: 'CSV',
+  includeSites: true,
+  includeLists: true,
+  includePermissions: true,
+  includeContentTypes: false,
+  includeWorkflows: false,
+  includeStatistics: true,
+  splitByType: false,
+  fileName: undefined,
+  ...overrides,
+});
+
+// Mock electron API
+const mockOnProgress = jest.fn<jest.Mock, [(data: ProgressData) => void]>();
+mockOnProgress.mockReturnValue(jest.fn());
+
+const mockElectronAPI = {
+  executeModule: jest.fn(),
+  cancelExecution: jest.fn(),
+  onProgress: mockOnProgress,
+};
+
+// Setup window.electronAPI mock
+beforeAll(() => {
+  Object.defineProperty(window, 'electronAPI', {
+    writable: true,
+    value: mockElectronAPI,
+  });
+});
+
+describe('useSharePointDiscoveryLogic', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Default mock for templates loading
+    mockElectronAPI.executeModule.mockResolvedValue({
+      success: true,
+      data: { templates: [] },
+    });
+  });
+
+  // ============================================================================
+  // Initial State Tests
+  // ============================================================================
+
+  describe('Initial State', () => {
+    it('should initialize with default config', () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      expect(result.current.config).toBeDefined();
+      expect(result.current.result).toBeNull();
+      expect(result.current.progress).toBeNull();
+      expect(result.current.isDiscovering).toBe(false);
+      expect(result.current.error).toBeNull();
+    });
+
+    it('should load templates on mount', async () => {
+      const mockTemplates = [
+        { id: '1', name: 'Full Site Scan', config: {} },
+        { id: '2', name: 'Permission Audit', config: {} },
+      ];
+      mockElectronAPI.executeModule.mockResolvedValueOnce({
+        success: true,
+        data: { templates: mockTemplates },
+      });
+
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await waitFor(() => {
+        expect(result.current.templates).toEqual(mockTemplates);
+      });
+
+      expect(mockElectronAPI.executeModule).toHaveBeenCalledWith({
+        modulePath: 'Modules/Discovery/SharePointDiscovery.psm1',
+        functionName: 'Get-SharePointDiscoveryTemplates',
+        parameters: {},
+      });
+    });
+
+    it('should initialize with empty filters', () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      expect(result.current.siteFilter).toEqual({});
+      expect(result.current.listFilter).toEqual({});
+      expect(result.current.permissionFilter).toEqual({});
+    });
+
+    it('should initialize with overview tab selected', () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      expect(result.current.selectedTab).toBe('overview');
+    });
+  });
+
+  // ============================================================================
+  // Discovery Execution Tests
+  // ============================================================================
+
+  describe('Discovery Execution', () => {
+    it('should start discovery successfully', async () => {
+      const mockResult: SharePointDiscoveryResult = createDiscoveryResult({
+        sites: [
+          createSite({
+            id: 'site1',
+            title: 'Team Site',
+            url: 'https://contoso.sharepoint.com/sites/team',
+            template: 'STS#3',
+            templateName: 'STS#3',
+            owner: 'admin@contoso.com',
+            ownerEmail: 'admin@contoso.com',
+            siteAdmins: ['admin@contoso.com'],
+            storageUsage: 5000.5,
+            storageQuota: 10000.0,
+            storageWarningLevel: 9000,
+            isHubSite: true,
+            groupId: 'grp123',
+            subsiteCount: 3,
+            listCount: 15,
+            documentLibraryCount: 7,
+            externalSharingEnabled: false,
+            sharingCapability: 'Disabled',
+            lastItemModifiedDate: new Date('2024-01-15T10:00:00Z'),
+            description: 'Main team site',
+          }),
+        ],
+        statistics: createStatistics({
+          totalSites: 1,
+          totalLists: 0,
+          uniquePermissions: 0,
+          totalStorage: 5000.5,
+          hubSites: 1,
+          externallySharedSites: 0,
+        }),
+      });
+
+      mockElectronAPI.executeModule
+        .mockResolvedValueOnce({ success: true, data: { templates: [] } }) // Template load
+        .mockResolvedValueOnce({
+          success: true,
+          data: mockResult,
+        }); // Discovery
+
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+    await waitFor(() => {
+      expect(result.current.isDiscovering).toBe(false);
+    });
+      expect(result.current.result).toEqual(mockResult);
+      expect(result.current.error).toBeNull();
+    });
+
+    it('should handle discovery failure', async () => {
+      const errorMessage = 'SharePoint site not accessible';
+      mockElectronAPI.executeModule
+        .mockResolvedValueOnce({ success: true, data: { templates: [] } }) // Template load
+        .mockRejectedValueOnce(new Error(errorMessage)); // Discovery fails
+
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+    await waitFor(() => {
+      expect(result.current.isDiscovering).toBe(false);
+    });
+      expect(result.current.error).toBe(errorMessage);
+      expect(result.current.result).toBeNull();
+    });
+
+    it('should handle discovery with error in result', async () => {
+      mockElectronAPI.executeModule
+        .mockResolvedValueOnce({ success: true, data: { templates: [] } }) // Template load
+        .mockResolvedValueOnce({
+          success: false,
+          error: 'Authentication failed',
+        }); // Discovery fails
+
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      expect(result.current.error).toBe('Authentication failed');
+    });
+
+    it('should set progress during discovery', async () => {
+      let progressCallback: ((data: ProgressData) => void) | undefined;
+      mockElectronAPI.onProgress.mockImplementation((cb: (data: ProgressData) => void) => {
+        progressCallback = cb;
+        return jest.fn();
+      });
+
+      mockElectronAPI.executeModule.mockImplementation(() => {
+        if (progressCallback) {
+          progressCallback({
+            executionId: 'progress-1',
+            message: 'Scanning sites...',
+            percentage: 40,
+            itemsProcessed: 40,
+            totalItems: 100,
+          });
+        }
+        return Promise.resolve({ success: true, data: { sites: [], lists: [], permissions: [], statistics: createStatistics() } });
+      });
+
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      expect(mockElectronAPI.onProgress).toHaveBeenCalled();
+    });
+  });
+
+  // ============================================================================
+  // Cancellation Tests
+  // ============================================================================
+
+  describe('Discovery Cancellation', () => {
+    it('should cancel discovery successfully', async () => {
+      mockElectronAPI.cancelExecution.mockResolvedValueOnce(undefined);
+
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.cancelDiscovery();
+      });
+
+      expect(mockElectronAPI.cancelExecution).toHaveBeenCalledWith('sharepoint-discovery');
+      expect(result.current.isDiscovering).toBe(false);
+      expect(result.current.progress).toBeNull();
+    });
+
+    it('should handle cancellation error gracefully', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      mockElectronAPI.cancelExecution.mockRejectedValueOnce(new Error('Cancel failed'));
+
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.cancelDiscovery();
+      });
+
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
+  });
+
+  // ============================================================================
+  // Template Management Tests
+  // ============================================================================
+
+  describe('Template Management', () => {
+    it('should load template and apply config', () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      const templateConfig: SharePointDiscoveryConfig = {
+        ...result.current.config,
+        siteUrlPattern: 'https://contoso.sharepoint.com',
+      };
+
+      const template: SharePointDiscoveryTemplate = {
+        id: 'tpl1',
+        name: 'Custom Template',
+        description: 'Test template',
+        config: templateConfig,
+        createdBy: 'tester@contoso.com',
+        createdDate: new Date('2024-01-01T00:00:00Z'),
+        modifiedDate: new Date('2024-01-02T00:00:00Z'),
+        isDefault: false,
+        tags: ['unit-test'],
+      };
+
+      act(() => {
+        result.current.loadTemplate(template);
+      });
+
+      expect(result.current.selectedTemplate).toEqual(template);
+      expect(result.current.config).toEqual(template.config);
+    });
+
+    it('should save template successfully', async () => {
+      mockElectronAPI.executeModule
+        .mockResolvedValueOnce({ success: true, data: { templates: [] } })
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: true, data: { templates: [{ id: 'new', name: 'My Template' }] } });
+
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.saveAsTemplate('My Template', 'Test description');
+      });
+
+      expect(mockElectronAPI.executeModule).toHaveBeenCalledWith({
+        modulePath: 'Modules/Discovery/SharePointDiscovery.psm1',
+        functionName: 'Save-SharePointDiscoveryTemplate',
+        parameters: {
+          Name: 'My Template',
+          Description: 'Test description',
+          Config: expect.any(Object),
+        },
+      });
+    });
+  });
+
+  // ============================================================================
+  // Site Filtering Tests
+  // ============================================================================
+
+  describe('Site Filtering', () => {
+    const mockSites: SharePointSite[] = [
+      createSite({
+        id: 'site1',
+        title: 'Marketing Site',
+        url: 'https://contoso.sharepoint.com/sites/marketing',
+        template: 'STS#3',
+        templateName: 'STS#3',
+        owner: 'marketing@contoso.com',
+        ownerEmail: 'marketing@contoso.com',
+        siteAdmins: ['marketing@contoso.com'],
+        storageUsage: 8000,
+        storageQuota: 10000,
+        storageWarningLevel: 9000,
+        isHubSite: true,
+        groupId: 'grp1',
+        subsiteCount: 5,
+        listCount: 20,
+        documentLibraryCount: 12,
+        externalSharingEnabled: true,
+        sharingCapability: 'ExternalUserAndGuestSharing',
+        lastItemModifiedDate: new Date('2024-01-15T10:00:00Z'),
+        description: 'Marketing team site',
+      }),
+      createSite({
+        id: 'site2',
+        title: 'HR Site',
+        url: 'https://contoso.sharepoint.com/sites/hr',
+        template: 'STS#0',
+        templateName: 'STS#0',
+        owner: 'hr@contoso.com',
+        ownerEmail: 'hr@contoso.com',
+        siteAdmins: ['hr@contoso.com'],
+        storageUsage: 2000,
+        storageQuota: 5000,
+        storageWarningLevel: 4000,
+        isHubSite: false,
+        groupId: undefined,
+        subsiteCount: 2,
+        listCount: 10,
+        documentLibraryCount: 4,
+        externalSharingEnabled: false,
+        sharingCapability: 'Disabled',
+        lastItemModifiedDate: new Date('2024-01-10T10:00:00Z'),
+        description: 'HR department site',
+      }),
+    ];
+
+    beforeEach(() => {
+      mockElectronAPI.executeModule.mockResolvedValue({
+        success: true,
+        data: {
+          sites: mockSites,
+          lists: [],
+          permissions: [],
+          statistics: createStatistics(),
+        },
+      });
+    });
+
+    it('should filter sites by search text', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setSiteFilter({ searchText: 'marketing' });
+      });
+
+      expect(result.current.sites).toHaveLength(1);
+      expect(result.current.sites[0].title).toBe('Marketing Site');
+    });
+
+    it('should filter sites by template', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setSiteFilter({ templates: ['STS#0'] });
+      });
+
+      expect(result.current.sites).toHaveLength(1);
+      expect(result.current.sites[0].templateName).toBe('STS#0');
+    });
+
+    it('should filter sites by storage range', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setSiteFilter({ minStorage: 5000, maxStorage: 9000 });
+      });
+
+      expect(result.current.sites).toHaveLength(1);
+      expect(result.current.sites[0].storageUsage).toBeGreaterThanOrEqual(5000);
+    });
+
+    it('should filter sites by hub site status', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setSiteFilter({ isHubSite: true });
+      });
+
+      expect(result.current.sites).toHaveLength(1);
+      expect(result.current.sites[0].isHubSite).toBe(true);
+    });
+
+    it('should filter sites by group connection', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setSiteFilter({ hasGroupConnection: true });
+      });
+
+      expect(result.current.sites).toHaveLength(1);
+      expect(result.current.sites[0].groupId).toBeTruthy();
+    });
+
+    it('should filter sites by external sharing', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setSiteFilter({ externalSharingEnabled: true });
+      });
+
+      expect(result.current.sites).toHaveLength(1);
+      expect(result.current.sites[0].externalSharingEnabled).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // List Filtering Tests
+  // ============================================================================
+
+  describe('List Filtering', () => {
+    const mockLists: SharePointList[] = [
+      createList({
+        id: 'list1',
+        title: 'Documents',
+        listUrl: 'https://contoso.sharepoint.com/sites/team/Documents',
+        siteUrl: 'https://contoso.sharepoint.com/sites/team',
+        baseTemplate: 101,
+        baseType: 'DocumentLibrary',
+        itemCount: 500,
+        folderCount: 25,
+        documentCount: 450,
+        totalFileSize: 1024 * 1024 * 500,
+        enableVersioning: true,
+        enableModeration: false,
+        hasUniquePermissions: true,
+        permissions: [],
+        lastItemModifiedDate: new Date('2024-01-15T10:00:00Z'),
+        description: 'Team documents',
+      }),
+      createList({
+        id: 'list2',
+        title: 'Tasks',
+        listUrl: 'https://contoso.sharepoint.com/sites/team/Tasks',
+        siteUrl: 'https://contoso.sharepoint.com/sites/team',
+        baseTemplate: 100,
+        baseType: 'GenericList',
+        itemCount: 50,
+        folderCount: 5,
+        documentCount: 0,
+        totalFileSize: 0,
+        enableVersioning: false,
+        enableModeration: true,
+        hasUniquePermissions: false,
+        contentTypesEnabled: false,
+        contentTypes: [],
+        lastItemModifiedDate: new Date('2024-01-10T10:00:00Z'),
+        description: 'Team tasks',
+      }),
+    ];
+
+    beforeEach(() => {
+      mockElectronAPI.executeModule.mockResolvedValue({
+        success: true,
+        data: {
+          sites: [],
+          lists: mockLists,
+          permissions: [],
+          statistics: createStatistics(),
+        },
+      });
+    });
+
+    it('should filter lists by search text', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setListFilter({ searchText: 'documents' });
+      });
+
+      expect(result.current.lists).toHaveLength(1);
+      expect(result.current.lists[0].title).toBe('Documents');
+    });
+
+    it('should filter lists by base type', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setListFilter({ baseTypes: ['GenericList'] });
+      });
+
+      expect(result.current.lists).toHaveLength(1);
+      expect(result.current.lists[0].baseType).toBe('GenericList');
+    });
+
+    it('should filter lists by item count range', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setListFilter({ minItemCount: 100, maxItemCount: 600 });
+      });
+
+      expect(result.current.lists).toHaveLength(1);
+      expect(result.current.lists[0].itemCount).toBeGreaterThanOrEqual(100);
+    });
+
+    it('should filter lists by unique permissions', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setListFilter({ hasUniquePermissions: true });
+      });
+
+      expect(result.current.lists).toHaveLength(1);
+      expect(result.current.lists[0].hasUniquePermissions).toBe(true);
+    });
+
+    it('should filter lists by versioning enabled', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setListFilter({ versioningEnabled: true });
+      });
+
+      expect(result.current.lists).toHaveLength(1);
+      expect(result.current.lists[0].enableVersioning).toBe(true);
+    });
+
+    it('should filter lists by moderation enabled', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setListFilter({ moderationEnabled: true });
+      });
+
+      expect(result.current.lists).toHaveLength(1);
+      expect(result.current.lists[0].enableModeration).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // Permission Filtering Tests
+  // ============================================================================
+
+  describe('Permission Filtering', () => {
+    const mockPermissions: SharePointPermission[] = [
+      {
+        id: 'perm1',
+        principalId: 'user1',
+        principalName: 'John Doe',
+        principalEmail: 'john@contoso.com',
+        principalType: 'User',
+        permissionLevel: 'Full Control',
+        permissionLevels: ['Full Control'],
+        scope: 'Site',
+        scopeUrl: 'https://contoso.sharepoint.com/sites/team',
+        directPermission: true,
+      },
+      {
+        id: 'perm2',
+        principalId: 'group1',
+        principalName: 'Marketing Group',
+        principalEmail: 'marketing@contoso.com',
+        principalType: 'SharePointGroup',
+        permissionLevel: 'Contribute',
+        permissionLevels: ['Contribute'],
+        scope: 'List',
+        scopeUrl: 'https://contoso.sharepoint.com/sites/team/Documents',
+        directPermission: false,
+      },
+    ];
+
+    beforeEach(() => {
+      mockElectronAPI.executeModule.mockResolvedValue({
+        success: true,
+        data: {
+          sites: [],
+          lists: [],
+          permissions: mockPermissions,
+          statistics: createStatistics(),
+        },
+      });
+    });
+
+    it('should filter permissions by search text', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setPermissionFilter({ searchText: 'john' });
+      });
+
+      expect(result.current.permissions).toHaveLength(1);
+      expect(result.current.permissions[0].principalName).toBe('John Doe');
+    });
+
+    it('should filter permissions by principal type', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setPermissionFilter({ principalTypes: ['SharePointGroup'] });
+      });
+
+      expect(result.current.permissions).toHaveLength(1);
+      expect(result.current.permissions[0].principalType).toBe('SharePointGroup');
+    });
+
+    it('should filter permissions by permission level', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setPermissionFilter({ permissionLevels: ['Full Control'] });
+      });
+
+      expect(result.current.permissions).toHaveLength(1);
+      expect(result.current.permissions[0].permissionLevel).toBe('Full Control');
+    });
+
+    it('should filter permissions by scope', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setPermissionFilter({ scopes: ['Site'] });
+      });
+
+      expect(result.current.permissions).toHaveLength(1);
+      expect(result.current.permissions[0].scope).toBe('Site');
+    });
+
+    it('should filter permissions by direct only', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      act(() => {
+        result.current.setPermissionFilter({ directOnly: true });
+      });
+
+      expect(result.current.permissions).toHaveLength(1);
+      expect(result.current.permissions[0].directPermission).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // Export Tests
+  // ============================================================================
+
+  describe('Export Functionality', () => {
+    it('should export data successfully', async () => {
+      mockElectronAPI.executeModule
+        .mockResolvedValueOnce({ success: true, data: { templates: [] } }) // Template load
+        .mockResolvedValueOnce({ success: true, data: { sites: [], lists: [], permissions: [], statistics: createStatistics() } }) // Discovery
+        .mockResolvedValueOnce({ success: true }); // Export
+
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      const exportOptions = createExportOptions({ format: 'Excel' });
+
+      await act(async () => {
+        await result.current.exportData(exportOptions);
+      });
+
+      expect(mockElectronAPI.executeModule).toHaveBeenLastCalledWith({
+        modulePath: 'Modules/Export/ExportService.psm1',
+        functionName: 'Export-SharePointDiscoveryData',
+        parameters: {
+          Result: expect.any(Object),
+          Options: exportOptions,
+        },
+      });
+    });
+
+    it('should not export when no result available', async () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      const exportOptions = createExportOptions({ format: 'CSV' });
+
+      await act(async () => {
+        await result.current.exportData(exportOptions);
+      });
+
+      expect(mockElectronAPI.executeModule).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ============================================================================
+  // Column Definitions Tests
+  // ============================================================================
+
+  describe('Column Definitions', () => {
+    it('should provide site column definitions', () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      expect(result.current.siteColumns).toBeDefined();
+      expect(result.current.siteColumns.length).toBeGreaterThan(0);
+      expect(result.current.siteColumns[0].field).toBe('title');
+    });
+
+    it('should provide list column definitions', () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      expect(result.current.listColumns).toBeDefined();
+      expect(result.current.listColumns.length).toBeGreaterThan(0);
+      expect(result.current.listColumns[0].field).toBe('title');
+    });
+
+    it('should provide permission column definitions', () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      expect(result.current.permissionColumns).toBeDefined();
+      expect(result.current.permissionColumns.length).toBeGreaterThan(0);
+      expect(result.current.permissionColumns[0].field).toBe('principalName');
+    });
+  });
+
+  // ============================================================================
+  // UI State Tests
+  // ============================================================================
+
+  describe('UI State Management', () => {
+    it('should update selected tab', () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      act(() => {
+        result.current.setSelectedTab('sites');
+      });
+
+      expect(result.current.selectedTab).toBe('sites');
+    });
+
+    it('should update config', () => {
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      const newConfig: SharePointDiscoveryConfig = {
+        ...result.current.config,
+        siteUrlPattern: 'https://custom.sharepoint.com',
+      };
+
+      act(() => {
+        result.current.setConfig(newConfig);
+      });
+
+      expect(result.current.config).toEqual(newConfig);
+    });
+  });
+
+  // ============================================================================
+  // Statistics Tests
+  // ============================================================================
+
+  describe('Statistics', () => {
+    it('should expose statistics from result', async () => {
+      const mockStatistics = createStatistics({
+        totalSites: 50,
+        totalLists: 250,
+        uniquePermissions: 1500,
+        totalStorage: 50000.75,
+        hubSites: 5,
+        externallySharedSites: 10,
+      });
+
+      mockElectronAPI.executeModule.mockResolvedValue({
+        success: true,
+        data: {
+          sites: [],
+          lists: [],
+          permissions: [],
+          statistics: mockStatistics,
+        },
+      });
+
+      const { result } = renderHook(() => useSharePointDiscoveryLogic());
+
+      await act(async () => {
+        await result.current.startDiscovery();
+      });
+
+      expect(result.current.statistics).toEqual(mockStatistics);
+    });
+  });
+});
+
+
+

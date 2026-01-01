@@ -2,21 +2,22 @@
 #Requires -Version 5.1
 
 # Author: Lukian Poleschtschuk
-# Version: 1.0.0
+# Version: 1.1.0
 # Created: 2025-08-30
-# Last Modified: 2025-08-31
+# Last Modified: 2026-01-01
 
 <#
 .SYNOPSIS
     OneDrive Discovery Module for M&A Discovery Suite
 .DESCRIPTION
-    Discovers OneDrive for Business sites, personal files, and storage configurations using Microsoft Graph API. 
-    This module provides comprehensive OneDrive discovery including personal document libraries, file analysis, 
+    Discovers OneDrive for Business sites, personal files, and storage configurations using Microsoft Graph API.
+    This module provides comprehensive OneDrive discovery including personal document libraries, file analysis,
     storage usage, sync status, and sharing configurations essential for M&A data discovery and migration planning.
 .NOTES
-    Version: 1.0.0
+    Version: 1.1.0
     Author: Lukian Poleschtschuk
     Created: 2025-08-30
+    Modified: 2026-01-01 - Added direct OAuth2 authentication fallback
     Requires: PowerShell 5.1+, Microsoft.Graph modules, DiscoveryBase module
 #>
 
@@ -93,7 +94,8 @@ function Invoke-OneDriveDiscovery {
     )
     
     # START: Enhanced discovery context validation and initialization
-    Write-OneDriveLog -Level "HEADER" -Message "=== M&A OneDrive Discovery Module Starting ===" -Context $Context
+    Write-OneDriveLog -Level "HEADER" -Message "=== M&A OneDrive Discovery Module v1.1.0 ===" -Context $Context
+    Write-OneDriveLog -Level "INFO" -Message "OAuth2 fallback authentication enabled" -Context $Context
     
     $result = [PSCustomObject]@{
         Success = $true
@@ -204,18 +206,82 @@ function Invoke-OneDriveDiscovery {
         Write-OneDriveLog -Level "INFO" -Message "Ensuring Microsoft Graph authentication is established..." -Context $Context
         Write-OneDriveLog -Level "DEBUG" -Message "Authentication status - Credentials valid: $credentialsValid, TenantId: $($null -ne $tenantId), ClientId: $($null -ne $clientId), ClientSecret: $($null -ne $clientSecret)" -Context $Context
 
+        $graphContext = $null
+        $authMethod = "None"
+
+        # Method 1: Try session-based authentication first
         try {
-            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId
-            Write-OneDriveLog -Level "DEBUG" -Message "Graph authentication result: $($graphAuth | ConvertTo-Json)" -Context $Context
-            if (-not $graphAuth) {
-                throw "Failed to establish Graph authentication - returned null"
+            Write-OneDriveLog -Level "INFO" -Message "Attempting session-based Graph authentication..." -Context $Context
+            $graphAuth = Get-AuthenticationForService -Service "Graph" -SessionId $SessionId -ErrorAction Stop
+            if ($graphAuth) {
+                $authMethod = "SessionManager"
+                Write-OneDriveLog -Level "SUCCESS" -Message "Microsoft Graph authentication established via SessionManager" -Context $Context
             }
-            Write-OneDriveLog -Level "SUCCESS" -Message "Microsoft Graph authentication established successfully" -Context $Context
         } catch {
-            $result.AddError("Failed to establish Microsoft Graph authentication: $($_.Exception.Message)", $_.Exception, "Graph Authentication")
-            Write-OneDriveLog -Level "ERROR" -Message "Authentication failure details - Credentials extracted: $credentialsValid" -Context $Context
+            Write-OneDriveLog -Level "WARN" -Message "Session-based authentication failed: $($_.Exception.Message)" -Context $Context
+        }
+
+        # Method 2: Fallback to direct OAuth2 token acquisition if session auth failed
+        if (-not $graphAuth -and $credentialsValid) {
+            Write-OneDriveLog -Level "INFO" -Message "Falling back to direct OAuth2 authentication..." -Context $Context
+            try {
+                # Get access token using OAuth2 client credentials flow
+                $tokenBody = @{
+                    grant_type    = "client_credentials"
+                    client_id     = $clientId
+                    client_secret = if ($clientSecret -is [SecureString]) {
+                        [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
+                            [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($clientSecret)
+                        )
+                    } else { $clientSecret }
+                    scope         = "https://graph.microsoft.com/.default"
+                }
+
+                $tokenUri = "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token"
+                Write-OneDriveLog -Level "DEBUG" -Message "Requesting access token from: $tokenUri" -Context $Context
+                $tokenResponse = Invoke-RestMethod -Uri $tokenUri -Method POST -Body $tokenBody -ContentType "application/x-www-form-urlencoded" -ErrorAction Stop
+
+                if ($tokenResponse.access_token) {
+                    Write-OneDriveLog -Level "SUCCESS" -Message "Access token acquired successfully via direct OAuth2" -Context $Context
+
+                    # Create custom context object with the access token
+                    $graphContext = [PSCustomObject]@{
+                        AccessToken = $tokenResponse.access_token
+                        TenantId    = $tenantId
+                        ClientId    = $clientId
+                        TokenType   = "Bearer"
+                        ExpiresOn   = (Get-Date).AddSeconds($tokenResponse.expires_in)
+                        Scopes      = @("https://graph.microsoft.com/.default")
+                        IsCustom    = $true
+                    }
+                    $authMethod = "DirectOAuth2"
+
+                    # Also connect via Connect-MgGraph for cmdlet compatibility
+                    try {
+                        $secureToken = ConvertTo-SecureString $tokenResponse.access_token -AsPlainText -Force
+                        Connect-MgGraph -AccessToken $secureToken -NoWelcome -ErrorAction Stop
+                        Write-OneDriveLog -Level "SUCCESS" -Message "Connected to Microsoft Graph using access token" -Context $Context
+                    } catch {
+                        Write-OneDriveLog -Level "WARN" -Message "Connect-MgGraph failed but REST API should still work: $($_.Exception.Message)" -Context $Context
+                    }
+                } else {
+                    throw "Token response did not contain access_token"
+                }
+            } catch {
+                $result.AddError("Failed to establish Microsoft Graph authentication via OAuth2: $($_.Exception.Message)", $_.Exception, "Graph OAuth2 Authentication")
+                Write-OneDriveLog -Level "ERROR" -Message "OAuth2 authentication failure: $($_.Exception.Message)" -Context $Context
+                return $result
+            }
+        }
+
+        # Final check - if no auth method succeeded
+        if (-not $graphAuth -and -not $graphContext) {
+            $result.AddError("Failed to establish Microsoft Graph authentication. No valid credentials or session available.", $null, "Graph Authentication")
+            Write-OneDriveLog -Level "ERROR" -Message "All authentication methods failed" -Context $Context
             return $result
         }
+
+        Write-OneDriveLog -Level "SUCCESS" -Message "Authentication established via: $authMethod" -Context $Context
 
 # 3. VALIDATE MODULE-SPECIFIC CONFIGURATION
 # OneDrive MUST have tenant name or auto-detect
@@ -352,21 +418,33 @@ if (-not $Configuration.discovery -or
         }
 
         # 5. DISCOVERY EXECUTION
+        Write-OneDriveLog -Level "HEADER" -Message "=== OneDrive Discovery Module v1.1.0 ===" -Context $Context
         Write-OneDriveLog -Level "HEADER" -Message "Starting OneDrive Discovery Process" -Context $Context
-        
+
         $discoveryData = @{
             Users = @()
             OneDriveSites = @()
             DriveItems = @()
             SharingLinks = @()
             StorageUsage = @()
+            StorageQuotas = @()      # NEW: Storage quota analysis
+            FileTypeAnalysis = @()   # NEW: File type breakdown
+            SharingAnalysis = @()    # NEW: Detailed sharing analysis
             Statistics = @{
                 TotalUsers = 0
                 TotalDrives = 0
                 TotalFiles = 0
+                TotalFolders = 0
                 TotalSize = 0
+                TotalQuota = 0
                 SharedItems = 0
                 ExternalShares = 0
+                InternalShares = 0
+                AnonymousLinks = 0
+                CompanyWideLinks = 0
+                HighStorageUsers = 0   # Users >80% storage
+                LowStorageUsers = 0    # Users <20% storage
+                InactiveUsers = 0      # No activity in 90 days
                 LastSyncUsers = 0
             }
         }
@@ -391,6 +469,21 @@ if (-not $Configuration.discovery -or
                     if ($drive) {
                         $discoveryData.Statistics.TotalDrives++
                         
+                        # Calculate usage percentage
+                        $usagePercent = if ($drive.Quota.Total -gt 0) { [math]::Round(($drive.Quota.Used / $drive.Quota.Total) * 100, 2) } else { 0 }
+
+                        # Determine storage status
+                        $storageStatus = "Normal"
+                        if ($usagePercent -ge 90) { $storageStatus = "Critical" }
+                        elseif ($usagePercent -ge 80) { $storageStatus = "Warning"; $discoveryData.Statistics.HighStorageUsers++ }
+                        elseif ($usagePercent -lt 20) { $storageStatus = "Low"; $discoveryData.Statistics.LowStorageUsers++ }
+
+                        # Check for inactivity (90+ days)
+                        $daysSinceAccess = if ($drive.LastModifiedDateTime) {
+                            ((Get-Date) - [DateTime]$drive.LastModifiedDateTime).Days
+                        } else { 999 }
+                        if ($daysSinceAccess -gt 90) { $discoveryData.Statistics.InactiveUsers++ }
+
                         # Get drive usage information
                         $driveUsage = [PSCustomObject]@{
                             UserId = $user.Id
@@ -408,14 +501,17 @@ if (-not $Configuration.discovery -or
                             RemainingSize = $drive.Quota.Remaining
                             DeletedSize = $drive.Quota.Deleted
                             AvailableSize = $drive.Quota.Available
-                            UsagePercentage = if ($drive.Quota.Total -gt 0) { [math]::Round(($drive.Quota.Used / $drive.Quota.Total) * 100, 2) } else { 0 }
+                            UsagePercentage = $usagePercent
+                            StorageStatus = $storageStatus
+                            DaysSinceLastAccess = $daysSinceAccess
                             LastAccessedDateTime = $drive.LastModifiedDateTime
                             CreatedDateTime = $drive.CreatedDateTime
                             WebUrl = $drive.WebUrl
                         }
-                        
+
                         $discoveryData.Users += $driveUsage
                         $discoveryData.Statistics.TotalSize += $drive.Quota.Used
+                        $discoveryData.Statistics.TotalQuota += $drive.Quota.Total
                         
                         # Get OneDrive site information
                         try {
@@ -442,25 +538,48 @@ if (-not $Configuration.discovery -or
                         try {
                             $driveItems = Get-MgDriveItem -DriveId $drive.Id -Top 100 -ErrorAction SilentlyContinue
                             foreach ($item in $driveItems) {
-                                $discoveryData.Statistics.TotalFiles++
-                                
+                                $itemType = if ($item.Folder) { "Folder" } else { "File" }
+                                $extension = if ($item.File) { [System.IO.Path]::GetExtension($item.Name).ToLower() } else { $null }
+
+                                if ($itemType -eq "Folder") {
+                                    $discoveryData.Statistics.TotalFolders++
+                                } else {
+                                    $discoveryData.Statistics.TotalFiles++
+                                }
+
+                                # Categorize file type
+                                $fileCategory = "Other"
+                                if ($extension) {
+                                    switch -Regex ($extension) {
+                                        '\.(docx?|xlsx?|pptx?|pdf)$' { $fileCategory = "Office" }
+                                        '\.(jpg|jpeg|png|gif|bmp|svg|webp)$' { $fileCategory = "Image" }
+                                        '\.(mp4|mov|avi|wmv|mkv)$' { $fileCategory = "Video" }
+                                        '\.(mp3|wav|m4a|flac)$' { $fileCategory = "Audio" }
+                                        '\.(zip|rar|7z|tar|gz)$' { $fileCategory = "Archive" }
+                                        '\.(txt|csv|json|xml|log)$' { $fileCategory = "Text" }
+                                        '\.(exe|msi|dll|bat|ps1)$' { $fileCategory = "Executable" }
+                                    }
+                                }
+
                                 $itemInfo = [PSCustomObject]@{
                                     UserId = $user.Id
                                     UserPrincipalName = $user.UserPrincipalName
                                     DriveId = $drive.Id
                                     ItemId = $item.Id
                                     ItemName = $item.Name
-                                    ItemType = if ($item.Folder) { "Folder" } else { "File" }
+                                    ItemType = $itemType
+                                    FileCategory = $fileCategory
                                     Size = $item.Size
                                     CreatedDateTime = $item.CreatedDateTime
                                     LastModifiedDateTime = $item.LastModifiedDateTime
                                     WebUrl = $item.WebUrl
                                     ParentPath = $item.ParentReference.Path
                                     MimeType = $item.File.MimeType
-                                    Extension = if ($item.File) { [System.IO.Path]::GetExtension($item.Name) } else { $null }
+                                    Extension = $extension
                                     HasChildren = if ($item.Folder) { $item.Folder.ChildCount -gt 0 } else { $false }
+                                    ChildCount = if ($item.Folder) { $item.Folder.ChildCount } else { 0 }
                                 }
-                                
+
                                 $discoveryData.DriveItems += $itemInfo
                                 
                                 # Check for sharing links
@@ -468,28 +587,62 @@ if (-not $Configuration.discovery -or
                                     $permissions = Get-MgDriveItemPermission -DriveId $drive.Id -DriveItemId $item.Id -ErrorAction SilentlyContinue
                                     foreach ($permission in $permissions) {
                                         $discoveryData.Statistics.SharedItems++
-                                        
+
+                                        # Determine share classification
+                                        $shareClassification = "Direct"
+                                        $isExternal = $false
+                                        $isAnonymous = $false
+
+                                        if ($permission.Link) {
+                                            if ($permission.Link.Scope -eq "anonymous") {
+                                                $shareClassification = "Anonymous"
+                                                $isAnonymous = $true
+                                                $discoveryData.Statistics.AnonymousLinks++
+                                            } elseif ($permission.Link.Scope -eq "organization") {
+                                                $shareClassification = "CompanyWide"
+                                                $discoveryData.Statistics.CompanyWideLinks++
+                                            } elseif ($permission.Link.Scope -eq "users") {
+                                                $shareClassification = "SpecificPeople"
+                                            }
+                                        }
+
+                                        if ($permission.GrantedToV2.User.Email) {
+                                            $isExternal = -not $permission.GrantedToV2.User.Email.EndsWith($tenantName + ".onmicrosoft.com")
+                                            if ($isExternal) {
+                                                $discoveryData.Statistics.ExternalShares++
+                                            } else {
+                                                $discoveryData.Statistics.InternalShares++
+                                            }
+                                        }
+
+                                        # Calculate risk level
+                                        $riskLevel = "Low"
+                                        if ($isAnonymous) { $riskLevel = "High" }
+                                        elseif ($isExternal) { $riskLevel = "Medium" }
+
                                         $shareInfo = [PSCustomObject]@{
                                             UserId = $user.Id
                                             UserPrincipalName = $user.UserPrincipalName
                                             DriveId = $drive.Id
                                             ItemId = $item.Id
                                             ItemName = $item.Name
+                                            ItemSize = $item.Size
+                                            FileCategory = $fileCategory
                                             PermissionId = $permission.Id
                                             PermissionType = $permission.Roles -join ','
                                             ShareType = $permission.Link.Type
                                             ShareScope = $permission.Link.Scope
+                                            ShareClassification = $shareClassification
+                                            RiskLevel = $riskLevel
                                             SharedWithEmail = if ($permission.GrantedToV2.User) { $permission.GrantedToV2.User.Email } else { $null }
                                             SharedWithDisplayName = if ($permission.GrantedToV2.User) { $permission.GrantedToV2.User.DisplayName } else { $null }
-                                            ExternalShare = if ($permission.GrantedToV2.User.Email) { -not $permission.GrantedToV2.User.Email.EndsWith($tenantName + ".onmicrosoft.com") } else { $false }
+                                            IsExternalShare = $isExternal
+                                            IsAnonymousLink = $isAnonymous
                                             CreatedDateTime = $permission.CreatedDateTime
                                             ExpirationDateTime = $permission.ExpirationDateTime
+                                            HasExpiration = ($null -ne $permission.ExpirationDateTime)
                                         }
-                                        
-                                        if ($shareInfo.ExternalShare) {
-                                            $discoveryData.Statistics.ExternalShares++
-                                        }
-                                        
+
                                         $discoveryData.SharingLinks += $shareInfo
                                     }
                                 } catch {
@@ -506,7 +659,14 @@ if (-not $Configuration.discovery -or
             }
             
             Write-OneDriveLog -Level "SUCCESS" -Message "Completed OneDrive discovery for $($users.Count) users" -Context $Context
-            Write-OneDriveLog -Level "INFO" -Message "Statistics: $($discoveryData.Statistics.TotalDrives) drives, $($discoveryData.Statistics.TotalFiles) files, $($discoveryData.Statistics.SharedItems) shared items, $($discoveryData.Statistics.ExternalShares) external shares" -Context $Context
+            Write-OneDriveLog -Level "INFO" -Message "Statistics Summary:" -Context $Context
+            Write-OneDriveLog -Level "INFO" -Message "  - Drives: $($discoveryData.Statistics.TotalDrives)" -Context $Context
+            Write-OneDriveLog -Level "INFO" -Message "  - Files: $($discoveryData.Statistics.TotalFiles), Folders: $($discoveryData.Statistics.TotalFolders)" -Context $Context
+            Write-OneDriveLog -Level "INFO" -Message "  - Total Storage Used: $([math]::Round($discoveryData.Statistics.TotalSize / 1GB, 2)) GB" -Context $Context
+            Write-OneDriveLog -Level "INFO" -Message "  - Total Quota: $([math]::Round($discoveryData.Statistics.TotalQuota / 1GB, 2)) GB" -Context $Context
+            Write-OneDriveLog -Level "INFO" -Message "  - Shared Items: $($discoveryData.Statistics.SharedItems) (Internal: $($discoveryData.Statistics.InternalShares), External: $($discoveryData.Statistics.ExternalShares))" -Context $Context
+            Write-OneDriveLog -Level "INFO" -Message "  - Anonymous Links: $($discoveryData.Statistics.AnonymousLinks), Company-Wide Links: $($discoveryData.Statistics.CompanyWideLinks)" -Context $Context
+            Write-OneDriveLog -Level "INFO" -Message "  - High Storage Users (>80%): $($discoveryData.Statistics.HighStorageUsers), Inactive Users (90+ days): $($discoveryData.Statistics.InactiveUsers)" -Context $Context
             
         } catch {
             $result.AddError("Failed to discover OneDrive information: $($_.Exception.Message)", $_.Exception, "OneDrive Discovery")
@@ -547,13 +707,27 @@ if (-not $Configuration.discovery -or
             # Save Statistics summary
             $statsPath = Join-Path $outputPath "OneDriveStatistics.csv"
             $statsObject = [PSCustomObject]@{
+                DiscoveryTimestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+                TenantName = $tenantName
                 TotalUsers = $discoveryData.Statistics.TotalUsers
                 TotalDrives = $discoveryData.Statistics.TotalDrives
                 TotalFiles = $discoveryData.Statistics.TotalFiles
-                TotalSize = $discoveryData.Statistics.TotalSize
+                TotalFolders = $discoveryData.Statistics.TotalFolders
+                TotalSizeBytes = $discoveryData.Statistics.TotalSize
+                TotalSizeGB = [math]::Round($discoveryData.Statistics.TotalSize / 1GB, 2)
+                TotalQuotaBytes = $discoveryData.Statistics.TotalQuota
+                TotalQuotaGB = [math]::Round($discoveryData.Statistics.TotalQuota / 1GB, 2)
+                StorageUsagePercent = if ($discoveryData.Statistics.TotalQuota -gt 0) {
+                    [math]::Round(($discoveryData.Statistics.TotalSize / $discoveryData.Statistics.TotalQuota) * 100, 2)
+                } else { 0 }
                 SharedItems = $discoveryData.Statistics.SharedItems
+                InternalShares = $discoveryData.Statistics.InternalShares
                 ExternalShares = $discoveryData.Statistics.ExternalShares
-                LastSyncUsers = $discoveryData.Statistics.LastSyncUsers
+                AnonymousLinks = $discoveryData.Statistics.AnonymousLinks
+                CompanyWideLinks = $discoveryData.Statistics.CompanyWideLinks
+                HighStorageUsers = $discoveryData.Statistics.HighStorageUsers
+                LowStorageUsers = $discoveryData.Statistics.LowStorageUsers
+                InactiveUsers = $discoveryData.Statistics.InactiveUsers
             }
             @($statsObject) | Export-Csv -Path $statsPath -NoTypeInformation -Encoding UTF8
             Write-OneDriveLog -Level "SUCCESS" -Message "Saved OneDrive statistics to $statsPath" -Context $Context

@@ -1,0 +1,712 @@
+{
+  "summary": {
+    "totalTests": 2455,
+    "passedTests": 1640,
+    "failedTests": 356,
+    "pendingTests": 459,
+    "passRate": "66.80%",
+    "totalTestSuites": 149,
+    "passedTestSuites": 57,
+    "failedTestSuites": 73
+  },
+  "failureCategories": [
+    {
+      "category": "renderingError",
+      "count": 201,
+      "percentage": "56.46%",
+      "examples": [
+        {
+          "file": "views/analytics/ScheduledReportsView.test.tsx",
+          "test": "ScheduledReportsView Loading State shows loading state when data is loading",
+          "snippet": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: true\nReceived: false\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\analytics\\ScheduledReportsView.tes"
+        },
+        {
+          "file": "views/analytics/ScheduledReportsView.test.tsx",
+          "test": "ScheduledReportsView Error Handling shows error alert with proper styling",
+          "snippet": "Error: expect(received).toBeInTheDocument()\n\nreceived value must be an HTMLElement or an SVGElement.\nReceived has value: null\n    at __EXTERNAL_MATCHER_TRAP__ (D:\\Scripts\\UserMandA\\guiv2\\node_modules\\"
+        },
+        {
+          "file": "views/licensing/LicenseManagementView.test.tsx",
+          "test": "LicenseManagementView Data Display shows empty state when no data",
+          "snippet": "Error: expect(received).toBeTruthy()\n\nReceived: null\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\licensing\\LicenseManagementView.test.tsx:161:9)\n    at Promise.finally.com"
+        },
+        {
+          "file": "views/licensing/LicenseManagementView.test.tsx",
+          "test": "LicenseManagementView Search and Filtering renders search input",
+          "snippet": "Error: expect(received).toBeTruthy()\n\nReceived: null\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\licensing\\LicenseManagementView.test.tsx:179:27)\n    at Promise.finally.co"
+        },
+        {
+          "file": "views/licensing/LicenseManagementView.test.tsx",
+          "test": "LicenseManagementView Button Actions disables export button when no data",
+          "snippet": "Error: expect(element).toBeDisabled()\n\nReceived element is not disabled:\n  <button aria-busy=\"false\" aria-disabled=\"false\" class=\"inline-flex items-center justify-center font-medium rounded-md transit"
+        }
+      ]
+    },
+    {
+      "category": "textContentMismatch",
+      "count": 42,
+      "percentage": "11.80%",
+      "examples": [
+        {
+          "file": "views/analytics/ScheduledReportsView.test.tsx",
+          "test": "ScheduledReportsView Rendering displays the view description",
+          "snippet": "TestingLibraryElementError: Unable to find an element with the text: /Schedule automated reports/i. This could be because the text is broken up by multiple elements. In this case, you can provide a fu"
+        },
+        {
+          "file": "views/licensing/LicenseManagementView.test.tsx",
+          "test": "LicenseManagementView Rendering displays the view description",
+          "snippet": "TestingLibraryElementError: Unable to find an element with the text: /Manage licenses/i. This could be because the text is broken up by multiple elements. In this case, you can provide a function for "
+        },
+        {
+          "file": "views/compliance/ComplianceDashboardView.test.tsx",
+          "test": "ComplianceDashboardView Rendering displays the view description",
+          "snippet": "TestingLibraryElementError: Unable to find an element with the text: /View compliance status/i. This could be because the text is broken up by multiple elements. In this case, you can provide a functi"
+        },
+        {
+          "file": "views/migration/MigrationPlanningView.test.tsx",
+          "test": "MigrationPlanningView Rendering displays the view description",
+          "snippet": "TestingLibraryElementError: Unable to find an element with the text: /Plan migration waves/i. This could be because the text is broken up by multiple elements. In this case, you can provide a function"
+        },
+        {
+          "file": "views/analytics/BenchmarkingView.test.tsx",
+          "test": "BenchmarkingView Rendering displays the view title",
+          "snippet": "TestingLibraryElementError: Unable to find an element with the text: Benchmarking. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your t"
+        }
+      ]
+    },
+    {
+      "category": "missingDataTestId",
+      "count": 32,
+      "percentage": "8.99%",
+      "examples": [
+        {
+          "file": "views/discovery/IntuneDiscoveryView.test.tsx",
+          "test": "IntuneDiscoveryView exposes export helpers once results exist",
+          "snippet": "TestingLibraryElementError: Unable to find an element by: [data-testid=\"export-csv-btn\"]\n\nIgnored nodes: comments, script, style\n\u001b[36m<body>\u001b[39m\n  \u001b[36m<div>\u001b[39m\n    \u001b[36m<div\u001b[39m\n      \u001b[33mclass\u001b"
+        },
+        {
+          "file": "views/discovery/InfrastructureDiscoveryHubView.test.tsx",
+          "test": "InfrastructureDiscoveryHubView launches a discovery module when a tile is selected",
+          "snippet": "TestingLibraryElementError: Unable to find an element by: [data-testid=\"discovery-tile-azure\"]\n\nIgnored nodes: comments, script, style\n\u001b[36m<body>\u001b[39m\n  \u001b[36m<div>\u001b[39m\n    \u001b[36m<div\u001b[39m\n      \u001b[33m"
+        },
+        {
+          "file": "views/discovery/InfrastructureDiscoveryHubView.test.tsx",
+          "test": "InfrastructureDiscoveryHubView updates the search filter when typing in the search bar",
+          "snippet": "TestingLibraryElementError: Unable to find an element by: [data-testid=\"discovery-search\"]\n\nIgnored nodes: comments, script, style\n\u001b[36m<body>\u001b[39m\n  \u001b[36m<div>\u001b[39m\n    \u001b[36m<div\u001b[39m\n      \u001b[33mclas"
+        },
+        {
+          "file": "views/analytics/UserAnalyticsView.test.tsx",
+          "test": "UserAnalyticsView Rendering renders without crashing",
+          "snippet": "TestingLibraryElementError: Unable to find an element by: [data-testid=\"user-analytics-view\"]\n\nIgnored nodes: comments, script, style\n\u001b[36m<body>\u001b[39m\n  \u001b[36m<div>\u001b[39m\n    \u001b[36m<div\u001b[39m\n      \u001b[33mc"
+        },
+        {
+          "file": "views/analytics/UserAnalyticsView.test.tsx",
+          "test": "UserAnalyticsView Chart Display displays charts when data is available",
+          "snippet": "TestingLibraryElementError: Unable to find an element by: [data-testid=\"user-analytics-view\"]\n\nIgnored nodes: comments, script, style\n\u001b[36m<body>\u001b[39m\n  \u001b[36m<div>\u001b[39m\n    \u001b[36m<div\u001b[39m\n      \u001b[33mc"
+        }
+      ]
+    },
+    {
+      "category": "mockDataMismatch",
+      "count": 31,
+      "percentage": "8.71%",
+      "examples": [
+        {
+          "file": "views/analytics/ScheduledReportsView.test.tsx",
+          "test": "ScheduledReportsView Button Actions calls refreshData when refresh button clicked",
+          "snippet": "Error: expect(jest.fn()).toHaveBeenCalled()\n\nExpected number of calls: >= 1\nReceived number of calls:    0\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\analytics\\ScheduledR"
+        },
+        {
+          "file": "views/licensing/LicenseManagementView.test.tsx",
+          "test": "LicenseManagementView Button Actions calls exportData when export button clicked",
+          "snippet": "Error: expect(jest.fn()).toHaveBeenCalled()\n\nExpected number of calls: >= 1\nReceived number of calls:    0\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\licensing\\LicenseMan"
+        },
+        {
+          "file": "views/licensing/LicenseManagementView.test.tsx",
+          "test": "LicenseManagementView Integration handles complete workflow",
+          "snippet": "Error: expect(jest.fn()).toHaveBeenCalled()\n\nExpected number of calls: >= 1\nReceived number of calls:    0\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\licensing\\LicenseMan"
+        },
+        {
+          "file": "views/analytics/DataVisualizationView.test.tsx",
+          "test": "DataVisualizationView Button Actions calls refreshData when refresh button clicked",
+          "snippet": "Error: expect(jest.fn()).toHaveBeenCalled()\n\nExpected number of calls: >= 1\nReceived number of calls:    0\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\analytics\\DataVisual"
+        },
+        {
+          "file": "views/security/SecurityAuditView.test.tsx",
+          "test": "SecurityAuditView Button Actions calls refreshData when refresh button clicked",
+          "snippet": "Error: expect(jest.fn()).toHaveBeenCalled()\n\nExpected number of calls: >= 1\nReceived number of calls:    0\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\security\\SecurityAud"
+        }
+      ]
+    },
+    {
+      "category": "missingAccessibleElement",
+      "count": 20,
+      "percentage": "5.62%",
+      "examples": [
+        {
+          "file": "views/analytics/UserAnalyticsView.test.tsx",
+          "test": "UserAnalyticsView Button Actions renders action buttons",
+          "snippet": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\"\n\nHere are the accessible roles:\n\n  paragraph:\n\n  Name \"\":\n  \u001b[36m<p\u001b[39m\n    \u001b[33mclass\u001b[39m=\u001b[32m\"text-gray-500"
+        },
+        {
+          "file": "views/analytics/UserAnalyticsView.test.tsx",
+          "test": "UserAnalyticsView Accessibility has accessible button labels",
+          "snippet": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\"\n\nHere are the accessible roles:\n\n  paragraph:\n\n  Name \"\":\n  \u001b[36m<p\u001b[39m\n    \u001b[33mclass\u001b[39m=\u001b[32m\"text-gray-500"
+        },
+        {
+          "file": "views/analytics/UserAnalyticsView.test.tsx",
+          "test": "UserAnalyticsView Accessibility has proper heading structure",
+          "snippet": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\"\n\nHere are the accessible roles:\n\n  paragraph:\n\n  Name \"\":\n  \u001b[36m<p\u001b[39m\n    \u001b[33mclass\u001b[39m=\u001b[32m\"text-gray-50"
+        },
+        {
+          "file": "views/admin/PermissionsView.test.tsx",
+          "test": "PermissionsView Rendering displays the view title",
+          "snippet": "TestingLibraryElementError: Unable to find an element with the text: Permissions. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your te"
+        },
+        {
+          "file": "views/admin/PermissionsView.test.tsx",
+          "test": "PermissionsView Rendering displays the view description",
+          "snippet": "TestingLibraryElementError: Unable to find an element with the text: /Manage user permissions/i. This could be because the text is broken up by multiple elements. In this case, you can provide a funct"
+        }
+      ]
+    },
+    {
+      "category": "serviceIntegration",
+      "count": 15,
+      "percentage": "4.21%",
+      "examples": [
+        {
+          "file": "main/services/logicEngineService.test.ts",
+          "test": "LogicEngineService CSV Loading should load users from CSV",
+          "snippet": "Error: expect(received).toBeGreaterThan(expected)\n\nExpected: > 0\nReceived:   0\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\logicEngineService.test.ts:52:28)"
+        },
+        {
+          "file": "main/services/logicEngineService.test.ts",
+          "test": "LogicEngineService CSV Loading should load groups from CSV",
+          "snippet": "Error: expect(received).toBeGreaterThan(expected)\n\nExpected: > 0\nReceived:   0\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\logicEngineService.test.ts:62:29)"
+        },
+        {
+          "file": "main/services/logicEngineService.test.ts",
+          "test": "LogicEngineService CSV Loading should load computers from CSV",
+          "snippet": "Error: expect(received).toBeGreaterThan(expected)\n\nExpected: > 0\nReceived:   0\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\logicEngineService.test.ts:71:30)"
+        },
+        {
+          "file": "main/services/logicEngineService.test.ts",
+          "test": "LogicEngineService CSV Loading should load all 14 entity types",
+          "snippet": "Error: expect(received).toBeGreaterThan(expected)\n\nExpected: > 0\nReceived:   0\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\logicEngineService.test.ts:82:31)"
+        },
+        {
+          "file": "main/services/logicEngineService.test.ts",
+          "test": "LogicEngineService CSV Loading should handle missing CSV files gracefully",
+          "snippet": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: false\nReceived: true\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\logicEngineService.test.ts:105:23)"
+        }
+      ]
+    },
+    {
+      "category": "undefinedProperty",
+      "count": 15,
+      "percentage": "4.21%",
+      "examples": [
+        {
+          "file": "main/services/logicEngineService.test.ts",
+          "test": "LogicEngineService Inference Rules should apply ACL Group-User inference",
+          "snippet": "Error: expect(received).toBeDefined()\n\nReceived: undefined\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\logicEngineService.test.ts:124:20)\n    at Promise.finally.completed ("
+        },
+        {
+          "file": "main/services/logicEngineService.test.ts",
+          "test": "LogicEngineService UserDetailProjection should build complete projection with all fields",
+          "snippet": "Error: expect(received).toBeDefined()\n\nReceived: undefined\n    at Object.<anonymous> (D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\logicEngineService.test.ts:231:32)"
+        },
+        {
+          "file": "views/reports/ReportsView.test.tsx",
+          "test": "ReportsView Template Display displays templates when loaded",
+          "snippet": "TypeError: Cannot read properties of undefined (reading 'has')\n    at D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\reports\\ReportsView.tsx:77:54\n    at Array.map (<anonymous>)\n    at ReportsView (D:\\"
+        },
+        {
+          "file": "views/reports/ReportsView.test.tsx",
+          "test": "ReportsView Integration handles complete workflow",
+          "snippet": "TypeError: Cannot read properties of undefined (reading 'has')\n    at D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\reports\\ReportsView.tsx:77:54\n    at Array.map (<anonymous>)\n    at ReportsView (D:\\"
+        },
+        {
+          "file": "views/discovery/TeamsDiscoveryView.test.tsx",
+          "test": "TeamsDiscoveryView exposes export controls once results exist",
+          "snippet": "TypeError: Cannot read properties of undefined (reading 'averageMembersPerTeam')\n    at OverviewTab (D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\discovery\\TeamsDiscoveryView.tsx:495:72)\n    at rende"
+        }
+      ]
+    },
+    {
+      "category": "missingDataCy",
+      "count": 0,
+      "percentage": "0.00%",
+      "examples": []
+    },
+    {
+      "category": "asyncTimeout",
+      "count": 0,
+      "percentage": "0.00%",
+      "examples": []
+    },
+    {
+      "category": "moduleNotFound",
+      "count": 0,
+      "percentage": "0.00%",
+      "examples": []
+    },
+    {
+      "category": "other",
+      "count": 0,
+      "percentage": "0.00%",
+      "examples": []
+    }
+  ],
+  "layerBreakdown": [
+    {
+      "layer": "other",
+      "passed": 1640,
+      "failed": 356,
+      "total": 2455,
+      "passRate": "66.80%"
+    },
+    {
+      "layer": "hooks",
+      "passed": 0,
+      "failed": 0,
+      "total": 0,
+      "passRate": "0%"
+    },
+    {
+      "layer": "views",
+      "passed": 0,
+      "failed": 0,
+      "total": 0,
+      "passRate": "0%"
+    },
+    {
+      "layer": "services",
+      "passed": 0,
+      "failed": 0,
+      "total": 0,
+      "passRate": "0%"
+    },
+    {
+      "layer": "components",
+      "passed": 0,
+      "failed": 0,
+      "total": 0,
+      "passRate": "0%"
+    }
+  ],
+  "moduleBreakdown": [
+    {
+      "module": "other",
+      "passed": 1640,
+      "failed": 356,
+      "total": 2455,
+      "passRate": "66.80%"
+    }
+  ],
+  "worstFiles": [
+    {
+      "file": "VirtualizedDataGrid.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\components\\organisms\\VirtualizedDataGrid.test.tsx",
+      "passed": 12,
+      "failed": 14,
+      "total": 27,
+      "passRate": "44.44%"
+    },
+    {
+      "file": "logicEngineService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\logicEngineService.test.ts",
+      "passed": 13,
+      "failed": 13,
+      "total": 26,
+      "passRate": "50.00%"
+    },
+    {
+      "file": "UserAnalyticsView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\analytics\\UserAnalyticsView.test.tsx",
+      "passed": 5,
+      "failed": 12,
+      "total": 17,
+      "passRate": "29.41%"
+    },
+    {
+      "file": "ExecutiveDashboardView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\analytics\\ExecutiveDashboardView.test.tsx",
+      "passed": 5,
+      "failed": 12,
+      "total": 17,
+      "passRate": "29.41%"
+    },
+    {
+      "file": "ComplianceDashboardView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\compliance\\ComplianceDashboardView.test.tsx",
+      "passed": 15,
+      "failed": 10,
+      "total": 25,
+      "passRate": "60.00%"
+    },
+    {
+      "file": "SettingsView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\settings\\SettingsView.test.tsx",
+      "passed": 12,
+      "failed": 10,
+      "total": 22,
+      "passRate": "54.55%"
+    },
+    {
+      "file": "ReportsView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\reports\\ReportsView.test.tsx",
+      "passed": 9,
+      "failed": 10,
+      "total": 19,
+      "passRate": "47.37%"
+    },
+    {
+      "file": "SecurityPostureView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\advanced\\SecurityPostureView.test.tsx",
+      "passed": 14,
+      "failed": 10,
+      "total": 24,
+      "passRate": "58.33%"
+    },
+    {
+      "file": "ChangeManagementView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\advanced\\ChangeManagementView.test.tsx",
+      "passed": 14,
+      "failed": 10,
+      "total": 24,
+      "passRate": "58.33%"
+    },
+    {
+      "file": "CapacityPlanningView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\advanced\\CapacityPlanningView.test.tsx",
+      "passed": 14,
+      "failed": 10,
+      "total": 24,
+      "passRate": "58.33%"
+    },
+    {
+      "file": "CostOptimizationView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\advanced\\CostOptimizationView.test.tsx",
+      "passed": 14,
+      "failed": 10,
+      "total": 24,
+      "passRate": "58.33%"
+    },
+    {
+      "file": "MigrationValidationView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\migration\\MigrationValidationView.test.tsx",
+      "passed": 7,
+      "failed": 10,
+      "total": 17,
+      "passRate": "41.18%"
+    },
+    {
+      "file": "LicenseManagementView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\licensing\\LicenseManagementView.test.tsx",
+      "passed": 15,
+      "failed": 9,
+      "total": 24,
+      "passRate": "62.50%"
+    },
+    {
+      "file": "SecurityAuditView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\security\\SecurityAuditView.test.tsx",
+      "passed": 16,
+      "failed": 9,
+      "total": 25,
+      "passRate": "64.00%"
+    },
+    {
+      "file": "AssetInventoryView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\assets\\AssetInventoryView.test.tsx",
+      "passed": 16,
+      "failed": 9,
+      "total": 25,
+      "passRate": "64.00%"
+    },
+    {
+      "file": "RiskAssessmentView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\security\\RiskAssessmentView.test.tsx",
+      "passed": 16,
+      "failed": 9,
+      "total": 25,
+      "passRate": "64.00%"
+    },
+    {
+      "file": "CustomFieldsView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\advanced\\CustomFieldsView.test.tsx",
+      "passed": 15,
+      "failed": 9,
+      "total": 24,
+      "passRate": "62.50%"
+    },
+    {
+      "file": "BulkOperationsView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\advanced\\BulkOperationsView.test.tsx",
+      "passed": 15,
+      "failed": 9,
+      "total": 24,
+      "passRate": "62.50%"
+    },
+    {
+      "file": "TrendAnalysisView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\analytics\\TrendAnalysisView.test.tsx",
+      "passed": 9,
+      "failed": 8,
+      "total": 17,
+      "passRate": "52.94%"
+    },
+    {
+      "file": "PolicyManagementView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\security\\PolicyManagementView.test.tsx",
+      "passed": 17,
+      "failed": 8,
+      "total": 25,
+      "passRate": "68.00%"
+    },
+    {
+      "file": "ComplianceReportView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\compliance\\ComplianceReportView.test.tsx",
+      "passed": 17,
+      "failed": 8,
+      "total": 25,
+      "passRate": "68.00%"
+    },
+    {
+      "file": "ThreatAnalysisView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\security\\ThreatAnalysisView.test.tsx",
+      "passed": 17,
+      "failed": 8,
+      "total": 25,
+      "passRate": "68.00%"
+    },
+    {
+      "file": "RetentionPolicyView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\advanced\\RetentionPolicyView.test.tsx",
+      "passed": 16,
+      "failed": 8,
+      "total": 24,
+      "passRate": "66.67%"
+    },
+    {
+      "file": "SoftwareLicenseComplianceView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\advanced\\SoftwareLicenseComplianceView.test.tsx",
+      "passed": 16,
+      "failed": 8,
+      "total": 24,
+      "passRate": "66.67%"
+    },
+    {
+      "file": "CloudMigrationPlannerView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\advanced\\CloudMigrationPlannerView.test.tsx",
+      "passed": 16,
+      "failed": 8,
+      "total": 24,
+      "passRate": "66.67%"
+    },
+    {
+      "file": "CustomReportBuilderView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\analytics\\CustomReportBuilderView.test.tsx",
+      "passed": 10,
+      "failed": 7,
+      "total": 17,
+      "passRate": "58.82%"
+    },
+    {
+      "file": "ComputerInventoryView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\assets\\ComputerInventoryView.test.tsx",
+      "passed": 18,
+      "failed": 7,
+      "total": 25,
+      "passRate": "72.00%"
+    },
+    {
+      "file": "MigrationExecutionView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\migration\\MigrationExecutionView.test.tsx",
+      "passed": 10,
+      "failed": 7,
+      "total": 17,
+      "passRate": "58.82%"
+    },
+    {
+      "file": "PrivilegedAccessView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\advanced\\PrivilegedAccessView.test.tsx",
+      "passed": 17,
+      "failed": 7,
+      "total": 24,
+      "passRate": "70.83%"
+    },
+    {
+      "file": "MigrationMappingView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\migration\\MigrationMappingView.test.tsx",
+      "passed": 10,
+      "failed": 7,
+      "total": 17,
+      "passRate": "58.82%"
+    }
+  ],
+  "bestFiles": [
+    {
+      "file": "migrationPlanningService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\migrationPlanningService.test.ts",
+      "passed": 43,
+      "failed": 0,
+      "total": 43,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "useTeamsDiscoveryLogic.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useTeamsDiscoveryLogic.test.ts",
+      "passed": 38,
+      "failed": 0,
+      "total": 38,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "useSharePointDiscoveryLogic.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useSharePointDiscoveryLogic.test.ts",
+      "passed": 37,
+      "failed": 0,
+      "total": 37,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "useExchangeDiscoveryLogic.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useExchangeDiscoveryLogic.test.ts",
+      "passed": 36,
+      "failed": 0,
+      "total": 36,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "useFileSystemDiscoveryLogic.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useFileSystemDiscoveryLogic.test.ts",
+      "passed": 35,
+      "failed": 0,
+      "total": 35,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "resourceMappingService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\resourceMappingService.test.ts",
+      "passed": 35,
+      "failed": 0,
+      "total": 35,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "migrationValidationService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\migrationValidationService.test.ts",
+      "passed": 34,
+      "failed": 0,
+      "total": 36,
+      "passRate": "94.44%"
+    },
+    {
+      "file": "migrationReportingService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\migrationReportingService.test.ts",
+      "passed": 34,
+      "failed": 0,
+      "total": 34,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "conflictResolutionService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\conflictResolutionService.test.ts",
+      "passed": 33,
+      "failed": 0,
+      "total": 33,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "powerShellService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\powerShellService.test.ts",
+      "passed": 32,
+      "failed": 0,
+      "total": 32,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "coexistenceService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\coexistenceService.test.ts",
+      "passed": 31,
+      "failed": 0,
+      "total": 31,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "migrationOrchestrationService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\migrationOrchestrationService.test.ts",
+      "passed": 29,
+      "failed": 0,
+      "total": 29,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "deltaSyncService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\deltaSyncService.test.ts",
+      "passed": 29,
+      "failed": 0,
+      "total": 29,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "cacheService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\services\\cacheService.test.ts",
+      "passed": 28,
+      "failed": 0,
+      "total": 28,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "themeService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\services\\themeService.test.ts",
+      "passed": 26,
+      "failed": 0,
+      "total": 26,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "cutoverService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\cutoverService.test.ts",
+      "passed": 26,
+      "failed": 0,
+      "total": 26,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "NetworkDeviceInventoryView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\assets\\NetworkDeviceInventoryView.test.tsx",
+      "passed": 25,
+      "failed": 0,
+      "total": 25,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "useAzureDiscoveryLogic.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\hooks\\useAzureDiscoveryLogic.test.ts",
+      "passed": 25,
+      "failed": 0,
+      "total": 25,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "migrationExecutionService.test.ts",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\main\\services\\migrationExecutionService.test.ts",
+      "passed": 25,
+      "failed": 0,
+      "total": 25,
+      "passRate": "100.00%"
+    },
+    {
+      "file": "ServerInventoryView.test.tsx",
+      "filePath": "D:\\Scripts\\UserMandA\\guiv2\\src\\renderer\\views\\assets\\ServerInventoryView.test.tsx",
+      "passed": 24,
+      "failed": 0,
+      "total": 24,
+      "passRate": "100.00%"
+    }
+  ]
+}

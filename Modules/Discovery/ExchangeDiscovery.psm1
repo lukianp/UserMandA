@@ -1,24 +1,53 @@
 ﻿# -*- coding: utf-8-bom -*-
 #Requires -Version 5.1
 
+# ============================================================================
+# EXCHANGE DISCOVERY MODULE v2.0.0
+# ============================================================================
 # Author: Lukian Poleschtschuk
-# Version: 1.0.0
+# Version: 2.0.0
 # Created: 2025-01-18
-# Last Modified: 2025-01-18
+# Last Modified: 2026-01-01
+#
+# CHANGELOG:
+# v2.0.0 (2026-01-01) - Major mail flow enhancement:
+#   - Added Transport Rules discovery (Get-TransportRule)
+#   - Added Inbound/Outbound Connectors discovery
+#   - Added Remote Domains discovery
+#   - Added Organization Config discovery
+#   - Added Organization Relationships (federation)
+#   - Added DKIM Signing Config discovery
+#   - Added Anti-Spam, Anti-Phishing, Malware policy discovery
+#   - Added Migration Endpoints and Batches discovery
+#   - Added Retention Policies and Journal Rules discovery
+#   - Added DNS/MX/SPF/DKIM/DMARC discovery with third-party gateway detection
+# v1.0.0 (2025-01-18) - Initial release
+# ============================================================================
 
 <#
 .SYNOPSIS
     Enhanced Exchange Discovery Module for M&A Discovery Suite
 .DESCRIPTION
-    Discovers Exchange Online mailboxes, distribution groups, mail-enabled security groups, mailbox statistics, 
-    mail flow rules, retention policies, and more using Microsoft Graph API. This module provides comprehensive 
-    Exchange Online discovery including detailed mailbox configurations, distribution lists, mail flow analysis, 
-    and email security settings essential for M&A email system assessment and migration planning.
+    Discovers Exchange Online mailboxes, distribution groups, mail-enabled security groups, mailbox statistics,
+    mail flow rules, retention policies, and more using Microsoft Graph API AND Exchange Online PowerShell.
+    This module provides comprehensive Exchange Online discovery including:
+    - Mailboxes with detailed configurations and permissions
+    - Distribution lists and M365 groups
+    - Transport rules (mail flow rules)
+    - Inbound/Outbound connectors
+    - Remote domains and accepted domains
+    - Organization configuration and federation relationships
+    - Security policies (DKIM, Anti-Spam, Anti-Phishing, Malware)
+    - Migration endpoints and batches
+    - DNS records (MX, SPF, DKIM, DMARC) with third-party gateway detection
+    Essential for M&A email system assessment and migration planning.
 .NOTES
-    Version: 1.0.0
+    Version: 2.0.0
     Author: Lukian Poleschtschuk
     Created: 2025-01-18
-    Requires: PowerShell 5.1+, Microsoft.Graph modules, Exchange.ManageAsApp permission, DiscoveryBase module
+    Last Modified: 2026-01-01
+    Requires: PowerShell 5.1+, Microsoft.Graph modules, ExchangeOnlineManagement module,
+              Exchange.ManageAsApp permission, DiscoveryBase module
 #>
 
 # Import base module
@@ -269,6 +298,7 @@ function Invoke-ExchangeDiscovery {
     )
 
     Write-ModuleLog -ModuleName "Exchange" -Message "=== Exchange Discovery Module Starting ===" -Level "HEADER"
+    Write-ModuleLog -ModuleName "Exchange" -Message "Module Version: 2.0.0" -Level "INFO"
 
     # CREDENTIAL VALIDATION AND EXTRACTION
     Write-ModuleLog -ModuleName "Exchange" -Message "Extracting and validating credentials from Configuration..." -Level "INFO"
@@ -1291,6 +1321,944 @@ function Invoke-ExchangeDiscovery {
             $Result.AddWarning("Failed to discover accepted domains: $($_.Exception.Message)", @{Section="AcceptedDomains"})
         }
 
+        # ============================================================================
+        # MAIL FLOW CONFIGURATION DISCOVERY (Requires EXO PowerShell Connection)
+        # These cmdlets provide critical data for M&A migration planning
+        # ============================================================================
+
+        if ($exoConnected) {
+            Write-ModuleLog -ModuleName "Exchange" -Message "=== Mail Flow Configuration Discovery ===" -Level "HEADER"
+
+            # --- TRANSPORT RULES (Mail Flow Rules) ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering transport rules (mail flow rules)..." -Level "INFO"
+
+                $transportRules = Get-TransportRule -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        Name = $_.Name
+                        State = $_.State
+                        Priority = $_.Priority
+                        Mode = $_.Mode
+                        Comments = $_.Comments
+                        # Conditions
+                        SentTo = if ($_.SentTo) { ($_.SentTo -join ';') } else { $null }
+                        SentToScope = $_.SentToScope
+                        RecipientDomainIs = if ($_.RecipientDomainIs) { ($_.RecipientDomainIs -join ';') } else { $null }
+                        FromScope = $_.FromScope
+                        From = if ($_.From) { ($_.From -join ';') } else { $null }
+                        FromAddressContainsWords = if ($_.FromAddressContainsWords) { ($_.FromAddressContainsWords -join ';') } else { $null }
+                        SubjectContainsWords = if ($_.SubjectContainsWords) { ($_.SubjectContainsWords -join ';') } else { $null }
+                        SubjectOrBodyContainsWords = if ($_.SubjectOrBodyContainsWords) { ($_.SubjectOrBodyContainsWords -join ';') } else { $null }
+                        HasAttachment = $_.HasAttachment
+                        AttachmentContainsWords = if ($_.AttachmentContainsWords) { ($_.AttachmentContainsWords -join ';') } else { $null }
+                        AttachmentNameMatchesPatterns = if ($_.AttachmentNameMatchesPatterns) { ($_.AttachmentNameMatchesPatterns -join ';') } else { $null }
+                        SenderIpRanges = if ($_.SenderIpRanges) { ($_.SenderIpRanges -join ';') } else { $null }
+                        # Actions
+                        RedirectMessageTo = if ($_.RedirectMessageTo) { ($_.RedirectMessageTo -join ';') } else { $null }
+                        CopyTo = if ($_.CopyTo) { ($_.CopyTo -join ';') } else { $null }
+                        BlindCopyTo = if ($_.BlindCopyTo) { ($_.BlindCopyTo -join ';') } else { $null }
+                        AddToRecipients = if ($_.AddToRecipients) { ($_.AddToRecipients -join ';') } else { $null }
+                        ModerateMessageByUser = if ($_.ModerateMessageByUser) { ($_.ModerateMessageByUser -join ';') } else { $null }
+                        PrependSubject = $_.PrependSubject
+                        SetHeaderName = $_.SetHeaderName
+                        SetHeaderValue = $_.SetHeaderValue
+                        RemoveHeader = $_.RemoveHeader
+                        SetSCL = $_.SetSCL
+                        Quarantine = $_.Quarantine
+                        RejectMessageReasonText = $_.RejectMessageReasonText
+                        RejectMessageEnhancedStatusCode = $_.RejectMessageEnhancedStatusCode
+                        DeleteMessage = $_.DeleteMessage
+                        Disconnect = $_.Disconnect
+                        ApplyClassification = $_.ApplyClassification
+                        ApplyHtmlDisclaimerText = $_.ApplyHtmlDisclaimerText
+                        ApplyHtmlDisclaimerLocation = $_.ApplyHtmlDisclaimerLocation
+                        # Exceptions
+                        ExceptIfSentTo = if ($_.ExceptIfSentTo) { ($_.ExceptIfSentTo -join ';') } else { $null }
+                        ExceptIfFrom = if ($_.ExceptIfFrom) { ($_.ExceptIfFrom -join ';') } else { $null }
+                        ExceptIfRecipientDomainIs = if ($_.ExceptIfRecipientDomainIs) { ($_.ExceptIfRecipientDomainIs -join ';') } else { $null }
+                        # Metadata
+                        RuleErrorAction = $_.RuleErrorAction
+                        SenderAddressLocation = $_.SenderAddressLocation
+                        WhenChanged = $_.WhenChanged
+                        _DataType = "TransportRule"
+                    }
+                }
+
+                if ($transportRules) {
+                    $transportRules | ForEach-Object { $null = $allDiscoveredData.Add($_) }
+                    $enabledRules = ($transportRules | Where-Object { $_.State -eq 'Enabled' }).Count
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $($transportRules.Count) transport rules ($enabledRules enabled)" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "No transport rules found" -Level "INFO"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover transport rules: $($_.Exception.Message)", @{Section="TransportRules"})
+            }
+
+            # --- INBOUND CONNECTORS ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering inbound connectors..." -Level "INFO"
+
+                $inboundConnectors = Get-InboundConnector -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        Name = $_.Name
+                        Identity = $_.Identity
+                        Enabled = $_.Enabled
+                        ConnectorType = $_.ConnectorType
+                        ConnectorSource = $_.ConnectorSource
+                        SenderDomains = if ($_.SenderDomains) { ($_.SenderDomains -join ';') } else { $null }
+                        SenderIPAddresses = if ($_.SenderIPAddresses) { ($_.SenderIPAddresses -join ';') } else { $null }
+                        AssociatedAcceptedDomains = if ($_.AssociatedAcceptedDomains) { ($_.AssociatedAcceptedDomains -join ';') } else { $null }
+                        RequireTls = $_.RequireTls
+                        RestrictDomainsToIPAddresses = $_.RestrictDomainsToIPAddresses
+                        RestrictDomainsToCertificate = $_.RestrictDomainsToCertificate
+                        TlsSenderCertificateName = $_.TlsSenderCertificateName
+                        TreatMessagesAsInternal = $_.TreatMessagesAsInternal
+                        CloudServicesMailEnabled = $_.CloudServicesMailEnabled
+                        EFSkipLastIP = $_.EFSkipLastIP
+                        EFSkipIPs = if ($_.EFSkipIPs) { ($_.EFSkipIPs -join ';') } else { $null }
+                        EFSkipMailGateway = if ($_.EFSkipMailGateway) { ($_.EFSkipMailGateway -join ';') } else { $null }
+                        Comment = $_.Comment
+                        WhenChanged = $_.WhenChanged
+                        _DataType = "InboundConnector"
+                    }
+                }
+
+                if ($inboundConnectors) {
+                    $inboundConnectors | ForEach-Object { $null = $allDiscoveredData.Add($_) }
+                    $enabledInbound = ($inboundConnectors | Where-Object { $_.Enabled -eq $true }).Count
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $($inboundConnectors.Count) inbound connectors ($enabledInbound enabled)" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "No inbound connectors found" -Level "INFO"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover inbound connectors: $($_.Exception.Message)", @{Section="InboundConnectors"})
+            }
+
+            # --- OUTBOUND CONNECTORS ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering outbound connectors..." -Level "INFO"
+
+                $outboundConnectors = Get-OutboundConnector -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        Name = $_.Name
+                        Identity = $_.Identity
+                        Enabled = $_.Enabled
+                        ConnectorType = $_.ConnectorType
+                        ConnectorSource = $_.ConnectorSource
+                        RecipientDomains = if ($_.RecipientDomains) { ($_.RecipientDomains -join ';') } else { $null }
+                        SmartHosts = if ($_.SmartHosts) { ($_.SmartHosts -join ';') } else { $null }
+                        TlsSettings = $_.TlsSettings
+                        TlsDomain = $_.TlsDomain
+                        RequireTLS = $_.RequireTLS
+                        IsTransportRuleScoped = $_.IsTransportRuleScoped
+                        RouteAllMessagesViaOnPremises = $_.RouteAllMessagesViaOnPremises
+                        CloudServicesMailEnabled = $_.CloudServicesMailEnabled
+                        AllAcceptedDomains = $_.AllAcceptedDomains
+                        UseMXRecord = $_.UseMXRecord
+                        Comment = $_.Comment
+                        WhenChanged = $_.WhenChanged
+                        _DataType = "OutboundConnector"
+                    }
+                }
+
+                if ($outboundConnectors) {
+                    $outboundConnectors | ForEach-Object { $null = $allDiscoveredData.Add($_) }
+                    $enabledOutbound = ($outboundConnectors | Where-Object { $_.Enabled -eq $true }).Count
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $($outboundConnectors.Count) outbound connectors ($enabledOutbound enabled)" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "No outbound connectors found" -Level "INFO"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover outbound connectors: $($_.Exception.Message)", @{Section="OutboundConnectors"})
+            }
+
+            # --- REMOTE DOMAINS ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering remote domains..." -Level "INFO"
+
+                $remoteDomains = Get-RemoteDomain -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        DomainName = $_.DomainName
+                        Name = $_.Name
+                        Identity = $_.Identity
+                        IsInternal = $_.IsInternal
+                        AllowedOOFType = $_.AllowedOOFType
+                        AutoReplyEnabled = $_.AutoReplyEnabled
+                        AutoForwardEnabled = $_.AutoForwardEnabled
+                        DeliveryReportEnabled = $_.DeliveryReportEnabled
+                        NDREnabled = $_.NDREnabled
+                        MeetingForwardNotificationEnabled = $_.MeetingForwardNotificationEnabled
+                        TNEFEnabled = $_.TNEFEnabled
+                        TrustedMailOutboundEnabled = $_.TrustedMailOutboundEnabled
+                        TrustedMailInboundEnabled = $_.TrustedMailInboundEnabled
+                        CharacterSet = $_.CharacterSet
+                        NonMimeCharacterSet = $_.NonMimeCharacterSet
+                        ContentType = $_.ContentType
+                        LineWrapSize = $_.LineWrapSize
+                        TargetDeliveryDomain = $_.TargetDeliveryDomain
+                        ByteEncoderTypeFor7BitCharsets = $_.ByteEncoderTypeFor7BitCharsets
+                        WhenChanged = $_.WhenChanged
+                        _DataType = "RemoteDomain"
+                    }
+                }
+
+                if ($remoteDomains) {
+                    $remoteDomains | ForEach-Object { $null = $allDiscoveredData.Add($_) }
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $($remoteDomains.Count) remote domains" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "No remote domains found" -Level "INFO"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover remote domains: $($_.Exception.Message)", @{Section="RemoteDomains"})
+            }
+
+            # --- ORGANIZATION CONFIG ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering organization configuration..." -Level "INFO"
+
+                $orgConfig = Get-OrganizationConfig -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        DisplayName = $_.DisplayName
+                        Name = $_.Name
+                        Identity = $_.Identity
+                        OrganizationId = $_.OrganizationId
+                        IsDehydrated = $_.IsDehydrated
+                        # Mail Tips
+                        MailTipsAllTipsEnabled = $_.MailTipsAllTipsEnabled
+                        MailTipsExternalRecipientsTipsEnabled = $_.MailTipsExternalRecipientsTipsEnabled
+                        MailTipsGroupMetricsEnabled = $_.MailTipsGroupMetricsEnabled
+                        MailTipsLargeAudienceThreshold = $_.MailTipsLargeAudienceThreshold
+                        MailTipsMailboxSourcedTipsEnabled = $_.MailTipsMailboxSourcedTipsEnabled
+                        # Public Folders
+                        PublicFoldersEnabled = $_.PublicFoldersEnabled
+                        PublicFolderMigrationComplete = $_.PublicFolderMigrationComplete
+                        DefaultPublicFolderMailbox = $_.DefaultPublicFolderMailbox
+                        # Protocols
+                        EwsEnabled = $_.EwsEnabled
+                        EwsAllowOutlook = $_.EwsAllowOutlook
+                        EwsAllowMacOutlook = $_.EwsAllowMacOutlook
+                        EwsAllowEntourage = $_.EwsAllowEntourage
+                        MapiHttpEnabled = $_.MapiHttpEnabled
+                        OAuth2ClientProfileEnabled = $_.OAuth2ClientProfileEnabled
+                        # Security
+                        DirectoryBasedEdgeBlockModeEnabled = $_.DirectoryBasedEdgeBlockModeEnabled
+                        UnifiedAuditLogIngestionEnabled = $_.UnifiedAuditLogIngestionEnabled
+                        AuditDisabled = $_.AuditDisabled
+                        # Distribution Groups
+                        DistributionGroupDefaultOU = $_.DistributionGroupDefaultOU
+                        DistributionGroupNameBlockedWordsList = if ($_.DistributionGroupNameBlockedWordsList) { ($_.DistributionGroupNameBlockedWordsList -join ';') } else { $null }
+                        DistributionGroupNamingPolicy = $_.DistributionGroupNamingPolicy
+                        # Exchange Recipient
+                        MicrosoftExchangeRecipientPrimarySmtpAddress = $_.MicrosoftExchangeRecipientPrimarySmtpAddress
+                        MicrosoftExchangeRecipientEmailAddresses = if ($_.MicrosoftExchangeRecipientEmailAddresses) { ($_.MicrosoftExchangeRecipientEmailAddresses -join ';') } else { $null }
+                        # Misc
+                        DefaultGroupAccessType = $_.DefaultGroupAccessType
+                        BookingsEnabled = $_.BookingsEnabled
+                        BookingsPaymentsEnabled = $_.BookingsPaymentsEnabled
+                        BookingsSocialSharingRestricted = $_.BookingsSocialSharingRestricted
+                        FocusedInboxOn = $_.FocusedInboxOn
+                        ReadTrackingEnabled = $_.ReadTrackingEnabled
+                        AutoExpandingArchive = $_.AutoExpandingArchive
+                        WhenChanged = $_.WhenChanged
+                        _DataType = "OrganizationConfig"
+                    }
+                }
+
+                if ($orgConfig) {
+                    $null = $allDiscoveredData.Add($orgConfig)
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered organization configuration for: $($orgConfig.DisplayName)" -Level "SUCCESS"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover organization config: $($_.Exception.Message)", @{Section="OrganizationConfig"})
+            }
+
+            # --- ORGANIZATION RELATIONSHIPS (Federation) ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering organization relationships (federation)..." -Level "INFO"
+
+                $orgRelationships = Get-OrganizationRelationship -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        Name = $_.Name
+                        Identity = $_.Identity
+                        Enabled = $_.Enabled
+                        DomainNames = if ($_.DomainNames) { ($_.DomainNames -join ';') } else { $null }
+                        # Free/Busy Sharing
+                        FreeBusyAccessEnabled = $_.FreeBusyAccessEnabled
+                        FreeBusyAccessLevel = $_.FreeBusyAccessLevel
+                        FreeBusyAccessScope = $_.FreeBusyAccessScope
+                        # Mail Tips
+                        MailTipsAccessEnabled = $_.MailTipsAccessEnabled
+                        MailTipsAccessLevel = $_.MailTipsAccessLevel
+                        MailTipsAccessScope = $_.MailTipsAccessScope
+                        # Photos and Delivery Reports
+                        PhotosEnabled = $_.PhotosEnabled
+                        DeliveryReportEnabled = $_.DeliveryReportEnabled
+                        # Target URLs
+                        TargetApplicationUri = $_.TargetApplicationUri
+                        TargetAutodiscoverEpr = $_.TargetAutodiscoverEpr
+                        TargetOwaURL = $_.TargetOwaURL
+                        TargetSharingEpr = $_.TargetSharingEpr
+                        # Archive Access
+                        ArchiveAccessEnabled = $_.ArchiveAccessEnabled
+                        MailboxMoveEnabled = $_.MailboxMoveEnabled
+                        MailboxMoveCapability = $_.MailboxMoveCapability
+                        MailboxMovePublishedScopes = if ($_.MailboxMovePublishedScopes) { ($_.MailboxMovePublishedScopes -join ';') } else { $null }
+                        OAuthApplicationId = $_.OAuthApplicationId
+                        WhenChanged = $_.WhenChanged
+                        _DataType = "OrganizationRelationship"
+                    }
+                }
+
+                if ($orgRelationships) {
+                    $orgRelationships | ForEach-Object { $null = $allDiscoveredData.Add($_) }
+                    $enabledRels = ($orgRelationships | Where-Object { $_.Enabled -eq $true }).Count
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $($orgRelationships.Count) organization relationships ($enabledRels enabled)" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "No organization relationships found" -Level "INFO"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover organization relationships: $($_.Exception.Message)", @{Section="OrganizationRelationships"})
+            }
+
+            # --- DKIM SIGNING CONFIG ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering DKIM signing configuration..." -Level "INFO"
+
+                $dkimConfigs = Get-DkimSigningConfig -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        Domain = $_.Domain
+                        Identity = $_.Identity
+                        Enabled = $_.Enabled
+                        Status = $_.Status
+                        Selector1CNAME = $_.Selector1CNAME
+                        Selector2CNAME = $_.Selector2CNAME
+                        Selector1PublicKey = $_.Selector1PublicKey
+                        Selector2PublicKey = $_.Selector2PublicKey
+                        KeyCreationTime = $_.KeyCreationTime
+                        LastChecked = $_.LastChecked
+                        RotateOnDate = $_.RotateOnDate
+                        SelectorBeforeRotateonDate = $_.SelectorBeforeRotateonDate
+                        SelectorAfterRotateonDate = $_.SelectorAfterRotateonDate
+                        _DataType = "DkimConfig"
+                    }
+                }
+
+                if ($dkimConfigs) {
+                    $dkimConfigs | ForEach-Object { $null = $allDiscoveredData.Add($_) }
+                    $enabledDkim = ($dkimConfigs | Where-Object { $_.Enabled -eq $true }).Count
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $($dkimConfigs.Count) DKIM configurations ($enabledDkim enabled)" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "No DKIM configurations found" -Level "INFO"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover DKIM config: $($_.Exception.Message)", @{Section="DkimConfig"})
+            }
+
+            # --- ANTI-SPAM POLICIES ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering anti-spam policies..." -Level "INFO"
+
+                $antiSpamPolicies = Get-HostedContentFilterPolicy -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        Name = $_.Name
+                        Identity = $_.Identity
+                        IsDefault = $_.IsDefault
+                        # Spam Actions
+                        SpamAction = $_.SpamAction
+                        HighConfidenceSpamAction = $_.HighConfidenceSpamAction
+                        BulkSpamAction = $_.BulkSpamAction
+                        PhishSpamAction = $_.PhishSpamAction
+                        HighConfidencePhishAction = $_.HighConfidencePhishAction
+                        # Thresholds
+                        BulkThreshold = $_.BulkThreshold
+                        MarkAsSpamBulkMail = $_.MarkAsSpamBulkMail
+                        # Quarantine
+                        QuarantineRetentionPeriod = $_.QuarantineRetentionPeriod
+                        SpamQuarantineTag = $_.SpamQuarantineTag
+                        HighConfidenceSpamQuarantineTag = $_.HighConfidenceSpamQuarantineTag
+                        PhishQuarantineTag = $_.PhishQuarantineTag
+                        HighConfidencePhishQuarantineTag = $_.HighConfidencePhishQuarantineTag
+                        BulkQuarantineTag = $_.BulkQuarantineTag
+                        # Notifications
+                        EnableEndUserSpamNotifications = $_.EnableEndUserSpamNotifications
+                        EndUserSpamNotificationFrequency = $_.EndUserSpamNotificationFrequency
+                        # Filters
+                        AllowedSenders = if ($_.AllowedSenders) { ($_.AllowedSenders -join ';') } else { $null }
+                        AllowedSenderDomains = if ($_.AllowedSenderDomains) { ($_.AllowedSenderDomains -join ';') } else { $null }
+                        BlockedSenders = if ($_.BlockedSenders) { ($_.BlockedSenders -join ';') } else { $null }
+                        BlockedSenderDomains = if ($_.BlockedSenderDomains) { ($_.BlockedSenderDomains -join ';') } else { $null }
+                        # Zero Hour Auto Purge
+                        ZapEnabled = $_.ZapEnabled
+                        SpamZapEnabled = $_.SpamZapEnabled
+                        PhishZapEnabled = $_.PhishZapEnabled
+                        # Advanced
+                        InlineSafetyTipsEnabled = $_.InlineSafetyTipsEnabled
+                        LanguageBlockList = if ($_.LanguageBlockList) { ($_.LanguageBlockList -join ';') } else { $null }
+                        RegionBlockList = if ($_.RegionBlockList) { ($_.RegionBlockList -join ';') } else { $null }
+                        TestModeAction = $_.TestModeAction
+                        _DataType = "AntiSpamPolicy"
+                    }
+                }
+
+                if ($antiSpamPolicies) {
+                    $antiSpamPolicies | ForEach-Object { $null = $allDiscoveredData.Add($_) }
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $($antiSpamPolicies.Count) anti-spam policies" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "No anti-spam policies found" -Level "INFO"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover anti-spam policies: $($_.Exception.Message)", @{Section="AntiSpamPolicies"})
+            }
+
+            # --- ANTI-PHISHING POLICIES ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering anti-phishing policies..." -Level "INFO"
+
+                $antiPhishPolicies = Get-AntiPhishPolicy -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        Name = $_.Name
+                        Identity = $_.Identity
+                        IsDefault = $_.IsDefault
+                        Enabled = $_.Enabled
+                        # Impersonation Protection
+                        EnableMailboxIntelligence = $_.EnableMailboxIntelligence
+                        EnableMailboxIntelligenceProtection = $_.EnableMailboxIntelligenceProtection
+                        MailboxIntelligenceProtectionAction = $_.MailboxIntelligenceProtectionAction
+                        EnableOrganizationDomainsProtection = $_.EnableOrganizationDomainsProtection
+                        EnableTargetedDomainsProtection = $_.EnableTargetedDomainsProtection
+                        TargetedDomainsToProtect = if ($_.TargetedDomainsToProtect) { ($_.TargetedDomainsToProtect -join ';') } else { $null }
+                        TargetedDomainProtectionAction = $_.TargetedDomainProtectionAction
+                        EnableTargetedUserProtection = $_.EnableTargetedUserProtection
+                        TargetedUsersToProtect = if ($_.TargetedUsersToProtect) { ($_.TargetedUsersToProtect -join ';') } else { $null }
+                        TargetedUserProtectionAction = $_.TargetedUserProtectionAction
+                        # Spoof Protection
+                        EnableSpoofIntelligence = $_.EnableSpoofIntelligence
+                        AuthenticationFailAction = $_.AuthenticationFailAction
+                        # Safety Tips
+                        EnableFirstContactSafetyTips = $_.EnableFirstContactSafetyTips
+                        EnableSimilarUsersSafetyTips = $_.EnableSimilarUsersSafetyTips
+                        EnableSimilarDomainsSafetyTips = $_.EnableSimilarDomainsSafetyTips
+                        EnableUnusualCharactersSafetyTips = $_.EnableUnusualCharactersSafetyTips
+                        EnableUnauthenticatedSender = $_.EnableUnauthenticatedSender
+                        EnableViaTag = $_.EnableViaTag
+                        # Exclusions
+                        ExcludedDomains = if ($_.ExcludedDomains) { ($_.ExcludedDomains -join ';') } else { $null }
+                        ExcludedSenders = if ($_.ExcludedSenders) { ($_.ExcludedSenders -join ';') } else { $null }
+                        ImpersonationProtectionState = $_.ImpersonationProtectionState
+                        PolicyTag = $_.PolicyTag
+                        _DataType = "AntiPhishPolicy"
+                    }
+                }
+
+                if ($antiPhishPolicies) {
+                    $antiPhishPolicies | ForEach-Object { $null = $allDiscoveredData.Add($_) }
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $($antiPhishPolicies.Count) anti-phishing policies" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "No anti-phishing policies found" -Level "INFO"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover anti-phishing policies: $($_.Exception.Message)", @{Section="AntiPhishPolicies"})
+            }
+
+            # --- MALWARE FILTER POLICIES ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering malware filter policies..." -Level "INFO"
+
+                $malwarePolicies = Get-MalwareFilterPolicy -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        Name = $_.Name
+                        Identity = $_.Identity
+                        IsDefault = $_.IsDefault
+                        # File Filtering
+                        EnableFileFilter = $_.EnableFileFilter
+                        FileTypes = if ($_.FileTypes) { ($_.FileTypes -join ';') } else { $null }
+                        FileTypeAction = $_.FileTypeAction
+                        # Zero Hour Auto Purge
+                        ZapEnabled = $_.ZapEnabled
+                        # Notifications
+                        EnableInternalSenderAdminNotifications = $_.EnableInternalSenderAdminNotifications
+                        InternalSenderAdminAddress = $_.InternalSenderAdminAddress
+                        EnableExternalSenderAdminNotifications = $_.EnableExternalSenderAdminNotifications
+                        ExternalSenderAdminAddress = $_.ExternalSenderAdminAddress
+                        EnableInternalSenderNotifications = $_.EnableInternalSenderNotifications
+                        EnableExternalSenderNotifications = $_.EnableExternalSenderNotifications
+                        # Custom Messages
+                        CustomFromName = $_.CustomFromName
+                        CustomFromAddress = $_.CustomFromAddress
+                        CustomNotifications = $_.CustomNotifications
+                        CustomInternalSubject = $_.CustomInternalSubject
+                        CustomInternalBody = $_.CustomInternalBody
+                        CustomExternalSubject = $_.CustomExternalSubject
+                        CustomExternalBody = $_.CustomExternalBody
+                        # Quarantine
+                        QuarantineTag = $_.QuarantineTag
+                        _DataType = "MalwarePolicy"
+                    }
+                }
+
+                if ($malwarePolicies) {
+                    $malwarePolicies | ForEach-Object { $null = $allDiscoveredData.Add($_) }
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $($malwarePolicies.Count) malware filter policies" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "No malware filter policies found" -Level "INFO"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover malware policies: $($_.Exception.Message)", @{Section="MalwarePolicies"})
+            }
+
+            # --- MIGRATION ENDPOINTS ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering migration endpoints..." -Level "INFO"
+
+                $migrationEndpoints = Get-MigrationEndpoint -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        Identity = $_.Identity
+                        EndpointType = $_.EndpointType
+                        RemoteServer = $_.RemoteServer
+                        ExchangeServer = $_.ExchangeServer
+                        RpcProxyServer = $_.RpcProxyServer
+                        NspiServer = $_.NspiServer
+                        Credentials = if ($_.Credentials) { $_.Credentials.UserName } else { $null }
+                        MailboxPermission = $_.MailboxPermission
+                        MaxConcurrentMigrations = $_.MaxConcurrentMigrations
+                        MaxConcurrentIncrementalSyncs = $_.MaxConcurrentIncrementalSyncs
+                        UseAutoDiscover = $_.UseAutoDiscover
+                        IsRemote = $_.IsRemote
+                        ApplicationId = $_.ApplicationId
+                        AppSecretKeyVaultUrl = $_.AppSecretKeyVaultUrl
+                        LastModifiedTime = $_.LastModifiedTime
+                        _DataType = "MigrationEndpoint"
+                    }
+                }
+
+                if ($migrationEndpoints) {
+                    $migrationEndpoints | ForEach-Object { $null = $allDiscoveredData.Add($_) }
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $($migrationEndpoints.Count) migration endpoints" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "No migration endpoints found" -Level "INFO"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover migration endpoints: $($_.Exception.Message)", @{Section="MigrationEndpoints"})
+            }
+
+            # --- MIGRATION BATCHES ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering migration batches..." -Level "INFO"
+
+                $migrationBatches = Get-MigrationBatch -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        Identity = $_.Identity
+                        Status = $_.Status
+                        State = $_.State
+                        Type = $_.MigrationType
+                        Direction = $_.Direction
+                        SourceEndpoint = $_.SourceEndpoint
+                        TargetEndpoint = $_.TargetEndpoint
+                        TargetDeliveryDomain = $_.TargetDeliveryDomain
+                        TotalCount = $_.TotalCount
+                        SyncedCount = $_.SyncedCount
+                        FinalizedCount = $_.FinalizedCount
+                        FailedCount = $_.FailedCount
+                        PendingCount = $_.PendingCount
+                        ProvisionedCount = $_.ProvisionedCount
+                        CreationDateTime = $_.CreationDateTime
+                        StartDateTime = $_.StartDateTime
+                        CompleteDateTime = $_.FinalizedDateTime
+                        LastSyncedDateTime = $_.LastSyncedDateTime
+                        SubmittedByUser = $_.SubmittedByUser
+                        NotificationEmails = if ($_.NotificationEmails) { ($_.NotificationEmails -join ';') } else { $null }
+                        SkipMerging = if ($_.SkipMerging) { ($_.SkipMerging -join ';') } else { $null }
+                        _DataType = "MigrationBatch"
+                    }
+                }
+
+                if ($migrationBatches) {
+                    $migrationBatches | ForEach-Object { $null = $allDiscoveredData.Add($_) }
+                    $activeBatches = ($migrationBatches | Where-Object { $_.Status -notin @('Completed', 'Failed', 'Stopped') }).Count
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $($migrationBatches.Count) migration batches ($activeBatches active)" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "No migration batches found" -Level "INFO"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover migration batches: $($_.Exception.Message)", @{Section="MigrationBatches"})
+            }
+
+            # --- RETENTION POLICIES ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering retention policies..." -Level "INFO"
+
+                $retentionPolicies = Get-RetentionPolicy -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        Name = $_.Name
+                        Identity = $_.Identity
+                        IsDefault = $_.IsDefault
+                        IsDefaultArbitrationMailbox = $_.IsDefaultArbitrationMailbox
+                        RetentionPolicyTagLinks = if ($_.RetentionPolicyTagLinks) { ($_.RetentionPolicyTagLinks -join ';') } else { $null }
+                        WhenChanged = $_.WhenChanged
+                        _DataType = "RetentionPolicy"
+                    }
+                }
+
+                if ($retentionPolicies) {
+                    $retentionPolicies | ForEach-Object { $null = $allDiscoveredData.Add($_) }
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $($retentionPolicies.Count) retention policies" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "No retention policies found" -Level "INFO"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover retention policies: $($_.Exception.Message)", @{Section="RetentionPolicies"})
+            }
+
+            # --- JOURNAL RULES ---
+            try {
+                Write-ModuleLog -ModuleName "Exchange" -Message "Discovering journal rules..." -Level "INFO"
+
+                $journalRules = Get-JournalRule -ErrorAction SilentlyContinue | ForEach-Object {
+                    [PSCustomObject]@{
+                        Name = $_.Name
+                        Identity = $_.Identity
+                        Enabled = $_.Enabled
+                        Recipient = $_.Recipient
+                        JournalEmailAddress = $_.JournalEmailAddress
+                        Scope = $_.Scope
+                        _DataType = "JournalRule"
+                    }
+                }
+
+                if ($journalRules) {
+                    $journalRules | ForEach-Object { $null = $allDiscoveredData.Add($_) }
+                    Write-ModuleLog -ModuleName "Exchange" -Message "Discovered $($journalRules.Count) journal rules" -Level "SUCCESS"
+                } else {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "No journal rules found" -Level "INFO"
+                }
+
+            } catch {
+                $Result.AddWarning("Failed to discover journal rules: $($_.Exception.Message)", @{Section="JournalRules"})
+            }
+
+            Write-ModuleLog -ModuleName "Exchange" -Message "=== Mail Flow Configuration Discovery Complete ===" -Level "HEADER"
+
+        } else {
+            Write-ModuleLog -ModuleName "Exchange" -Message "Exchange Online PowerShell not connected - skipping mail flow configuration discovery" -Level "WARN"
+            Write-ModuleLog -ModuleName "Exchange" -Message "  Mail flow data (transport rules, connectors, security policies) requires EXO connection" -Level "WARN"
+        }
+
+        # ============================================================================
+        # DNS & MAIL ROUTING DISCOVERY (MX, SPF, DKIM, DMARC, Third-Party Detection)
+        # Discover how mail actually flows to/from the organization
+        # ============================================================================
+
+        Write-ModuleLog -ModuleName "Exchange" -Message "=== DNS & Mail Routing Discovery ===" -Level "HEADER"
+
+        # Get accepted domains for DNS checks
+        $acceptedDomains = $allDiscoveredData | Where-Object { $_._DataType -eq 'AcceptedDomain' }
+
+        if ($acceptedDomains -and $acceptedDomains.Count -gt 0) {
+            Write-ModuleLog -ModuleName "Exchange" -Message "Discovering DNS records for $($acceptedDomains.Count) domains..." -Level "INFO"
+
+            foreach ($domain in $acceptedDomains) {
+                $domainName = $domain.DomainName
+                Write-ModuleLog -ModuleName "Exchange" -Message "Checking DNS for: $domainName" -Level "DEBUG"
+
+                $dnsRecord = [PSCustomObject]@{
+                    DomainName = $domainName
+                    IsDefault = $domain.IsDefault
+                    IsInitial = $domain.IsInitial
+                    # MX Records
+                    MXRecords = $null
+                    MXPriorities = $null
+                    MXProvider = $null
+                    UsesThirdPartyGateway = $false
+                    ThirdPartyService = $null
+                    # SPF Record
+                    SPFRecord = $null
+                    SPFValid = $false
+                    SPFIncludes = $null
+                    # DKIM Records
+                    DKIMSelector1 = $null
+                    DKIMSelector2 = $null
+                    DKIMConfigured = $false
+                    # DMARC Record
+                    DMARCRecord = $null
+                    DMARCPolicy = $null
+                    DMARCReportEmail = $null
+                    # Mail Flow Summary
+                    MailFlowPath = $null
+                    _DataType = "DomainDNSRecord"
+                }
+
+                # --- MX Records ---
+                try {
+                    $mxRecords = Resolve-DnsName -Name $domainName -Type MX -ErrorAction SilentlyContinue
+                    if ($mxRecords) {
+                        $mxHosts = ($mxRecords | Where-Object { $_.Type -eq 'MX' } | Sort-Object Preference | ForEach-Object { $_.NameExchange }) -join ';'
+                        $mxPriorities = ($mxRecords | Where-Object { $_.Type -eq 'MX' } | Sort-Object Preference | ForEach-Object { "$($_.Preference):$($_.NameExchange)" }) -join ';'
+                        $dnsRecord.MXRecords = $mxHosts
+                        $dnsRecord.MXPriorities = $mxPriorities
+
+                        # Detect mail provider/gateway from MX records
+                        $primaryMX = ($mxRecords | Where-Object { $_.Type -eq 'MX' } | Sort-Object Preference | Select-Object -First 1).NameExchange.ToLower()
+
+                        if ($primaryMX) {
+                            # Detect third-party mail gateways
+                            $thirdPartyDetected = $false
+                            $serviceName = $null
+                            $mailFlowPath = "Unknown"
+
+                            switch -Wildcard ($primaryMX) {
+                                # Microsoft 365 / Exchange Online
+                                '*.mail.protection.outlook.com' {
+                                    $dnsRecord.MXProvider = 'Microsoft 365 (EOP)'
+                                    $mailFlowPath = "Direct to Microsoft 365"
+                                }
+                                # Mimecast
+                                '*.mimecast.com' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'Mimecast'
+                                    $dnsRecord.MXProvider = 'Mimecast Gateway'
+                                    $mailFlowPath = "Mimecast -> Microsoft 365"
+                                }
+                                '*mimecast*' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'Mimecast'
+                                    $dnsRecord.MXProvider = 'Mimecast Gateway'
+                                    $mailFlowPath = "Mimecast -> Microsoft 365"
+                                }
+                                # Proofpoint
+                                '*.pphosted.com' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'Proofpoint'
+                                    $dnsRecord.MXProvider = 'Proofpoint Gateway'
+                                    $mailFlowPath = "Proofpoint -> Microsoft 365"
+                                }
+                                '*proofpoint*' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'Proofpoint'
+                                    $dnsRecord.MXProvider = 'Proofpoint Gateway'
+                                    $mailFlowPath = "Proofpoint -> Microsoft 365"
+                                }
+                                # Barracuda
+                                '*.barracudanetworks.com' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'Barracuda'
+                                    $dnsRecord.MXProvider = 'Barracuda Gateway'
+                                    $mailFlowPath = "Barracuda -> Microsoft 365"
+                                }
+                                '*barracuda*' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'Barracuda'
+                                    $dnsRecord.MXProvider = 'Barracuda Gateway'
+                                    $mailFlowPath = "Barracuda -> Microsoft 365"
+                                }
+                                # Cisco Email Security (IronPort)
+                                '*.iphmx.com' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'Cisco Email Security'
+                                    $dnsRecord.MXProvider = 'Cisco IronPort Gateway'
+                                    $mailFlowPath = "Cisco IronPort -> Microsoft 365"
+                                }
+                                '*ironport*' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'Cisco IronPort'
+                                    $dnsRecord.MXProvider = 'Cisco IronPort Gateway'
+                                    $mailFlowPath = "Cisco IronPort -> Microsoft 365"
+                                }
+                                # Symantec/Broadcom
+                                '*.messagelabs.com' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'Symantec/Broadcom'
+                                    $dnsRecord.MXProvider = 'Symantec MessageLabs'
+                                    $mailFlowPath = "Symantec -> Microsoft 365"
+                                }
+                                # Forcepoint
+                                '*.mailcontrol.com' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'Forcepoint'
+                                    $dnsRecord.MXProvider = 'Forcepoint Gateway'
+                                    $mailFlowPath = "Forcepoint -> Microsoft 365"
+                                }
+                                # Trend Micro
+                                '*.tmes.trendmicro.com' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'Trend Micro'
+                                    $dnsRecord.MXProvider = 'Trend Micro Gateway'
+                                    $mailFlowPath = "Trend Micro -> Microsoft 365"
+                                }
+                                # Sophos
+                                '*.sophos.com' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'Sophos'
+                                    $dnsRecord.MXProvider = 'Sophos Gateway'
+                                    $mailFlowPath = "Sophos -> Microsoft 365"
+                                }
+                                # SpamTitan
+                                '*.spamtitan.com' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'SpamTitan'
+                                    $dnsRecord.MXProvider = 'SpamTitan Gateway'
+                                    $mailFlowPath = "SpamTitan -> Microsoft 365"
+                                }
+                                # Cloudflare
+                                '*.mx.cloudflare.net' {
+                                    $thirdPartyDetected = $true
+                                    $serviceName = 'Cloudflare Email Routing'
+                                    $dnsRecord.MXProvider = 'Cloudflare'
+                                    $mailFlowPath = "Cloudflare -> Microsoft 365"
+                                }
+                                # Google Workspace
+                                '*.google.com' {
+                                    $dnsRecord.MXProvider = 'Google Workspace'
+                                    $mailFlowPath = "Google Workspace (not Microsoft 365)"
+                                }
+                                '*aspmx.l.google.com' {
+                                    $dnsRecord.MXProvider = 'Google Workspace'
+                                    $mailFlowPath = "Google Workspace (not Microsoft 365)"
+                                }
+                                # On-premises / Custom
+                                default {
+                                    $dnsRecord.MXProvider = "Custom/On-Premises: $primaryMX"
+                                    $mailFlowPath = "Custom MX -> Unknown destination"
+                                }
+                            }
+
+                            $dnsRecord.UsesThirdPartyGateway = $thirdPartyDetected
+                            $dnsRecord.ThirdPartyService = $serviceName
+                            $dnsRecord.MailFlowPath = $mailFlowPath
+                        }
+                    } else {
+                        $dnsRecord.MXRecords = "No MX records found"
+                        $dnsRecord.MXProvider = "None"
+                    }
+                } catch {
+                    $dnsRecord.MXRecords = "DNS lookup failed: $($_.Exception.Message)"
+                    Write-ModuleLog -ModuleName "Exchange" -Message "MX lookup failed for $domainName : $($_.Exception.Message)" -Level "DEBUG"
+                }
+
+                # --- SPF Record ---
+                try {
+                    $txtRecords = Resolve-DnsName -Name $domainName -Type TXT -ErrorAction SilentlyContinue
+                    if ($txtRecords) {
+                        $spfRecord = $txtRecords | Where-Object { $_.Strings -match '^v=spf1' } | Select-Object -First 1
+                        if ($spfRecord) {
+                            $spfText = $spfRecord.Strings -join ''
+                            $dnsRecord.SPFRecord = $spfText
+                            $dnsRecord.SPFValid = $true
+
+                            # Extract includes
+                            $includes = [regex]::Matches($spfText, 'include:([^\s]+)') | ForEach-Object { $_.Groups[1].Value }
+                            $dnsRecord.SPFIncludes = ($includes -join ';')
+                        } else {
+                            $dnsRecord.SPFRecord = "No SPF record found"
+                            $dnsRecord.SPFValid = $false
+                        }
+                    }
+                } catch {
+                    $dnsRecord.SPFRecord = "DNS lookup failed"
+                    Write-ModuleLog -ModuleName "Exchange" -Message "SPF lookup failed for $domainName : $($_.Exception.Message)" -Level "DEBUG"
+                }
+
+                # --- DKIM Records (check common selectors) ---
+                try {
+                    # Microsoft 365 selectors
+                    $selector1 = Resolve-DnsName -Name "selector1._domainkey.$domainName" -Type CNAME -ErrorAction SilentlyContinue
+                    $selector2 = Resolve-DnsName -Name "selector2._domainkey.$domainName" -Type CNAME -ErrorAction SilentlyContinue
+
+                    if ($selector1) {
+                        $dnsRecord.DKIMSelector1 = ($selector1 | Where-Object { $_.Type -eq 'CNAME' }).NameHost
+                        $dnsRecord.DKIMConfigured = $true
+                    }
+                    if ($selector2) {
+                        $dnsRecord.DKIMSelector2 = ($selector2 | Where-Object { $_.Type -eq 'CNAME' }).NameHost
+                        $dnsRecord.DKIMConfigured = $true
+                    }
+
+                    # If no Microsoft selectors, check for 'default' or 'google' selectors
+                    if (-not $dnsRecord.DKIMConfigured) {
+                        $defaultSelector = Resolve-DnsName -Name "default._domainkey.$domainName" -Type TXT -ErrorAction SilentlyContinue
+                        $googleSelector = Resolve-DnsName -Name "google._domainkey.$domainName" -Type TXT -ErrorAction SilentlyContinue
+
+                        if ($defaultSelector -or $googleSelector) {
+                            $dnsRecord.DKIMConfigured = $true
+                            if ($defaultSelector) { $dnsRecord.DKIMSelector1 = "default (TXT record present)" }
+                            if ($googleSelector) { $dnsRecord.DKIMSelector2 = "google (TXT record present)" }
+                        }
+                    }
+                } catch {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "DKIM lookup failed for $domainName : $($_.Exception.Message)" -Level "DEBUG"
+                }
+
+                # --- DMARC Record ---
+                try {
+                    $dmarcRecord = Resolve-DnsName -Name "_dmarc.$domainName" -Type TXT -ErrorAction SilentlyContinue
+                    if ($dmarcRecord) {
+                        $dmarcTxt = $dmarcRecord | Where-Object { $_.Strings -match '^v=DMARC1' } | Select-Object -First 1
+                        if ($dmarcTxt) {
+                            $dmarcText = $dmarcTxt.Strings -join ''
+                            $dnsRecord.DMARCRecord = $dmarcText
+
+                            # Extract policy
+                            $policyMatch = [regex]::Match($dmarcText, 'p=(\w+)')
+                            if ($policyMatch.Success) {
+                                $dnsRecord.DMARCPolicy = $policyMatch.Groups[1].Value
+                            }
+
+                            # Extract report email
+                            $ruaMatch = [regex]::Match($dmarcText, 'rua=([^;]+)')
+                            if ($ruaMatch.Success) {
+                                $dnsRecord.DMARCReportEmail = $ruaMatch.Groups[1].Value
+                            }
+                        } else {
+                            $dnsRecord.DMARCRecord = "No DMARC record found"
+                        }
+                    } else {
+                        $dnsRecord.DMARCRecord = "No DMARC record found"
+                    }
+                } catch {
+                    $dnsRecord.DMARCRecord = "DNS lookup failed"
+                    Write-ModuleLog -ModuleName "Exchange" -Message "DMARC lookup failed for $domainName : $($_.Exception.Message)" -Level "DEBUG"
+                }
+
+                $null = $allDiscoveredData.Add($dnsRecord)
+            }
+
+            # Summary logging
+            $thirdPartyDomains = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DomainDNSRecord' -and $_.UsesThirdPartyGateway -eq $true })
+            $directM365Domains = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DomainDNSRecord' -and $_.MXProvider -eq 'Microsoft 365 (EOP)' })
+            $dkimConfigured = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DomainDNSRecord' -and $_.DKIMConfigured -eq $true })
+            $dmarcConfigured = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DomainDNSRecord' -and $_.DMARCPolicy })
+
+            Write-ModuleLog -ModuleName "Exchange" -Message "DNS Discovery Summary:" -Level "SUCCESS"
+            Write-ModuleLog -ModuleName "Exchange" -Message "  Domains checked: $($acceptedDomains.Count)" -Level "INFO"
+            Write-ModuleLog -ModuleName "Exchange" -Message "  Direct M365 routing: $($directM365Domains.Count)" -Level "INFO"
+            Write-ModuleLog -ModuleName "Exchange" -Message "  Third-party gateways: $($thirdPartyDomains.Count)" -Level "INFO"
+            if ($thirdPartyDomains) {
+                foreach ($tpd in $thirdPartyDomains) {
+                    Write-ModuleLog -ModuleName "Exchange" -Message "    - $($tpd.DomainName): $($tpd.ThirdPartyService)" -Level "INFO"
+                }
+            }
+            Write-ModuleLog -ModuleName "Exchange" -Message "  DKIM configured: $($dkimConfigured.Count)" -Level "INFO"
+            Write-ModuleLog -ModuleName "Exchange" -Message "  DMARC configured: $($dmarcConfigured.Count)" -Level "INFO"
+
+        } else {
+            Write-ModuleLog -ModuleName "Exchange" -Message "No accepted domains found to check DNS records" -Level "WARN"
+        }
+
+        Write-ModuleLog -ModuleName "Exchange" -Message "=== DNS & Mail Routing Discovery Complete ===" -Level "HEADER"
+
         # Data Validation and Quality Checks
         if ($allDiscoveredData.Count -gt 0) {
             Write-ModuleLog -ModuleName "Exchange" -Message "Performing data validation and quality checks..." -Level "INFO"
@@ -1370,35 +2338,89 @@ function Invoke-ExchangeDiscovery {
             
             foreach ($group in $dataGroups) {
                 $fileName = switch ($group.Name) {
+                    # Mailbox Types
                     'Mailbox' { 'ExchangeMailboxes.csv' }
                     'SharedMailbox' { 'ExchangeSharedMailboxes.csv' }
                     'ResourceMailbox' { 'ExchangeResourceMailboxes.csv' }
+                    'EquipmentMailbox' { 'ExchangeEquipmentMailboxes.csv' }
+                    # Groups and Contacts
                     'DistributionGroup' { 'ExchangeDistributionGroups.csv' }
                     'MailContact' { 'ExchangeMailContacts.csv' }
+                    # Domain Configuration
+                    'AcceptedDomain' { 'ExchangeAcceptedDomains.csv' }
+                    'RemoteDomain' { 'ExchangeRemoteDomains.csv' }
+                    'DomainDNSRecord' { 'ExchangeDomainDNSRecords.csv' }
+                    # Mail Flow Configuration
+                    'TransportRule' { 'ExchangeTransportRules.csv' }
+                    'InboundConnector' { 'ExchangeInboundConnectors.csv' }
+                    'OutboundConnector' { 'ExchangeOutboundConnectors.csv' }
+                    # Organization Configuration
+                    'OrganizationConfig' { 'ExchangeOrganizationConfig.csv' }
+                    'OrganizationRelationship' { 'ExchangeOrganizationRelationships.csv' }
+                    # Security Policies
+                    'DkimConfig' { 'ExchangeDkimConfig.csv' }
+                    'AntiSpamPolicy' { 'ExchangeAntiSpamPolicies.csv' }
+                    'AntiPhishPolicy' { 'ExchangeAntiPhishPolicies.csv' }
+                    'MalwarePolicy' { 'ExchangeMalwarePolicies.csv' }
+                    # Migration Configuration
+                    'MigrationEndpoint' { 'ExchangeMigrationEndpoints.csv' }
+                    'MigrationBatch' { 'ExchangeMigrationBatches.csv' }
+                    # Compliance
+                    'RetentionPolicy' { 'ExchangeRetentionPolicies.csv' }
+                    'JournalRule' { 'ExchangeJournalRules.csv' }
+                    # Fallback
                     default { "Exchange_$($group.Name).csv" }
                 }
-                
+
                 Export-DiscoveryResults -Data $group.Group `
                     -FileName $fileName `
                     -OutputPath $Context.Paths.RawDataOutput `
                     -ModuleName "Exchange" `
                     -SessionId $SessionId
             }
-            
+
             # Create comprehensive summary report
             $summaryData = @{
+                # Mailbox Statistics
                 TotalMailboxes = ($allDiscoveredData | Where-Object { $_._DataType -eq 'Mailbox' }).Count
                 SharedMailboxes = ($allDiscoveredData | Where-Object { $_._DataType -eq 'SharedMailbox' }).Count
                 ResourceMailboxes = ($allDiscoveredData | Where-Object { $_._DataType -eq 'ResourceMailbox' }).Count
-                DistributionGroups = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DistributionGroup' }).Count
-                MailContacts = ($allDiscoveredData | Where-Object { $_._DataType -eq 'MailContact' }).Count
-                TotalRecords = $allDiscoveredData.Count
                 EnabledMailboxes = ($allDiscoveredData | Where-Object { $_._DataType -eq 'Mailbox' -and $_.AccountEnabled }).Count
                 DisabledMailboxes = ($allDiscoveredData | Where-Object { $_._DataType -eq 'Mailbox' -and -not $_.AccountEnabled }).Count
                 HybridUsers = ($allDiscoveredData | Where-Object { $_._DataType -eq 'Mailbox' -and $_.OnPremisesSyncEnabled }).Count
                 CloudOnlyUsers = ($allDiscoveredData | Where-Object { $_._DataType -eq 'Mailbox' -and -not $_.OnPremisesSyncEnabled }).Count
+                # Groups and Contacts
+                DistributionGroups = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DistributionGroup' }).Count
+                MailContacts = ($allDiscoveredData | Where-Object { $_._DataType -eq 'MailContact' }).Count
                 DynamicGroups = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DistributionGroup' -and $_.IsDynamicGroup }).Count
                 Microsoft365Groups = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DistributionGroup' -and $_.GroupType -eq 'Microsoft365' }).Count
+                # Domain and DNS
+                AcceptedDomains = ($allDiscoveredData | Where-Object { $_._DataType -eq 'AcceptedDomain' }).Count
+                RemoteDomains = ($allDiscoveredData | Where-Object { $_._DataType -eq 'RemoteDomain' }).Count
+                DomainsWithThirdPartyGateway = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DomainDNSRecord' -and $_.UsesThirdPartyGateway -eq $true }).Count
+                DomainsWithDKIM = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DomainDNSRecord' -and $_.DKIMConfigured -eq $true }).Count
+                DomainsWithDMARC = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DomainDNSRecord' -and $_.DMARCPolicy }).Count
+                # Mail Flow Configuration
+                TransportRules = ($allDiscoveredData | Where-Object { $_._DataType -eq 'TransportRule' }).Count
+                TransportRulesEnabled = ($allDiscoveredData | Where-Object { $_._DataType -eq 'TransportRule' -and $_.State -eq 'Enabled' }).Count
+                InboundConnectors = ($allDiscoveredData | Where-Object { $_._DataType -eq 'InboundConnector' }).Count
+                OutboundConnectors = ($allDiscoveredData | Where-Object { $_._DataType -eq 'OutboundConnector' }).Count
+                # Organization
+                OrganizationRelationships = ($allDiscoveredData | Where-Object { $_._DataType -eq 'OrganizationRelationship' }).Count
+                # Security Policies
+                AntiSpamPolicies = ($allDiscoveredData | Where-Object { $_._DataType -eq 'AntiSpamPolicy' }).Count
+                AntiPhishPolicies = ($allDiscoveredData | Where-Object { $_._DataType -eq 'AntiPhishPolicy' }).Count
+                MalwarePolicies = ($allDiscoveredData | Where-Object { $_._DataType -eq 'MalwarePolicy' }).Count
+                DkimConfigs = ($allDiscoveredData | Where-Object { $_._DataType -eq 'DkimConfig' }).Count
+                # Migration
+                MigrationEndpoints = ($allDiscoveredData | Where-Object { $_._DataType -eq 'MigrationEndpoint' }).Count
+                MigrationBatches = ($allDiscoveredData | Where-Object { $_._DataType -eq 'MigrationBatch' }).Count
+                ActiveMigrations = ($allDiscoveredData | Where-Object { $_._DataType -eq 'MigrationBatch' -and $_.Status -notin @('Completed', 'Failed', 'Stopped') }).Count
+                # Compliance
+                RetentionPolicies = ($allDiscoveredData | Where-Object { $_._DataType -eq 'RetentionPolicy' }).Count
+                JournalRules = ($allDiscoveredData | Where-Object { $_._DataType -eq 'JournalRule' }).Count
+                # Totals
+                TotalRecords = $allDiscoveredData.Count
                 DiscoveryDate = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
                 SessionId = $SessionId
                 ValidationResults = $validationResults

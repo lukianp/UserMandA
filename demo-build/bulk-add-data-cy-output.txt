@@ -1,0 +1,35 @@
+Processing 50 data-cy attributes...
+
+⚠️  export-results-btn: no-match (SecurityDashboardView.tsx)
+⚠️  cancel-discovery-btn: no-match (WebServerConfigurationDiscoveryView.tsx)
+⚠️  clear-logs-btn: no-match (WebServerConfigurationDiscoveryView.tsx)
+⚠️  ag-grid-mock: no-match (VirtualizedDataGrid.tsx)
+⚠️  config-toggle: no-match (WebServerConfigurationDiscoveryView.tsx)
+⚠️  loading-overlay: no-match (IntuneDiscoveryView.tsx)
+⚠️  benchmarking-view: no-match (BenchmarkingView.tsx)
+⚠️  overview-view: no-match (OverviewView.tsx)
+⚠️  migration-validation-view: no-match (MigrationValidationView.tsx)
+⚠️  migration-execution-view: no-match (MigrationExecutionView.tsx)
+⚠️  web-server-discovery-view: no-match (WebServerConfigurationDiscoveryView.tsx)
+⚠️  v-mware-discovery-view: no-match (VMwareDiscoveryView.tsx)
+⚠️  s-q-l-server-discovery-view: no-match (SQLServerDiscoveryView.tsx)
+⚠️  share-point-discovery-view: no-match (SharePointDiscoveryView.tsx)
+⚠️  security-infrastructure-discovery-view: no-match (SecurityInfrastructureDiscoveryView.tsx)
+⚠️  one-drive-discovery-view: no-match (OneDriveDiscoveryView.tsx)
+⚠️  office365-discovery-view: no-match (Office365DiscoveryView.tsx)
+
+============================================================
+BULK DATA-CY ADDITION SUMMARY
+============================================================
+Attempted:       50
+Modified:        0 files
+Already exists:  0
+No match found:  0
+Parse errors:    0
+
+Unique files modified: 0
+
+Next steps:
+1. Review changes: git diff
+2. Run TypeScript check: npm run build
+3. Run tests: npm test

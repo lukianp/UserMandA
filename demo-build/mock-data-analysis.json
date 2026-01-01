@@ -1,0 +1,67 @@
+{
+  "alreadyUsing": [],
+  "needsStandardization": [
+    {
+      "file": "src/renderer/hooks/useActiveDirectoryDiscoveryLogic.test.ts",
+      "suggestedMock": "createMockADDiscoveryResult"
+    },
+    {
+      "file": "src/renderer/hooks/useExchangeDiscoveryLogic.test.ts",
+      "suggestedMock": "createMockExchangeDiscoveryResult"
+    },
+    {
+      "file": "src/renderer/hooks/useGoogleWorkspaceDiscoveryLogic.test.ts",
+      "suggestedMock": "createMockGoogleWorkspaceDiscoveryResult"
+    },
+    {
+      "file": "src/renderer/hooks/useAWSDiscoveryLogic.test.ts",
+      "suggestedMock": "createMockDiscoveryResult"
+    },
+    {
+      "file": "src/renderer/hooks/useSharePointDiscoveryLogic.test.ts",
+      "suggestedMock": "createMockDiscoveryResult"
+    },
+    {
+      "file": "src/renderer/hooks/useTeamsDiscoveryLogic.test.ts",
+      "suggestedMock": "createMockDiscoveryResult"
+    },
+    {
+      "file": "src/renderer/hooks/useFileSystemDiscoveryLogic.test.ts",
+      "suggestedMock": "createMockDiscoveryResult"
+    },
+    {
+      "file": "src/renderer/hooks/useApplicationDiscoveryLogic.test.ts",
+      "suggestedMock": "createMockDiscoveryResult"
+    },
+    {
+      "file": "src/renderer/hooks/useConditionalAccessDiscoveryLogic.test.ts",
+      "suggestedMock": "createMockDiscoveryResult"
+    },
+    {
+      "file": "src/renderer/hooks/useDataLossPreventionDiscoveryLogic.test.ts",
+      "suggestedMock": "createMockDiscoveryResult"
+    },
+    {
+      "file": "src/renderer/hooks/useHyperVDiscoveryLogic.test.ts",
+      "suggestedMock": "createMockDiscoveryResult"
+    },
+    {
+      "file": "src/renderer/hooks/useIdentityGovernanceDiscoveryLogic.test.ts",
+      "suggestedMock": "createMockDiscoveryResult"
+    }
+  ],
+  "noInlineMocks": [
+    "src/renderer/hooks/useAzureDiscoveryLogic.test.ts",
+    "src/renderer/hooks/useVMwareDiscoveryLogic.test.ts",
+    "src/renderer/hooks/useIntuneDiscoveryLogic.test.ts",
+    "src/renderer/hooks/useSQLServerDiscoveryLogic.test.ts",
+    "src/renderer/hooks/useNetworkDiscoveryLogic.test.ts",
+    "src/renderer/hooks/useOneDriveDiscoveryLogic.test.ts",
+    "src/renderer/hooks/useOffice365DiscoveryLogic.test.ts",
+    "src/renderer/hooks/usePowerPlatformDiscoveryLogic.test.ts",
+    "src/renderer/hooks/useWebServerDiscoveryLogic.test.ts",
+    "src/renderer/hooks/useLicensingDiscoveryLogic.test.ts",
+    "src/renderer/hooks/useSecurityInfrastructureDiscoveryLogic.test.ts"
+  ],
+  "errors": []
+}

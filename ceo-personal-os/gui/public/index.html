@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEO Personal Operating System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <h2>CEO OS</h2>
+            <ul>
+                <li><a href="#" data-section="README.md">Home</a></li>
+                <li><a href="#" data-section="principles.md">Principles</a></li>
+                <li><a href="#" data-section="north_star.md">North Star</a></li>
+                <li><a href="#" data-section="frameworks">Frameworks</a>
+                    <ul>
+                        <li><a href="#" data-section="frameworks/annual_review.md">Annual Review</a></li>
+                        <li><a href="#" data-section="frameworks/vivid_vision.md">Vivid Vision</a></li>
+                        <li><a href="#" data-section="frameworks/ideal_life_costing.md">Ideal Life Costing</a></li>
+                        <li><a href="#" data-section="frameworks/life_map.md">Life Map</a></li>
+                    </ul>
+                </li>
+                <li><a href="#" data-section="interviews">Interviews</a>
+                    <ul>
+                        <li><a href="#" data-section="interviews/past_year_reflection.md">Past Year</a></li>
+                        <li><a href="#" data-section="interviews/identity_and_values.md">Identity & Values</a></li>
+                        <li><a href="#" data-section="interviews/future_self_interview.md">Future Self</a></li>
+                    </ul>
+                </li>
+                <li><a href="#" data-section="reviews">Reviews</a>
+                    <ul>
+                        <li><a href="#" data-section="reviews/daily">Daily</a></li>
+                        <li><a href="#" data-section="reviews/weekly">Weekly</a></li>
+                        <li><a href="#" data-section="reviews/quarterly">Quarterly</a></li>
+                        <li><a href="#" data-section="reviews/annual">Annual</a></li>
+                    </ul>
+                </li>
+                <li><a href="#" data-section="goals">Goals</a>
+                    <ul>
+                        <li><a href="#" data-section="goals/1_year.md">1 Year</a></li>
+                        <li><a href="#" data-section="goals/3_year.md">3 Year</a></li>
+                        <li><a href="#" data-section="goals/10_year.md">10 Year</a></li>
+                    </ul>
+                </li>
+                <li><a href="#" data-section="memory.md">Memory</a></li>
+                <li><a href="#" data-section="uploads">Uploads</a></li>
+            </ul>
+        </nav>
+        <main class="main-content">
+            <header>
+                <h1 id="page-title">Welcome to CEO Personal OS</h1>
+                <button id="edit-toggle">View</button>
+                <button id="save-btn" style="display:none;">Save</button>
+            </header>
+            <div id="content">
+                <div id="file-list"></div>
+                <div id="markdown-view"></div>
+                <textarea id="markdown-edit" style="display:none;"></textarea>
+            </div>
+        </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

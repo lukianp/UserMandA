@@ -212,13 +212,66 @@ return { activeTab, setActiveTab, searchTerm, setSearchTerm, loading, error, sta
 ### 9. Build/Update Discovered View
 Update `guiv2/src/renderer/views/discovered/<ModuleName>DiscoveredView.tsx`:
 
+**MANDATORY: Discovery Success % Card (FIRST card, prominent position):**
+
+Every enriched view MUST include a Discovery Success % card that shows:
+- Percentage of expected data sources that returned data (0-100%)
+- Visual indicator (green 80%+, yellow 60-79%, orange 40-59%, red <40%)
+- Tooltip showing received/total data sources
+
+```typescript
+// Calculate in logic hook - weighted by importance
+discoverySuccessPercentage: (() => {
+  const expectedSources = [
+    { name: 'PrimaryData1', hasData: data1.length > 0, weight: 20 },
+    { name: 'PrimaryData2', hasData: data2.length > 0, weight: 15 },
+    { name: 'SecondaryData1', hasData: data3.length > 0, weight: 10 },
+    // ... add all expected CSV files with appropriate weights
+  ];
+  const totalWeight = expectedSources.reduce((sum, s) => sum + s.weight, 0);
+  const achievedWeight = expectedSources.reduce((sum, s) => sum + (s.hasData ? s.weight : 0), 0);
+  return Math.round((achievedWeight / totalWeight) * 100);
+})(),
+dataSourcesReceivedCount: expectedSources.filter(s => s.hasData).length,
+dataSourcesTotal: expectedSources.length,
+dataSourcesReceived: expectedSources.filter(s => s.hasData).map(s => s.name),
+
+// DiscoverySuccessCard component (add to both Discovery and Discovered views)
+const DiscoverySuccessCard: React.FC<{percentage: number; received: number; total: number}> = ({ percentage, received, total }) => {
+  const getGradient = () => {
+    if (percentage >= 80) return 'from-green-500 to-emerald-600';
+    if (percentage >= 60) return 'from-yellow-500 to-amber-600';
+    if (percentage >= 40) return 'from-orange-500 to-orange-600';
+    return 'from-red-500 to-rose-600';
+  };
+  const getIcon = () => {
+    if (percentage >= 80) return CheckCircle2;
+    if (percentage >= 60) return AlertTriangle;
+    return XCircle;
+  };
+  const Icon = getIcon();
+  return (
+    <div className={`bg-gradient-to-br ${getGradient()} rounded-xl p-4 text-white shadow-lg`}>
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-white/20 rounded-lg"><Icon size={24} /></div>
+        <div>
+          <p className="text-xs opacity-80">Discovery Success</p>
+          <p className="text-2xl font-bold">{percentage}%</p>
+          <p className="text-xs opacity-80">{received}/{total} data sources</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
 **12 Statistics Cards (3 rows × 4 columns):**
 ```typescript
-// Row 1: Primary metrics
+// Row 1: Discovery Success FIRST, then primary metrics
+<DiscoverySuccessCard percentage={stats.discoverySuccessPercentage} received={stats.dataSourcesReceivedCount} total={stats.dataSourcesTotal} />
 <StatCard icon={Icon1} label="Total X" value={stats.total} gradient="from-blue-500 to-blue-600" />
 <StatCard icon={Icon2} label="Total Y" value={stats.count} gradient="from-green-500 to-green-600" />
 <StatCard icon={Icon3} label="Total Z" value={stats.items} gradient="from-purple-500 to-purple-600" />
-<StatCard icon={Icon4} label="Metric D" value={stats.metric} gradient="from-yellow-500 to-yellow-600" />
 
 // Row 2: Status/health metrics
 <StatCard ... gradient="from-indigo-500 to-indigo-600" />

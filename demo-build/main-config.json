@@ -1,0 +1,120 @@
+{
+  "entry": "./src/index.ts",
+  "mode": "development",
+  "module": {
+    "rules": [
+      {
+        "test": {},
+        "use": "node-loader"
+      },
+      {
+        "test": {},
+        "parser": {
+          "amd": false
+        },
+        "use": {
+          "loader": "@vercel/webpack-asset-relocator-loader",
+          "options": {
+            "outputAssetBase": "native_modules"
+          }
+        }
+      },
+      {
+        "test": {},
+        "exclude": {},
+        "use": {
+          "loader": "ts-loader",
+          "options": {
+            "transpileOnly": true
+          }
+        }
+      },
+      {
+        "test": {},
+        "use": [
+          {
+            "loader": "style-loader"
+          },
+          {
+            "loader": "css-loader"
+          },
+          {
+            "loader": "postcss-loader"
+          }
+        ]
+      }
+    ]
+  },
+  "plugins": [
+    {
+      "options": {
+        "logger": "webpack-infrastructure",
+        "async": true,
+        "typescript": {
+          "diagnosticOptions": {
+            "semantic": true,
+            "syntactic": true
+          },
+          "mode": "write-references"
+        }
+      }
+    },
+    {
+      "definitions": {
+        "process.env.NODE_ENV": "\"development\"",
+        "__DEV__": "true",
+        "__PROD__": "false"
+      }
+    },
+    {
+      "options": {
+        "resourceRegExp": {},
+        "contextRegExp": {}
+      }
+    }
+  ],
+  "resolve": {
+    "extensions": [
+      ".js",
+      ".ts",
+      ".jsx",
+      ".tsx",
+      ".css",
+      ".json"
+    ]
+  },
+  "infrastructureLogging": {
+    "level": "error",
+    "colors": false
+  },
+  "optimization": {
+    "minimize": true,
+    "minimizer": [
+      {
+        "options": {
+          "test": {},
+          "extractComments": false,
+          "parallel": true,
+          "minimizer": {
+            "options": {
+              "compress": {
+                "drop_console": false,
+                "drop_debugger": true
+              },
+              "mangle": true,
+              "format": {
+                "comments": false
+              }
+            }
+          }
+        }
+      }
+    ],
+    "usedExports": true
+  },
+  "performance": {
+    "hints": false,
+    "maxEntrypointSize": 2097152,
+    "maxAssetSize": 1048576
+  }
+}

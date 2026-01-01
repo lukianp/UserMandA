@@ -1,0 +1,422 @@
+{
+  "$schema": "./discovery-modules-schema.json",
+  "version": "1.0.0",
+  "description": "Configuration manifest for all discovery modules and their frontend views",
+  "modules": [
+    {
+      "id": "activedirectory",
+      "name": "Active Directory",
+      "description": "Active Directory objects, OUs, and domain configuration",
+      "icon": "Database",
+      "csvPath": "activedirectory/results.csv",
+      "category": "identity",
+      "enabled": true
+    },
+    {
+      "id": "applications",
+      "name": "Applications",
+      "description": "Installed applications and software inventory",
+      "icon": "Package",
+      "csvPath": "applications/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "aws",
+      "name": "AWS Resources",
+      "description": "Amazon Web Services cloud resources and configurations",
+      "icon": "Cloud",
+      "csvPath": "aws/results.csv",
+      "category": "cloud",
+      "enabled": true
+    },
+    {
+      "id": "azure",
+      "name": "Azure Resources",
+      "description": "Microsoft Azure cloud resources and services",
+      "icon": "Cloud",
+      "csvPath": "azure/results.csv",
+      "category": "cloud",
+      "enabled": true
+    },
+    {
+      "id": "azureresource",
+      "name": "Azure Resource Manager",
+      "description": "Azure ARM resources, subscriptions, and resource groups",
+      "icon": "Layers",
+      "csvPath": "azureresource/results.csv",
+      "category": "cloud",
+      "enabled": true
+    },
+    {
+      "id": "backuprecovery",
+      "name": "Backup & Recovery",
+      "description": "Backup systems, recovery points, and disaster recovery configurations",
+      "icon": "HardDrive",
+      "csvPath": "backuprecovery/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "certificateauthority",
+      "name": "Certificate Authority",
+      "description": "PKI certificate authorities and certificate services",
+      "icon": "Shield",
+      "csvPath": "certificateauthority/results.csv",
+      "category": "security",
+      "enabled": true
+    },
+    {
+      "id": "certificates",
+      "name": "Certificates",
+      "description": "SSL/TLS certificates and certificate inventory",
+      "icon": "Key",
+      "csvPath": "certificates/results.csv",
+      "category": "security",
+      "enabled": true
+    },
+    {
+      "id": "conditionalaccess",
+      "name": "Conditional Access",
+      "description": "Azure AD conditional access policies and rules",
+      "icon": "Lock",
+      "csvPath": "conditionalaccess/results.csv",
+      "category": "security",
+      "enabled": true
+    },
+    {
+      "id": "databaseschema",
+      "name": "Database Schemas",
+      "description": "Database structures, tables, and schema definitions",
+      "icon": "Database",
+      "csvPath": "databaseschema/results.csv",
+      "category": "data",
+      "enabled": true
+    },
+    {
+      "id": "dataclassification",
+      "name": "Data Classification",
+      "description": "Data sensitivity labels and classification tags",
+      "icon": "Tag",
+      "csvPath": "dataclassification/results.csv",
+      "category": "data",
+      "enabled": true
+    },
+    {
+      "id": "dnsdhcp",
+      "name": "DNS & DHCP",
+      "description": "DNS zones, DHCP scopes, and network services",
+      "icon": "Network",
+      "csvPath": "dnsdhcp/results.csv",
+      "category": "network",
+      "enabled": true
+    },
+    {
+      "id": "entraidapp",
+      "name": "Entra ID Applications",
+      "description": "Azure AD application registrations and service principals",
+      "icon": "AppWindow",
+      "csvPath": "entraidapp/results.csv",
+      "category": "identity",
+      "enabled": true
+    },
+    {
+      "id": "environmentdetection",
+      "name": "Environment Detection",
+      "description": "Automatic environment discovery and topology detection",
+      "icon": "Radar",
+      "csvPath": "environmentdetection/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "exchange",
+      "name": "Exchange",
+      "description": "Exchange mailboxes, distribution groups, and transport rules",
+      "icon": "Mail",
+      "csvPath": "exchange/results.csv",
+      "category": "collaboration",
+      "enabled": true
+    },
+    {
+      "id": "externalidentity",
+      "name": "External Identities",
+      "description": "B2B users, guest accounts, and external collaborators",
+      "icon": "Users",
+      "csvPath": "externalidentity/results.csv",
+      "category": "identity",
+      "enabled": true
+    },
+    {
+      "id": "fileserver",
+      "name": "File Servers",
+      "description": "File server shares, permissions, and storage",
+      "icon": "Server",
+      "csvPath": "fileserver/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "filesystem",
+      "name": "File Systems",
+      "description": "File system shares, permissions, and large files",
+      "icon": "HardDrive",
+      "csvPath": "filesystem/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "gcp",
+      "name": "GCP Resources",
+      "description": "Google Cloud Platform resources and services",
+      "icon": "Cloud",
+      "csvPath": "gcp/results.csv",
+      "category": "cloud",
+      "enabled": true
+    },
+    {
+      "id": "gpo",
+      "name": "Group Policies",
+      "description": "Active Directory Group Policy Objects and settings",
+      "icon": "FileText",
+      "csvPath": "gpo/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "graph",
+      "name": "Microsoft Graph",
+      "description": "Microsoft Graph API data and relationships",
+      "icon": "Network",
+      "csvPath": "graph/results.csv",
+      "category": "identity",
+      "enabled": true
+    },
+    {
+      "id": "infrastructure",
+      "name": "Infrastructure",
+      "description": "Physical and virtual infrastructure inventory",
+      "icon": "Server",
+      "csvPath": "infrastructure/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "intune",
+      "name": "Intune",
+      "description": "Microsoft Intune devices and management policies",
+      "icon": "Smartphone",
+      "csvPath": "intune/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "licensing",
+      "name": "Licensing",
+      "description": "Software licenses and subscription assignments",
+      "icon": "FileText",
+      "csvPath": "licensing/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "multidomainforest",
+      "name": "Multi-Domain Forest",
+      "description": "Active Directory forest and domain trust relationships",
+      "icon": "GitBranch",
+      "csvPath": "multidomainforest/results.csv",
+      "category": "identity",
+      "enabled": true
+    },
+    {
+      "id": "networkinfrastructure",
+      "name": "Network Infrastructure",
+      "description": "Network devices, routers, switches, and firewall rules",
+      "icon": "Network",
+      "csvPath": "networkinfrastructure/results.csv",
+      "category": "network",
+      "enabled": true
+    },
+    {
+      "id": "onedrive",
+      "name": "OneDrive",
+      "description": "OneDrive storage, sharing, and sync configurations",
+      "icon": "Folders",
+      "csvPath": "onedrive/results.csv",
+      "category": "collaboration",
+      "enabled": true
+    },
+    {
+      "id": "paloalto",
+      "name": "Palo Alto Networks",
+      "description": "Palo Alto firewall rules, policies, and security zones",
+      "icon": "Shield",
+      "csvPath": "paloalto/results.csv",
+      "category": "security",
+      "enabled": true
+    },
+    {
+      "id": "physicalserver",
+      "name": "Physical Servers",
+      "description": "Physical server hardware, BIOS, and storage configurations",
+      "icon": "Server",
+      "csvPath": "physicalserver/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "powerbi",
+      "name": "Power BI",
+      "description": "Power BI workspaces, datasets, and reports",
+      "icon": "BarChart3",
+      "csvPath": "powerbi/results.csv",
+      "category": "data",
+      "enabled": true
+    },
+    {
+      "id": "powerplatform",
+      "name": "Power Platform",
+      "description": "Power Apps, Power Automate flows, and Power Virtual Agents",
+      "icon": "Workflow",
+      "csvPath": "powerplatform/results.csv",
+      "category": "collaboration",
+      "enabled": true
+    },
+    {
+      "id": "printers",
+      "name": "Printers",
+      "description": "Network printers and print queues",
+      "icon": "Printer",
+      "csvPath": "printers/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "scheduledtasks",
+      "name": "Scheduled Tasks",
+      "description": "Windows scheduled tasks and automation jobs",
+      "icon": "Calendar",
+      "csvPath": "scheduledtasks/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "securityinfrastructure",
+      "name": "Security Infrastructure",
+      "description": "Security devices, IDS/IPS, and security monitoring",
+      "icon": "Shield",
+      "csvPath": "securityinfrastructure/results.csv",
+      "category": "security",
+      "enabled": true
+    },
+    {
+      "id": "sharepoint",
+      "name": "SharePoint",
+      "description": "SharePoint sites, libraries, and permissions",
+      "icon": "Folder",
+      "csvPath": "sharepoint/results.csv",
+      "category": "collaboration",
+      "enabled": true
+    },
+    {
+      "id": "sqlserver",
+      "name": "SQL Server",
+      "description": "SQL Server instances, databases, and configurations",
+      "icon": "Database",
+      "csvPath": "sqlserver/results.csv",
+      "category": "data",
+      "enabled": true
+    },
+    {
+      "id": "storagearray",
+      "name": "Storage Arrays",
+      "description": "SAN/NAS storage arrays and volume configurations",
+      "icon": "HardDrive",
+      "csvPath": "storagearray/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "teams",
+      "name": "Microsoft Teams",
+      "description": "Teams channels, members, and chat configurations",
+      "icon": "MessageSquare",
+      "csvPath": "teams/results.csv",
+      "category": "collaboration",
+      "enabled": true
+    },
+    {
+      "id": "virtualization",
+      "name": "Virtualization",
+      "description": "Virtual machines, hypervisors, and VM configurations",
+      "icon": "Cpu",
+      "csvPath": "virtualization/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "vmware",
+      "name": "VMware",
+      "description": "VMware vSphere VMs, hosts, and clusters",
+      "icon": "Cpu",
+      "csvPath": "vmware/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "webserverconfig",
+      "name": "Web Server Config",
+      "description": "IIS/Apache web server configurations and bindings",
+      "icon": "Globe",
+      "csvPath": "webserverconfig/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    },
+    {
+      "id": "hyperv",
+      "name": "Hyper-V",
+      "description": "Hyper-V virtual machines and host configurations",
+      "icon": "Cpu",
+      "csvPath": "hyperv/results.csv",
+      "category": "infrastructure",
+      "enabled": true
+    }
+  ],
+  "categories": {
+    "identity": {
+      "label": "Identity & Access",
+      "color": "#3b82f6",
+      "order": 1
+    },
+    "infrastructure": {
+      "label": "Infrastructure",
+      "color": "#8b5cf6",
+      "order": 2
+    },
+    "cloud": {
+      "label": "Cloud Services",
+      "color": "#10b981",
+      "order": 3
+    },
+    "collaboration": {
+      "label": "Collaboration",
+      "color": "#f59e0b",
+      "order": 4
+    },
+    "security": {
+      "label": "Security",
+      "color": "#ef4444",
+      "order": 5
+    },
+    "network": {
+      "label": "Network",
+      "color": "#06b6d4",
+      "order": 6
+    },
+    "data": {
+      "label": "Data & Databases",
+      "color": "#ec4899",
+      "order": 7
+    }
+  }
+}
