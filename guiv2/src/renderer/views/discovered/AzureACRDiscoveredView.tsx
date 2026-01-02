@@ -21,6 +21,7 @@ import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataG
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
 import LoadingOverlay from '../../components/molecules/LoadingOverlay';
+import { DiscoverySuccessCard } from '../../components/molecules/DiscoverySuccessCard';
 
 const AzureACRDiscoveredView: React.FC = () => {
   const {
@@ -82,6 +83,12 @@ const AzureACRDiscoveredView: React.FC = () => {
       {/* Statistics Cards */}
       {stats && (
         <div className="grid grid-cols-4 gap-4 p-6">
+          <DiscoverySuccessCard
+            percentage={stats.discoverySuccessPercentage ?? 0}
+            received={stats.dataSourcesReceivedCount ?? 0}
+            total={stats.dataSourcesTotal ?? 1}
+            showAnimation={true}
+          />
           <div className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow text-white">
             <div className="flex items-center justify-between">
               <Package className="w-8 h-8 opacity-80" />

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { useEntraIDAppDiscoveredLogic } from '../../hooks/useEntraIDAppDiscoveredLogic';
+import { DiscoverySuccessCard } from '../../components/molecules/DiscoverySuccessCard';
 
 export const EntraidappDiscoveredView: React.FC = () => {
   const {
@@ -78,7 +79,13 @@ export const EntraidappDiscoveredView: React.FC = () => {
 
       {/* Statistics Cards Grid (3 rows × 4 columns = 12 cards) */}
       <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Row 1 */}
+        {/* Row 1 - Discovery Success FIRST */}
+        <DiscoverySuccessCard
+          percentage={statistics.discoverySuccessPercentage ?? 0}
+          received={statistics.dataSourcesReceivedCount ?? 0}
+          total={statistics.dataSourcesTotal ?? 4}
+          showAnimation={true}
+        />
         <StatCard
           icon={Settings}
           label="App Registrations"
@@ -144,16 +151,10 @@ export const EntraidappDiscoveredView: React.FC = () => {
           gradient="from-teal-500 to-teal-600"
         />
         <StatCard
-          icon={XCircle}
-          label="Disabled Service Principals"
-          value={statistics.disabledServicePrincipals}
-          gradient="from-rose-500 to-rose-600"
-        />
-        <StatCard
           icon={Shield}
           label="High Privilege Apps"
           value={statistics.appsWithHighPrivileges}
-          gradient="from-pink-500 to-pink-600"
+          gradient="from-rose-500 to-rose-600"
         />
       </div>
 

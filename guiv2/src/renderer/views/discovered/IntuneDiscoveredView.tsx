@@ -15,13 +15,13 @@ import {
   Settings,
   Lock,
   Laptop,
-  CheckCircle,
   Download,
   RefreshCw,
   Search
 } from 'lucide-react';
 
 import { useIntuneDiscoveredLogic } from '../../hooks/useIntuneDiscoveredLogic';
+import { DiscoverySuccessCard } from '../../components/molecules/DiscoverySuccessCard';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
@@ -54,13 +54,6 @@ const IntuneDiscoveredView: React.FC = () => {
     appProtectionColumns,
     appColumns
   } = useIntuneDiscoveredLogic();
-
-  // Get Discovery Success color
-  const getSuccessColor = (percent: number) => {
-    if (percent >= 80) return 'from-green-500 to-green-600';
-    if (percent >= 50) return 'from-yellow-500 to-yellow-600';
-    return 'from-red-500 to-red-600';
-  };
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Smartphone },
@@ -173,17 +166,13 @@ const IntuneDiscoveredView: React.FC = () => {
           <div className="space-y-6 pt-4">
             {/* Statistics Cards - Row 1 */}
             <div className="grid grid-cols-4 gap-4">
-              {/* Discovery Success */}
-              <div className={`p-4 rounded-xl bg-gradient-to-br ${getSuccessColor(statistics.discoverySuccessPercent)} text-white shadow-lg`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm opacity-90">Discovery Success</p>
-                    <p className="text-3xl font-bold">{statistics.discoverySuccessPercent}%</p>
-                    <p className="text-xs opacity-75">{statistics.receivedDataSources}/{statistics.expectedDataSources} data sources</p>
-                  </div>
-                  <CheckCircle size={32} className="opacity-80" />
-                </div>
-              </div>
+              {/* Discovery Success - Using standardized component */}
+              <DiscoverySuccessCard
+                percentage={statistics.discoverySuccessPercent}
+                received={statistics.receivedDataSources}
+                total={statistics.expectedDataSources}
+                showAnimation={true}
+              />
 
               {/* Total Devices */}
               <div className="p-4 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 text-white shadow-lg">

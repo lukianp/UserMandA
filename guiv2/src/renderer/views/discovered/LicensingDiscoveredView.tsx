@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 
 import { useLicensingDiscoveredLogic } from '../../hooks/useLicensingDiscoveredLogic';
+import { DiscoverySuccessCard } from '../../components/molecules/DiscoverySuccessCard';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
@@ -125,7 +126,14 @@ const LicensingDiscoveredView: React.FC = () => {
       {/* Statistics Cards */}
       {stats && (
         <div className="grid grid-cols-4 gap-4 p-6">
-          {/* Row 1: Core License Metrics */}
+          {/* Row 1: Discovery Success FIRST, then Core License Metrics */}
+          <DiscoverySuccessCard
+            percentage={stats.discoverySuccessPercentage ?? 0}
+            received={stats.dataSourcesReceivedCount ?? 0}
+            total={stats.dataSourcesTotal ?? 4}
+            showAnimation={true}
+          />
+
           <div className="p-4 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg shadow text-white">
             <div className="flex items-center justify-between">
               <Key className="w-8 h-8 opacity-80" />

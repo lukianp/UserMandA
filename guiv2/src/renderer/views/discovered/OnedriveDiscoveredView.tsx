@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { useOneDriveDiscoveredLogic, formatBytes } from '../../hooks/useOneDriveDiscoveredLogic';
+import { DiscoverySuccessCard } from '../../components/molecules/DiscoverySuccessCard';
 
 export const OneDriveDiscoveredView: React.FC = () => {
   const {
@@ -117,11 +118,12 @@ export const OneDriveDiscoveredView: React.FC = () => {
 
       {/* Statistics Cards Grid (3 rows x 4 columns = 12 cards) */}
       <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Row 1: Adoption & Users */}
-        <AdoptionCard
-          percentage={enhancedStats.adoptionRate}
-          withOneDrive={enhancedStats.usersWithOneDrive}
-          total={enhancedStats.totalUsers}
+        {/* Row 1: Discovery Success FIRST, then Adoption & Users */}
+        <DiscoverySuccessCard
+          percentage={enhancedStats.discoverySuccessPercentage}
+          received={enhancedStats.dataSourcesReceivedCount}
+          total={enhancedStats.dataSourcesTotal}
+          showAnimation={true}
         />
         <StatCard
           icon={Users}

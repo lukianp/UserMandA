@@ -5,7 +5,7 @@
  */
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Cloud,
   Users,
@@ -25,9 +25,13 @@ import {
   Settings,
   Lock,
   Server,
+  UsersRound,
+  User,
+  ChevronRight,
 } from 'lucide-react';
 
 import { useEntraIDM365DiscoveredLogic } from '../../hooks/useEntraIDM365DiscoveredLogic';
+import { DiscoverySuccessCard } from '../../components/molecules/DiscoverySuccessCard';
 import { VirtualizedDataGrid } from '../../components/organisms/VirtualizedDataGrid';
 import { Button } from '../../components/atoms/Button';
 import { Input } from '../../components/atoms/Input';
@@ -43,6 +47,8 @@ const EntraIDM365DiscoveredView: React.FC = () => {
     stats,
     columns,
     filteredData,
+    groupMembers,
+    filteredGroupMembers,
     setActiveTab,
     updateFilter,
     clearError,
@@ -52,6 +58,77 @@ const EntraIDM365DiscoveredView: React.FC = () => {
   } = useEntraIDM365DiscoveredLogic();
 
   const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [searchText, setSearchText] = useState('');
+
+  // Group members by group for hierarchical view
+  const groupedMemberData = useMemo(() => {
+    const groupMap = new Map<string, { groupId: string; groupName: string; groupType: string; members: Array<{ id: string; name: string; upn: string; type: string }> }>();
+
+    const membersToProcess = searchText
+      ? groupMembers.filter(m =>
+          m.GroupDisplayName?.toLowerCase().includes(searchText.toLowerCase()) ||
+          m.MemberDisplayName?.toLowerCase().includes(searchText.toLowerCase()) ||
+          m.MemberUPN?.toLowerCase().includes(searchText.toLowerCase())
+        )
+      : groupMembers;
+
+    membersToProcess.forEach((m) => {
+      if (!groupMap.has(m.GroupId)) {
+        groupMap.set(m.GroupId, {
+          groupId: m.GroupId,
+          groupName: m.GroupDisplayName,
+          groupType: m.GroupType,
+          members: [],
+        });
+      }
+      groupMap.get(m.GroupId)!.members.push({
+        id: m.MemberId,
+        name: m.MemberDisplayName,
+        upn: m.MemberUPN,
+        type: m.MemberType,
+      });
+    });
+
+    return Array.from(groupMap.values()).sort((a, b) => b.members.length - a.members.length);
+  }, [groupMembers, searchText]);
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  };
+
+  const expandAllGroups = () => {
+    setExpandedGroups(new Set(groupedMemberData.map(g => g.groupId)));
+  };
+
+  const collapseAllGroups = () => {
+    setExpandedGroups(new Set());
+  };
+
+  const getGroupTypeColor = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case 'security':
+        return 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200';
+      case 'microsoft365group':
+      case 'm365':
+        return 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200';
+      case 'distributionlist':
+      case 'distribution':
+        return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200';
+      case 'mailenabledSecurity':
+        return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+    }
+  };
 
   const userTypes = ['Member', 'Guest'];
   const groupTypes = ['Security', 'Microsoft365Group', 'DistributionList'];
@@ -129,7 +206,14 @@ const EntraIDM365DiscoveredView: React.FC = () => {
       {/* Statistics Cards */}
       {stats && (
         <div className="grid grid-cols-4 gap-4 p-6">
-          {/* Row 1: User Metrics */}
+          {/* Row 1: Discovery Success FIRST, then User Metrics */}
+          <DiscoverySuccessCard
+            percentage={stats.discoverySuccessPercentage}
+            received={stats.dataSourcesReceivedCount}
+            total={stats.dataSourcesTotal}
+            showAnimation={true}
+          />
+
           <div className="p-4 bg-gradient-to-br from-sky-500 to-sky-600 rounded-lg shadow text-white">
             <div className="flex items-center justify-between">
               <Users className="w-8 h-8 opacity-80" />
@@ -294,6 +378,19 @@ const EntraIDM365DiscoveredView: React.FC = () => {
             <FolderTree className="w-4 h-4" />
             Groups
             {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats.totalGroups}</span>}
+          </button>
+          <button
+            onClick={() => setActiveTab('groupmembers')}
+            className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
+              activeTab === 'groupmembers'
+                ? 'border-b-2 border-sky-600 text-sky-600'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+            data-testid="tab-groupmembers"
+          >
+            <UsersRound className="w-4 h-4" />
+            Members
+            {stats && <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">{stats.totalGroupMembers?.toLocaleString() || 0}</span>}
           </button>
           <button
             onClick={() => setActiveTab('teams')}
@@ -614,6 +711,120 @@ const EntraIDM365DiscoveredView: React.FC = () => {
               />
             </div>
           </>
+        )}
+
+        {/* Group Members Tab - Hierarchical View */}
+        {activeTab === 'groupmembers' && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Search and Controls */}
+            <div className="mb-4 flex gap-4 items-center">
+              <div className="flex-1">
+                <Input
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  placeholder="Search groups or members..."
+                  data-testid="groupmembers-search"
+                />
+              </div>
+              <Button onClick={expandAllGroups} variant="secondary" size="sm">
+                Expand All
+              </Button>
+              <Button onClick={collapseAllGroups} variant="secondary" size="sm">
+                Collapse All
+              </Button>
+              <Button
+                onClick={() => exportToCSV(filteredGroupMembers, `m365-group-members-${new Date().toISOString().split('T')[0]}.csv`)}
+                variant="secondary"
+                icon={<Download className="w-4 h-4" />}
+                size="sm"
+              >
+                Export CSV
+              </Button>
+            </div>
+
+            {/* Summary */}
+            <div className="mb-4 flex gap-4 text-sm text-gray-600 dark:text-gray-400">
+              <span>{groupedMemberData.length} groups</span>
+              <span>•</span>
+              <span>{groupMembers.length} total memberships</span>
+            </div>
+
+            {/* Hierarchical Group View */}
+            <div className="flex-1 overflow-auto bg-white dark:bg-gray-800 rounded-lg shadow">
+              {groupedMemberData.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-gray-500 dark:text-gray-400">
+                    <UsersRound className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>No group membership data found</p>
+                    <p className="text-sm mt-1">Run Entra ID & Microsoft 365 Discovery to enumerate group members</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {groupedMemberData.map((group) => (
+                    <div key={group.groupId} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                      {/* Group Header - Clickable */}
+                      <button
+                        onClick={() => toggleGroup(group.groupId)}
+                        className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors text-left"
+                      >
+                        <ChevronRight
+                          className={`w-5 h-5 text-gray-400 transition-transform ${
+                            expandedGroups.has(group.groupId) ? 'rotate-90' : ''
+                          }`}
+                        />
+                        <FolderTree className="w-5 h-5 text-indigo-500" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900 dark:text-white truncate">
+                              {group.groupName}
+                            </span>
+                            <span className={`px-2 py-0.5 text-xs rounded-full ${getGroupTypeColor(group.groupType)}`}>
+                              {group.groupType}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {group.members.length} member{group.members.length !== 1 ? 's' : ''}
+                        </span>
+                      </button>
+
+                      {/* Members List - Expandable */}
+                      {expandedGroups.has(group.groupId) && (
+                        <div className="bg-gray-50 dark:bg-gray-850 pl-12 pr-4 pb-2">
+                          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                            {group.members.map((member) => (
+                              <div
+                                key={member.id}
+                                className="flex items-center gap-3 py-2 text-sm"
+                              >
+                                <User className="w-4 h-4 text-gray-400" />
+                                <span className="font-medium text-gray-700 dark:text-gray-300 w-48 truncate">
+                                  {member.name}
+                                </span>
+                                <span className="text-gray-500 dark:text-gray-400 flex-1 truncate">
+                                  {member.upn}
+                                </span>
+                                <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                  member.type === 'User'
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                    : member.type === 'Group'
+                                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                                }`}>
+                                  {member.type}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {/* Empty State */}
